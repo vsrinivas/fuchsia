@@ -114,8 +114,13 @@ fuchsia::sysmem::AllocatorSyncPtr CreateSysmemAllocatorSyncPtr(
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
                                             sysmem_allocator.NewRequest().TakeChannel().release());
   FX_DCHECK(status == ZX_OK);
-  sysmem_allocator->SetDebugClientInfo(fsl::GetCurrentProcessName() + " " + debug_name_suffix,
-                                       fsl::GetCurrentProcessKoid());
+  auto debug_name = fsl::GetCurrentProcessName() + " " + debug_name_suffix;
+  constexpr size_t kMaxNameLength = 64;  // from fuchsia.sysmem/allocator.fidl
+  FX_DCHECK(debug_name.length() <= kMaxNameLength)
+      << "Sysmem client debug name exceeded max length of " << kMaxNameLength << " (\""
+      << debug_name << "\")";
+
+  sysmem_allocator->SetDebugClientInfo(std::move(debug_name), fsl::GetCurrentProcessKoid());
   return sysmem_allocator;
 }
 

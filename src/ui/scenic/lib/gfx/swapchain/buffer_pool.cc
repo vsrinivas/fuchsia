@@ -171,7 +171,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   }
 
   local_token->SetName(100u, use_protected_memory ? "Display-Protected" : "Display");
-  local_token->SetDebugClientInfo("buffer_pool", 0u);
+  local_token->SetDebugClientInfo("gfx::BufferPool", 0u);
 
   auto tokens = DuplicateToken(local_token, 2);
   if (tokens.empty()) {
@@ -180,7 +180,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   }
 
   // Set display buffer constraints.
-  tokens[1]->SetDebugClientInfo("buffer_pool duplicated", 0u);
+  tokens[1]->SetDebugClientInfo("gfx::BufferPool duplicated", 0u);
   auto display_collection_id = allocation::GenerateUniqueBufferCollectionId();
   auto result = scenic_impl::ImportBufferCollection(display_collection_id,
                                                     *environment->display_controller.get(),

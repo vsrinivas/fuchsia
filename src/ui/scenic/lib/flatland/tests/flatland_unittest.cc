@@ -4868,10 +4868,9 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers(
       {buffer_collection_importer_, local_buffer_collection_importer});
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> screenshot_importers;
-  std::shared_ptr<Allocator> allocator =
-      std::make_shared<Allocator>(context_provider_.context(), importers, screenshot_importers,
-                                  utils::CreateSysmemAllocatorSyncPtr(
-                                      "FlatlandTest::ImageImportPassesFailsOnDiffImportersTest"));
+  std::shared_ptr<Allocator> allocator = std::make_shared<Allocator>(
+      context_provider_.context(), importers, screenshot_importers,
+      utils::CreateSysmemAllocatorSyncPtr("ImageImportPassesFailsOnDiffImportersTest"));
   auto session_id = scheduling::GetNextSessionId();
   fuchsia::ui::composition::FlatlandPtr flatland_ptr;
   auto flatland = Flatland::New(
@@ -5328,9 +5327,9 @@ TEST_F(FlatlandTest, MultithreadedLinkResolution) {
 TEST_F(FlatlandTest, NoDoubleDestroyRequest) {
   // Create flatland and allocator instances that has two BufferCollectionImporters.
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> no_importers;
-  std::shared_ptr<Allocator> allocator = std::make_shared<Allocator>(
-      context_provider_.context(), no_importers, no_importers,
-      utils::CreateSysmemAllocatorSyncPtr("FlatlandTest::NoDoubleDestroyRequest"));
+  std::shared_ptr<Allocator> allocator =
+      std::make_shared<Allocator>(context_provider_.context(), no_importers, no_importers,
+                                  utils::CreateSysmemAllocatorSyncPtr("NoDoubleDestroyRequest"));
 
   auto session_id = scheduling::GetNextSessionId();
   fuchsia::ui::composition::FlatlandPtr flatland_ptr;

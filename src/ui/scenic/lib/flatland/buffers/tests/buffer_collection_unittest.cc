@@ -24,7 +24,7 @@ class BufferCollectionTest : public ::testing::Test {
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
     EXPECT_EQ(status, ZX_OK);
-    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName() + "-BufferCollectionTest",
+    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName() + " BufferCollectionTest",
                                           fsl::GetCurrentProcessKoid());
   }
 

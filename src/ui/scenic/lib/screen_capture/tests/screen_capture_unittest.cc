@@ -33,7 +33,7 @@ class ScreenCaptureTest : public gtest::TestLoopFixture {
  public:
   ScreenCaptureTest() = default;
   void SetUp() override {
-    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr("ScreenCaptureTest");
+    sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr("ScreenCaptureTest::Setup");
 
     mock_buffer_collection_importer_ = new allocation::MockBufferCollectionImporter();
     buffer_collection_importer_ =

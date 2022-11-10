@@ -59,7 +59,7 @@ class DisplayCompositorSmokeTest : public DisplayCompositorTestBase {
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
     EXPECT_EQ(status, ZX_OK);
     sysmem_allocator_->SetDebugClientInfo(
-        fsl::GetCurrentProcessName() + "-DisplayCompositorSmokeTest", fsl::GetCurrentProcessKoid());
+        fsl::GetCurrentProcessName() + " DisplayCompositorSmokeTest", fsl::GetCurrentProcessKoid());
 
     executor_ = std::make_unique<async::Executor>(dispatcher());
 

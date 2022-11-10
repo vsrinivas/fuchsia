@@ -136,7 +136,7 @@ class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
     EXPECT_EQ(status, ZX_OK);
     sysmem_allocator_->SetDebugClientInfo(
-        fsl::GetCurrentProcessName() + "-ImagePipe2ThatCreatesFakeImages",
+        fsl::GetCurrentProcessName() + " ImagePipe2ThatCreatesFakeImages",
         fsl::GetCurrentProcessKoid());
   }
   ~ImagePipe2ThatCreatesFakeImages() override { CloseConnectionAndCleanUp(); }
