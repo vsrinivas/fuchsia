@@ -6,7 +6,7 @@ use {
     crate::{
         boot_args::BootArgs, config::apply_boot_args_to_config, environment::FshostEnvironment,
     },
-    anyhow::{format_err, Context, Result},
+    anyhow::{format_err, Context, Error},
     fidl::prelude::*,
     fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
     fuchsia_runtime::{take_startup_handle, HandleType},
@@ -26,12 +26,13 @@ mod device;
 mod environment;
 mod manager;
 mod matcher;
+mod ramdisk;
 mod service;
 mod volume;
 mod watcher;
 
 #[fuchsia::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Error> {
     let boot_args = BootArgs::new().await.context("Failed to create boot_args")?;
     let mut config = fshost_config::Config::take_from_startup_handle();
     apply_boot_args_to_config(&mut config, &boot_args);
@@ -70,6 +71,12 @@ async fn main() -> Result<()> {
         Path::dot(),
         directory_request.into(),
     );
+
+    // Potentially launch the boot items ramdisk. It's not fatal, so if it fails we print an error
+    // and continue.
+    ramdisk::set_up_ramdisk().await.unwrap_or_else(|e| {
+        tracing::error!(?e, "failed to set up ramdisk filesystems");
+    });
 
     // Run the main loop of fshost, handling devices as they appear according to our filesystem
     // policy.

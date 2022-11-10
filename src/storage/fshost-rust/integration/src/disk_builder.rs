@@ -18,6 +18,7 @@ use {
         zxcrypt,
     },
     uuid::Uuid,
+    zerocopy::AsBytes,
 };
 
 // We set the default disk size to be twice the value of
@@ -397,5 +398,54 @@ impl DiskBuilder {
         // the file could get dropped.
         let _: Vec<_> = file.query().await.expect("query failed");
         fs.shutdown().await.expect("shutdown failed");
+    }
+
+    /// Create a vmo artifact with the format of a compressed zbi boot item containing this
+    /// filesystem.
+    pub(crate) async fn build_as_zbi_ramdisk(self) -> zx::Vmo {
+        /// The following types and constants are defined in
+        /// zircon/system/public/zircon/boot/image.h.
+        const ZBI_TYPE_STORAGE_RAMDISK: u32 = 0x4b534452;
+        const ZBI_FLAGS_VERSION: u32 = 0x00010000;
+        const ZBI_ITEM_MAGIC: u32 = 0xb5781729;
+        const ZBI_FLAGS_STORAGE_COMPRESSED: u32 = 0x00000001;
+
+        #[repr(C)]
+        #[derive(AsBytes)]
+        struct ZbiHeader {
+            type_: u32,
+            length: u32,
+            extra: u32,
+            flags: u32,
+            _reserved0: u32,
+            _reserved1: u32,
+            magic: u32,
+            _crc32: u32,
+        }
+
+        let ramdisk_vmo = self.build().await;
+        let extra = ramdisk_vmo.get_size().unwrap() as u32;
+        let mut decompressed_buf = vec![0u8; extra as usize];
+        ramdisk_vmo.read(&mut decompressed_buf, 0).unwrap();
+        let compressed_buf = zstd::encode_all(decompressed_buf.as_slice(), 0).unwrap();
+        let length = compressed_buf.len() as u32;
+
+        let header = ZbiHeader {
+            type_: ZBI_TYPE_STORAGE_RAMDISK,
+            length,
+            extra,
+            flags: ZBI_FLAGS_VERSION | ZBI_FLAGS_STORAGE_COMPRESSED,
+            _reserved0: 0,
+            _reserved1: 0,
+            magic: ZBI_ITEM_MAGIC,
+            _crc32: 0,
+        };
+
+        let header_size = std::mem::size_of::<ZbiHeader>() as u64;
+        let zbi_vmo = zx::Vmo::create(header_size + length as u64).unwrap();
+        zbi_vmo.write(header.as_bytes(), 0).unwrap();
+        zbi_vmo.write(&compressed_buf, header_size).unwrap();
+
+        zbi_vmo
     }
 }

@@ -56,7 +56,13 @@ zx_status_t DecompressZstd(zx::vmo& input, uint64_t input_offset, size_t input_s
   auto output_buffer = std::make_unique<uint8_t[]>(output_size);
 
   auto rc = ZSTD_decompress(output_buffer.get(), output_size, input_buffer.get(), input_size);
-  if (ZSTD_isError(rc) || rc != output_size) {
+  if (ZSTD_isError(rc)) {
+    FX_LOGS(ERROR) << "failed to decompress RAMDISK: " << ZSTD_getErrorName(rc);
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+  if (rc != output_size) {
+    FX_LOGS(ERROR) << "failed to decompress RAMDISK: got the wrong size back: expected: "
+                   << output_size << " got: " << rc;
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 

@@ -24,6 +24,7 @@ pub struct TestFixtureBuilder {
 
     disk: Option<disk_builder::Disk>,
     fshost: fshost_builder::FshostBuilder,
+    zbi_ramdisk: Option<disk_builder::DiskBuilder>,
 }
 
 impl TestFixtureBuilder {
@@ -32,6 +33,7 @@ impl TestFixtureBuilder {
             netboot: false,
             disk: None,
             fshost: fshost_builder::FshostBuilder::new(fshost_component_name),
+            zbi_ramdisk: None,
         }
     }
 
@@ -49,15 +51,25 @@ impl TestFixtureBuilder {
         self
     }
 
+    pub fn with_zbi_ramdisk(&mut self) -> &mut disk_builder::DiskBuilder {
+        self.zbi_ramdisk = Some(disk_builder::DiskBuilder::new());
+        self.zbi_ramdisk.as_mut().unwrap()
+    }
+
     pub fn netboot(mut self) -> Self {
         self.netboot = true;
         self
     }
 
     pub async fn build(self) -> TestFixture {
-        let mocks = mocks::new_mocks(self.netboot).await;
         let builder = RealmBuilder::new().await.unwrap();
         let fshost = self.fshost.build(&builder).await;
+
+        let maybe_zbi_vmo = match self.zbi_ramdisk {
+            Some(disk_builder) => Some(disk_builder.build_as_zbi_ramdisk().await),
+            None => None,
+        };
+        let mocks = mocks::new_mocks(self.netboot, maybe_zbi_vmo).await;
 
         let mocks = builder
             .add_local_child("mocks", move |h| mocks(h).boxed(), ChildOptions::new())
@@ -74,47 +86,42 @@ impl TestFixtureBuilder {
             .await
             .unwrap();
 
+        let drivers = builder
+            .add_child(
+                "storage_driver_test_realm",
+                "#meta/storage_driver_test_realm.cm",
+                ChildOptions::new().eager(),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::directory("dev-topological").rights(fio::RW_STAR_DIR))
+                    .from(&drivers)
+                    .to(Ref::parent())
+                    .to(&fshost),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<fprocess::LauncherMarker>())
+                    .capability(Capability::protocol::<flogger::LogSinkMarker>())
+                    .from(Ref::parent())
+                    .to(&drivers),
+            )
+            .await
+            .unwrap();
+
+        let mut fixture =
+            TestFixture { realm: builder.build().await.unwrap(), ramdisk: None, ramdisk_vmo: None };
+
         if let Some(disk) = self.disk {
             let vmo = disk.get_vmo().await;
             let vmo_clone =
                 vmo.create_child(zx::VmoChildOptions::SLICE, 0, vmo.get_size().unwrap()).unwrap();
-
-            let drivers = builder
-                .add_child(
-                    "storage_driver_test_realm",
-                    "#meta/storage_driver_test_realm.cm",
-                    ChildOptions::new().eager(),
-                )
-                .await
-                .unwrap();
-            builder
-                .add_route(
-                    Route::new()
-                        .capability(
-                            Capability::directory("dev-topological").rights(fio::RW_STAR_DIR),
-                        )
-                        .from(&drivers)
-                        .to(Ref::parent())
-                        .to(&fshost),
-                )
-                .await
-                .unwrap();
-            builder
-                .add_route(
-                    Route::new()
-                        .capability(Capability::protocol::<fprocess::LauncherMarker>())
-                        .capability(Capability::protocol::<flogger::LogSinkMarker>())
-                        .from(Ref::parent())
-                        .to(&drivers),
-                )
-                .await
-                .unwrap();
-
-            let mut fixture = TestFixture {
-                realm: builder.build().await.unwrap(),
-                ramdisk: None,
-                ramdisk_vmo: None,
-            };
 
             let dev = fixture.dir("dev-topological");
 
@@ -129,25 +136,9 @@ impl TestFixtureBuilder {
                 VmoRamdiskClientBuilder::new(vmo).dev_root(dev_fd).block_size(512).build().unwrap(),
             );
             fixture.ramdisk_vmo = Some(vmo_clone);
-
-            fixture
-        } else {
-            builder
-                .add_route(
-                    Route::new()
-                        .capability(
-                            Capability::directory("dev-topological")
-                                .path("/dev")
-                                .rights(fio::RW_STAR_DIR),
-                        )
-                        .from(&mocks)
-                        .to(&fshost)
-                        .to(Ref::parent()),
-                )
-                .await
-                .unwrap();
-            TestFixture { realm: builder.build().await.unwrap(), ramdisk: None, ramdisk_vmo: None }
         }
+
+        fixture
     }
 }
 

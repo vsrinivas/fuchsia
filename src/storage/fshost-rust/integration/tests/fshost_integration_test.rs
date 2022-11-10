@@ -298,3 +298,16 @@ async fn netboot_set() {
 
     fixture.tear_down().await;
 }
+
+#[fuchsia::test]
+async fn fvm_ramdisk_serves_zbi_ramdisk_contents_with_unformatted_data() {
+    let mut builder = new_builder();
+    builder.fshost().set_fvm_ramdisk();
+    builder.with_zbi_ramdisk().without_zxcrypt();
+    let fixture = builder.build().await;
+
+    fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
+    fixture.check_fs_type("data", data_fs_type()).await;
+
+    fixture.tear_down().await;
+}

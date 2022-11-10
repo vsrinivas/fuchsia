@@ -43,6 +43,9 @@ rustc_library("fshost_test_fixture") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:uuid",
+    "//third_party/rust_crates:zerocopy",
+    "//third_party/rust_crates:zstd",
+    "//third_party/zstd",
   ]
 }
 

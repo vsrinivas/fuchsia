@@ -7,7 +7,9 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_boot as fboot, fidl_fuchsia_io as fio,
     fuchsia_component_test::LocalComponentHandles,
+    fuchsia_zircon as zx,
     futures::{future::BoxFuture, FutureExt, StreamExt},
+    std::sync::Arc,
     vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path, service},
 };
 
@@ -16,26 +18,32 @@ const ZBI_TYPE_STORAGE_RAMDISK: u32 = 0x4b534452;
 
 pub async fn new_mocks(
     netboot: bool,
+    vmo: Option<zx::Vmo>,
 ) -> impl Fn(LocalComponentHandles) -> BoxFuture<'static, Result<(), Error>> + Sync + Send + 'static
 {
-    let mock = move |handles: LocalComponentHandles| run_mocks(handles, netboot).boxed();
+    let vmo = vmo.map(Arc::new);
+    let mock = move |handles: LocalComponentHandles| {
+        let vmo_clone = vmo.clone();
+        run_mocks(handles, netboot, vmo_clone).boxed()
+    };
 
     mock
 }
 
-async fn run_mocks(handles: LocalComponentHandles, netboot: bool) -> Result<(), Error> {
+async fn run_mocks(
+    handles: LocalComponentHandles,
+    netboot: bool,
+    vmo: Option<Arc<zx::Vmo>>,
+) -> Result<(), Error> {
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
             fboot::ArgumentsMarker::PROTOCOL_NAME => service::host(move |stream| {
                 run_boot_args(stream, netboot)
             }),
-            fboot::ItemsMarker::PROTOCOL_NAME => service::host(run_boot_items),
-        },
-        "dev" => vfs::pseudo_directory! {
-            "class" => vfs::pseudo_directory! {
-                "block" => vfs::pseudo_directory!{},
-                "nand" => vfs::pseudo_directory!{},
-            },
+            fboot::ItemsMarker::PROTOCOL_NAME => service::host(move |stream| {
+                let vmo_clone = vmo.clone();
+                run_boot_items(stream, vmo_clone)
+            }),
         },
     };
 
@@ -55,14 +63,17 @@ async fn run_mocks(handles: LocalComponentHandles, netboot: bool) -> Result<(), 
 /// fshost uses exactly one boot item - it checks to see if there is an item of type
 /// ZBI_TYPE_STORAGE_RAMDISK. If it's there, it's a vmo that represents a ramdisk version of the
 /// fvm, and fshost creates a ramdisk from the vmo so it can go through the normal device matching.
-/// For now we don't test this, so we make sure that's the only use (if any) and return None.
-async fn run_boot_items(mut stream: fboot::ItemsRequestStream) {
+async fn run_boot_items(mut stream: fboot::ItemsRequestStream, vmo: Option<Arc<zx::Vmo>>) {
     while let Some(request) = stream.next().await {
         match request.unwrap() {
             fboot::ItemsRequest::Get { type_, extra, responder } => {
                 assert_eq!(type_, ZBI_TYPE_STORAGE_RAMDISK);
                 assert_eq!(extra, 0);
-                responder.send(None, 0).unwrap();
+                let response_vmo = vmo.as_ref().map(|vmo| {
+                    vmo.create_child(zx::VmoChildOptions::SLICE, 0, vmo.get_size().unwrap())
+                        .unwrap()
+                });
+                responder.send(response_vmo, 0).unwrap();
             }
             fboot::ItemsRequest::Get2 { type_, extra, responder } => {
                 assert_eq!(type_, ZBI_TYPE_STORAGE_RAMDISK);
