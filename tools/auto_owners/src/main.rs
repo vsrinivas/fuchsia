@@ -357,7 +357,7 @@ struct OwnersFile {
 
 const HEADER: &str = "\
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
-# DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
+# DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners_files
 ";
 
 impl std::fmt::Display for OwnersFile {
