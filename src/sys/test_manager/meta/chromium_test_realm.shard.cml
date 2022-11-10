@@ -66,6 +66,7 @@
                 "fuchsia.ui.policy.Presenter",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.vulkan.loader.Loader",
+                "fuchsia.web.ContextProvider",
             ],
             from: "parent",
             to: "#chromium-tests",
