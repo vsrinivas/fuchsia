@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/media/audio/audio_core/shared/device_id.h"
 #include "src/media/audio/audio_core/shared/thermal_config.h"
 #include "src/media/audio/audio_core/v1/context.h"
 #include "src/media/audio/audio_core/v1/testing/fake_plug_detector.h"
@@ -21,7 +22,7 @@ namespace media::audio {
 namespace {
 
 const auto kDeviceIdString = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
-const auto kDeviceIdUnique = AudioDevice::UniqueIdFromString(kDeviceIdString).take_value();
+const auto kDeviceIdUnique = DeviceUniqueIdFromString(kDeviceIdString).take_value();
 const auto kDefaultVolumeCurve = VolumeCurve::DefaultForMinGain(-160.0f);
 
 }  // namespace

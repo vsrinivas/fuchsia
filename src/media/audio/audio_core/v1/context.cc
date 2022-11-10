@@ -6,6 +6,8 @@
 
 #include "src/media/audio/audio_core/shared/audio_admin.h"
 #include "src/media/audio/audio_core/shared/stream_volume_manager.h"
+#include "src/media/audio/audio_core/shared/usage_gain_reporter_impl.h"
+#include "src/media/audio/audio_core/shared/usage_reporter_impl.h"
 #include "src/media/audio/audio_core/v1/activity_dispatcher.h"
 #include "src/media/audio/audio_core/v1/audio_device_manager.h"
 #include "src/media/audio/audio_core/v1/audio_impl.h"
@@ -17,8 +19,6 @@
 #include "src/media/audio/audio_core/v1/route_graph.h"
 #include "src/media/audio/audio_core/v1/threading_model.h"
 #include "src/media/audio/audio_core/v1/throttle_output.h"
-#include "src/media/audio/audio_core/v1/usage_gain_reporter_impl.h"
-#include "src/media/audio/audio_core/v1/usage_reporter_impl.h"
 #include "src/media/audio/lib/effects_loader/effects_loader_v2.h"
 
 namespace media::audio {
@@ -63,7 +63,7 @@ class ContextImpl : public Context {
                      &idle_policy_, threading_model_->FidlDomain().dispatcher()),
         vmar_manager_(
             fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)),
-        usage_gain_reporter_(this),
+        usage_gain_reporter_(device_manager_, stream_volume_manager_, process_config_),
         effects_controller_(*this),
         audio_tuner_(*this),
         audio_(this) {

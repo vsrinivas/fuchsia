@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/v1/usage_gain_reporter_impl.h"
+#include "src/media/audio/audio_core/shared/usage_gain_reporter_impl.h"
+
+#include "src/media/audio/audio_core/shared/device_id.h"
 
 namespace media::audio {
 
@@ -14,14 +16,14 @@ UsageGainReporterImpl::GetFidlRequestHandler() {
 void UsageGainReporterImpl::RegisterListener(
     std::string device_unique_id, fuchsia::media::Usage usage,
     fidl::InterfaceHandle<fuchsia::media::UsageGainListener> usage_gain_listener_handler) {
-  const auto deserialize_result = AudioDevice::UniqueIdFromString(device_unique_id);
+  const auto deserialize_result = DeviceUniqueIdFromString(device_unique_id);
   if (deserialize_result.is_error()) {
     FX_LOGS(WARNING) << "UsageGainReporter client provided invalid device id";
     return;
   }
   const auto& deserialized_id = deserialize_result.value();
 
-  auto devices = device_registry_.GetDeviceInfos();
+  auto devices = device_lister_.GetDeviceInfos();
   const auto it = std::find_if(devices.begin(), devices.end(), [&device_unique_id](auto candidate) {
     return candidate.unique_id == device_unique_id;
   });

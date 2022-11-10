@@ -7,6 +7,7 @@
 #include <lib/fpromise/bridge.h>
 #include <lib/trace/event.h>
 
+#include "src/media/audio/audio_core/shared/device_id.h"
 #include "src/media/audio/audio_core/v1/audio_device_manager.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
 #include "src/media/audio/audio_core/v1/audio_output.h"
@@ -19,38 +20,6 @@ namespace {
 constexpr float kDefaultDeviceGain = 0.0;
 
 }  // namespace
-
-// static
-std::string AudioDevice::UniqueIdToString(const audio_stream_unique_id_t& id) {
-  static_assert(sizeof(id.data) == 16, "Unexpected unique ID size");
-  char buf[(sizeof(id.data) * 2) + 1];
-
-  const auto& d = id.data;
-  snprintf(buf, sizeof(buf), "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-           d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13],
-           d[14], d[15]);
-  return std::string(buf, sizeof(buf) - 1);
-}
-
-// static
-fpromise::result<audio_stream_unique_id_t> AudioDevice::UniqueIdFromString(const std::string& id) {
-  if (id.size() != 32) {
-    return fpromise::error();
-  }
-
-  audio_stream_unique_id_t unique_id;
-  auto& d = unique_id.data;
-  const auto captured =
-      sscanf(id.c_str(),
-             "%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
-             &d[0], &d[1], &d[2], &d[3], &d[4], &d[5], &d[6], &d[7], &d[8], &d[9], &d[10], &d[11],
-             &d[12], &d[13], &d[14], &d[15]);
-  if (captured != 16) {
-    return fpromise::error();
-  }
-
-  return fpromise::ok(unique_id);
-}
 
 // Simple accessor here (not in .h) because of forward-declaration issues with AudioDriver
 std::shared_ptr<Clock> AudioDevice::reference_clock() {
@@ -323,12 +292,12 @@ fuchsia::media::AudioDeviceInfo AudioDevice::GetDeviceInfo() const {
 
   if constexpr (kLogAudioDevice) {
     FX_LOGS(INFO) << "AudioDevice::" << __FUNCTION__ << " (" << (is_input() ? "input " : "output ")
-                  << this << "): '" << UniqueIdToString(driver()->persistent_unique_id())
+                  << this << "): '" << DeviceUniqueIdToString(driver()->persistent_unique_id())
                   << "', token " << token();
   }
   return {
       .name = driver()->manufacturer_name() + ' ' + driver()->product_name(),
-      .unique_id = UniqueIdToString(driver()->persistent_unique_id()),
+      .unique_id = DeviceUniqueIdToString(driver()->persistent_unique_id()),
       .token_id = token(),
       .is_input = is_input(),
       .gain_info = device_settings_->GetGainInfo(),

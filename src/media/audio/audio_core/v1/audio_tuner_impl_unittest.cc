@@ -7,6 +7,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/media/audio/audio_core/shared/device_id.h"
 #include "src/media/audio/audio_core/v1/audio_device_manager.h"
 #include "src/media/audio/audio_core/v1/clock.h"
 #include "src/media/audio/audio_core/v1/testing/fake_audio_driver.h"
@@ -20,7 +21,7 @@ namespace media::audio {
 namespace {
 
 const auto kDeviceIdString = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
-const auto kDeviceIdUnique = AudioDevice::UniqueIdFromString(kDeviceIdString).take_value();
+const auto kDeviceIdUnique = DeviceUniqueIdFromString(kDeviceIdString).take_value();
 
 const auto kDefaultVolumeCurve = VolumeCurve::DefaultForMinGain(-160.0f);
 const auto kDefaultProcessConfig =
@@ -116,7 +117,7 @@ class TestDevice : public AudioOutput {
   fuchsia::media::AudioDeviceInfo GetDeviceInfo() const override {
     return {
         .name = driver()->manufacturer_name() + ' ' + driver()->product_name(),
-        .unique_id = UniqueIdToString(driver()->persistent_unique_id()),
+        .unique_id = DeviceUniqueIdToString(driver()->persistent_unique_id()),
         .token_id = token(),
         .is_input = is_input(),
         .gain_info =

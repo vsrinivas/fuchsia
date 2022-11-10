@@ -10,25 +10,18 @@
 
 #include <unordered_set>
 
+#include "src/media/audio/audio_core/shared/device_lister.h"
 #include "src/media/audio/audio_core/shared/loudness_transform.h"
 #include "src/media/audio/audio_core/shared/process_config.h"
 #include "src/media/audio/audio_core/shared/stream_volume_manager.h"
-#include "src/media/audio/audio_core/v1/audio_device_manager.h"
-#include "src/media/audio/audio_core/v1/context.h"
 
 namespace media::audio {
 
 class UsageGainReporterImpl : public fuchsia::media::UsageGainReporter {
  public:
-  explicit UsageGainReporterImpl(Context* context)
-      : UsageGainReporterImpl(context->device_manager(), context->volume_manager(),
-                              context->process_config()) {
-    FX_DCHECK(context);
-  }
-
-  UsageGainReporterImpl(DeviceRegistry& device_registry, StreamVolumeManager& stream_volume_manager,
+  UsageGainReporterImpl(DeviceLister& device_lister, StreamVolumeManager& stream_volume_manager,
                         const ProcessConfig& process_config)
-      : device_registry_(device_registry),
+      : device_lister_(device_lister),
         stream_volume_manager_(stream_volume_manager),
         process_config_(process_config) {}
 
@@ -66,7 +59,7 @@ class UsageGainReporterImpl : public fuchsia::media::UsageGainReporter {
 
   // TODO(fxbug.dev/50596): Disconnect listeners upon device removal
 
-  DeviceRegistry& device_registry_;
+  DeviceLister& device_lister_;
   StreamVolumeManager& stream_volume_manager_;
   const ProcessConfig& process_config_;
   std::unordered_map<Listener*, std::unique_ptr<Listener>> listeners_;

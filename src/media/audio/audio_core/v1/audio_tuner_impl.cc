@@ -6,8 +6,8 @@
 
 #include <filesystem>
 
+#include "src/media/audio/audio_core/shared/device_id.h"
 #include "src/media/audio/audio_core/shared/stream_usage.h"
-#include "src/media/audio/audio_core/v1/audio_device.h"
 #include "src/media/audio/audio_core/v1/audio_device_manager.h"
 #include "src/media/audio/lib/effects_loader/effects_loader_v1.h"
 
@@ -135,7 +135,7 @@ void AudioTunerImpl::SetAudioEffectConfig(std::string device_id,
 
 AudioTunerImpl::OutputDeviceSpecification AudioTunerImpl::GetDefaultDeviceSpecification(
     const std::string& device_id) {
-  auto unique_id_result = AudioDevice::UniqueIdFromString(device_id);
+  auto unique_id_result = DeviceUniqueIdFromString(device_id);
   if (!unique_id_result.is_ok()) {
     FX_LOGS(WARNING) << "GetDefaultDeviceSpecification: Default device id (" << device_id
                      << ") not recognized; returning system default.";

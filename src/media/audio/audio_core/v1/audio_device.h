@@ -36,10 +36,6 @@ class WritableRingBuffer;
 
 class AudioDevice : public AudioObject, public std::enable_shared_from_this<AudioDevice> {
  public:
-  static std::string UniqueIdToString(const audio_stream_unique_id_t& id);
-  static fpromise::result<audio_stream_unique_id_t> UniqueIdFromString(
-      const std::string& unique_id);
-
   ~AudioDevice() override = default;
 
   const std::string& name() const { return name_; }

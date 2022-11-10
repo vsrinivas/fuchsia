@@ -9,8 +9,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/audio_core/v1/testing/threading_model_fixture.h"
-
 namespace media::audio {
 namespace {
 
@@ -50,18 +48,13 @@ class FakeGainListener : public fuchsia::media::UsageGainListener {
   size_t call_count_ = 0;
 };
 
-class TestDeviceRegistry : public DeviceRegistry {
+class TestDeviceListener : public DeviceListener {
  public:
   void AddDeviceInfo(fuchsia::media::AudioDeviceInfo device_info) {
     device_info_.push_back(device_info);
   }
 
-  // |DeviceRegistry|
-  void AddDevice(const std::shared_ptr<AudioDevice>& device) final {}
-  void ActivateDevice(const std::shared_ptr<AudioDevice>& device) final {}
-  void RemoveDevice(const std::shared_ptr<AudioDevice>& device) final {}
-  void OnPlugStateChanged(const std::shared_ptr<AudioDevice>& device, bool plugged,
-                          zx::time plug_time) final {}
+  // |DeviceListener|
   std::vector<fuchsia::media::AudioDeviceInfo> GetDeviceInfos() final { return device_info_; }
 
  private:
@@ -90,12 +83,12 @@ class UsageGainReporterTest : public gtest::TestLoopFixture {
         usage_(fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)) {}
 
   std::unique_ptr<FakeGainListener> Listen(std::string device_id) {
-    auto device_registry = std::make_unique<TestDeviceRegistry>();
-    device_registry->AddDeviceInfo({.unique_id = device_id});
+    auto device_lister = std::make_unique<TestDeviceListener>();
+    device_lister->AddDeviceInfo({.unique_id = device_id});
 
     stream_volume_manager_ = std::make_unique<StreamVolumeManager>(dispatcher());
     under_test_ = std::make_unique<UsageGainReporterImpl>(
-        *device_registry.get(), *stream_volume_manager_.get(), process_config_);
+        *device_lister.get(), *stream_volume_manager_.get(), process_config_);
 
     auto fake_gain_listener = std::make_unique<FakeGainListener>();
     under_test_->RegisterListener(device_id, fidl::Clone(usage_), fake_gain_listener->NewBinding());

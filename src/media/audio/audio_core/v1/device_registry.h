@@ -11,12 +11,13 @@
 #include <memory>
 
 #include "src/media/audio/audio_core/shared/audio_policy.h"
+#include "src/media/audio/audio_core/shared/device_lister.h"
 
 namespace media::audio {
 
 class AudioDevice;
 
-class DeviceRegistry {
+class DeviceRegistry : public DeviceLister {
  public:
   virtual ~DeviceRegistry() = default;
 
@@ -34,15 +35,14 @@ class DeviceRegistry {
   // Handles a plugged/unplugged state change for the supplied audio device.
   virtual void OnPlugStateChanged(const std::shared_ptr<AudioDevice>& device, bool plugged,
                                   zx::time plug_time) = 0;
-
-  // Provides the set of devices in the registry.
-  virtual std::vector<fuchsia::media::AudioDeviceInfo> GetDeviceInfos() = 0;
 };
 
 // An interface by which |DeviceRegistry| reports immediately before, and immediately after, the
 // RouteGraph has added/removed a target device.
 class DeviceRouter {
  public:
+  virtual ~DeviceRouter() = default;
+
   // To be overridden by child implementations
   virtual void SetIdlePowerOptionsFromPolicy(AudioPolicy::IdlePowerOptions) = 0;
 

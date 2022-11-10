@@ -12,8 +12,8 @@
 #include <set>
 #include <vector>
 
+#include "src/media/audio/audio_core/shared/device_id.h"
 #include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
-#include "src/media/audio/audio_core/v1/audio_device.h"
 #include "src/media/audio/audio_core/v1/audio_tuner_impl.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
@@ -1364,7 +1364,7 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
   renderer->ClearPayload();
 
   // Setup new output pipeline details.
-  auto device_id = AudioDevice::UniqueIdToString({{0xff, 0x00}});
+  auto device_id = DeviceUniqueIdToString({{0xff, 0x00}});
   PipelineConfig::MixGroup root{.name = "linearize",
                                 .input_streams =
                                     {
@@ -1431,7 +1431,7 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
 // output is verified as having the inversion_filter effect disabled (no effects applied).
 TEST_F(AudioRendererPipelineTuningTest, AudioTunerUpdateEffect) {
   // Disable the inverter; frames should be unmodified.
-  auto device_id = AudioDevice::UniqueIdToString({{0xff, 0x00}});
+  auto device_id = DeviceUniqueIdToString({{0xff, 0x00}});
   fuchsia::media::tuning::AudioEffectConfig updated_effect;
   updated_effect.set_instance_name(kInverterEffectName);
   updated_effect.set_configuration("{\"enabled\": false}");
