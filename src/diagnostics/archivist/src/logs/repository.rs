@@ -58,44 +58,36 @@ impl LogsRepository {
 
     /// Drain the kernel's debug log. The returned future completes once
     /// existing messages have been ingested.
-    pub async fn drain_debuglog<K>(&self, klog_reader: K)
+    pub async fn drain_debuglog<K>(self: Arc<Self>, klog_reader: K)
     where
         K: DebugLog + Send + Sync + 'static,
     {
-        let mut mutable_state = self.mutable_state.write().await;
-        // We can only have one klog reader, if this is already set, it means we are already
-        // draining klog.
-        if mutable_state.drain_klog_task.is_some() {
-            return;
+        debug!("Draining debuglog.");
+        let container =
+            self.mutable_state.write().await.get_log_container(KERNEL_IDENTITY.clone()).await;
+        let mut kernel_logger = DebugLogBridge::create(klog_reader);
+        let mut messages = match kernel_logger.existing_logs().await {
+            Ok(messages) => messages,
+            Err(e) => {
+                error!(%e, "failed to read from kernel log, important logs may be missing");
+                return;
+            }
+        };
+        messages.sort_by_key(|m| m.timestamp());
+        for message in messages {
+            container.ingest_message(message).await;
         }
 
-        let container = mutable_state.get_log_container(KERNEL_IDENTITY.clone()).await;
-        mutable_state.drain_klog_task = Some(fasync::Task::spawn(async move {
-            debug!("Draining debuglog.");
-            let mut kernel_logger = DebugLogBridge::create(klog_reader);
-            let mut messages = match kernel_logger.existing_logs().await {
-                Ok(messages) => messages,
-                Err(e) => {
-                    error!(%e, "failed to read from kernel log, important logs may be missing");
-                    return;
-                }
-            };
-            messages.sort_by_key(|m| m.timestamp());
-            for message in messages {
+        let res = kernel_logger
+            .listen()
+            .try_for_each(|message| async {
                 container.ingest_message(message).await;
-            }
-
-            let res = kernel_logger
-                .listen()
-                .try_for_each(|message| async {
-                    container.ingest_message(message).await;
-                    Ok(())
-                })
-                .await;
-            if let Err(e) = res {
-                error!(%e, "failed to drain kernel log, important logs may be missing");
-            }
-        }));
+                Ok(())
+            })
+            .await;
+        if let Err(e) = res {
+            error!(%e, "failed to drain kernel log, important logs may be missing");
+        }
     }
 
     pub async fn logs_cursor(
@@ -231,9 +223,6 @@ pub struct LogsRepositoryState {
     /// Interest registrations that we have received through fuchsia.logger.Log/ListWithSelectors
     /// or through fuchsia.logger.LogSettings/RegisterInterest.
     interest_registrations: BTreeMap<usize, Vec<LogInterestSelector>>,
-
-    /// The task draining klog and routing to syslog.
-    drain_klog_task: Option<fasync::Task<()>>,
 }
 
 impl LogsRepositoryState {
@@ -250,7 +239,6 @@ impl LogsRepositoryState {
             logs_interest: vec![],
             logs_multiplexers: MultiplexerBroker::new(),
             interest_registrations: BTreeMap::new(),
-            drain_klog_task: None,
         })
     }
 

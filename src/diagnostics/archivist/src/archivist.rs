@@ -5,6 +5,7 @@
 use crate::{
     accessor::ArchiveAccessorServer,
     component_lifecycle::{self, TestControllerServer},
+    diagnostics,
     error::Error,
     events::{
         router::{ConsumerConfig, EventRouter, ProducerConfig, RouterOptions},
@@ -26,7 +27,6 @@ use fuchsia_component::{
     server::{ServiceFs, ServiceObj},
 };
 use fuchsia_inspect::{component, health::Reporter};
-use fuchsia_zircon as zx;
 use futures::{
     channel::{mpsc, oneshot},
     future::{self, abortable},
@@ -57,7 +57,7 @@ pub struct Archivist {
     pipelines: Vec<Arc<Pipeline>>,
 
     /// The repository holding Inspect data.
-    _inspect_repository: Arc<InspectRepository>,
+    inspect_repository: Arc<InspectRepository>,
 
     /// The repository holding active log connections.
     logs_repository: Arc<LogsRepository>,
@@ -85,57 +85,35 @@ impl Archivist {
     /// Creates new instance, sets up inspect and adds 'archive' directory to output folder.
     /// Also installs `fuchsia.diagnostics.Archive` service.
     /// Call `install_log_services`
-    pub async fn new(config: &Config) -> Self {
-        // Initialize the pipelines that the archivist will expose.
-        let pipelines = Self::init_pipelines(config);
+    pub fn new(archivist_configuration: &Config) -> Self {
+        let pipelines = Self::init_pipelines(archivist_configuration);
 
-        // Initialize our data repositories.
-        let logs_budget = BudgetManager::new(config.logs_max_cached_original_bytes as usize);
+        let logs_budget =
+            BudgetManager::new(archivist_configuration.logs_max_cached_original_bytes as usize);
         let logs_repo = Arc::new(LogsRepository::new(&logs_budget, component::inspector().root()));
         let inspect_repo =
             Arc::new(InspectRepository::new(pipelines.iter().map(Arc::downgrade).collect()));
 
-        // Initialize our FIDL servers. This doesn't start serving yet.
         let accessor_server =
             Arc::new(ArchiveAccessorServer::new(inspect_repo.clone(), logs_repo.clone()));
         let log_server = Arc::new(LogServer::new(logs_repo.clone()));
         let log_settings_server = Arc::new(LogSettingsServer::new(logs_repo.clone()));
 
-        // Initialize the respective v1 and v2 protocols in charge of telling the archivist to
-        // shutdown gracefully while draining existing log sinks and ensuring existing readers get
-        // all the logs.
-        assert!(
-            !(config.install_controller && config.listen_to_lifecycle),
-            "only one shutdown mechanism can be specified."
-        );
-        let (test_controller_server, _lifecycle_task, stop_recv) = if config.install_controller {
-            let (s, r) = TestControllerServer::new();
-            (Some(s), None, Some(r))
-        } else if config.listen_to_lifecycle {
-            debug!("Lifecycle listener initialized.");
-            let (t, r) = component_lifecycle::serve_v2();
-            (None, Some(t), Some(r))
-        } else {
-            (None, None, None)
-        };
+        let (test_controller_server, _lifecycle_task, stop_recv) =
+            if archivist_configuration.install_controller {
+                let (s, r) = TestControllerServer::new();
+                (Some(s), None, Some(r))
+            } else if archivist_configuration.listen_to_lifecycle {
+                debug!("Lifecycle listener initialized.");
+                let (t, r) = component_lifecycle::serve_v2();
+                (None, Some(t), Some(r))
+            } else {
+                (None, None, None)
+            };
 
-        // Initialize the core event router and the external event providers containing incoming
-        // diagnostics directories and log sink connections.
         let mut event_router =
             EventRouter::new(component::inspector().root().create_child("events"));
-        let incoming_external_event_producers =
-            Self::initialize_external_event_sources(&mut event_router, config).await;
-        event_router.add_consumer(ConsumerConfig {
-            consumer: &logs_repo,
-            events: vec![EventType::LogSinkRequested],
-        });
-        event_router.add_consumer(ConsumerConfig {
-            consumer: &inspect_repo,
-            events: vec![EventType::DiagnosticsReady],
-        });
-
-        // Initialize the unattributed log sink provider.
-        let unattributed_log_sink_source = if config.serve_unattributed_logs {
+        let unattributed_log_sink_source = if archivist_configuration.serve_unattributed_logs {
             let mut source = UnattributedLogSinkSource::default();
             event_router.add_producer(ProducerConfig {
                 producer: &mut source,
@@ -146,26 +124,6 @@ impl Archivist {
             None
         };
 
-        // Drain klog and publish it to syslog.
-        if config.enable_klog {
-            match KernelDebugLog::new().await {
-                Ok(klog) => logs_repo.drain_debuglog(klog).await,
-                Err(err) => warn!(
-                    ?err,
-                    "Failed to start the kernel debug log reader. Klog won't be in syslog"
-                ),
-            };
-        }
-
-        // Start related services that should start once the Archivist has started.
-        for name in &config.bind_services {
-            info!("Connecting to service {}", name);
-            let (_local, remote) = zx::Channel::create().expect("cannot create channels");
-            if let Err(e) = fdio::service_connect(&format!("/svc/{}", name), remote) {
-                error!("Couldn't connect to service {}: {:?}", name, e);
-            }
-        }
-
         Self {
             test_controller_server,
             accessor_server,
@@ -175,9 +133,9 @@ impl Archivist {
             stop_recv,
             _lifecycle_task,
             _drain_klog_task: None,
-            incoming_external_event_producers,
+            incoming_external_event_producers: vec![],
             pipelines,
-            _inspect_repository: inspect_repo,
+            inspect_repository: inspect_repo,
             logs_repository: logs_repo,
             logs_budget,
             unattributed_log_sink_source,
@@ -209,68 +167,70 @@ impl Archivist {
         pipelines
     }
 
-    pub async fn initialize_external_event_sources(
-        event_router: &mut EventRouter,
-        config: &Config,
-    ) -> Vec<fasync::Task<()>> {
-        let mut incoming_external_event_producers = vec![];
-        if config.enable_component_event_provider {
-            match connect_to_protocol::<fsys_internal::ComponentEventProviderMarker>() {
-                Err(err) => {
-                    warn!(?err, "Failed to connect to fuchsia.sys.internal.ComponentEventProvider");
-                }
-                Ok(proxy) => {
-                    let mut component_event_provider = ComponentEventProvider::new(proxy);
-                    event_router.add_producer(ProducerConfig {
-                        producer: &mut component_event_provider,
-                        events: vec![EventType::DiagnosticsReady],
-                    });
-                    incoming_external_event_producers.push(fasync::Task::spawn(async move {
-                        component_event_provider.spawn().await.unwrap_or_else(|err| {
-                            warn!(?err, "Failed to run component event provider loop");
-                        });
-                    }));
-                }
-            };
-        }
-
-        if config.enable_event_source {
-            match EventSource::new(connect_to_protocol::<EventSourceMarker>().unwrap()).await {
-                Err(err) => warn!(?err, "Failed to create event source"),
-                Ok(mut event_source) => {
-                    event_router.add_producer(ProducerConfig {
-                        producer: &mut event_source,
-                        events: vec![EventType::LogSinkRequested, EventType::DiagnosticsReady],
-                    });
-                    incoming_external_event_producers.push(fasync::Task::spawn(async move {
-                        // This should never exit.
-                        let _ = event_source.spawn().await;
-                    }));
-                }
+    pub async fn install_event_source(&mut self) {
+        debug!("fuchsia.sys.EventStream connection");
+        match EventSource::new(connect_to_protocol::<EventSourceMarker>().unwrap()).await {
+            Err(err) => error!(?err, "Failed to create event source"),
+            Ok(mut event_source) => {
+                self.event_router.add_producer(ProducerConfig {
+                    producer: &mut event_source,
+                    events: vec![EventType::LogSinkRequested, EventType::DiagnosticsReady],
+                });
+                self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
+                    // This should never exit.
+                    // If it does, it will print an error informing users why it did exit.
+                    let _ = event_source.spawn().await;
+                }));
             }
         }
+    }
 
-        if config.enable_log_connector {
-            match connect_to_protocol::<fsys_internal::LogConnectorMarker>() {
-                Err(err) => {
-                    warn!(?err, "Failed to connect to fuchsia.sys.internal.LogConnector");
-                }
-                Ok(proxy) => {
-                    let mut connector = LogConnector::new(proxy);
-                    event_router.add_producer(ProducerConfig {
-                        producer: &mut connector,
-                        events: vec![EventType::LogSinkRequested],
-                    });
-                    incoming_external_event_producers.push(fasync::Task::spawn(async move {
-                        connector.spawn().await.unwrap_or_else(|err| {
-                            warn!(?err, "Failed to run event source producer loop");
-                        });
-                    }));
-                }
+    pub async fn install_component_event_provider(&mut self) {
+        let proxy = match connect_to_protocol::<fsys_internal::ComponentEventProviderMarker>() {
+            Ok(proxy) => proxy,
+            Err(err) => {
+                error!(?err, "Failed to connect to fuchsia.sys.internal.ComponentEventProvider");
+                return;
             }
-        }
+        };
+        let mut component_event_provider = ComponentEventProvider::new(proxy);
+        self.event_router.add_producer(ProducerConfig {
+            producer: &mut component_event_provider,
+            events: vec![EventType::DiagnosticsReady],
+        });
+        self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
+            component_event_provider.spawn().await.unwrap_or_else(|err| {
+                error!(?err, "Failed to run component event provider loop");
+            });
+        }));
+    }
 
-        incoming_external_event_producers
+    pub fn install_log_connector(&mut self) {
+        let proxy = match connect_to_protocol::<fsys_internal::LogConnectorMarker>() {
+            Ok(proxy) => proxy,
+            Err(err) => {
+                error!(?err, "Failed to connect to fuchsia.sys.internal.LogConnector");
+                return;
+            }
+        };
+        let mut connector = LogConnector::new(proxy);
+        self.event_router.add_producer(ProducerConfig {
+            producer: &mut connector,
+            events: vec![EventType::LogSinkRequested],
+        });
+        self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
+            connector.spawn().await.unwrap_or_else(|err| {
+                warn!(?err, "Failed to run event source producer loop");
+            });
+        }));
+    }
+
+    /// Spawns a task that will drain klog as another log source.
+    pub async fn start_draining_klog(&mut self) -> Result<(), Error> {
+        let debuglog = KernelDebugLog::new().await?;
+        self._drain_klog_task =
+            Some(fasync::Task::spawn(self.logs_repository.clone().drain_debuglog(debuglog)));
+        Ok(())
     }
 
     /// Run archivist to completion.
@@ -283,26 +243,33 @@ impl Archivist {
     ) -> Result<(), Error> {
         debug!("Running Archivist.");
 
-        // Start servicing all outgoing services.
         let mut fs = ServiceFs::new();
         self.serve_protocols(&mut fs).await;
+
+        let logs_repository = self.logs_repository.clone();
+        let inspect_repository = self.inspect_repository.clone();
         fs.serve_connection(outgoing_channel).map_err(Error::ServeOutgoing)?;
+        // Start servicing all outgoing services.
         let run_outgoing = fs.collect::<()>();
 
-        // Start the log budget component removal task.
-        // TODO(fxbug.dev/92015): move this logic and the logs budget to the logs repository.
-        let logs_repository = self.logs_repository.clone();
         let (snd, rcv) = mpsc::unbounded::<Arc<ComponentIdentity>>();
         self.logs_budget.set_remover(snd).await;
         let component_removal_task =
             fasync::Task::spawn(Self::process_removal_of_components(rcv, logs_repository.clone()));
 
-        // Start ingesting events.
-        let (terminate_handle, drain_events_fut) = self
-            .event_router
-            .start(router_opts)
-            // panic: can only panic if we didn't register event producers and consumers correctly.
-            .expect("Failed to start event router");
+        let logs_budget = self.logs_budget.handle();
+        let mut event_router = self.event_router;
+        event_router.add_consumer(ConsumerConfig {
+            consumer: &logs_repository,
+            events: vec![EventType::LogSinkRequested],
+        });
+        event_router.add_consumer(ConsumerConfig {
+            consumer: &inspect_repository,
+            events: vec![EventType::DiagnosticsReady],
+        });
+        // panic: can only panic if we didn't register event producers and consumers correctly.
+        let (terminate_handle, drain_events_fut) =
+            event_router.start(router_opts).expect("Failed to start event router");
         let _event_routing_task = fasync::Task::spawn(async move {
             drain_events_fut.await;
         });
@@ -310,7 +277,6 @@ impl Archivist {
         let accessor_server = self.accessor_server.clone();
         let log_server = self.log_server.clone();
         let logs_repo = logs_repository.clone();
-        let logs_budget = self.logs_budget.handle();
         let all_msg = async {
             logs_repo.wait_for_termination().await;
             debug!("Terminated logs");
@@ -350,9 +316,7 @@ impl Archivist {
     }
 
     async fn serve_protocols(&mut self, fs: &mut ServiceFs<ServiceObj<'static, ()>>) {
-        component::serve_inspect_stats();
-        inspect_runtime::serve(component::inspector(), fs)
-            .unwrap_or_else(|err| warn!(?err, "failed to serve diagnostics"));
+        diagnostics::serve(fs).unwrap_or_else(|err| warn!(?err, "failed to serve diagnostics"));
 
         let mut svc_dir = fs.dir("svc");
 
@@ -423,7 +387,7 @@ mod tests {
     use fuchsia_component::client::connect_to_protocol_at_dir_svc;
     use futures::channel::oneshot;
 
-    async fn init_archivist() -> Archivist {
+    fn init_archivist() -> Archivist {
         let config = Config {
             enable_component_event_provider: false,
             enable_klog: false,
@@ -439,7 +403,7 @@ mod tests {
             bind_services: vec![],
         };
 
-        let mut archivist = Archivist::new(&config).await;
+        let mut archivist = Archivist::new(&config);
         // Install a fake producer that allows all incoming events. This allows skipping
         // validation for the purposes of the tests here.
         let mut fake_producer = FakeProducer {};
@@ -460,7 +424,7 @@ mod tests {
     // run archivist and send signal when it dies.
     async fn run_archivist_and_signal_on_exit() -> (fio::DirectoryProxy, oneshot::Receiver<()>) {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-        let archivist = init_archivist().await;
+        let archivist = init_archivist();
         let (signal_send, signal_recv) = oneshot::channel();
         fasync::Task::spawn(async move {
             archivist
@@ -476,7 +440,7 @@ mod tests {
     // runs archivist and returns its directory.
     async fn run_archivist() -> fio::DirectoryProxy {
         let (directory, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-        let archivist = init_archivist().await;
+        let archivist = init_archivist();
         fasync::Task::spawn(async move {
             archivist
                 .run(server_end, RouterOptions::default())

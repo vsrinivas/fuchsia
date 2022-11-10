@@ -48,8 +48,7 @@ impl EventSource {
         })
     }
 
-    #[cfg(test)]
-    async fn new_for_test(event_stream: EventStream2Proxy) -> Result<Self, EventError> {
+    pub async fn new_for_test(event_stream: EventStream2Proxy) -> Result<Self, EventError> {
         // Connect to /events/event_stream which contains our newer FIDL protocol
         Ok(Self {
             event_streams: Some(vec![event_stream]),

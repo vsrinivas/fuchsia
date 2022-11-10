@@ -2,18 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async_lock::Mutex;
-use fuchsia_inspect::{
-    ExponentialHistogramParams, HistogramProperty, LinearHistogramParams, Node, NumericProperty,
-    StringReference, UintExponentialHistogramProperty, UintLinearHistogramProperty, UintProperty,
-};
-use fuchsia_zircon::{self as zx, Duration};
-use lazy_static::lazy_static;
-use std::{
-    collections::BTreeMap,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
+use {
+    async_lock::Mutex,
+    fuchsia_component::server::{ServiceFs, ServiceObjTrait},
+    fuchsia_inspect::{
+        component, health::Reporter, ExponentialHistogramParams, HistogramProperty,
+        LinearHistogramParams, Node, NumericProperty, StringReference,
+        UintExponentialHistogramProperty, UintLinearHistogramProperty, UintProperty,
+    },
+    fuchsia_zircon::{self as zx, Duration},
+    lazy_static::lazy_static,
+    std::{
+        collections::BTreeMap,
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
     },
 };
 
@@ -21,6 +25,7 @@ lazy_static! {
     static ref BATCH_ITERATOR : StringReference<'static> = "batch_iterator".into();
     static ref BATCH_ITERATOR_CONNECTIONS : StringReference<'static> = "batch_iterator_connections".into();
     static ref COMPONENT_TIME_USEC : StringReference<'static> = "component_time_usec".into();
+    static ref COMPONENT_TIMEOUTS_COUNT : StringReference<'static> = "component_timeouts_count".into();
     static ref CONNECTIONS_OPENED : StringReference<'static> = "connections_opened".into();
     static ref CONNECTIONS_CLOSED : StringReference<'static> = "connections_closed".into();
     static ref DURATION_SECONDS : StringReference<'static> = "duration_seconds".into();
@@ -64,6 +69,21 @@ lazy_static! {
         step_size: 5,
         buckets: 20,
     };
+}
+
+const INSPECTOR_SIZE: usize = 2 * 1024 * 1024 /* 2MB */;
+
+pub fn init() {
+    component::init_inspector_with_size(INSPECTOR_SIZE);
+    component::health().set_starting_up();
+}
+
+pub fn serve(
+    service_fs: &mut ServiceFs<impl ServiceObjTrait>,
+) -> Result<(), fuchsia_inspect::Error> {
+    component::serve_inspect_stats();
+    inspect_runtime::serve(component::inspector(), service_fs)?;
+    Ok(())
 }
 
 pub struct AccessorStats {
@@ -133,6 +153,9 @@ pub struct GlobalConnectionStats {
     reader_servers_destroyed: UintProperty,
     /// Stats about BatchIterator connections.
     batch_iterator: GlobalBatchIteratorStats,
+    /// Property tracking number of times a future to retrieve diagnostics data for a component
+    /// timed out.
+    component_timeouts_count: UintProperty,
     /// Number of times a diagnostics schema had to be truncated because it would otherwise
     /// cause a component to exceed its configured size budget.
     schema_truncation_count: UintProperty,
@@ -156,6 +179,7 @@ impl GlobalConnectionStats {
         let reader_servers_destroyed = node.create_uint(&*READER_SERVERS_DESTROYED, 0);
 
         let batch_iterator = GlobalBatchIteratorStats::new(&node);
+        let component_timeouts_count = node.create_uint(&*COMPONENT_TIMEOUTS_COUNT, 0);
 
         let max_snapshot_sizes_bytes = node.create_uint_linear_histogram(
             &*MAX_SNAPSHOT_SIZE_BYTES,
@@ -176,6 +200,7 @@ impl GlobalConnectionStats {
             reader_servers_destroyed,
             batch_iterator,
             batch_iterator_connections,
+            component_timeouts_count,
             max_snapshot_sizes_bytes,
             snapshot_schema_truncation_percentage,
             schema_truncation_count,
@@ -190,6 +215,10 @@ impl GlobalConnectionStats {
             .batch_iterator_connections
             .create_child(self.next_connection_id.fetch_add(1, Ordering::Relaxed).to_string());
         BatchIteratorConnectionStats::new(node, self.clone())
+    }
+
+    pub fn add_timeout(&self) {
+        self.component_timeouts_count.add(1);
     }
 
     pub fn record_percent_truncated_schemas(&self, percent_truncated_schemas: u64) {
@@ -260,6 +289,8 @@ struct GlobalBatchIteratorGetNextStats {
     requests: UintProperty,
     /// Number of times a "GetNext" response was sent
     responses: UintProperty,
+    /// Number of times "GetNext" resulted in an error
+    errors: UintProperty,
     /// Number of items returned in batches from "GetNext"
     result_count: UintProperty,
     /// Number of items returned in batches from "GetNext" that contained errors
@@ -273,11 +304,12 @@ impl GlobalBatchIteratorGetNextStats {
         let node = parent.create_child(&*GET_NEXT);
         let requests = node.create_uint(&*REQUESTS, 0);
         let responses = node.create_uint(&*RESPONSES, 0);
+        let errors = node.create_uint(&*ERRORS, 0);
         let result_count = node.create_uint(&*RESULT_COUNT, 0);
         let result_errors = node.create_uint(&*RESULT_ERRORS, 0);
         let time_usec =
             node.create_uint_exponential_histogram(&*TIME_USEC, TIME_USEC_PARAMS.clone());
-        Self { _node: node, requests, responses, result_count, result_errors, time_usec }
+        Self { _node: node, requests, responses, errors, result_count, result_errors, time_usec }
     }
 }
 
@@ -414,6 +446,10 @@ impl BatchIteratorConnectionStats {
         self.global_stats.batch_iterator.get_next.result_count.add(1);
     }
 
+    pub fn add_error(&self) {
+        self.global_stats.batch_iterator.get_next.errors.add(1);
+    }
+
     pub fn add_result_error(&self) {
         self.global_stats.batch_iterator.get_next.result_errors.add(1);
     }
@@ -431,9 +467,9 @@ impl Drop for BatchIteratorConnectionStats {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use fuchsia_inspect::{
-        assert_data_tree, component, health::Reporter, testing::AnyProperty, Inspector,
+    use {
+        super::*,
+        fuchsia_inspect::{assert_data_tree, health::Reporter, testing::AnyProperty, Inspector},
     };
 
     #[fuchsia::test]

@@ -397,7 +397,8 @@ pub async fn debuglog_test(
     let log_server = LogServer::new(lm.clone());
     let (log_proxy, log_stream) = fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
     log_server.spawn(log_stream);
-    lm.drain_debuglog(debug_log).await;
+
+    fasync::Task::spawn(lm.drain_debuglog(debug_log)).detach();
 
     validate_log_stream(expected, log_proxy, None).await;
     inspector

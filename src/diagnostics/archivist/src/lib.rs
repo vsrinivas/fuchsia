@@ -4,23 +4,23 @@
 
 #![warn(clippy::all)]
 
-mod accessor;
+pub mod accessor;
 pub mod archivist;
 mod component_lifecycle;
 mod configs;
 pub mod constants;
-mod container;
-mod diagnostics;
-mod error;
+pub mod container;
+pub mod diagnostics;
+pub mod error;
 pub mod events;
 pub mod formatter;
-mod identity;
-mod inspect;
+pub mod identity;
+pub mod inspect;
 pub mod logs;
-mod moniker_rewriter;
-mod pipeline;
+pub(crate) mod moniker_rewriter;
+pub mod pipeline;
 mod trie;
-mod utils;
+pub mod utils;
 
 #[cfg(test)]
 mod testing;

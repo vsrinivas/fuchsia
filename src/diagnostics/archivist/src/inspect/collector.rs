@@ -22,6 +22,8 @@ use futures::FutureExt;
 /// diagnostics data.
 pub type DataMap = HashMap<ImmutableString, InspectData>;
 
+pub type Moniker = String;
+
 /// Data associated with a component.
 /// This data is stored by data collectors and passed by the collectors to processors.
 #[derive(Debug)]

@@ -17,6 +17,7 @@ use {
     fuchsia_inspect::reader::PartialNodeHierarchy,
     fuchsia_trace as ftrace, fuchsia_zircon as zx,
     futures::prelude::*,
+    selectors,
     std::{
         convert::{TryFrom, TryInto},
         sync::Arc,
@@ -387,6 +388,7 @@ mod tests {
             inspect::repository::InspectRepository,
             pipeline::Pipeline,
         },
+        fdio,
         fidl::endpoints::{create_proxy_and_stream, DiscoverableProtocolMarker},
         fidl_fuchsia_diagnostics::{BatchIteratorMarker, BatchIteratorProxy, StreamMode},
         fidl_fuchsia_inspect::TreeMarker,
@@ -867,12 +869,14 @@ mod tests {
                         connections_opened: 0u64,
                         get_next: {
                             time_usec: AnyProperty,
+                            errors: 0u64,
                             requests: 0u64,
                             responses: 0u64,
                             result_count: 0u64,
                             result_errors: 0u64,
                         }
                     },
+                    component_timeouts_count: 0u64,
                     reader_servers_constructed: 1u64,
                     reader_servers_destroyed: 0u64,
                     schema_truncation_count: 0u64,
@@ -885,6 +889,7 @@ mod tests {
                         connections_closed: 0u64,
                         connections_opened: 0u64,
                         get_next: {
+                            errors: 0u64,
                             requests: 0u64,
                             responses: 0u64,
                             result_count: 0u64,
@@ -892,6 +897,7 @@ mod tests {
                             time_usec: AnyProperty,
                         }
                     },
+                    component_timeouts_count: 0u64,
                     reader_servers_constructed: 0u64,
                     reader_servers_destroyed: 0u64,
                     max_snapshot_sizes_bytes: AnyProperty,
@@ -969,12 +975,14 @@ mod tests {
                             connections_opened: 1u64,
                             get_next: {
                                 time_usec: AnyProperty,
+                                errors: 0u64,
                                 requests: 2u64,
                                 responses: 2u64,
                                 result_count: 1u64,
                                 result_errors: expected_get_next_result_errors,
                             }
                         },
+                        component_timeouts_count: 0u64,
                         component_time_usec: AnyProperty,
                         reader_servers_constructed: 1u64,
                         reader_servers_destroyed: 1u64,
@@ -994,6 +1002,7 @@ mod tests {
                             connections_closed: 0u64,
                             connections_opened: 0u64,
                             get_next: {
+                                errors: 0u64,
                                 requests: 0u64,
                                 responses: 0u64,
                                 result_count: 0u64,
@@ -1001,6 +1010,7 @@ mod tests {
                                 time_usec: AnyProperty,
                             }
                         },
+                        component_timeouts_count: 0u64,
                         reader_servers_constructed: 0u64,
                         reader_servers_destroyed: 0u64,
                         max_snapshot_sizes_bytes: AnyProperty,
@@ -1038,12 +1048,14 @@ mod tests {
                             connections_opened: 2u64,
                             get_next: {
                                 time_usec: AnyProperty,
+                                errors: 0u64,
                                 requests: 3u64,
                                 responses: 3u64,
                                 result_count: 1u64,
                                 result_errors: expected_get_next_result_errors,
                             }
                         },
+                        component_timeouts_count: 0u64,
                         component_time_usec: AnyProperty,
                         reader_servers_constructed: 2u64,
                         reader_servers_destroyed: 2u64,
@@ -1063,6 +1075,7 @@ mod tests {
                             connections_closed: 0u64,
                             connections_opened: 0u64,
                             get_next: {
+                                errors: 0u64,
                                 requests: 0u64,
                                 responses: 0u64,
                                 result_count: 0u64,
@@ -1070,6 +1083,7 @@ mod tests {
                                 time_usec: AnyProperty,
                             }
                         },
+                        component_timeouts_count: 0u64,
                         reader_servers_constructed: 0u64,
                         reader_servers_destroyed: 0u64,
                         max_snapshot_sizes_bytes: AnyProperty,

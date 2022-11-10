@@ -7,29 +7,29 @@
 #![warn(clippy::all)]
 #![warn(missing_docs)]
 
-use anyhow::{format_err, Context, Error};
-use archivist_config::Config;
-use archivist_lib::{archivist::Archivist, constants, events::router::RouterOptions};
-use argh::FromArgs;
-use fuchsia_async::SendExecutor;
-use fuchsia_component::server::MissingStartupHandle;
-use fuchsia_inspect::{component, health::Reporter};
-use fuchsia_zircon as zx;
-use std::str::FromStr;
-use tracing::{debug, info, warn, Level, Subscriber};
-use tracing_subscriber::{
-    fmt::{
-        format::{self, FormatEvent, FormatFields},
-        FmtContext,
+use {
+    anyhow::{format_err, Context, Error},
+    archivist_config::Config,
+    archivist_lib::{archivist::Archivist, constants, diagnostics, events::router::RouterOptions},
+    argh::FromArgs,
+    fuchsia_async::SendExecutor,
+    fuchsia_component::server::MissingStartupHandle,
+    fuchsia_inspect::component,
+    fuchsia_zircon as zx,
+    std::str::FromStr,
+    tracing::{debug, error, info, warn, Level, Subscriber},
+    tracing_subscriber::{
+        fmt::{
+            format::{self, FormatEvent, FormatFields},
+            FmtContext,
+        },
+        registry::LookupSpan,
     },
-    registry::LookupSpan,
 };
-
-const INSPECTOR_SIZE: usize = 2 * 1024 * 1024 /* 2MB */;
 
 /// The archivist.
 #[derive(Debug, Default, FromArgs)]
-struct Args {
+pub struct Args {
     /// must be passed when running the archivist in CFv1.
     #[argh(option)]
     v1: Vec<ArchivistOptionV1>,
@@ -37,7 +37,7 @@ struct Args {
 
 /// Available options for the V1 archivist.
 #[derive(Debug)]
-enum ArchivistOptionV1 {
+pub enum ArchivistOptionV1 {
     /// Default mode for v1.
     Default,
     /// Don't connect to the LogConnector.
@@ -100,31 +100,6 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-async fn async_main(config: Config) -> Result<(), Error> {
-    init_diagnostics(&config).await.context("initializing diagnostics")?;
-    component::inspector()
-        .root()
-        .record_child("config", |config_node| config.record_inspect(config_node));
-
-    let archivist = Archivist::new(&config).await;
-    debug!("Archivist initialized from configuration.");
-
-    let startup_handle =
-        fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest.into())
-            .ok_or(MissingStartupHandle)?;
-
-    archivist
-        .run(
-            fidl::endpoints::ServerEnd::new(zx::Channel::from(startup_handle)),
-            RouterOptions {
-                validate: config.enable_event_source || config.enable_component_event_provider,
-            },
-        )
-        .await?;
-
-    Ok(())
-}
-
 async fn init_diagnostics(config: &Config) -> Result<(), Error> {
     if config.log_to_debuglog {
         stdout_to_debuglog::init().await.unwrap();
@@ -141,10 +116,63 @@ async fn init_diagnostics(config: &Config) -> Result<(), Error> {
         info!("Logging started.");
     }
 
-    component::init_inspector_with_size(INSPECTOR_SIZE);
-    component::health().set_starting_up();
+    diagnostics::init();
 
     fuchsia_trace_provider::trace_provider_create_with_fdio();
+    Ok(())
+}
+
+async fn async_main(config: Config) -> Result<(), Error> {
+    init_diagnostics(&config).await.context("initializing diagnostics")?;
+    component::inspector()
+        .root()
+        .record_child("config", |config_node| config.record_inspect(config_node));
+
+    let mut archivist = Archivist::new(&config);
+    debug!("Archivist initialized from configuration.");
+
+    if config.enable_event_source {
+        archivist.install_event_source().await;
+    }
+
+    if config.enable_component_event_provider {
+        archivist.install_component_event_provider().await;
+    }
+
+    assert!(
+        !(config.install_controller && config.listen_to_lifecycle),
+        "only one shutdown mechanism can be specified."
+    );
+
+    if config.enable_log_connector {
+        archivist.install_log_connector();
+    }
+
+    if config.enable_klog {
+        archivist.start_draining_klog().await?;
+    }
+
+    for name in config.bind_services {
+        info!("Connecting to service {}", name);
+        let (_local, remote) = zx::Channel::create().expect("cannot create channels");
+        if let Err(e) = fdio::service_connect(&format!("/svc/{}", name), remote) {
+            error!("Couldn't connect to service {}: {:?}", name, e);
+        }
+    }
+
+    let startup_handle =
+        fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest.into())
+            .ok_or(MissingStartupHandle)?;
+
+    archivist
+        .run(
+            fidl::endpoints::ServerEnd::new(zx::Channel::from(startup_handle)),
+            RouterOptions {
+                validate: config.enable_event_source || config.enable_component_event_provider,
+            },
+        )
+        .await?;
+
     Ok(())
 }
 

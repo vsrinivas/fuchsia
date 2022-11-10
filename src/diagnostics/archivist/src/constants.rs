@@ -2,6 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// Serve 64 schemas at a time.
+/// We limit to 64 because each schema is sent over a VMO and we can only have
+/// 64 handles sent over a message.
+// TODO(fxbug.dev/4601): Greedily fill the vmos with object delimited json, rather than
+// giving every schema its own vmo.
+pub const IN_MEMORY_SNAPSHOT_LIMIT: usize = 64;
+
 // Number of seconds to wait for a single component to have its diagnostics data "pumped".
 // This involves diagnostics directory traversal, contents extraction, and snapshotting.
 pub const PER_COMPONENT_ASYNC_TIMEOUT_SECONDS: i64 = 10;

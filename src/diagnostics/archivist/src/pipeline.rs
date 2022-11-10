@@ -10,7 +10,7 @@ use {
     diagnostics_hierarchy::InspectHierarchyMatcher,
     fidl::prelude::*,
     fidl_fuchsia_diagnostics::{self, ArchiveAccessorMarker, Selector},
-    fuchsia_inspect as inspect,
+    fuchsia_inspect as inspect, selectors,
     std::{collections::HashMap, convert::TryInto, ops::Deref, path::Path},
 };
 
