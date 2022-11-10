@@ -829,6 +829,15 @@ impl Telemetry {
                         _ => {
                             self.get_iface_stats_fail_count.add(1);
                             *state.num_consecutive_get_counter_stats_failures.get_mut() += 1;
+                            // Safe to unwrap: If we've exceeded 63 bits of consecutive failures,
+                            // we have other things to worry about.
+                            self.stats_logger
+                                .log_consecutive_counter_stats_failures(
+                                    (*state.num_consecutive_get_counter_stats_failures)
+                                        .try_into()
+                                        .unwrap(),
+                                )
+                                .await;
                             let _ = state.prev_counters.take();
                         }
                     }
@@ -2605,6 +2614,16 @@ impl StatsLogger {
             &[]
         )
     }
+
+    async fn log_consecutive_counter_stats_failures(&mut self, count: i64) {
+        log_cobalt_1dot1!(
+            self.cobalt_1dot1_proxy,
+            log_integer,
+            metrics::CONSECUTIVE_COUNTER_STATS_FAILURES_METRIC_ID,
+            count,
+            &[]
+        )
+    }
 }
 
 fn append_device_connected_channel_cobalt_metrics(
@@ -2962,6 +2981,17 @@ mod tests {
                 num_consecutive_get_counter_stats_failures: 20u64,
             }
         });
+
+        // Expect that Cobalt has been notified.
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let logged_metrics =
+            test_helper.get_logged_metrics(metrics::CONSECUTIVE_COUNTER_STATS_FAILURES_METRIC_ID);
+        assert_eq!(logged_metrics.len(), 20);
+
+        assert_eq!(
+            logged_metrics[19].payload,
+            fidl_fuchsia_metrics::MetricEventPayload::IntegerValue(20)
+        );
     }
 
     #[fuchsia::test]
