@@ -33,6 +33,8 @@ action_foreach("json_schema_headers") {
 source_set("shared") {
   sources = [
     "active_stream_count_reporter.h",
+    "activity_dispatcher.cc",
+    "activity_dispatcher.h",
     "audio_admin.cc",
     "audio_admin.h",
     "audio_policy.h",
@@ -131,6 +133,7 @@ executable("unittest_bin") {
   output_name = "audio_core_shared_unittests"
 
   sources = [
+    "activity_dispatcher_unittest.cc",
     "audio_admin_unittest.cc",
     "device_config_unittest.cc",
     "device_id_unittest.cc",

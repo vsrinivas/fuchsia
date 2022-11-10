@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_V1_ACTIVITY_DISPATCHER_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_ACTIVITY_DISPATCHER_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_ACTIVITY_DISPATCHER_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_ACTIVITY_DISPATCHER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -44,4 +44,4 @@ class ActivityDispatcherImpl : public AudioAdmin::ActivityDispatcher {
       bindings_;
 };
 }  // namespace media::audio
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_V1_ACTIVITY_DISPATCHER_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_SHARED_ACTIVITY_DISPATCHER_H_

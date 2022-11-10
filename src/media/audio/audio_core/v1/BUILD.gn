@@ -7,8 +7,6 @@ import("//build/fuzzing/fuzzer.gni")
 
 source_set("audio_core_lib") {
   sources = [
-    "activity_dispatcher.cc",
-    "activity_dispatcher.h",
     "audio_capturer.cc",
     "audio_capturer.h",
     "audio_core_impl.cc",
@@ -175,7 +173,6 @@ executable("unittest_bin") {
   output_name = "audio_core_v1_unittests"
 
   sources = [
-    "activity_dispatcher_unittest.cc",
     "audio_capturer_unittest.cc",
     "audio_device_settings_unittest.cc",
     "audio_device_unittest.cc",

@@ -4,11 +4,11 @@
 
 #include "src/media/audio/audio_core/v1/context.h"
 
+#include "src/media/audio/audio_core/shared/activity_dispatcher.h"
 #include "src/media/audio/audio_core/shared/audio_admin.h"
 #include "src/media/audio/audio_core/shared/stream_volume_manager.h"
 #include "src/media/audio/audio_core/shared/usage_gain_reporter_impl.h"
 #include "src/media/audio/audio_core/shared/usage_reporter_impl.h"
-#include "src/media/audio/audio_core/v1/activity_dispatcher.h"
 #include "src/media/audio/audio_core/v1/audio_device_manager.h"
 #include "src/media/audio/audio_core/v1/audio_impl.h"
 #include "src/media/audio/audio_core/v1/audio_tuner_impl.h"
