@@ -167,17 +167,6 @@ load(
 
 rules_fuchsia_deps()
 
-# buildifier: disable=load-on-top
-load(
-    "@rules_fuchsia_experimental//fuchsia/private:python_runtime_repository.bzl",
-    "python_runtime_repository",
-)
-
-python_runtime_repository(
-    name = "python_runtime",
-    version = "2@3.9.13.chromium.22",
-)
-
 fuchsia_sdk_repository(
     name = "fuchsia_sdk",
     local_path = "../../../../sdk/exported/core",
@@ -210,3 +199,5 @@ generate_prebuilt_toolchain_repository(
 )
 register_toolchains("@prebuilt_clang//:host_clang_{host_os}_x64_cc_toolchain")
 register_toolchains("@prebuilt_clang//:host_clang_{host_os}_arm64_cc_toolchain")
+
+register_toolchains("//build/bazel/toolchains/python:py_toolchain")

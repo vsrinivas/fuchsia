@@ -1,0 +1,36 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""Python toolchain definition for our prebuilt Python3 executable."""
+
+load("//:fuchsia_build_config.bzl", "build_config")
+load("@rules_python//python:defs.bzl", "py_runtime_pair")
+
+package(default_visibility = ["//visibility:public"])
+
+py_runtime(
+    name = "py3_runtime",
+    files = ["//:prebuilt_python_files"],
+    interpreter = "//:prebuilt/third_party/python3/%s/bin/python3" % build_config.host_tag,
+    python_version = "PY3",
+)
+
+py_runtime_pair(
+    name = "runtime_pair",
+    py3_runtime = ":py3_runtime",
+)
+
+toolchain(
+    name = "py_toolchain",
+    exec_compatible_with = [
+        build_config.host_platform_os_constraint,
+        build_config.host_platform_cpu_constraint,
+    ],
+    target_compatible_with = [
+        build_config.host_platform_os_constraint,
+        build_config.host_platform_cpu_constraint,
+    ],
+    toolchain = ":runtime_pair",
+    toolchain_type = "@rules_python//python:toolchain_type",
+)

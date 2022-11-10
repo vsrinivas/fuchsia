@@ -7,7 +7,15 @@ This is the top-level BUILD.bazel for the Fuchsia platform build.
 See //build/bazel/README.md for details about this file.
 """
 
+load("//:fuchsia_build_config.bzl", "build_config")
 load("//:build/bazel/toolchains/linux_sysroot.bzl", "linux_sysroot")
+
+# This exclude is needed as there are files in the folder that have space
+# in the filename. Bazel does not support spaces in filename.
+_python_prebuilt_files = glob(
+    ["prebuilt/third_party/python3/%s/**/*" % build_config.host_tag],
+    exclude = ["**/* *"],
+)
 
 exports_files(
     # Export these files for the benefit of the //build/bazel/toolchains/clang package.
@@ -17,7 +25,10 @@ exports_files(
 
     # Used by code generators in vendor/google:
     glob(["prebuilt/third_party/gn/*/gn"]) +
-    glob(["prebuilt/third_party/buildifier/*/buildifier"]),
+    glob(["prebuilt/third_party/buildifier/*/buildifier"]) +
+
+    # Used by //build/bazel/toolchains/python:
+    _python_prebuilt_files,
 )
 
 linux_sysroot(
@@ -28,4 +39,10 @@ linux_sysroot(
 linux_sysroot(
     name = "linux_sysroot_arm64",
     sysroot_arch = "aarch64",
+)
+
+filegroup(
+    name = "prebuilt_python_files",
+    srcs = _python_prebuilt_files,
+    visibility = ["//build/bazel/toolchains/python:__pkg__"],
 )
