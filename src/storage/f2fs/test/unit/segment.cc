@@ -28,7 +28,7 @@ TEST_F(SegmentManagerTest, BlkChaining) {
       LockedPage read_page;
       fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
       blk_chain.push_back(read_page.GetPage<NodePage>().NextBlkaddrOfNode());
-      read_page->SetDirty();
+      read_page.SetDirty();
     }
     WritebackOperation op = {.bSync = true};
     fs_->GetNodeVnode().Writeback(op);
@@ -63,7 +63,7 @@ TEST_F(SegmentManagerTest, DirtyToFree) {
     {
       LockedPage read_page;
       fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
-      read_page->SetDirty();
+      read_page.SetDirty();
     }
 
     WritebackOperation op = {.bSync = true};
@@ -140,7 +140,7 @@ TEST_F(SegmentManagerTest, GetNewSegmentHeap) {
     {
       LockedPage read_page;
       fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
-      read_page->SetDirty();
+      read_page.SetDirty();
     }
     WritebackOperation op = {.bSync = true};
     fs_->GetNodeVnode().Writeback(op);
@@ -326,7 +326,7 @@ TEST(SegmentManagerOptionTest, Section) {
       ASSERT_NE(root_node_page, nullptr);
 
       // Consume a block in the current section
-      root_node_page->SetDirty();
+      root_node_page.SetDirty();
     }
     WritebackOperation op = {.bSync = true};
     fs->GetNodeVnode().Writeback(op);
@@ -380,7 +380,7 @@ TEST(SegmentManagerOptionTest, GetNewSegmentHeap) {
       LockedPage root_node_page;
       fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
       ASSERT_NE(root_node_page, nullptr);
-      root_node_page->SetDirty();
+      root_node_page.SetDirty();
     }
 
     WritebackOperation op = {.bSync = true};
@@ -432,7 +432,7 @@ TEST(SegmentManagerOptionTest, GetNewSegmentNoHeap) {
       LockedPage root_node_page;
       fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
       ASSERT_NE(root_node_page, nullptr);
-      root_node_page->SetDirty();
+      root_node_page.SetDirty();
     }
     WritebackOperation op = {.bSync = true};
     fs->GetNodeVnode().Writeback(op);
@@ -516,7 +516,7 @@ TEST(SegmentManagerOptionTest, ModeLfs) {
       ASSERT_EQ(ret, ZX_OK);
     }
     WritebackOperation op = {.bSync = true};
-    fs->SyncDirtyDataPages(op);
+    file->Writeback(op);
   }
 
   // Since kMountForceLfs is on, f2fs doesn't allocate segments in ssr manner.

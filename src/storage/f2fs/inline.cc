@@ -108,7 +108,7 @@ zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode) {
   TestAndSetBit(0, InlineDentryBitmap(&(*ipage)));
   TestAndSetBit(1, InlineDentryBitmap(&(*ipage)));
 
-  ipage->SetDirty();
+  ipage.SetDirty();
 
   if (vnode->GetSize() < vnode->MaxInlineData()) {
     vnode->SetSize(vnode->MaxInlineData());
@@ -177,7 +177,7 @@ zx_status_t Dir::ConvertInlineDir() {
       dentry_blk->filename, InlineDentryFilenameArray(ipage, *this),
       safemath::CheckMul(safemath::checked_cast<size_t>(MaxInlineDentry()), kNameLen).ValueOrDie());
 
-  page->SetDirty();
+  page.SetDirty();
   // clear inline dir and flag after data writeback
   ipage->WaitOnWriteback();
   ipage->ZeroUserSegment(InlineDataOffset(), InlineDataOffset() + MaxInlineData());
@@ -192,7 +192,7 @@ zx_status_t Dir::ConvertInlineDir() {
     SetFlag(InodeInfoFlag::kUpdateDir);
   }
 
-  UpdateInode(ipage);
+  UpdateInode(dnode_page);
 #if 0  // porting needed
   // stat_dec_inline_inode(dir);
 #endif
@@ -214,7 +214,7 @@ zx::result<bool> Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode) {
 
       if (zx_status_t err = InitInodeMetadata(vnode); err != ZX_OK) {
         if (ClearFlag(InodeInfoFlag::kUpdateDir)) {
-          UpdateInode(ipage.get());
+          UpdateInode(ipage);
         }
         return zx::error(err);
       }
@@ -235,10 +235,10 @@ zx::result<bool> Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode) {
       }
 #endif  // __Fuchsia__
 
-      ipage->SetDirty();
+      ipage.SetDirty();
       UpdateParentMetadata(vnode, 0);
       vnode->WriteInode();
-      UpdateInode(ipage.get());
+      UpdateInode(ipage);
 
       ClearFlag(InodeInfoFlag::kUpdateDir);
       return zx::ok(false);
@@ -253,19 +253,19 @@ zx::result<bool> Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode) {
 
 void Dir::DeleteInlineEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs *vnode) {
   LockedPage lock_page(page);
-  page->WaitOnWriteback();
+  lock_page->WaitOnWriteback();
 
-  unsigned int bit_pos = static_cast<uint32_t>(dentry - InlineDentryArray(page.get(), *this));
+  unsigned int bit_pos = static_cast<uint32_t>(dentry - InlineDentryArray(lock_page.get(), *this));
   int slots = GetDentrySlots(LeToCpu(dentry->name_len));
   for (int i = 0; i < slots; ++i) {
-    TestAndClearBit(bit_pos + i, InlineDentryBitmap(page.get()));
+    TestAndClearBit(bit_pos + i, InlineDentryBitmap(lock_page.get()));
   }
 
-  page->SetDirty();
+  lock_page.SetDirty();
 
 #ifdef __Fuchsia__
   std::string_view remove_name(
-      reinterpret_cast<char *>(InlineDentryFilenameArray(page.get(), *this)[bit_pos]),
+      reinterpret_cast<char *>(InlineDentryFilenameArray(lock_page.get(), *this)[bit_pos]),
       LeToCpu(dentry->name_len));
 
   fs()->GetDirEntryCache().RemoveDirEntry(Ino(), remove_name);
@@ -296,7 +296,7 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs
       fs()->AddOrphanInode(vnode);
     }
   }
-  UpdateInode(page.get());
+  UpdateInode(lock_page);
 }
 
 bool Dir::IsEmptyInlineDir() {
@@ -436,7 +436,7 @@ zx_status_t File::ConvertInlineData() {
   uint8_t *inline_data = InlineDataPtr(ipage);
   memcpy(page->GetAddress(), inline_data, GetSize());
 
-  page->SetDirty();
+  page.SetDirty();
 
   ipage->WaitOnWriteback();
   ipage->ZeroUserSegment(InlineDataOffset(), InlineDataOffset() + MaxInlineData());
@@ -445,7 +445,7 @@ zx_status_t File::ConvertInlineData() {
   ClearFlag(InodeInfoFlag::kInlineData);
   ClearFlag(InodeInfoFlag::kDataExist);
 
-  UpdateInode(ipage);
+  UpdateInode(dnode_page);
 
   return ZX_OK;
 }
@@ -467,7 +467,7 @@ zx_status_t File::WriteInline(const void *data, size_t len, size_t offset, size_
 
   SetSize(std::max(static_cast<size_t>(GetSize()), offset + len));
   SetFlag(InodeInfoFlag::kDataExist);
-  inline_page->SetDirty();
+  inline_page.SetDirty();
 
   timespec cur_time;
   clock_gettime(CLOCK_REALTIME, &cur_time);
@@ -506,7 +506,7 @@ zx_status_t File::TruncateInline(size_t len, bool is_recover) {
       ClearFlag(InodeInfoFlag::kDataExist);
     }
 
-    inline_page->SetDirty();
+    inline_page.SetDirty();
   }
   timespec cur_time;
   clock_gettime(CLOCK_REALTIME, &cur_time);
@@ -546,7 +546,7 @@ zx_status_t File::RecoverInlineData(NodePage &page) {
     SetFlag(InodeInfoFlag::kInlineData);
     SetFlag(InodeInfoFlag::kDataExist);
 
-    ipage->SetDirty();
+    ipage.SetDirty();
     return ZX_OK;
   }
 

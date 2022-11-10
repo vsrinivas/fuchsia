@@ -66,8 +66,8 @@ uint64_t Dir::DirBlockIndex(uint32_t level, uint8_t dir_level, uint32_t idx) {
     bidx += safemath::checked_cast<uint64_t>(
         safemath::CheckMul(DirBuckets(i, dir_level), BucketBlocks(i)).ValueOrDie());
   }
-  bidx += safemath::checked_cast<uint64_t>(
-      safemath::CheckMul(idx, BucketBlocks(level)).ValueOrDie());
+  bidx +=
+      safemath::checked_cast<uint64_t>(safemath::CheckMul(idx, BucketBlocks(level)).ValueOrDie());
   return bidx;
 }
 
@@ -272,7 +272,7 @@ void Dir::SetLink(DirEntry *de, fbl::RefPtr<Page> &page, VnodeF2fs *vnode) {
     SetDeType(de, vnode);
     // If |de| is an inline dentry, the inode block should be flushed.
     // Otherwise, it writes out the data block.
-    page->SetDirty();
+    page_lock.SetDirty();
 
 #ifdef __Fuchsia__
     fs()->GetDirEntryCache().UpdateDirEntry(Ino(), vnode->GetNameView(), *de, page->GetIndex());
@@ -303,7 +303,10 @@ void Dir::InitDentInode(VnodeF2fs *vnode, NodePage &ipage) {
   auto size = safemath::checked_cast<uint32_t>(name.size());
   rn->i.i_namelen = CpuToLe(size);
   name.copy(reinterpret_cast<char *>(&rn->i.i_name[0]), size);
-  ipage.SetDirty();
+
+  LockedPage lock_page(fbl::RefPtr<Page>(&ipage), false);
+  lock_page.SetDirty();
+  [[maybe_unused]] auto unused = lock_page.release(false);
 }
 
 zx_status_t Dir::InitInodeMetadata(VnodeF2fs *vnode) {
@@ -444,7 +447,7 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
           for (int i = 0; i < slots; ++i) {
             TestAndSetBit(bit_pos + i, dentry_blk->dentry_bitmap);
           }
-          dentry_page->SetDirty();
+          dentry_page.SetDirty();
 #ifdef __Fuchsia__
           fs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, dentry_page->GetIndex());
 #endif  // __Fuchsia__
@@ -487,7 +490,7 @@ void Dir::DeleteEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs *vnod
     for (int i = 0; i < slots; ++i) {
       TestAndClearBit(bit_pos + i, dentry_blk->dentry_bitmap);
     }
-    page->SetDirty();
+    page_lock.SetDirty();
 
 #ifdef __Fuchsia__
     std::string_view remove_name(reinterpret_cast<char *>(dentry_blk->filename[bit_pos]),
@@ -560,7 +563,7 @@ zx_status_t Dir::MakeEmpty(VnodeF2fs *vnode) {
   TestAndSetBit(0, dentry_blk->dentry_bitmap);
   TestAndSetBit(1, dentry_blk->dentry_bitmap);
 
-  dentry_page->SetDirty();
+  dentry_page.SetDirty();
   return 0;
 }
 

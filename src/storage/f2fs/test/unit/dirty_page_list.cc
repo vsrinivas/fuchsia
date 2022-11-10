@@ -25,16 +25,18 @@ TEST_F(DirtyPageListTest, AddAndRemoveDirtyPage) {
     vn->GrabCachePage(0, &locked_page);
 
     // Add dirty Page
-    locked_page->SetDirty();
+    locked_page.SetDirty();
+    ASSERT_FALSE(locked_page->IsLastReference());
     ASSERT_EQ(locked_page->IsDirty(), true);
     ASSERT_EQ(locked_page->InTreeContainer(), true);
     ASSERT_EQ(locked_page->InListContainer(), true);
     ASSERT_EQ(fs_->GetDirtyDataPageList().Size(), 1U);
     // Duplicate add is ignored
-    ASSERT_EQ(fs_->GetDirtyDataPageList().AddDirty(locked_page.get()), ZX_ERR_ALREADY_EXISTS);
+    ASSERT_EQ(fs_->GetDirtyDataPageList().AddDirty(locked_page).status_value(),
+              ZX_ERR_ALREADY_EXISTS);
 
     // Remove dirty Page
-    ASSERT_EQ(fs_->GetDirtyDataPageList().RemoveDirty(locked_page.get()), ZX_OK);
+    ASSERT_TRUE(fs_->GetDirtyDataPageList().RemoveDirty(locked_page).is_ok());
     ASSERT_TRUE(locked_page->IsLastReference());
     locked_page->ClearDirtyForIo();
   }
@@ -44,32 +46,49 @@ TEST_F(DirtyPageListTest, AddAndRemoveDirtyPage) {
   vn = nullptr;
 }
 
-TEST_F(DirtyPageListTest, MakeSingleDirtyPage) {
+TEST_F(DirtyPageListTest, TakeeDirtyPages) {
   fbl::RefPtr<fs::Vnode> test_file;
   root_dir_->Create("test", S_IFREG, &test_file);
   fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
   char buf[kPageSize];
 
-  // Make dirty Page
+  // Make dirty Pages
+  FileTester::AppendToFile(vn.get(), buf, kPageSize);
   FileTester::AppendToFile(vn.get(), buf, kPageSize);
 
-  ASSERT_EQ(fs_->GetDirtyDataPageList().Size(), 1U);
+  ASSERT_EQ(fs_->GetDirtyDataPageList().Size(), 2U);
 
-  Page *raw_page;
-  {
+  for (int i = 0; i < 2; ++i) {
     LockedPage locked_page;
-    vn->GrabCachePage(0, &locked_page);
+    vn->GrabCachePage(i, &locked_page);
     ASSERT_EQ(locked_page->IsDirty(), true);
     ASSERT_EQ(locked_page->InTreeContainer(), true);
     ASSERT_EQ(locked_page->InListContainer(), true);
-    raw_page = locked_page.get();
   }
 
-  auto pages = fs_->GetDirtyDataPageList().TakePages(1);
+  // Hold the lock of the 1st Page.
+  LockedPage locked_page;
+  vn->GrabCachePage(0, &locked_page);
 
-  ASSERT_EQ(pages[0]->GetKey(), raw_page->GetKey());
-  ASSERT_EQ(fs_->GetDirtyDataPageList().Size(), 0U);
-  ASSERT_TRUE(pages[0]->ClearDirtyForIo());
+  // Try to take 2 Pages from the list
+  {
+    auto pages = fs_->GetDirtyDataPageList().TakePages(2);
+
+    ASSERT_EQ(pages[0]->GetKey(), 1ULL);
+    ASSERT_EQ(fs_->GetDirtyDataPageList().Size(), 1U);
+    ASSERT_TRUE(pages[0]->ClearDirtyForIo());
+  }
+
+  // Release the lock.
+  locked_page.reset();
+
+  // Try to take 2 Pages from the list
+  {
+    auto pages = fs_->GetDirtyDataPageList().TakePages(2);
+    ASSERT_EQ(pages[0]->GetKey(), 0ULL);
+    ASSERT_EQ(fs_->GetDirtyDataPageList().Size(), 0U);
+    ASSERT_TRUE(pages[0]->ClearDirtyForIo());
+  }
 
   vn->Close();
   vn = nullptr;
@@ -96,6 +115,7 @@ TEST_F(DirtyPageListTest, ResetFileCache) {
     raw_page = locked_page.get();
   }
 
+  fs_->GetDirtyDataPageList().Reset();
   raw_page->GetFileCache().Reset();
   ASSERT_EQ(fs_->GetDirtyDataPageList().Size(), 0U);
 

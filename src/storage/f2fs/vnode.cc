@@ -551,13 +551,13 @@ zx_status_t VnodeF2fs::Vget(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
   return ZX_OK;
 }
 
-void VnodeF2fs::UpdateInode(Page *node_page) {
+void VnodeF2fs::UpdateInode(LockedPage &inode_page) {
   Node *rn;
   Inode *ri;
 
-  node_page->WaitOnWriteback();
+  inode_page->WaitOnWriteback();
 
-  rn = node_page->GetAddress<Node>();
+  rn = inode_page->GetAddress<Node>();
   ri = &(rn->i);
 
   ri->i_mode = CpuToLe(GetMode());
@@ -618,7 +618,7 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
     ri->i_inline &= ~kInlineXattr;
   }
 
-  node_page->SetDirty();
+  inode_page.SetDirty();
 }
 
 zx_status_t VnodeF2fs::WriteInode(bool is_reclaim) {
@@ -635,7 +635,7 @@ zx_status_t VnodeF2fs::WriteInode(bool is_reclaim) {
     if (ret = fs()->GetNodeManager().GetNodePage(ino_, &node_page); ret != ZX_OK) {
       return ret;
     }
-    UpdateInode(node_page.get());
+    UpdateInode(node_page);
   }
 
   return ZX_OK;
@@ -677,7 +677,9 @@ int VnodeF2fs::TruncateDataBlocksRange(NodePage &node_page, uint32_t ofs_in_node
     ++nr_free;
   }
   if (nr_free) {
-    node_page.SetDirty();
+    LockedPage lock_page(fbl::RefPtr<Page>(&node_page), false);
+    lock_page.SetDirty();
+    [[maybe_unused]] auto unused = lock_page.release(false);
     MarkInodeDirty();
   }
   return nr_free;
@@ -700,7 +702,7 @@ void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
   LockedPage locked_page(page);
   locked_page->WaitOnWriteback();
   locked_page->ZeroUserSegment(static_cast<uint32_t>(offset), kPageSize);
-  locked_page->SetDirty();
+  locked_page.SetDirty();
 
   if (locked_page->IsMmapped()) {
     ZX_ASSERT(WritePagedVmo(locked_page->GetAddress(), (from >> kPageCacheShift) * kBlockSize,

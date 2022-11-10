@@ -116,21 +116,53 @@ TEST_F(FileCacheTest, EvictActivePages) {
   FileTester::AppendToFile(vn.get(), buf, kPageSize);
   FileTester::AppendToFile(vn.get(), buf, kPageSize);
 
-  // Keep the Pages active in Writer after making them be subject to writeback.
-  WritebackOperation op;
-  vn->Writeback(op);
+  // Configure op to flush dirty Pages in a sync manner.
+  WritebackOperation op = {.bSync = true, .bReleasePages = false};
 
-  for (auto i = 0; i < 2; ++i) {
+  constexpr uint64_t kPageNum = 2;
+  fbl::RefPtr<Page> unlock_page;
+  Page *raw_pages[kPageNum];
+  for (auto i = 0ULL; i < kPageNum; ++i) {
     LockedPage page;
-    vn->GrabCachePage(0, &page);
-    ASSERT_TRUE(page->IsWriteback());
+    vn->GrabCachePage(i, &page);
+    ASSERT_TRUE(page->IsDirty());
+    ASSERT_FALSE(page->IsWriteback());
+    raw_pages[i] = page.get();
+    if (!i) {
+      unlock_page = page.release();
+    }
   }
 
-  // Invalidate Pages from the 2nd one, which causes flushing all Pages in Writer.
-  // If it waits for Page writeback with FileCache::tree_lock_ held, it results in deadlock.
-  // It happened in FileCache::Invalidate() and FileCache::Reset().
-  // Refer to Bug 94594 for more details.
-  vn->InvalidatePages(1);
+  // Flush every dirty Page regardless of its active flag.
+  ASSERT_EQ(vn->Writeback(op), kPageNum);
+
+  for (auto i = 0ULL; i < kPageNum; ++i) {
+    LockedPage page;
+    vn->GrabCachePage(i, &page);
+    ASSERT_FALSE(page->IsDirty());
+  }
+
+  // Every Page becomes inactive.
+  unlock_page.reset();
+
+  fbl::RefPtr<Page> inactive_pages[kPageNum];
+  for (auto i = 0ULL; i < kPageNum; ++i) {
+    ASSERT_FALSE(raw_pages[i]->IsActive());
+    ASSERT_TRUE(raw_pages[i]->InTreeContainer());
+    // Get the ref of Pages to avoid deletion when they are evicted from FileCache.
+    inactive_pages[i] = fbl::RefPtr<Page>(raw_pages[i]);
+  }
+
+  // Evict every inactive Page.
+  op.bReleasePages = true;
+  ASSERT_EQ(vn->Writeback(op), 0ULL);
+
+  for (auto i = 0ULL; i < kPageNum; ++i) {
+    ASSERT_FALSE(raw_pages[i]->IsActive());
+    // Every Pages were evicted.
+    ASSERT_FALSE(raw_pages[i]->InTreeContainer());
+  }
+
   vn->Close();
   vn = nullptr;
 }
@@ -144,7 +176,8 @@ TEST_F(FileCacheTest, WritebackOperation) {
   WritebackOperation op = {.start = 0,
                            .end = 2,
                            .to_write = 2,
-                           .bSync = false,
+                           .bSync = true,
+                           .bReleasePages = false,
                            .if_page = [&key](const fbl::RefPtr<Page> &page) {
                              if (page->GetKey() <= key) {
                                return ZX_OK;
@@ -156,43 +189,47 @@ TEST_F(FileCacheTest, WritebackOperation) {
   ASSERT_EQ(vn->GetDirtyPageCount(), 0);
   FileTester::AppendToFile(vn.get(), buf, kPageSize);
   FileTester::AppendToFile(vn.get(), buf, kPageSize);
-  // Get the Page of 2nd block.
+  // Flush the Page of 1st block.
   {
     LockedPage page;
-    vn->GrabCachePage(1, &page);
+    vn->GrabCachePage(0, &page);
     ASSERT_EQ(vn->GetDirtyPageCount(), 2);
     key = page->GetKey();
-
-    // Request writeback for dirty Pages. The Page of 1st block should be written out.
+    auto unlocked_page = page.release();
+    // Request writeback for dirty Pages. |unlocked_page| should be written out.
+    key = 0;
     ASSERT_EQ(vn->Writeback(op), 1UL);
-    // Writeback() should not touch active Pages such as |page|.
+    // Writeback() should be able to flush |unlocked_page|.
     ASSERT_EQ(vn->GetDirtyPageCount(), 1);
-    ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 1);
+    ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 0);
     ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 1);
-    ASSERT_EQ(page->IsWriteback(), false);
-    ASSERT_EQ(page->IsDirty(), true);
+    ASSERT_EQ(unlocked_page->IsWriteback(), false);
+    ASSERT_EQ(unlocked_page->IsDirty(), false);
   }
-
-  key = 0;
+  // Set sync. writeback.
+  op.bSync = true;
   // Request writeback for dirty Pages, but there is no Page meeting op.if_page.
   ASSERT_EQ(vn->Writeback(op), 0UL);
+  // Every writeback Page has been already flushed since op.bSync is set.
+  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 0);
+  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 1);
+
   key = 1;
+  // Set async. writeback.
+  op.bSync = false;
   // Now, 2nd Page meets op.if_page.
   ASSERT_EQ(vn->Writeback(op), 1UL);
   ASSERT_EQ(vn->GetDirtyPageCount(), 0);
-  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 2);
+  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 1);
   ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 0);
-
-  // Request sync. writeback.
+  // Set sync. writeback.
   op.bSync = true;
   // No dirty Pages to be written.
   // All writeback Pages should be clean.
   ASSERT_EQ(vn->Writeback(op), 0UL);
   ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 0);
 
-  // Do not release clean Pages
-  op.bReleasePages = false;
-  // It should not release any clean Pages.
+  // It should not release any clean Pages since op.bReleasePages is false.
   ASSERT_EQ(vn->Writeback(op), 0UL);
   // Pages at 1st and 2nd blocks should be uptodate
   {

@@ -19,7 +19,7 @@ void NodePage::CopyNodeFooterFrom(NodePage &src) {
 }
 
 void NodePage::FillNodeFooterBlkaddr(block_t blkaddr) {
-  Checkpoint &ckpt = fs_->GetSuperblockInfo().GetCheckpoint();
+  Checkpoint &ckpt = fs()->GetSuperblockInfo().GetCheckpoint();
   GetRawNode().footer.cp_ver = ckpt.checkpoint_ver;
   GetRawNode().footer.next_blkaddr = blkaddr;
 }
@@ -70,8 +70,6 @@ void NodePage::SetNid(size_t off, nid_t nid, bool is_inode) {
   } else {
     GetRawNode().in.nid[off] = CpuToLe(nid);
   }
-
-  SetDirty();
 }
 
 nid_t NodePage::GetNid(size_t off, bool is_inode) {

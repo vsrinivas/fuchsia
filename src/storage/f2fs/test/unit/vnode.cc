@@ -41,7 +41,7 @@ void VgetFaultInjetionAndTest(F2fs &fs, Dir &root_dir, std::string_view name, T 
 
     fault_injection(rn);
 
-    node_page->SetDirty();
+    node_page.SetDirty();
   }
 
   ASSERT_EQ(fs.GetVCache().RemoveDirty(test_vnode.get()), ZX_OK);

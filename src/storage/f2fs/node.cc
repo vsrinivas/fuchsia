@@ -59,7 +59,7 @@ bool NodeManager::IncValidNodeCount(VnodeF2fs *vnode, uint32_t count, bool isIno
 
 zx_status_t NodeManager::NextFreeNid(nid_t *nid) {
   if (free_nid_count_ <= 0)
-    return ZX_ERR_OUT_OF_RANGE;
+    return ZX_ERR_NO_RESOURCES;
 
   std::lock_guard free_nid_lock(free_nid_list_lock_);
   FreeNid *fnid = containerof(free_nid_list_.next, FreeNid, list);
@@ -164,7 +164,7 @@ void NodeManager::GetNextNatPage(nid_t nid, LockedPage *out) {
   fs_->GrabMetaPage(dst_off, &dst_page);
 
   memcpy(dst_page->GetAddress(), src_page->GetAddress(), kPageSize);
-  dst_page->SetDirty();
+  dst_page.SetDirty();
 
   SetToNextNat(nid);
 
@@ -555,6 +555,7 @@ zx_status_t NodeManager::GetLockedDnodePage(VnodeF2fs &vnode, pgoff_t index, Loc
       }
 
       parent.GetPage<NodePage>().SetNid(offset[i - 1], nid, IsInode(*parent));
+      parent.SetDirty();
       AllocNidDone(nid);
     } else {
       if (zx_status_t err = GetNodePage(nid, &node_page); err != ZX_OK) {
@@ -653,6 +654,7 @@ zx::result<uint32_t> NodeManager::TruncateNodes(VnodeF2fs &vnode, nid_t start_ni
         return ret;
       }
       page.GetPage<NodePage>().SetNid(i, 0, false);
+      page.SetDirty();
     }
   } else {
     child_nofs = nofs + ofs * (kNidsPerBlock + 1) + 1;
@@ -669,6 +671,7 @@ zx::result<uint32_t> NodeManager::TruncateNodes(VnodeF2fs &vnode, nid_t start_ni
         }
       } else if (*freed_or == (kNidsPerBlock + 1)) {
         page.GetPage<NodePage>().SetNid(i, 0, false);
+        page.SetDirty();
         child_nofs += *freed_or;
       }
     }
@@ -709,6 +712,7 @@ zx_status_t NodeManager::TruncatePartialNodes(VnodeF2fs &vnode, const Inode &ri,
       return ret.error_value();
     }
     pages[idx].GetPage<NodePage>().SetNid(i, 0, false);
+    pages[idx].SetDirty();
   }
 
   if (offset[idx + 1] == 0) {
@@ -804,7 +808,7 @@ zx_status_t NodeManager::TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from) {
       LockedPage locked_ipage(ipage);
       locked_ipage->WaitOnWriteback();
       rn->i.i_nid[offset[0] - kNodeDir1Block] = 0;
-      locked_ipage->SetDirty();
+      locked_ipage.SetDirty();
     }
     offset[1] = 0;
     ++offset[0];
@@ -882,7 +886,7 @@ zx_status_t NodeManager::NewNodePage(VnodeF2fs &vnode, nid_t nid, uint32_t ofs, 
 
   vnode.MarkInodeDirty();
 
-  page->SetDirty();
+  page.SetDirty();
   page.GetPage<NodePage>().SetColdNode(vnode);
   if (ofs == 0)
     fs_->IncValidInodeCount();
@@ -939,7 +943,7 @@ Page *NodeManager::GetNodePageRa(Page *parent, int start) {
 }
 #endif
 
-pgoff_t NodeManager::SyncNodePages(WritebackOperation &operation) {
+pgoff_t NodeManager::FlushDirtyNodePages(WritebackOperation &operation) {
   if (superblock_info_->GetPageCount(CountType::kDirtyNodes) == 0 && !operation.bReleasePages) {
     return 0;
   }
@@ -996,8 +1000,9 @@ pgoff_t NodeManager::FsyncNodePages(VnodeF2fs &vnode) {
   return fs_->GetNodeVnode().Writeback(op);
 }
 
-zx_status_t NodeManager::F2fsWriteNodePage(LockedPage &page, bool is_reclaim) {
+zx::result<block_t> NodeManager::GetBlockAddrForDirtyNodePage(LockedPage &page, bool is_reclaim) {
   page->WaitOnWriteback();
+  block_t new_addr = kNullAddr;
   if (page->ClearDirtyForIo()) {
     page->SetWriteback();
     // get old block addr of this node page
@@ -1008,14 +1013,15 @@ zx_status_t NodeManager::F2fsWriteNodePage(LockedPage &page, bool is_reclaim) {
     GetNodeInfo(nid, ni);
     // This page is already truncated
     if (ni.blk_addr == kNullAddr) {
-      return ZX_ERR_NOT_FOUND;
+      return zx::error(ZX_ERR_NOT_FOUND);
     }
 
-    block_t new_addr;
-    fs_->GetSegmentManager().WriteNodePage(page, nid, ni.blk_addr, &new_addr);
+    auto addr_or = fs_->GetSegmentManager().GetBlockAddrForNodePage(page, nid, ni.blk_addr);
+    ZX_ASSERT(addr_or.is_ok());
+    new_addr = *addr_or;
     SetNodeAddr(ni, new_addr);
   }
-  return ZX_OK;
+  return zx::ok(new_addr);
 }
 
 #if 0  // porting needed
@@ -1263,7 +1269,7 @@ zx_status_t NodeManager::RecoverInodePage(NodePage &page) {
   ZX_ASSERT(IncValidNodeCount(nullptr, 1, true));
   SetNodeAddr(new_node_info, kNewAddr);
   fs_->IncValidInodeCount();
-  ipage->SetDirty();
+  ipage.SetDirty();
   return ZX_OK;
 }
 
@@ -1375,7 +1381,7 @@ void NodeManager::FlushNatEntries() {
       } else {  // flush to NAT block
         if (!page || (start_nid > nid || nid > end_nid)) {
           if (page) {
-            page->SetDirty();
+            page.SetDirty();
             page.reset();
           }
           start_nid = StartNid(nid);
@@ -1418,7 +1424,7 @@ void NodeManager::FlushNatEntries() {
 
   // Write out last modified NAT block
   if (page != nullptr) {
-    page->SetDirty();
+    page.SetDirty();
   }
 
   // 2) shrink nat caches if necessary

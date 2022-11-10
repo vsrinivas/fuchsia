@@ -37,31 +37,7 @@ zx_status_t F2fs::GetMetaPage(pgoff_t index, LockedPage *out) {
   return ZX_OK;
 }
 
-zx_status_t F2fs::F2fsWriteMetaPage(LockedPage &page, bool is_reclaim) const {
-  zx_status_t err = ZX_OK;
-
-  page->WaitOnWriteback();
-
-  if (page->ClearDirtyForIo()) {
-    page->SetWriteback();
-
-    if (err = this->GetSegmentManager().WriteMetaPage(page, is_reclaim); err != ZX_OK) {
-#if 0  // porting needed
-    // ++wbc->pages_skipped;
-#endif
-      return err;
-    }
-  }
-
-  // In this case, we should not unlock this page
-#if 0  // porting needed
-  // if (err != kAopWritepageActivate)
-  // unlock_page(page);
-#endif
-  return err;
-}
-
-pgoff_t F2fs::SyncMetaPages(WritebackOperation &operation) {
+pgoff_t F2fs::FlushDirtyMetaPages(WritebackOperation &operation) {
   if (superblock_info_->GetPageCount(CountType::kDirtyMeta) == 0 && !operation.bReleasePages) {
     return 0;
   }
@@ -166,7 +142,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
       orphan_blk->blk_addr = CpuToLe(index);
       orphan_blk->blk_count = CpuToLe(orphan_blocks);
       orphan_blk->entry_count = CpuToLe(nentries);
-      page->SetDirty();
+      page.SetDirty();
       page.reset();
       ++index;
       ++start_blk;
@@ -176,7 +152,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
       GrabMetaPage(start_blk, &page);
       orphan_blk = page->GetAddress<OrphanBlock>();
       memset(orphan_blk, 0, sizeof(*orphan_blk));
-      page->SetDirty();
+      page.SetDirty();
     }
     orphan_blk->ino[nentries++] = CpuToLe(ino);
   });
@@ -184,7 +160,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
     orphan_blk->blk_addr = CpuToLe(index);
     orphan_blk->blk_count = CpuToLe(orphan_blocks);
     orphan_blk->entry_count = CpuToLe(nentries);
-    page->SetDirty();
+    page.SetDirty();
   }
 }
 
@@ -288,7 +264,7 @@ zx_status_t F2fs::GetValidCheckpoint() {
   return ZX_OK;
 }
 
-pgoff_t F2fs::SyncDirtyDataPages(WritebackOperation &operation) {
+pgoff_t F2fs::FlushDirtyDataPages(WritebackOperation &operation) {
   pgoff_t total_nwritten = 0;
   GetVCache().ForDirtyVnodesIf(
       [&](fbl::RefPtr<VnodeF2fs> &vnode) {
@@ -320,7 +296,7 @@ void F2fs::BlockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
       }
       return ZX_ERR_NEXT;
     };
-    SyncDirtyDataPages(op);
+    FlushDirtyDataPages(op);
 
     // Stop file operation
     superblock_info.mutex_lock_op(LockType::kFileOp);
@@ -335,7 +311,7 @@ void F2fs::BlockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
   // until finishing nat/sit flush.
   while (true) {
     WritebackOperation op = {.bSync = false};
-    GetNodeManager().SyncNodePages(op);
+    GetNodeManager().FlushDirtyNodePages(op);
 
     superblock_info.mutex_lock_op(LockType::kNodeOp);
     if (superblock_info.GetPageCount(CountType::kDirtyNodes)) {
@@ -363,10 +339,10 @@ void F2fs::DoCheckpoint(bool is_umount) {
   // Flush all the NAT/SIT pages
   while (superblock_info.GetPageCount(CountType::kDirtyMeta)) {
     WritebackOperation op = {.bSync = false};
-    SyncMetaPages(op);
+    FlushDirtyMetaPages(op);
   }
 
-  ScheduleWriterSubmitPages();
+  ScheduleWriter();
   GetNodeManager().NextFreeNid(&last_nid);
 
   // modify checkpoint
@@ -438,7 +414,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
     LockedPage cp_page;
     GrabMetaPage(start_blk++, &cp_page);
     memcpy(cp_page->GetAddress(), &ckpt, (1 << superblock_info.GetLogBlocksize()));
-    cp_page->SetDirty();
+    cp_page.SetDirty();
   }
 
   for (uint32_t i = 0; i < LeToCpu(raw_sb_->cp_payload); ++i) {
@@ -446,7 +422,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
     GrabMetaPage(start_blk++, &cp_page);
     memcpy(cp_page->GetAddress(), &superblock_info.GetCheckpointTrailer()[i],
            (1 << superblock_info.GetLogBlocksize()));
-    cp_page->SetDirty();
+    cp_page.SetDirty();
   }
 
   if (superblock_info.GetVnodeSetSize(InoType::kOrphanIno) > 0) {
@@ -464,7 +440,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
   {
     // Write out this checkpoint pack.
     WritebackOperation op = {.bSync = true};
-    SyncMetaPages(op);
+    FlushDirtyMetaPages(op);
   }
 
   // Prepare the commit block.
@@ -472,7 +448,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
     LockedPage cp_page;
     GrabMetaPage(start_blk, &cp_page);
     memcpy(cp_page->GetAddress(), &ckpt, (1 << superblock_info.GetLogBlocksize()));
-    cp_page->SetDirty();
+    cp_page.SetDirty();
   }
 
   // Update the valid block count.
@@ -486,7 +462,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
     // TODO: Use FUA when it is available.
     GetBc().Flush();
     WritebackOperation op = {.bSync = true};
-    SyncMetaPages(op);
+    FlushDirtyMetaPages(op);
     GetBc().Flush();
 
     GetSegmentManager().ClearPrefreeSegments();
