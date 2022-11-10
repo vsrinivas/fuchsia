@@ -36,7 +36,8 @@ type client interface {
 		ctx context.Context,
 		repo *packages.Repository,
 		name string,
-		createRewriteRule bool) (*packages.Server, error)
+		createRewriteRule bool,
+		rewritePackages []string) (*packages.Server, error)
 	Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error
 }
 
@@ -82,7 +83,7 @@ func updateCheckNow(ctx context.Context, c client, repo *packages.Repository, cr
 
 		// We pass createRewriteRule=true for versions of system-update-checker prior to
 		// fxrev.dev/504000. Newer versions need to have `update channel set` called below.
-		server, err := c.ServePackageRepository(ctx, repo, "trigger-ota", createRewriteRule)
+		server, err := c.ServePackageRepository(ctx, repo, "trigger-ota", createRewriteRule, nil)
 		if err != nil {
 			return fmt.Errorf("error setting up server: %w", err)
 		}
@@ -152,7 +153,7 @@ func NewSystemUpdater(repo *packages.Repository, updatePackageUrl string) *Syste
 
 func (u *SystemUpdater) Update(ctx context.Context, c client) error {
 	startTime := time.Now()
-	server, err := c.ServePackageRepository(ctx, u.repo, "download-ota", true)
+	server, err := c.ServePackageRepository(ctx, u.repo, "download-ota", true, nil)
 	if err != nil {
 		return fmt.Errorf("error setting up server: %w", err)
 	}

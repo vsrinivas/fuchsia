@@ -483,7 +483,13 @@ func (c *Client) RemoteFileExists(ctx context.Context, path string) (bool, error
 }
 
 // RegisterPackageRepository adds the repository as a repository inside the device.
-func (c *Client) RegisterPackageRepository(ctx context.Context, repo *packages.Server, createRewriteRule bool) error {
+// If rewritePackages is not nil, the rewrite rule will only affect the passed packages.
+func (c *Client) RegisterPackageRepository(
+	ctx context.Context,
+	repo *packages.Server,
+	createRewriteRule bool,
+	rewritePackages []string,
+) error {
 	// Test if `pkgctl repo add url` is supported on this build.
 	cmd := []string{"pkgctl", "repo", "add", "url"}
 	var b bytes.Buffer
@@ -521,6 +527,21 @@ func (c *Client) RegisterPackageRepository(ctx context.Context, repo *packages.S
 			{"host_match":"fuchsia.com","host_replacement":"%[1]v","path_prefix_match":"/","path_prefix_replacement":"/"},
 			{"host_match":"chromium.org","host_replacement":"%[1]v","path_prefix_match":"/","path_prefix_replacement":"/"}
 		]}'`
+		if rewritePackages != nil {
+			ruleTemplate = `'{"version":"1","content":[`
+			for i, p := range rewritePackages {
+				if i > 0 {
+					ruleTemplate += ","
+				}
+				ruleTemplate += `{
+					"host_match":"fuchsia.com",
+					"host_replacement":"%[1]v",
+					"path_prefix_match":"/` + p + `/",
+					"path_prefix_replacement":"/` + p + `/"
+				}`
+			}
+			ruleTemplate += `]}'`
+		}
 		cmd = []string{"pkgctl", "rule", "replace", "json", fmt.Sprintf(ruleTemplate, name)}
 		return c.Run(ctx, cmd, os.Stdout, os.Stderr)
 	} else {
@@ -534,6 +555,7 @@ func (c *Client) ServePackageRepository(
 	repo *packages.Repository,
 	name string,
 	createRewriteRule bool,
+	rewritePackages []string,
 ) (*packages.Server, error) {
 	// Make sure the device doesn't have any broken static packages.
 	if err := c.ValidateStaticPackages(ctx); err != nil {
@@ -552,7 +574,7 @@ func (c *Client) ServePackageRepository(
 		return nil, err
 	}
 
-	if err := c.RegisterPackageRepository(ctx, server, createRewriteRule); err != nil {
+	if err := c.RegisterPackageRepository(ctx, server, createRewriteRule, rewritePackages); err != nil {
 		server.Shutdown(ctx)
 		return nil, err
 	}
@@ -575,7 +597,7 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 
 	// Configure the target to use this repository as "fuchsia-pkg://host_target_testing_sl4f".
 	repoName := "host_target_testing_sl4f"
-	repoServer, err := c.ServePackageRepository(ctx, repo, repoName, true)
+	repoServer, err := c.ServePackageRepository(ctx, repo, repoName, true, []string{"sl4f", "start_sl4f"})
 	if err != nil {
 		return nil, fmt.Errorf("error serving repo to device: %w", err)
 	}
