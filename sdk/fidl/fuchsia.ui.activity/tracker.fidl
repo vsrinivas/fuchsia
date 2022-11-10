@@ -7,14 +7,16 @@ using zx;
 
 alias OngoingActivityId = uint32;
 
-// TODO(fxbug.dev/103843): Remove this interface.
 /// The Tracker protocol collects evidence of user activity and uses this
 /// evidence to set the system's activity state.
-@discoverable
+@available(deprecated=10, removed=11)
 protocol Tracker {
     /// Reports a discrete activity such as a keystroke.
     /// `event_time` is in nanoseconds in the `CLOCK_MONOTONIC` time base.
-    @available(deprecated=9, note="Instead, use `fuchsia.input.interaction.observation.Aggregator`")
+    @available(
+            deprecated=9,
+            removed=10,
+            note="Instead, use `fuchsia.input.interaction.observation.Aggregator`")
     ReportDiscreteActivity(struct {
         activity DiscreteActivity;
         event_time zx.time;
@@ -24,7 +26,10 @@ protocol Tracker {
     /// `activity_id` is a unique identifier which is expected to be later
     /// passed to EndOngoingActivity.
     /// `start_time` is in nanoseconds in the `CLOCK_MONOTONIC` time base.
-    @available(deprecated=9, note="Instead, use `fuchsia.input.interaction.observation.Aggregator`")
+    @available(
+            deprecated=9,
+            removed=10,
+            note="Instead, use `fuchsia.input.interaction.observation.Aggregator`")
     StartOngoingActivity(struct {
         activity_id OngoingActivityId;
         activity OngoingActivity;
@@ -34,7 +39,10 @@ protocol Tracker {
     /// Reports the end of an ongoing activity such as media playback.
     /// `activity_id` is the nonce which was passed into StartOngoingActivity.
     /// `end_time` is in nanoseconds in the `CLOCK_MONOTONIC` time base.
-    @available(deprecated=9, note="Instead, use `fuchsia.input.interaction.observation.Aggregator`")
+    @available(
+            deprecated=9,
+            removed=10,
+            note="Instead, use `fuchsia.input.interaction.observation.Aggregator`")
     EndOngoingActivity(struct {
         activity_id OngoingActivityId;
         end_time zx.time;
