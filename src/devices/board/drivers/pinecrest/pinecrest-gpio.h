@@ -7,6 +7,7 @@
 
 namespace board_pinecrest {
 
+#define GPIO_MIC_MUTE_STATUS 11
 #define GPIO_AMP_EN 17
 #define GPIO_LED_TOUCH_RESET 4
 #define GPIO_TOUCH_IRQ 5

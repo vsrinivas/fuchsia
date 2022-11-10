@@ -778,6 +778,7 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
       "sys/platform/00:00:9/dw-i2c/i2c/i2c-0-49/audio-max98373/MAX98373",
       "sys/platform/14:01:6/synaptics-dhub/as370-audio-in/as370-audio-in",
       "sys/platform/14:01:6/synaptics-dhub/as370-audio-out/as370-audio-out",
+      "sys/platform/14:01:1/as370-gpio/gpio-11/as370-buttons/hid-buttons/hidbus_function/hid-device/InputReport",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -804,6 +805,7 @@ TEST_F(DeviceEnumerationTest, PinecrestTest) {
       "sys/platform/14:01:6/synaptics-dhub/pinecrest-audio-out/as370-audio-out",
       "sys/platform/14:01:12/pinecrest-nna/as370-nna",
       "sys/platform/14:01:a/as370-sdhci/sdhci/sdmmc/sdmmc-sdio/sdmmc-sdio-1/wifi/nxpfmac_sdio-wlanphy",
+      "sys/platform/14:01:1/as370-gpio/gpio-11/pinecrest-buttons/hid-buttons/hidbus_function/hid-device/InputReport",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

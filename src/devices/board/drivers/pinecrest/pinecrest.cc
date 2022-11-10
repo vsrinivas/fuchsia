@@ -134,6 +134,10 @@ int Pinecrest::Thread() {
     zxlogf(ERROR, "%s: SdioInit() failed", __func__);
   }
 
+  if (ButtonsInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: ButtonsInit() failed", __func__);
+  }
+
   return 0;
 }
 }  // namespace board_pinecrest

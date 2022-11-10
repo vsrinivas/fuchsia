@@ -25,6 +25,14 @@ driver_bind_rules("as370-wifi-bind") {
   deps = [ "//src/devices/bind/fuchsia.sdmmc" ]
 }
 
+driver_bind_rules("as370-buttons-bind") {
+  rules = "bind/as370-buttons.bind"
+  header_output = "as370-buttons-bind.h"
+  bind_output = "as370-buttons-bind.bc"
+  tests = "bind-tests/as370-buttons-bind-test.json"
+  deps = [ "//src/devices/bind/fuchsia.gpio" ]
+}
+
 fuchsia_driver("as370-driver") {
   output_name = "as370"
   configs += [
@@ -33,6 +41,7 @@ fuchsia_driver("as370-driver") {
   ]
   sources = [
     "as370-audio.cc",
+    "as370-buttons.cc",
     "as370-clock.cc",
     "as370-gpio.cc",
     "as370-i2c.cc",
@@ -50,6 +59,7 @@ fuchsia_driver("as370-driver") {
   deps = [
     ":as370-bind",
     ":as370-bind_header",
+    ":as370-buttons-bind_header",
     ":as370-nna-bind_header",
     ":as370-wifi-bind_header",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
@@ -104,6 +114,7 @@ group("tests") {
   testonly = true
   deps = [
     ":as370-bind_test",
+    ":as370-buttons-bind_test",
     ":as370-nna-bind_test",
     ":as370-wifi-bind_test",
   ]

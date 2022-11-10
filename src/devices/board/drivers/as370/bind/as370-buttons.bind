@@ -1,0 +1,12 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+composite as370_buttons;
+
+using fuchsia.gpio;
+
+primary node "mic-mute" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == 11;  // GPIO_MIC_MUTE_STATUS
+}

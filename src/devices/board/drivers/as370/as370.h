@@ -49,6 +49,7 @@ class As370 : public ddk::Device<As370> {
   zx_status_t SdioInit();
   zx_status_t ThermalInit();
   zx_status_t TouchInit();
+  zx_status_t ButtonsInit();
 
   const fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
   const fuchsia_hardware_platform_bus::TemporaryBoardInfo board_info_;

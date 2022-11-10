@@ -36,6 +36,14 @@ driver_bind_rules("pinecrest-emmc-bind") {
   ]
 }
 
+driver_bind_rules("pinecrest-buttons-bind") {
+  rules = "bind/pinecrest-buttons.bind"
+  header_output = "pinecrest-buttons-bind.h"
+  bind_output = "pinecrest-buttons-bind.bc"
+  tests = "bind-tests/pinecrest-buttons-bind-test.json"
+  deps = [ "//src/devices/bind/fuchsia.gpio" ]
+}
+
 fuchsia_driver("pinecrest-driver") {
   output_name = "pinecrest"
   configs += [
@@ -44,6 +52,7 @@ fuchsia_driver("pinecrest-driver") {
   ]
   sources = [
     "pinecrest-audio.cc",
+    "pinecrest-buttons.cc",
     "pinecrest-clock.cc",
     "pinecrest-emmc.cc",
     "pinecrest-gpio.cc",
@@ -61,6 +70,7 @@ fuchsia_driver("pinecrest-driver") {
   deps = [
     ":pinecrest-bind",
     ":pinecrest-bind_header",
+    ":pinecrest-buttons-bind_header",
     ":pinecrest-emmc-bind_header",
     ":pinecrest-nna-bind_header",
     ":pinecrest-wifi-bind_header",
@@ -117,6 +127,7 @@ group("tests") {
   testonly = true
   deps = [
     ":pinecrest-bind_test",
+    ":pinecrest-buttons-bind_test",
     ":pinecrest-nna-bind_test",
     ":pinecrest-wifi-bind_test",
   ]
