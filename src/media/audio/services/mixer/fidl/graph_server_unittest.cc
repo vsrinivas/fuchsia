@@ -168,7 +168,7 @@ MakeDefaultCreateConsumerRequestWithStreamSink(fidl::AnyArena& arena) {
   return fuchsia_audio_mixer::wire::GraphCreateConsumerRequest::Builder(arena)
       .name(fidl::StringView::FromExternal("consumer"))
       .direction(PipelineDirection::kOutput)
-      .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithStreamSink(
+      .data_sink(fuchsia_audio_mixer::wire::ConsumerDataSink::WithStreamSink(
           arena, MakeDefaultStreamSinkConsumer(arena).Build()))
       .thread(1)
       .external_delay_watcher(
@@ -180,7 +180,7 @@ MakeDefaultCreateConsumerRequestWithRingBuffer(fidl::AnyArena& arena) {
   return fuchsia_audio_mixer::wire::GraphCreateConsumerRequest::Builder(arena)
       .name(fidl::StringView::FromExternal("consumer"))
       .direction(PipelineDirection::kOutput)
-      .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
+      .data_sink(fuchsia_audio_mixer::wire::ConsumerDataSink::WithRingBuffer(
           arena, MakeDefaultRingBuffer(arena).Build()))
       .thread(1)
       .external_delay_watcher(
@@ -622,8 +622,8 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
-          .name = "MissingDataSource",
-          .edit = [](auto& request) { request.clear_data_source(); },
+          .name = "MissingDataSink",
+          .edit = [](auto& request) { request.clear_data_sink(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
@@ -632,7 +632,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
               [this](auto& request) {
                 auto stream_sink = MakeDefaultStreamSinkConsumer(arena_);
                 stream_sink.clear_client_end();
-                request.data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithStreamSink(
+                request.data_sink(fuchsia_audio_mixer::wire::ConsumerDataSink::WithStreamSink(
                     arena_, stream_sink.Build()));
               },
           .expected_error = CreateNodeError::kMissingRequiredField,
@@ -653,7 +653,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
               [this](auto& request) {
                 // Enough bytes for just one producer frame, but we need enough space for
                 // kDefaultMixPeriod.
-                request.data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
+                request.data_sink(fuchsia_audio_mixer::wire::ConsumerDataSink::WithRingBuffer(
                     arena_, MakeDefaultRingBuffer(arena_)
                                 .producer_bytes(kFormat.bytes_per_frame())
                                 .Build()));
@@ -666,7 +666,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
               [this](auto& request) {
                 auto stream_sink = MakeDefaultStreamSinkConsumer(arena_);
                 stream_sink.frames_per_packet(0);
-                request.data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithStreamSink(
+                request.data_sink(fuchsia_audio_mixer::wire::ConsumerDataSink::WithStreamSink(
                     arena_, stream_sink.Build()));
               },
           .expected_error = CreateNodeError::kInvalidParameter,
@@ -677,7 +677,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
               [this](auto& request) {
                 auto stream_sink = MakeDefaultStreamSinkConsumer(arena_);
                 stream_sink.payload_buffer(MakeVmo(0));
-                request.data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithStreamSink(
+                request.data_sink(fuchsia_audio_mixer::wire::ConsumerDataSink::WithStreamSink(
                     arena_, stream_sink.Build()));
               },
           .expected_error = CreateNodeError::kInvalidParameter,

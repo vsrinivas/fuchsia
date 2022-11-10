@@ -19,7 +19,7 @@
 
 namespace media_audio {
 
-// Base class for consuemrs. A consumer has one source stream and zero destination streams. All data
+// Base class for consumers. A consumer has one source stream and zero destination streams. All data
 // "consumed" from the source stream is written to an object that implements the
 // `BaseConsumerStage::Writer` interface. Data is "consumed" in whole frame units, hence this class
 // represents frame units with int64_t instead of Fixed.
@@ -48,7 +48,7 @@ class BaseConsumerStage : public PipelineStage {
     // Name of this stage.
     std::string_view name;
 
-    // Format of audio consumed by this stage.
+    // Format of audio written to `writer`.
     Format format;
 
     // Reference clock used by this consumer.

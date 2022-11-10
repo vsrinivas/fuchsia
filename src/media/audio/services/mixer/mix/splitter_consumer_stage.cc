@@ -18,7 +18,8 @@ SplitterConsumerStage::SplitterConsumerStage(Args args)
           .format = args.format,
           .reference_clock = std::move(args.reference_clock),
           .thread = std::move(args.thread),
-          .writer = std::make_shared<RingBufferConsumerWriter>(std::move(args.ring_buffer)),
+          .writer = std::make_shared<RingBufferConsumerWriter>(args.ring_buffer,
+                                                               args.ring_buffer->format()),
       }) {}
 
 void SplitterConsumerStage::UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) {

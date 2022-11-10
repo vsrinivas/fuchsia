@@ -73,7 +73,7 @@ protocol GraphCreator {
 /// Audio is strongly typed: each node declares the audio format(s) it can
 /// ingest from source streams and the audio format(s) it can produce to
 /// destination streams. It is illegal to connect nodes with incompatible
-/// encodings.
+/// formats.
 ///
 /// ## Execution Model
 ///
@@ -215,22 +215,31 @@ protocol Graph {
         /// Required.
         2: direction PipelineDirection;
 
-        /// Data source for this consumer.
+        /// Data sink for this consumer.
         ///
         /// Required.
-        3: data_source ConsumerDataSource;
+        3: data_sink ConsumerDataSink;
+
+        /// The consumer's source edge must have the given sample type. If not
+        /// specified, this defaults to the same sample type as `data_sink`.
+        ///
+        /// No matter what, the source edge source must have the same frame
+        /// rate and channelization as `data_sink`. Put differently, consumers
+        /// can perform sample type conversion, but they cannot perform rate
+        /// conversion or rechannelization.
+        4: source_sample_type fuchsia.audio.SampleType;
 
         /// The Consumer's mix job should execute on this thread.
         ///
         /// Required.
-        4: thread ThreadId;
+        5: thread ThreadId;
 
         /// If `direction` is OUTPUT, this must be specified. This reports the
         /// delay between when a frame is written by this consumer and when that
         /// frame is rendered at its final destination (such as a speaker).
         ///
         /// If `direction` is INPUT, this must be empty.
-        5: external_delay_watcher ExternalDelayWatcher;
+        6: external_delay_watcher ExternalDelayWatcher;
     }) -> (table {
         /// ID of the newly-created node. Guaranteed to be unique.
         1: id NodeId;
@@ -254,7 +263,7 @@ protocol Graph {
         /// Required.
         2: direction PipelineDirection;
 
-        /// Encoding of the Mixer's destination stream.
+        /// Format of the Mixer's destination stream.
         ///
         /// Required.
         3: dest_format fuchsia.audio.Format;
@@ -308,7 +317,7 @@ protocol Graph {
         /// Required.
         2: direction PipelineDirection;
 
-        /// Encoding of the Splitter's source and destination streams.
+        /// Format of the Splitter's source and destination streams.
         ///
         /// Required.
         3: format fuchsia.audio.Format;
@@ -391,9 +400,9 @@ protocol Graph {
 
     /// Creates an edge from the source node to the destination node.
     ///
-    /// Both nodes must exist. The source's encoding must be supported by the
-    /// destination node. With the exception of Mixer nodes, most nodes require
-    /// source to have a specific (fixed) encoding.
+    /// Both nodes must exist. The source's format must be supported by the
+    /// destination node. Mixer nodes support arbitrary source formats. Other
+    /// nodes support only specific (fixed) source formats.
     ///
     /// Both ends must use the same reference clock, unless the destination is a
     /// Mixer, in which case the source can use any clock.

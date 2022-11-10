@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/lib/format2/sample_converter.h"
 #include "src/media/audio/services/mixer/mix/testing/consumer_stage_wrapper.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 
@@ -48,11 +49,13 @@ struct TestHarness {
 };
 
 // Defaults to one media tick per frame.
-TestHarness MakeTestHarness(TimelineRate media_ticks_per_ns = kFormat.frames_per_ns()) {
+TestHarness MakeTestHarness(TimelineRate media_ticks_per_ns = kFormat.frames_per_ns(),
+                            Format source_format = kFormat) {
   TestHarness h;
   h.recycled_packet_queue = std::make_shared<PacketQueue>();
   h.writer = std::make_unique<StreamSinkConsumerWriter>(StreamSinkConsumerWriter::Args{
-      .format = kFormat,
+      .dest_format = kFormat,
+      .source_format = source_format,
       .media_ticks_per_ns = media_ticks_per_ns,
       .call_put_packet =
           [&h](auto packet) mutable {
@@ -358,6 +361,32 @@ TEST(StreamSinkConsumerWriterTest, TranslateToMediaTime) {
   fidl::Arena<> arena;
   auto fidl0 = h.packets[0]->ToFidl(arena);
   EXPECT_EQ(fidl0.timestamp().specified(), 50);
+}
+
+TEST(StreamSinkConsumerWriterTest, WriteWithConversion) {
+  auto h = MakeTestHarness(
+      /*media_ticks_per_ns=*/kFormat.frames_per_ns(),
+      /*source_format=*/Format::CreateOrDie({SampleType::kInt32, 2, 48000}));
+
+  std::vector<int32_t> input_payload;
+  std::vector<float> expected_payload;
+
+  for (int k = 0; k < kFramesPerPacket * kFormat.channels(); k++) {
+    input_payload.push_back(k * 100);
+    expected_payload.push_back(SampleConverter<int32_t>::ToFloat(k * 100));
+  }
+
+  // Write a single packet.
+  h.recycled_packet_queue->push(MakePacket(h, 0));
+  h.writer->WriteData(0, kFramesPerPacket, input_payload.data());
+  ASSERT_EQ(h.packets.size(), 1u);
+
+  fidl::Arena<> arena;
+  auto fidl = h.packets[0]->ToFidl(arena);
+  EXPECT_EQ(fidl.payload().buffer_id, kBufferId);
+  EXPECT_EQ(fidl.payload().offset, 0u);
+  EXPECT_EQ(fidl.payload().size, static_cast<uint64_t>(kBytesPerPacket));
+  EXPECT_EQ(GetPayload(h, 0, kFramesPerPacket), expected_payload);
 }
 
 }  // namespace

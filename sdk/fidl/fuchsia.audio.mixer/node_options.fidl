@@ -17,7 +17,7 @@ type ProducerDataSource = flexible resource union {
 };
 
 /// A Consumer node can write to a StreamSink or a RingBuffer.
-type ConsumerDataSource = flexible resource union {
+type ConsumerDataSink = flexible resource union {
     1: stream_sink StreamSinkConsumer;
     2: ring_buffer fuchsia.audio.RingBuffer;
 };

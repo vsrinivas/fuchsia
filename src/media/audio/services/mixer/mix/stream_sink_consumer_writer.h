@@ -79,8 +79,11 @@ class StreamSinkConsumerWriter : public ConsumerStage::Writer {
   using PacketQueue = ThreadSafeQueue<std::unique_ptr<Packet>>;
 
   struct Args {
-    // Format of packets sent to this StreamSink.
-    Format format;
+    // Format of packets sent to the FIDL StreamSink.
+    Format dest_format;
+
+    // Format of source data. Must not differ from `dest_format` except in sample type.
+    Format source_format;
 
     // Ticks of media time per nanoseconds of reference time.
     TimelineRate media_ticks_per_ns;

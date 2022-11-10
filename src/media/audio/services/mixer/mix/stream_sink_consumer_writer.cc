@@ -63,11 +63,9 @@ fuchsia_audio::wire::Packet StreamSinkConsumerWriter::Packet::ToFidl(fidl::AnyAr
 }
 
 StreamSinkConsumerWriter::StreamSinkConsumerWriter(Args args)
-    :  // TODO(fxbug.dev/87651): When ConsumerStage::Writers can write a different sample type than
-       // the parent ConsumerStage, we'll have different source and dest formats here.
-      stream_converter_(StreamConverter::Create(args.format, args.format)),
-      media_ticks_per_frame_(
-          TimelineRate::Product(args.media_ticks_per_ns, args.format.frames_per_ns().Inverse())),
+    : stream_converter_(StreamConverter::Create(args.source_format, args.dest_format)),
+      media_ticks_per_frame_(TimelineRate::Product(args.media_ticks_per_ns,
+                                                   args.dest_format.frames_per_ns().Inverse())),
       call_put_packet_(std::move(args.call_put_packet)),
       call_end_(std::move(args.call_end)),
       recycled_packet_queue_(std::move(args.recycled_packet_queue)) {}

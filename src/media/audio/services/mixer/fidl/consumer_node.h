@@ -28,6 +28,10 @@ class ConsumerNode : public Node {
     // Format of audio consumed by this node.
     Format format;
 
+    // SampleType used by the source stream. If different that `format.sample_type()`, this consumer
+    // performs sample type conversion before writing to `writer`.
+    fuchsia_audio::SampleType source_sample_type;
+
     // Reference clock used by this consumer.
     std::shared_ptr<Clock> reference_clock;
 
@@ -64,7 +68,7 @@ class ConsumerNode : public Node {
 
   ConsumerNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
                PipelineDirection pipeline_direction, ConsumerStagePtr pipeline_stage,
-               const Format& format,
+               const Format& format, fuchsia_audio::SampleType source_sample_type,
                std::shared_ptr<PendingStartStopCommand> pending_start_stop_command,
                std::shared_ptr<GraphMixThread> mix_thread,
                std::shared_ptr<DelayWatcherClient> delay_watcher);
@@ -81,6 +85,7 @@ class ConsumerNode : public Node {
   bool AllowsDest() const final;
 
   const Format format_;
+  const fuchsia_audio::SampleType source_sample_type_;
   const std::shared_ptr<PendingStartStopCommand> pending_start_stop_command_;
   const std::shared_ptr<GraphMixThread> mix_thread_;
   const ConsumerStagePtr consumer_stage_;

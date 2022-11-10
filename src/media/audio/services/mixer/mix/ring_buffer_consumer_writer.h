@@ -21,7 +21,9 @@ namespace media_audio {
 // Enables consumers to write to a ring buffer.
 class RingBufferConsumerWriter : public ConsumerStage::Writer {
  public:
-  explicit RingBufferConsumerWriter(std::shared_ptr<RingBuffer> buffer);
+  // Writes data of `source_format` to the ring buffer. The `source_format` must not differ from
+  // `buffer->format()` except in sample type.
+  RingBufferConsumerWriter(std::shared_ptr<RingBuffer> buffer, const Format& source_format);
 
   // Implements ConsumerStage::Writer.
   void WriteData(int64_t start_frame, int64_t frame_count, const void* payload) final;

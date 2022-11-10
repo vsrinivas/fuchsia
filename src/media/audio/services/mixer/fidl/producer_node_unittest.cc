@@ -233,7 +233,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
 
   // Write to the ring buffer.
   std::vector<float> payload(kFormat.channels() * kRingBufferFrames, 0.25f);
-  RingBufferConsumerWriter writer(h.ring_buffer);
+  RingBufferConsumerWriter writer(h.ring_buffer, kFormat);
   writer.WriteData(0, 5, payload.data());
 
   // Verify that packet was received by the producer stage.

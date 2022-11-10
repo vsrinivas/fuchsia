@@ -6,10 +6,9 @@
 
 namespace media_audio {
 
-RingBufferConsumerWriter::RingBufferConsumerWriter(std::shared_ptr<RingBuffer> buffer)
-    :  // TODO(fxbug.dev/87651): When ConsumerStage::Writers can write a different sample type than
-       // the parent ConsumerStage, we'll have different source and dest formats here.
-      stream_converter_(StreamConverter::Create(buffer->format(), buffer->format())),
+RingBufferConsumerWriter::RingBufferConsumerWriter(std::shared_ptr<RingBuffer> buffer,
+                                                   const Format& source_format)
+    : stream_converter_(StreamConverter::Create(source_format, buffer->format())),
       buffer_(std::move(buffer)) {}
 
 void RingBufferConsumerWriter::WriteData(int64_t start_frame, int64_t frame_count,

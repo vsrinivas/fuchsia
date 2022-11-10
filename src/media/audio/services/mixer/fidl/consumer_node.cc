@@ -16,13 +16,14 @@ std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
    public:
     explicit WithPublicCtor(std::string_view name, std::shared_ptr<Clock> reference_clock,
                             PipelineDirection pipeline_direction, ConsumerStagePtr pipeline_stage,
-                            const Format& format,
+                            const Format& format, fuchsia_audio::SampleType source_sample_type,
                             std::shared_ptr<PendingStartStopCommand> pending_start_stop_command,
                             std::shared_ptr<GraphMixThread> mix_thread,
                             std::shared_ptr<DelayWatcherClient> delay_watcher)
         : ConsumerNode(name, std::move(reference_clock), pipeline_direction,
-                       std::move(pipeline_stage), format, std::move(pending_start_stop_command),
-                       std::move(mix_thread), std::move(delay_watcher)) {}
+                       std::move(pipeline_stage), format, source_sample_type,
+                       std::move(pending_start_stop_command), std::move(mix_thread),
+                       std::move(delay_watcher)) {}
   };
 
   auto pending_start_stop_command = std::make_shared<PendingStartStopCommand>();
@@ -38,7 +39,8 @@ std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
   });
   auto node = std::make_shared<WithPublicCtor>(
       args.name, std::move(args.reference_clock), args.pipeline_direction, pipeline_stage,
-      args.format, std::move(pending_start_stop_command), args.thread, args.delay_watcher);
+      args.format, args.source_sample_type, std::move(pending_start_stop_command), args.thread,
+      args.delay_watcher);
 
   if (args.pipeline_direction == PipelineDirection::kOutput) {
     FX_CHECK(args.delay_watcher);
@@ -58,13 +60,14 @@ std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
 
 ConsumerNode::ConsumerNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
                            PipelineDirection pipeline_direction, ConsumerStagePtr pipeline_stage,
-                           const Format& format,
+                           const Format& format, fuchsia_audio::SampleType source_sample_type,
                            std::shared_ptr<PendingStartStopCommand> pending_start_stop_command,
                            std::shared_ptr<GraphMixThread> mix_thread,
                            std::shared_ptr<DelayWatcherClient> delay_watcher)
     : Node(Type::kConsumer, name, std::move(reference_clock), pipeline_direction, pipeline_stage,
            /*parent=*/nullptr),
       format_(format),
+      source_sample_type_(source_sample_type),
       pending_start_stop_command_(std::move(pending_start_stop_command)),
       mix_thread_(std::move(mix_thread)),
       consumer_stage_(std::move(pipeline_stage)),
@@ -131,7 +134,12 @@ void ConsumerNode::PrepareToDeleteSelf() {
   delay_watcher_ = nullptr;
 }
 
-bool ConsumerNode::CanAcceptSourceFormat(const Format& format) const { return format == format_; }
+bool ConsumerNode::CanAcceptSourceFormat(const Format& format) const {
+  return format.sample_type() == source_sample_type_ &&
+         format.frames_per_second() == format_.frames_per_second() &&
+         format.channels() == format_.channels();
+}
+
 std::optional<size_t> ConsumerNode::MaxSources() const { return 1; }
 bool ConsumerNode::AllowsDest() const { return false; }
 

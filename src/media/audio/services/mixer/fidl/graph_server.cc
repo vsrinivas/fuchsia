@@ -257,6 +257,26 @@ ValidateExternalDelayWatcher(std::string_view debug_description, std::string_vie
   });
 }
 
+fpromise::result<Format, fuchsia_audio_mixer::CreateNodeError>  //
+ValidateConsumerSourceSampleType(const GraphServer::CreateConsumerRequestView& request,
+                                 const Format& dest_format) {
+  auto source_sample_type =
+      request->has_source_sample_type() ? request->source_sample_type() : dest_format.sample_type();
+
+  auto source_format_result = Format::Create({
+      .sample_type = source_sample_type,
+      .channels = dest_format.channels(),
+      .frames_per_second = dest_format.frames_per_second(),
+  });
+  if (!source_format_result.is_ok()) {
+    FX_LOGS(WARNING) << "CreateConsumer: invalid source sample format: "
+                     << source_format_result.error();
+    return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+  }
+
+  return fpromise::ok(source_format_result.value());
+}
+
 fpromise::result<Node::CreateEdgeOptions, fuchsia_audio_mixer::CreateEdgeError>
 ParseCreateEdgeOptions(
     const GraphServer::CreateEdgeRequestView& request,
@@ -561,7 +581,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
   TRACE_DURATION("audio", "Graph::CreateConsumer");
   ScopedThreadChecker checker(thread().checker());
 
-  if (!request->has_direction() || !request->has_data_source() || !request->has_thread()) {
+  if (!request->has_direction() || !request->has_data_sink() || !request->has_thread()) {
     FX_LOGS(WARNING) << "CreateConsumer: missing field";
     completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
     return;
@@ -577,12 +597,13 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
   auto& mix_thread = mix_thread_it->second;
   const auto name = NameOrEmpty(*request);
   std::shared_ptr<ConsumerStage::Writer> writer;
-  std::optional<Format> format;
+  std::optional<Format> dest_format;
+  std::optional<Format> source_format;
   std::shared_ptr<Clock> reference_clock;
   TimelineRate media_ticks_per_ns;
 
-  if (request->data_source().is_stream_sink()) {
-    auto& stream_sink = request->data_source().stream_sink();
+  if (request->data_sink().is_stream_sink()) {
+    auto& stream_sink = request->data_sink().stream_sink();
     auto result = ValidateStreamSink("CreateConsumer(StreamSink)", name, *clock_registry_,
                                      *clock_factory_, stream_sink, /*writable=*/false);
     if (!result.is_ok()) {
@@ -591,15 +612,23 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     }
 
     reference_clock = std::move(result.value().reference_clock);
-    format = result.value().format;
+    dest_format = result.value().format;
     media_ticks_per_ns = result.value().media_ticks_per_ns;
 
+    // Validate this now that we have dest_format.
+    auto source_format_result = ValidateConsumerSourceSampleType(request, *dest_format);
+    if (!source_format_result.is_ok()) {
+      completer.ReplyError(source_format_result.error());
+      return;
+    }
+    source_format = source_format_result.value();
+
     // Packet size defaults to the mix period or the buffer size, whichever is smaller.
-    const int64_t frames_per_mix_period = format->integer_frames_per(
+    const int64_t frames_per_mix_period = dest_format->integer_frames_per(
         mix_thread->mix_period(), media::TimelineRate::RoundingMode::Floor);
     const int64_t frames_per_payload_buffer =
         static_cast<int64_t>(result.value().payload_buffer->content_size()) /
-        format->bytes_per_frame();
+        dest_format->bytes_per_frame();
     if (frames_per_payload_buffer <= 0) {
       FX_LOGS(WARNING) << "CreateConsumer: invalid field `payload_buffer`";
       completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
@@ -618,7 +647,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
 
     const auto packet_queue = std::make_shared<StreamSinkClient::PacketQueue>();
     const auto client = std::make_shared<StreamSinkClient>(StreamSinkClient::Args{
-        .format = *format,
+        .format = *dest_format,
         .frames_per_packet = frames_per_packet,
         .client_end = std::move(stream_sink.client_end()),
         .payload_buffers = {{0, std::move(result.value().payload_buffer)}},
@@ -628,31 +657,41 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
 
     // This keeps `client` alive implicitly via the callbacks.
     writer = std::make_shared<StreamSinkConsumerWriter>(StreamSinkConsumerWriter::Args{
-        .format = *format,
+        .dest_format = *dest_format,
+        .source_format = *source_format,
         .media_ticks_per_ns = media_ticks_per_ns,
         .call_put_packet = [client](auto packet) { client->PutPacket(std::move(packet)); },
         .call_end = [client]() { client->End(); },
         .recycled_packet_queue = packet_queue,
     });
 
-  } else if (request->data_source().is_ring_buffer()) {
+  } else if (request->data_sink().is_ring_buffer()) {
     auto result =
         ValidateRingBuffer("CreateConsumer(RingBuffer)", name, *clock_registry_, *clock_factory_,
-                           request->data_source().ring_buffer(), /*writable=*/true);
+                           request->data_sink().ring_buffer(), /*writable=*/true);
     if (!result.is_ok()) {
       completer.ReplyError(result.error());
       return;
     }
 
-    writer = std::make_shared<RingBufferConsumerWriter>(result.value().ring_buffer);
-    format = result.value().format;
+    dest_format = result.value().format;
     reference_clock = std::move(result.value().reference_clock);
-    media_ticks_per_ns = format->frames_per_ns();
+    media_ticks_per_ns = dest_format->frames_per_ns();
+
+    // Validate this now that we have dest_format.
+    auto source_format_result = ValidateConsumerSourceSampleType(request, *dest_format);
+    if (!source_format_result.is_ok()) {
+      completer.ReplyError(source_format_result.error());
+      return;
+    }
+
+    source_format = source_format_result.value();
+    writer = std::make_shared<RingBufferConsumerWriter>(result.value().ring_buffer, *source_format);
 
     // The consumer adds two mix periods worth of delay (it writes one mix period worth of data
     // starting one mix period in the future). The specified `producer_frames` must be large enough
     // to cover this delay.
-    auto min_producer_frames = format->integer_frames_per(2 * mix_thread->mix_period());
+    auto min_producer_frames = dest_format->integer_frames_per(2 * mix_thread->mix_period());
     if (min_producer_frames > result.value().producer_frames) {
       FX_LOGS(WARNING) << "CreateConsumer: ring buffer has " << result.value().producer_frames
                        << " producer frames, but need at least " << min_producer_frames
@@ -662,8 +701,8 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     }
 
   } else {
-    FX_LOGS(WARNING) << "Unsupported ConsumerDataSource: "
-                     << static_cast<int>(request->data_source().Which());
+    FX_LOGS(WARNING) << "Unsupported ConsumerDataSink: "
+                     << static_cast<int>(request->data_sink().Which());
     completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kUnsupportedOption);
     return;
   }
@@ -693,7 +732,8 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
   const auto consumer = ConsumerNode::Create({
       .name = name,
       .pipeline_direction = request->direction(),
-      .format = *format,
+      .format = *dest_format,
+      .source_sample_type = source_format->sample_type(),
       .reference_clock = std::move(reference_clock),
       .media_ticks_per_ns = media_ticks_per_ns,
       .writer = std::move(writer),

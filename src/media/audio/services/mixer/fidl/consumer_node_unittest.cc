@@ -20,7 +20,6 @@ using SampleType = fuchsia_audio::SampleType;
 using ::testing::ElementsAre;
 
 const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 10000});
-const Format kWrongFormat = Format::CreateOrDie({SampleType::kFloat32, 1, 10000});
 
 // At 10kHz fps, 1ms is 10 frames.
 constexpr auto kMixJobFrames = 10;
@@ -40,7 +39,8 @@ struct TestHarness {
 };
 
 TestHarness MakeTestHarness(FakeGraph::Args graph_args,
-                            zx::duration consumer_downstream_delay = zx::nsec(0)) {
+                            zx::duration consumer_downstream_delay = zx::nsec(0),
+                            std::optional<SampleType> source_sample_type = std::nullopt) {
   TestHarness h;
   h.graph = std::make_unique<FakeGraph>(std::move(graph_args));
   h.clock_realm = SyntheticClockRealm::Create();
@@ -68,6 +68,7 @@ TestHarness MakeTestHarness(FakeGraph::Args graph_args,
   h.consumer_node = ConsumerNode::Create({
       .pipeline_direction = graph_args.default_pipeline_direction,
       .format = kFormat,
+      .source_sample_type = source_sample_type ? *source_sample_type : kFormat.sample_type(),
       .reference_clock = h.clock,
       .media_ticks_per_ns = kFormat.frames_per_ns(),
       .writer = h.consumer_writer,
@@ -86,18 +87,53 @@ TestHarness::~TestHarness() {
   graph->global_task_queue()->RunForThread(mix_thread->id());
 }
 
-TEST(ConsumerNodeTest, CreateEdgeSourceBadFormat) {
-  auto h = MakeTestHarness({
-      .unconnected_ordinary_nodes = {1},
-      .formats = {{&kWrongFormat, {1}}},
-  });
+TEST(ConsumerNodeTest, CreateEdgeSourceOtherFormats) {
+  using ::fuchsia_audio_mixer::CreateEdgeError;
 
-  auto& graph = *h.graph;
+  struct TestCase {
+    std::string name;
+    Format source_format;
+    std::optional<CreateEdgeError> expected_error;
+  };
+  const std::vector<TestCase> test_cases = {
+      {
+          .name = "DifferentChannels",
+          .source_format = Format::CreateOrDie({SampleType::kFloat32, 1, 10000}),
+          .expected_error = CreateEdgeError::kIncompatibleFormats,
+      },
+      {
+          .name = "DifferentRate",
+          .source_format = Format::CreateOrDie({SampleType::kFloat32, 2, 20000}),
+          .expected_error = CreateEdgeError::kIncompatibleFormats,
+      },
+      {
+          .name = "DifferentSampleType",
+          .source_format = Format::CreateOrDie({SampleType::kInt32, 2, 10000}),
+          .expected_error = std::nullopt,  // success
+      },
+  };
 
-  // Cannot create an edge where a the source has a different format than the consumer.
-  auto result = Node::CreateEdge(graph.ctx(), graph.node(1), h.consumer_node, /*options=*/{});
-  ASSERT_FALSE(result.is_ok());
-  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
+  for (auto& tc : test_cases) {
+    SCOPED_TRACE(tc.name);
+
+    auto h = MakeTestHarness(
+        {
+            .unconnected_ordinary_nodes = {1},
+            .formats = {{&tc.source_format, {1}}},
+        },
+        /*consumer_downstream_delay=*/zx::nsec(0),
+        /*source_sample_type=*/tc.source_format.sample_type());
+
+    auto& graph = *h.graph;
+    auto result = Node::CreateEdge(graph.ctx(), graph.node(1), h.consumer_node, /*options=*/{});
+
+    if (tc.expected_error) {
+      ASSERT_FALSE(result.is_ok());
+      EXPECT_EQ(result.error(), *tc.expected_error);
+    } else {
+      ASSERT_TRUE(result.is_ok());
+    }
+  }
 }
 
 TEST(ConsumerNodeTest, CreateEdgeTooManySources) {
