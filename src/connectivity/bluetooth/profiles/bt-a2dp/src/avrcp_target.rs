@@ -20,8 +20,7 @@ async fn lifecycle_wait_ready(proxy: LifecycleProxy) -> Result<(), Error> {
 /// Returns Ok if the AVRCP Target was successfully started, or Error otherwise.
 pub async fn start_avrcp_target() -> Result<(), Error> {
     let lifecycle = fuchsia_component::client::connect_to_protocol::<LifecycleMarker>()?;
-    lifecycle_wait_ready(lifecycle).await?;
-    Ok(())
+    lifecycle_wait_ready(lifecycle).await
 }
 
 #[cfg(test)]

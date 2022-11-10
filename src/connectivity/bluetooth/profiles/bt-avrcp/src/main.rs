@@ -102,7 +102,6 @@ async fn main() -> Result<(), Error> {
 
     // Set up cobalt 1.1 logger.
     let cobalt = bt_metrics::create_metrics_logger()
-        .await
         .map_err(|e| warn!("Failed to create metrics: {e}"))
         .ok();
 

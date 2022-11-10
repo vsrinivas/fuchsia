@@ -49,6 +49,8 @@ mod error;
 
 pub use crate::error::Error;
 
+pub type Result<T> = std::result::Result<T, Error>;
+
 #[derive(Debug)]
 pub enum ProfileEvent {
     /// A peer has connected.
@@ -72,7 +74,7 @@ impl ProfileEvent {
 
 impl TryFrom<bredr::SearchResultsRequest> for ProfileEvent {
     type Error = Error;
-    fn try_from(value: bredr::SearchResultsRequest) -> Result<Self, Self::Error> {
+    fn try_from(value: bredr::SearchResultsRequest) -> Result<Self> {
         let bredr::SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } =
             value;
         let id: PeerId = peer_id.into();
@@ -89,7 +91,7 @@ impl TryFrom<bredr::SearchResultsRequest> for ProfileEvent {
 
 impl TryFrom<bredr::ConnectionReceiverRequest> for ProfileEvent {
     type Error = Error;
-    fn try_from(value: bredr::ConnectionReceiverRequest) -> Result<Self, Self::Error> {
+    fn try_from(value: bredr::ConnectionReceiverRequest) -> Result<Self> {
         let bredr::ConnectionReceiverRequest::Connected { peer_id, channel, protocol, .. } = value;
         let id = peer_id.into();
         let channel = channel.try_into().map_err(Error::connection_receiver)?;
@@ -144,7 +146,7 @@ impl ProfileClient {
         proxy: bredr::ProfileProxy,
         services: &[bredr::ServiceDefinition],
         channel_params: bredr::ChannelParameters,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self> {
         if services.is_empty() {
             return Ok(Self::new(proxy));
         }
@@ -163,7 +165,7 @@ impl ProfileClient {
         &mut self,
         service_uuid: bredr::ServiceClassProfileIdentifier,
         attributes: &[u16],
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         if self.terminated {
             return Err(Error::AlreadyTerminated);
         }
@@ -186,7 +188,7 @@ impl FusedStream for ProfileClient {
 }
 
 impl Stream for ProfileClient {
-    type Item = Result<ProfileEvent, Error>;
+    type Item = Result<ProfileEvent>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.terminated {

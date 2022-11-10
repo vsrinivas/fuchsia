@@ -22,6 +22,7 @@ rustc_library("bt-metrics") {
     ":bt_metrics_registry_rustlib",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:tracing",
