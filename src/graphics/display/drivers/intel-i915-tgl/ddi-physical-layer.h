@@ -182,13 +182,20 @@ class DdiSkylake : public DdiPhysicalLayer {
   bool enabled_ = false;
 };
 
-// Instantiation of COMBO DDI Physical Layer (DDI A-C) on Tiger Lake.
+// Tiger Lake's Combo DDIs (DDI A-C).
 //
-// TODO(fxbug.dev/105240): Currently this is only a placeholder class that does
-// nothing. Correct Enable() / Disable() logic needs to be implemented.
+// Combo DDIs support both high-voltage display standards (DisplayPort, HDMI)
+// suitable for long backplanes (cables connected to external monitors) and
+// as low-voltage standards (Embedded DisplayPort, MIPI D-PHY) used for shorter
+// backplanes (PCB traces and short internal cables).
+//
+// Each combo DDI is connected to a specific port type at device manufacturing
+// time. The connectivity information is recorded in the VBT (Video BIOS
+// Table). The display driver (us) is responsible for configuring the DDI to
+// reflect this information.
 class ComboDdiTigerLake : public DdiPhysicalLayer {
  public:
-  explicit ComboDdiTigerLake(DdiId ddi_id) : DdiPhysicalLayer(ddi_id) {}
+  explicit ComboDdiTigerLake(DdiId ddi_id, fdf::MmioBuffer* mmio_space);
   ~ComboDdiTigerLake() override = default;
 
   // DdiPhysicalLayer overrides:
@@ -198,8 +205,17 @@ class ComboDdiTigerLake : public DdiPhysicalLayer {
   bool Disable() override;
   PhysicalLayerInfo GetPhysicalLayerInfo() const override;
 
+  // Combo PHYs must be initialized before being enabled.
+  // TODO(fxbug.dev/114769): Create an initialization API in the base class.
+  bool Initialize();
+
+  // Combo PHYs must be un-initialized before entering the DC9 sleep state.
+  // TODO(fxbug.dev/114769): Create an initialization API in the base class.
+  bool Deinitialize();
+
  private:
   bool enabled_ = false;
+  fdf::MmioBuffer* const mmio_space_ = nullptr;
 };
 
 // Instantiation of Type-C DDI Physical Layer (DDI TC 1-6) on Tiger Lake.

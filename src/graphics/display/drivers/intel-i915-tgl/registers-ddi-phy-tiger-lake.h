@@ -663,7 +663,7 @@ class PortPhysicalCoding1 : public hwreg::RegisterBase<PortPhysicalCoding1, uint
   DEF_RSVDZ_FIELD(23, 22);
 
   // Selects how often DCC (Duty Cycle Correction) is performed.
-  DEF_FIELD(21, 20, duty_cycle_correction_schedule_select);
+  DEF_ENUM_FIELD(DutyCycleCorrectionScheduleSelect, 21, 20, duty_cycle_correction_schedule_select);
 
   // If true, the DCC (Duty Cycle Correction) calibration is bypassed.
   //
@@ -708,11 +708,11 @@ class PortPhysicalCoding1 : public hwreg::RegisterBase<PortPhysicalCoding1, uint
   DEF_FIELD(3, 2, latency_optimization_value);
 
   // If true, `soft_lane_reset` is read by the circuitry.
-  DEF_BIT(1, soft_lane_reset_enable);
+  DEF_BIT(1, soft_lane_reset_valid);
 
   // If false, requests that the lanes controlled by this register are reset.
   //
-  // This field is only used if `soft_lane_reset_enable` is true.
+  // This field is only used if `soft_lane_reset_valid` is true.
   DEF_BIT(0, soft_lane_reset);
 
   static auto GetForDdiLane(i915_tgl::DdiId ddi_id, PortLane lane) {

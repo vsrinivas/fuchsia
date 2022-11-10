@@ -1004,6 +1004,136 @@ TEST_F(TypeCDdiTigerLakeTest, ReadPhysicalLayerInfo_Thunderbolt) {
   }
 }
 
+class ComboDdiTigerLakeTest : public ::testing::Test {
+ public:
+  ComboDdiTigerLakeTest() = default;
+  ~ComboDdiTigerLakeTest() override = default;
+
+  void SetUp() override {}
+  void TearDown() override { mmio_range_.CheckAllAccessesReplayed(); }
+
+ protected:
+  constexpr static int kMmioRangeSize = 0x200000;
+  MockMmioRange mmio_range_{kMmioRangeSize, MockMmioRange::Size::k32};
+  fdf::MmioBuffer mmio_buffer_{mmio_range_.GetMmioBuffer()};
+};
+
+constexpr int kPhyMiscAOffset = 0x64c00;
+constexpr int kPhyMiscBOffset = 0x64c04;
+
+constexpr int kPortClDw5BOffset = 0x6c014;
+constexpr int kPortCompDw0BOffset = 0x6c100;
+constexpr int kPortCompDw1BOffset = 0x6c104;
+constexpr int kPortCompDw3BOffset = 0x6c10c;
+constexpr int kPortCompDw8BOffset = 0x6c120;
+constexpr int kPortCompDw9BOffset = 0x6c124;
+constexpr int kPortCompDw10BOffset = 0x6c128;
+constexpr int kPortPcsDw1AuxBOffset = 0x6c304;
+constexpr int kPortTxDw8AuxBOffset = 0x6c3a0;
+constexpr int kPortPcsDw1Ln0BOffset = 0x6c804;
+constexpr int kPortTxDw8Ln0BOffset = 0x6c8a0;
+constexpr int kPortPcsDw1Ln1BOffset = 0x6c904;
+constexpr int kPortTxDw8Ln1BOffset = 0x6c9a0;
+constexpr int kPortPcsDw1Ln2BOffset = 0x6ca04;
+constexpr int kPortTxDw8Ln2BOffset = 0x6caa0;
+constexpr int kPortPcsDw1Ln3BOffset = 0x6cb04;
+constexpr int kPortTxDw8Ln3BOffset = 0x6cba0;
+
+constexpr int kPortClDw5AOffset = 0x162014;
+constexpr int kPortCompDw0AOffset = 0x162100;
+constexpr int kPortCompDw1AOffset = 0x162104;
+constexpr int kPortCompDw3AOffset = 0x16210c;
+constexpr int kPortCompDw8AOffset = 0x162120;
+constexpr int kPortCompDw9AOffset = 0x162124;
+constexpr int kPortCompDw10AOffset = 0x162128;
+constexpr int kPortPcsDw1AuxAOffset = 0x162304;
+constexpr int kPortTxDw8AuxAOffset = 0x1623a0;
+constexpr int kPortPcsDw1Ln0AOffset = 0x162804;
+constexpr int kPortTxDw8Ln0AOffset = 0x1628a0;
+constexpr int kPortPcsDw1Ln1AOffset = 0x162904;
+constexpr int kPortTxDw8Ln1AOffset = 0x1629a0;
+constexpr int kPortPcsDw1Ln2AOffset = 0x162a04;
+constexpr int kPortTxDw8Ln2AOffset = 0x162aa0;
+constexpr int kPortPcsDw1Ln3AOffset = 0x162b04;
+constexpr int kPortTxDw8Ln3AOffset = 0x162ba0;
+
+TEST_F(ComboDdiTigerLakeTest, InitializeDdiADell5420) {
+  mmio_range_.Expect(MockMmioRange::AccessList({
+      {.address = kPortCompDw3AOffset, .value = 0xc0606b25},
+      {.address = kPortCompDw1AOffset, .value = 0x81000400},
+      {.address = kPortCompDw9AOffset, .value = 0x62ab67bb},
+      {.address = kPortCompDw10AOffset, .value = 0x51914f96},
+      {.address = kPortClDw5AOffset, .value = 0x1204047b},
+      {.address = kPortTxDw8AuxAOffset, .value = 0x30037c9c},
+      {.address = kPortPcsDw1AuxAOffset, .value = 0x1c300004},
+      {.address = kPortTxDw8Ln0AOffset, .value = 0x300335dc},
+      {.address = kPortPcsDw1Ln0AOffset, .value = 0x1c300004},
+      {.address = kPortTxDw8Ln1AOffset, .value = 0x3003379c},
+      {.address = kPortPcsDw1Ln1AOffset, .value = 0x1c300004},
+      {.address = kPortTxDw8Ln2AOffset, .value = 0x3003501c},
+      {.address = kPortPcsDw1Ln2AOffset, .value = 0x1c300004},
+      {.address = kPortTxDw8Ln3AOffset, .value = 0x3003501c},
+      {.address = kPortPcsDw1Ln3AOffset, .value = 0x1c300004},
+      {.address = kPhyMiscAOffset, .value = 0x23000000},
+      {.address = kPortCompDw8AOffset, .value = 0x010d0280},
+      {.address = kPortCompDw0AOffset, .value = 0x80005f25},
+  }));
+
+  ComboDdiTigerLake ddi(DdiId::DDI_A, &mmio_buffer_);
+  EXPECT_EQ(true, ddi.Initialize());
+}
+
+TEST_F(ComboDdiTigerLakeTest, InitializeDdiBDell5420) {
+  mmio_range_.Expect(MockMmioRange::AccessList({
+      {.address = kPortCompDw3BOffset, .value = 0xc0606b25},
+      {.address = kPortCompDw1BOffset, .value = 0x81000400},
+      {.address = kPortCompDw9BOffset, .value = 0x62ab67bb},
+      {.address = kPortCompDw10BOffset, .value = 0x51914f96},
+      {.address = kPortClDw5BOffset, .value = 0x12040478},
+      {.address = kPortTxDw8AuxBOffset, .value = 0x3003501c},
+      {.address = kPortPcsDw1AuxBOffset, .value = 0x1c300004},
+      {.address = kPortTxDw8Ln0BOffset, .value = 0x3003501c},
+      {.address = kPortPcsDw1Ln0BOffset, .value = 0x1c300004},
+      {.address = kPortTxDw8Ln1BOffset, .value = 0x3003501c},
+      {.address = kPortPcsDw1Ln1BOffset, .value = 0x1c300004},
+      {.address = kPortTxDw8Ln2BOffset, .value = 0x3003501c},
+      {.address = kPortPcsDw1Ln2BOffset, .value = 0x1c300004},
+      {.address = kPortTxDw8Ln3BOffset, .value = 0x3003501c},
+      {.address = kPortPcsDw1Ln3BOffset, .value = 0x1c300004},
+      {.address = kPhyMiscBOffset, .value = 0x23000000},
+      {.address = kPortCompDw8BOffset, .value = 0x000d0280},
+      {.address = kPortCompDw0BOffset, .value = 0x80005f26},
+  }));
+
+  ComboDdiTigerLake ddi(DdiId::DDI_B, &mmio_buffer_);
+  EXPECT_EQ(true, ddi.Initialize());
+}
+
+TEST_F(ComboDdiTigerLakeTest, InitializeDdiBNuc11) {
+  mmio_range_.Expect(MockMmioRange::AccessList({
+      {.address = kPortCompDw3BOffset, .value = 0xc0608025},
+      {.address = kPortCompDw1BOffset, .value = 0x81000400},
+      {.address = kPortCompDw9BOffset, .value = 0x62ab67bb},
+      {.address = kPortCompDw10BOffset, .value = 0x51914f96},
+      {.address = kPortClDw5BOffset, .value = 0x1204047b},
+      {.address = kPortTxDw8AuxBOffset, .value = 0x3003501c},
+      {.address = kPortPcsDw1AuxBOffset, .value = 0x18300004},
+      {.address = kPortTxDw8Ln0BOffset, .value = 0x300355fc},
+      {.address = kPortPcsDw1Ln0BOffset, .value = 0x18300004},
+      {.address = kPortTxDw8Ln1BOffset, .value = 0x300335fc},
+      {.address = kPortPcsDw1Ln1BOffset, .value = 0x18300004},
+      {.address = kPortTxDw8Ln2BOffset, .value = 0x300335bc},
+      {.address = kPortPcsDw1Ln2BOffset, .value = 0x18300004},
+      {.address = kPortTxDw8Ln3BOffset, .value = 0x300335dc},
+      {.address = kPortPcsDw1Ln3BOffset, .value = 0x18300004},
+      {.address = kPhyMiscBOffset, .value = 0x23000000},
+      {.address = kPortCompDw8BOffset, .value = 0x000d0280},
+      {.address = kPortCompDw0BOffset, .value = 0x80005f28},
+  }));
+  ComboDdiTigerLake ddi(DdiId::DDI_B, &mmio_buffer_);
+  EXPECT_EQ(true, ddi.Initialize());
+}
+
 }  // namespace
 
 }  // namespace i915_tgl
