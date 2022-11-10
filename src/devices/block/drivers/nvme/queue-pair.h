@@ -22,14 +22,25 @@
 
 namespace nvme {
 
-// TODO(fxbug.dev/102133): Merge this struct with nvme_utxn_t in nvme.cc.
+struct IoCommand;
+
 // Data associated with a transaction.
 struct TransactionData {
+  void ClearExceptPrp() {
+    io_cmd = nullptr;
+    pmt.reset();
+    buffer = {};
+    active = false;
+  }
+
+  // The IoCommand consists of one or more transactions.
+  IoCommand* io_cmd;
+  // Used to pin the pages relevant to this transaction.
+  zx::pmt pmt;
   // Data buffer, provided by the user.
   ddk::IoBuffer buffer;
-  // If the first buffer covers more than two pages, this buffer
-  // will be allocated by |QueuePair::Submit| and will contain a PRP list, as described
-  // by NVM Express Base Specification 2.0 Section 4.1.1, "Physical Region Page Entry and List"
+  // Described by NVM Express Base Specification 2.0 Section 4.1.1, "Physical Region Page Entry and
+  // List"
   ddk::IoBuffer prp_buffer;
   // Set to true when a transaction is submitted, and set to false when it is completed.
   bool active = false;
@@ -41,36 +52,45 @@ struct TransactionData {
 // we always assume there is a 1:1 relationship between the two.
 class QueuePair {
  public:
+  // TODO(fxbug.dev/102133): Tune kMaxTransferPages vs. preallocated PRP buffer usage.
+  // Limits the PRP buffer size to a single page.
+  static constexpr size_t kMaxTransferPages = 256;
+
+  static zx::result<std::unique_ptr<QueuePair>> Create(zx::unowned_bti bti, size_t queue_id,
+                                                       size_t max_entries, CapabilityReg& reg,
+                                                       fdf::MmioBuffer& mmio,
+                                                       bool prealloc_prp = false);
+
   // Prefer |QueuePair::Create|.
   QueuePair(Queue completion, Queue submission, zx::unowned_bti bti, fdf::MmioBuffer& mmio,
-            DoorbellReg completion_doorbell, DoorbellReg submission_doorbell, size_t utxn_count)
-      : completion_(std::move(completion)),
+            DoorbellReg completion_doorbell, DoorbellReg submission_doorbell)
+      : kPageSize(zx_system_get_page_size()),
+        kPageMask(zx_system_get_page_size() - 1),
+        kPageShift(__builtin_ctzl(zx_system_get_page_size())),
+        completion_(std::move(completion)),
         submission_(std::move(submission)),
-        txns_(utxn_count),
+        txns_(submission_.entry_count()),
         bti_(std::move(bti)),
         mmio_(mmio),
         completion_doorbell_(completion_doorbell),
         submission_doorbell_(submission_doorbell) {}
 
-  static zx::result<std::unique_ptr<QueuePair>> Create(zx::unowned_bti bti, size_t queue_id,
-                                                       size_t max_entries, CapabilityReg& reg,
-                                                       fdf::MmioBuffer& mmio, size_t utxn_count);
-
   const Queue& completion() { return completion_; }
   const Queue& submission() { return submission_; }
   const std::vector<TransactionData>& txn_data() { return txns_; }
 
+  // Preallocates PRP buffers to avoid repeatedly allocating and freeing them for every transaction.
+  zx_status_t PreallocatePrpBuffers();
+
   // Check the completion queue for any new completed elements. Should be called from an async task
   // posted by the interrupt handler.
-  zx_status_t CheckForNewCompletion(Completion** comp_ptr);
+  zx_status_t CheckForNewCompletion(IoCommand** io_cmd, bool* has_error_code);
   void RingCompletionDb();
 
-  // Submit will take ownership of |completer| only if submission succeeds. If submission fails, it
-  // is up to the caller to appropriately fail the completer.
   zx::result<> Submit(Submission& submission, std::optional<zx::unowned_vmo> data,
-                      zx_off_t vmo_offset, uint16_t utxn_id) {
+                      zx_off_t vmo_offset, size_t bytes, IoCommand* io_cmd) {
     return Submit(cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(&submission), sizeof(submission)),
-                  std::move(data), vmo_offset, utxn_id);
+                  std::move(data), vmo_offset, bytes, io_cmd);
   }
 
  private:
@@ -78,16 +98,22 @@ class QueuePair {
 
   // Raw implementation of submit that operates on a byte span rather than a submission.
   zx::result<> Submit(cpp20::span<uint8_t> submission, std::optional<zx::unowned_vmo> data,
-                      zx_off_t vmo_offset, uint16_t utxn_id);
+                      zx_off_t vmo_offset, size_t bytes, IoCommand* io_cmd);
 
+  // TODO(fxbug.dev/102133): Use this if setting up PRP lists that span more than one page. See
+  // QueuePair::kMaxTransferPages.
   // Puts a PRP list in |buf| containing the given addresses.
   zx::result<> PreparePrpList(ddk::IoBuffer& buf, cpp20::span<const zx_paddr_t> pages);
+
+  // System parameters.
+  const uint64_t kPageSize;
+  const uint64_t kPageMask;
+  const uint64_t kPageShift;
 
   // Completion queue.
   Queue completion_ __TA_GUARDED(completion_lock_);
   // Submission queue.
   Queue submission_ __TA_GUARDED(submission_lock_);
-  // TODO(fxbug.dev/102133): Merge this array with nvme_->utxn in nvme.h.
   // This is an array of data associated with each transaction.
   // Each transaction's ID is equal to its index in the queue, and this array works the same way.
   std::vector<TransactionData> txns_ __TA_GUARDED(transaction_lock_);

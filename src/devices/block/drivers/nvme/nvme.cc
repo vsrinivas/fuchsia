@@ -36,33 +36,21 @@
 
 namespace nvme {
 
-#define TXN_FLAG_FAILED 1
+#define COMMAND_FLAG_FAILED 1
 
-struct nvme_txn_t {
+struct IoCommand {
   block_op_t op;
   list_node_t node;
   block_impl_queue_callback completion_cb;
   void* cookie;
-  uint16_t pending_utxns;
+  uint16_t pending_txns;
   uint8_t opcode;
   uint8_t flags;
 };
 
-struct nvme_utxn_t {
-  zx_paddr_t phys;  // io buffer phys base (1 page)
-  void* virt;       // io buffer virt base
-  zx_handle_t pmt;  // pinned memory
-  nvme_txn_t* txn;  // related txn
-  uint16_t id;
-  uint16_t reserved0;
-  uint32_t reserved1;
-};
-
-#define UTXN_COUNT 63
-
 // Limit maximum transfer size to 1MB which fits comfortably
-// within our single scatter gather page per utxn setup
-#define MAX_XFER (1024 * 1024)
+// within our single scatter gather page per QueuePair setup
+#define MAX_XFER (QueuePair::kMaxTransferPages * zx_system_get_page_size())
 
 // Maximum submission and completion queue item counts, for
 // queues that are a single page in size.
@@ -80,18 +68,16 @@ struct nvme_device_t {
   uint32_t flags;
   fbl::Mutex lock;
 
-  uint64_t utxn_avail;  // bitmask of available utxns
-
-  // The pending list is txns that have been received
+  // The pending list consists of commands that have been received
   // via nvme_queue() and are waiting for io to start.
   // The exception is the head of the pending list which may
-  // be partially started, waiting for more utxns to become
+  // be partially started, waiting for more txns to become
   // available.
-  // The active list consists of txns where all utxns have
+  // The active list consists of commands where all txns have
   // been created and we're waiting for them to complete or
   // error out.
-  list_node_t pending_txns;  // inbound txns to process
-  list_node_t active_txns;   // txns in flight
+  list_node_t pending_commands;  // inbound commands to process
+  list_node_t active_commands;   // commands in flight
 
   // The io signal completion is signaled from nvme_queue()
   // or from the irq thread, notifying the io thread that
@@ -121,42 +107,11 @@ struct nvme_device_t {
 
   // source of physical pages for queues and admin commands
   io_buffer_t iob;
-
-  // pool of utxns
-  nvme_utxn_t utxn[UTXN_COUNT];
 };
 
 // Takes the log2 of a page size to turn it into a shift.
 static inline size_t PageShift(size_t page_size) {
   return (sizeof(int) * 8) - __builtin_clz((int)page_size) - 1;
-}
-
-// We break IO transactions down into one or more "micro transactions" (utxn)
-// based on the transfer limits of the controller, etc.  Each utxn has an
-// id associated with it, which is used as the command id for the command
-// queued to the NVME device.  This id is the same as its index into the
-// pool of utxns and the bitmask of free txns, to simplify management.
-//
-// We maintain a pool of 63 of these, which is the number of commands
-// that can be submitted to NVME via a single page submit queue.
-//
-// The utxns are not protected by locks.  Instead, after initialization,
-// they may only be touched by the io thread, which is responsible for
-// queueing commands and dequeuing completion messages.
-
-static nvme_utxn_t* utxn_get(nvme_device_t* nvme) {
-  uint64_t n = __builtin_ffsll(nvme->utxn_avail);
-  if (n == 0) {
-    return NULL;
-  }
-  n--;
-  nvme->utxn_avail &= ~(1ULL << n);
-  return nvme->utxn + n;
-}
-
-static void utxn_put(nvme_device_t* nvme, nvme_utxn_t* utxn) {
-  uint64_t n = utxn->id;
-  nvme->utxn_avail |= (1ULL << n);
 }
 
 static zx_status_t nvme_admin_cq_get(nvme_device_t* nvme, nvme_cpl_t* cpl) {
@@ -239,30 +194,15 @@ static zx_status_t nvme_admin_txn(nvme_device_t* nvme, nvme_cmd_t* cmd, nvme_cpl
   return status;
 }
 
-static inline void txn_complete(nvme_txn_t* txn, zx_status_t status) {
-  txn->completion_cb(txn->cookie, status, &txn->op);
+static inline void IoCommandComplete(IoCommand* io_cmd, zx_status_t status) {
+  io_cmd->completion_cb(io_cmd->cookie, status, &io_cmd->op);
 }
 
-bool Nvme::IoProcessTxn(nvme_txn_t* txn) {
+bool Nvme::SubmitAllTxnsForIoCommand(IoCommand* io_cmd) {
   nvme_device_t* nvme = nvme_;
 
-  zx_handle_t vmo = txn->op.rw.vmo;
-  nvme_utxn_t* utxn;
-  zx_paddr_t* pages;
-  zx_status_t status;
-
-  const size_t kPageSize = zx_system_get_page_size();
-  const size_t kPageMask = kPageSize - 1;
-  const size_t kPageShift = PageShift(kPageSize);
-
   for (;;) {
-    // If there are no available utxns, we can't proceed
-    // and we tell the caller to retain the txn (true)
-    if ((utxn = utxn_get(nvme)) == NULL) {
-      return true;
-    }
-
-    uint32_t blocks = txn->op.rw.length;
+    uint32_t blocks = io_cmd->op.rw.length;
     if (blocks > nvme->max_xfer) {
       blocks = nvme->max_xfer;
     }
@@ -270,174 +210,114 @@ bool Nvme::IoProcessTxn(nvme_txn_t* txn) {
     // Total transfer size in bytes
     size_t bytes = ((size_t)blocks) * ((size_t)nvme->info.block_size);
 
-    // Page offset of first page of transfer
-    size_t pageoffset = txn->op.rw.offset_vmo & (~kPageMask);
-
-    // Byte offset into first page of transfer
-    size_t byteoffset = txn->op.rw.offset_vmo & kPageMask;
-
-    // Total pages mapped / touched
-    size_t pagecount = (byteoffset + bytes + kPageMask) >> kPageShift;
-
-    // read disk (OP_READ) -> memory (PERM_WRITE) or
-    // write memory (PERM_READ) -> disk (OP_WRITE)
-    uint32_t opt = (txn->opcode == NVME_OP_READ) ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
-
-    pages = static_cast<zx_paddr_t*>(utxn->virt);
-
-    if ((status = zx_bti_pin(bti_.get(), opt, vmo, pageoffset, pagecount << kPageShift, pages,
-                             pagecount, &utxn->pmt)) != ZX_OK) {
-      zxlogf(ERROR, "could not pin pages: %s", zx_status_get_string(status));
-      break;
-    }
-
-    NvmIoSubmission submission(txn->opcode == NVME_OP_WRITE);
+    NvmIoSubmission submission(io_cmd->opcode == NVME_OP_WRITE);
     submission.namespace_id = 1;
     ZX_ASSERT(blocks - 1 <= UINT16_MAX);
-    submission.set_start_lba(txn->op.rw.offset_dev).set_block_count(blocks - 1);
-    // The NVME command has room for two data pointers inline.
-    // The first is always the pointer to the first page where data is.
-    // The second is the second page if pagecount is 2.
-    // The second is the address of an array of page 2..n if pagecount > 2
-    submission.data_pointer[0] = pages[0] | byteoffset;
-    if (pagecount == 2) {
-      submission.data_pointer[1] = pages[1];
-    } else if (pagecount > 2) {
-      submission.data_pointer[1] = utxn->phys + sizeof(uint64_t);
-    }
+    submission.set_start_lba(io_cmd->op.rw.offset_dev).set_block_count(blocks - 1);
 
-    zxlogf(TRACE, "txn=%p utxn id=%u pages=%zu op=%s", txn, utxn->id, pagecount,
-           txn->opcode == NVME_OP_WRITE ? "WR" : "RD");
-    zxlogf(TRACE, "prp[0]=%016zx prp[1]=%016zx", submission.data_pointer[0],
-           submission.data_pointer[1]);
-    zxlogf(TRACE, "pages[] = { %016zx, %016zx, %016zx, %016zx, ... }", pages[0], pages[1], pages[2],
-           pages[3]);
-
-    zx::result<> status =
-        io_queue_->Submit(submission, std::nullopt, txn->op.rw.offset_vmo, utxn->id);
+    zx::result<> status = io_queue_->Submit(submission, zx::unowned_vmo(io_cmd->op.rw.vmo),
+                                            io_cmd->op.rw.offset_vmo, bytes, io_cmd);
     if (status.is_error()) {
-      zxlogf(ERROR, "Failed to submit cmd (txn=%p id=%u): %s", txn, utxn->id,
-             status.status_string());
-      break;
+      if (status.status_value() == ZX_ERR_SHOULD_WAIT) {
+        // We can't proceed if there is no available space in the submission queue, and we tell the
+        // caller to retain the command (false).
+        return false;
+      } else {
+        zxlogf(ERROR, "Failed to submit transaction (command %p): %s", io_cmd,
+               status.status_string());
+        break;
+      }
     }
-
-    utxn->txn = txn;
 
     // keep track of where we are
-    txn->op.rw.offset_dev += blocks;
-    txn->op.rw.offset_vmo += bytes;
-    txn->op.rw.length -= blocks;
-    txn->pending_utxns++;
+    io_cmd->op.rw.offset_dev += blocks;
+    io_cmd->op.rw.offset_vmo += bytes;
+    io_cmd->op.rw.length -= blocks;
+    io_cmd->pending_txns++;
 
-    // If there's no more remaining, we're done, and we
-    // move this txn to the active list and tell the
-    // caller not to retain the txn (false)
-    if (txn->op.rw.length == 0) {
+    // If there are no more transactions remaining, we're done. We move this command to the active
+    // list and tell the caller not to retain the command (true).
+    if (io_cmd->op.rw.length == 0) {
       fbl::AutoLock lock(&nvme->lock);
-      list_add_tail(&nvme->active_txns, &txn->node);
-      return false;
+      list_add_tail(&nvme->active_commands, &io_cmd->node);
+      return true;
     }
   }
-
-  // failure
-  if ((status = zx_pmt_unpin(utxn->pmt)) != ZX_OK) {
-    zxlogf(ERROR, "cannot unpin io buffer: %s", zx_status_get_string(status));
-  }
-  utxn_put(nvme, utxn);
 
   {
     fbl::AutoLock lock(&nvme->lock);
-    txn->flags |= TXN_FLAG_FAILED;
-    if (txn->pending_utxns) {
-      // if there are earlier uncompleted IOs we become active now
-      // and will finish erroring out when they complete
-      list_add_tail(&nvme->active_txns, &txn->node);
-      txn = NULL;
+    io_cmd->flags |= COMMAND_FLAG_FAILED;
+    if (io_cmd->pending_txns) {
+      // If there are earlier uncompleted transactions, we become active now and will finish
+      // erroring out when they complete.
+      list_add_tail(&nvme->active_commands, &io_cmd->node);
+      io_cmd = NULL;
     }
   }
 
-  if (txn != NULL) {
-    txn_complete(txn, ZX_ERR_INTERNAL);
+  if (io_cmd != NULL) {
+    IoCommandComplete(io_cmd, ZX_ERR_INTERNAL);
   }
 
-  // Either way we tell the caller not to retain the txn (false)
-  return false;
+  // Either successful or not, we tell the caller not to retain the command (true).
+  return true;
 }
 
-void Nvme::IoProcessTxns() {
+void Nvme::ProcessIoSubmissions() {
   nvme_device_t* nvme = nvme_;
 
-  nvme_txn_t* txn;
-
+  IoCommand* io_cmd;
   for (;;) {
     {
       fbl::AutoLock lock(&nvme->lock);
-      txn = list_remove_head_type(&nvme->pending_txns, nvme_txn_t, node);
+      io_cmd = list_remove_head_type(&nvme->pending_commands, IoCommand, node);
     }
 
-    if (txn == NULL) {
+    if (io_cmd == NULL) {
       return;
     }
 
-    if (IoProcessTxn(txn)) {
-      // put txn back at front of queue for further processing later
+    if (!SubmitAllTxnsForIoCommand(io_cmd)) {
+      // put command back at front of queue for further processing later
       fbl::AutoLock lock(&nvme->lock);
-      list_add_head(&nvme->pending_txns, &txn->node);
+      list_add_head(&nvme->pending_commands, &io_cmd->node);
       return;
     }
   }
 }
 
-void Nvme::IoProcessCpls() {
+void Nvme::ProcessIoCompletions() {
   nvme_device_t* nvme = nvme_;
 
   bool ring_doorbell = false;
-  Completion* cpl;
+  IoCommand* io_cmd = nullptr;
+  bool has_error_code = true;
 
-  while (io_queue_->CheckForNewCompletion(&cpl) != ZX_ERR_SHOULD_WAIT) {
+  while (io_queue_->CheckForNewCompletion(&io_cmd, &has_error_code) != ZX_ERR_SHOULD_WAIT) {
     ring_doorbell = true;
 
-    if (cpl->command_id() >= UTXN_COUNT) {
-      zxlogf(ERROR, "unexpected cmd id %u", cpl->command_id());
-      continue;
-    }
-    nvme_utxn_t* utxn = nvme->utxn + cpl->command_id();
-    nvme_txn_t* txn = utxn->txn;
-
-    if (txn == NULL) {
-      zxlogf(ERROR, "inactive utxn #%u completed?!", cpl->command_id());
+    if (io_cmd == nullptr) {
+      zxlogf(ERROR, "Completed transaction isn't associated with a command.");
       continue;
     }
 
-    if (cpl->status_code_type() != StatusCodeType::kGeneric || cpl->status_code() != 0) {
-      zxlogf(ERROR, "utxn #%u txn %p failed: status type=%01x, status=%02x", cpl->command_id(), txn,
-             cpl->status_code_type(), cpl->status_code());
-      txn->flags |= TXN_FLAG_FAILED;
+    if (has_error_code) {
+      io_cmd->flags |= COMMAND_FLAG_FAILED;
       // discard any remaining bytes -- no reason to keep creating
-      // further utxns once one has failed
-      txn->op.rw.length = 0;
-    } else {
-      zxlogf(TRACE, "utxn #%u txn %p OKAY", cpl->command_id(), txn);
+      // further txns once one has failed
+      io_cmd->op.rw.length = 0;
     }
 
-    zx_status_t status = zx_pmt_unpin(utxn->pmt);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "cannot unpin io buffer: %s", zx_status_get_string(status));
-    }
-
-    // release the microtransaction
-    utxn->txn = NULL;
-    utxn_put(nvme, utxn);
-
-    txn->pending_utxns--;
-    if ((txn->pending_utxns == 0) && (txn->op.rw.length == 0)) {
+    io_cmd->pending_txns--;
+    if ((io_cmd->pending_txns == 0) && (io_cmd->op.rw.length == 0)) {
       // remove from either pending or active list
       {
         fbl::AutoLock lock(&nvme->lock);
-        list_delete(&txn->node);
+        list_delete(&io_cmd->node);
       }
-      zxlogf(TRACE, "txn %p %s", txn, txn->flags & TXN_FLAG_FAILED ? "error" : "okay");
-      txn_complete(txn, txn->flags & TXN_FLAG_FAILED ? ZX_ERR_IO : ZX_OK);
+      zxlogf(TRACE, "Completed command %p %s", io_cmd,
+             io_cmd->flags & COMMAND_FLAG_FAILED ? "FAILED." : "OK.");
+      IoCommandComplete(io_cmd, io_cmd->flags & COMMAND_FLAG_FAILED ? ZX_ERR_IO : ZX_OK);
     }
   }
 
@@ -462,10 +342,10 @@ int Nvme::IoLoop() {
     sync_completion_reset(&nvme->io_signal);
 
     // process completion messages
-    IoProcessCpls();
+    ProcessIoCompletions();
 
     // process work queue
-    IoProcessTxns();
+    ProcessIoSubmissions();
   }
   return 0;
 }
@@ -473,49 +353,49 @@ int Nvme::IoLoop() {
 void Nvme::BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_cb, void* cookie) {
   nvme_device_t* nvme = nvme_;
 
-  nvme_txn_t* txn = containerof(op, nvme_txn_t, op);
-  txn->completion_cb = completion_cb;
-  txn->cookie = cookie;
+  IoCommand* io_cmd = containerof(op, IoCommand, op);
+  io_cmd->completion_cb = completion_cb;
+  io_cmd->cookie = cookie;
 
-  switch (txn->op.command & BLOCK_OP_MASK) {
+  switch (io_cmd->op.command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
-      txn->opcode = NVME_OP_READ;
+      io_cmd->opcode = NVME_OP_READ;
       break;
     case BLOCK_OP_WRITE:
-      txn->opcode = NVME_OP_WRITE;
+      io_cmd->opcode = NVME_OP_WRITE;
       break;
     case BLOCK_OP_FLUSH:
       // TODO
-      txn_complete(txn, ZX_OK);
+      IoCommandComplete(io_cmd, ZX_OK);
       return;
     default:
-      txn_complete(txn, ZX_ERR_NOT_SUPPORTED);
+      IoCommandComplete(io_cmd, ZX_ERR_NOT_SUPPORTED);
       return;
   }
 
-  if (txn->op.rw.length == 0) {
-    txn_complete(txn, ZX_ERR_INVALID_ARGS);
+  if (io_cmd->op.rw.length == 0) {
+    IoCommandComplete(io_cmd, ZX_ERR_INVALID_ARGS);
     return;
   }
   // Transaction must fit within device
-  if ((txn->op.rw.offset_dev >= nvme->info.block_count) ||
-      (nvme->info.block_count - txn->op.rw.offset_dev < txn->op.rw.length)) {
-    txn_complete(txn, ZX_ERR_OUT_OF_RANGE);
+  if ((io_cmd->op.rw.offset_dev >= nvme->info.block_count) ||
+      (nvme->info.block_count - io_cmd->op.rw.offset_dev < io_cmd->op.rw.length)) {
+    IoCommandComplete(io_cmd, ZX_ERR_OUT_OF_RANGE);
     return;
   }
 
   // convert vmo offset to a byte offset
-  txn->op.rw.offset_vmo *= nvme->info.block_size;
+  io_cmd->op.rw.offset_vmo *= nvme->info.block_size;
 
-  txn->pending_utxns = 0;
-  txn->flags = 0;
+  io_cmd->pending_txns = 0;
+  io_cmd->flags = 0;
 
-  zxlogf(TRACE, "io: %s: %ublks @ blk#%zu", txn->opcode == NVME_OP_WRITE ? "wr" : "rd",
-         txn->op.rw.length + 1U, txn->op.rw.offset_dev);
+  zxlogf(TRACE, "io: %s: %ublks @ blk#%zu", io_cmd->opcode == NVME_OP_WRITE ? "wr" : "rd",
+         io_cmd->op.rw.length + 1U, io_cmd->op.rw.offset_dev);
 
   {
     fbl::AutoLock lock(&nvme->lock);
-    list_add_tail(&nvme->pending_txns, &txn->node);
+    list_add_tail(&nvme->pending_commands, &io_cmd->node);
   }
 
   sync_completion_signal(&nvme->io_signal);
@@ -525,7 +405,7 @@ void Nvme::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
   nvme_device_t* nvme = nvme_;
 
   *info_out = nvme->info;
-  *block_op_size_out = sizeof(nvme_txn_t);
+  *block_op_size_out = sizeof(IoCommand);
 }
 
 void Nvme::DdkRelease() {
@@ -550,15 +430,15 @@ void Nvme::DdkRelease() {
     thrd_join(io_thread_, &r);
   }
 
-  // error out any pending txns
+  // Error out any pending commands
   {
     fbl::AutoLock lock(&nvme->lock);
-    nvme_txn_t* txn;
-    while ((txn = list_remove_head_type(&nvme->active_txns, nvme_txn_t, node)) != NULL) {
-      txn_complete(txn, ZX_ERR_PEER_CLOSED);
+    IoCommand* io_cmd;
+    while ((io_cmd = list_remove_head_type(&nvme->active_commands, IoCommand, node)) != NULL) {
+      IoCommandComplete(io_cmd, ZX_ERR_PEER_CLOSED);
     }
-    while ((txn = list_remove_head_type(&nvme->pending_txns, nvme_txn_t, node)) != NULL) {
-      txn_complete(txn, ZX_ERR_PEER_CLOSED);
+    while ((io_cmd = list_remove_head_type(&nvme->pending_commands, IoCommand, node)) != NULL) {
+      IoCommandComplete(io_cmd, ZX_ERR_PEER_CLOSED);
     }
   }
 
@@ -601,9 +481,7 @@ static void infostring(const char* prefix, uint8_t* str, size_t len) {
 #define IDX_ADMIN_SQ 0
 #define IDX_ADMIN_CQ 1
 #define IDX_SCRATCH 2
-#define IDX_UTXN_POOL 3  // this must always be last
-
-#define IO_PAGE_COUNT (IDX_UTXN_POOL + UTXN_COUNT)
+#define IO_PAGE_COUNT 3  // this must always be last
 
 #define WAIT_MS 5000
 
@@ -633,35 +511,27 @@ void Nvme::DdkInit(ddk::InitTxn txn) {
          caps_.contiguous_queues_required() ? 'Y' : 'N');
   zxlogf(DEBUG, "Maximum queue entries supported (MQES): %u", caps_.max_queue_entries());
 
-  if (zx_system_get_page_size() < caps_.memory_page_size_min_bytes()) {
-    zxlogf(ERROR, "Page size is too small (ours: 0x%x, min: 0x%x).", zx_system_get_page_size(),
+  const size_t kPageSize = zx_system_get_page_size();
+  if (kPageSize < caps_.memory_page_size_min_bytes()) {
+    zxlogf(ERROR, "Page size is too small (ours: 0x%zd, min: 0x%d).", kPageSize,
            caps_.memory_page_size_min_bytes());
     txn.Reply(ZX_ERR_NOT_SUPPORTED);
     return;
   }
-  if (zx_system_get_page_size() > caps_.memory_page_size_max_bytes()) {
-    zxlogf(ERROR, "Page size is too large (ours: 0x%x, max: 0x%x).", zx_system_get_page_size(),
+  if (kPageSize > caps_.memory_page_size_max_bytes()) {
+    zxlogf(ERROR, "Page size is too large (ours: 0x%zd, max: 0x%d).", kPageSize,
            caps_.memory_page_size_max_bytes());
     txn.Reply(ZX_ERR_NOT_SUPPORTED);
     return;
   }
 
-  // allocate pages for various queues and the utxn scatter lists
+  // Allocate pages for the admin queue and scratch.
   // TODO: these should all be RO to hardware apart from the scratch io page(s)
-  const size_t kPageSize = zx_system_get_page_size();
   if (io_buffer_init(&nvme->iob, bti_.get(), kPageSize * IO_PAGE_COUNT, IO_BUFFER_RW) ||
       io_buffer_physmap(&nvme->iob)) {
     zxlogf(ERROR, "could not allocate io buffers");
     txn.Reply(ZX_ERR_NO_MEMORY);
     return;
-  }
-
-  // initialize the microtransaction pool
-  nvme->utxn_avail = 0x7FFFFFFFFFFFFFFFULL;
-  for (uint16_t n = 0; n < UTXN_COUNT; n++) {
-    nvme->utxn[n].id = n;
-    nvme->utxn[n].phys = nvme->iob.phys_list[IDX_UTXN_POOL + n];
-    nvme->utxn[n].virt = static_cast<uint8_t*>(nvme->iob.virt) + (IDX_UTXN_POOL + n) * kPageSize;
   }
 
   if (ControllerStatusReg::Get().ReadFrom(&*mmio_).ready()) {
@@ -695,7 +565,7 @@ void Nvme::DdkInit(ddk::InitTxn txn) {
       .set_arbitration_mechanism(ControllerConfigReg::ArbitrationMechanism::kRoundRobin)
       // We know that page size is always at least 4096 (required by spec), and we check
       // that zx_system_get_page_size is supported by the controller above.
-      .set_memory_page_size(__builtin_ctzl(zx_system_get_page_size()) - 12)
+      .set_memory_page_size(__builtin_ctzl(kPageSize) - 12)
       .set_io_command_set(ControllerConfigReg::CommandSet::kNvm)
       .set_enabled(1)
       .WriteTo(&*mmio_);
@@ -732,8 +602,8 @@ void Nvme::DdkInit(ddk::InitTxn txn) {
   nvme->admin_cq_toggle = 1;
 
   // Set up IO submission and completion queues.
-  auto io_queue =
-      QueuePair::Create(bti_.borrow(), 1, caps_.max_queue_entries(), caps_, *mmio_, UTXN_COUNT);
+  auto io_queue = QueuePair::Create(bti_.borrow(), 1, caps_.max_queue_entries(), caps_, *mmio_,
+                                    /*prealloc_prp=*/true);
   if (io_queue.is_error()) {
     zxlogf(ERROR, "Failed to set up io queue: %s", io_queue.status_string());
     txn.Reply(io_queue.error_value());
@@ -965,8 +835,8 @@ zx_status_t Nvme::AddDevice(zx_device_t* dev) {
   }
   nvme_device_t* nvme = nvme_;
 
-  list_initialize(&nvme->pending_txns);
-  list_initialize(&nvme->active_txns);
+  list_initialize(&nvme->pending_commands);
+  list_initialize(&nvme->active_commands);
 
   auto cleanup = fit::defer([&] { DdkRelease(); });
 

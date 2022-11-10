@@ -17,7 +17,7 @@
 namespace nvme {
 
 struct nvme_device_t;
-struct nvme_txn_t;
+struct IoCommand;
 
 class Nvme;
 using DeviceType = ddk::Device<Nvme, ddk::Initializable>;
@@ -42,14 +42,14 @@ class Nvme : public DeviceType, public ddk::BlockImplProtocol<Nvme, ddk::base_pr
   int IoLoop();
   int IrqLoop();
 
-  // Attempt to generate utxns and queue nvme commands for a txn. Returns true if this could not be
-  // completed due to temporary lack of resources, or false if either it succeeded or errored out.
-  bool IoProcessTxn(nvme_txn_t* txn);
+  // Attempt to submit NVMe transactions for an IoCommand. Returns false if this could not be
+  // completed due to temporary lack of resources, or true if either it succeeded or errored out.
+  bool SubmitAllTxnsForIoCommand(IoCommand* io_cmd);
 
-  // Process pending IO txns. Called in the IoLoop().
-  void IoProcessTxns();
+  // Process pending IO commands. Called in the IoLoop().
+  void ProcessIoSubmissions();
   // Process pending IO completions. Called in the IoLoop().
-  void IoProcessCpls();
+  void ProcessIoCompletions();
 
   // TODO(fxbug.dev/102133): Extract variables from this struct as class members.
   nvme_device_t* nvme_;
