@@ -60,7 +60,7 @@ pub enum Event {
     AddNetwork,
     Cancel,
     ChooseNetwork,
-    Fail(ErrorMessage),
+    Error(ErrorMessage),
     WiFiConnected,
     Networks(Vec<NetworkInfo>),
     Progress(PercentProgress),
@@ -80,8 +80,13 @@ impl PartialEq for Event {
     }
 }
 
+#[cfg_attr(test, automock)]
 pub trait EventHandler {
     fn handle_event(&mut self, event: Event);
+}
+
+pub trait StateHandler {
+    fn handle_state(&mut self, event: State);
 }
 
 #[cfg_attr(test, automock)]
@@ -102,13 +107,13 @@ impl StateMachine {
         #[cfg(feature = "debug_logging")]
         println!("====== SM: state {:?}, event: {:?}", self.current_state, event);
         let new_state = match (&self.current_state, event) {
-            // Any cancel sends us back to the start.
+            // Any cancel or error sends us back to the start.
             (_, Event::Cancel) => Some(State::Home),
 
             (State::Home, Event::StartFactoryReset) => Some(State::FactoryReset),
             (State::Home, Event::TryAnotherWay) => Some(State::Reinstall),
 
-            (State::FactoryReset, Event::Fail(_reason)) => {
+            (State::FactoryReset, Event::Error(_reason)) => {
                 Some(State::Failed(Operation::FactoryDataReset, None))
             }
 
@@ -142,7 +147,7 @@ impl StateMachine {
             }
 
             (State::Connecting(_, _), Event::WiFiConnected) => Some(State::SetPrivacy(false)),
-            (State::Connecting(network, password), Event::Fail(_reason)) => {
+            (State::Connecting(network, password), Event::Error(_reason)) => {
                 Some(State::ConnectionFailed(network.clone(), password.clone()))
             }
 
@@ -162,10 +167,11 @@ impl StateMachine {
             (State::ExecuteReinstall(_), Event::Progress(percent)) => {
                 Some(State::ExecuteReinstall(percent))
             }
-            (State::ExecuteReinstall(_), Event::Fail(error)) => {
+            (State::ExecuteReinstall(_), Event::Error(error)) => {
                 Some(State::Failed(Operation::Reinstall, Some(error)))
             }
-
+            // TODO(b/258323217): Add error message to home screen
+            (_, Event::Error(_)) => Some(State::Home),
             (state, event) => {
                 println!("Error unexpected event {:?} for state {:?}", event, state);
                 None

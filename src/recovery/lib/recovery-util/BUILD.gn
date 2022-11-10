@@ -31,6 +31,9 @@ rustc_library("recovery-util") {
   sources = [
     "src/block.rs",
     "src/lib.rs",
+    "src/ota/action.rs",
+    "src/ota/actions/error.rs",
+    "src/ota/actions/mod.rs",
     "src/ota/controller.rs",
     "src/ota/mod.rs",
     "src/ota/state_machine.rs",
