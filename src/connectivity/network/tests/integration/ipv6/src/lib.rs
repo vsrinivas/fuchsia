@@ -350,34 +350,17 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
         .expect("failed to get next OnData event");
 
     // Send a Router Advertisement with information for a SLAAC prefix.
-    let ra = RouterAdvertisement::new(
-        0,     /* current_hop_limit */
-        false, /* managed_flag */
-        false, /* other_config_flag */
-        0,     /* router_lifetime */
-        0,     /* reachable_time */
-        0,     /* retransmit_timer */
-    );
-    let pi = PrefixInformation::new(
+    let options = [NdpOptionBuilder::PrefixInformation(PrefixInformation::new(
         ipv6_consts::PREFIX.prefix(),  /* prefix_length */
         false,                         /* on_link_flag */
         true,                          /* autonomous_address_configuration_flag */
         99999,                         /* valid_lifetime */
         99999,                         /* preferred_lifetime */
         ipv6_consts::PREFIX.network(), /* prefix */
-    );
-    let options = [NdpOptionBuilder::PrefixInformation(pi)];
-    let () = write_ndp_message::<&[u8], _>(
-        eth_consts::MAC_ADDR,
-        Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
-        ipv6_consts::LINK_LOCAL_ADDR,
-        net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
-        ra,
-        &options,
-        &fake_ep,
-    )
-    .await
-    .expect("failed to write NDP message");
+    ))];
+    send_ra_with_router_lifetime(&fake_ep, 0, &options)
+        .await
+        .expect("failed to send router advertisement");
 
     // Wait for the SLAAC addresses to be generated.
     //
@@ -905,34 +888,17 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
             .expect("error setting up network");
 
     // Send a Router Advertisement with information for a SLAAC prefix.
-    let ra = RouterAdvertisement::new(
-        0,     /* current_hop_limit */
-        false, /* managed_flag */
-        false, /* other_config_flag */
-        0,     /* router_lifetime */
-        0,     /* reachable_time */
-        0,     /* retransmit_timer */
-    );
-    let pi = PrefixInformation::new(
+    let options = [NdpOptionBuilder::PrefixInformation(PrefixInformation::new(
         ipv6_consts::PREFIX.prefix(),  /* prefix_length */
         false,                         /* on_link_flag */
         true,                          /* autonomous_address_configuration_flag */
         99999,                         /* valid_lifetime */
         99999,                         /* preferred_lifetime */
         ipv6_consts::PREFIX.network(), /* prefix */
-    );
-    let options = [NdpOptionBuilder::PrefixInformation(pi)];
-    let () = write_ndp_message::<&[u8], _>(
-        eth_consts::MAC_ADDR,
-        Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
-        ipv6_consts::LINK_LOCAL_ADDR,
-        net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
-        ra,
-        &options,
-        &fake_ep,
-    )
-    .await
-    .expect("failed to write RA message");
+    ))];
+    send_ra_with_router_lifetime(&fake_ep, 0, &options)
+        .await
+        .expect("failed to send router advertisement");
 
     let tried_address = expect_ns_message_in(&fake_ep, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT).await;
 

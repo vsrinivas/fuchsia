@@ -27,13 +27,14 @@ use futures::{
 };
 use itertools::Itertools as _;
 use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_subnet, std_ip_v6, std_socket_addr};
-use net_types::{ethernet::Mac, ip as net_types_ip, Witness as _};
+use net_types::ip as net_types_ip;
 use netemul::{RealmTcpListener as _, RealmUdpSocket as _};
 use netstack_testing_common::{
-    constants::{eth as eth_consts, ipv6 as ipv6_consts},
+    constants::ipv6 as ipv6_consts,
     interfaces, pause_fake_clock,
     realms::{KnownServiceProvider, Manager, ManagerConfig, Netstack2, TestSandboxExt as _},
-    wait_for_component_stopped, write_ndp_message, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    send_ra_with_router_lifetime, wait_for_component_stopped, Result,
+    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
 use packet::{
@@ -45,10 +46,7 @@ use packet_formats::{
         EtherType, EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck,
         EthernetIpExt as _,
     },
-    icmp::ndp::{
-        options::{NdpOptionBuilder, RecursiveDnsServer},
-        RouterAdvertisement,
-    },
+    icmp::ndp::options::{NdpOptionBuilder, RecursiveDnsServer},
     ip::{IpPacket as _, IpProto, Ipv6Proto},
     ipv6::{Ipv6Packet, Ipv6PacketBuilder},
     udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs},
@@ -267,28 +265,12 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
 
     // Send a Router Advertisement with DNS server configurations.
     let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");
-    let ra = RouterAdvertisement::new(
-        0,     /* current_hop_limit */
-        false, /* managed_flag */
-        false, /* other_config_flag */
-        0,     /* router_lifetime */
-        0,     /* reachable_time */
-        0,     /* retransmit_timer */
-    );
     let addresses = [NDP_DNS_SERVER.addr.into()];
     let rdnss = RecursiveDnsServer::new(9999, &addresses);
     let options = [NdpOptionBuilder::RecursiveDnsServer(rdnss)];
-    let () = write_ndp_message::<&[u8], _>(
-        eth_consts::MAC_ADDR,
-        Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
-        ipv6_consts::LINK_LOCAL_ADDR,
-        net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
-        ra,
-        &options,
-        &fake_ep,
-    )
-    .await
-    .expect("failed to write NDP message");
+    send_ra_with_router_lifetime(&fake_ep, 0, &options)
+        .await
+        .expect("failed to send router advertisement");
 
     // The list of servers we expect to retrieve from `fuchsia.net.name/LookupAdmin`.
     let expect = [
