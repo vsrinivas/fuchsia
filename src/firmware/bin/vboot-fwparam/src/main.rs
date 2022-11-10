@@ -13,13 +13,15 @@ use fidl_fuchsia_hardware_nvram as fnvram;
 use fidl_fuchsia_nand_flashmap::{FlashmapMarker, FlashmapProxy, ManagerMarker};
 use fidl_fuchsia_vboot::FirmwareParamRequestStream;
 use fuchsia_component::{
-    client::{connect_to_protocol, connect_to_protocol_at_path},
+    client::{
+        connect_to_named_protocol_at_dir_root, connect_to_protocol, connect_to_protocol_at_path,
+    },
     server::ServiceFs,
 };
 use fuchsia_fs::OpenFlags;
 use fuchsia_inspect::{component, health::Reporter};
 use fuchsia_zircon as zx;
-use futures::StreamExt;
+use futures::{StreamExt, TryStreamExt};
 use tracing::{error, info};
 
 enum IncomingRequest {
@@ -96,10 +98,31 @@ async fn find_flashmap_device() -> Result<FlashmapProxy, anyhow::Error> {
 }
 
 /// Find and connect to the ChromeOS ACPI device.
-fn find_chromeos_acpi_device() -> Result<chrome_acpi::DeviceProxy, anyhow::Error> {
-    let path = "/dev/class/chromeos-acpi/000";
-    Ok(connect_to_protocol_at_path::<chrome_acpi::DeviceMarker>(path)
-        .context("Connecting to chromeos_acpi device")?)
+async fn find_chromeos_acpi_device() -> Result<chrome_acpi::DeviceProxy, anyhow::Error> {
+    const ACPI_PATH: &str = "/dev/class/chromeos-acpi";
+    let proxy = fuchsia_fs::directory::open_in_namespace(
+        ACPI_PATH,
+        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+    )
+    .with_context(|| format!("Opening {}", ACPI_PATH))?;
+
+    let path = device_watcher::watch_for_files(Clone::clone(&proxy))
+        .await
+        .with_context(|| format!("Watching for files in {}", ACPI_PATH))?
+        .try_next()
+        .await
+        .with_context(|| format!("Getting a file from {}", ACPI_PATH))?;
+
+    match path {
+        Some(path) => connect_to_named_protocol_at_dir_root::<chrome_acpi::DeviceMarker>(
+            &proxy,
+            path.to_str().unwrap(),
+        )
+        .context("Connecting to chromeos_acpi device"),
+        None => Err(anyhow!(
+            "Watching for files finished before any chromeos ACPI device could be found"
+        )),
+    }
 }
 
 #[fuchsia::main(logging = true)]
@@ -119,7 +142,7 @@ async fn real_main() -> Result<(), anyhow::Error> {
     let _ = service_fs.take_and_serve_directory_handle().context("Serving outgoing namespace")?;
 
     // Make sure we support the version of nvdata in use on this system.
-    let acpi = find_chromeos_acpi_device().context("Finding chromeos-acpi device")?;
+    let acpi = find_chromeos_acpi_device().await.context("Finding chromeos-acpi device")?;
     let nvdata_version = acpi
         .get_nvdata_version()
         .await?

@@ -509,9 +509,6 @@ Devfs::Devfs(std::optional<Devnode>& root, Device* device,
       // TODO(https://fxbug.dev/113720): Remove.
       "camera",
 
-      // TODO(https://fxbug.dev/113827): Remove.
-      "chromeos-acpi",
-
       // TODO(https://fxbug.dev/113828): Remove.
       "cpu-ctrl",
 
