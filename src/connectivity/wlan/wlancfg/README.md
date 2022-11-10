@@ -83,12 +83,12 @@ Responsiblities:
 
 ### Scan Manager
 
-Implemented in: [`client/scan.rs`](./src/client/scan.rs)
+Implemented in: [`client/scan/mod.rs`](./src/client/scan/mod.rs)
 
 Responsiblities:
 
 - Performs scans via the Interface Manager.
-- Distributes scan results to the requester as well as the Network Selection Manager and Emergency Location provider.
+- Distributes scan results to the requester and Emergency Location provider.
 
 ### Telemetry
 

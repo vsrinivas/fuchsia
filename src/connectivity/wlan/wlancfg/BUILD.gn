@@ -84,7 +84,7 @@ rustc_library("lib") {
     "src/client/bss_selection.rs",
     "src/client/mod.rs",
     "src/client/network_selection.rs",
-    "src/client/scan.rs",
+    "src/client/scan/mod.rs",
     "src/client/state_machine.rs",
     "src/client/types.rs",
     "src/config_management/config_manager.rs",
