@@ -34,6 +34,18 @@ thiserror = ["third_party/rust_crates/OWNERS"]
 log = ["src/diagnostics/OWNERS"]
 tracing = ["src/diagnostics/OWNERS"]
 
+# i18n team
+rust_icu_common = ["src/intl/OWNERS"]
+rust_icu_sys = ["src/intl/OWNERS"]
+rust_icu_ucal = ["src/intl/OWNERS"]
+rust_icu_uchar = ["src/intl/OWNERS"]
+rust_icu_udat = ["src/intl/OWNERS"]
+rust_icu_udata = ["src/intl/OWNERS"]
+rust_icu_uenum = ["src/intl/OWNERS"]
+rust_icu_uloc = ["src/intl/OWNERS"]
+rust_icu_unorm2 = ["src/intl/OWNERS"]
+rust_icu_ustring = ["src/intl/OWNERS"]
+
 # hyper maintainers
 hyper = ["src/lib/fuchsia-hyper/OWNERS"]
 
