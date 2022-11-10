@@ -634,7 +634,7 @@ mod tests {
                     clock_utc: AnyProperty,
                 },
                 primary_time_source: contains {
-                    component: "Push(FakeTimeSource)",
+                    component: "Push(FakePushTimeSource)",
                     status: "Launched",
                     status_change_monotonic: AnyProperty,
                 },
@@ -754,12 +754,12 @@ mod tests {
             inspector,
             root: contains {
                 primary_time_source: contains {
-                    component: "Push(FakeTimeSource)",
+                    component: "Push(FakePushTimeSource)",
                     status: "Launched",
                     status_change_monotonic: AnyProperty,
                 },
                 monitor_time_source: contains {
-                    component: "Push(FakeTimeSource)",
+                    component: "Push(FakePushTimeSource)",
                     status: "Launched",
                     status_change_monotonic: AnyProperty,
                 }
@@ -777,7 +777,7 @@ mod tests {
             inspector,
             root: contains {
                 primary_time_source: contains {
-                    component: "Push(FakeTimeSource)",
+                    component: "Push(FakePushTimeSource)",
                     status: "Failed(CallFailed)",
                     status_change_monotonic: AnyProperty,
                     failure_count_LaunchFailed: 1u64,
@@ -785,7 +785,7 @@ mod tests {
                     rejection_count_BeforeBackstop: 1u64,
                 },
                 monitor_time_source: contains {
-                    component: "Push(FakeTimeSource)",
+                    component: "Push(FakePushTimeSource)",
                     status: "Network",
                     status_change_monotonic: AnyProperty,
                 }
