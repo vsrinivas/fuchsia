@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <librtc.h>
+#include <librtc_c.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -233,7 +233,6 @@ static zx_status_t rtc_bad_get(void* ctx, fuchsia_hardware_rtc_Time* rtc) {
 static zx_status_t rtc_bad_set(void*, const fuchsia_hardware_rtc_Time* rtc) {
   return ZX_ERR_ACCESS_DENIED;
 }
-
 
 TEST(RTCLibTest, rtc_backstop_seconds) {
   auto parent = MockDevice::FakeRootParent();

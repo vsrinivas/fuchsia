@@ -5,7 +5,7 @@
 #include "src/devices/rtc/drivers/intel-rtc/intel-rtc.h"
 
 #include <lib/async-loop/cpp/loop.h>
-#include <librtc.h>
+#include <librtc_c.h>
 
 #include <ddktl/device.h>
 #include <zxtest/zxtest.h>

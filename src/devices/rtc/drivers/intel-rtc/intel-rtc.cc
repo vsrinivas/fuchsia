@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.hardware.rtc/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/hw/inout.h>
-#include <librtc.h>
+#include <librtc_c.h>
 #include <librtc_llcpp.h>
 #include <zircon/errors.h>
 

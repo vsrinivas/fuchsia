@@ -9,10 +9,10 @@ group("tests") {
   deps = [ "tests" ]
 }
 
-zx_library("rtc") {
+zx_library("rtc_c") {
   sdk = "source"
-  sdk_headers = [ "librtc.h" ]
-  sources = [ "librtc.c" ]
+  sdk_headers = [ "librtc_c.h" ]
+  sources = [ "librtc_c.c" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//src/devices/lib/driver",
@@ -30,6 +30,7 @@ zx_library("rtc_llcpp") {
   sources = [ "librtc_llcpp.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_cpp_wire",
+    "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
 }
