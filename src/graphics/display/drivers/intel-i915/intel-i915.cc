@@ -481,11 +481,11 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
   return true;
 }
 
-uint64_t Controller::SetupGttImage(const image_t* image, uint32_t rotation) {
-  const std::unique_ptr<GttRegion>& region = GetGttRegion(image->handle);
+const GttRegion& Controller::SetupGttImage(const image_t* image, uint32_t rotation) {
+  const std::unique_ptr<GttRegionImpl>& region = GetGttRegionImpl(image->handle);
   ZX_DEBUG_ASSERT(region);
   region->SetRotation(rotation, *image);
-  return region->base();
+  return *region;
 }
 
 std::unique_ptr<DisplayDevice> Controller::QueryDisplay(registers::Ddi ddi) {
@@ -920,15 +920,16 @@ zx_status_t Controller::DisplayControllerImplImportImage(image_t* image, zx_unow
   } else {
     align = registers::PlaneSurface::kYTilingAlignment;
   }
-  std::unique_ptr<GttRegion> gtt_region;
+  std::unique_ptr<GttRegionImpl> gtt_region;
   zx_status_t status = gtt_.AllocRegion(length, align, &gtt_region);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to allocate GTT region, status %s", zx_status_get_string(status));
     return status;
   }
 
   // The vsync logic requires that images not have base == 0
   if (gtt_region->base() == 0) {
-    std::unique_ptr<GttRegion> alt_gtt_region;
+    std::unique_ptr<GttRegionImpl> alt_gtt_region;
     zx_status_t status = gtt_.AllocRegion(length, align, &alt_gtt_region);
     if (status != ZX_OK) {
       return status;
@@ -938,9 +939,11 @@ zx_status_t Controller::DisplayControllerImplImportImage(image_t* image, zx_unow
 
   status = gtt_region->PopulateRegion(vmo.release(), offset / PAGE_SIZE, length);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to populate GTT region, status %s", zx_status_get_string(status));
     return status;
   }
 
+  gtt_region->set_bytes_per_row(format.value().bytes_per_row);
   image->handle = gtt_region->base();
   imported_images_.push_back(std::move(gtt_region));
   return ZX_OK;
@@ -957,7 +960,7 @@ void Controller::DisplayControllerImplReleaseImage(image_t* image) {
   }
 }
 
-const std::unique_ptr<GttRegion>& Controller::GetGttRegion(uint64_t handle) {
+const std::unique_ptr<GttRegionImpl>& Controller::GetGttRegionImpl(uint64_t handle) {
   fbl::AutoLock lock(&gtt_lock_);
   for (auto& region : imported_images_) {
     if (region->base() == handle) {
@@ -1913,7 +1916,7 @@ zx_status_t Controller::IntelGpuCoreGttAlloc(uint64_t page_count, uint64_t* addr
   if (length > gtt_.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
-  std::unique_ptr<GttRegion> region;
+  std::unique_ptr<GttRegionImpl> region;
   zx_status_t status =
       gtt_.AllocRegion(static_cast<uint32_t>(page_count * PAGE_SIZE), PAGE_SIZE, &region);
   if (status != ZX_OK) {

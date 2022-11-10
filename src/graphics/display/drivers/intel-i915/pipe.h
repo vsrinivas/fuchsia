@@ -40,7 +40,8 @@ class Pipe {
 
   void ApplyModeConfig(const display_mode_t& mode);
 
-  using SetupGttImageFunc = fit::function<uint64_t(const image_t* image, uint32_t rotation)>;
+  using SetupGttImageFunc =
+      fit::function<const GttRegion&(const image_t* image, uint32_t rotation)>;
   void ApplyConfiguration(const display_config_t* config, const config_stamp_t* config_stamp,
                           const SetupGttImageFunc& setup_gtt_image);
 

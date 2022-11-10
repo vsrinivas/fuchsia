@@ -81,7 +81,7 @@ TEST_F(GttTest, InitGtt) {
   }
 
   // Allocated GTT regions should start from base 0.
-  std::unique_ptr<i915::GttRegion> region;
+  std::unique_ptr<i915::GttRegionImpl> region;
   EXPECT_EQ(ZX_OK, gtt.AllocRegion(kPageSize, kPageSize, &region));
   ASSERT_TRUE(region != nullptr);
   EXPECT_EQ(0u, region->base());
@@ -116,7 +116,7 @@ TEST_F(GttTest, InitGttWithFramebufferOffset) {
   }
 
   // The first allocated GTT regions should exclude the framebuffer pages.
-  std::unique_ptr<i915::GttRegion> region;
+  std::unique_ptr<i915::GttRegionImpl> region;
   EXPECT_EQ(ZX_OK, gtt.AllocRegion(kPageSize, kPageSize, &region));
   ASSERT_TRUE(region != nullptr);
   EXPECT_EQ(kFbPages * kPageSize, region->base());

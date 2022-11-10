@@ -297,7 +297,8 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
 
   const image_t* image = &primary->image;
 
-  uint32_t base_address = static_cast<uint32_t>(setup_gtt_image(image, primary->transform_mode));
+  const GttRegion& region = setup_gtt_image(image, primary->transform_mode);
+  uint32_t base_address = static_cast<uint32_t>(region.base());
   uint32_t plane_width;
   uint32_t plane_height;
   uint32_t stride;
@@ -307,7 +308,7 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
       primary->transform_mode == FRAME_TRANSFORM_ROT_180) {
     plane_width = primary->src_frame.width;
     plane_height = primary->src_frame.height;
-    stride = width_in_tiles(image->type, image->width, image->pixel_format);
+    stride = region.bytes_per_row() / get_tile_byte_width(image->type, image->pixel_format);
     x_offset = primary->src_frame.x_pos;
     y_offset = primary->src_frame.y_pos;
   } else {
