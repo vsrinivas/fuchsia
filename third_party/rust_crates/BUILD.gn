@@ -1116,11 +1116,7 @@ group("xts-mode") {
 }
 
 group("zerocopy") {
-  public_deps = [ ":zerocopy-v0_7_0-alpha_1" ]
-}
-
-group("zerocopy-derive") {
-  public_deps = [ ":zerocopy-derive-v0_3_2($host_toolchain)" ]
+  public_deps = [ ":zerocopy-v0_7_0-alpha_2" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -12634,34 +12630,33 @@ rust_library("yaml-rust-v0_4_5") {
   visibility = [ ":*" ]
 }
 
-rust_library("zerocopy-v0_7_0-alpha_1") {
+rust_library("zerocopy-v0_7_0-alpha_2") {
   crate_name = "zerocopy"
   crate_root =
-      "//third_party/rust_crates/vendor/zerocopy-0.7.0-alpha.1/src/lib.rs"
-  output_name = "zerocopy-3434985500281d16"
+      "//third_party/rust_crates/vendor/zerocopy-0.7.0-alpha.2/src/lib.rs"
+  output_name = "zerocopy-2702e29bb8c9a2"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
   deps += [ ":byteorder-v1_3_1" ]
-  deps += [ ":zerocopy-derive-v0_3_2($host_toolchain)" ]
+  deps += [ ":zerocopy-derive-v0_7_0-alpha_2($host_toolchain)" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2021",
-    "-Cmetadata=3434985500281d16",
-    "-Cextra-filename=-3434985500281d16",
+    "-Cmetadata=2702e29bb8c9a2",
+    "-Cextra-filename=-2702e29bb8c9a2",
   ]
 
   visibility = [ ":*" ]
 }
 
-rust_proc_macro("zerocopy-derive-v0_3_2") {
+rust_proc_macro("zerocopy-derive-v0_7_0-alpha_2") {
   crate_name = "zerocopy_derive"
-  crate_root =
-      "//third_party/rust_crates/vendor/zerocopy-derive-0.3.2/src/lib.rs"
-  output_name = "zerocopy_derive-ae6e7b0d09f2cf29"
+  crate_root = "//third_party/rust_crates/vendor/zerocopy-derive-0.7.0-alpha.2/src/lib.rs"
+  output_name = "zerocopy_derive-a2d5d5e2f61556da"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -12673,9 +12668,9 @@ rust_proc_macro("zerocopy-derive-v0_3_2") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=ae6e7b0d09f2cf29",
-    "-Cextra-filename=-ae6e7b0d09f2cf29",
+    "--edition=2021",
+    "-Cmetadata=a2d5d5e2f61556da",
+    "-Cextra-filename=-a2d5d5e2f61556da",
   ]
 
   visibility = [ ":*" ]
