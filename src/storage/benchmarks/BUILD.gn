@@ -23,7 +23,6 @@ rustc_binary("storage-benchmarks") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
-    "//src/lib/cstr",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",

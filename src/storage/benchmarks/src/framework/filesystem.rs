@@ -5,7 +5,6 @@
 use {
     crate::framework::{BlockDevice, BlockDeviceConfig, BlockDeviceFactory},
     async_trait::async_trait,
-    cstr::cstr,
     either::Either,
     fidl::encoding::Decodable,
     fidl_fuchsia_fs::AdminMarker,
@@ -15,7 +14,7 @@ use {
     fidl_fuchsia_io as fio,
     fs_management::{
         filesystem::{ServingMultiVolumeFilesystem, ServingSingleVolumeFilesystem},
-        Blobfs, FSConfig, Fxfs, LegacyConfig, Minfs, Mode,
+        Blobfs, F2fs, FSConfig, Fxfs, Minfs,
     },
     fuchsia_component::client::{
         connect_channel_to_protocol, connect_to_childs_protocol, open_childs_exposed_directory,
@@ -215,14 +214,6 @@ async fn create_fxfs<BDF: BlockDeviceFactory>(
     FsmFilesystem::new(Fxfs::with_crypt_client(Arc::new(get_crypt_client)), block_device).await
 }
 
-struct F2fs {}
-
-impl FSConfig for F2fs {
-    fn mode(&self) -> Mode<'_> {
-        Mode::Legacy(LegacyConfig { binary_path: cstr!("/pkg/bin/f2fs"), ..Default::default() })
-    }
-}
-
 async fn create_f2fs<BDF: BlockDeviceFactory>(
     block_device_factory: &BDF,
 ) -> FsmFilesystem<F2fs, <BDF as BlockDeviceFactory>::BlockDevice> {
@@ -232,7 +223,7 @@ async fn create_f2fs<BDF: BlockDeviceFactory>(
             fvm_volume_size: Some(60 * 1024 * 1024),
         })
         .await;
-    FsmFilesystem::new(F2fs {}, block_device).await
+    FsmFilesystem::new(F2fs::default(), block_device).await
 }
 
 pub struct Memfs {}

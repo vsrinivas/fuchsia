@@ -10,6 +10,7 @@ use {
         VolumeManagerMarker, VolumeManagerProxy, VolumeSynchronousProxy,
     },
     fidl_fuchsia_io as fio,
+    fs_management::BLOBFS_TYPE_GUID,
     fuchsia_component::client::{connect_channel_to_protocol_at_path, connect_to_protocol_at_path},
     fuchsia_zircon::{self as zx},
     ramdevice_client::RamdiskClient,
@@ -22,10 +23,6 @@ use {
 
 const RAMDISK_FVM_SLICE_SIZE: usize = 1024 * 1024;
 
-// From zircon/system/public/zircon/hw/gpt.h.
-const BLOBFS_TYPE_GUID: &Guid = &[
-    0x0e, 0x38, 0x67, 0x29, 0x4c, 0x13, 0xbb, 0x4c, 0xb6, 0xda, 0x17, 0xe7, 0xce, 0x1c, 0xa4, 0x5d,
-];
 const BLOBFS_VOLUME_NAME: &str = "blobfs";
 
 /// Block device configuration options.
@@ -118,7 +115,7 @@ impl FvmVolumeFactory {
         // Find Blobfs' volume then work backwards from Blobfs' topological path to find FVM.
         let blobfs_dev_path = wait_for_block_device(&[
             BlockDeviceMatcher::Name(BLOBFS_VOLUME_NAME),
-            BlockDeviceMatcher::TypeGuid(BLOBFS_TYPE_GUID),
+            BlockDeviceMatcher::TypeGuid(&BLOBFS_TYPE_GUID),
         ])
         .await
         .expect("Failed to find Blobfs");
@@ -336,7 +333,7 @@ mod tests {
         fvm::create_fvm_volume(
             &volume_manager,
             BLOBFS_VOLUME_NAME,
-            BLOBFS_TYPE_GUID,
+            &BLOBFS_TYPE_GUID,
             &create_random_guid(),
             None,
             ALLOCATE_PARTITION_FLAG_INACTIVE,
