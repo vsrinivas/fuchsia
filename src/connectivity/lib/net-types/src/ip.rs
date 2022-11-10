@@ -2732,11 +2732,17 @@ macro_rules! ip_generic {
         GenericOverIp<IpType> for $type<$($params),*> {
             type Type = $type<$($params::Type),*>;
         }
+    };
+    ( $type:ident) => {
+        impl<IpType: Ip> GenericOverIp<IpType> for $type {
+            type Type = Self;
+        }
     }
 }
 
 ip_generic!(Option<T>);
 ip_generic!(Result<R, E>);
+ip_generic!(bool);
 
 impl<'s, NewIp: Ip, T: GenericOverIp<NewIp>> GenericOverIp<NewIp> for &'s T
 where
