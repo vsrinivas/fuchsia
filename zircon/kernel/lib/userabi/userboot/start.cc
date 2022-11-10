@@ -438,7 +438,7 @@ struct TerminationInfo {
   // to determine that the test succeeded since shutting the
   // machine down doesn't return a value to anyone for us.
   if (info.test_return_code && info.test_return_code == 0) {
-    printl(log, "%s\n", ZBI_TEST_SUCCESS_STRING);
+    printl(log, "%s\n", BOOT_TEST_SUCCESS_STRING);
   }
 
   printl(log, "Process exited.  Executing poweroff");

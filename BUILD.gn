@@ -144,6 +144,7 @@ build_api_module("api") {
     ":assembly_input_archives",
     ":assembly_manifests",
     ":binaries",
+    ":boot_tests",
     ":build_info",
     ":checkout_artifacts",
     ":cipd_assembly_artifacts",
@@ -165,7 +166,6 @@ build_api_module("api") {
     ":tests",
     ":tool_paths",
     ":triage_sources",
-    ":zbi_tests",
     "//build/images/archive",
   ]
 }
@@ -592,7 +592,7 @@ build_api_module("images") {
     "build/images",
 
     # This has the images referred to by $qemu_kernel_label entries.
-    "//build/zircon/zbi_tests",
+    "//build/zircon/boot_tests",
 
     # Images who are pulled as part of host interaction tests.
     ":host",
@@ -773,7 +773,7 @@ build_api_module("tests") {
     ":developer_universe_packages",
   ]
   if (include_zbi_host_tests) {
-    deps += [ "//build/zircon/zbi_tests" ]
+    deps += [ "//build/zircon/boot_tests" ]
   }
 }
 
@@ -1009,12 +1009,13 @@ build_api_module("triage_sources") {
   ]
 }
 
-# This describes all the "ZBI tests" the build can produce.
-# in file: "$root_build_dir/zbi_tests.json"
+# This describes all the "boot tests" the build can produce.
+# in file: "$root_build_dir/boot_tests.json"
 #
-# This tells the infra recipes how to run ZBI tests, defined with zbi_test(),
-# which is a class of tests that are 'run' by booting an associated ZBI and
-# listening on serial for a particular string indicating success.
+# This tells the infra recipes how to run boot tests, defined with zbi_test(),
+# qemu_kernel_test(), or efi_test(). which is a class of tests that are 'run'
+# by booting an associated ZBI, QEMU kernel, or UEFI application and listening
+# on serial for a particular string indicating success.
 #
 # The schema produced here matches //:images with the addition of the
 # `success_string` key.
@@ -1063,12 +1064,12 @@ build_api_module("triage_sources") {
 #     - Optional: Timeout for running the test, in seconds.
 #     - Type: seconds
 #
-build_api_module("zbi_tests") {
+build_api_module("boot_tests") {
   testonly = true
-  data_keys = [ "zbi_tests" ]
+  data_keys = [ "boot_tests" ]
   deps = [
     "build/images",
-    "build/zircon/zbi_tests",
+    "build/zircon/boot_tests",
   ]
 }
 
@@ -1285,7 +1286,7 @@ group("default") {
     "//build/assembly:validate_product_defs",
     "//build/images/updates:packages",
     "//build/input:build_only",
-    "//build/zircon/zbi_tests",
+    "//build/zircon/boot_tests",
     "//sdk",
   ]
 

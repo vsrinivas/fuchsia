@@ -167,7 +167,7 @@ int main() {
 
   auto res = RUN_ALL_TESTS(argc, const_cast<char**>(argv));
   if (res == 0) {
-    printf(ZBI_TEST_SUCCESS_STRING "\n");
+    printf(BOOT_TEST_SUCCESS_STRING "\n");
   }
   return res;
 }

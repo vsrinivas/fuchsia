@@ -4,7 +4,7 @@
 
 package build
 
-type ZBITest struct {
+type BootTest struct {
 	Name string `json:"name"`
 
 	// Label is the label of the test's GN target.

@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/boot_test_success.gni")
 import("//build/testing/kernel_zbi_test.gni")
 import("//build/testing/zbi_test_executable.gni")
-import("//build/testing/zbi_test_success.gni")
 
 group("tests") {
   testonly = true
@@ -19,7 +19,7 @@ if (is_fuchsia) {
     configs += [ "//build/c:fidl-deprecated-c-bindings" ]
     testonly = true
     visibility = [ ":*" ]
-    defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
+    defines = [ "BOOT_TEST_SUCCESS_STRING=\"$boot_test_success_string\"" ]
 
     sources = [ "helper.cc" ]
     public = [ "helper.h" ]

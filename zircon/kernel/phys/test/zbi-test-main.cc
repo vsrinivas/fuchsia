@@ -21,7 +21,7 @@
   // Run the test.
   int status = TestMain(zbi, ticks);
   if (status == 0) {
-    printf("\n*** Test succeeded ***\n%s\n\n", ZBI_TEST_SUCCESS_STRING);
+    printf("\n*** Test succeeded ***\n%s\n\n", BOOT_TEST_SUCCESS_STRING);
   } else {
     printf("\n*** Test FAILED: status %d ***\n\n", status);
   }

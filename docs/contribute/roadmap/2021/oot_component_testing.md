@@ -150,7 +150,7 @@ The priority customer for TRF so far has been in-tree testing, with success
 measured in terms of the portion of tests that run on TRF. At the time of
 writing more than 70% of Fuchsia in-tree tests have been migrated to TRF, with
 modern (CFv2) tests running exclusively on TRF. By the end of 2021 we expect all
-remaining tests except [ZBI tests][fx-run-zbi-test] to run under TRF, thanks to
+remaining tests except [ZBI tests][fx-run-boot-test] to run under TRF, thanks to
 an upcoming compatibility layer.
 
 Once all component tests are migrated to TRF, we will turn down the legacy
@@ -327,7 +327,7 @@ covered in a [separate roadmap document][oot-system-testing].
 [fx-gce]: https://fuchsia.dev/reference/tools/fx/cmd/gce
 [fx-log]: https://fuchsia.dev/reference/tools/fx/cmd/log
 [fx-qemu]: https://fuchsia.dev/reference/tools/fx/cmd/qemu
-[fx-run-zbi-test]: https://fuchsia.dev/reference/tools/fx/cmd/run-zbi-test
+[fx-run-boot-test]: https://fuchsia.dev/reference/tools/fx/cmd/run-boot-test
 [fx-scp]: https://fuchsia.dev/reference/tools/fx/cmd/scp
 [fx-shell]: https://fuchsia.dev/reference/tools/fx/cmd/shell
 [fxb-73984]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=73984

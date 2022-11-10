@@ -339,7 +339,7 @@ hwreg_asm_header("linuxboot-asm") {
   deps = [ "//zircon/system/ulib/zircon-internal" ]
 }
 
-phys_qemu_test("paging-test") {
+qemu_kernel_test("paging-test") {
   sources = [ "paging-test.cc" ]
   include_dirs = [ "//zircon/kernel/phys/test" ]
   deps = [

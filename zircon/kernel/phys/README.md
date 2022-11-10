@@ -16,7 +16,7 @@ The project uses ZBI tests, built in all product configurations, including
 command:
 
 ```sh
-fx run-zbi-test zbi-phys-unittests
+fx run-boot-test zbi-phys-unittests
 ```
 
 Other ZBI tests also exist in the project. The full list can be viewed by

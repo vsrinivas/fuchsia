@@ -227,7 +227,7 @@ if (is_fuchsia) {
   }
 }
 
-zbi_tests = [ ":core-tests" ]
+boot_tests = [ ":core-tests" ]
 core_tests("core-tests") {
   device_types = [
     "AEMU",
@@ -249,10 +249,10 @@ if (current_cpu == "x64") {
     # Using an HPET-based clock substantially increases the run-time.
     timeout = 600
   }
-  zbi_tests += [ ":core-tests-hpet" ]
+  boot_tests += [ ":core-tests-hpet" ]
 }
 
-group("zbi_tests") {
+group("boot_tests") {
   testonly = true
-  deps = zbi_tests
+  deps = boot_tests
 }

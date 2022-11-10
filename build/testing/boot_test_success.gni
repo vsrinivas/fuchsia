@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# The test runners have no better way to determine that a ZBI test succeeded
+# The test runners have no better way to determine that a boot test succeeded
 # than to look for an exact string in the console log output.  zbi_test()
 # targets produce metadata to drive the test runners, which tells them to
 # match this particular string.  When booted in standalone mode, userboot
 # prints this message after the initial process exits iff its return_code was
 # zero, but shutting down.  This string includes some random data that
 # shouldn't appear elsewhere, to avoid false-positive matches.
-zbi_test_success_string =
-    "***ZBI-test-successful!-MDd7/O65SuVZ23yGAaQG4CedYQGH9E1/58r73pSAVK0=***"
+boot_test_success_string =
+    "***Boot-test-successful!-MDd7/O65SuVZ23yGAaQG4CedYQGH9E1/58r73pSAVK0=***"

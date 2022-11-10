@@ -128,7 +128,7 @@ BT_SET_UP() {
 ]
 EOF
 
-cat > "${BT_TEMP_DIR}/out/default/zbi_tests.json" <<EOF
+cat > "${BT_TEMP_DIR}/out/default/boot_tests.json" <<EOF
 [
   {
     "bootserver_netboot": [
@@ -140,7 +140,7 @@ cat > "${BT_TEMP_DIR}/out/default/zbi_tests.json" <<EOF
     "label": "//zircon/system/utest/core:core-tests(//build/toolchain/fuchsia:x64)",
     "name": "core-tests",
     "path": "obj/zircon/system/utest/core/core-tests.zbi",
-    "success_string": "***ZBI-test-successful!-MDd7/O65SuVZ23yGAaQG4CedYQGH9E1/58r73pSAVK0=***"
+    "success_string": "***Boot-test-successful!-MDd7/O65SuVZ23yGAaQG4CedYQGH9E1/58r73pSAVK0=***"
   }
 ]
 EOF
@@ -238,12 +238,12 @@ TEST_fx-list-build-artifacts-flash() {
   BT_EXPECT_EQ "$(${fx} list-build-artifacts flash)" "flash.sh fuchsia.zbi fuchsia.vbmeta obj/build/images/fvm.sparse.blk unlock_creds/unlock_creds.zip gpt.fuchsia.bin"
 }
 
-TEST_fx-list-build-artifacts-zbi-tests() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts zbi-tests)" "obj/zircon/system/utest/core/core-tests.zbi"
+TEST_fx-list-build-artifacts-boot-tests() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts boot-tests)" "obj/zircon/system/utest/core/core-tests.zbi"
 }
 
-TEST_fx-list-build-artifacts-zbi-tests-by-name() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts zbi-tests --name core-tests)" "obj/zircon/system/utest/core/core-tests.zbi"
+TEST_fx-list-build-artifacts-boot-tests-by-name() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts boot-tests --name core-tests)" "obj/zircon/system/utest/core/core-tests.zbi"
 }
 
 TEST_fx-list-build-artifacts-tools() {

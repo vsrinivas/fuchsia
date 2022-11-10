@@ -6,7 +6,7 @@
 #### CATEGORY=Test
 ### run zircon core-tests
 
-## usage: core-tests [-...`fx run-zbi-test` switches...] [--gtest_filter=<FILTER>]
+## usage: core-tests [-...`fx run-boot-test` switches...] [--gtest_filter=<FILTER>]
 ##        [--gtest_repeat=<REPEAT>]
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
@@ -20,4 +20,4 @@ for arg in "$@"; do
   esac
 done
 
-fx-command-exec run-zbi-test "${ARGS[@]}" core-tests
+fx-command-exec run-boot-test "${ARGS[@]}" core-tests

@@ -32,7 +32,7 @@ qemu_short_timeout = 30
 #     - Type: string
 #
 #   * timeout
-#     - Optional: Passed along to zbi_test() for phys_qemu_test() tests.
+#     - Optional: Passed along to zbi_test() for qemu_kernel_test() tests.
 #       $qemu_short_timeout is a good default for QEMU boots of tiny tests.
 #     - Type: seconds
 #
@@ -102,7 +102,7 @@ foreach(qemu, qemu_boot_formats) {
 #
 # Other parameters are propagated to phys_executable(), which see.
 #
-template("phys_qemu_test") {
+template("qemu_kernel_test") {
   group_target = target_name
 
   group(group_target) {

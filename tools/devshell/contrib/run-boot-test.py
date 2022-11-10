@@ -30,7 +30,7 @@ def find_bootserver(build_dir):
 
 def main():
     parser = argparse.ArgumentParser(
-        prog='fx run-zbi-test', description='Run a ZBI test.')
+        prog='fx run-boot-test', description='Run a boot test.')
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument(
         '--boot', '-b', action='store_true', help='Run via bootserver')
@@ -55,7 +55,7 @@ def main():
         default=[],
         help='Add kernel command-line arguments.')
     parser.add_argument(
-        'name', help='Name of the zbi_test() target to run', nargs='?')
+        'name', help='Name of the zbi_test()/qemu_kernel_test()/efi_test() target to run', nargs='?')
     args = parser.parse_args()
 
     build_dir = os.path.relpath(os.getenv('FUCHSIA_BUILD_DIR'))
@@ -67,8 +67,8 @@ def main():
         print('FUCHSIA_ARCH not set')
         return 1
 
-    with open(os.path.join(build_dir, 'zbi_tests.json')) as file:
-        zbi_tests = json.load(file)
+    with open(os.path.join(build_dir, 'boot_tests.json')) as file:
+        boot_tests = json.load(file)
 
     with open(os.path.join(build_dir, 'images.json')) as file:
         images = json.load(file)
@@ -95,22 +95,23 @@ def main():
 
     all_qemu = [
         qemu_test(test)
-        for test in zbi_tests
+        for test in boot_tests
         if test['cpu'] == test_cpu and 'qemu_kernel_label' in test
     ]
 
     all_zbi = [
-        test for test in zbi_tests
+        test for test in boot_tests
         if test['cpu'] == test_cpu and 'qemu_kernel_label' not in test
     ]
 
     if not args.name:
-        print('Available ZBI and QEMU tests:')
-        for test in all_zbi + all_qemu:
-            print(
-                '%s%s from %s' % (
-                    test['name'], ' (disabled)' if test['disabled'] else '',
-                    test['label']))
+        for kind, tests in {'ZBI': all_zbi, 'QEMU kernel': all_qemu}.items():
+            print('\nAvailable %s tests:' % kind)
+            for test in tests:
+                print(
+                    '  %s%s from %s' % (
+                        test['name'], ' (disabled)' if test['disabled'] else '',
+                        test['label']))
         return 0
 
     zbis = [

@@ -33,6 +33,7 @@ go_library("build") {
     "assembly_manifest.go",
     "binaries.go",
     "binaries_test.go",
+    "boot_tests.go",
     "checkout_artifacts.go",
     "clippy.go",
     "images.go",
@@ -51,7 +52,6 @@ go_library("build") {
     "tests_test.go",
     "tools.go",
     "tools_test.go",
-    "zbi_tests.go",
   ]
   deps = [
     "//third_party/golibs:github.com/google/go-cmp",

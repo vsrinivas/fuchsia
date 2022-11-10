@@ -36,7 +36,7 @@ if (current_toolchain != default_toolchain) {
   source_set("qemu-test-main") {
     testonly = true
     sources = [ "qemu-test-main.cc" ]
-    defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
+    defines = [ "BOOT_TEST_SUCCESS_STRING=\"$boot_test_success_string\"" ]
     deps = [
       "..:stdio",
       "..:uart",
@@ -54,7 +54,7 @@ if (current_toolchain != default_toolchain) {
   source_set("zbi-test-main") {
     testonly = true
     sources = [ "zbi-test-main.cc" ]
-    defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
+    defines = [ "BOOT_TEST_SUCCESS_STRING=\"$boot_test_success_string\"" ]
     public_deps = [ ":test-main" ]
     deps = [ "//zircon/kernel/lib/libc" ]
   }
@@ -62,7 +62,7 @@ if (current_toolchain != default_toolchain) {
   source_set("efi-test-main") {
     testonly = true
     sources = [ "efi-test-main.cc" ]
-    defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
+    defines = [ "BOOT_TEST_SUCCESS_STRING=\"$boot_test_success_string\"" ]
     public_deps = [ ":test-main" ]
     deps = [
       "//zircon/kernel/lib/libc",
@@ -93,13 +93,13 @@ if (current_toolchain != default_toolchain) {
     deps = [ "//zircon/kernel/lib/libc" ]
   }
 
-  # Build both a phys_qemu_test() and zbi_executable()/zbi_test() from the
+  # Build both a qemu_kernel_test() and zbi_executable()/zbi_test() from the
   # same sources.
   #
   # Generates a target with a name of the form "qemu-xxx" for the QEMU test,
   # and "zbi-xxx" for the ZBI test.
   template("common_test") {
-    phys_qemu_test("qemu-$target_name") {
+    qemu_kernel_test("qemu-$target_name") {
       visibility = [ ":*" ]
       forward_variables_from(invoker, "*", [ "target_name" ])
     }
@@ -194,7 +194,7 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 
-  # The phys_qemu_test only works on x86, but it's nowhere in deps.
+  # The qemu_kernel_test only works on x86, but it's nowhere in deps.
   common_test("memory-test") {
     sources = [ "phys-memory-test.cc" ]
     deps = [

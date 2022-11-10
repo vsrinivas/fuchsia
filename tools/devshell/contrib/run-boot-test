@@ -6,7 +6,7 @@
 #### CATEGORY=Run, inspect and debug
 ### Run a ZBI test
 
-## Run `fx run-zbi-test --help` for usage.
+## Run `fx run-boot-test --help` for usage.
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
@@ -14,4 +14,4 @@ source "$SCRIPT_DIR"/../lib/vars.sh || exit $?
 
 fx-config-read
 
-"${PREBUILT_PYTHON3_DIR}/bin/python3.8" "$SCRIPT_DIR"/run-zbi-test.py "$@"
+"${PREBUILT_PYTHON3_DIR}/bin/python3.8" "$SCRIPT_DIR"/run-boot-test.py "$@"

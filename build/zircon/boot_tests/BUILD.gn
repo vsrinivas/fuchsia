@@ -2,15 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This provides metadata in the //:images and //:zbi_tests schemas
-# transliterated from the Zircon data for //zircon/:zbi_tests and the
+# This provides metadata in the //:images and //:boot_tests schemas
+# transliterated from the Zircon data for //zircon/:boot_tests and the
 # subset of //zircon/:images it refers to.
-group("zbi_tests") {
+group("boot_tests") {
   visibility = [
+    "//:boot_tests",
     "//:default",
     "//:images",
     "//:tests",
-    "//:zbi_tests",
   ]
   testonly = true
 
@@ -18,6 +18,6 @@ group("zbi_tests") {
     "//src/bringup/lib/mexec/tests",
     "//zircon/kernel/lib/userabi/userboot/tests",
     "//zircon/kernel/phys:tests",
-    "//zircon/system/utest/core:zbi_tests",
+    "//zircon/system/utest/core:boot_tests",
   ]
 }
