@@ -16,8 +16,13 @@ part_ids = [
   2,
   3,
   4,
-  5,
 ]
+
+# TODO(fxbug.dev/114320): Flaky test disabled on coverage.
+# Please fix the flake and remove the condition below.
+if (!is_coverage) {
+  part_ids += [ 5 ]
+}
 integration_test_components = []
 part_components = []
 unit_test_components = []
