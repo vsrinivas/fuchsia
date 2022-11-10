@@ -1,0 +1,12 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.adhoc.lp8556;
+
+using fuchsia.hardware.backlight;
+using fuchsia.hardware.power.sensor;
+
+protocol Device {
+    compose fuchsia.hardware.backlight.Device;
+    compose fuchsia.hardware.power.sensor.Device;
+};

@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/drivers.gni")
+import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 
 driver_bind_rules("ti-lp8556-bind") {
@@ -15,6 +16,15 @@ driver_bind_rules("ti-lp8556-bind") {
   deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
 }
 
+fidl("fuchsia.hardware.adhoc.lp8556") {
+  sources = [ "adhoc.fidl" ]
+  visibility = [ ":*" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.backlight",
+    "//sdk/fidl/fuchsia.hardware.power.sensor",
+  ]
+}
+
 fuchsia_driver("ti-lp8556-driver") {
   output_name = "ti-lp8556"
   configs += [
@@ -23,9 +33,8 @@ fuchsia_driver("ti-lp8556-driver") {
   ]
   sources = [ "ti-lp8556.cc" ]
   deps = [
+    ":fuchsia.hardware.adhoc.lp8556_cpp_wire",
     ":ti-lp8556-bind",
-    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_cpp_wire",
     "//sdk/lib/fidl",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
@@ -43,11 +52,6 @@ fuchsia_driver("ti-lp8556-driver") {
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-
-  # TODO(fxbug.dev/85473): This target uses |fidl::WireTryDispatch| which is deprecated.
-  # Please remove ad-hoc composition of FIDL protocols and migrate to |fidl::WireDispatch|.
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-wire-try-dispatch" ]
 }
 
 fuchsia_driver_component("ti-lp8556") {
@@ -64,10 +68,8 @@ test("ti-lp8556-test") {
     "ti-lp8556.cc",
   ]
   deps = [
+    ":fuchsia.hardware.adhoc.lp8556_cpp_wire",
     ":ti-lp8556-bind",
-    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_cpp_wire",
     "//sdk/lib/fidl",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -93,11 +95,6 @@ test("ti-lp8556-test") {
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-
-  # TODO(fxbug.dev/85473): This target uses |fidl::WireTryDispatch| which is deprecated.
-  # Please remove ad-hoc composition of FIDL protocols and migrate to |fidl::WireDispatch|.
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-wire-try-dispatch" ]
 }
 
 fuchsia_unittest_package("ti-lp8556-test-package") {

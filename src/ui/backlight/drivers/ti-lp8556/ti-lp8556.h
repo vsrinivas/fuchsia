@@ -5,8 +5,7 @@
 #ifndef SRC_UI_BACKLIGHT_DRIVERS_TI_LP8556_TI_LP8556_H_
 #define SRC_UI_BACKLIGHT_DRIVERS_TI_LP8556_TI_LP8556_H_
 
-#include <fidl/fuchsia.hardware.backlight/cpp/wire.h>
-#include <fidl/fuchsia.hardware.power.sensor/cpp/wire.h>
+#include <fidl/fuchsia.hardware.adhoc.lp8556/cpp/wire.h>
 #include <lib/ddk/hw/reg.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/inspect/cpp/inspect.h>
@@ -59,9 +58,8 @@ constexpr int kNumBacklightDriverChannels = 6;
 constexpr int kMilliampPerAmp = 1000;
 
 class Lp8556Device;
-using DeviceType = ddk::Device<Lp8556Device, ddk::MessageableManual>;
-namespace FidlBacklight = fuchsia_hardware_backlight;
-namespace FidlPowerSensor = fuchsia_hardware_power_sensor;
+using DeviceType =
+    ddk::Device<Lp8556Device, ddk::Messageable<fuchsia_hardware_adhoc_lp8556::Device>::Mixin>;
 
 class BrightnessStickyReg : public hwreg::RegisterBase<BrightnessStickyReg, uint32_t> {
  public:
@@ -76,10 +74,7 @@ class BrightnessStickyReg : public hwreg::RegisterBase<BrightnessStickyReg, uint
   static auto Get() { return hwreg::RegisterAddr<BrightnessStickyReg>(kAOBrightnessStickyReg); }
 };
 
-class Lp8556Device : public DeviceType,
-                     public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT>,
-                     public fidl::WireServer<FidlBacklight::Device>,
-                     public fidl::WireServer<FidlPowerSensor::Device> {
+class Lp8556Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT> {
  public:
   Lp8556Device(zx_device_t* parent, ddk::I2cChannel i2c, fdf::MmioBuffer mmio)
       : DeviceType(parent), i2c_(std::move(i2c)), mmio_(std::move(mmio)) {}
@@ -88,14 +83,13 @@ class Lp8556Device : public DeviceType,
 
   // Methods required by the ddk mixins
   void DdkRelease();
-  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
 
-  zx_status_t GetBacklightState(bool* power, double* brightness);
+  zx_status_t GetBacklightState(bool* power, double* brightness) const;
   zx_status_t SetBacklightState(bool power, double brightness);
 
-  double GetDeviceBrightness() { return brightness_; }
-  bool GetDevicePower() { return power_; }
-  uint8_t GetCfg2() { return cfg2_; }
+  double GetDeviceBrightness() const { return brightness_; }
+  bool GetDevicePower() const { return power_; }
+  uint8_t GetCfg2() const { return cfg2_; }
   void SetMaxAbsoluteBrightnessNits(double brightness_nits) {
     max_absolute_brightness_nits_ = brightness_nits;
     if (max_absolute_brightness_nits_property_) {
@@ -115,11 +109,11 @@ class Lp8556Device : public DeviceType,
     kNumTypes = 4,
   };
 
-  double GetBacklightPower(double backlight_brightness);
-  double GetBrightnesstoCurrentScalar();
-  double GetBacklightVoltage(double backlight_brightness, PanelType panel_type);
-  double GetDriverEfficiency(double backlight_brightness);
-  PanelType GetPanelType();
+  double GetBacklightPower(double backlight_brightness) const;
+  double GetBrightnesstoCurrentScalar() const;
+  static double GetBacklightVoltage(double backlight_brightness, PanelType panel_type);
+  static double GetDriverEfficiency(double backlight_brightness);
+  PanelType GetPanelType() const;
 
   // FIDL calls
   void GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) override;

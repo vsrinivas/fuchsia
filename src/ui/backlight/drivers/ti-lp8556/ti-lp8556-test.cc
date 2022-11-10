@@ -4,8 +4,7 @@
 
 #include "ti-lp8556.h"
 
-#include <fidl/fuchsia.hardware.backlight/cpp/wire.h>
-#include <fidl/fuchsia.hardware.power.sensor/cpp/wire.h>
+#include <fidl/fuchsia.hardware.adhoc.lp8556/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>
@@ -54,17 +53,9 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
         &ac, fake_parent_.get(), std::move(i2c_endpoints->client), std::move(mmio));
     ASSERT_TRUE(ac.check());
 
-    auto backlight_endpoints = fidl::CreateEndpoints<fuchsia_hardware_backlight::Device>();
-    fidl::BindServer(
-        loop_.dispatcher(), std::move(backlight_endpoints->server),
-        static_cast<fidl::WireServer<fuchsia_hardware_backlight::Device>*>(dev_.get()));
-    backlight_client_ = std::move(backlight_endpoints->client);
-
-    auto power_sensor_endpoints = fidl::CreateEndpoints<fuchsia_hardware_power_sensor::Device>();
-    fidl::BindServer(
-        loop_.dispatcher(), std::move(power_sensor_endpoints->server),
-        static_cast<fidl::WireServer<fuchsia_hardware_power_sensor::Device>*>(dev_.get()));
-    power_sensor_client_ = std::move(power_sensor_endpoints->client);
+    zx::result server = fidl::CreateEndpoints(&client_);
+    ASSERT_OK(server);
+    fidl::BindServer(loop_.dispatcher(), std::move(server.value()), dev_.get());
 
     ASSERT_OK(loop_.StartThread("lp8556-client-thread"));
     ASSERT_OK(i2c_loop_.StartThread("mock-i2c-driver-thread"));
@@ -122,14 +113,7 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
   }
 
  protected:
-  fidl::WireSyncClient<fuchsia_hardware_backlight::Device> client() {
-    return fidl::WireSyncClient<fuchsia_hardware_backlight::Device>(std::move(backlight_client_));
-  }
-
-  fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device> sensorSyncClient() {
-    return fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device>(
-        std::move(power_sensor_client_));
-  }
+  const fidl::ClientEnd<fuchsia_hardware_adhoc_lp8556::Device>& client() const { return client_; }
 
   mock_i2c::MockI2c mock_i2c_;
   std::unique_ptr<Lp8556Device> dev_;
@@ -138,8 +122,7 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
 
  private:
   ddk_mock::MockMmioReg mock_reg_array_[kMmioRegCount];
-  fidl::ClientEnd<fuchsia_hardware_backlight::Device> backlight_client_;
-  fidl::ClientEnd<fuchsia_hardware_power_sensor::Device> power_sensor_client_;
+  fidl::ClientEnd<fuchsia_hardware_adhoc_lp8556::Device> client_;
   async::Loop loop_;
   async::Loop i2c_loop_;
 };
@@ -302,9 +285,7 @@ TEST_F(Lp8556DeviceTest, OverwriteStickyRegister) {
       .ExpectReadStop({0xab})
       .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xa4});
 
-  fidl::WireSyncClient<fuchsia_hardware_backlight::Device> backlight_client(client());
-
-  auto result = backlight_client->SetStateNormalized({true, 0.25});
+  auto result = fidl::WireCall(client())->SetStateNormalized({true, 0.25});
   EXPECT_TRUE(result.ok());
   EXPECT_FALSE(result->is_error());
 
@@ -336,8 +317,7 @@ TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
 
   EXPECT_OK(dev_->Init());
 
-  fidl::WireSyncClient<fuchsia_hardware_backlight::Device> backlight_client(client());
-  auto result = backlight_client->GetNormalizedBrightnessScale();
+  auto result = fidl::WireCall(client())->GetNormalizedBrightnessScale();
   ASSERT_TRUE(result.ok());
   ASSERT_TRUE(result->is_ok());
   EXPECT_TRUE(FloatNear(result->value()->scale, static_cast<double>(0xe05) / 0xfff));
@@ -370,17 +350,15 @@ TEST_F(Lp8556DeviceTest, SetCurrentScale) {
 
   EXPECT_OK(dev_->Init());
 
-  fidl::WireSyncClient<fuchsia_hardware_backlight::Device> backlight_client(client());
-
   mock_i2c_.ExpectWrite({kCfgReg}).ExpectReadStop({0x7e}).ExpectWriteStop(
       {kCurrentLsbReg, 0xab, 0x72});
 
   auto set_result =
-      backlight_client->SetNormalizedBrightnessScale(static_cast<double>(0x2ab) / 0xfff);
+      fidl::WireCall(client())->SetNormalizedBrightnessScale(static_cast<double>(0x2ab) / 0xfff);
   ASSERT_TRUE(set_result.ok());
   EXPECT_TRUE(set_result->is_ok());
 
-  auto get_result = backlight_client->GetNormalizedBrightnessScale();
+  auto get_result = fidl::WireCall(client())->GetNormalizedBrightnessScale();
   ASSERT_TRUE(get_result.ok());
   ASSERT_TRUE(get_result->is_ok());
   EXPECT_TRUE(FloatNear(get_result->value()->scale, static_cast<double>(0x2ab) / 0xfff));
@@ -417,13 +395,11 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
 
   EXPECT_OK(dev_->Init());
 
-  fidl::WireSyncClient<fuchsia_hardware_backlight::Device> backlight_client(client());
-
   mock_i2c_.ExpectWrite({kCfgReg}).ExpectReadStop({0x7e}).ExpectWriteStop(
       {kCurrentLsbReg, 0xab, 0x72});
 
   auto set_result =
-      backlight_client->SetNormalizedBrightnessScale(static_cast<double>(0x2ab) / 0xfff);
+      fidl::WireCall(client())->SetNormalizedBrightnessScale(static_cast<double>(0x2ab) / 0xfff);
   EXPECT_TRUE(set_result.ok());
   EXPECT_FALSE(set_result->is_error());
 
@@ -435,7 +411,7 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
       .ExpectReadStop({0xab})
       .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xa8});
 
-  auto absolute_result_1 = backlight_client->SetStateAbsolute({true, 175.0});
+  auto absolute_result_1 = fidl::WireCall(client())->SetStateAbsolute({true, 175.0});
   EXPECT_TRUE(absolute_result_1.ok());
   EXPECT_FALSE(absolute_result_1->is_error());
 
@@ -445,7 +421,7 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
       .ExpectReadStop({0x1b})
       .ExpectWriteStop({kBacklightBrightnessMsbReg, 0x14});
 
-  auto absolute_result_2 = backlight_client->SetStateAbsolute({true, 87.5});
+  auto absolute_result_2 = fidl::WireCall(client())->SetStateAbsolute({true, 87.5});
   EXPECT_TRUE(absolute_result_2.ok());
   EXPECT_FALSE(absolute_result_2->is_error());
 
@@ -553,8 +529,7 @@ TEST_F(Lp8556DeviceTest, GetPowerWatts) {
   VerifySetBrightness(true, 1.0);
   EXPECT_LT(abs(dev_->GetBacklightPower(4095) - 1.0637770353), 0.000001f);
 
-  fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device> sensor_client(sensorSyncClient());
-  auto result = sensor_client->GetPowerWatts();
+  auto result = fidl::WireCall(client())->GetPowerWatts();
   EXPECT_TRUE(result.ok());
   EXPECT_FALSE(result->is_error());
 }
