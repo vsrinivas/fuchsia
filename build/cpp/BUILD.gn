@@ -191,7 +191,6 @@ config("fidl-llcpp-deprecated-wire-try-dispatch") {
     "//src/devices/misc/drivers/compat:lib",
     "//src/devices/rtc/drivers/intel-rtc:intel-rtc-driver",
     "//src/devices/rtc/drivers/intel-rtc:intel-rtc-test-bin",
-    "//src/lib/storage/block_client/cpp:block_client_unit_test",
     "//src/lib/storage/vfs/cpp",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-driver",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test",

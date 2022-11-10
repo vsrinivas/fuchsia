@@ -4,12 +4,9 @@
 
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 
-#include <fidl/fuchsia.hardware.block/cpp/wire.h>
-#include <fidl/fuchsia.io/cpp/wire_test_base.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fdio/fd.h>
-#include <lib/fidl-utils/bind.h>
 #include <lib/fzl/fifo.h>
 #include <lib/zx/vmo.h>
 
@@ -26,58 +23,26 @@
 namespace block_client {
 namespace {
 
-namespace fio = fuchsia_io;
-
 constexpr uint16_t kGoldenVmoid = 2;
 constexpr uint32_t kBlockSize = 4096;
 constexpr uint64_t kBlockCount = 10;
 
-class FidlTransaction : public fidl::Transaction {
+// Emulate the non-standard behavior of the block device which implements both the block device APIs
+// and the Node API.
+class MockBlockDevice : public fidl::testing::WireTestBase<fuchsia_hardware_block::BlockAndNode> {
  public:
-  FidlTransaction(FidlTransaction&&) = default;
-  explicit FidlTransaction(zx_txid_t transaction_id, zx::unowned_channel channel)
-      : txid_(transaction_id), channel_(std::move(channel)) {}
-
-  std::unique_ptr<fidl::Transaction> TakeOwnership() override {
-    return std::make_unique<FidlTransaction>(std::move(*this));
-  }
-
-  zx_status_t Reply(fidl::OutgoingMessage* message, fidl::WriteOptions write_options) override {
-    ZX_ASSERT(txid_ != 0);
-    message->set_txid(txid_);
-    txid_ = 0;
-    message->Write(channel_, std::move(write_options));
-    return message->status();
-  }
-
-  void Close(zx_status_t epitaph) override { ZX_ASSERT(false); }
-
-  void InternalError(fidl::UnbindInfo info, fidl::ErrorOrigin origin) override {
-    detected_error_ = info;
-  }
-
-  ~FidlTransaction() override = default;
-
-  const std::optional<fidl::UnbindInfo>& detected_error() const { return detected_error_; }
-
- private:
-  zx_txid_t txid_;
-  zx::unowned_channel channel_;
-  std::optional<fidl::UnbindInfo> detected_error_;
-};
-
-class MockBlockDevice : public fidl::WireServer<fuchsia_hardware_block::Block> {
- public:
-  zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
-    dispatcher_ = dispatcher;
-    channel_ = zx::unowned(channel);
-    mock_server_ = std::make_unique<MockFile>(this);
+  explicit MockBlockDevice(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
     // Create buffer for read / write calls
     buffer_.resize(kBlockSize * kBlockCount);
-    return fidl_bind(dispatcher_, channel.release(), FidlDispatch, this, nullptr);
   }
 
-  zx_status_t ReadFifoRequests(block_fifo_request_t* requests, size_t* count) {
+  void Bind(fidl::ServerEnd<fuchsia_hardware_block::Block> server_end) {
+    fidl::BindServer(
+        dispatcher_,
+        fidl::ServerEnd<fuchsia_hardware_block::BlockAndNode>(server_end.TakeChannel()), this);
+  }
+
+  zx_status_t ReadFifoRequests(block_fifo_request_t* requests, size_t* count) const {
     zx_signals_t seen;
     zx_status_t status = fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
                                         zx::deadline_after(zx::sec(5)), &seen);
@@ -87,58 +52,22 @@ class MockBlockDevice : public fidl::WireServer<fuchsia_hardware_block::Block> {
     return fifo_.read(requests, BLOCK_FIFO_MAX_DEPTH, count);
   }
 
-  zx_status_t WriteFifoResponse(const block_fifo_response_t& response) {
+  zx_status_t WriteFifoResponse(const block_fifo_response_t& response) const {
     return fifo_.write_one(response);
   }
 
   bool FifoAttached() const { return fifo_.get().is_valid(); }
 
- private:
-  // Manually dispatch to emulate the non-standard behavior of the block device,
-  // which implements both the block device APIs, the Node API, and (optionally)
-  // the FVM API.
-  static zx_status_t FidlDispatch(void* context, fidl_txn_t* txn, fidl_incoming_msg_t* msg,
-                                  const void*) {
-    return reinterpret_cast<MockBlockDevice*>(context)->HandleMessage(txn, msg);
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    FAIL() << "unexpected call to: " << name;
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  zx_status_t HandleMessage(fidl_txn_t* txn, fidl_incoming_msg_t* msg) {
-    auto incoming_msg = fidl::IncomingHeaderAndMessage::FromEncodedCMessage(msg);
-    FidlTransaction ftxn(incoming_msg.header()->txid, zx::unowned(channel_));
-
-    switch (fidl::WireTryDispatch<fio::File>(mock_server_.get(), incoming_msg, &ftxn)) {
-      case fidl::DispatchResult::kFound:
-        return ZX_OK;
-      case fidl::DispatchResult::kNotFound:
-        break;
-    }
-
-    switch (fidl::WireTryDispatch<fuchsia_hardware_block::Block>(this, incoming_msg, &ftxn)) {
-      case fidl::DispatchResult::kFound:
-        return ZX_OK;
-      case fidl::DispatchResult::kNotFound:
-        break;
-    }
-
-    return ZX_ERR_NOT_FOUND;
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
+    fidl::BindServer(
+        dispatcher_,
+        fidl::ServerEnd<fuchsia_hardware_block::BlockAndNode>(request->object.TakeChannel()), this);
   }
-
-  class MockFile : public fidl::testing::WireTestBase<fio::File> {
-   public:
-    explicit MockFile(MockBlockDevice* self) : self_(self) {}
-
-    void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
-      FAIL() << "unexpected call to: " << name;
-      completer.Close(ZX_ERR_NOT_SUPPORTED);
-    }
-
-    void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
-      self_->Bind(self_->dispatcher_, request->object.TakeChannel());
-    }
-
-   private:
-    MockBlockDevice* self_;
-  };
 
   void GetInfo(GetInfoCompleter::Sync& completer) override {
     fuchsia_hardware_block::wire::BlockInfo info = {
@@ -188,9 +117,7 @@ class MockBlockDevice : public fidl::WireServer<fuchsia_hardware_block::Block> {
   }
 
   async_dispatcher_t* dispatcher_ = nullptr;
-  zx::unowned_channel channel_;
   fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
-  std::unique_ptr<MockFile> mock_server_;
   std::vector<uint8_t> buffer_;
 };
 
@@ -203,8 +130,8 @@ TEST(RemoteBlockDeviceTest, Constructor) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  MockBlockDevice mock_device;
-  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), server.TakeChannel()), ZX_OK);
+  MockBlockDevice mock_device(loop.dispatcher());
+  mock_device.Bind(std::move(server));
 
   std::unique_ptr<RemoteBlockDevice> device;
   ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
@@ -220,8 +147,8 @@ TEST(RemoteBlockDeviceTest, FifoClosedOnDestruction) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  MockBlockDevice mock_device;
-  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), server.TakeChannel()), ZX_OK);
+  MockBlockDevice mock_device(loop.dispatcher());
+  mock_device.Bind(std::move(server));
 
   EXPECT_FALSE(mock_device.FifoAttached());
   {
@@ -242,8 +169,8 @@ TEST(RemoteBlockDeviceTest, WriteTransactionReadResponse) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  MockBlockDevice mock_device;
-  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), server.TakeChannel()), ZX_OK);
+  MockBlockDevice mock_device(loop.dispatcher());
+  mock_device.Bind(std::move(server));
 
   std::unique_ptr<RemoteBlockDevice> device;
   ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
@@ -294,8 +221,8 @@ TEST(RemoteBlockDeviceTest, WriteReadBlock) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  MockBlockDevice mock_device;
-  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), server.TakeChannel()), ZX_OK);
+  MockBlockDevice mock_device(loop.dispatcher());
+  mock_device.Bind(std::move(server));
 
   constexpr size_t max_count = 3;
 
@@ -329,11 +256,7 @@ TEST(RemoteBlockDeviceTest, WriteReadBlock) {
   }
 }
 
-// TODO(https://fxbug.dev/113609): MockBlockDevice and MockFile are implemented incorrectly; they
-// always reply on the latest-bound channel rather than the channel on which a transaction arrived.
-// This being a test that uses multiple channels, it provokes that behavior, resulting in the
-// BlockGetInfo call hanging as the server attempts to reply on the already-closed second channel.
-TEST(RemoteBlockDeviceTest, DISABLED_VolumeManagerOrdinals) {
+TEST(RemoteBlockDeviceTest, VolumeManagerOrdinals) {
   zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Block>();
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
   auto& [client, server] = endpoints.value();
@@ -341,8 +264,8 @@ TEST(RemoteBlockDeviceTest, DISABLED_VolumeManagerOrdinals) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  MockBlockDevice mock_device;
-  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), server.TakeChannel()), ZX_OK);
+  MockBlockDevice mock_device(loop.dispatcher());
+  mock_device.Bind(std::move(server));
 
   std::unique_ptr<RemoteBlockDevice> device;
   ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
@@ -374,8 +297,8 @@ TEST(RemoteBlockDeviceTest, LargeThreadCountSuceeds) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  MockBlockDevice mock_device;
-  ASSERT_EQ(mock_device.Bind(loop.dispatcher(), server.TakeChannel()), ZX_OK);
+  MockBlockDevice mock_device(loop.dispatcher());
+  mock_device.Bind(std::move(server));
 
   std::unique_ptr<RemoteBlockDevice> device;
   ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
@@ -451,8 +374,8 @@ TEST(RemoteBlockDeviceTest, NoHangForErrorsWithMultipleThreads) {
   std::thread threads[kThreadCount];
 
   {
-    MockBlockDevice mock_device;
-    ASSERT_EQ(mock_device.Bind(loop.dispatcher(), server.TakeChannel()), ZX_OK);
+    MockBlockDevice mock_device(loop.dispatcher());
+    mock_device.Bind(std::move(server));
 
     ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
 
