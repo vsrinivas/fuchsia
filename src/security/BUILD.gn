@@ -11,10 +11,12 @@ group("tests") {
   testonly = true
   deps = [
     "bin:tests",
-    "lib:tests",
+    "lib/fcrypto:tests",
+    "lib/scrutiny:tests",
+    "lib/zxcrypt:tests",
     "pkg_test/tests",
     "tee_manager:tests",
-    "tests/",
+    "tests/ffx_test:tests",
     "tools:tests",
   ]
 }
@@ -22,6 +24,6 @@ group("tests") {
 if (is_host) {
   group("host_tests") {
     testonly = true
-    deps = [ "lib:host_tests" ]
+    deps = [ "lib/scrutiny:host_tests" ]
   }
 }
