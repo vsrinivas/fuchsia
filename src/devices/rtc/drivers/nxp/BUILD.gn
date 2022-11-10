@@ -21,21 +21,12 @@ fuchsia_driver("nxp-driver") {
   sources = [ "pcf8563-rtc.cc" ]
   deps = [
     ":pcf8563_rtc_bind",
-    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
+    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_cpp_wire",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/rtc/lib/rtc",
-    "//src/devices/rtc/lib/rtc:rtc_c",
-    "//src/lib/ddk",
+    "//src/devices/rtc/lib/rtc:rtc_llcpp",
     "//src/lib/ddktl",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/hid",
-    "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_driver_component("nxp") {
