@@ -717,9 +717,9 @@ void Dwc2::HandleTransferComplete(uint8_t ep_num) {
 
   ep->lock.Acquire();
 
-  auto transfered = ReadTransfered(ep);
-
-  ep->req_offset += transfered;
+  ep->req_offset += ReadTransfered(ep);
+  // Make a copy since this is used outside the critical section.
+  auto actual = ep->req_offset;
 
   usb_request_t* req = ep->current_req;
   if (req) {
@@ -732,7 +732,7 @@ void Dwc2::HandleTransferComplete(uint8_t ep_num) {
     // forcefully complete it after we've already completed it).
     ep->current_req = nullptr;
     ep->lock.Release();
-    request.Complete(ZX_OK, ep->req_offset);
+    request.Complete(ZX_OK, actual);
     ep->lock.Acquire();
 
     QueueNextRequest(ep);
