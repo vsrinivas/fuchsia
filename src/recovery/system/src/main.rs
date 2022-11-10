@@ -63,6 +63,7 @@ use {
         keyboard::{KeyboardMessages, KeyboardViewAssistant},
         proxy_view_assistant::ProxyMessages,
     },
+    recovery_util::reboot::request_reboot,
     std::sync::Arc,
 };
 
@@ -96,6 +97,7 @@ mod http_setup_server {
     pub(super) const WIFI_PASSWORD: &'static str = "WiFi Password";
     pub(super) const WIFI_CONNECT: &'static str = "WiFi Connect";
     pub(super) const UPDATE: &'static str = "Update";
+    pub(super) const REBOOT_DELAY_SECONDS: u64 = 10;
 }
 
 #[cfg(feature = "http_setup_server")]
@@ -128,6 +130,7 @@ const COUNTDOWN_MODE_HEADLINE: &'static str = "Factory reset device";
 const COUNTDOWN_MODE_BODY: &'static str =
     "\nContinue holding the keys to the end of the countdown. \
 This will wipe all of your data from this device and reset it to factory settings.";
+
 const PATH_TO_FDR_RESTRICTION_CONFIG: &'static str = "/config/data/check_fdr_restriction.json";
 
 /// An enum to track whether fdr is restricted or not.
@@ -980,6 +983,15 @@ impl RecoveryViewAssistant {
                                             cobalt::log_recovery_stage,
                                             metrics::RecoveryEventMetricDimensionResult::OtaSuccess
                                         );
+                                    })
+                                    .detach();
+
+                                    fasync::Task::local(async move {
+                                        if let Err(e) =
+                                            request_reboot(Some(REBOOT_DELAY_SECONDS)).await
+                                        {
+                                            eprintln!("Failed to reboot: {:?}", e);
+                                        }
                                     })
                                     .detach();
                                 }

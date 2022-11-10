@@ -20,6 +20,7 @@
         {
             protocol: [
                 "fuchsia.fshost.Admin",
+                "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.process.Launcher",
                 "fuchsia.wlan.policy.ClientListener",

@@ -11,6 +11,7 @@ rustc_library("recovery-util") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_rust",
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_rust",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_rust",
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
@@ -40,6 +41,7 @@ rustc_library("recovery-util") {
     "src/ota/controller.rs",
     "src/ota/mod.rs",
     "src/ota/state_machine.rs",
+    "src/reboot.rs",
     "src/testing/mod.rs",
     "src/wlan.rs",
   ]
