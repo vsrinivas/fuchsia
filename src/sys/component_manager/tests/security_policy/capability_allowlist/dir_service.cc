@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/cpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/memfs/memfs.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/channel.h>
 
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/storage/memfs/scoped_memfs.h"
 
 int main(int argc, char* argv[]) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -20,36 +20,49 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  memfs_filesystem_t* vfs;
-  zx::channel memfs_channel;
-  zx_status_t status =
-      memfs_create_filesystem(memfs_loop.dispatcher(), &vfs, memfs_channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    fprintf(stderr, "Failed to create memfs: %d\n", status);
+  zx::result<ScopedMemfs> memfs = ScopedMemfs::Create(memfs_loop.dispatcher());
+  if (memfs.is_error()) {
+    fprintf(stderr, "Failed to create memfs: %s\n", memfs.status_string());
     return -1;
   }
 
-  fidl::InterfacePtr<fuchsia::io::Directory> memfs_dir;
-  memfs_dir.Bind(std::move(memfs_channel));
+  const fidl::ClientEnd<fuchsia_io::Directory>& memfs_dir = memfs.value().root();
 
-  fidl::InterfaceHandle<fuchsia::io::Node> restricted_dir;
-  fidl::InterfaceHandle<fuchsia::io::Node> unrestricted_dir;
   svc::Outgoing outgoing(loop.dispatcher());
-  memfs_dir->Clone(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-                   restricted_dir.NewRequest());
-  memfs_dir->Clone(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-                   unrestricted_dir.NewRequest());
-  outgoing.root_dir()->AddEntry("restricted",
-                                fbl::MakeRefCounted<fs::RemoteDir>(restricted_dir.TakeChannel()));
-  outgoing.root_dir()->AddEntry("unrestricted",
-                                fbl::MakeRefCounted<fs::RemoteDir>(unrestricted_dir.TakeChannel()));
-  status = outgoing.ServeFromStartupInfo();
-  if (status != ZX_OK) {
-    fprintf(stderr, "Failed to serve outgoing dir: %d\n", status);
+
+  for (fbl::String name : {"restricted", "unrestricted"}) {
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    if (endpoints.is_error()) {
+      fprintf(stderr, "Failed to create endpoints: %s\n", endpoints.status_string());
+      return -1;
+    }
+    auto& [client, node_server] = endpoints.value();
+    fidl::ServerEnd<fuchsia_io::Node> server(node_server.TakeChannel());
+    if (fidl::WireResult result =
+            fidl::WireCall(memfs_dir)->Clone(fuchsia_io::wire::OpenFlags::kRightReadable |
+                                                 fuchsia_io::wire::OpenFlags::kRightWritable,
+                                             std::move(server));
+        !result.ok()) {
+      fprintf(stderr, "Failed to clone memfs dir: %s\n", result.FormatDescription().c_str());
+      return -1;
+    }
+    if (zx_status_t status = outgoing.root_dir()->AddEntry(
+            name, fbl::MakeRefCounted<fs::RemoteDir>(std::move(client)));
+        status != ZX_OK) {
+      fprintf(stderr, "Failed to add outgoing entry: %s\n", zx_status_get_string(status));
+      return -1;
+    }
+  }
+
+  if (zx_status_t status = outgoing.ServeFromStartupInfo(); status != ZX_OK) {
+    fprintf(stderr, "Failed to serve outgoing dir: %s\n", zx_status_get_string(status));
     return -1;
   }
 
-  loop.Run();
-  memfs_free_filesystem(vfs, nullptr);
+  if (zx_status_t status = loop.Run(); status != ZX_OK) {
+    fprintf(stderr, "Failed to run loop: %s\n", zx_status_get_string(status));
+    return -1;
+  }
+
   return 0;
 }

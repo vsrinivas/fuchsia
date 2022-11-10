@@ -127,8 +127,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/sys/appmgr:bin",
     "//src/sys/appmgr:lib",
     "//src/sys/appmgr:unittest_bin",
-    "//src/sys/component_manager/tests/rights:expose_dir_rights_bin",
-    "//src/sys/component_manager/tests/security_policy/capability_allowlist:dir_service_bin",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//src/sys/startup",
     "//src/ui/backlight/bin/backlight",

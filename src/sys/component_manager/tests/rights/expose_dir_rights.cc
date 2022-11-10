@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/cpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/svc/outgoing.h>
@@ -26,39 +26,49 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  fidl::InterfacePtr<fuchsia::io::Directory> memfs_dir;
-  memfs_dir.Bind(memfs->root().TakeChannel());
-
-  fidl::InterfaceHandle<fuchsia::io::Node> ro_dir;
-  fidl::InterfaceHandle<fuchsia::io::Node> rw_dir;
-  fidl::InterfaceHandle<fuchsia::io::Node> rx_dir;
-  fidl::InterfaceHandle<fuchsia::io::Node> ra_dir;
-  fidl::InterfaceHandle<fuchsia::io::Node> r_after_scoped_dir;
-
-  memfs_dir->Clone(fuchsia::io::OpenFlags::RIGHT_READABLE, ro_dir.NewRequest());
-  memfs_dir->Clone(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-                   rw_dir.NewRequest());
-  memfs_dir->Clone(
-      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_EXECUTABLE,
-      rx_dir.NewRequest());
-  memfs_dir->Clone(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-                   r_after_scoped_dir.NewRequest());
+  const fidl::ClientEnd<fuchsia_io::Directory>& memfs_dir = memfs.value().root();
 
   svc::Outgoing outgoing(loop.dispatcher());
-  outgoing.root_dir()->AddEntry("read_only",
-                                fbl::MakeRefCounted<fs::RemoteDir>(ro_dir.TakeChannel()));
-  outgoing.root_dir()->AddEntry("read_write",
-                                fbl::MakeRefCounted<fs::RemoteDir>(rw_dir.TakeChannel()));
-  outgoing.root_dir()->AddEntry("read_exec",
-                                fbl::MakeRefCounted<fs::RemoteDir>(rx_dir.TakeChannel()));
-  outgoing.root_dir()->AddEntry("read_only_after_scoped", fbl::MakeRefCounted<fs::RemoteDir>(
-                                                              r_after_scoped_dir.TakeChannel()));
-  zx_status_t status = outgoing.ServeFromStartupInfo();
-  if (status != ZX_OK) {
-    fprintf(stderr, "Failed to serve outgoing dir: %d\n", status);
+
+  using fuchsia_io::wire::OpenFlags;
+
+  std::pair<fbl::String, OpenFlags> dirs[] = {
+      {"read_only", OpenFlags::kRightReadable},
+      {"read_write", OpenFlags::kRightReadable | OpenFlags::kRightWritable},
+      {"read_exec", OpenFlags::kRightReadable | OpenFlags::kRightExecutable},
+      {"read_only_after_scoped", OpenFlags::kRightReadable | OpenFlags::kRightWritable},
+  };
+
+  for (const auto& [name, rights] : dirs) {
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    if (endpoints.is_error()) {
+      fprintf(stderr, "Failed to create endpoints: %s\n", endpoints.status_string());
+      return -1;
+    }
+    auto& [client, node_server] = endpoints.value();
+    fidl::ServerEnd<fuchsia_io::Node> server(node_server.TakeChannel());
+    if (fidl::WireResult result = fidl::WireCall(memfs_dir)->Clone(rights, std::move(server));
+        !result.ok()) {
+      fprintf(stderr, "Failed to clone memfs dir: %s\n", result.FormatDescription().c_str());
+      return -1;
+    }
+    if (zx_status_t status = outgoing.root_dir()->AddEntry(
+            name, fbl::MakeRefCounted<fs::RemoteDir>(std::move(client)));
+        status != ZX_OK) {
+      fprintf(stderr, "Failed to add outgoing entry: %s\n", zx_status_get_string(status));
+      return -1;
+    }
+  }
+
+  if (zx_status_t status = outgoing.ServeFromStartupInfo(); status != ZX_OK) {
+    fprintf(stderr, "Failed to serve outgoing dir: %s\n", zx_status_get_string(status));
     return -1;
   }
 
-  loop.Run();
+  if (zx_status_t status = loop.Run(); status != ZX_OK) {
+    fprintf(stderr, "Failed to run loop: %s\n", zx_status_get_string(status));
+    return -1;
+  }
+
   return 0;
 }
