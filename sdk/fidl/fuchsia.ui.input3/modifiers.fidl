@@ -10,6 +10,10 @@ library fuchsia.ui.input3;
 /// a bit is set if the specific modifier key is actuated (held down),
 /// irrespective of whether the modifier has an associated lock state or not.
 ///
+/// **NOTE:** If you want to examine the lock state (such as whether Caps
+/// Lock needs to turn all letters into uppercase),you want [LockState]
+/// instead.
+///
 /// Somewhat specially, and as a convenience for the users, the modifiers that
 /// have "left" and "right" flavors have special bit values which can be used
 /// if the distinction between sides does not matter.
