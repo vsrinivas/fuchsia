@@ -117,7 +117,7 @@ pub const UNLOCK_ERR: &str = "The product requires the target to be unlocked. \
 pub fn map_fidl_error(e: FidlError) -> Error {
     tracing::error!("FIDL Communication error: {}", e);
     anyhow!(
-        "There was an error communcation with the daemon:\n{}\n\
+        "There was an error communicating with the daemon:\n{}\n\
         Try running `ffx doctor` for further diagnositcs.",
         e
     )

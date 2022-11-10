@@ -35,7 +35,7 @@ pub async fn info<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -> R
         fastboot_proxy.get_all_vars(var_client).map_err(|e| {
             tracing::error!("FIDL Communication error: {}", e);
             anyhow!(
-                "There was an error communcation with the daemon. Try running\n\
+                "There was an error communicating with the daemon. Try running\n\
                 `ffx doctor` for further diagnositcs."
             )
         }),
