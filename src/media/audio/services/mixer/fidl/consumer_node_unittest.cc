@@ -202,7 +202,7 @@ void TestCreateEdgeSuccess(CreateEdgeSuccessArgs args) {
               .clock = StartStopControl::WhichClock::kReference,
               .time = args.consumer_start_time,
           },
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
 
   q.RunForThread(h.mix_thread->id());

@@ -1,0 +1,65 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media2;
+
+using zx;
+
+/// As soon as possible.
+type Asap = struct {};
+
+/// Specifies a real time using a system monotonic or reference clock time or an
+/// option specifying ‘as soon as possible’. This type is used when a transport
+/// control operation is to occur using a time value that is meaningful when the
+/// transport is stopped.
+type RealTime = flexible union {
+    /// As soon as possible.
+    1: asap Asap;
+
+    /// Real time according to the system monotonic clock.
+    2: system_time zx.time;
+
+    /// Real time according to the relevant reference clock. If no reference
+    /// clock (other than the system clock) is relevant, this is equivalent to
+    /// `system_time`.
+    3: reference_time zx.time;
+};
+
+/// Specifies a stream time either as a duration or as a packet timestamp in the
+/// relevant timestamp units. This type is used when a transport control
+/// operation is to define a positional offset value that is relative to the
+/// beginning of the stream.
+type StreamTime = flexible union {
+    /// Stream time expressed as a duration (nanoseconds).
+    1: stream_time zx.duration;
+
+    /// Stream time expressed in the same timestamps that are used on the
+    /// relevant packets.
+    2: packet_timestamp int64;
+};
+
+/// Specifies a real time or a stream time. Real time is expressed using a
+/// system monotonic or reference clock time. Stream time is expressed either as
+/// a duration or as a packet timestamp in the relevant units. This type is used
+/// when a transport control operation is to occur using a time value that is
+/// meaningful when the transport is progressing.
+type RealOrStreamTime = flexible union {
+    /// As soon as possible.
+    1: asap Asap;
+
+    /// Real time according to the system monotonic clock.
+    2: system_time zx.time;
+
+    /// Real time according to the relevant reference clock. If no reference
+    /// clock (other than the system clock) is relevant, this is equivalent to
+    /// `system_time`.
+    3: reference_time zx.time;
+
+    /// Stream time expressed as a duration (nanoseconds).
+    4: stream_time zx.duration;
+
+    /// Stream time expressed in the same timestamps that are used on the
+    /// relevant packets.
+    5: packet_timestamp int64;
+};

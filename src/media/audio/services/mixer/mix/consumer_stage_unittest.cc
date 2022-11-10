@@ -44,7 +44,7 @@ TEST(ConsumerStageTest, SourceIsEmpty) {
 
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
 
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
@@ -66,7 +66,7 @@ TEST(ConsumerStageTest, SourceHasPackets) {
   auto payload3 = w.PushPacket(Fixed(144), 48);
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
 
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
@@ -93,7 +93,7 @@ TEST(ConsumerStageTest, SourceHasPacketAtFractionalOffset) {
   auto payload1 = w.PushPacket(Fixed(16), 32);
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
 
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
@@ -118,7 +118,7 @@ TEST(ConsumerStageTest, StartDuringJob) {
   auto payload1 = w.PushPacket(Fixed(48), 48);
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0 + zx::msec(1)},
-      .start_position = Fixed(48),
+      .stream_time = Fixed(48),
   });
 
   // We start at the second packet.
@@ -139,7 +139,7 @@ TEST(ConsumerStageTest, StartAtEndOfJob) {
   auto payload0 = w.PushPacket(Fixed(0), 48);
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0 + zx::msec(1)},
-      .start_position = Fixed(48),
+      .stream_time = Fixed(48),
   });
 
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
@@ -159,7 +159,7 @@ TEST(ConsumerStageTest, StartAfterJob) {
   auto payload0 = w.PushPacket(Fixed(0), 48);
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0 + zx::msec(3)},
-      .start_position = Fixed(144),
+      .stream_time = Fixed(144),
   });
 
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
@@ -182,7 +182,7 @@ TEST(ConsumerStageTest, StopDuringJob) {
   // Mix job ends at a StartCommand.
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   {
     auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0) - period, period);
@@ -214,7 +214,7 @@ TEST(ConsumerStageTest, StopAtEndOfJob) {
   // Mix job ends at a StartCommand.
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   {
     auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0) - period, period);
@@ -245,7 +245,7 @@ TEST(ConsumerStageTest, StopAfterJob) {
   // Mix job ends at a StartCommand.
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   {
     auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0) - period, period);
@@ -278,7 +278,7 @@ TEST(ConsumerStageTest, StopInSecondJob) {
   // Mix job ends at a StartCommand.
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   {
     auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0) - period, period);
@@ -317,7 +317,7 @@ TEST(ConsumerStageTest, RemoveSource) {
   auto payload1 = w.PushPacket(Fixed(48), 48);
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   w.consumer->RemoveSource(w.packet_queue);
 
@@ -338,7 +338,7 @@ TEST(ConsumerStageTest, OutputPipelineWithDelay) {
   auto payload0 = w.PushPacket(Fixed(0), 48);
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
   EXPECT_TRUE(std::holds_alternative<StartedStatus>(status));
@@ -357,7 +357,7 @@ TEST(ConsumerStageTest, InputPipelineWithDelay) {
   auto payload0 = w.PushPacket(Fixed(0), 48);
   w.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
   EXPECT_TRUE(std::holds_alternative<StartedStatus>(status));

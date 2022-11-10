@@ -8,5 +8,8 @@ fidl("fuchsia.media2") {
   sources = [
     "payload_range.fidl",
     "reasons.fidl",
+    "transport.fidl",
   ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

@@ -149,7 +149,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
   // Start the producer's internal frame timeline.
   h.producer->Start(ProducerStage::StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
 
   // Also start the producer's downstream frame timeline.
@@ -224,7 +224,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
   // Start the producer's internal frame timeline.
   h.producer->Start({
       .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
 
   // Also start the producer's downstream frame timeline. This is normally updated by the Consumer.
@@ -278,7 +278,7 @@ TEST(ProducerNodeTest, StopCancelsStart) {
   bool canceled = false;
   h.producer->Start(ProducerStage::StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
       .callback =
           [&canceled](auto result) {
             ASSERT_TRUE(result.is_error());
@@ -301,7 +301,7 @@ TEST(ProducerNodeTest, StartCancelsStop) {
   // Start the producer's internal frame timeline.
   h.producer->Start(ProducerStage::StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
 
   // Also start the producer's downstream frame timeline.
@@ -327,7 +327,7 @@ TEST(ProducerNodeTest, StartCancelsStop) {
   });
   h.producer->Start(ProducerStage::StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0) + zx::msec(100)},
-      .start_position = Fixed(1000),
+      .stream_time = Fixed(1000),
   });
 
   EXPECT_TRUE(canceled);

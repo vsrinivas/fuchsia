@@ -4,9 +4,10 @@
 
 library fuchsia.audio.mixer;
 
-using zx;
-using fuchsia.audio.effects;
 using fuchsia.audio;
+using fuchsia.audio.effects;
+using fuchsia.media2;
+using zx;
 
 alias NodeId = uint64;
 alias ThreadId = uint64;
@@ -547,12 +548,12 @@ protocol Graph {
         /// When to apply the start command.
         ///
         /// Required.
-        2: when RealTime;
+        2: when fuchsia.media2.RealTime;
 
         /// Stream time of the start frame.
         ///
         /// Required.
-        3: stream_time StreamTime;
+        3: stream_time fuchsia.media2.StreamTime;
     }) -> (table {
         /// The system time when the producer or consumer was actually started.
         ///
@@ -585,7 +586,7 @@ protocol Graph {
         /// When to apply the stop command.
         ///
         /// Required.
-        2: when RealOrStreamTime;
+        2: when fuchsia.media2.RealOrStreamTime;
     }) -> (table {
         /// The system time when the producer or consumer was actually stopped.
         ///

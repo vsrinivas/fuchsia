@@ -132,7 +132,7 @@ std::pair<When, StartStopControl::CommandType> StartStopControl::PendingCommand(
 When StartStopControl::PendingStartCommand(const ClockSnapshot& ref_clock, const StartCommand& cmd,
                                            zx::time reference_time_for_immediate) const {
   When when;
-  SetMediaPositions(when, MediaPositionToFrame(cmd.start_position));
+  SetStreamTime(when, StreamTimeToFrame(cmd.stream_time));
 
   // If the start time is not specified, it happens right now.
   if (!cmd.start_time) {
@@ -168,8 +168,8 @@ When StartStopControl::PendingStopCommand(const ClockSnapshot& ref_clock, const 
 
   // If the stop time is at a specific frame, and that frame translates to a fractional nanosecond,
   // round up to the first reference time after the frame is presented.
-  if (cmd.when && std::holds_alternative<MediaPosition>(*cmd.when)) {
-    SetMediaPositions(when, MediaPositionToFrame(std::get<MediaPosition>(*cmd.when)));
+  if (cmd.when && std::holds_alternative<StreamTime>(*cmd.when)) {
+    SetStreamTime(when, StreamTimeToFrame(std::get<StreamTime>(*cmd.when)));
     when.reference_time = last_start_reference_time +
                           format_.duration_per(when.frame - last_start_frame,
                                                ::media::TimelineRate::RoundingMode::Ceiling);
@@ -197,32 +197,33 @@ When StartStopControl::PendingStopCommand(const ClockSnapshot& ref_clock, const 
     }
   }
 
-  SetMediaPositions(when, last_start_frame + format_.frac_frames_per(
-                                                 when.reference_time - last_start_reference_time,
-                                                 ::media::TimelineRate::RoundingMode::Floor));
+  SetStreamTime(when, last_start_frame +
+                          format_.frac_frames_per(when.reference_time - last_start_reference_time,
+                                                  ::media::TimelineRate::RoundingMode::Floor));
   return when;
 }
 
-// Media position rounding rules: when converting between a frame and media time/ticks, round so the
-// media time/ticks are not before the frame. Going from frame to media time/ticks, round up. In the
-// other direction, round down.
+// Stream time rounding rules: when converting between a frame and stream time, round so the stream
+// tim is not before the frame. Going from frame to stream time, round up. In the other direction,
+// round down.
 
-void StartStopControl::SetMediaPositions(When& when, Fixed frame) const {
-  when.media_time = format_.duration_per(frame, TimelineRate::RoundingMode::Ceiling);
-  when.media_ticks = frac_frames_per_media_ticks_.Inverse().Scale(
+void StartStopControl::SetStreamTime(When& when, Fixed frame) const {
+  when.stream_time = format_.duration_per(frame, TimelineRate::RoundingMode::Ceiling);
+  when.packet_timestamp = frac_frames_per_media_ticks_.Inverse().Scale(
       frame.raw_value(), TimelineRate::RoundingMode::Ceiling);
   when.frame = frame;
 }
 
-Fixed StartStopControl::MediaPositionToFrame(MediaPosition pos) const {
-  if (std::holds_alternative<zx::duration>(pos)) {
-    return format_.frac_frames_per(std::get<zx::duration>(pos), TimelineRate::RoundingMode::Floor);
+Fixed StartStopControl::StreamTimeToFrame(StreamTime stream_time) const {
+  if (std::holds_alternative<zx::duration>(stream_time)) {
+    return format_.frac_frames_per(std::get<zx::duration>(stream_time),
+                                   TimelineRate::RoundingMode::Floor);
   }
-  if (std::holds_alternative<MediaTicks>(pos)) {
-    return Fixed::FromRaw(frac_frames_per_media_ticks_.Scale(std::get<MediaTicks>(pos).value,
+  if (std::holds_alternative<int64_t>(stream_time)) {
+    return Fixed::FromRaw(frac_frames_per_media_ticks_.Scale(std::get<int64_t>(stream_time),
                                                              TimelineRate::RoundingMode::Floor));
   }
-  return std::get<Fixed>(pos);
+  return std::get<Fixed>(stream_time);
 }
 
 }  // namespace media_audio

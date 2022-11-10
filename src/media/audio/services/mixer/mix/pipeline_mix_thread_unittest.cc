@@ -76,7 +76,7 @@ TEST_F(PipelineMixThreadRunMixJobsTest, RunAfterDeadline) {
                          UnreadableClock(mono_clock()));
   c.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   thread().AddConsumer(c.consumer);
   thread().NotifyConsumerStarting(c.consumer);
@@ -123,7 +123,7 @@ TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerStartCommandQueued) {
   // The consumer starts after the first mix job.
   c.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0 + 3 * kPeriod},
-      .start_position = Fixed(3 * kPeriodFrames),
+      .stream_time = Fixed(3 * kPeriodFrames),
   });
   thread().AddConsumer(c.consumer);
   thread().NotifyConsumerStarting(c.consumer);
@@ -161,7 +161,7 @@ TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerStarted) {
                          UnreadableClock(mono_clock()));
   c.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   auto payload0 = c.PushPacket(Fixed(0), kPeriodFrames);
   auto payload1 = c.PushPacket(Fixed(kPeriodFrames), kPeriodFrames);
@@ -205,7 +205,7 @@ TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerStartedNonMonotonicClock) {
                          UnreadableClock(clock));
   c.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   thread().AddConsumer(c.consumer);
   thread().NotifyConsumerStarting(c.consumer);
@@ -245,7 +245,7 @@ TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerStopsDuringJob) {
                          UnreadableClock(mono_clock()));
   c.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   thread().AddConsumer(c.consumer);
   thread().NotifyConsumerStarting(c.consumer);
@@ -280,15 +280,15 @@ TEST_F(PipelineMixThreadRunMixJobsTest, MultipleConsumers) {
 
   c0.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   c1.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   c2.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
 
   // Push in unsorted order to verify sorting.
@@ -352,11 +352,11 @@ TEST_F(PipelineMixThreadRunLoopTest, AddStartedConsumers) {
   // shouldn't need to call NotifyConsumerStarting.
   c0.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0 + 1 * kPeriod},
-      .start_position = Fixed(1 * kPeriodFrames),
+      .stream_time = Fixed(1 * kPeriodFrames),
   });
   c1.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0 + 3 * kPeriod},
-      .start_position = Fixed(3 * kPeriodFrames),
+      .stream_time = Fixed(3 * kPeriodFrames),
   });
 
   // Add both consumers.
@@ -413,7 +413,7 @@ TEST_F(PipelineMixThreadRunLoopTest, AddRemoveUnstartedConsumers) {
   // Start the consumer then advance through the second mix job. This should produce a packet.
   c0.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0 + kPeriod},
-      .start_position = Fixed(kPeriodFrames),
+      .stream_time = Fixed(kPeriodFrames),
   });
   task_queue().Push(thread().id(), [this, &c0] {
     ScopedThreadChecker checker(thread().checker());
@@ -446,7 +446,7 @@ TEST_F(PipelineMixThreadRunLoopTest, AddRemoveUnstartedConsumers) {
   // Start the consumer then advance through the fourth mix job. This should produce a packet.
   c1.pending_start_stop_command->set_must_be_empty(StartCommand{
       .start_time = RealTime{.clock = WhichClock::kReference, .time = pt0 + 3 * kPeriod},
-      .start_position = Fixed(3 * kPeriodFrames),
+      .stream_time = Fixed(3 * kPeriodFrames),
   });
   task_queue().Push(thread().id(), [this, &c1] {
     ScopedThreadChecker checker(thread().checker());

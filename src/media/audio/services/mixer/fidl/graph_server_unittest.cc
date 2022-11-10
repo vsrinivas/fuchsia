@@ -4,7 +4,15 @@
 
 #include "src/media/audio/services/mixer/fidl/graph_server.h"
 
+#include <fidl/fuchsia.audio.effects/cpp/markers.h>
+#include <fidl/fuchsia.audio.effects/cpp/wire_types.h>
+#include <fidl/fuchsia.audio.mixer/cpp/common_types.h>
 #include <fidl/fuchsia.audio.mixer/cpp/natural_ostream.h>
+#include <fidl/fuchsia.audio.mixer/cpp/natural_types.h>
+#include <fidl/fuchsia.audio.mixer/cpp/wire_types.h>
+#include <fidl/fuchsia.audio/cpp/markers.h>
+#include <fidl/fuchsia.mediastreams/cpp/wire_types.h>
+#include <fidl/fuchsia.mem/cpp/wire_types.h>
 #include <lib/fidl/cpp/wire/arena.h>
 #include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/fidl/cpp/wire/wire_types.h>
@@ -19,14 +27,6 @@
 
 #include <gtest/gtest.h>
 
-#include "fidl/fuchsia.audio.effects/cpp/markers.h"
-#include "fidl/fuchsia.audio.effects/cpp/wire_types.h"
-#include "fidl/fuchsia.audio.mixer/cpp/common_types.h"
-#include "fidl/fuchsia.audio.mixer/cpp/natural_types.h"
-#include "fidl/fuchsia.audio.mixer/cpp/wire_types.h"
-#include "fidl/fuchsia.audio/cpp/markers.h"
-#include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
-#include "fidl/fuchsia.mem/cpp/wire_types.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/common/testing/test_server_and_sync_client.h"
@@ -44,12 +44,12 @@ using ::fuchsia_audio_mixer::wire::CreateGainControlError;
 using ::fuchsia_audio_mixer::wire::CreateNodeError;
 using ::fuchsia_audio_mixer::wire::DeleteGainControlError;
 using ::fuchsia_audio_mixer::wire::DeleteNodeError;
-using ::fuchsia_audio_mixer::wire::RealOrStreamTime;
-using ::fuchsia_audio_mixer::wire::RealTime;
 using ::fuchsia_audio_mixer::wire::StartError;
 using ::fuchsia_audio_mixer::wire::StopError;
-using ::fuchsia_audio_mixer::wire::StreamTime;
 using ::fuchsia_math::wire::RatioU64;
+using ::fuchsia_media2::wire::RealOrStreamTime;
+using ::fuchsia_media2::wire::RealTime;
+using ::fuchsia_media2::wire::StreamTime;
 
 const Format kFormat = Format::CreateOrDie({
     .sample_type = ::fuchsia_audio::SampleType::kFloat32,
@@ -1980,10 +1980,9 @@ TEST_F(GraphServerTest, StopFails) {
 
   for (auto& tc : cases) {
     SCOPED_TRACE("TestCase: " + tc.name);
-    auto request =
-        fuchsia_audio_mixer::wire::GraphStopRequest::Builder(arena_)
-            .node_id(consumer_id)
-            .when(RealOrStreamTime::WithRealTime(arena_, RealTime::WithSystemTime(arena_, 0)));
+    auto request = fuchsia_audio_mixer::wire::GraphStopRequest::Builder(arena_)
+                       .node_id(consumer_id)
+                       .when(RealOrStreamTime::WithSystemTime(arena_, 0));
     tc.edit(request);
 
     const auto result = client()->Stop(request.Build());
@@ -2031,11 +2030,10 @@ TEST_F(GraphServerTest, StopSuccess) {
 
   {
     // Stop consumer.
-    const auto result = client()->Stop(
-        fuchsia_audio_mixer::wire::GraphStopRequest::Builder(arena_)
-            .node_id(consumer_id)
-            .when(RealOrStreamTime::WithRealTime(arena_, RealTime::WithSystemTime(arena_, 6)))
-            .Build());
+    const auto result = client()->Stop(fuchsia_audio_mixer::wire::GraphStopRequest::Builder(arena_)
+                                           .node_id(consumer_id)
+                                           .when(RealOrStreamTime::WithSystemTime(arena_, 6))
+                                           .Build());
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_FALSE(result->is_error()) << result->error_value();
     ASSERT_TRUE(result->value()->has_system_time());

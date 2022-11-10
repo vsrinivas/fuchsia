@@ -17,8 +17,7 @@
 namespace media_audio {
 namespace {
 
-using MediaPosition = StartStopControl::MediaPosition;
-using MediaTicks = StartStopControl::MediaTicks;
+using StreamTime = StartStopControl::StreamTime;
 using RealTime = StartStopControl::RealTime;
 using StartError = StartStopControl::StartError;
 using StopError = StartStopControl::StopError;
@@ -46,7 +45,7 @@ using ::testing::ElementsAre;
 const Format kFormat = Format::CreateOrDie({fuchsia_audio::SampleType::kFloat32, 2, 128000});
 const auto kFramesPer10ms = Fixed(1280);
 
-// One media tick every 2 nanoseconds.
+// One tick every 2 nanoseconds.
 const auto kMediaTicksPerNs = TimelineRate(1, 2);
 
 zx::time ReferenceTimeFromFrame(const StartStopControl& control, Fixed frame) {
@@ -63,8 +62,8 @@ class StartStopControlTest : public ::testing::Test {
   // than the mono clock, so after 1ms, the ref clock has advanced 1us less.
   static inline constexpr zx::time kMonoT0 = zx::time(0) + zx::msec(1);
   static inline constexpr zx::time kRefT0 = zx::time(0) + zx::msec(1) - zx::usec(1);
-  static inline constexpr zx::duration kMediaTimeAtT0 = kRefT0 - zx::time(0);
-  static inline constexpr int64_t kMediaTicksAtT0 = kMediaTimeAtT0.to_nsecs() / 2;  // 2ns per tick
+  static inline constexpr zx::duration kStreamTimeAtT0 = kRefT0 - zx::time(0);
+  static inline constexpr int64_t kMediaTicksAtT0 = kStreamTimeAtT0.to_nsecs() / 2;  // 2ns per tick
 
   // Assuming the frame position starts at Fixed(0) at reference time 0, this is the frame position
   // that overlaps kRefT0.
@@ -98,8 +97,8 @@ class StartStopControlTest : public ::testing::Test {
     ASSERT_TRUE(start_callback_result->is_ok());
     EXPECT_EQ(start_callback_result->value().mono_time, when.mono_time);
     EXPECT_EQ(start_callback_result->value().reference_time, when.reference_time);
-    EXPECT_EQ(start_callback_result->value().media_time, when.media_time);
-    EXPECT_EQ(start_callback_result->value().media_ticks, when.media_ticks);
+    EXPECT_EQ(start_callback_result->value().stream_time, when.stream_time);
+    EXPECT_EQ(start_callback_result->value().packet_timestamp, when.packet_timestamp);
     EXPECT_EQ(start_callback_result->value().frame, when.frame);
 
     // No more pending commands.
@@ -117,8 +116,8 @@ class StartStopControlTest : public ::testing::Test {
     ASSERT_TRUE(stop_callback_result->is_ok());
     EXPECT_EQ(stop_callback_result->value().mono_time, when.mono_time);
     EXPECT_EQ(stop_callback_result->value().reference_time, when.reference_time);
-    EXPECT_EQ(stop_callback_result->value().media_time, when.media_time);
-    EXPECT_EQ(stop_callback_result->value().media_ticks, when.media_ticks);
+    EXPECT_EQ(stop_callback_result->value().stream_time, when.stream_time);
+    EXPECT_EQ(stop_callback_result->value().packet_timestamp, when.packet_timestamp);
     EXPECT_EQ(stop_callback_result->value().frame, when.frame);
 
     // No more pending commands.
@@ -146,7 +145,7 @@ TEST_F(StartStopControlTest, ScheduleStartImmediately) {
   std::optional<fpromise::result<When, StartError>> result;
   control.Start({
       .start_time = std::nullopt,
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
       .callback = [&result](auto r) { result = r; },
   });
 
@@ -156,8 +155,8 @@ TEST_F(StartStopControlTest, ScheduleStartImmediately) {
                      When{
                          .mono_time = zx::time(0),
                          .reference_time = zx::time(0),
-                         .media_time = zx::nsec(0),
-                         .media_ticks = 0,
+                         .stream_time = zx::nsec(0),
+                         .packet_timestamp = 0,
                          .frame = Fixed(0),
                      });
 }
@@ -166,36 +165,36 @@ TEST_F(StartStopControlTest, ScheduleStartInFutureOrPast) {
   const auto expected_when = When{
       .mono_time = kMonoT0,
       .reference_time = kRefT0,
-      .media_time = zx::msec(1),                  // 128 frames = 1ms
-      .media_ticks = zx::msec(1).to_nsecs() / 2,  // 2ns per tick
+      .stream_time = zx::msec(1),                      // 128 frames = 1ms
+      .packet_timestamp = zx::msec(1).to_nsecs() / 2,  // 2ns per tick
       .frame = Fixed(128),
   };
 
   struct TestCase {
     std::string name;
     RealTime start_time;
-    MediaPosition start_position;
+    StreamTime stream_time;
   };
   std::vector<TestCase> test_cases = {
       {
           .name = "schedule with SystemMonotonic time and frame position",
           .start_time = {.clock = WhichClock::kSystemMonotonic, .time = kMonoT0},
-          .start_position = expected_when.frame,
+          .stream_time = expected_when.frame,
       },
       {
           .name = "schedule with Reference time and frame position",
           .start_time = {.clock = WhichClock::kReference, .time = kRefT0},
-          .start_position = expected_when.frame,
+          .stream_time = expected_when.frame,
       },
       {
-          .name = "schedule with Reference time and media_time position",
+          .name = "schedule with Reference time and stream_time",
           .start_time = {.clock = WhichClock::kReference, .time = kRefT0},
-          .start_position = expected_when.media_time,
+          .stream_time = expected_when.stream_time,
       },
       {
-          .name = "schedule with Reference time and media_ticks position",
+          .name = "schedule with Reference time and packet_timestamp",
           .start_time = {.clock = WhichClock::kReference, .time = kRefT0},
-          .start_position = MediaTicks{expected_when.media_ticks},
+          .stream_time = expected_when.packet_timestamp,
       },
   };
 
@@ -210,7 +209,7 @@ TEST_F(StartStopControlTest, ScheduleStartInFutureOrPast) {
       std::optional<fpromise::result<When, StartError>> result;
       control.Start({
           .start_time = tc.start_time,
-          .start_position = tc.start_position,
+          .stream_time = tc.stream_time,
           .callback = [&result](auto r) { result = r; },
       });
 
@@ -241,7 +240,7 @@ TEST_F(StartStopControlTest, ScheduleStartInFutureOrPast) {
       std::optional<fpromise::result<When, StartError>> result;
       control.Start({
           .start_time = tc.start_time,
-          .start_position = tc.start_position,
+          .stream_time = tc.stream_time,
           .callback = [&result](auto r) { result = r; },
       });
 
@@ -261,14 +260,14 @@ TEST_F(StartStopControlTest, MultipleStartCommands) {
 
   control.Start({
       .start_time = std::nullopt,
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
       .callback = [&result1](auto r) { result1 = r; },
   });
 
   // A second command should cancel the first.
   control.Start({
       .start_time = std::nullopt,
-      .start_position = Fixed(128),
+      .stream_time = Fixed(128),
       .callback = [&result2](auto r) { result2 = r; },
   });
 
@@ -284,8 +283,8 @@ TEST_F(StartStopControlTest, MultipleStartCommands) {
                        When{
                            .mono_time = zx::time(0),
                            .reference_time = zx::time(0),
-                           .media_time = zx::msec(1),                  // 128 frames = 1ms
-                           .media_ticks = zx::msec(1).to_nsecs() / 2,  // 2 ns/tick
+                           .stream_time = zx::msec(1),                      // 128 frames = 1ms
+                           .packet_timestamp = zx::msec(1).to_nsecs() / 2,  // 2 ns/tick
                            .frame = Fixed(128),
                        });
   }
@@ -293,7 +292,7 @@ TEST_F(StartStopControlTest, MultipleStartCommands) {
   // Now that the pending command has been applied, another can be scheduled.
   control.Start({
       .start_time = std::nullopt,
-      .start_position = Fixed(64),
+      .stream_time = Fixed(64),
       .callback = [&result3](auto r) { result3 = r; },
   });
 
@@ -304,8 +303,8 @@ TEST_F(StartStopControlTest, MultipleStartCommands) {
                        When{
                            .mono_time = zx::time(1),
                            .reference_time = zx::time(1),
-                           .media_time = zx::usec(500),                  // 64 frames = 0.5ms
-                           .media_ticks = zx::usec(500).to_nsecs() / 2,  // 2 ns/tick
+                           .stream_time = zx::usec(500),                      // 64 frames = 0.5ms
+                           .packet_timestamp = zx::usec(500).to_nsecs() / 2,  // 2 ns/tick
                            .frame = Fixed(64),
                        });
   }
@@ -317,7 +316,7 @@ TEST_F(StartStopControlTest, ScheduleStopImmediately) {
   // Initially started.
   control.Start({
       .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   control.AdvanceTo(clock_snapshots_, zx::time(0));
   EXPECT_TRUE(control.is_started());
@@ -334,8 +333,8 @@ TEST_F(StartStopControlTest, ScheduleStopImmediately) {
                     When{
                         .mono_time = kMonoT0,
                         .reference_time = kRefT0,
-                        .media_time = kMediaTimeAtT0,
-                        .media_ticks = kMediaTicksAtT0,
+                        .stream_time = kStreamTimeAtT0,
+                        .packet_timestamp = kMediaTicksAtT0,
                         .frame = kFrameAtRefT0,
                     });
 }
@@ -344,14 +343,14 @@ TEST_F(StartStopControlTest, ScheduleStopInFutureOrPast) {
   const auto expected_when = When{
       .mono_time = kMonoT0,
       .reference_time = kRefT0,
-      .media_time = kMediaTimeAtT0,
-      .media_ticks = kMediaTicksAtT0,
+      .stream_time = kStreamTimeAtT0,
+      .packet_timestamp = kMediaTicksAtT0,
       .frame = kFrameAtRefT0,
   };
 
   struct TestCase {
     std::string name;
-    std::variant<RealTime, MediaPosition> when;
+    std::variant<RealTime, StreamTime> when;
   };
   std::vector<TestCase> test_cases = {
       {
@@ -364,15 +363,15 @@ TEST_F(StartStopControlTest, ScheduleStopInFutureOrPast) {
       },
       {
           .name = "schedule with frame position",
-          .when = MediaPosition(kFrameAtRefT0),
+          .when = StreamTime(kFrameAtRefT0),
       },
       {
-          .name = "schedule with media_time position",
-          .when = MediaPosition(kMediaTimeAtT0),
+          .name = "schedule with stream_time",
+          .when = StreamTime(kStreamTimeAtT0),
       },
       {
-          .name = "schedule with media_ticks position",
-          .when = MediaPosition(MediaTicks{kMediaTicksAtT0}),
+          .name = "schedule with packet_timestamp",
+          .when = StreamTime(kMediaTicksAtT0),
       },
   };
 
@@ -387,7 +386,7 @@ TEST_F(StartStopControlTest, ScheduleStopInFutureOrPast) {
       // Initially started.
       control.Start({
           .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
-          .start_position = Fixed(0),
+          .stream_time = Fixed(0),
       });
       control.AdvanceTo(clock_snapshots_, zx::time(0));
       EXPECT_TRUE(control.is_started());
@@ -421,7 +420,7 @@ TEST_F(StartStopControlTest, ScheduleStopInFutureOrPast) {
       // Initially started.
       control.Start({
           .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
-          .start_position = Fixed(0),
+          .stream_time = Fixed(0),
       });
       control.AdvanceTo(clock_snapshots_, zx::time(0));
       EXPECT_TRUE(control.is_started());
@@ -451,7 +450,7 @@ TEST_F(StartStopControlTest, MultipleStopCommands) {
   // Initially started.
   control.Start({
       .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   control.AdvanceTo(clock_snapshots_, zx::time(0));
   EXPECT_TRUE(control.is_started());
@@ -499,7 +498,7 @@ TEST_F(StartStopControlTest, StopCancelsStart) {
   // Initially started.
   control.Start({
       .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   control.AdvanceTo(clock_snapshots_, zx::time(0));
   EXPECT_TRUE(control.is_started());
@@ -509,7 +508,7 @@ TEST_F(StartStopControlTest, StopCancelsStart) {
 
   control.Start({
       .start_time = std::nullopt,
-      .start_position = Fixed(1),
+      .stream_time = Fixed(1),
       .callback = [&result1](auto r) { result1 = r; },
   });
   control.Stop({
@@ -536,7 +535,7 @@ TEST_F(StartStopControlTest, StartCancelsStop) {
   // Initially started.
   control.Start({
       .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   control.AdvanceTo(clock_snapshots_, zx::time(0));
   EXPECT_TRUE(control.is_started());
@@ -550,7 +549,7 @@ TEST_F(StartStopControlTest, StartCancelsStop) {
   });
   control.Start({
       .start_time = std::nullopt,
-      .start_position = Fixed(1),
+      .stream_time = Fixed(1),
       .callback = [&result2](auto r) { result2 = r; },
   });
 
@@ -570,7 +569,7 @@ TEST_F(StartStopControlTest, StartCancelsStop) {
 TEST_F(StartStopControlTest, NullCallbacksDontCrash) {
   StartStopControl control(kFormat, kMediaTicksPerNs, UnreadableClock(clock_));
 
-  control.Start({.start_time = std::nullopt, .start_position = Fixed(0)});
+  control.Start({.start_time = std::nullopt, .stream_time = Fixed(0)});
   control.AdvanceTo(clock_snapshots_, zx::time(0));
   EXPECT_TRUE(control.is_started());
 
@@ -585,7 +584,7 @@ TEST_F(StartStopControlTest, PendingImmediateCommand) {
   control.AdvanceTo(clock_snapshots_, zx::time(0));
   control.Start({
       .start_time = std::nullopt,
-      .start_position = Fixed(1),
+      .stream_time = Fixed(1),
   });
 
   auto pending = control.PendingCommand(clock_snapshots_);
@@ -601,7 +600,7 @@ TEST_F(StartStopControlTest, PendingStartCommand) {
 
   control.Start({
       .start_time = RealTime{.clock = WhichClock::kReference, .time = kRefT0},
-      .start_position = Fixed(1),
+      .stream_time = Fixed(1),
   });
 
   control.AdvanceTo(clock_snapshots_, zx::time(0));
@@ -620,7 +619,7 @@ TEST_F(StartStopControlTest, PendingStopCommand) {
   // Initially started.
   control.Start({
       .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   control.AdvanceTo(clock_snapshots_, zx::time(0));
   EXPECT_TRUE(control.is_started());

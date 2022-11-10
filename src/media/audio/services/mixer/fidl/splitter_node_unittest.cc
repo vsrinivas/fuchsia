@@ -300,7 +300,7 @@ TEST(SplitterNodeTest, CopySourceToDests) {
               .clock = StartStopControl::WhichClock::kReference,
               .time = zx::time(0),
           },
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   dest2->Start({
       .start_time =
@@ -308,7 +308,7 @@ TEST(SplitterNodeTest, CopySourceToDests) {
               .clock = StartStopControl::WhichClock::kReference,
               .time = zx::time(0),
           },
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
   dest3->Start({
       .start_time =
@@ -316,7 +316,7 @@ TEST(SplitterNodeTest, CopySourceToDests) {
               .clock = StartStopControl::WhichClock::kReference,
               .time = zx::time(0),
           },
-      .start_position = Fixed(0),
+      .stream_time = Fixed(0),
   });
 
   q->RunForThread(thread1->id());

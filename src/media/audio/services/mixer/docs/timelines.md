@@ -2,10 +2,7 @@
 
 [TOC]
 
-## Reference time and media time
-
-**TODO(fxbug.dev/87651): make names consistent with the wider media APIs after
-those are decided, e.g. we might use "stream time" instead of "media time"**
+## Reference time and stream time
 
 Every edge in the mix graph represents a single audio stream, where each audio
 stream contains a sequence of timestamped frames. We measure the progress of
@@ -16,12 +13,12 @@ time in two ways:
     monotonically and is always expressed in nanoseconds relative to the clock's
     epoch.
 
-*   **Media time**, also called **media position**, is a logical position in an
-    audio stream. Media time advances while the stream is started and stops
-    advancing when the stream is stopped. Media time can be represented in
-    arbitrary units, but is most commonly represented in frames (also referred
-    to as a **frame position**) or as a duration since the start of the logical
-    stream.
+*   **Stream time**, also known as **media time** or **stream position**, is a
+    logical position in an audio stream. Stream time advances while the stream
+    is started and stops advancing when the stream is stopped. Stream time can
+    be represented in arbitrary units, but is most commonly represented in
+    frames (also referred to as a **frame position**) or as a duration since the
+    start of the logical stream.
 
 ### Presentation timestamps
 
@@ -31,32 +28,32 @@ will be presented (i.e. rendered) at a speaker, at the end of the pipeline. For
 input pipelines, this is the time the frame was initially presented (i.e.
 captured) at a live microphone, at the beginning of the pipeline.
 
-### Translating between media time and presentation time
+### Translating between stream time and presentation timestamps
 
 Each call to
 [`Graph.Start`](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.audio.mixer/graph.fidl;drc=97de0886d1be546e6d2ca3aac32277ff2c7de791;l=542)
-links a pair of timestamps *(Tr0, Tm0)*, where reference time *Tr0* is media
-time *Tm0*'s *presentation timestamp*. Given this pair plus the units for media
+links a pair of timestamps *(Tr0, Ts0)*, where reference time *Tr0* is stream
+time *Ts0*'s *presentation timestamp*. Given this pair plus the units for stream
 time, we can build a
-[TimelineFunction](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/media/audio/lib/timeline/timeline_function.h;drc=b076cf49545244228ad4ba0ba2b48582b6cb76a6;l=21),
-to translate between media timestamps and presentation timestamps. This function
-has the following coefficients:
+[TimelineFunction](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/stream/audio/lib/timeline/timeline_function.h;drc=b076cf49545244228ad4ba0ba2b48582b6cb76a6;l=21),
+to translate between stream time and presentation timestamps. This function has
+the following coefficients:
 
-*   The pair *(Tr0, Tm0)* provided by `Graph.Start` defines the
-    TimelineFunction's epoch. The first frame, at *Tm0*, has presentation
+*   The pair *(Tr0, Ts0)* provided by `Graph.Start` defines the
+    TimelineFunction's epoch. The first frame, at *Ts0*, has presentation
     timestamp *Tr0*.
 
-*   A rate *∆m / ∆r*, where every *∆m* steps of media time correspond to *∆r*
-    steps of reference time. If the media timeline is stopped, this rate is 0.
-    If media time has units nanoseconds, this rate is 1. If media time has units
-    frames, this is the frame rate.
+*   A rate *∆s / ∆r*, where every *∆s* steps of stream time correspond to *∆r*
+    steps of reference time. If the stream timeline is stopped, this rate is 0.
+    If stream time has units nanoseconds, this rate is 1. If stream time has
+    units frames, this is the frame rate.
 
 While an audio stream is running, the above translation is defined for all
-timestamps from *(Tr0, Tm0)* and higher. When
+timestamps from *(Tr0, Ts0)* and higher. When
 [Graph.Stop](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.audio.mixer/graph.fidl;drc=97de0886d1be546e6d2ca3aac32277ff2c7de791;l=580)
-is called to stop the audio stream at time *(Tr1, Tm1)*, media time stops
+is called to stop the audio stream at time *(Tr1, Ts1)*, stream time stops
 advancing which makes the translation undefined. By convention, we represent the
-translation between presentation and media times as a
+translation between presentation and stream times as a
 `std::optional<TimelineFunction>` which is `std::nullopt` iff the stream is
 stopped.
 
@@ -75,40 +72,40 @@ Producers don't necessarily represent a continuously advancing stream. Producers
 may represent static streams that are being navigated dynamically by "loop" or
 "seek" events, as in typical media players. When a Producer is started, it
 starts producing from some point in the stream. When the Producer stops, then
-restarts, it can restart at any media time, including at an older media time to
-implement a "seek backwards" action.
+restarts, it can restart at any stream time, including at an older stream time
+to implement a "seek backwards" action.
 
-Hence, given a sequence *Start at (Tr0, Tm0), Stop at (Tr1, Tm1), Start at (Tr2,
-Tm2)*, we always have *Tr0 ≤ Tr1 ≤ Tr2*, because reference time advances
-continuously and monotonically. At Consumers, we have *Tm0 ≤ Tm1 ≤ Tm2*, while
-at Producers we have *Tm0 ≤ Tm1* with no constraints *Tm2* because Producers
+Hence, given a sequence *Start at (Tr0, Ts0), Stop at (Tr1, Ts1), Start at (Tr2,
+Ts2)*, we always have *Tr0 ≤ Tr1 ≤ Tr2*, because reference time advances
+continuously and monotonically. At Consumers, we have *Ts0 ≤ Ts1 ≤ Ts2*, while
+at Producers we have *Ts0 ≤ Ts1* with no constraints *Ts2* because Producers
 (unlike Consumers) are allowed to seek backwards.
 
-## Units for media time
+## Units for stream time
 
-Media time, a.k.a. media position, can be expressed in arbitrary units. All
-internally computations are done using frame positions. This is illustrated by
-`PipelineStage::Read`, which operates on frame positions via the `Fixed` type.
+Stream time can be expressed in arbitrary units. All internally computations are
+done using frame positions. This is illustrated by `PipelineStage::Read`, which
+operates on frame positions via the `Fixed` type.
 
-Some FIDL APIs allow clients to express media time in arbitrary units. For
+Some FIDL APIs allow clients to express stream time in arbitrary units. For
 example, when a Producer or Consumer node is backed by a
 [StreamSink](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.audio.mixer/node_options.fidl;drc=e859bd380655c4be3890af5625de9a2e15984c11;l=26)
-(i.e., a packet queue), packet timestamps are media timestamps and the client
+(i.e., a packet queue), packet timestamps are stream timestamps and the client
 can define those timestamps using any units they like. Common choices are
 nanoseconds and frames. For example, a 30 second audio stream might start at
-media timestamp 0 and end at media timestamp 30,000,000,000 (in nanosecond
-units) or 30,000,000 (in millisecond units) or 1,440,000 (in frame units
-assuming 48kHz audio).
+stream time 0 and end at stream time 30,000,000,000 (in nanosecond units) or
+30,000,000 (in millisecond units) or 1,440,000 (in frame units assuming 48kHz
+audio).
 
-When a Producer or Consumer node is backed by a ring buffer, media time always
+When a Producer or Consumer node is backed by a ring buffer, stream time always
 has units frames, where each frame position corresponds to a unique offset in
 the ring buffer: frame X is located at offset `X % ring_buffer_size`.
 
-Producers and Consumers are responsible for translating client-specified media
+Producers and Consumers are responsible for translating client-specified stream
 timestamps to-and-from frame positions. This is a simple unit conversion: we
-translate from media time *Tm* to frame position *Tf* using the function *Tf =
-Tm * ∆f / ∆m*, where every *∆f* frames correspond to *∆m* steps of media time in
-the client-specified units. Since *∆f* and *∆m* are constants set when the
+translate from stream time *Ts* to frame position *Tf* using the function *Tf =
+Ts * ∆f / ∆s*, where every *∆f* frames correspond to *∆s* steps of stream time
+in the client-specified units. Since *∆f* and *∆s* are constants set when the
 Producer or Consumer is created, this function never changes.
 
 ## Frame timelines
@@ -133,8 +130,8 @@ presentation time to *downstream* frame.
 
 ### Upwards propagation
 
-On `Graph.Start(Tr0, Tm0)`, a Consumer starts generating a sequence of output
-frames starting from frame *Tf0 = Tm0 * ∆f / ∆m*. This entire process is driven
+On `Graph.Start(Tr0, Ts0)`, a Consumer starts generating a sequence of output
+frames starting from frame *Tf0 = Ts0 * ∆f / ∆s*. This entire process is driven
 by frame position: the Consumer asks its source for frame *Tf0*, which asks its
 source for *Tf0* (and possibly additional frames, e.g. to resample), and so on,
 until we reach a Producer, which interprets *Tf0* as a *downstream frame*,
@@ -169,7 +166,7 @@ This is illustrated by the following recursive pseudocode:
 ```cpp
 void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) {
   if (this is a ConsumerStage) {
-    this.presentation_time_to_frac_frame = compose Tf-to-Tm with Tm-to-Tr;
+    this.presentation_time_to_frac_frame = compose Tf-to-Ts with Ts-to-Tr;
     source.UpdateFrameTimeline(this.presentation_time_to_frac_frame);
   }
   else if (this is a MixerStage) {
@@ -230,7 +227,7 @@ digraph G {
     fontname = "Courier New",
     label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
       <tr><td><b> Producer0 </b><br/></td></tr>
-      <tr><td align="left">[MT1] media time </td></tr>
+      <tr><td align="left">[MT1] stream time </td></tr>
       <tr><td align="left">[FT1] internal frame time </td></tr>
       <tr><td align="left">[FT2] downstream frame time </td></tr>
     </table>>,
@@ -300,7 +297,7 @@ digraph G {
     label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
       <tr><td><b> Consumer1 </b><br/></td></tr>
       <tr><td align="left">[FT3] frame time </td></tr>
-      <tr><td align="left">[MT3] media time </td></tr>
+      <tr><td align="left">[MT3] stream time </td></tr>
     </table>>,
     shape=plain
   ];
@@ -310,7 +307,7 @@ digraph G {
     label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
       <tr><td><b> Consumer2 </b><br/></td></tr>
       <tr><td align="left">[FT4] frame time </td></tr>
-      <tr><td align="left">[MT4] media time </td></tr>
+      <tr><td align="left">[MT4] stream time </td></tr>
     </table>>,
     shape=plain
   ];

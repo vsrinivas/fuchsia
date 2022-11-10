@@ -40,14 +40,9 @@ class StartStopControl {
     zx::time time;
   };
 
-  // This is used to avoid variant confusion in MediaPosition.
-  struct MediaTicks {
-    int64_t value;
-  };
-
   // A position in a stream expressed relative to the logical start of the stream, as a
-  // zx::duration, a media tick count (defined by `media_ticks_per_ns`), or a frame number.
-  using MediaPosition = std::variant<zx::duration, MediaTicks, Fixed>;
+  // `zx::duration`, a packet timestamp (defined by `media_ticks_per_ns`), or a frame number.
+  using StreamTime = std::variant<zx::duration, int64_t, Fixed>;
 
   // Describes when a command took effect using all supported units.
   struct When {
@@ -56,8 +51,8 @@ class StartStopControl {
     zx::time mono_time;
     zx::time reference_time;
     // The position at which the command took effect.
-    zx::duration media_time;
-    int64_t media_ticks;
+    zx::duration stream_time;
+    int64_t packet_timestamp;
     Fixed frame;
   };
 
@@ -79,7 +74,7 @@ class StartStopControl {
     // immediately (during the next call to AdvanceTo).
     std::optional<RealTime> start_time;
     // Which frame to start.
-    MediaPosition start_position;
+    StreamTime stream_time;
     // This callback is invoked when the start command takes effect (i.e., at `start_time`) or when
     // the command fails. The call back parameter describes when the command was applied (on
     // success) or the error message (on failure). The callback is optional -- it can be nullptr.
@@ -91,7 +86,7 @@ class StartStopControl {
   struct StopCommand {
     // When to stop. This may be a system monotonic time, a reference time, or a position. If not
     // specified, the command takes effect immediately (during the next call to AdvanceTo).
-    std::optional<std::variant<RealTime, MediaPosition>> when;
+    std::optional<std::variant<RealTime, StreamTime>> when;
     // This callback is invoked when the start command takes effect (i.e., at `when`), or when the
     // command fails. The call back parameter describes when the command was applied (on success) or
     // the error message (on failure). The callback is optional -- it can be nullptr.
@@ -162,8 +157,8 @@ class StartStopControl {
                            zx::time reference_time_for_immediate) const;
   When PendingStopCommand(const ClockSnapshot& ref_clock, const StopCommand& cmd,
                           zx::time reference_time_for_immediate) const;
-  void SetMediaPositions(When& when, Fixed frame) const;
-  Fixed MediaPositionToFrame(MediaPosition pos) const;
+  void SetStreamTime(When& when, Fixed frame) const;
+  Fixed StreamTimeToFrame(StreamTime pos) const;
 
   const Format format_;
   const TimelineRate media_ticks_per_ns_;

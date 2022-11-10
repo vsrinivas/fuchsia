@@ -286,13 +286,10 @@ ParseCreateEdgeOptions(
   return fpromise::ok(std::move(options));
 }
 
-zx::result<StartStopControl::RealTime> ParseRealTime(
-    const fuchsia_audio_mixer::wire::RealTime& real_time) {
-  if (real_time.is_reference_time()) {
-    return zx::ok(StartStopControl::RealTime{
-        .clock = StartStopControl::WhichClock::kReference,
-        .time = zx::time(real_time.reference_time()),
-    });
+zx::result<std::optional<StartStopControl::RealTime>> ParseRealTime(
+    const fuchsia_media2::wire::RealTime& real_time) {
+  if (real_time.is_asap()) {
+    return zx::ok(std::nullopt);
   }
   if (real_time.is_system_time()) {
     return zx::ok(StartStopControl::RealTime{
@@ -300,28 +297,48 @@ zx::result<StartStopControl::RealTime> ParseRealTime(
         .time = zx::time(real_time.system_time()),
     });
   }
+  if (real_time.is_reference_time()) {
+    return zx::ok(StartStopControl::RealTime{
+        .clock = StartStopControl::WhichClock::kReference,
+        .time = zx::time(real_time.reference_time()),
+    });
+  }
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::result<StartStopControl::MediaPosition> ParseStreamTime(
-    const fuchsia_audio_mixer::wire::StreamTime& stream_time) {
+zx::result<StartStopControl::StreamTime> ParseStreamTime(
+    const fuchsia_media2::wire::StreamTime& stream_time) {
   if (stream_time.is_stream_time()) {
-    return zx::ok(StartStopControl::MediaPosition{zx::duration(stream_time.stream_time())});
+    return zx::ok(StartStopControl::StreamTime{zx::duration(stream_time.stream_time())});
   }
   if (stream_time.is_packet_timestamp()) {
-    return zx::ok(StartStopControl::MediaPosition{
-        StartStopControl::MediaTicks{stream_time.packet_timestamp()}});
+    return zx::ok(StartStopControl::StreamTime{stream_time.packet_timestamp()});
   }
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::result<std::variant<StartStopControl::RealTime, StartStopControl::MediaPosition>>
-ParseRealOrStreamTime(const fuchsia_audio_mixer::wire::RealOrStreamTime& real_or_stream_time) {
-  if (real_or_stream_time.is_real_time()) {
-    return ParseRealTime(real_or_stream_time.real_time());
+zx::result<std::optional<std::variant<StartStopControl::RealTime, StartStopControl::StreamTime>>>
+ParseRealOrStreamTime(const fuchsia_media2::wire::RealOrStreamTime& real_or_stream_time) {
+  if (real_or_stream_time.is_asap()) {
+    return zx::ok(std::nullopt);
+  }
+  if (real_or_stream_time.is_system_time()) {
+    return zx::ok(StartStopControl::RealTime{
+        .clock = StartStopControl::WhichClock::kSystemMonotonic,
+        .time = zx::time(real_or_stream_time.system_time()),
+    });
+  }
+  if (real_or_stream_time.is_reference_time()) {
+    return zx::ok(StartStopControl::RealTime{
+        .clock = StartStopControl::WhichClock::kReference,
+        .time = zx::time(real_or_stream_time.reference_time()),
+    });
   }
   if (real_or_stream_time.is_stream_time()) {
-    return ParseStreamTime(real_or_stream_time.stream_time());
+    return zx::ok(StartStopControl::StreamTime{zx::duration(real_or_stream_time.stream_time())});
+  }
+  if (real_or_stream_time.is_packet_timestamp()) {
+    return zx::ok(StartStopControl::StreamTime{real_or_stream_time.packet_timestamp()});
   }
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
@@ -360,15 +377,15 @@ void StartProducerOrConsumer(const GraphServer::StartRequestView& request,
               completer.ReplySuccess(fuchsia_audio_mixer::wire::GraphStartResponse::Builder(arena)
                                          .system_time(value.mono_time.get())
                                          .reference_time(value.reference_time.get())
-                                         .stream_time(value.media_time.get())
-                                         .packet_timestamp(value.media_ticks)
+                                         .stream_time(value.stream_time.get())
+                                         .packet_timestamp(value.packet_timestamp)
                                          .Build());
             });
       };
 
   node.Start(StartStopControl::StartCommand{
       .start_time = start_time.value(),
-      .start_position = start_position.value(),
+      .stream_time = start_position.value(),
       .callback = std::move(callback),
   });
 }
@@ -405,8 +422,8 @@ void StopProducerOrConsumer(const GraphServer::StopRequestView& request,
               completer.ReplySuccess(fuchsia_audio_mixer::wire::GraphStopResponse::Builder(arena)
                                          .system_time(value.mono_time.get())
                                          .reference_time(value.reference_time.get())
-                                         .stream_time(value.media_time.get())
-                                         .packet_timestamp(value.media_ticks)
+                                         .stream_time(value.stream_time.get())
+                                         .packet_timestamp(value.packet_timestamp)
                                          .Build());
             });
       };

@@ -170,39 +170,3 @@ type PipelineDirection = strict enum {
     OUTPUT = 1;
     INPUT = 2;
 };
-
-// TODO(fxbug.dev/87651): Rename/move `RealTime` and `StreamTime` definitions
-// below to the common media api once finalized.
-
-/// Specifies a real time using a system monotonic or reference clock time.
-type RealTime = flexible union {
-    /// Real time according to the system monotonic clock.
-    1: system_time zx.time;
-
-    /// Real time according to the relevant reference clock. If no reference
-    /// clock (other than the system clock) is relevant, this is equivalent to
-    /// `system_time`.
-    2: reference_time zx.time;
-
-    // TODO(fxbug.dev/87651): Add "immediately" option similar to `GainTimestamp`.
-};
-
-/// Specifies a stream time either as a duration or as a packet timestamp in the
-/// relevant timestamp units.
-type StreamTime = flexible union {
-    /// Stream time expressed as a duration.
-    1: stream_time zx.duration;
-
-    /// Stream time expressed in the same timestamps that are used on the
-    /// relevant packets.
-    2: packet_timestamp int64;
-};
-
-/// Specifies a real time or a presentation time.
-type RealOrStreamTime = flexible union {
-    /// Real time.
-    1: real_time RealTime;
-
-    /// Stream time.
-    2: stream_time StreamTime;
-};
