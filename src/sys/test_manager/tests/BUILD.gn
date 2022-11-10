@@ -32,6 +32,28 @@ rustc_test("test_manager_test_bin") {
   ]
 }
 
+rustc_test("test_manager_stress_test_bin") {
+  edition = "2021"
+  name = "test_manager_stress_test"
+  source_root = "src/stress_tests.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
+    "//src/sys/test_manager:test_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:pretty_assertions",
+  ]
+
+  sources = [ "src/stress_tests.rs" ]
+}
+
 fuchsia_unittest_package("test_manager_test") {
   manifest = "meta/test_manager_test.cml"
   deps = [
@@ -49,9 +71,19 @@ fuchsia_unittest_package("test_manager_test") {
   }
 }
 
+fuchsia_unittest_package("test_manager_stress_test") {
+  manifest = "meta/test_manager_stress_test.cml"
+  deps = [
+    ":test_manager_stress_test_bin",
+    "test_data:debug_data_spam_test",
+    "//src/sys/test_manager:test_manager_for_test_cmp",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
+    ":test_manager_stress_test",
     ":test_manager_test",
     "chromium_tests:tests",
     "diagnostics_tests:tests",

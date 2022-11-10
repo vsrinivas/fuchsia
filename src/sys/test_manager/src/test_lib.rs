@@ -19,6 +19,75 @@ use {
     tracing::*,
 };
 
+pub fn default_run_option() -> ftest_manager::RunOptions {
+    ftest_manager::RunOptions {
+        parallel: None,
+        arguments: None,
+        run_disabled_tests: Some(false),
+        timeout: None,
+        case_filters_to_run: None,
+        log_iterator: None,
+        ..ftest_manager::RunOptions::EMPTY
+    }
+}
+
+pub async fn collect_suite_events(
+    suite_instance: SuiteRunInstance,
+) -> Result<(Vec<RunEvent>, Vec<String>), Error> {
+    let (sender, mut recv) = mpsc::channel(1);
+    let execution_task =
+        fasync::Task::spawn(async move { suite_instance.collect_events(sender).await });
+    let mut events = vec![];
+    let mut log_tasks = vec![];
+    while let Some(event) = recv.next().await {
+        match event.payload {
+            SuiteEventPayload::RunEvent(RunEvent::CaseStdout { name, mut stdout_message }) => {
+                if stdout_message.ends_with("\n") {
+                    stdout_message.truncate(stdout_message.len() - 1)
+                }
+                let logs = stdout_message.split("\n");
+                for log in logs {
+                    // gtest produces this line when tests are randomized. As of
+                    // this writing, our gtest_main binary *always* randomizes.
+                    if log.contains("Note: Randomizing tests' orders with a seed of") {
+                        continue;
+                    }
+                    events.push(RunEvent::case_stdout(name.clone(), log.to_string()));
+                }
+            }
+            SuiteEventPayload::RunEvent(RunEvent::CaseStderr { name, mut stderr_message }) => {
+                if stderr_message.ends_with("\n") {
+                    stderr_message.truncate(stderr_message.len() - 1)
+                }
+                let logs = stderr_message.split("\n");
+                for log in logs {
+                    events.push(RunEvent::case_stderr(name.clone(), log.to_string()));
+                }
+            }
+            SuiteEventPayload::RunEvent(e) => events.push(e),
+            SuiteEventPayload::SuiteLog { log_stream } => {
+                let t = fasync::Task::spawn(log_stream.collect::<Vec<_>>());
+                log_tasks.push(t);
+            }
+            SuiteEventPayload::TestCaseLog { .. } => {
+                panic!("not supported yet!")
+            }
+        }
+    }
+    execution_task.await.context("test execution failed")?;
+
+    let mut collected_logs = vec![];
+    for t in log_tasks {
+        let logs = t.await;
+        for log_result in logs {
+            let log = log_result?;
+            collected_logs.push(log.msg().unwrap().to_string());
+        }
+    }
+
+    Ok((events, collected_logs))
+}
+
 /// Builds and runs test suite(s).
 pub struct TestBuilder {
     proxy: ftest_manager::RunBuilderProxy,
