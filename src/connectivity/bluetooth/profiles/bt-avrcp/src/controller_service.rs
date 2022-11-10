@@ -89,10 +89,10 @@ impl ControllerService {
                     &mut self
                         .controller
                         .get_player_application_settings(
-                            attribute_ids.into_iter().map(|x| x.into()).collect(),
+                            attribute_ids.into_iter().map(Into::into).collect(),
                         )
                         .await
-                        .map(|res| res.into())
+                        .map(Into::into)
                         .map_err(ControllerError::from),
                 )?;
             }
@@ -104,7 +104,7 @@ impl ControllerService {
                             crate::packets::PlayerApplicationSettings::from(&requested_settings),
                         )
                         .await
-                        .map(|res| res.into())
+                        .map(Into::into)
                         .map_err(ControllerError::from),
                 )?;
             }
@@ -345,7 +345,7 @@ impl ControllerExtService {
                     &mut self
                         .controller
                         .send_raw_vendor_command(pdu_id, &command[..])
-                        .map_err(|e| ControllerError::from(e))
+                        .map_err(ControllerError::from)
                         .await,
                 )?;
             }

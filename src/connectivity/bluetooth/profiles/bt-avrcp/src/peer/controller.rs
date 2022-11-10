@@ -121,20 +121,21 @@ impl Controller {
     /// Sends GetElementAttributes command to the peer.
     /// Returns all the media attributes received as a response or an error.
     pub async fn get_media_attributes(&self) -> Result<fidl_avrcp::MediaAttributes, Error> {
-        let mut media_attributes = fidl_avrcp::MediaAttributes::EMPTY;
         let cmd = GetElementAttributesCommand::all_attributes();
         trace!("get_media_attributes send command {:#?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let response = GetElementAttributesResponse::decode(&buf[..])?;
         trace!("get_media_attributes received response {:#?}", response);
-        media_attributes.title = response.title;
-        media_attributes.artist_name = response.artist_name;
-        media_attributes.album_name = response.album_name;
-        media_attributes.track_number = response.track_number;
-        media_attributes.total_number_of_tracks = response.total_number_of_tracks;
-        media_attributes.genre = response.genre;
-        media_attributes.playing_time = response.playing_time;
-        Ok(media_attributes)
+        Ok(fidl_avrcp::MediaAttributes {
+            title: response.title,
+            artist_name: response.artist_name,
+            album_name: response.album_name,
+            track_number: response.track_number,
+            total_number_of_tracks: response.total_number_of_tracks,
+            genre: response.genre,
+            playing_time: response.playing_time,
+            ..fidl_avrcp::MediaAttributes::EMPTY
+        })
     }
 
     /// Send a GetCapabilities command requesting all supported events by the peer.
@@ -257,8 +258,7 @@ impl Controller {
                     let _ = SetPlayerApplicationSettingValueResponse::decode(&buf[..])?;
                 }
                 Err(_) => {
-                    let attribute = setting.0;
-                    set_settings.clear_attribute(attribute);
+                    set_settings.clear_attribute(setting.0);
                 }
             }
         }

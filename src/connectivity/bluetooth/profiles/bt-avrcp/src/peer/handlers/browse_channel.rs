@@ -84,12 +84,12 @@ impl BrowseChannelHandler {
                 let folder_items = target_delegate
                     .send_get_media_player_items_command()
                     .await
-                    .map_err(|e| StatusCode::from(e))?;
+                    .map_err(StatusCode::from)?;
 
                 // Use an arbitrary uid_counter for creating the response. Don't support
                 // multiple players, so this value is irrelevant.
                 let uid_counter: u16 = 0x1234;
-                let media_player_items = folder_items.into_iter().map(|i| i.into()).collect();
+                let media_player_items = folder_items.into_iter().map(Into::into).collect();
                 let resp = GetFolderItemsResponse::new_success(uid_counter, media_player_items);
 
                 // Encode the result into the output buffer.

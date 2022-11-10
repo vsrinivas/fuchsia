@@ -447,7 +447,7 @@ async fn handle_get_play_status(
     let response = GetPlayStatusResponse {
         song_length: play_status.song_length.unwrap_or(SONG_LENGTH_NOT_SUPPORTED),
         song_position: play_status.song_position.unwrap_or(SONG_POSITION_NOT_SUPPORTED),
-        playback_status: play_status.playback_status.map_or(PlaybackStatus::Stopped, |s| s.into()),
+        playback_status: play_status.playback_status.map_or(PlaybackStatus::Stopped, Into::into),
     };
 
     Ok(Box::new(response))
@@ -457,10 +457,8 @@ async fn handle_get_element_attributes(
     cmd: GetElementAttributesCommand,
     target_delegate: Arc<TargetDelegate>,
 ) -> Result<Box<dyn PacketEncodable>, StatusCode> {
-    let element_attributes = target_delegate
-        .send_get_media_attributes_command()
-        .await
-        .map_err(|e| StatusCode::from(e))?;
+    let element_attributes =
+        target_delegate.send_get_media_attributes_command().await.map_err(StatusCode::from)?;
 
     let mut response = GetElementAttributesResponse::default();
     for attribute in cmd.attributes() {
@@ -501,7 +499,7 @@ async fn handle_list_player_application_setting_attributes(
     let attributes = target_delegate
         .send_list_player_application_setting_attributes_command()
         .await
-        .map_err(|e| StatusCode::from(e))?;
+        .map_err(StatusCode::from)?;
 
     let response = ListPlayerApplicationSettingAttributesResponse::new(
         attributes.len() as u8,
@@ -541,7 +539,7 @@ async fn handle_get_current_player_application_setting_value(
         )
         .await
         .map(|v| PlayerApplicationSettings::from(&v))
-        .map_err(|e| StatusCode::from(e))?;
+        .map_err(StatusCode::from)?;
 
     let response: GetCurrentPlayerApplicationSettingValueResponse = current_values.into();
 

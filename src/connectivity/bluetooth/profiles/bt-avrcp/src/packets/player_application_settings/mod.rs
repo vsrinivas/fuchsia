@@ -236,21 +236,13 @@ impl From<&fidl_avrcp::PlayerApplicationSettings> for PlayerApplicationSettings 
 
 impl From<PlayerApplicationSettings> for fidl_avrcp::PlayerApplicationSettings {
     fn from(src: PlayerApplicationSettings) -> fidl_avrcp::PlayerApplicationSettings {
-        let mut setting = fidl_avrcp::PlayerApplicationSettings::EMPTY;
-        if let Some(eq) = src.equalizer {
-            setting.equalizer = Some(eq.into());
+        fidl_avrcp::PlayerApplicationSettings {
+            equalizer: src.equalizer.map(Into::into),
+            repeat_status_mode: src.repeat_status_mode.map(Into::into),
+            shuffle_mode: src.shuffle_mode.map(Into::into),
+            scan_mode: src.scan_mode.map(Into::into),
+            ..fidl_avrcp::PlayerApplicationSettings::EMPTY
         }
-        if let Some(rsm) = src.repeat_status_mode {
-            setting.repeat_status_mode = Some(rsm.into());
-        }
-        if let Some(shm) = src.shuffle_mode {
-            setting.shuffle_mode = Some(shm.into());
-        }
-        if let Some(scm) = src.scan_mode {
-            setting.scan_mode = Some(scm.into());
-        }
-
-        setting
     }
 }
 
