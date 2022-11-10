@@ -29,7 +29,7 @@ constexpr int kInvalidIndex = -1;
 }  // namespace
 
 zx_status_t AmlVoltageRegulator::Create(
-    zx_device_t* parent, const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+    zx_device_t* parent, const fuchsia_hardware_thermal::wire::ThermalDeviceInfo& thermal_config,
     const aml_thermal_info_t* thermal_info) {
   auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
@@ -38,8 +38,7 @@ zx_status_t AmlVoltageRegulator::Create(
   }
 
   pdev_device_info_t device_info;
-  zx_status_t status = pdev.GetDeviceInfo(&device_info);
-  if (status != ZX_OK) {
+  if (zx_status_t status = pdev.GetDeviceInfo(&device_info); status != ZX_OK) {
     zxlogf(ERROR, "aml-voltage: failed to get GetDeviceInfo ");
     return status;
   }
@@ -49,7 +48,7 @@ zx_status_t AmlVoltageRegulator::Create(
     zxlogf(ERROR, "%s: failed to get big cluster PWM fragment", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if ((status = big_cluster_pwm_.Enable()) != ZX_OK) {
+  if (zx_status_t status = big_cluster_pwm_.Enable(); status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not enable PWM", __func__);
     return status;
   }
@@ -61,7 +60,7 @@ zx_status_t AmlVoltageRegulator::Create(
       zxlogf(ERROR, "%s: failed to get little cluster PWM fragment", __func__);
       return ZX_ERR_NOT_SUPPORTED;
     }
-    if ((status = little_cluster_pwm_.Enable()) != ZX_OK) {
+    if (zx_status_t status = little_cluster_pwm_.Enable(); status != ZX_OK) {
       zxlogf(ERROR, "%s: Could not enable PWM", __func__);
       return status;
     }
@@ -72,20 +71,19 @@ zx_status_t AmlVoltageRegulator::Create(
 
 zx_status_t AmlVoltageRegulator::Init(
     const pwm_protocol_t* big_cluster_pwm, const pwm_protocol_t* little_cluster_pwm,
-    const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+    const fuchsia_hardware_thermal::wire::ThermalDeviceInfo& thermal_config,
     const aml_thermal_info_t* thermal_info) {
-  zx_status_t status = ZX_OK;
   big_little_ = thermal_config.big_little;
 
   big_cluster_pwm_ = ddk::PwmProtocolClient(big_cluster_pwm);
-  if ((status = big_cluster_pwm_.Enable()) != ZX_OK) {
+  if (zx_status_t status = big_cluster_pwm_.Enable(); status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not enable PWM", __func__);
     return status;
   }
 
   if (big_little_) {
     little_cluster_pwm_ = ddk::PwmProtocolClient(little_cluster_pwm);
-    if ((status = little_cluster_pwm_.Enable()) != ZX_OK) {
+    if (zx_status_t status = little_cluster_pwm_.Enable(); status != ZX_OK) {
       zxlogf(ERROR, "%s: Could not enable PWM", __func__);
       return status;
     }
@@ -95,10 +93,9 @@ zx_status_t AmlVoltageRegulator::Init(
 }
 
 zx_status_t AmlVoltageRegulator::Init(
-    const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+    const fuchsia_hardware_thermal::wire::ThermalDeviceInfo& thermal_config,
     const aml_thermal_info_t* thermal_info) {
   ZX_DEBUG_ASSERT(thermal_info);
-  zx_status_t status = ZX_OK;
 
   // Get the voltage-table metadata.
   memcpy(&thermal_info_, thermal_info, sizeof(aml_thermal_info_t));
@@ -109,12 +106,14 @@ zx_status_t AmlVoltageRegulator::Init(
   uint32_t max_big_cluster_microvolt = 0;
   uint32_t max_little_cluster_microvolt = 0;
 
-  const fuchsia_hardware_thermal_OperatingPoint& big_cluster_opp =
-      thermal_config.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN];
-  const fuchsia_hardware_thermal_OperatingPoint& little_cluster_opp =
-      thermal_config.opps[fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN];
+  const fuchsia_hardware_thermal::wire::OperatingPoint& big_cluster_opp =
+      thermal_config.opps[static_cast<uint32_t>(
+          fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain)];
+  const fuchsia_hardware_thermal::wire::OperatingPoint& little_cluster_opp =
+      thermal_config.opps[static_cast<uint32_t>(
+          fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain)];
 
-  for (uint32_t i = 0; i < fuchsia_hardware_thermal_MAX_DVFS_OPPS; i++) {
+  for (uint32_t i = 0; i < fuchsia_hardware_thermal::wire::kMaxDvfsOpps; i++) {
     if (i < big_cluster_opp.count && big_cluster_opp.opp[i].volt_uv > max_big_cluster_microvolt) {
       max_big_cluster_microvolt = big_cluster_opp.opp[i].volt_uv;
     }
@@ -125,11 +124,14 @@ zx_status_t AmlVoltageRegulator::Init(
   }
 
   // Set the voltage to maximum to start with
-  if ((status = SetBigClusterVoltage(max_big_cluster_microvolt)) != ZX_OK) {
+  if (zx_status_t status = SetBigClusterVoltage(max_big_cluster_microvolt); status != ZX_OK) {
     return status;
   }
-  if (big_little_ && (status = SetLittleClusterVoltage(max_little_cluster_microvolt)) != ZX_OK) {
-    return status;
+  if (big_little_) {
+    if (zx_status_t status = SetLittleClusterVoltage(max_little_cluster_microvolt);
+        status != ZX_OK) {
+      return status;
+    }
   }
 
   return ZX_OK;
@@ -151,7 +153,6 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status = ZX_OK;
   // If this is the first time we are setting up the voltage
   // we directly set it.
   if (*current_voltage_index < 0) {
@@ -160,7 +161,7 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
     pwm_config_t cfg = {false, thermal_info_.voltage_pwm_period_ns,
                         static_cast<float>(thermal_info_.voltage_table[target_index].duty_cycle),
                         reinterpret_cast<uint8_t*>(&on), sizeof(on)};
-    if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
+    if (zx_status_t status = pwm.SetConfig(&cfg); status != ZX_OK) {
       zxlogf(ERROR, "%s: Could not initialize PWM", __func__);
       return status;
     }
@@ -192,7 +193,7 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
         false, thermal_info_.voltage_pwm_period_ns,
         static_cast<float>(thermal_info_.voltage_table[*current_voltage_index].duty_cycle),
         reinterpret_cast<uint8_t*>(&on), sizeof(on)};
-    if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
+    if (zx_status_t status = pwm.SetConfig(&cfg); status != ZX_OK) {
       zxlogf(ERROR, "%s: Could not initialize PWM", __func__);
       return status;
     }

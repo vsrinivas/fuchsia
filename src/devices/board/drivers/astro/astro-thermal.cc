@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
-#include <fuchsia/hardware/thermal/c/fidl.h>
+#include <fidl/fuchsia.hardware.thermal/cpp/wire.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -62,8 +62,9 @@ static const std::vector<fpbus::Irq> thermal_irqs_ddr{
     }},
 };
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c, uint16_t cpu_opp,
-                                                                    uint16_t gpu_opp) {
+constexpr fuchsia_hardware_thermal::wire::ThermalTemperatureInfo TripPoint(float temp_c,
+                                                                           uint16_t cpu_opp,
+                                                                           uint16_t gpu_opp) {
   constexpr float kHysteresis = 2.0f;
 
   return {
@@ -76,7 +77,7 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
   };
 }
 
-fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll = {
+fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config_pll = {
     .active_cooling = false,
     .passive_cooling = false,
     .gpu_throttling = false,
@@ -89,7 +90,7 @@ fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll = {
         },
     .opps = {}};
 
-fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_ddr = {
+fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config_ddr = {
     .active_cooling = false,
     .passive_cooling = false,
     .gpu_throttling = false,

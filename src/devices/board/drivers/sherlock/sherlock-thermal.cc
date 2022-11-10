@@ -4,8 +4,8 @@
 
 #include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
+#include <fidl/fuchsia.hardware.thermal/cpp/wire.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
-#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -31,7 +31,7 @@ namespace {
 
 constexpr uint32_t kPwmDFn = 3;
 
-static const std::vector<fpbus::Mmio> thermal_mmios_pll{
+const std::vector<fpbus::Mmio> thermal_mmios_pll{
     {{
         .base = T931_TEMP_SENSOR_PLL_BASE,
         .length = T931_TEMP_SENSOR_PLL_LENGTH,
@@ -46,7 +46,7 @@ static const std::vector<fpbus::Mmio> thermal_mmios_pll{
     }},
 };
 
-static const std::vector<fpbus::Mmio> thermal_mmios_ddr{
+const std::vector<fpbus::Mmio> thermal_mmios_ddr{
     {{
         .base = T931_TEMP_SENSOR_DDR_BASE,
         .length = T931_TEMP_SENSOR_DDR_LENGTH,
@@ -61,24 +61,24 @@ static const std::vector<fpbus::Mmio> thermal_mmios_ddr{
     }},
 };
 
-static const std::vector<fpbus::Irq> thermal_irqs_pll{
+const std::vector<fpbus::Irq> thermal_irqs_pll{
     {{
         .irq = T931_TS_PLL_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     }},
 };
 
-static const std::vector<fpbus::Irq> thermal_irqs_ddr{
+const std::vector<fpbus::Irq> thermal_irqs_ddr{
     {{
         .irq = T931_TS_DDR_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     }},
 };
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
-                                                                    uint16_t cpu_opp_big,
-                                                                    uint16_t cpu_opp_little,
-                                                                    uint16_t gpu_opp) {
+constexpr fuchsia_hardware_thermal::wire::ThermalTemperatureInfo TripPoint(float temp_c,
+                                                                           uint16_t cpu_opp_big,
+                                                                           uint16_t cpu_opp_little,
+                                                                           uint16_t gpu_opp) {
   constexpr float kHysteresis = 2.0f;
 
   return {
@@ -130,29 +130,27 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
 
 // NOTE: This is a very trivial policy, no data backing it up
 // As we do more testing this policy can evolve.
-fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll = {
-    .active_cooling = false,
-    .passive_cooling = true,
-    .gpu_throttling = true,
-    .num_trip_points = 4,
-    .big_little = true,
-    .critical_temp_celsius = 101.0f,
-    .trip_point_info =
-        {
-            TripPoint(82.5f, 9, 10, 4), TripPoint(85.0f, 8, 9, 4), TripPoint(87.5f, 6, 6, 4),
-            TripPoint(90.0f, 4, 4, 4),
-            TripPoint(-273.15f, 0, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
-        },
-    .opps =
-        {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wc99-designator"
-            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
-#pragma GCC diagnostic pop
-                {
+fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config_pll =
+    {
+        .active_cooling = false,
+        .passive_cooling = true,
+        .gpu_throttling = true,
+        .num_trip_points = 4,
+        .big_little = true,
+        .critical_temp_celsius = 101.0f,
+        .trip_point_info =
+            {
+                TripPoint(82.5f, 9, 10, 4), TripPoint(85.0f, 8, 9, 4), TripPoint(87.5f, 6, 6, 4),
+                TripPoint(90.0f, 4, 4, 4),
+                TripPoint(-273.15f, 0, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
+            },
+        .opps =
+            {
+                fuchsia_hardware_thermal::wire::OperatingPoint{
                     .opp =
                         {
-                            {.freq_hz = 100'000'000, .volt_uv = 751'000},
+                            fuchsia_hardware_thermal::wire::OperatingPointEntry{
+                                .freq_hz = 100'000'000, .volt_uv = 751'000},
                             {.freq_hz = 250'000'000, .volt_uv = 751'000},
                             {.freq_hz = 500'000'000, .volt_uv = 751'000},
                             {.freq_hz = 667'000'000, .volt_uv = 751'000},
@@ -167,14 +165,11 @@ fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll = {
                     .latency = 0,
                     .count = 11,
                 },
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wc99-designator"
-            [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
-#pragma GCC diagnostic pop
-                {
+                fuchsia_hardware_thermal::wire::OperatingPoint{
                     .opp =
                         {
-                            {.freq_hz = 100'000'000, .volt_uv = 731'000},
+                            fuchsia_hardware_thermal::wire::OperatingPointEntry{
+                                .freq_hz = 100'000'000, .volt_uv = 731'000},
                             {.freq_hz = 250'000'000, .volt_uv = 731'000},
                             {.freq_hz = 500'000'000, .volt_uv = 731'000},
                             {.freq_hz = 667'000'000, .volt_uv = 731'000},
@@ -189,10 +184,10 @@ fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll = {
                     .latency = 0,
                     .count = 11,
                 },
-        },
+            },
 };
 
-fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_ddr = {
+fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config_ddr = {
     .active_cooling = false,
     .passive_cooling = false,
     .gpu_throttling = false,
@@ -218,8 +213,12 @@ aml_thermal_info_t aml_thermal_info = {
         {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc99-designator"
-            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'000'000'000,
-            [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] = 1'200'000'000,
+            [static_cast<uint32_t>(
+                fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain)] =
+                1'000'000'000,
+            [static_cast<uint32_t>(
+                fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain)] =
+                1'200'000'000,
 #pragma GCC diagnostic pop
         },
     .voltage_pwm_period_ns = 1250,
@@ -227,7 +226,7 @@ aml_thermal_info_t aml_thermal_info = {
     .cluster_id_map = {},
 };
 
-static const std::vector<fpbus::Metadata> thermal_metadata_pll{
+const std::vector<fpbus::Metadata> thermal_metadata_pll{
     {{
         .type = DEVICE_METADATA_THERMAL_CONFIG,
         .data = std::vector<uint8_t>(
@@ -242,7 +241,7 @@ static const std::vector<fpbus::Metadata> thermal_metadata_pll{
     }},
 };
 
-static const std::vector<fpbus::Metadata> thermal_metadata_ddr{
+const std::vector<fpbus::Metadata> thermal_metadata_ddr{
     {{
         .type = DEVICE_METADATA_THERMAL_CONFIG,
         .data = std::vector<uint8_t>(
@@ -251,7 +250,7 @@ static const std::vector<fpbus::Metadata> thermal_metadata_ddr{
     }},
 };
 
-static const fpbus::Node thermal_dev_pll = []() {
+const fpbus::Node thermal_dev_pll = []() {
   fpbus::Node dev = {};
   dev.name() = "aml-thermal-pll";
   dev.vid() = PDEV_VID_AMLOGIC;
@@ -263,7 +262,7 @@ static const fpbus::Node thermal_dev_pll = []() {
   return dev;
 }();
 
-static const fpbus::Node thermal_dev_ddr = []() {
+const fpbus::Node thermal_dev_ddr = []() {
   fpbus::Node dev = {};
   dev.name() = "aml-thermal-ddr";
   dev.vid() = PDEV_VID_AMLOGIC;

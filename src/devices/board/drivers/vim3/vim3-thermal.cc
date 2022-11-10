@@ -4,8 +4,8 @@
 
 #include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
+#include <fidl/fuchsia.hardware.thermal/cpp/wire.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
-#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -27,7 +27,7 @@ namespace fpbus = fuchsia_hardware_platform_bus;
 
 namespace {
 
-static const std::vector<fpbus::Mmio> thermal_mmios_pll{
+const std::vector<fpbus::Mmio> thermal_mmios_pll{
     {{
         .base = A311D_TEMP_SENSOR_PLL_BASE,
         .length = A311D_TEMP_SENSOR_PLL_LENGTH,
@@ -42,7 +42,7 @@ static const std::vector<fpbus::Mmio> thermal_mmios_pll{
     }},
 };
 
-static const std::vector<fpbus::Mmio> thermal_mmios_ddr{
+const std::vector<fpbus::Mmio> thermal_mmios_ddr{
     {{
         .base = A311D_TEMP_SENSOR_DDR_BASE,
         .length = A311D_TEMP_SENSOR_DDR_LENGTH,
@@ -57,24 +57,24 @@ static const std::vector<fpbus::Mmio> thermal_mmios_ddr{
     }},
 };
 
-static const std::vector<fpbus::Irq> thermal_irqs_pll{
+const std::vector<fpbus::Irq> thermal_irqs_pll{
     {{
         .irq = A311D_TS_PLL_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     }},
 };
 
-static const std::vector<fpbus::Irq> thermal_irqs_ddr{
+const std::vector<fpbus::Irq> thermal_irqs_ddr{
     {{
         .irq = A311D_TS_DDR_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     }},
 };
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
-                                                                    uint16_t cpu_opp_big,
-                                                                    uint16_t cpu_opp_little,
-                                                                    uint16_t gpu_opp) {
+constexpr fuchsia_hardware_thermal::wire::ThermalTemperatureInfo TripPoint(float temp_c,
+                                                                           uint16_t cpu_opp_big,
+                                                                           uint16_t cpu_opp_little,
+                                                                           uint16_t gpu_opp) {
   constexpr float kHysteresis = 2.0f;
 
   return {
@@ -87,7 +87,7 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
   };
 }
 
-static constexpr fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll = {
+constexpr fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config_pll = {
     .active_cooling = false,
     .passive_cooling = true,
     .gpu_throttling = true,
@@ -98,7 +98,7 @@ static constexpr fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll =
     .opps = {},
 };
 
-static constexpr fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_ddr = {
+constexpr fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config_ddr = {
     .active_cooling = false,
     .passive_cooling = false,
     .gpu_throttling = false,
@@ -109,7 +109,7 @@ static constexpr fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_ddr =
     .opps = {},
 };
 
-static const std::vector<fpbus::Metadata> thermal_metadata_pll{
+const std::vector<fpbus::Metadata> thermal_metadata_pll{
     {{
         .type = DEVICE_METADATA_THERMAL_CONFIG,
         .data = std::vector<uint8_t>(
@@ -118,7 +118,7 @@ static const std::vector<fpbus::Metadata> thermal_metadata_pll{
     }},
 };
 
-static const std::vector<fpbus::Metadata> thermal_metadata_ddr{
+const std::vector<fpbus::Metadata> thermal_metadata_ddr{
     {{
         .type = DEVICE_METADATA_THERMAL_CONFIG,
         .data = std::vector<uint8_t>(
@@ -127,7 +127,7 @@ static const std::vector<fpbus::Metadata> thermal_metadata_ddr{
     }},
 };
 
-static const fpbus::Node thermal_dev_pll = []() {
+const fpbus::Node thermal_dev_pll = []() {
   fpbus::Node dev = {};
   dev.name() = "aml-thermal-pll";
   dev.vid() = PDEV_VID_AMLOGIC;
@@ -139,7 +139,7 @@ static const fpbus::Node thermal_dev_pll = []() {
   return dev;
 }();
 
-static const fpbus::Node thermal_dev_ddr = []() {
+const fpbus::Node thermal_dev_ddr = []() {
   fpbus::Node dev = {};
   dev.name() = "aml-thermal-ddr";
   dev.vid() = PDEV_VID_AMLOGIC;

@@ -40,14 +40,13 @@ constexpr uint32_t kSysPll = 1;
 namespace thermal {
 
 zx_status_t AmlCpuFrequency::Create(
-    zx_device_t* parent, const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+    zx_device_t* parent, const fuchsia_hardware_thermal::wire::ThermalDeviceInfo& thermal_config,
     const aml_thermal_info_t& thermal_info) {
   big_little_ = thermal_config.big_little;
-  big_cluster_current_rate_ = thermal_info.initial_cluster_frequencies
-                                  [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN];
-  little_cluster_current_rate_ =
-      thermal_info.initial_cluster_frequencies
-          [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN];
+  big_cluster_current_rate_ = thermal_info.initial_cluster_frequencies[static_cast<uint32_t>(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain)];
+  little_cluster_current_rate_ = thermal_info.initial_cluster_frequencies[static_cast<uint32_t>(
+      fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain)];
 
   auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
@@ -103,15 +102,15 @@ zx_status_t AmlCpuFrequency::Init() {
   // Once we switch to using the MPLL, we re-initialize the SYS PLL
   // to known values and then the thermal driver can take over the dynamic
   // switching.
-  zx_status_t status = SetFrequency(fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN,
-                                    kFrequencyThreshold);
+  zx_status_t status = SetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain, kFrequencyThreshold);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq, status = %d", status);
     return status;
   }
 
   if (big_little_) {
-    status = SetFrequency(fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
+    status = SetFrequency(fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain,
                           kFrequencyThreshold);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq, status = %d", status);
@@ -177,9 +176,8 @@ zx_status_t AmlCpuFrequency::WaitForBusyCpu(uint32_t offset) {
       // Wait a little bit before trying again.
       zx_nanosleep(zx_deadline_after(ZX_USEC(kSysCpuWaitBusyTimeoutUs)));
       continue;
-    } else {
-      return ZX_OK;
     }
+    return ZX_OK;
   }
   return ZX_ERR_TIMED_OUT;
 }
@@ -295,22 +293,21 @@ zx_status_t AmlCpuFrequency::SetBigClusterFrequency(uint32_t new_rate, uint32_t 
 
     // Now let's set SYS_PLL rate to new_rate.
     return ConfigureSysPLL(new_rate, offset);
-
-  } else if (new_rate > kFrequencyThreshold && big_cluster_current_rate_ <= kFrequencyThreshold) {
+  }
+  if (new_rate > kFrequencyThreshold && big_cluster_current_rate_ <= kFrequencyThreshold) {
     // Switching from a frequency lower than 1GHz to one greater than 1GHz.
     // In this case we just need to set the SYS_PLL to required rate and
     // then set the final mux to 1 (to select SYS_PLL as the source.)
 
     // Now let's set SYS_PLL rate to new_rate.
     return ConfigureSysPLL(new_rate, offset);
-
-  } else {
-    // Switching between two frequencies below 1GHz.
-    // In this case we change the source and dividers accordingly
-    // to get the required rate from MPLL and do not touch the
-    // final mux.
-    return ConfigureCpuFixedPLL(new_rate, offset);
   }
+  // Switching between two frequencies below 1GHz.
+  // In this case we change the source and dividers accordingly
+  // to get the required rate from MPLL and do not touch the
+  // final mux.
+  return ConfigureCpuFixedPLL(new_rate, offset);
+
   return ZX_OK;
 }
 
@@ -333,29 +330,27 @@ zx_status_t AmlCpuFrequency::SetLittleClusterFrequency(uint32_t new_rate, uint32
 
     // Now let's set SYS_PLL rate to new_rate.
     return ConfigureSys1PLL(new_rate, offset);
-
-  } else if (new_rate > kFrequencyThreshold &&
-             little_cluster_current_rate_ <= kFrequencyThreshold) {
+  }
+  if (new_rate > kFrequencyThreshold && little_cluster_current_rate_ <= kFrequencyThreshold) {
     // Switching from a frequency lower than 1GHz to one greater than 1GHz.
     // In this case we just need to set the SYS_PLL to required rate and
     // then set the final mux to 1 (to select SYS_PLL as the source.)
 
     // Now let's set SYS1_PLL rate to new_rate.
     return ConfigureSys1PLL(new_rate, offset);
-
-  } else {
-    // Switching between two frequencies below 1GHz.
-    // In this case we change the source and dividers accordingly
-    // to get the required rate from MPLL and do not touch the
-    // final mux.
-    return ConfigureCpuFixedPLL(new_rate, offset);
   }
+  // Switching between two frequencies below 1GHz.
+  // In this case we change the source and dividers accordingly
+  // to get the required rate from MPLL and do not touch the
+  // final mux.
+  return ConfigureCpuFixedPLL(new_rate, offset);
+
   return ZX_OK;
 }
 
-zx_status_t AmlCpuFrequency::SetFrequency(fuchsia_hardware_thermal_PowerDomain power_domain,
+zx_status_t AmlCpuFrequency::SetFrequency(fuchsia_hardware_thermal::wire::PowerDomain power_domain,
                                           uint32_t new_rate) {
-  if (power_domain == fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+  if (power_domain == fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain) {
     const uint32_t offset = big_little_ ? kSysCpuBOffset : kSysCpuOffset;
     zx_status_t status = SetBigClusterFrequency(new_rate, offset);
     if (status != ZX_OK) {
@@ -363,7 +358,8 @@ zx_status_t AmlCpuFrequency::SetFrequency(fuchsia_hardware_thermal_PowerDomain p
     }
     big_cluster_current_rate_ = new_rate;
     return status;
-  } else if (power_domain == fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN) {
+  }
+  if (power_domain == fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain) {
     if (!big_little_) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -374,17 +370,19 @@ zx_status_t AmlCpuFrequency::SetFrequency(fuchsia_hardware_thermal_PowerDomain p
     }
     little_cluster_current_rate_ = new_rate;
     return status;
-  } else
-    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_ERR_INVALID_ARGS;
 }
 
-uint32_t AmlCpuFrequency::GetFrequency(fuchsia_hardware_thermal_PowerDomain power_domain) {
-  if (power_domain == fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+uint32_t AmlCpuFrequency::GetFrequency(
+    fuchsia_hardware_thermal::wire::PowerDomain power_domain) const {
+  if (power_domain == fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain) {
     return big_cluster_current_rate_;
-  } else if (power_domain == fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN) {
+  }
+  if (power_domain == fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain) {
     return little_cluster_current_rate_;
-  } else
-    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_ERR_INVALID_ARGS;
 }
 
 }  // namespace thermal

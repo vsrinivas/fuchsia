@@ -27,28 +27,26 @@ class AmlCpuFrequency {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpuFrequency);
   AmlCpuFrequency() = default;
   AmlCpuFrequency(fdf::MmioBuffer hiu_mmio, mmio_buffer_t hiu_internal_mmio,
-                  const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+                  const fuchsia_hardware_thermal::wire::ThermalDeviceInfo& thermal_config,
                   const aml_thermal_info_t& thermal_info)
       : hiu_mmio_(std::move(hiu_mmio)),
-        big_cluster_current_rate_(
-            thermal_info.initial_cluster_frequencies
-                [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN]),
-        little_cluster_current_rate_(
-            thermal_info.initial_cluster_frequencies
-                [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN]),
+        big_cluster_current_rate_(thermal_info.initial_cluster_frequencies[static_cast<uint32_t>(
+            fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain)]),
+        little_cluster_current_rate_(thermal_info.initial_cluster_frequencies[static_cast<uint32_t>(
+            fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain)]),
         big_little_(thermal_config.big_little) {
     // HIU Init.
-    hiu_.mmio = std::move(hiu_internal_mmio);
+    hiu_.mmio = hiu_internal_mmio;
     hiu_.regs_vaddr = static_cast<MMIO_PTR uint8_t*>(hiu_.mmio.vaddr);
   }
   ~AmlCpuFrequency() = default;
-  zx_status_t SetFrequency(fuchsia_hardware_thermal_PowerDomain power_domain, uint32_t rate);
+  zx_status_t SetFrequency(fuchsia_hardware_thermal::wire::PowerDomain power_domain, uint32_t rate);
   zx_status_t Create(zx_device_t* parent,
-                     const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+                     const fuchsia_hardware_thermal::wire::ThermalDeviceInfo& thermal_config,
                      const aml_thermal_info_t& thermal_info);
 
   zx_status_t Init();
-  uint32_t GetFrequency(fuchsia_hardware_thermal_PowerDomain power_domain);
+  uint32_t GetFrequency(fuchsia_hardware_thermal::wire::PowerDomain power_domain) const;
 
  private:
   zx_status_t WaitForBusyCpu(uint32_t offset);

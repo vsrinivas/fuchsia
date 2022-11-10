@@ -453,7 +453,7 @@ fuchsia_driver("nelson-module-driver") {
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_c",
     "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
-    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/connectivity/openthread/lib/ot-radio",
     "//src/devices/bind/fuchsia.ams.platform:fuchsia.ams.platform_cpp",

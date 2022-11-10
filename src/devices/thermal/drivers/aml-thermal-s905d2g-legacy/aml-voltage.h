@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_LEGACY_AML_VOLTAGE_H_
 #define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_LEGACY_AML_VOLTAGE_H_
 
-#include <fbl/macros.h>
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
@@ -14,6 +13,7 @@
 
 #include <memory>
 
+#include <fbl/macros.h>
 #include <soc/aml-common/aml-pwm-regs.h>
 #include <soc/aml-common/aml-thermal.h>
 
@@ -26,23 +26,24 @@ class AmlVoltageRegulator {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlVoltageRegulator);
   AmlVoltageRegulator() = default;
   zx_status_t Create(zx_device_t* parent,
-                     const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+                     const fuchsia_hardware_thermal::wire::ThermalDeviceInfo& thermal_config,
                      const aml_thermal_info_t* thermal_info);
   // For testing
   zx_status_t Init(const pwm_protocol_t* big_cluster_pwm, const pwm_protocol_t* little_cluster_pwm,
-                   const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+                   const fuchsia_hardware_thermal::wire::ThermalDeviceInfo& thermal_config,
                    const aml_thermal_info_t* thermal_info);
-  zx_status_t Init(const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+  zx_status_t Init(const fuchsia_hardware_thermal::wire::ThermalDeviceInfo& thermal_config,
                    const aml_thermal_info_t* thermal_info);
-  uint32_t GetVoltage(fuchsia_hardware_thermal_PowerDomain power_domain) {
-    if (power_domain == fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+  uint32_t GetVoltage(fuchsia_hardware_thermal::wire::PowerDomain power_domain) {
+    if (power_domain == fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain) {
       return thermal_info_.voltage_table[current_big_cluster_voltage_index_].microvolt;
     }
     return thermal_info_.voltage_table[current_little_cluster_voltage_index_].microvolt;
   }
 
-  zx_status_t SetVoltage(fuchsia_hardware_thermal_PowerDomain power_domain, uint32_t microvolt) {
-    if (power_domain == fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
+  zx_status_t SetVoltage(fuchsia_hardware_thermal::wire::PowerDomain power_domain,
+                         uint32_t microvolt) {
+    if (power_domain == fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain) {
       return SetClusterVoltage(&current_big_cluster_voltage_index_, big_cluster_pwm_, microvolt);
     }
     return SetLittleClusterVoltage(microvolt);

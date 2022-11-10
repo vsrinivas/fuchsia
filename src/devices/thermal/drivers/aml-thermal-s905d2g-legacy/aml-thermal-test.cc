@@ -32,11 +32,11 @@ constexpr size_t kRegSize = 0x00002000 / sizeof(uint32_t);  // in 32 bits chunks
 
 // Temperature Sensor
 // Copied from sherlock-thermal.cc
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
-                                                                    float hysteresis_c,
-                                                                    uint16_t cpu_opp_big,
-                                                                    uint16_t cpu_opp_little,
-                                                                    uint16_t gpu_opp) {
+constexpr fuchsia_hardware_thermal::wire::ThermalTemperatureInfo TripPoint(float temp_c,
+                                                                           float hysteresis_c,
+                                                                           uint16_t cpu_opp_big,
+                                                                           uint16_t cpu_opp_little,
+                                                                           uint16_t gpu_opp) {
   return {
       .up_temp_celsius = temp_c + hysteresis_c,
       .down_temp_celsius = temp_c - hysteresis_c,
@@ -47,102 +47,96 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
   };
 }
 
-constexpr fuchsia_hardware_thermal_ThermalDeviceInfo sherlock_thermal_config = {
-    .active_cooling = false,
-    .passive_cooling = true,
-    .gpu_throttling = true,
-    .num_trip_points = 6,
-    .big_little = true,
-    .critical_temp_celsius = 102.0f,
-    .trip_point_info =
+constexpr fuchsia_hardware_thermal::wire::ThermalDeviceInfo
+    sherlock_thermal_config =
         {
-            TripPoint(55.0f, 2.0f, 9, 10, 4),
-            TripPoint(75.0f, 2.0f, 8, 9, 4),
-            TripPoint(80.0f, 2.0f, 7, 8, 3),
-            TripPoint(90.0f, 2.0f, 6, 7, 3),
-            TripPoint(95.0f, 2.0f, 5, 6, 3),
-            TripPoint(100.0f, 2.0f, 4, 5, 2),
-            // 0 Kelvin is impossible, marks end of TripPoints
-            TripPoint(-273.15f, 2.0f, 0, 0, 0),
-        },
-    .opps =
-        {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wc99-designator"
-            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
-#pragma GCC diagnostic pop
+            .active_cooling = false,
+            .passive_cooling = true,
+            .gpu_throttling = true,
+            .num_trip_points = 6,
+            .big_little = true,
+            .critical_temp_celsius = 102.0f,
+            .trip_point_info =
                 {
-                    .opp =
-                        {
-                            {.freq_hz = 100000000, .volt_uv = 751000},
-                            {.freq_hz = 250000000, .volt_uv = 751000},
-                            {.freq_hz = 500000000, .volt_uv = 751000},
-                            {.freq_hz = 667000000, .volt_uv = 751000},
-                            {.freq_hz = 1000000000, .volt_uv = 771000},
-                            {.freq_hz = 1200000000, .volt_uv = 771000},
-                            {.freq_hz = 1398000000, .volt_uv = 791000},
-                            {.freq_hz = 1512000000, .volt_uv = 821000},
-                            {.freq_hz = 1608000000, .volt_uv = 861000},
-                            {.freq_hz = 1704000000, .volt_uv = 891000},
-                            {.freq_hz = 1704000000, .volt_uv = 891000},
-                        },
-                    .latency = 0,
-                    .count = 11,
+                    TripPoint(55.0f, 2.0f, 9, 10, 4),
+                    TripPoint(75.0f, 2.0f, 8, 9, 4),
+                    TripPoint(80.0f, 2.0f, 7, 8, 3),
+                    TripPoint(90.0f, 2.0f, 6, 7, 3),
+                    TripPoint(95.0f, 2.0f, 5, 6, 3),
+                    TripPoint(100.0f, 2.0f, 4, 5, 2),
+                    // 0 Kelvin is impossible, marks end of TripPoints
+                    TripPoint(-273.15f, 2.0f, 0, 0, 0),
                 },
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wc99-designator"
-            [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
-#pragma GCC diagnostic pop
+            .opps =
                 {
-                    .opp =
-                        {
-                            {.freq_hz = 100000000, .volt_uv = 731000},
-                            {.freq_hz = 250000000, .volt_uv = 731000},
-                            {.freq_hz = 500000000, .volt_uv = 731000},
-                            {.freq_hz = 667000000, .volt_uv = 731000},
-                            {.freq_hz = 1000000000, .volt_uv = 731000},
-                            {.freq_hz = 1200000000, .volt_uv = 731000},
-                            {.freq_hz = 1398000000, .volt_uv = 761000},
-                            {.freq_hz = 1512000000, .volt_uv = 791000},
-                            {.freq_hz = 1608000000, .volt_uv = 831000},
-                            {.freq_hz = 1704000000, .volt_uv = 861000},
-                            {.freq_hz = 1896000000, .volt_uv = 1011000},
-                        },
-                    .latency = 0,
-                    .count = 11,
+                    fuchsia_hardware_thermal::wire::OperatingPoint{
+                        .opp =
+                            {
+                                fuchsia_hardware_thermal::wire::OperatingPointEntry{
+                                    .freq_hz = 100000000, .volt_uv = 751000},
+                                {.freq_hz = 250000000, .volt_uv = 751000},
+                                {.freq_hz = 500000000, .volt_uv = 751000},
+                                {.freq_hz = 667000000, .volt_uv = 751000},
+                                {.freq_hz = 1000000000, .volt_uv = 771000},
+                                {.freq_hz = 1200000000, .volt_uv = 771000},
+                                {.freq_hz = 1398000000, .volt_uv = 791000},
+                                {.freq_hz = 1512000000, .volt_uv = 821000},
+                                {.freq_hz = 1608000000, .volt_uv = 861000},
+                                {.freq_hz = 1704000000, .volt_uv = 891000},
+                                {.freq_hz = 1704000000, .volt_uv = 891000},
+                            },
+                        .latency = 0,
+                        .count = 11,
+                    },
+                    {
+                        .opp =
+                            {
+                                fuchsia_hardware_thermal::wire::OperatingPointEntry{
+                                    .freq_hz = 100000000, .volt_uv = 731000},
+                                {.freq_hz = 250000000, .volt_uv = 731000},
+                                {.freq_hz = 500000000, .volt_uv = 731000},
+                                {.freq_hz = 667000000, .volt_uv = 731000},
+                                {.freq_hz = 1000000000, .volt_uv = 731000},
+                                {.freq_hz = 1200000000, .volt_uv = 731000},
+                                {.freq_hz = 1398000000, .volt_uv = 761000},
+                                {.freq_hz = 1512000000, .volt_uv = 791000},
+                                {.freq_hz = 1608000000, .volt_uv = 831000},
+                                {.freq_hz = 1704000000, .volt_uv = 861000},
+                                {.freq_hz = 1896000000, .volt_uv = 1011000},
+                            },
+                        .latency = 0,
+                        .count = 11,
+                    },
                 },
-        },
 };
 
-constexpr fuchsia_hardware_thermal_ThermalDeviceInfo astro_thermal_config = {
-    .active_cooling = false,
-    .passive_cooling = true,
-    .gpu_throttling = true,
-    .num_trip_points = 7,
-    .big_little = false,
-    .critical_temp_celsius = 102.0f,
-    .trip_point_info =
-        {
-            TripPoint(0.0f, 2.0f, 10, 0, 5),
-            TripPoint(75.0f, 2.0f, 9, 0, 4),
-            TripPoint(80.0f, 2.0f, 8, 0, 3),
-            TripPoint(85.0f, 2.0f, 7, 0, 3),
-            TripPoint(90.0f, 2.0f, 6, 0, 2),
-            TripPoint(95.0f, 2.0f, 5, 0, 1),
-            TripPoint(100.0f, 2.0f, 4, 0, 0),
-            // 0 Kelvin is impossible, marks end of TripPoints
-            TripPoint(-273.15f, 2.0f, 0, 0, 0),
-        },
-    .opps =
-        {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wc99-designator"
-            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
-#pragma GCC diagnostic pop
-                {
+constexpr fuchsia_hardware_thermal::wire::ThermalDeviceInfo astro_thermal_config =
+    {
+        .active_cooling = false,
+        .passive_cooling = true,
+        .gpu_throttling = true,
+        .num_trip_points = 7,
+        .big_little = false,
+        .critical_temp_celsius = 102.0f,
+        .trip_point_info =
+            {
+                TripPoint(0.0f, 2.0f, 10, 0, 5),
+                TripPoint(75.0f, 2.0f, 9, 0, 4),
+                TripPoint(80.0f, 2.0f, 8, 0, 3),
+                TripPoint(85.0f, 2.0f, 7, 0, 3),
+                TripPoint(90.0f, 2.0f, 6, 0, 2),
+                TripPoint(95.0f, 2.0f, 5, 0, 1),
+                TripPoint(100.0f, 2.0f, 4, 0, 0),
+                // 0 Kelvin is impossible, marks end of TripPoints
+                TripPoint(-273.15f, 2.0f, 0, 0, 0),
+            },
+        .opps =
+            {
+                fuchsia_hardware_thermal::wire::OperatingPoint{
                     .opp =
                         {
-                            {.freq_hz = 100'000'000, .volt_uv = 731'000},
+                            fuchsia_hardware_thermal::wire::OperatingPointEntry{
+                                .freq_hz = 100'000'000, .volt_uv = 731'000},
                             {.freq_hz = 250'000'000, .volt_uv = 731'000},
                             {.freq_hz = 500'000'000, .volt_uv = 731'000},
                             {.freq_hz = 667'000'000, .volt_uv = 731'000},
@@ -157,10 +151,10 @@ constexpr fuchsia_hardware_thermal_ThermalDeviceInfo astro_thermal_config = {
                     .latency = 0,
                     .count = 11,
                 },
-        },
+            },
 };
 
-constexpr fuchsia_hardware_thermal_ThermalDeviceInfo nelson_thermal_config = {
+constexpr fuchsia_hardware_thermal::wire::ThermalDeviceInfo nelson_thermal_config = {
     .active_cooling = false,
     .passive_cooling = true,
     .gpu_throttling = true,
@@ -179,35 +173,32 @@ constexpr fuchsia_hardware_thermal_ThermalDeviceInfo nelson_thermal_config = {
         },
     .opps =
         {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wc99-designator"
-            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
-#pragma GCC diagnostic pop
-                {
-                    .opp =
-                        {
-                            {.freq_hz = 100'000'000, .volt_uv = 760'000},
-                            {.freq_hz = 250'000'000, .volt_uv = 760'000},
-                            {.freq_hz = 500'000'000, .volt_uv = 760'000},
-                            {.freq_hz = 667'000'000, .volt_uv = 780'000},
-                            {.freq_hz = 1'000'000'000, .volt_uv = 800'000},
-                            {.freq_hz = 1'200'000'000, .volt_uv = 810'000},
-                            {.freq_hz = 1'404'000'000, .volt_uv = 820'000},
-                            {.freq_hz = 1'512'000'000, .volt_uv = 830'000},
-                            {.freq_hz = 1'608'000'000, .volt_uv = 860'000},
-                            {.freq_hz = 1'704'000'000, .volt_uv = 900'000},
-                            {.freq_hz = 1'800'000'000, .volt_uv = 940'000},
-                            {.freq_hz = 1'908'000'000, .volt_uv = 970'000},
-                        },
-                    .latency = 0,
-                    .count = 12,
-                },
+            fuchsia_hardware_thermal::wire::OperatingPoint{
+                .opp =
+                    {
+                        fuchsia_hardware_thermal::wire::OperatingPointEntry{.freq_hz = 100'000'000,
+                                                                            .volt_uv = 760'000},
+                        {.freq_hz = 250'000'000, .volt_uv = 760'000},
+                        {.freq_hz = 500'000'000, .volt_uv = 760'000},
+                        {.freq_hz = 667'000'000, .volt_uv = 780'000},
+                        {.freq_hz = 1'000'000'000, .volt_uv = 800'000},
+                        {.freq_hz = 1'200'000'000, .volt_uv = 810'000},
+                        {.freq_hz = 1'404'000'000, .volt_uv = 820'000},
+                        {.freq_hz = 1'512'000'000, .volt_uv = 830'000},
+                        {.freq_hz = 1'608'000'000, .volt_uv = 860'000},
+                        {.freq_hz = 1'704'000'000, .volt_uv = 900'000},
+                        {.freq_hz = 1'800'000'000, .volt_uv = 940'000},
+                        {.freq_hz = 1'908'000'000, .volt_uv = 970'000},
+                    },
+                .latency = 0,
+                .count = 12,
+            },
         },
 };
 
 // Voltage Regulator
 // Copied from sherlock-thermal.cc
-static aml_thermal_info_t fake_thermal_info = {
+aml_thermal_info_t fake_thermal_info = {
     .voltage_table =
         {
             {1022000, 0},  {1011000, 3}, {1001000, 6}, {991000, 10}, {981000, 13}, {971000, 16},
@@ -221,8 +212,12 @@ static aml_thermal_info_t fake_thermal_info = {
         {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc99-designator"
-            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'000'000'000,
-            [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] = 1'200'000'000,
+            [static_cast<uint32_t>(
+                fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain)] =
+                1'000'000'000,
+            [static_cast<uint32_t>(
+                fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain)] =
+                1'200'000'000,
 #pragma GCC diagnostic pop
         },
     .voltage_pwm_period_ns = 1250,
@@ -246,7 +241,9 @@ constexpr aml_thermal_info_t nelson_thermal_info = {
         {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc99-designator"
-            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'000'000'000,
+            [static_cast<uint32_t>(
+                fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain)] =
+                1'000'000'000,
 #pragma GCC diagnostic pop
         },
     .voltage_pwm_period_ns = 1500,
@@ -474,8 +471,6 @@ class FakeAmlVoltageRegulator : public AmlVoltageRegulator {
     EXPECT_OK(test->Init(big_cluster_pwm, little_cluster_pwm, config, &fake_thermal_info));
     return test;
   }
-
-  FakeAmlVoltageRegulator() : AmlVoltageRegulator() {}
 };
 
 class AmlVoltageRegulatorTest : public zxtest::Test {
@@ -528,15 +523,18 @@ class AmlVoltageRegulatorTest : public zxtest::Test {
 
 TEST_F(AmlVoltageRegulatorTest, SherlockGetVoltageTest) {
   Create(4);
-  uint32_t val = voltage_regulator_->GetVoltage(0);
+  uint32_t val = voltage_regulator_->GetVoltage(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain);
   EXPECT_EQ(val, 891000);
-  val = voltage_regulator_->GetVoltage(1);
+  val = voltage_regulator_->GetVoltage(
+      fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain);
   EXPECT_EQ(val, 1011000);
 }
 
 TEST_F(AmlVoltageRegulatorTest, AstroGetVoltageTest) {
   Create(3);
-  uint32_t val = voltage_regulator_->GetVoltage(0);
+  uint32_t val = voltage_regulator_->GetVoltage(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain);
   EXPECT_EQ(val, 981000);
 }
 
@@ -554,8 +552,10 @@ TEST_F(AmlVoltageRegulatorTest, SherlockSetVoltageTest) {
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 86;
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  EXPECT_OK(voltage_regulator_->SetVoltage(0, 761000));
-  uint32_t val = voltage_regulator_->GetVoltage(0);
+  EXPECT_OK(voltage_regulator_->SetVoltage(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain, 761000));
+  uint32_t val = voltage_regulator_->GetVoltage(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain);
   EXPECT_EQ(val, 761000);
 
   // SetLittleClusterVoltage(911000)
@@ -567,8 +567,10 @@ TEST_F(AmlVoltageRegulatorTest, SherlockSetVoltageTest) {
   little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 36;
   little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  EXPECT_OK(voltage_regulator_->SetVoltage(1, 911000));
-  val = voltage_regulator_->GetVoltage(1);
+  EXPECT_OK(voltage_regulator_->SetVoltage(
+      fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain, 911000));
+  val = voltage_regulator_->GetVoltage(
+      fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain);
   EXPECT_EQ(val, 911000);
 }
 
@@ -584,8 +586,10 @@ TEST_F(AmlVoltageRegulatorTest, AstroSetVoltageTest) {
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 53;
   big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
-  EXPECT_OK(voltage_regulator_->SetVoltage(0, 861000));
-  uint32_t val = voltage_regulator_->GetVoltage(0);
+  EXPECT_OK(voltage_regulator_->SetVoltage(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain, 861000));
+  uint32_t val = voltage_regulator_->GetVoltage(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain);
   EXPECT_EQ(val, 861000);
 }
 
@@ -609,10 +613,9 @@ class FakeAmlCpuFrequency : public AmlCpuFrequency {
   }
 
   FakeAmlCpuFrequency(fdf::MmioBuffer hiu_mmio, mmio_buffer_t hiu_internal_mmio,
-                      const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+                      const fuchsia_hardware_thermal::wire::ThermalDeviceInfo& thermal_config,
                       const aml_thermal_info_t& thermal_info)
-      : AmlCpuFrequency(std::move(hiu_mmio), std::move(hiu_internal_mmio), thermal_config,
-                        thermal_info) {}
+      : AmlCpuFrequency(std::move(hiu_mmio), hiu_internal_mmio, thermal_config, thermal_info) {}
 };
 
 class AmlCpuFrequencyTest : public zxtest::Test {
@@ -703,17 +706,20 @@ class AmlCpuFrequencyTest : public zxtest::Test {
 TEST_F(AmlCpuFrequencyTest, SherlockGetFrequencyTest) {
   Create(4);
   InitHiuInternalMmio();
-  uint32_t val = cpufreq_scaling_->GetFrequency(0);
+  uint32_t val = cpufreq_scaling_->GetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain);
   EXPECT_EQ(val, 1000000000);
   InitHiuInternalMmio();
-  val = cpufreq_scaling_->GetFrequency(1);
+  val = cpufreq_scaling_->GetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain);
   EXPECT_EQ(val, 1000000000);
 }
 
 TEST_F(AmlCpuFrequencyTest, AstroGetFrequencyTest) {
   Create(3);
   InitHiuInternalMmio();
-  uint32_t val = cpufreq_scaling_->GetFrequency(0);
+  uint32_t val = cpufreq_scaling_->GetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain);
   EXPECT_EQ(val, 1000000000);
 }
 
@@ -723,18 +729,22 @@ TEST_F(AmlCpuFrequencyTest, SherlockSetFrequencyTest0) {
   (*mock_hiu_mmio_)[520].ExpectRead(0x00000000).ExpectRead(0x00000000);
   (*mock_hiu_mmio_)[520].ExpectRead(0x00000000).ExpectWrite(0x00350400);
   InitHiuInternalMmio();
-  EXPECT_OK(cpufreq_scaling_->SetFrequency(0, 250000000));
+  EXPECT_OK(cpufreq_scaling_->SetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain, 250000000));
   InitHiuInternalMmio();
-  uint32_t val = cpufreq_scaling_->GetFrequency(0);
+  uint32_t val = cpufreq_scaling_->GetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain);
   EXPECT_EQ(val, 250000000);
 
   // Little
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectRead(0x00000000);
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00350400);
   InitHiuInternalMmio();
-  EXPECT_OK(cpufreq_scaling_->SetFrequency(1, 250000000));
+  EXPECT_OK(cpufreq_scaling_->SetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain, 250000000));
   InitHiuInternalMmio();
-  val = cpufreq_scaling_->GetFrequency(1);
+  val = cpufreq_scaling_->GetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain);
   EXPECT_EQ(val, 250000000);
 }
 
@@ -744,9 +754,11 @@ TEST_F(AmlCpuFrequencyTest, SherlockSetFrequencyTest1) {
   (*mock_hiu_mmio_)[520].ExpectRead(0x00000000).ExpectRead(0x00000000);
   (*mock_hiu_mmio_)[520].ExpectRead(0x00000000).ExpectWrite(0x00000800);
   InitHiuInternalMmio();
-  EXPECT_OK(cpufreq_scaling_->SetFrequency(0, 1536000000));
+  EXPECT_OK(cpufreq_scaling_->SetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain, 1536000000));
   InitHiuInternalMmio();
-  uint32_t val = cpufreq_scaling_->GetFrequency(0);
+  uint32_t val = cpufreq_scaling_->GetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain);
   EXPECT_EQ(val, 1536000000);
 
   (*mock_hiu_mmio_)[520].ExpectRead(0x00000000).ExpectRead(0x00000000);
@@ -754,18 +766,22 @@ TEST_F(AmlCpuFrequencyTest, SherlockSetFrequencyTest1) {
   (*mock_hiu_mmio_)[520].ExpectRead(0x00000000).ExpectRead(0x00000000);
   (*mock_hiu_mmio_)[520].ExpectRead(0x00000000).ExpectWrite(0x00000800);
   InitHiuInternalMmio();
-  EXPECT_OK(cpufreq_scaling_->SetFrequency(0, 1494000000));
+  EXPECT_OK(cpufreq_scaling_->SetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain, 1494000000));
   InitHiuInternalMmio();
-  val = cpufreq_scaling_->GetFrequency(0);
+  val = cpufreq_scaling_->GetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain);
   EXPECT_EQ(val, 1494000000);
 
   // Little
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectRead(0x00000000);
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00000800);
   InitHiuInternalMmio();
-  EXPECT_OK(cpufreq_scaling_->SetFrequency(1, 1200000000));
+  EXPECT_OK(cpufreq_scaling_->SetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain, 1200000000));
   InitHiuInternalMmio();
-  val = cpufreq_scaling_->GetFrequency(1);
+  val = cpufreq_scaling_->GetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain);
   EXPECT_EQ(val, 1200000000);
 
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectRead(0x00000000);
@@ -773,9 +789,11 @@ TEST_F(AmlCpuFrequencyTest, SherlockSetFrequencyTest1) {
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectRead(0x00000000);
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00000800);
   InitHiuInternalMmio();
-  EXPECT_OK(cpufreq_scaling_->SetFrequency(1, 1398000000));
+  EXPECT_OK(cpufreq_scaling_->SetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain, 1398000000));
   InitHiuInternalMmio();
-  val = cpufreq_scaling_->GetFrequency(1);
+  val = cpufreq_scaling_->GetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain);
   EXPECT_EQ(val, 1398000000);
 }
 
@@ -784,9 +802,11 @@ TEST_F(AmlCpuFrequencyTest, AstroSetFrequencyTest0) {
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectRead(0x00000000);
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00350400);
   InitHiuInternalMmio();
-  EXPECT_OK(cpufreq_scaling_->SetFrequency(0, 250000000));
+  EXPECT_OK(cpufreq_scaling_->SetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain, 250000000));
   InitHiuInternalMmio();
-  uint32_t val = cpufreq_scaling_->GetFrequency(0);
+  uint32_t val = cpufreq_scaling_->GetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain);
   EXPECT_EQ(val, 250000000);
 }
 
@@ -795,9 +815,11 @@ TEST_F(AmlCpuFrequencyTest, AstroSetFrequencyTest1) {
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectRead(0x00000000);
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00000800);
   InitHiuInternalMmio();
-  EXPECT_OK(cpufreq_scaling_->SetFrequency(0, 1536000000));
+  EXPECT_OK(cpufreq_scaling_->SetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain, 1536000000));
   InitHiuInternalMmio();
-  uint32_t val = cpufreq_scaling_->GetFrequency(0);
+  uint32_t val = cpufreq_scaling_->GetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain);
   EXPECT_EQ(val, 1536000000);
 
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectRead(0x00000000);
@@ -805,9 +827,11 @@ TEST_F(AmlCpuFrequencyTest, AstroSetFrequencyTest1) {
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectRead(0x00000000);
   (*mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00000800);
   InitHiuInternalMmio();
-  EXPECT_OK(cpufreq_scaling_->SetFrequency(0, 1494000000));
+  EXPECT_OK(cpufreq_scaling_->SetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain, 1494000000));
   InitHiuInternalMmio();
-  val = cpufreq_scaling_->GetFrequency(0);
+  val = cpufreq_scaling_->GetFrequency(
+      fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain);
   EXPECT_EQ(val, 1494000000);
 }
 
@@ -844,8 +868,8 @@ class FakeAmlThermal : public AmlThermal {
 
     // CPU Frequency and Scaling
     auto cpufreq_scaling = fbl::make_unique_checked<AmlCpuFrequency>(
-        &ac, std::move(cpufreq_scaling_hiu_mmio), std::move(cpufreq_scaling_mock_hiu_internal_mmio),
-        config, fake_thermal_info);
+        &ac, std::move(cpufreq_scaling_hiu_mmio), cpufreq_scaling_mock_hiu_internal_mmio, config,
+        fake_thermal_info);
     if (!ac.check()) {
       return nullptr;
     }
@@ -859,10 +883,11 @@ class FakeAmlThermal : public AmlThermal {
 
     // SetTarget
     EXPECT_OK(test->SetTarget(config.trip_point_info[0].big_cluster_dvfs_opp,
-                              fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN));
+                              fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain));
     if (config.big_little) {
-      EXPECT_OK(test->SetTarget(config.trip_point_info[0].little_cluster_dvfs_opp,
-                                fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN));
+      EXPECT_OK(
+          test->SetTarget(config.trip_point_info[0].little_cluster_dvfs_opp,
+                          fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain));
     }
 
     return test;
@@ -873,7 +898,7 @@ class FakeAmlThermal : public AmlThermal {
   FakeAmlThermal(std::unique_ptr<thermal::AmlTSensor> tsensor,
                  std::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator,
                  std::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling,
-                 const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config)
+                 const fuchsia_hardware_thermal::wire::ThermalDeviceInfo& thermal_config)
       : AmlThermal(nullptr, std::move(tsensor), std::move(voltage_regulator),
                    std::move(cpufreq_scaling), thermal_config) {}
 };

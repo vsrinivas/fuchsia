@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
-#include <fuchsia/hardware/thermal/c/fidl.h>
+#include <fidl/fuchsia.hardware.thermal/cpp/wire.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -21,7 +21,7 @@
 namespace {
 namespace fpbus = fuchsia_hardware_platform_bus;
 
-static const std::vector<fpbus::Mmio> cpu_mmios{
+const std::vector<fpbus::Mmio> cpu_mmios{
     {{
         // AOBUS
         .base = T931_AOBUS_BASE,
@@ -30,11 +30,15 @@ static const std::vector<fpbus::Mmio> cpu_mmios{
 };
 
 constexpr amlogic_cpu::legacy_cluster_size_t cluster_sizes[] = {
-    {.pd_id = fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, .core_count = 4},
-    {.pd_id = fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, .core_count = 2},
+    {.pd_id =
+         static_cast<uint32_t>(fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain),
+     .core_count = 4},
+    {.pd_id = static_cast<uint32_t>(
+         fuchsia_hardware_thermal::wire::PowerDomain::kLittleClusterPowerDomain),
+     .core_count = 2},
 };
 
-static const std::vector<fpbus::Metadata> cpu_metadata{
+const std::vector<fpbus::Metadata> cpu_metadata{
     {{
         .type = DEVICE_METADATA_CLUSTER_SIZE_LEGACY,
         .data = std::vector<uint8_t>(
@@ -43,7 +47,7 @@ static const std::vector<fpbus::Metadata> cpu_metadata{
     }},
 };
 
-static const fpbus::Node cpu_dev = []() {
+const fpbus::Node cpu_dev = []() {
   fpbus::Node result = {};
   result.name() = "aml-cpu";
   result.vid() = PDEV_VID_GOOGLE;

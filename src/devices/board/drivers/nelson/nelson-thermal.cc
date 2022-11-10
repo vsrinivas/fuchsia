@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
-#include <fuchsia/hardware/thermal/c/fidl.h>
+#include <fidl/fuchsia.hardware.thermal/cpp/wire.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -55,10 +55,10 @@ static const std::vector<fpbus::Smc> thermal_smcs{
     }},
 };
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
-                                                                    float hysteresis_c,
-                                                                    uint16_t cpu_opp,
-                                                                    uint16_t gpu_opp) {
+constexpr fuchsia_hardware_thermal::wire::ThermalTemperatureInfo TripPoint(float temp_c,
+                                                                           float hysteresis_c,
+                                                                           uint16_t cpu_opp,
+                                                                           uint16_t gpu_opp) {
   return {
       .up_temp_celsius = temp_c + hysteresis_c,
       .down_temp_celsius = temp_c - hysteresis_c,
@@ -78,7 +78,7 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
  * 4 - 800 MHz
  * 5 - 846 MHz
  */
-static const fuchsia_hardware_thermal_ThermalDeviceInfo nelson_config = {
+static const fuchsia_hardware_thermal::wire::ThermalDeviceInfo nelson_config = {
     .active_cooling = false,
     .passive_cooling = true,
     .gpu_throttling = true,
@@ -128,7 +128,9 @@ static const aml_thermal_info_t aml_thermal_info = {
         {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc99-designator"
-            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'200'000'000,
+            [static_cast<uint32_t>(
+                fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain)] =
+                1'200'000'000,
 #pragma GCC diagnostic pop
         },
     .voltage_pwm_period_ns = 1500,
@@ -136,13 +138,15 @@ static const aml_thermal_info_t aml_thermal_info = {
         {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc99-designator"
-            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
+            [static_cast<uint32_t>(
+                fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain)] =
 #pragma GCC diagnostic pop
                 {
                     {
                         .opp =
                             {
-                                {.freq_hz = 100'000'000, .volt_uv = 760'000},
+                                fuchsia_hardware_thermal::wire::OperatingPointEntry{
+                                    .freq_hz = 100'000'000, .volt_uv = 760'000},
                                 {.freq_hz = 250'000'000, .volt_uv = 760'000},
                                 {.freq_hz = 500'000'000, .volt_uv = 760'000},
                                 {.freq_hz = 667'000'000, .volt_uv = 780'000},
@@ -161,7 +165,8 @@ static const aml_thermal_info_t aml_thermal_info = {
                     {
                         .opp =
                             {
-                                {.freq_hz = 100'000'000, .volt_uv = 760'000},
+                                fuchsia_hardware_thermal::wire::OperatingPointEntry{
+                                    .freq_hz = 100'000'000, .volt_uv = 760'000},
                                 {.freq_hz = 250'000'000, .volt_uv = 760'000},
                                 {.freq_hz = 500'000'000, .volt_uv = 760'000},
                                 {.freq_hz = 667'000'000, .volt_uv = 780'000},
@@ -180,7 +185,8 @@ static const aml_thermal_info_t aml_thermal_info = {
                     {
                         .opp =
                             {
-                                {.freq_hz = 100'000'000, .volt_uv = 760'000},
+                                fuchsia_hardware_thermal::wire::OperatingPointEntry{
+                                    .freq_hz = 100'000'000, .volt_uv = 760'000},
                                 {.freq_hz = 250'000'000, .volt_uv = 760'000},
                                 {.freq_hz = 500'000'000, .volt_uv = 760'000},
                                 {.freq_hz = 667'000'000, .volt_uv = 780'000},
@@ -202,7 +208,8 @@ static const aml_thermal_info_t aml_thermal_info = {
         {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc99-designator"
-            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 0,
+            [static_cast<uint32_t>(
+                fuchsia_hardware_thermal::wire::PowerDomain::kBigClusterPowerDomain)] = 0,
 #pragma GCC diagnostic pop
         },
 };

@@ -14,7 +14,6 @@
 #include <soc/aml-common/aml-thermal.h>
 
 #include "av400.h"
-#include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace av400 {
 namespace fpbus = fuchsia_hardware_platform_bus;
@@ -43,10 +42,10 @@ static const std::vector<fpbus::Irq> thermal_pll_irqs{
     }},
 };
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
-                                                                    uint16_t cpu_opp_big,
-                                                                    uint16_t cpu_opp_little,
-                                                                    uint16_t gpu_opp) {
+constexpr fuchsia_hardware_thermal::wire::ThermalTemperatureInfo TripPoint(float temp_c,
+                                                                           uint16_t cpu_opp_big,
+                                                                           uint16_t cpu_opp_little,
+                                                                           uint16_t gpu_opp) {
   constexpr float kHysteresis = 2.0f;
 
   return {
@@ -59,7 +58,7 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
   };
 }
 
-static constexpr fuchsia_hardware_thermal_ThermalDeviceInfo thermal_pll_config = {
+static constexpr fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_pll_config = {
     .active_cooling = false,
     .passive_cooling = true,
     .gpu_throttling = true,

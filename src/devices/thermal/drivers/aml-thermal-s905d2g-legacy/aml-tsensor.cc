@@ -35,7 +35,7 @@ constexpr int32_t kCalD_ = 9411;
 
 }  // namespace
 
-zx_status_t AmlTSensor::NotifyThermalDaemon() {
+zx_status_t AmlTSensor::NotifyThermalDaemon() const {
   zx_port_packet_t thermal_port_packet;
   thermal_port_packet.key = current_trip_idx_;
   thermal_port_packet.type = ZX_PKT_TYPE_USER;
@@ -98,7 +98,7 @@ int AmlTSensor::TripPointIrqHandler() {
   }
 
   while (running_.load()) {
-    status = tsensor_irq_.wait(NULL);
+    status = tsensor_irq_.wait(nullptr);
     if (status != ZX_OK) {
       return status;
     }
@@ -259,7 +259,7 @@ zx_status_t AmlTSensor::InitTripPoints() {
 
 // Tsensor treats temperature as a mapped temperature code.
 // The temperature is converted differently depending on the calibration type.
-uint32_t AmlTSensor::TempCelsiusToCode(float temp_c, bool trend) {
+uint32_t AmlTSensor::TempCelsiusToCode(float temp_c, bool trend) const {
   int32_t temp_decicelsius = static_cast<int32_t>(std::round(temp_c * 10.0f));
   int64_t sensor_code;
   uint32_t reg_code;
@@ -289,7 +289,7 @@ uint32_t AmlTSensor::TempCelsiusToCode(float temp_c, bool trend) {
 
 // Calculate a temperature value from a temperature code.
 // The unit of the temperature is degree Celsius.
-float AmlTSensor::CodeToTempCelsius(uint32_t temp_code) {
+float AmlTSensor::CodeToTempCelsius(uint32_t temp_code) const {
   uint32_t sensor_temp = temp_code;
   uint32_t uefuse = trim_info_ & 0xffff;
 
@@ -324,9 +324,8 @@ float AmlTSensor::ReadTemperatureCelsius() {
   }
   if (count == 0) {
     return 0;
-  } else {
-    return CodeToTempCelsius(value_all / count);
   }
+  return CodeToTempCelsius(value_all / count);
 }
 
 void AmlTSensor::SetRebootTemperatureCelsius(float temp_c) {
@@ -340,12 +339,12 @@ void AmlTSensor::SetRebootTemperatureCelsius(float temp_c) {
       .WriteTo(&*pll_mmio_);
 }
 
-zx_status_t AmlTSensor::GetStateChangePort(zx_handle_t* port) {
+zx_status_t AmlTSensor::GetStateChangePort(zx_handle_t* port) const {
   return zx_handle_duplicate(port_, ZX_RIGHT_SAME_RIGHTS, port);
 }
 
 zx_status_t AmlTSensor::Create(zx_device_t* parent,
-                               fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config) {
+                               fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config) {
   auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "aml-voltage: failed to get pdev protocol");
@@ -381,9 +380,11 @@ zx_status_t AmlTSensor::Create(zx_device_t* parent,
   return InitSensor(thermal_config);
 }
 
-zx_status_t AmlTSensor::InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config) {
+zx_status_t AmlTSensor::InitSensor(
+    fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config) {
   // Copy the thermal_config
-  memcpy(&thermal_config_, &thermal_config, sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo));
+  memcpy(&thermal_config_, &thermal_config,
+         sizeof(fuchsia_hardware_thermal::wire::ThermalDeviceInfo));
 
   // Get the trim info.
   trim_info_ = trim_mmio_->Read32(0);
@@ -421,7 +422,7 @@ AmlTSensor::~AmlTSensor() {
   running_.store(false);
   tsensor_irq_.destroy();
   if (irq_thread_) {
-    thrd_join(*irq_thread_, NULL);
+    thrd_join(*irq_thread_, nullptr);
   }
 }
 
