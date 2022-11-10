@@ -3,17 +3,19 @@
 // found in the LICENSE file.
 use {
     async_utils::hanging_get::server::{HangingGet, Publisher},
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_identity_authentication::{
-        Empty, Error as ApiError, TestAuthenticatorCondition, TestInteractionRequest,
-        TestInteractionRequestStream, TestInteractionWatchStateResponder,
+        Empty, Error as ApiError, TestAuthenticatorCondition, TestInteractionMarker,
+        TestInteractionRequest, TestInteractionRequestStream, TestInteractionWatchStateResponder,
         TestInteractionWatchStateResponse,
     },
-    futures::TryStreamExt,
-    std::cell::RefCell,
+    futures::{lock::Mutex, TryStreamExt},
+    std::sync::Arc,
     tracing::warn,
 };
-type NotifyFn =
-    Box<dyn Fn(&TestInteractionWatchStateResponse, TestInteractionWatchStateResponder) -> bool>;
+type NotifyFn = Box<
+    dyn Fn(&TestInteractionWatchStateResponse, TestInteractionWatchStateResponder) -> bool + Send,
+>;
 type StateHangingGet =
     HangingGet<TestInteractionWatchStateResponse, TestInteractionWatchStateResponder, NotifyFn>;
 #[allow(dead_code)] // Unused for now since we only have a single state which we don't update.
@@ -21,20 +23,36 @@ type StatePublisher =
     Publisher<TestInteractionWatchStateResponse, TestInteractionWatchStateResponder, NotifyFn>;
 
 #[allow(dead_code)]
+/// Implement the fuchsia.identity.authentication.TestInteraction protocol.
+/// We can call SetSuccess() to pre-determine if the authentication should
+/// succeed or fail when it is not called. Enrollment always completes
+/// immediately and successfully.
 pub struct TestInteraction {
     /// Hanging get broker that requires mutability.
-    state_hanging_get: RefCell<StateHangingGet>,
+    state_hanging_get: Arc<Mutex<StateHangingGet>>,
 }
 
 impl TestInteraction {
     #[allow(dead_code)]
+    /// Creates a new TestInteraction object which will handle TestInteractionRequests
+    /// and return whether the authenticate operation should succeed based on
+    /// whether SetSuccess() was called or not.
+    pub async fn start(server_end: ServerEnd<TestInteractionMarker>) -> Result<bool, ApiError> {
+        let test_interaction = Self::new();
+        let stream = server_end.into_stream().map_err(|err| {
+            warn!("Failed to convert TestInteraction to stream: {:?}", err);
+            ApiError::Resource
+        })?;
+        test_interaction.handle_requests_from_stream(stream).await
+    }
+
     /// Creates a new TestInteraction handler.
     fn new() -> Self {
         let initial_state = TestInteractionWatchStateResponse::Waiting(vec![
             TestAuthenticatorCondition::SetSuccess(Empty),
         ]);
         let hanging_get = Self::create_hanging_get_broker(initial_state);
-        Self { state_hanging_get: RefCell::new(hanging_get) }
+        Self { state_hanging_get: Arc::new(Mutex::new(hanging_get)) }
     }
 
     fn create_hanging_get_broker(
@@ -57,7 +75,6 @@ impl TestInteraction {
         StateHangingGet::new(initial_state, notify_fn)
     }
 
-    #[allow(dead_code)]
     /// Asynchronously handles the supplied stream of `TestInteractionRequestStream` messages.
     /// Returns a `bool` which specifies whether authentication/enroll request
     /// made on the fuchsia.identity.authentication.StorageUnlockMechanism channel
@@ -75,7 +92,7 @@ impl TestInteraction {
                     return Ok(true);
                 }
                 TestInteractionRequest::WatchState { responder } => {
-                    let subscriber = self.state_hanging_get.borrow_mut().new_subscriber();
+                    let subscriber = self.state_hanging_get.lock().await.new_subscriber();
                     subscriber.register(responder).map_err(|err| {
                         warn!(
                             "Failed to register new TestInteractionWatchState subscriber: {:?}",
@@ -93,10 +110,8 @@ impl TestInteraction {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        fidl::endpoints::create_proxy,
-        fidl_fuchsia_identity_authentication::{TestInteractionMarker, TestInteractionProxy},
-        fuchsia_async::Task,
+        super::*, fidl::endpoints::create_proxy,
+        fidl_fuchsia_identity_authentication::TestInteractionProxy, fuchsia_async::Task,
     };
 
     fn make_proxy() -> (TestInteractionProxy, Task<bool>) {

@@ -11,6 +11,7 @@ use {
     fuchsia_zircon::{self as zx, Clock},
     futures::prelude::*,
     lazy_static::lazy_static,
+    tracing::warn,
 };
 
 type EnrollmentData = Vec<u8>;
@@ -74,41 +75,55 @@ impl StorageUnlockMechanism {
         mut stream: StorageUnlockMechanismRequestStream,
     ) -> Result<(), fidl::Error> {
         while let Some(request) = stream.try_next().await? {
-            self.handle_request(request)?;
+            self.handle_request(request).await?;
         }
         Ok(())
     }
 
     /// Asynchronously handle a fidl request.
-    fn handle_request(&self, request: StorageUnlockMechanismRequest) -> Result<(), fidl::Error> {
+    async fn handle_request(
+        &self,
+        request: StorageUnlockMechanismRequest,
+    ) -> Result<(), fidl::Error> {
         match request {
             StorageUnlockMechanismRequest::Authenticate { interaction, enrollments, responder } => {
-                responder.send(&mut self.authenticate(interaction, enrollments))
+                let mut response = self.authenticate(interaction, enrollments).await;
+                responder.send(&mut response)
             }
             StorageUnlockMechanismRequest::Enroll { interaction, responder } => {
-                responder.send(&mut self.enroll(interaction))
+                let mut response = self.enroll(interaction).await;
+                responder.send(&mut response)
             }
         }
     }
 
     /// Implementation of `authenticate` fidl method.
-    fn authenticate(
+    async fn authenticate(
         &self,
-        _interaction: InteractionProtocolServerEnd,
+        interaction: InteractionProtocolServerEnd,
         enrollments: Vec<Enrollment>,
     ) -> Result<AttemptedEvent, ApiError> {
-        // TODO(fxbug.dev/104199): Verify interaction matches the test authentication mechanism and
-        // wait for a command on the interaction channel to determine the outcome of authentication.
+        // Return either the correct or incorrect prekey based on the enrollment mode.
+        let prekey_material = match interaction {
+            InteractionProtocolServerEnd::Test(_) => {
+                // TODO(fxbug.dev/104199): Verify interaction matches the test
+                // authentication mechanism and wait for a command on the
+                // interaction channel to determine the outcome of authentication.
+                match self.mode {
+                    Mode::AlwaysSucceed => MAGIC_PREKEY.clone(),
+                    Mode::AlwaysFailAuthentication => NOT_MAGIC_PREKEY.clone(),
+                }
+            }
+            _ => {
+                warn!("Unsupported InteractionProtocolServerEnd: Only Test is supported");
+                return Err(ApiError::InvalidRequest);
+            }
+        };
 
         // Take the ID of the first enrollment.
         let enrollment = enrollments.into_iter().next().ok_or(ApiError::InvalidRequest)?;
         let Enrollment { id, .. } = enrollment;
 
-        // Return either the correct or incorrect prekey based on the enrollment mode.
-        let prekey_material = match self.mode {
-            Mode::AlwaysSucceed => MAGIC_PREKEY.clone(),
-            Mode::AlwaysFailAuthentication => NOT_MAGIC_PREKEY.clone(),
-        };
         Ok(AttemptedEvent {
             timestamp: self.read_clock(),
             enrollment_id: Some(id),
@@ -119,14 +134,18 @@ impl StorageUnlockMechanism {
     }
 
     /// Implementation of `enroll` fidl method.
-    fn enroll(
+    async fn enroll(
         &self,
-        _interaction: InteractionProtocolServerEnd,
+        interaction: InteractionProtocolServerEnd,
     ) -> Result<(EnrollmentData, PrekeyMaterial), ApiError> {
         // TODO(fxbug.dev/104199): Verify interaction matches the test authentication mechanism.
-        match self.mode {
-            Mode::AlwaysSucceed | Mode::AlwaysFailAuthentication => {
+        match interaction {
+            InteractionProtocolServerEnd::Test(_) => {
                 Ok((FIXED_ENROLLMENT_DATA.clone(), MAGIC_PREKEY.clone()))
+            }
+            _ => {
+                warn!("Unsupported InteractionProtocolServerEnd: Only Test is supported");
+                Err(ApiError::InvalidRequest)
             }
         }
     }
@@ -147,6 +166,11 @@ mod test {
     fn create_test_interaction_protocol() -> InteractionProtocolServerEnd {
         let (_, server_end) = create_endpoints().unwrap();
         InteractionProtocolServerEnd::Test(server_end)
+    }
+
+    fn create_password_interaction_protocol() -> InteractionProtocolServerEnd {
+        let (_, server_end) = create_endpoints().unwrap();
+        InteractionProtocolServerEnd::Password(server_end)
     }
 
     async fn run_proxy_test<Fn, Fut>(mode: Mode, test_fn: Fn)
@@ -233,6 +257,37 @@ mod test {
             assert_ne!(prekey_material, Some(MAGIC_PREKEY.clone()));
             assert!(updated_enrollment_data.is_none());
             assert_eq!(enrollment_id, Some(TEST_ENROLLMENT_ID));
+            Ok(())
+        })
+        .await
+    }
+
+    #[fuchsia::test(allow_stalls = false)]
+    async fn password_ipse_fail_enrollment_and_authentication() {
+        run_proxy_test(Mode::AlwaysFailAuthentication, |proxy| async move {
+            // Fail Enrollment since it only supports Test IPSE.
+            assert_eq!(
+                proxy.enroll(&mut create_password_interaction_protocol()).await?,
+                Err(ApiError::InvalidRequest)
+            );
+
+            let (enrollment_data, enrollment_prekey) =
+                proxy.enroll(&mut create_test_interaction_protocol()).await?.unwrap();
+
+            let enrollment = Enrollment { id: TEST_ENROLLMENT_ID, data: enrollment_data.clone() };
+            assert_eq!(enrollment_prekey, MAGIC_PREKEY.clone());
+
+            // Fail authentication since it only supports Test IPSE.
+            assert_eq!(
+                proxy
+                    .authenticate(
+                        &mut create_password_interaction_protocol(),
+                        &mut vec![enrollment].iter_mut(),
+                    )
+                    .await?,
+                Err(ApiError::InvalidRequest)
+            );
+
             Ok(())
         })
         .await

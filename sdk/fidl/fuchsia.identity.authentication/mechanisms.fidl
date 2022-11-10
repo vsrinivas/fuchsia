@@ -104,8 +104,8 @@ type PasswordError = flexible union {
 /// authentication is complete.
 ///
 /// Enrollment always completes immediately and successfully without any action
-/// from the client. Authentication either successfully when the client calls
-/// `SetSuccess` or fails when the client calls `SetFailure`.
+/// from the client. Authentication completes successfully when the client calls
+/// SetSuccess.
 protocol TestInteraction {
     /// (authentication) Causes this test authenticator to immediately succeed.
     SetSuccess();
