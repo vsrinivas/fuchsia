@@ -9,8 +9,10 @@ package fidlconv
 import (
 	"fmt"
 	"syscall/zx"
+	"time"
 
 	"fidl/fuchsia/net"
+	interfacesadmin "fidl/fuchsia/net/interfaces/admin"
 	"fidl/fuchsia/net/multicast/admin"
 	"fidl/fuchsia/net/stack"
 
@@ -240,6 +242,10 @@ func ToZxTime(t tcpip.MonotonicTime) zx.Time {
 	return zx.Time(t.Sub(tcpip.MonotonicTime{}))
 }
 
+func ToTCPIPMonotonicTime(zxtime zx.Time) tcpip.MonotonicTime {
+	return tcpip.MonotonicTime{}.Add(time.Duration(zxtime))
+}
+
 func BytesToAddressDroppingUnspecified(b []uint8) tcpip.Address {
 	for _, e := range b {
 		if e != 0 {
@@ -274,4 +280,38 @@ func ToTcpIpAddressDroppingUnspecifiedv4(fidl net.Ipv4Address) tcpip.Address {
 
 func ToTcpIpAddressDroppingUnspecifiedv6(fidl net.Ipv6Address) tcpip.Address {
 	return BytesToAddressDroppingUnspecified(fidl.Addr[:])
+}
+
+func ToAddressAssignmentState(state tcpipstack.AddressAssignmentState) interfacesadmin.AddressAssignmentState {
+	switch state {
+	case tcpipstack.AddressDisabled:
+		return interfacesadmin.AddressAssignmentStateUnavailable
+	case tcpipstack.AddressAssigned:
+		return interfacesadmin.AddressAssignmentStateAssigned
+	case tcpipstack.AddressTentative:
+		return interfacesadmin.AddressAssignmentStateTentative
+	default:
+		panic(fmt.Errorf("unknown address assignment state: %d", state))
+	}
+}
+
+func ToAddressRemovalReason(reason tcpipstack.AddressRemovalReason) interfacesadmin.AddressRemovalReason {
+	switch reason {
+	case tcpipstack.AddressRemovalDADFailed:
+		return interfacesadmin.AddressRemovalReasonDadFailed
+	case tcpipstack.AddressRemovalInterfaceRemoved:
+		return interfacesadmin.AddressRemovalReasonInterfaceRemoved
+	case tcpipstack.AddressRemovalManualAction:
+		return interfacesadmin.AddressRemovalReasonUserRemoved
+	// TODO(https://fxbug.dev/113923): When invalidation for all addresses are
+	// handled in-stack, change this to return an appropriate FIDL variant instead
+	// of panicking.
+	// The invalidated removal reason is only returned for addresses auto-generated
+	// within the stack, and cannot be returned for addresses added via
+	// fuchsia.net.interfaces.admin/Control.AddAddress.
+	case tcpipstack.AddressRemovalInvalidated:
+		panic("unexpected address removal due to invalidation")
+	default:
+		panic(fmt.Errorf("unknown address removal reason: %d", reason))
+	}
 }

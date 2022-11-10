@@ -16,8 +16,8 @@ import (
 	"syscall/zx"
 	"syscall/zx/fidl"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -49,6 +49,10 @@ func initialProperties(ifs *ifState, name string) interfaces.Properties {
 	p.SetAddresses([]interfaces.Address{})
 
 	return p
+}
+
+func hasAllSecondaryProperties(addr interfaces.Address) bool {
+	return addr.HasValidUntil() && addr.HasPreferredLifetimeInfo()
 }
 
 var _ interfaces.WatcherWithCtx = (*interfaceWatcherImpl)(nil)
@@ -242,45 +246,85 @@ var _ interfaceEvent = (*defaultRouteChanged)(nil)
 
 func (defaultRouteChanged) isInterfaceEvent() {}
 
-type addressAdded struct {
-	nicid  tcpip.NICID
-	subnet net.Subnet
-	// TODO(https://fxbug.dev/97731): Remove this once address assignment
-	// state is tracked.
+type addressProperties struct {
+	lifetimes stack.AddressLifetimes
+	state     stack.AddressAssignmentState
+}
+
+func diffAddressProperties(properties1, properties2 addressProperties) interfaces.AddressPropertiesInterest {
+	var bitflag interfaces.AddressPropertiesInterest
+	if properties1.lifetimes.ValidUntil != properties2.lifetimes.ValidUntil {
+		bitflag |= interfaces.AddressPropertiesInterestValidUntil
+	}
+	if properties1.lifetimes.Deprecated != properties2.lifetimes.Deprecated ||
+		properties1.lifetimes.PreferredUntil != properties2.lifetimes.PreferredUntil {
+		bitflag |= interfaces.AddressPropertiesInterestPreferredLifetimeInfo
+	}
+	return bitflag
+}
+
+// isAddressVisible returns whether an address should be visible to clients.
+//
+// Returns true iff the address is IPv4 or the address is IPv6 and assigned.
+// In particular, IPv6 addresses are not visible to clients while the interface
+// they are assigned to is offline, or they are tentative (yet to pass DAD).
+//
+// TODO(https://fxbug.dev/113056): Expose the address assignment state via
+// the API directly instead of hiding addresses in disabled/tentative state.
+func isAddressVisible(state stack.AddressAssignmentState) bool {
+	switch state {
+	case stack.AddressAssigned:
+		return true
+	case stack.AddressDisabled, stack.AddressTentative:
+		return false
+	default:
+		panic(fmt.Sprintf("unknown address assignment state: %d", state))
+	}
+}
+
+type interfaceProperties struct {
+	interfaces.Properties
+	// addresses stores address properties that come from the gVisor stack.
 	//
-	// If true, receiver should panic if this event contains an address that
-	// already exists.
-	strict bool
+	// It is necessary to track these properties separately because IPv6
+	// addresses in disabled or tentative state are hidden from clients
+	// so such addresses are not present in the embedded Properties and
+	// need to have their properties stored here.
+	addresses map[tcpip.ProtocolAddress]addressProperties
 }
 
-var _ interfaceEvent = (*addressAdded)(nil)
+func addressMapToSlice(addressMap map[tcpip.ProtocolAddress]addressProperties) []interfaces.Address {
+	var addressSlice []interfaces.Address
+	for protocolAddr, properties := range addressMap {
+		if isAddressVisible(properties.state) {
+			var addr interfaces.Address
+			addr.SetAddr(fidlconv.ToNetSubnet(protocolAddr.AddressWithPrefix))
+			addr.SetValidUntil(int64(toZxTimeInfiniteIfZero(properties.lifetimes.ValidUntil)))
+			info := func() interfaces.PreferredLifetimeInfo {
+				if properties.lifetimes.Deprecated {
+					return interfaces.PreferredLifetimeInfoWithDeprecated(interfaces.Empty{})
+				} else {
+					return interfaces.PreferredLifetimeInfoWithPreferredUntil(int64(toZxTimeInfiniteIfZero(properties.lifetimes.PreferredUntil)))
+				}
+			}()
+			addr.SetPreferredLifetimeInfo(info)
 
-func (addressAdded) isInterfaceEvent() {}
+			addressSlice = append(addressSlice, addr)
+		}
+	}
 
-type addressRemoved struct {
-	nicid  tcpip.NICID
-	subnet net.Subnet
-	// TODO(https://fxbug.dev/97731): Remove this once address assignment
-	// state is tracked.
-	//
-	// If true, receiver should panic if this event contains an address that
-	// doesn't exist.
-	strict bool
+	sort.Slice(addressSlice, func(i, j int) bool {
+		return cmpSubnet(addressSlice[i].GetAddr(), addressSlice[j].GetAddr()) <= 0
+	})
+	return addressSlice
 }
 
-var _ interfaceEvent = (*addressRemoved)(nil)
-
-func (addressRemoved) isInterfaceEvent() {}
-
-type validUntilChanged struct {
-	nicid      tcpip.NICID
-	subnet     net.Subnet
-	validUntil time.Time
+func toZxTimeInfiniteIfZero(t tcpip.MonotonicTime) zx.Time {
+	if t == (tcpip.MonotonicTime{}) {
+		return zx.TimensecInfinite
+	}
+	return fidlconv.ToZxTime(t)
 }
-
-var _ interfaceEvent = (*validUntilChanged)(nil)
-
-func (validUntilChanged) isInterfaceEvent() {}
 
 type fidlInterfaceWatcherStats struct {
 	count atomic.Int64
@@ -292,8 +336,15 @@ func interfaceWatcherEventLoop(
 	watcherChan <-chan interfaceWatcherRequest,
 	fidlInterfaceWatcherStats *fidlInterfaceWatcherStats,
 ) {
+	if eventChan == nil {
+		panic("cannot start interface watcher event loop with nil interface event channel")
+	}
+	if watcherChan == nil {
+		panic("cannot start interface watcher event loop with nil watcher channel")
+	}
+
 	watchers := make(map[*interfaceWatcherImpl]struct{})
-	propertiesMap := make(map[tcpip.NICID]interfaces.Properties)
+	propertiesMap := make(map[tcpip.NICID]interfaceProperties)
 	watcherClosedChan := make(chan *interfaceWatcherImpl)
 	watcherClosedFn := func(closedWatcher *interfaceWatcherImpl) {
 		delete(watchers, closedWatcher)
@@ -330,7 +381,10 @@ func interfaceWatcherEventLoop(
 				if properties, ok := propertiesMap[nicid]; ok {
 					panic(fmt.Sprintf("interface %#v already exists but duplicate added event received: %#v", properties, event))
 				}
-				propertiesMap[nicid] = added
+				propertiesMap[nicid] = interfaceProperties{
+					Properties: added,
+					addresses:  make(map[tcpip.ProtocolAddress]addressProperties),
+				}
 				for w := range watchers {
 					properties := added
 					// Since added interfaces must not have any addresses, explicitly set
@@ -400,92 +454,58 @@ func interfaceWatcherEventLoop(
 				for w := range watchers {
 					w.onEvent(interfaces.EventWithChanged(changes))
 				}
-			case addressAdded:
+			case addressChanged:
 				properties, ok := propertiesMap[event.nicid]
-				// TODO(https://fxbug.dev/95468): Change to panic once interface properties
-				// are guaranteed to not change after an interface is removed.
 				if !ok {
-					_ = syslog.WarnTf(watcherProtocolName, "address added event for unknown interface: %#v", event)
-					break
+					panic(fmt.Sprintf("address changed event for unknown interface: %#v", event))
 				}
-				addresses := properties.GetAddresses()
-				// Addresses are sorted by subnet.
-				i := sort.Search(len(addresses), func(i int) bool {
-					return cmpSubnet(event.subnet, addresses[i].GetAddr()) <= 0
-				})
-				if i < len(addresses) && cmpSubnet(event.subnet, addresses[i].GetAddr()) == 0 {
-					// TODO(https://fxbug.dev/97731): Panic if we receive duplicate DAD success
-					// within the same link once address assignment state is tracked.
-					if event.strict {
-						panic(fmt.Sprintf("duplicate address added event: %#v", event))
-					} else {
-						_ = syslog.WarnTf(watcherProtocolName, "address added event for already-assigned address: %#v", event)
-						break
-					}
-				}
-				addresses = append(addresses, interfaces.Address{})
-				copy(addresses[i+1:], addresses[i:])
-				newAddr := &addresses[i]
-				newAddr.SetAddr(event.subnet)
-				newAddr.SetValidUntil(int64(zx.TimensecInfinite))
+				nextProperties := addressProperties{state: event.state, lifetimes: event.lifetimes}
+				prevProperties, found := properties.addresses[event.protocolAddr]
+				properties.addresses[event.protocolAddr] = nextProperties
+				addresses := addressMapToSlice(properties.addresses)
 				properties.SetAddresses(addresses)
 				propertiesMap[event.nicid] = properties
 
+				propertyChangedBitflag, addedOrRemoved := func() (interfaces.AddressPropertiesInterest, bool) {
+					nextVisible := isAddressVisible(event.state)
+					if found {
+						if prevProperties == nextProperties {
+							return interfaces.AddressPropertiesInterest(0), false
+						}
+						if prevVisible := isAddressVisible(prevProperties.state); prevVisible != nextVisible {
+							return interfaces.AddressPropertiesInterest(0), true
+						} else {
+							return diffAddressProperties(prevProperties, nextProperties), false
+						}
+					} else {
+						return interfaces.AddressPropertiesInterest(0), isAddressVisible(event.state)
+					}
+				}()
+				if propertyChangedBitflag == 0 && !addedOrRemoved {
+					break
+				}
 				for w := range watchers {
-					w.onAddressesChanged(event.nicid, addresses, true /* addedOrRemoved */, 0)
+					w.onAddressesChanged(event.nicid, addresses, addedOrRemoved, propertyChangedBitflag)
 				}
 			case addressRemoved:
 				properties, ok := propertiesMap[event.nicid]
-				// TODO(https://fxbug.dev/95468): Change to panic once interface properties
-				// are guaranteed to not change after an interface is removed.
 				if !ok {
-					_ = syslog.WarnTf(watcherProtocolName, "address removed event for unknown interface: %#v", event)
-					break
+					panic(fmt.Sprintf("address removed event for unknown interface: %#v", event))
 				}
-				addresses := properties.GetAddresses()
-				// Addresses are sorted by subnet.
-				i := sort.Search(len(addresses), func(i int) bool {
-					return cmpSubnet(event.subnet, addresses[i].GetAddr()) <= 0
-				})
-				if i == len(addresses) || cmpSubnet(event.subnet, addresses[i].GetAddr()) != 0 {
-					// TODO(https://fxbug.dev/97731): Panic when the address being removed
-					// isn't assigned or tentative when `event.strict` is true.
-					_ = syslog.WarnTf(watcherProtocolName, "address removed event for non-existent address: %#v", event)
-					break
+				addrProperties, ok := properties.addresses[event.protocolAddr]
+				if !ok {
+					panic(fmt.Sprintf("address removed event for unknown address: %#v", event))
 				}
-				addresses = append(addresses[:i], addresses[i+1:]...)
+				delete(properties.addresses, event.protocolAddr)
+				addresses := addressMapToSlice(properties.addresses)
 				properties.SetAddresses(addresses)
 				propertiesMap[event.nicid] = properties
 
+				if !isAddressVisible(addrProperties.state) {
+					break
+				}
 				for w := range watchers {
-					w.onAddressesChanged(event.nicid, addresses, true /* addedOrRemoved */, 0)
-				}
-			case validUntilChanged:
-				properties, ok := propertiesMap[event.nicid]
-				// TODO(https://fxbug.dev/95468): Change to panic once interface properties
-				// are guaranteed to not change after an interface is removed.
-				if !ok {
-					_ = syslog.WarnTf(watcherProtocolName, "address validUntil changed event for unknown interface: %#v", event)
-					break
-				}
-				addresses := properties.GetAddresses()
-				// Addresses are sorted by subnet.
-				i := sort.Search(len(addresses), func(i int) bool {
-					return cmpSubnet(event.subnet, addresses[i].GetAddr()) <= 0
-				})
-				if i == len(addresses) || cmpSubnet(event.subnet, addresses[i].GetAddr()) != 0 {
-					// TODO(https://fxbug.dev/96130): Change this to panic once DHCPv4 client
-					// is guaranteed to not send this event if the address is missing.
-					_ = syslog.ErrorTf(watcherProtocolName, "validUntil changed event for non-existent address: %#v", event)
-					break
-				}
-
-				if time.Monotonic(addresses[i].GetValidUntil()) != event.validUntil {
-					addresses[i].SetValidUntil(event.validUntil.MonotonicNano())
-
-					for w := range watchers {
-						w.onAddressesChanged(event.nicid, addresses, false /* addedOrRemoved */, interfaces.AddressPropertiesInterestValidUntil)
-					}
+					w.onAddressesChanged(event.nicid, addresses, true /* addedOrRemoved */, interfaces.AddressPropertiesInterest(0))
 				}
 			}
 		case watcher := <-watcherChan:
@@ -501,6 +521,7 @@ func interfaceWatcherEventLoop(
 				// Filtering address properties returns a deep copy of the
 				// addresses so that updates to the current interface state
 				// don't accidentally change enqueued events.
+				properties := properties.Properties
 				properties.SetAddresses(impl.filterAddressProperties(properties.GetAddresses()))
 				impl.onEvent(interfaces.EventWithExisting(properties))
 			}

@@ -10,6 +10,7 @@ use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_netemul_network as fnetemul_network;
 use fuchsia_async::{self as fasync, TimeoutExt as _};
+use fuchsia_zircon as zx;
 use fuchsia_zircon_status as zx_status;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip_v6, std_socket_addr};
@@ -114,6 +115,81 @@ async fn address_deprecation<N: Netstack, E: netemul::Endpoint>(name: &str) {
         .expect("FIDL error setting address to preferred");
 
     assert_eq!(get_source_addr().await, ADDR2);
+}
+
+#[variants_test]
+async fn update_address_lifetimes<N: Netstack, E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
+    let interface = realm
+        .install_endpoint(device, Default::default())
+        .await
+        .expect("install endpoint into Netstack");
+
+    const ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!("abcd::1/64");
+    let addr_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
+        &interface,
+        ADDR,
+        fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+    )
+    .await
+    .expect("failed to add preferred address");
+
+    let interface_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+    let event_stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+        .expect("event stream from state")
+        .fuse();
+    futures::pin_mut!(event_stream);
+    let mut if_state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(interface.id());
+    async fn wait_for_lifetimes(
+        event_stream: impl futures::Stream<
+            Item = Result<fidl_fuchsia_net_interfaces::Event, fidl::Error>,
+        >,
+        if_state: &mut fidl_fuchsia_net_interfaces_ext::InterfaceState,
+        valid_until: zx::sys::zx_time_t,
+    ) -> Result<(), anyhow::Error> {
+        fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+            event_stream,
+            if_state,
+            move |fidl_fuchsia_net_interfaces_ext::Properties {
+                      addresses,
+                      online: _,
+                      id: _,
+                      name: _,
+                      device_class: _,
+                      has_default_ipv4_route: _,
+                      has_default_ipv6_route: _,
+                  }: &fidl_fuchsia_net_interfaces_ext::Properties| {
+                addresses
+                    .contains(&fidl_fuchsia_net_interfaces_ext::Address { addr: ADDR, valid_until })
+                    .then_some(())
+            },
+        )
+        .await
+        .map_err(Into::into)
+    }
+    wait_for_lifetimes(event_stream.by_ref(), &mut if_state, zx::sys::ZX_TIME_INFINITE)
+        .await
+        .expect("failed to observe address with default (infinite) lifetimes");
+
+    {
+        const VALID_UNTIL: zx::sys::zx_time_t = 123_000_000_000;
+        addr_state_provider
+            .update_address_properties(fidl_fuchsia_net_interfaces_admin::AddressProperties {
+                preferred_lifetime_info: None,
+                valid_lifetime_end: Some(VALID_UNTIL),
+                ..fidl_fuchsia_net_interfaces_admin::AddressProperties::EMPTY
+            })
+            .await
+            .expect("FIDL error updating address lifetimes");
+
+        wait_for_lifetimes(event_stream.by_ref(), &mut if_state, VALID_UNTIL)
+            .await
+            .expect("failed to observe address with updated lifetimes");
+    }
 }
 
 #[variants_test]

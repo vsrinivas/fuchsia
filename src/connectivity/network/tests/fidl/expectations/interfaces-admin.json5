@@ -20,6 +20,10 @@
                 // TODO(https://fxbug.dev/76987): Should pass against Netstack3 once
                 // get/set forwarding is supported.
                 "get_set_forwarding_ns3_*",
+
+                // TODO(https://fxbug.dev/106959): Should pass against Netstack3 once
+                // updating adddress lifetimes is supported.
+                "update_address_lifetimes_ns3_*",
             ],
         },
     ],

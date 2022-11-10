@@ -13,10 +13,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
-
-	"fidl/fuchsia/net/interfaces"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -85,97 +82,6 @@ func waitForEmptyQueue(n *ndpDispatcher) {
 			break
 		}
 		<-n.testNotifyCh
-	}
-}
-
-// Test that interface state watchers receive an event on DAD and SLAAC address
-// invalidation events.
-func TestInterfacesChangeEvent(t *testing.T) {
-	addGoleakCheck(t)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	eventChan, watcherChan := startEventLoop(t)
-	si := &interfaceStateImpl{watcherChan: watcherChan}
-
-	ndpDisp := newNDPDispatcherForTest()
-	ndpDisp.getAddressPrefix = func(info *stack.NICInfo, addr tcpip.Address) (int, bool) {
-		if addr != testProtocolAddr1.AddressWithPrefix.Address {
-			t.Fatalf("got %s, want %s", addr, testProtocolAddr1.AddressWithPrefix.Address)
-		}
-		return testProtocolAddr1.AddressWithPrefix.PrefixLen, true
-	}
-	ns, _ := newNetstack(t, netstackTestOptions{ndpDisp: ndpDisp, interfaceEventChan: eventChan})
-	ndpDisp.start(ctx)
-
-	ifs := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs.RemoveByUser)
-	if err := ifs.Up(); err != nil {
-		t.Fatalf("ifs.Up(): %s", err)
-	}
-	request, watcher, err := interfaces.NewWatcherWithCtxInterfaceRequest()
-	if err != nil {
-		t.Fatalf("failed to create interface watcher protocol channel pair: %s", err)
-	}
-	defer func() {
-		if err := watcher.Close(); err != nil {
-			t.Errorf("failed to close interface watcher: %s", err)
-		}
-	}()
-
-	if err := si.GetWatcher(context.Background(), interfaces.WatcherOptions{}, request); err != nil {
-		t.Fatalf("failed to initialize interface watcher: %s", err)
-	}
-	hasAddr := func(addresses []interfaces.Address) bool {
-		for _, a := range addresses {
-			if a.HasAddr() && fidlconv.ToTCPIPProtocolAddress(a.GetAddr()) == testProtocolAddr1 {
-				return true
-			}
-		}
-		return false
-	}
-	if event, err := watcher.Watch(context.Background()); err != nil {
-		t.Fatalf("failed to watch: %s", err)
-	} else if event.Which() != interfaces.EventExisting || event.Existing.GetId() != uint64(ifs.nicid) || hasAddr(event.Existing.GetAddresses()) {
-		t.Fatalf("got: %#v, expected interface %d exists event without address %s", event, ifs.nicid, testProtocolAddr1.AddressWithPrefix.Address)
-	}
-
-	if event, err := watcher.Watch(context.Background()); err != nil {
-		t.Fatalf("failed to watch: %s", err)
-	} else if event.Which() != interfaces.EventIdle {
-		t.Fatalf("got: %#v, expected Idle event", event)
-	}
-
-	eventCh := make(chan interfaces.Event)
-	go func() {
-		event, err := watcher.Watch(context.Background())
-		if err != nil {
-			t.Errorf("failed to watch: %s", err)
-			close(eventCh)
-			return
-		}
-		eventCh <- event
-	}()
-	ndpDisp.OnAutoGenAddress(ifs.nicid, testProtocolAddr1.AddressWithPrefix)
-	waitForEmptyQueue(ndpDisp)
-	select {
-	case event := <-eventCh:
-		t.Fatalf("unexpected watcher event: %#v", event)
-	default:
-	}
-
-	ndpDisp.OnDuplicateAddressDetectionResult(ifs.nicid, testProtocolAddr1.AddressWithPrefix.Address, &stack.DADSucceeded{})
-	event := <-eventCh
-	if event.Which() != interfaces.EventChanged || event.Changed.GetId() != uint64(ifs.nicid) || !hasAddr(event.Changed.GetAddresses()) {
-		t.Fatalf("got: %#v, expected interface %d changed event with address %s", event, ifs.nicid, testProtocolAddr1.AddressWithPrefix.Address)
-	}
-
-	ndpDisp.OnAutoGenAddressInvalidated(ifs.nicid, testProtocolAddr1.AddressWithPrefix)
-	if event, err := watcher.Watch(context.Background()); err != nil {
-		t.Fatalf("failed to watch: %s", err)
-	} else if event.Which() != interfaces.EventChanged || event.Changed.GetId() != uint64(ifs.nicid) || hasAddr(event.Changed.GetAddresses()) {
-		t.Fatalf("got: %#v, expected interface %d changed event without address %s", event, ifs.nicid, testProtocolAddr1.AddressWithPrefix.Address)
 	}
 }
 

@@ -212,9 +212,15 @@ func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip
 	if !header.IsV6LinkLocalUnicastAddress(addrWithPrefix.Address) {
 		n.dynamicAddressSourceTracker.incGlobalSLAAC(nicID)
 	}
-	// TODO(https://fxbug.dev/104108): Return a stack.AddressDispatcher impl and
-	// expose lifetimes via fuchsia.net.interfaces/Watcher.
-	return nil
+
+	return &watcherAddressDispatcher{
+		nicid: nicID,
+		protocolAddr: tcpip.ProtocolAddress{
+			Protocol:          header.IPv6ProtocolNumber,
+			AddressWithPrefix: addrWithPrefix,
+		},
+		ch: n.ns.interfaceEventChan,
+	}
 }
 
 // OnAutoGenAddressDeprecated implements ipv6.NDPDispatcher.
@@ -452,50 +458,24 @@ func (n *ndpDispatcher) handleEvent(event ndpEvent) {
 	// Handle the event.
 	switch event := event.(type) {
 	case *ndpDuplicateAddressDetectionEvent:
-		success, completed := func() (bool, bool) {
-			switch result := event.result.(type) {
-			case *stack.DADSucceeded:
-				_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d), sending address added event...", event.addr, event.nicID)
-				if nicInfo, ok := n.ns.stack.NICInfo()[event.nicID]; ok {
-					ifs := nicInfo.Context.(*ifState)
-					if prefix, found := n.getAddressPrefix(&nicInfo, event.addr); found {
-						ifs.mu.Lock()
-						n.ns.onAddressAddLocked(event.nicID, tcpip.AddressWithPrefix{
-							Address:   event.addr,
-							PrefixLen: prefix,
-						}, false /* strict */)
-						ifs.mu.Unlock()
-					} else {
-						// NB: We can find ourselves here if there's a race
-						// between DAD succeeding and the address being removed.
-						// Given DAD events are not strict right now (see
-						// above), we're allowing this to just be logged.
-						_ = syslog.Warnf("could not retrieve prefix DAD address %s", event.addr)
-					}
-				}
-				return true, true
-			case *stack.DADError:
-				logFn := syslog.ErrorTf
-				if _, ok := result.Err.(*tcpip.ErrClosedForSend); ok {
-					logFn = syslog.WarnTf
-				}
-				_ = logFn(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s", event.addr, event.nicID, result.Err)
-				return false, true
-			case *stack.DADAborted:
-				_ = syslog.WarnTf(ndpSyslogTagName, "DAD for %s on nicID (%d) aborted", event.addr, event.nicID)
-				// Do not trigger on DAD complete because DAD was actually aborted.
-				// The link online change handler will update the address assignment
-				// state accordingly.
-				return false, false
-			case *stack.DADDupAddrDetected:
-				_ = syslog.WarnTf(ndpSyslogTagName, "DAD found %s holding %s on nicID (%d)", result.HolderLinkAddress, event.addr, event.nicID)
-				return false, true
-			default:
-				panic(fmt.Sprintf("unhandled DAD result variant %#v", result))
+		switch result := event.result.(type) {
+		case *stack.DADSucceeded:
+			_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d)", event.addr, event.nicID)
+		case *stack.DADError:
+			logFn := syslog.ErrorTf
+			if _, ok := result.Err.(*tcpip.ErrClosedForSend); ok {
+				logFn = syslog.WarnTf
 			}
-		}()
-		if completed {
-			n.ns.onDuplicateAddressDetectionComplete(event.nicID, event.addr, success)
+			_ = logFn(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s", event.addr, event.nicID, result.Err)
+		case *stack.DADAborted:
+			_ = syslog.WarnTf(ndpSyslogTagName, "DAD for %s on nicID (%d) aborted", event.addr, event.nicID)
+			// Do not trigger on DAD complete because DAD was actually aborted.
+			// The link online change handler will update the address assignment
+			// state accordingly.
+		case *stack.DADDupAddrDetected:
+			_ = syslog.WarnTf(ndpSyslogTagName, "DAD found %s holding %s on nicID (%d)", result.HolderLinkAddress, event.addr, event.nicID)
+		default:
+			panic(fmt.Sprintf("unhandled DAD result variant %#v", result))
 		}
 
 	case *ndpDiscoveredOffLinkRouteEvent:
@@ -553,16 +533,7 @@ func (n *ndpDispatcher) handleEvent(event ndpEvent) {
 
 	case *ndpInvalidatedAutoGenAddrEvent:
 		nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
-		_ = syslog.InfoTf(ndpSyslogTagName, "invalidated an auto-generated address (%s) on nicID (%d), sending interface changed event...", addrWithPrefix, nicID)
-		if nicInfo, ok := n.ns.stack.NICInfo()[event.nicID]; ok {
-			ifs := nicInfo.Context.(*ifState)
-			ifs.mu.Lock()
-			// TODO(https://fxbug.dev/95578): Remove strict parameter once it is
-			// guaranteed that getting here means that the auto-generated address was
-			// fully assigned and then removed.
-			n.ns.onAddressRemoveLocked(event.nicID, addrWithPrefix, false /* strict */)
-			ifs.mu.Unlock()
-		}
+		_ = syslog.InfoTf(ndpSyslogTagName, "invalidated an auto-generated address (%s) on nicID (%d)", addrWithPrefix, nicID)
 
 	case *ndpRecursiveDNSServerEvent:
 		nicID, addrs, lifetime := event.nicID, event.addrs, event.lifetime

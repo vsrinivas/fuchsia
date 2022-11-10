@@ -26,10 +26,8 @@ use test_case::test_case;
 
 #[variants_test]
 async fn watcher_existing<N: Netstack>(name: &str) {
-    // We're limiting this test to mostly IPv4 because Netstack3 doesn't support
-    // updates yet. We wanted the best test we could write just for the Existing
-    // case since IPv6 LL addresses are subject to DAD and hard to test with
-    // Existing events only.
+    // This test is limited to mostly IPv4 because IPv6 LL addresses are
+    // subject to DAD and hard to test with Existing events.
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
@@ -194,6 +192,38 @@ async fn watcher_existing<N: Netstack>(name: &str) {
                 .expect("add default ipv6 route entry");
         }
     }
+
+    // When an interface goes online in NS2, the consequences (such as address
+    // assignment state changing to ASSIGNED) are observed before the interface
+    // online itself, which means that it is possible to get here and for a new
+    // interface watcher to observe the interface that is added most recently to
+    // be offline. Guard against this by waiting for all interfaces to be online.
+    fidl_fuchsia_net_interfaces_ext::wait_interface(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+            .expect("get interface event stream"),
+        &mut HashMap::new(),
+        |properties_map| {
+            properties_map
+                .iter()
+                .all(
+                    |(
+                        _,
+                        fidl_fuchsia_net_interfaces_ext::Properties {
+                            online,
+                            device_class: _,
+                            id: _,
+                            name: _,
+                            addresses: _,
+                            has_default_ipv4_route: _,
+                            has_default_ipv6_route: _,
+                        },
+                    )| *online,
+                )
+                .then_some(())
+        },
+    )
+    .await
+    .expect("waiting for all interfaces to be online");
 
     // The netstacks report the loopback interface as NIC 1.
     assert_eq!(expectations.insert(1, Expectation::Loopback(1)), None);
@@ -895,6 +925,108 @@ async fn test_watcher_race<N: Netstack>(name: &str) {
     }
 }
 
+// TODO(https://fxbug.dev/107338): Run this against netstack3 when it
+// hides IPv6 addresses on offline interfaces from clients of
+// fuchsia.net.interfaces/Watcher.
+#[test_case(fidl_subnet!("abcd::1/64"))]
+#[test_case(fidl_subnet!("1.2.3.4/24"))]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_addresses_while_offline(addr_with_prefix: fidl_fuchsia_net::Subnet) {
+    let name = "test_addresses_while_offline";
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let device =
+        sandbox.create_endpoint::<netemul::NetworkDevice, _>(name).await.expect("create endpoint");
+    let interface = realm
+        .install_endpoint(device, Default::default())
+        .await
+        .expect("install endpoint to Netstack");
+
+    interface
+        .add_address_and_subnet_route(addr_with_prefix)
+        .await
+        .expect("add address and subnet route");
+    // Verify that addresses are present.
+    let interface_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+    let event_stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+        .expect("event stream from state")
+        .fuse();
+    futures::pin_mut!(event_stream);
+    let mut if_state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(interface.id());
+
+    fn contains_address<'a>(
+        addresses: impl IntoIterator<Item = &'a fidl_fuchsia_net_interfaces_ext::Address>,
+        want: fidl_fuchsia_net::Subnet,
+    ) -> bool {
+        addresses.into_iter().any(
+            |&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until }| {
+                assert_eq!(valid_until, zx::sys::ZX_TIME_INFINITE);
+                addr == want
+            },
+        )
+    }
+
+    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        event_stream.by_ref(),
+        &mut if_state,
+        |fidl_fuchsia_net_interfaces_ext::Properties {
+             online,
+             addresses,
+             id: _,
+             name: _,
+             device_class: _,
+             has_default_ipv4_route: _,
+             has_default_ipv6_route: _,
+         }: &fidl_fuchsia_net_interfaces_ext::Properties| {
+            (*online && contains_address(addresses, addr_with_prefix)).then_some(())
+        },
+    )
+    .await
+    .expect("failed to wait for address to be present");
+
+    // Address should disappear on interface offline.
+    assert!(interface.control().disable().await.expect("send FIDL").expect("disable interface"));
+    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        event_stream.by_ref(),
+        &mut if_state,
+        |fidl_fuchsia_net_interfaces_ext::Properties {
+             online,
+             addresses,
+             id: _,
+             name: _,
+             device_class: _,
+             has_default_ipv4_route: _,
+             has_default_ipv6_route: _,
+         }: &fidl_fuchsia_net_interfaces_ext::Properties| {
+            (!*online && !contains_address(addresses, addr_with_prefix)).then_some(())
+        },
+    )
+    .await
+    .expect("failed to wait for addresses to disappear due to interface offline");
+
+    // Address should reappear after interface online.
+    assert!(interface.control().enable().await.expect("send FIDL").expect("enable interface"));
+    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        event_stream.by_ref(),
+        &mut if_state,
+        |fidl_fuchsia_net_interfaces_ext::Properties {
+             online,
+             addresses,
+             id: _,
+             name: _,
+             device_class: _,
+             has_default_ipv4_route: _,
+             has_default_ipv6_route: _,
+         }: &fidl_fuchsia_net_interfaces_ext::Properties| {
+            (*online && contains_address(addresses, addr_with_prefix)).then_some(())
+        },
+    )
+    .await
+    .expect("failed to wait for address to be present");
+}
+
 // TODO(https://fxbug.dev/112627): Split this test up and run against NS3.
 /// Test interface changes are reported through the interface watcher.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -1009,20 +1141,19 @@ async fn test_watcher() {
     let () = assert_blocked(&mut blocking_stream).await;
     let did_enable = dev.control().enable().await.expect("send enable").expect("enable");
     assert!(did_enable);
-    const LL_ADDR_COUNT: usize = 1;
     // NB The following fold function is necessary because IPv6 link-local
-    // addresses are configured when the interface is brought up such that the
-    // ordering or the number of events that reports the changes in the online
-    // and addresses properties cannot be guaranteed. As such, we only assert
-    // that:
-    // 1. the online property changes exactly once to `true`,
-    // 2. all addresses added are IPv6 and eventually reach the expected count, and
-    // 3. no other properties change.
+    // addresses are configured when the interface is brought up. Assert that:
+    //
+    // 1. the online property changes exactly once to true,
+    // 2. the number of IPv6 addresses reaches the desired count of 1,
+    // 3. appearance of LL addresses must come in the same event or after
+    // online changing to true,
     //
     // It would be ideal to disable IPv6 LL address configuration for this
     // test, which would simplify this significantly.
-    let fold_fn = |(online_changed, addresses): (bool, _), event| {
-        let (online, got_addrs) = assert_matches::assert_matches!(
+    const LL_ADDR_COUNT: usize = 1;
+    let fold_fn = |online_changed: bool, event| {
+        let (online, addresses) = assert_matches::assert_matches!(
             event,
             fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
                 id: Some(got_id),
@@ -1041,11 +1172,11 @@ async fn test_watcher() {
                 "duplicate online property change to new value of {}",
                 got_online
             );
-            assert!(got_online, "got offline, expected online");
+            assert!(got_online, "online must change to true");
             true
         });
-        let addresses = got_addrs.map_or(addresses, |got_addrs| {
-            got_addrs
+        let addresses = addresses.map(|addresses| {
+            addresses
                 .iter()
                 .map(|addr| {
                     let addr = fidl_fuchsia_net_interfaces_ext::Address::try_from(addr.clone())
@@ -1066,16 +1197,23 @@ async fn test_watcher() {
                 })
                 .collect::<HashSet<_>>()
         });
-        futures::future::ready(if addresses.len() == LL_ADDR_COUNT && online_changed {
-            async_utils::fold::FoldWhile::Done(addresses)
-        } else {
-            async_utils::fold::FoldWhile::Continue((online_changed, addresses))
+        futures::future::ready(match addresses {
+            Some(addresses) if addresses.len() == LL_ADDR_COUNT => {
+                // TODO(https://fxbug.dev/105039): Make the assertion true
+                // regardless of whether DAD is enabled or not, and assert
+                // this through this test or perhaps a separate test.
+                if !online_changed {
+                    panic!("link-local address(es) appeared before online changed to true");
+                }
+                async_utils::fold::FoldWhile::Done(addresses)
+            }
+            Some(_) | None => async_utils::fold::FoldWhile::Continue(online_changed),
         })
     };
     let ll_addrs = assert_matches::assert_matches!(
         async_utils::fold::fold_while(
             blocking_stream.by_ref().map(|r| r.expect("blocking event stream error")),
-            (false, HashSet::new()),
+            false,
             fold_fn,
         ).await,
         async_utils::fold::FoldResult::ShortCircuited(addresses) => addresses
@@ -1084,7 +1222,7 @@ async fn test_watcher() {
         let addrs = assert_matches::assert_matches!(
             async_utils::fold::fold_while(
                 stream.by_ref().map(|r| r.expect("non-blocking event stream error")),
-                (false, HashSet::new()),
+                false,
                 fold_fn,
             ).await,
             async_utils::fold::FoldResult::ShortCircuited(addresses) => addresses
@@ -1187,7 +1325,7 @@ async fn test_watcher() {
     {
         let () = assert_blocked(&mut blocking_stream).await;
         let () = dev.set_link_up(false).await.expect("bring device up");
-        let fold_fn = |(online_changed, addresses_empty): (bool, bool), event| {
+        let fold_fn = |addresses_empty: bool, event| {
             let (online, addresses) = assert_matches::assert_matches!(
                 event,
                 fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
@@ -1201,34 +1339,27 @@ async fn test_watcher() {
                     ..
                 }) if got_id == id => (online, addresses)
             );
-            let online_changed = online.map_or(online_changed, |online| {
-                assert!(
-                    !online_changed,
-                    "duplicate online property change to new value of {}",
-                    online
-                );
-                assert!(!online, "got online changed to true, want false");
+            let addresses_empty = addresses.as_ref().map_or(addresses_empty, |addresses| {
+                assert!(!addresses_empty, "duplicate addresses property change to {:?}", addresses);
+                addresses.len() == 0
+            });
+            let online_changed = online.map_or(false, |got_online| {
+                assert!(!got_online, "online must change to false");
                 true
             });
-            let addresses_empty = addresses.map_or(addresses_empty, |addresses| {
-                assert!(
-                    !addresses_empty,
-                    "duplicate addresses property change to new value of {:?}",
-                    addresses
-                );
-                assert_eq!(addresses[..], []);
-                true
-            });
-            futures::future::ready(if addresses_empty && online_changed {
+            futures::future::ready(if online_changed {
+                if !addresses_empty {
+                    panic!("offline event before addresses removed");
+                }
                 async_utils::fold::FoldWhile::Done(())
             } else {
-                async_utils::fold::FoldWhile::Continue((online_changed, addresses_empty))
+                async_utils::fold::FoldWhile::Continue(addresses_empty)
             })
         };
         assert_eq!(
             async_utils::fold::fold_while(
                 blocking_stream.by_ref().map(|r| r.expect("blocking event stream error")),
-                (false, false),
+                false,
                 fold_fn,
             )
             .await,
@@ -1237,7 +1368,7 @@ async fn test_watcher() {
         assert_eq!(
             async_utils::fold::fold_while(
                 stream.by_ref().map(|r| r.expect("non-blocking event stream error")),
-                (false, false),
+                false,
                 fold_fn,
             )
             .await,

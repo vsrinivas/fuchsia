@@ -9,12 +9,13 @@ package netstack
 import (
 	"context"
 	"fmt"
+	"math"
 	"net"
 	"syscall/zx"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/bridge"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
@@ -206,7 +207,6 @@ type ifState struct {
 			// Used to restart the DHCP client when we go from down to up.
 			enabled bool
 		}
-		addressStateProviders addressStateProviderCollection
 	}
 
 	// metric is used by default for routes that originate from this NIC.
@@ -453,7 +453,7 @@ func (ns *Netstack) UpdateRoutesByInterfaceLocked(nicid tcpip.NICID, action rout
 	ns.routeTable.UpdateStackLocked(ns.stack, ns.resetDestinationCache)
 }
 
-func (ifs *ifState) removeAddressLocked(protocolAddr tcpip.ProtocolAddress) zx.Status {
+func (ifs *ifState) removeAddress(protocolAddr tcpip.ProtocolAddress) zx.Status {
 	_ = syslog.Infof("NIC %d: removing IP %s", ifs.nicid, protocolAddr.AddressWithPrefix)
 
 	switch err := ifs.ns.stack.RemoveAddress(ifs.nicid, protocolAddr.AddressWithPrefix.Address); err.(type) {
@@ -467,34 +467,93 @@ func (ifs *ifState) removeAddressLocked(protocolAddr tcpip.ProtocolAddress) zx.S
 		panic(fmt.Sprintf("stack.RemoveAddress(%d, %s) = %s", ifs.nicid, protocolAddr.AddressWithPrefix, err))
 	}
 
-	ifs.ns.onAddressRemoveLocked(ifs.nicid, protocolAddr.AddressWithPrefix, true /* strict */)
-	ifs.mu.addressStateProviders.onAddressRemoveLocked(protocolAddr.AddressWithPrefix.Address)
 	ifs.ns.resetDestinationCache()
 	return zx.ErrOk
 }
 
-func (ifs *ifState) removeAddress(protocolAddr tcpip.ProtocolAddress) zx.Status {
-	ifs.mu.Lock()
-	defer ifs.mu.Unlock()
-
-	return ifs.removeAddressLocked(protocolAddr)
+type addressChanged struct {
+	nicid        tcpip.NICID
+	protocolAddr tcpip.ProtocolAddress
+	lifetimes    stack.AddressLifetimes
+	state        stack.AddressAssignmentState
 }
 
-func (ifs *ifState) addAddressLocked(protocolAddr tcpip.ProtocolAddress, properties stack.AddressProperties) (bool, admin.AddressRemovalReason) {
+var _ interfaceEvent = (*addressChanged)(nil)
+
+func (addressChanged) isInterfaceEvent() {}
+
+type addressRemoved struct {
+	nicid        tcpip.NICID
+	protocolAddr tcpip.ProtocolAddress
+	reason       stack.AddressRemovalReason
+}
+
+var _ interfaceEvent = (*addressRemoved)(nil)
+
+func (addressRemoved) isInterfaceEvent() {}
+
+var _ stack.AddressDispatcher = (*watcherAddressDispatcher)(nil)
+
+type watcherAddressDispatcher struct {
+	nicid        tcpip.NICID
+	protocolAddr tcpip.ProtocolAddress
+	ch           chan<- interfaceEvent
+}
+
+// OnChanged is called when the address this AddressDispatcher is registered
+// on is assigned or changed.
+//
+// Note that this function is called while locked inside gVisor, so care should
+// be taken to avoid deadlock.
+func (ad *watcherAddressDispatcher) OnChanged(lifetimes stack.AddressLifetimes, state stack.AddressAssignmentState) {
+	_ = syslog.Debugf("NIC=%d addr=%s changed lifetimes=%#v state=%s",
+		ad.nicid, ad.protocolAddr.AddressWithPrefix, lifetimes, state)
+	if ad.ch != nil {
+		ad.ch <- addressChanged{
+			nicid:        ad.nicid,
+			protocolAddr: ad.protocolAddr,
+			lifetimes:    lifetimes,
+			state:        state,
+		}
+	}
+}
+
+// OnRemoved is called when the address this AddressDispatcher is registered
+// on is removed.
+//
+// Note that this function is called while locked inside gVisor, so care should
+// be taken to avoid deadlock.
+func (ad *watcherAddressDispatcher) OnRemoved(reason stack.AddressRemovalReason) {
+	_ = syslog.Debugf("NIC=%d addr=%s removed reason=%s", ad.nicid, ad.protocolAddr.AddressWithPrefix, reason)
+	if ad.ch != nil {
+		ad.ch <- addressRemoved{
+			nicid:        ad.nicid,
+			protocolAddr: ad.protocolAddr,
+			reason:       reason,
+		}
+	}
+}
+
+func (ifs *ifState) addAddress(protocolAddr tcpip.ProtocolAddress, properties stack.AddressProperties) (bool, admin.AddressRemovalReason) {
 	_ = syslog.Infof("NIC %d: adding address %s", ifs.nicid, protocolAddr.AddressWithPrefix)
 
+	// properties.Disp is non-nil iff the caller is serving
+	// fuchsia.net.interfaces.admin/Control.AddAddress. The
+	// AddressDispatcher implementation used serves both
+	// fuchsia.net.interfaces.admin/AddressStateProvider and
+	// fuchsia.net.interfaces/Watcher.
+	//
+	// If no dispatcher is passed, register one for serving
+	// fuchsia.net.interfaces/Watcher.
+	if properties.Disp == nil && ifs.ns.interfaceEventChan != nil {
+		properties.Disp = &watcherAddressDispatcher{
+			nicid:        ifs.nicid,
+			protocolAddr: protocolAddr,
+			ch:           ifs.ns.interfaceEventChan,
+		}
+	}
 	switch err := ifs.ns.stack.AddProtocolAddress(ifs.nicid, protocolAddr, properties); err.(type) {
 	case nil:
-		switch protocolAddr.Protocol {
-		case header.IPv4ProtocolNumber:
-			ifs.ns.onAddressAddLocked(ifs.nicid, protocolAddr.AddressWithPrefix, true /* strict */)
-		// TODO(https://fxbug.dev/82045): This assumes that DAD is
-		// always enabled, and relies on the DAD completion callback to
-		// unblock hanging gets waiting for interface address changes.
-		case header.IPv6ProtocolNumber:
-		default:
-			panic(fmt.Sprintf("address not IPv4 nor IPv6: %#v", protocolAddr))
-		}
 		return true, 0
 	case *tcpip.ErrUnknownNICID:
 		return false, admin.AddressRemovalReasonInterfaceRemoved
@@ -503,13 +562,6 @@ func (ifs *ifState) addAddressLocked(protocolAddr tcpip.ProtocolAddress, propert
 	default:
 		panic(fmt.Sprintf("stack.AddProtocolAddress(%d, %s, %#v) unexpected error: %s", ifs.nicid, protocolAddr.AddressWithPrefix, properties, err))
 	}
-}
-
-func (ifs *ifState) addAddress(protocolAddr tcpip.ProtocolAddress, properties stack.AddressProperties) (bool, admin.AddressRemovalReason) {
-	ifs.mu.Lock()
-	defer ifs.mu.Unlock()
-
-	return ifs.addAddressLocked(protocolAddr, properties)
 }
 
 // onInterfaceAddLocked must be called with `ifs.mu` locked.
@@ -575,71 +627,10 @@ func (ns *Netstack) onDefaultRouteChangeLocked(nicid tcpip.NICID, hasDefaultIPv4
 	}
 }
 
-func (ns *Netstack) onAddressAddLocked(nicid tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix, strict bool) {
-	if ns.interfaceEventChan != nil {
-		ns.interfaceEventChan <- addressAdded{
-			nicid:  nicid,
-			subnet: fidlconv.ToNetSubnet(addrWithPrefix),
-			strict: strict,
-		}
-	}
-}
-
-// TODO(https://fxbug.dev/95578): Remove `strict` parameter once we can always
-// enforce strictness.
-func (ns *Netstack) onAddressRemoveLocked(nicid tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix, strict bool) {
-	if ns.interfaceEventChan != nil {
-		ns.interfaceEventChan <- addressRemoved{
-			nicid:  nicid,
-			subnet: fidlconv.ToNetSubnet(addrWithPrefix),
-			strict: strict,
-		}
-	}
-}
-
-func (ns *Netstack) onAddressValidUntilChangeLocked(nicid tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix, validUntil zxtime.Time) {
-	if ns.interfaceEventChan != nil {
-		ns.interfaceEventChan <- validUntilChanged{
-			nicid:      nicid,
-			subnet:     fidlconv.ToNetSubnet(addrWithPrefix),
-			validUntil: validUntil,
-		}
-	}
-}
-
-// Called when DAD completes with either success or failure.
-//
-// Note that this function should not be called if DAD was aborted due to
-// interface going offline, as the link online change handler will update the
-// address assignment state accordingly.
-func (ns *Netstack) onDuplicateAddressDetectionComplete(nicid tcpip.NICID, addr tcpip.Address, success bool) {
-	nicInfo, ok := ns.stack.NICInfo()[nicid]
-	if !ok {
-		_ = syslog.Warnf("DAD completed for address %s on interface %d, interface not found", addr, nicid)
-		return
-	}
-
-	ifs := nicInfo.Context.(*ifState)
-	ifs.onDuplicateAddressDetectionComplete(addr, success)
-}
-
-func (ifs *ifState) onDuplicateAddressDetectionComplete(addr tcpip.Address, success bool) {
-	// TODO(https://fxbug.dev/82045): DAD completion and interface
-	// online/offline race against each other since they both set address
-	// assignment state, which means that we must lock `ifState.mu`
-	// and then `addressStateProviderCollection.mu` here to prevent
-	// interface online change concurrently attempting to mutate the
-	// address assignment state.
-	ifs.mu.Lock()
-	defer ifs.mu.Unlock()
-
-	ifs.mu.addressStateProviders.onDuplicateAddressDetectionCompleteLocked(ifs.nicid, addr, ifs.IsUpLocked(), success)
-}
-
 func (ifs *ifState) dhcpLostLocked(lost tcpip.AddressWithPrefix) {
 	name := ifs.ns.name(ifs.nicid)
 
-	switch status := ifs.removeAddressLocked(tcpip.ProtocolAddress{
+	switch status := ifs.removeAddress(tcpip.ProtocolAddress{
 		AddressWithPrefix: lost,
 		Protocol:          header.IPv4ProtocolNumber,
 	}); status {
@@ -667,23 +658,31 @@ func (ifs *ifState) dhcpAcquired(ctx context.Context, lost, acquired tcpip.Addre
 		}()
 	}
 
-	ifs.mu.Lock()
-	defer ifs.mu.Unlock()
-
 	name := ifs.ns.name(ifs.nicid)
 
 	if lost == acquired {
 		_ = syslog.Infof("NIC %s: DHCP renewed address %s for %s", name, acquired, config.LeaseLength)
+
+		ifs.ns.stack.SetAddressLifetimes(ifs.nicid, acquired.Address, stack.AddressLifetimes{
+			Deprecated:     false,
+			PreferredUntil: tcpip.MonotonicTime{}.Add(time.Duration(math.MaxInt64)),
+			ValidUntil:     tcpip.MonotonicTime{}.Add(time.Duration(config.UpdatedAt.Add(config.LeaseLength.Duration()).MonotonicNano())),
+		})
 	} else {
 		if lost != (tcpip.AddressWithPrefix{}) {
 			ifs.dhcpLostLocked(lost)
 		}
 
 		if acquired != (tcpip.AddressWithPrefix{}) {
-			if ok, reason := ifs.addAddressLocked(tcpip.ProtocolAddress{
+			if ok, reason := ifs.addAddress(tcpip.ProtocolAddress{
 				Protocol:          ipv4.ProtocolNumber,
 				AddressWithPrefix: acquired,
-			}, stack.AddressProperties{}); !ok {
+			}, stack.AddressProperties{
+				Lifetimes: stack.AddressLifetimes{
+					PreferredUntil: tcpip.MonotonicTime{}.Add(time.Duration(math.MaxInt64)),
+					ValidUntil:     tcpip.MonotonicTime{}.Add(time.Duration(config.UpdatedAt.Add(config.LeaseLength.Duration()).MonotonicNano())),
+				},
+			}); !ok {
 				_ = syslog.Errorf("NIC %s: failed to add DHCP acquired address %s: %s", name, acquired, reason)
 			} else {
 				_ = syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, acquired, config.LeaseLength)
@@ -704,13 +703,11 @@ func (ifs *ifState) dhcpAcquired(ctx context.Context, lost, acquired tcpip.Addre
 				}
 				_ = syslog.Infof("adding routes %s with metric=<not-set> dynamic=true", rs)
 
+				ifs.mu.Lock()
 				ifs.addRoutesWithPreferenceLocked(rs, routes.MediumPreference, metricNotSet, true /* dynamic */)
+				ifs.mu.Unlock()
 			}
 		}
-	}
-
-	if acquired != (tcpip.AddressWithPrefix{}) {
-		ifs.ns.onAddressValidUntilChangeLocked(ifs.nicid, acquired, config.UpdatedAt.Add(config.LeaseLength.Duration()))
 	}
 
 	if updated := ifs.setDNSServers(config.DNS); updated {
@@ -846,7 +843,6 @@ func (ifs *ifState) onDownLocked(name string, closed bool) {
 		}
 
 		ifs.ns.onInterfaceRemoveLocked(ifs.nicid)
-		ifs.mu.addressStateProviders.onInterfaceRemoveLocked()
 	} else {
 		if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {
 			_ = syslog.Errorf("error disabling NIC %s in stack.Stack: %s", name, err)
@@ -926,8 +922,6 @@ func (ifs *ifState) onLinkOnlineChanged(linkOnline bool) {
 	if changed {
 		ifs.ns.onOnlineChangeLocked(ifs.nicid, ifs.IsUpLocked())
 	}
-
-	ifs.mu.addressStateProviders.onInterfaceOnlineChangeLocked(ifs.IsUpLocked())
 }
 
 func (ifs *ifState) setState(enabled bool) (bool, error) {
@@ -963,7 +957,6 @@ func (ifs *ifState) setState(enabled bool) (bool, error) {
 			ifs.ns.onOnlineChangeLocked(ifs.nicid, ifs.IsUpLocked())
 		}
 
-		ifs.mu.addressStateProviders.onInterfaceOnlineChangeLocked(ifs.IsUpLocked())
 		return wasEnabled, nil
 	}()
 	if err != nil {
@@ -1241,7 +1234,6 @@ func (ns *Netstack) addEndpoint(
 	}
 	ifs.dhcpLock = make(chan struct{}, 1)
 	ifs.adminControls.mu.controls = make(map[*adminControlImpl]struct{})
-	ifs.mu.addressStateProviders.providers = make(map[tcpip.Address]*adminAddressStateProviderImpl)
 	if observer != nil {
 		observer.SetOnLinkClosed(ifs.RemoveByLinkClose)
 		observer.SetOnLinkOnlineChanged(ifs.onLinkOnlineChanged)

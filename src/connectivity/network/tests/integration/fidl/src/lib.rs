@@ -321,15 +321,25 @@ async fn disable_interface_loopback<N: Netstack>(name: &str) {
     let did_disable = control.disable().await.expect("send disable").expect("disable");
     assert!(did_disable);
 
-    let () = assert_matches::assert_matches!(stream.try_next().await,
-        Ok(Some(fidl_fuchsia_net_interfaces::Event::Changed(
-            fidl_fuchsia_net_interfaces::Properties {
+    // N2 emits Changed events for ::1 disappearing from the loopback
+    // interface first, so consume from the stream until a Changed event
+    // indicating interface offline is observed.
+    stream.filter_map(|event| {
+        let online = assert_matches::assert_matches!(
+            event,
+            Ok(fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
                 id: Some(id),
-                online: Some(false),
+                online,
                 ..
-            },
-        ))) if id == loopback_id => ()
-    );
+            })) if id == loopback_id => online
+        );
+        futures::future::ready(online.map(|online| if online {
+            panic!("online changed unexpectedly to true");
+        }))
+    })
+    .next()
+    .await
+    .expect("interface watcher stream ended unexpectedly")
 }
 
 enum ForwardingConfiguration {

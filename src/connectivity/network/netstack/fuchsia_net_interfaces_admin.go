@@ -26,7 +26,6 @@ import (
 	"fidl/fuchsia/net/interfaces/admin"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/ethernet"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -39,64 +38,42 @@ const (
 	deviceControlName        = "fuchsia.net.interfaces.admin/DeviceControl"
 )
 
-type addressStateProviderCollection struct {
-	nicid     tcpip.NICID
-	providers map[tcpip.Address]*adminAddressStateProviderImpl
-}
+var _ stack.AddressDispatcher = (*addressDispatcher)(nil)
 
-// Called when DAD completes.
-//
-// Note that `online` must not change when calling this function (`ifState.mu`
-// must be held).
-func (pc *addressStateProviderCollection) onDuplicateAddressDetectionCompleteLocked(nicid tcpip.NICID, addr tcpip.Address, online, success bool) {
-	pi, ok := pc.providers[addr]
-	if !ok {
-		return
-	}
-	pi.mu.Lock()
-	defer pi.mu.Unlock()
-
-	if success {
-		// If DAD completed successfully but the interface is currently offline, do
-		// not set the assignment state to ASSIGNED.
-		if !online {
-			_ = syslog.Warnf("interface %d is offline when DAD completed for %s", pc.nicid, addr)
-		} else {
-			pi.setStateLocked(admin.AddressAssignmentStateAssigned)
-		}
-	} else {
-		delete(pc.providers, addr)
-		pi.onRemoveLocked(admin.AddressRemovalReasonDadFailed)
+type addressDispatcher struct {
+	watcherDisp watcherAddressDispatcher
+	mu          struct {
+		sync.Mutex
+		aspImpl *adminAddressStateProviderImpl
 	}
 }
 
-func (pc *addressStateProviderCollection) onAddressRemoveLocked(addr tcpip.Address) {
-	if pi, ok := pc.providers[addr]; ok {
-		delete(pc.providers, addr)
-		pi.onRemove(admin.AddressRemovalReasonUserRemoved)
+func (ad *addressDispatcher) OnChanged(lifetimes stack.AddressLifetimes, state stack.AddressAssignmentState) {
+	ad.watcherDisp.OnChanged(lifetimes, state)
+
+	ad.mu.Lock()
+	if ad.mu.aspImpl != nil {
+		ad.mu.aspImpl.OnChanged(lifetimes, state)
 	}
+	ad.mu.Unlock()
 }
 
-func (pc *addressStateProviderCollection) onInterfaceRemoveLocked() {
-	for addr, pi := range pc.providers {
-		delete(pc.providers, addr)
-		pi.onRemove(admin.AddressRemovalReasonInterfaceRemoved)
-	}
-}
+func (ad *addressDispatcher) OnRemoved(reason stack.AddressRemovalReason) {
+	ad.watcherDisp.OnRemoved(reason)
 
-// TODO(https://fxbug.dev/82045): Avoid racing interface up/down against DAD.
-// Note that this function should be called while holding a lock which prevents
-// `online` from mutating.
-func (pc *addressStateProviderCollection) onInterfaceOnlineChangeLocked(online bool) {
-	for _, pi := range pc.providers {
-		pi.setInitialState(online)
+	ad.mu.Lock()
+	if ad.mu.aspImpl != nil {
+		ad.mu.aspImpl.OnRemoved(reason)
 	}
+	ad.mu.Unlock()
 }
 
 var _ admin.AddressStateProviderWithCtx = (*adminAddressStateProviderImpl)(nil)
+var _ stack.AddressDispatcher = (*adminAddressStateProviderImpl)(nil)
 
 type adminAddressStateProviderImpl struct {
-	controlImpl  *adminControlImpl
+	ns           *Netstack
+	nicid        tcpip.NICID
 	cancelServe  context.CancelFunc
 	ready        chan struct{}
 	protocolAddr tcpip.ProtocolAddress
@@ -104,87 +81,37 @@ type adminAddressStateProviderImpl struct {
 		sync.Mutex
 		eventProxy admin.AddressStateProviderEventProxy
 		isHanging  bool
+		// NB: state is the zero value while the address has been added but the
+		// initial assignment state is unknown.
+		state admin.AddressAssignmentState
 		// NB: lastObserved is the zero value iff the client has yet to observe the
 		// state for the first time.
-		state, lastObserved admin.AddressAssignmentState
-		detached            bool
+		lastObserved admin.AddressAssignmentState
+		// detached is set to true if Detach has been called on the channel, and will
+		// result in the address not being removed when the client closes its end of
+		// the channel.
+		detached bool
+		// removed is set to true if the address has already been removed, and
+		// therefore no longer needs to be removed when this protocol terminates.
+		removed bool
 	}
 }
 
-func (pi *adminAddressStateProviderImpl) setInitialState(online bool) {
-	pi.mu.Lock()
-	defer pi.mu.Unlock()
-
-	// If DAD won the race and set the assignment state to ASSIGNED already,
-	// leave the state as ASSIGNED rather than setting it to TENTATIVE.
-	if online && pi.mu.state == admin.AddressAssignmentStateAssigned {
-		_ = syslog.WarnTf(addressStateProviderName, "%s already in ASSIGNED state when interface became online", pi.protocolAddr.AddressWithPrefix.Address)
-	} else {
-		// TODO(https://fxbug.dev/82045): Don't assume that DAD is always enabled.
-		pi.setStateLocked(initialAddressAssignmentState(pi.protocolAddr, online))
-	}
-}
-
-func (pi *adminAddressStateProviderImpl) setStateLocked(state admin.AddressAssignmentState) {
-	pi.mu.state = state
-	if pi.mu.lastObserved != pi.mu.state {
-		syslog.DebugTf(addressStateProviderName, "address %+v state changed from %s to %s", pi.protocolAddr, pi.mu.lastObserved, pi.mu.state)
-		select {
-		case pi.ready <- struct{}{}:
-		default:
-		}
-	}
-}
-
-func (pi *adminAddressStateProviderImpl) onRemove(reason admin.AddressRemovalReason) {
-	pi.mu.Lock()
-	defer pi.mu.Unlock()
-
-	pi.onRemoveLocked(reason)
-}
-
-func (pi *adminAddressStateProviderImpl) onRemoveLocked(reason admin.AddressRemovalReason) {
-	if err := pi.mu.eventProxy.OnAddressRemoved(reason); err != nil {
-		var zxError *zx.Error
-		if !errors.As(err, &zxError) || (zxError.Status != zx.ErrPeerClosed && zxError.Status != zx.ErrBadHandle) {
-			_ = syslog.WarnTf(addressStateProviderName, "failed to send OnAddressRemoved(%s) for %s: %s", reason, pi.protocolAddr.AddressWithPrefix.Address, err)
-		}
-	}
-	pi.cancelServe()
-}
-
-// TODO(https://fxbug.dev/80621): Add support for updating an address's
-// properties (valid and expected lifetimes).
 func (pi *adminAddressStateProviderImpl) UpdateAddressProperties(_ fidl.Context, properties admin.AddressProperties) error {
-	var lifetimes stack.AddressLifetimes
-	// Note that absence of preferred lifetime means infinite preferred lifetime,
-	// so the zero value for Deprecated is left untouched.
-	if properties.HasPreferredLifetimeInfo() {
-		switch preferred := properties.GetPreferredLifetimeInfo(); preferred.Which() {
-		case interfaces.PreferredLifetimeInfoPreferredUntil:
-			// TODO(https://fxbug.dev/93825): Store the preferred lifetime.
-			panic(fmt.Sprintf("UpdateAddressProperties on addr %s with preferred lifetime %d not supported", pi.protocolAddr.AddressWithPrefix.Address, preferred))
-		case interfaces.PreferredLifetimeInfoDeprecated:
-			lifetimes.Deprecated = true
-		default:
-			panic(fmt.Sprintf("unexpected preferred lifetime info tag: %+v", preferred))
-		}
-	}
-	switch err := pi.controlImpl.ns.stack.SetAddressLifetimes(pi.controlImpl.nicid, pi.protocolAddr.AddressWithPrefix.Address, lifetimes); err.(type) {
+	lifetimes := propertiesToLifetimes(properties)
+	switch err := pi.ns.stack.SetAddressLifetimes(
+		pi.nicid,
+		pi.protocolAddr.AddressWithPrefix.Address,
+		lifetimes,
+	); err.(type) {
 	case nil:
 	case *tcpip.ErrUnknownNICID, *tcpip.ErrBadLocalAddress:
 		// TODO(https://fxbug.dev/94442): Upgrade to panic once we're guaranteed that we get here iff the address still exists.
 		_ = syslog.WarnTf(addressStateProviderName, "SetAddressLifetimes(%d, %s, %#v) failed: %s",
-			pi.controlImpl.nicid, pi.protocolAddr.AddressWithPrefix.Address, lifetimes, err)
+			pi.nicid, pi.protocolAddr.AddressWithPrefix.Address, lifetimes, err)
 	default:
 		panic(fmt.Sprintf("SetAddressLifetimes(%d, %s, %#v) failed with unexpected error: %s",
-			pi.controlImpl.nicid, pi.protocolAddr.AddressWithPrefix.Address, lifetimes, err))
-	}
-
-	if properties.HasValidLifetimeEnd() {
-		// TODO(https://fxbug.dev/93825): Store the valid lifetime.
-		panic(fmt.Sprintf("UpdateAddressProperties on addr %s with valid lifetime %d not supported",
-			pi.protocolAddr.AddressWithPrefix.Address, properties.GetValidLifetimeEnd()))
+			pi.nicid, pi.protocolAddr.AddressWithPrefix.Address, lifetimes, err))
 	}
 	return nil
 }
@@ -210,7 +137,7 @@ func (pi *adminAddressStateProviderImpl) WatchAddressAssignmentState(ctx fidl.Co
 		if pi.mu.lastObserved != pi.mu.state {
 			state := pi.mu.state
 			pi.mu.lastObserved = state
-			syslog.DebugTf(addressStateProviderName, "address %+v observed state: %s", pi.protocolAddr, state)
+			syslog.DebugTf(addressStateProviderName, "NIC=%d address %+v observed state: %s", pi.nicid, pi.protocolAddr, state)
 			return state, nil
 		}
 
@@ -229,20 +156,6 @@ func (pi *adminAddressStateProviderImpl) WatchAddressAssignmentState(ctx fidl.Co
 		if err != nil {
 			return 0, err
 		}
-	}
-}
-
-func initialAddressAssignmentState(protocolAddr tcpip.ProtocolAddress, online bool) admin.AddressAssignmentState {
-	if !online {
-		return admin.AddressAssignmentStateUnavailable
-	}
-	switch protocolAddr.Protocol {
-	case header.IPv4ProtocolNumber:
-		return admin.AddressAssignmentStateAssigned
-	case header.IPv6ProtocolNumber:
-		return admin.AddressAssignmentStateTentative
-	default:
-		panic(fmt.Sprintf("unknown protocol in address %s: %d", protocolAddr.AddressWithPrefix, protocolAddr.Protocol))
 	}
 }
 
@@ -308,77 +221,110 @@ func (ci *adminControlImpl) Detach(fidl.Context) error {
 	return nil
 }
 
-func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Subnet, parameters admin.AddressParameters, request admin.AddressStateProviderWithCtxInterfaceRequest) error {
-	protocolAddr := fidlconv.ToTCPIPProtocolAddress(interfaceAddr)
+func propertiesToLifetimes(properties admin.AddressProperties) stack.AddressLifetimes {
+	lifetimes := stack.AddressLifetimes{
+		ValidUntil: tcpip.MonotonicTimeInfinite(),
+	}
+	if properties.HasValidLifetimeEnd() {
+		lifetimes.ValidUntil = fidlconv.ToTCPIPMonotonicTime(zx.Time(properties.GetValidLifetimeEnd()))
+	}
+	if properties.HasPreferredLifetimeInfo() {
+		switch preferred := properties.GetPreferredLifetimeInfo(); preferred.Which() {
+		case interfaces.PreferredLifetimeInfoDeprecated:
+			lifetimes.Deprecated = true
+		case interfaces.PreferredLifetimeInfoPreferredUntil:
+			lifetimes.PreferredUntil = fidlconv.ToTCPIPMonotonicTime(zx.Time(preferred.PreferredUntil))
+		default:
+			panic(fmt.Sprintf("unknown preferred lifetime info tag: %+v", preferred))
+		}
+	} else {
+		lifetimes.PreferredUntil = tcpip.MonotonicTimeInfinite()
+	}
+	return lifetimes
+}
+
+func (pi *adminAddressStateProviderImpl) OnChanged(lifetimes stack.AddressLifetimes, state stack.AddressAssignmentState) {
+	_ = syslog.DebugTf(addressStateProviderName, "NIC=%d addr=%s changed lifetimes=%#v state=%s",
+		pi.nicid, pi.protocolAddr.AddressWithPrefix, lifetimes, state)
+
+	pi.mu.Lock()
+	defer pi.mu.Unlock()
+
+	pi.mu.state = fidlconv.ToAddressAssignmentState(state)
+	if pi.mu.lastObserved != pi.mu.state {
+		syslog.DebugTf(addressStateProviderName, "NIC=%d address %+v state changed from %s to %s", pi.nicid, pi.protocolAddr.AddressWithPrefix, pi.mu.lastObserved, pi.mu.state)
+		select {
+		case pi.ready <- struct{}{}:
+		default:
+		}
+	}
+}
+
+func (pi *adminAddressStateProviderImpl) OnRemoved(reason stack.AddressRemovalReason) {
+	_ = syslog.DebugTf(addressStateProviderName, "NIC=%d addr=%s removed reason=%s", pi.nicid, pi.protocolAddr.AddressWithPrefix, reason)
+
+	pi.mu.Lock()
+	defer pi.mu.Unlock()
+
+	pi.mu.removed = true
+
+	if err := pi.mu.eventProxy.OnAddressRemoved(fidlconv.ToAddressRemovalReason(reason)); err != nil {
+		var zxError *zx.Error
+		if !errors.As(err, &zxError) || (zxError.Status != zx.ErrPeerClosed && zxError.Status != zx.ErrBadHandle) {
+			_ = syslog.ErrorTf(addressStateProviderName, "NICID=%d failed to send OnAddressRemoved(%s) for %s: %s", pi.nicid, reason, pi.protocolAddr.AddressWithPrefix.Address, err)
+		}
+	}
+	pi.cancelServe()
+}
+
+func (ci *adminControlImpl) AddAddress(_ fidl.Context, subnet net.Subnet, parameters admin.AddressParameters, request admin.AddressStateProviderWithCtxInterfaceRequest) error {
+	protocolAddr := fidlconv.ToTCPIPProtocolAddress(subnet)
 	addr := protocolAddr.AddressWithPrefix.Address
 
 	ifs := ci.getNICContext()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	impl := &adminAddressStateProviderImpl{
-		controlImpl:  ci,
+		ns:           ci.ns,
+		nicid:        ci.nicid,
 		ready:        make(chan struct{}, 1),
 		cancelServe:  cancel,
 		protocolAddr: protocolAddr,
 	}
 	impl.mu.eventProxy.Channel = request.Channel
 
-	if reason := func() admin.AddressRemovalReason {
-		var properties stack.AddressProperties
-		if parameters.HasTemporary() && parameters.GetTemporary() {
-			properties.Temporary = true
-		}
-		if parameters.HasInitialProperties() {
-			initProperties := parameters.GetInitialProperties()
-			if initProperties.HasValidLifetimeEnd() {
-				// TODO(https://fxbug.dev/93825): Store the valid lifetime.
-				panic(fmt.Sprintf("adding address %s with valid lifetime %d is not supported", addr, initProperties.GetValidLifetimeEnd()))
-			}
-			// Note that absence of preferred lifetime means infinite preferred lifetime,
-			// so the zero value for Deprecated is left untouched.
-			if initProperties.HasPreferredLifetimeInfo() {
-				switch preferred := initProperties.GetPreferredLifetimeInfo(); preferred.Which() {
-				case interfaces.PreferredLifetimeInfoDeprecated:
-					properties.Lifetimes.Deprecated = true
-				case interfaces.PreferredLifetimeInfoPreferredUntil:
-					// TODO(https://fxbug.dev/93825): Store the preferred lifetime.
-					panic(fmt.Sprintf("adding address %s with preferred lifetime %d is not supported", addr, preferred))
-				default:
-					panic(fmt.Sprintf("unknown preferred lifetime info tag: %+v", preferred))
-				}
-			}
-		}
+	addrDisp := &addressDispatcher{
+		watcherDisp: watcherAddressDispatcher{
+			nicid:        ifs.nicid,
+			protocolAddr: protocolAddr,
+			ch:           ifs.ns.interfaceEventChan,
+		},
+	}
+	addrDisp.mu.aspImpl = impl
+	properties := stack.AddressProperties{
+		Temporary: parameters.GetTemporaryWithDefault(false),
+		Disp:      addrDisp,
+	}
+	if parameters.HasInitialProperties() {
+		properties.Lifetimes = propertiesToLifetimes(parameters.GetInitialProperties())
+	}
 
-		if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
-			return admin.AddressRemovalReasonInvalid
-		}
-
-		ifs.mu.Lock()
-		defer ifs.mu.Unlock()
-		online := ifs.IsUpLocked()
-
-		if _, ok := ifs.mu.addressStateProviders.providers[addr]; ok {
-			return admin.AddressRemovalReasonAlreadyAssigned
-		}
-
-		if ok, status := ifs.addAddressLocked(protocolAddr, properties); !ok {
-			return status
-		}
-		impl.mu.state = initialAddressAssignmentState(protocolAddr, online)
-		_ = syslog.DebugTf(addressStateProviderName, "initial state for %s: %s", protocolAddr.AddressWithPrefix, impl.mu.state)
-		ifs.mu.addressStateProviders.providers[addr] = impl
-
-		return 0
-	}(); reason != 0 {
+	var reason admin.AddressRemovalReason
+	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
+		reason = admin.AddressRemovalReasonInvalid
+	} else if ok, status := ifs.addAddress(protocolAddr, properties); !ok {
+		reason = status
+	}
+	if reason != 0 {
 		defer cancel()
 		if err := impl.mu.eventProxy.OnAddressRemoved(reason); err != nil {
 			var zxError *zx.Error
 			if !errors.As(err, &zxError) || (zxError.Status != zx.ErrPeerClosed && zxError.Status != zx.ErrBadHandle) {
-				_ = syslog.WarnTf(controlName, "failed to send OnAddressRemoved(%s) for %s: %s", reason, protocolAddr.AddressWithPrefix.Address, err)
+				_ = syslog.WarnTf(controlName, "NICID=%d failed to send OnAddressRemoved(%s) for %s: %s", impl.nicid, reason, protocolAddr.AddressWithPrefix.Address, err)
 			}
 		}
 		if err := impl.mu.eventProxy.Close(); err != nil {
-			_ = syslog.WarnTf(controlName, "failed to close %s channel", addressStateProviderName)
+			_ = syslog.WarnTf(controlName, "NICID=%d failed to close %s channel", impl.nicid, addressStateProviderName)
 		}
 		return nil
 	}
@@ -388,43 +334,28 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Subnet,
 		component.Serve(ctx, &admin.AddressStateProviderWithCtxStub{Impl: impl}, request.Channel, component.ServeOptions{
 			Concurrent: true,
 			OnError: func(err error) {
-				_ = syslog.WarnTf(addressStateProviderName, "address state provider for %s: %s", addr, err)
+				_ = syslog.WarnTf(addressStateProviderName, "NICID=%d address state provider for %s: %s", impl.nicid, addr, err)
 			},
 		})
 
-		if pi := func() *adminAddressStateProviderImpl {
-			ifs.mu.Lock()
-			defer ifs.mu.Unlock()
+		impl.mu.Lock()
+		detached, removed := impl.mu.detached, impl.mu.removed
+		impl.mu.Unlock()
 
-			// The impl may have already been removed due to address removal.
-			// Removing the address will also attempt to delete from
-			// the address state providers map, so delete from it and unlock
-			// immediately to avoid lock ordering and deadlock issues. We must proceed
-			// with address removal only if this impl is the one stored in the map.
-			// A new address state provider may have won the race here and could be
-			// trying to assign the address again.
-			if pi, ok := ifs.mu.addressStateProviders.providers[addr]; ok && pi == impl {
-				delete(ifs.mu.addressStateProviders.providers, addr)
-				return pi
-			}
-			return nil
-		}(); pi != nil {
-			pi.mu.Lock()
-			remove := !pi.mu.detached
-			pi.mu.Unlock()
+		addrDisp.mu.Lock()
+		if detached {
+			addrDisp.mu.aspImpl = nil
+		}
+		addrDisp.mu.Unlock()
 
-			if remove {
-				// NB: Removing the address will also attempt to access the address state
-				// provider collection and delete the impl out of it if found. The lock
-				// on the collection must not be held at this point to prevent the
-				// deadlock.
-				switch status := ifs.removeAddress(pi.protocolAddr); status {
-				case zx.ErrOk, zx.ErrNotFound:
-				case zx.ErrBadState:
-					_ = syslog.WarnTf(addressStateProviderName, "interface %d removed when trying to remove address %s upon channel closure: %s", ci.nicid, addr, status)
-				default:
-					panic(fmt.Sprintf("unknown error trying to remove address %s upon channel closure: %s", addr, status))
-				}
+		if !detached && !removed {
+			_ = syslog.DebugTf(addressStateProviderName, "NICID=%d removing address %s from NIC %d due to protocol closure", impl.nicid, addr, ci.nicid)
+			switch status := ifs.removeAddress(impl.protocolAddr); status {
+			case zx.ErrOk, zx.ErrNotFound:
+			case zx.ErrBadState:
+				_ = syslog.WarnTf(addressStateProviderName, "NIC %d removed when trying to remove address %s upon channel closure: %s", ci.nicid, addr, status)
+			default:
+				panic(fmt.Sprintf("NICID=%d unknown error trying to remove address %s upon channel closure: %s", impl.nicid, addr, status))
 			}
 		}
 	}()
