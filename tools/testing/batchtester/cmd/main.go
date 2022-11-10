@@ -31,9 +31,6 @@ func mainImpl(ctx context.Context, flags flags) error {
 	if err := jsonutil.ReadFromFile(flags.configPath, &config); err != nil {
 		return fmt.Errorf("failed to read config from %q: %w", flags.configPath, err)
 	}
-	if err := os.Chdir(config.Execroot); err != nil {
-		return fmt.Errorf("failed to switch to the execroot: %w", err)
-	}
 	return batchtester.Run(ctx, &config)
 }
 

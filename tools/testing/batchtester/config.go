@@ -10,9 +10,6 @@ package batchtester
 // All path fields are relative to the directory in which the batchtester is
 // invoked.
 type Config struct {
-	// Directory in which
-	Execroot string `json:"execroot"`
-
 	// List of tests to run, in order.
 	Tests []Test `json:"tests"`
 }
