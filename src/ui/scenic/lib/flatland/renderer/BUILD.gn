@@ -21,10 +21,7 @@ source_set("renderer") {
     "//third_party/glm",
   ]
 
-  deps = [
-    "//src/ui/lib/escher",
-    "//src/ui/scenic/lib/utils",
-  ]
+  deps = [ "//src/ui/lib/escher" ]
 
   configs += [ "//third_party/glm:enable_experimental" ]
 

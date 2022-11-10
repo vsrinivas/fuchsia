@@ -527,8 +527,7 @@ void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, ImageRect rectangle,
   std::unique_lock<std::mutex> lock(lock_);
 
   // TODO(fxbug.dev/71344): Pixel format should be ignored when using sysmem. We do not want to have
-  // to deal with this default image format.  Work was in progress to address this, but is currently
-  // stalled: see fxr/716543.
+  // to deal with this default image format.
   FX_DCHECK(buffer_collection_pixel_format_.count(image.collection_id));
   auto pixel_format = buffer_collection_pixel_format_[image.collection_id];
   fuchsia::hardware::display::ImageConfig image_config = {
