@@ -7,12 +7,14 @@
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <set>
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/report.h"
+#include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/report_util.h"
 #include "src/developer/forensics/utils/sized_data.h"
 #include "src/developer/forensics/utils/storage_size.h"
@@ -139,16 +141,18 @@ std::string ReadSnapshotUuid(const std::string& path) {
 
 ReportStore::ReportStore(LogTags* tags, std::shared_ptr<InfoContext> info,
                          feedback::AnnotationManager* annotation_manager,
-                         const ReportStore::Root& temp_root,
-                         const ReportStore::Root& persistent_root,
+                         const Root& temp_reports_root, const Root& persistent_reports_root,
+                         const SnapshotPersistence::Root& temp_snapshots_root,
+                         const SnapshotPersistence::Root& persistent_snapshots_root,
                          const std::string& garbage_collected_snapshots_path,
                          StorageSize max_archives_size)
-    : tmp_metadata_(temp_root.dir, temp_root.max_size),
-      cache_metadata_(persistent_root.dir, persistent_root.max_size),
+    : tmp_metadata_(temp_reports_root.dir, temp_reports_root.max_size),
+      cache_metadata_(persistent_reports_root.dir, persistent_reports_root.max_size),
       tags_(tags),
       info_(std::move(info)),
-      snapshot_store_(annotation_manager, garbage_collected_snapshots_path, max_archives_size) {
-  info_.LogMaxReportStoreSize(temp_root.max_size + persistent_root.max_size);
+      snapshot_store_(annotation_manager, garbage_collected_snapshots_path, temp_snapshots_root,
+                      persistent_snapshots_root, max_archives_size) {
+  info_.LogMaxReportStoreSize(temp_reports_root.max_size + persistent_reports_root.max_size);
 
   // Clean up any empty directories in the report store. This may happen if the component stops
   // running while it is deleting a report.
@@ -193,15 +197,15 @@ bool ReportStore::Add(Report report, std::vector<ReportId>* garbage_collected_re
 
   auto& root_metadata = PickRootForStorage(report_size);
 
-  return Add(report.Id(), report.ProgramShortname(), report_size, attachments, root_metadata,
-             garbage_collected_reports);
+  return AddToRoot(report.Id(), report.ProgramShortname(), report_size, attachments, root_metadata,
+                   garbage_collected_reports);
 }
 
-bool ReportStore::Add(const ReportId report_id, const std::string& program_shortname,
-                      const StorageSize report_size,
-                      const std::map<std::string, SizedData>& attachments,
-                      ReportStoreMetadata& store_root,
-                      std::vector<ReportId>* garbage_collected_reports) {
+bool ReportStore::AddToRoot(const ReportId report_id, const std::string& program_shortname,
+                            const StorageSize report_size,
+                            const std::map<std::string, SizedData>& attachments,
+                            ReportStoreMetadata& store_root,
+                            std::vector<ReportId>* garbage_collected_reports) {
   // Delete the persisted files and attempt to store the report under a new directory.
   auto on_error = [this, &store_root, report_id, program_shortname, report_size, &attachments,
                    garbage_collected_reports](const std::optional<std::string>& report_dir) {
@@ -216,8 +220,8 @@ bool ReportStore::Add(const ReportId report_id, const std::string& program_short
     auto& fallback_root = FallbackRoot(store_root);
     FX_LOGST(INFO, tags_->Get(report_id)) << "Using fallback root: " << fallback_root.RootDir();
 
-    return Add(report_id, program_shortname, report_size, attachments, fallback_root,
-               garbage_collected_reports);
+    return AddToRoot(report_id, program_shortname, report_size, attachments, fallback_root,
+                     garbage_collected_reports);
   };
 
   // Ensure there's enough space in the store for the report.
@@ -329,6 +333,8 @@ std::vector<ReportId> ReportStore::GetReports() const {
 
   return all_reports;
 }
+
+std::vector<ReportId> ReportStore::GetCacheReports() const { return cache_metadata_.Reports(); }
 
 SnapshotUuid ReportStore::GetSnapshotUuid(const ReportId id) {
   if (!Contains(id)) {

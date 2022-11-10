@@ -37,7 +37,9 @@ class Report {
   ReportId Id() const { return id_; }
 
   std::string ProgramShortname() const { return program_shortname_; }
+
   const AnnotationMap& Annotations() const { return annotations_; }
+  AnnotationMap& Annotations() { return annotations_; }
 
   const std::map<std::string, SizedData>& Attachments() const { return attachments_; }
   std::map<std::string, SizedData>& Attachments() { return attachments_; }

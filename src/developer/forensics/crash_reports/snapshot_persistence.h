@@ -34,12 +34,19 @@ class SnapshotPersistence {
   // Returns true if a snapshot for |uuid| exists on disk.
   bool Contains(const SnapshotUuid& uuid) const;
 
+  // Attempts to move the snapshot from /cache to /tmp. Will attempt to delete the snapshot from
+  // /cache regardless of whether the addition to /tmp succeeds. Check-fails that the snapshot was
+  // previously in /cache.
+  void MoveToTmp(const SnapshotUuid& uuid);
+
   // Returns location for where |uuid| is currently stored in persistence, if anywhere.
   std::optional<ItemLocation> SnapshotLocation(const SnapshotUuid& uuid);
 
   // Gets an archive from disk. Check-fails that the archive for |uuid| exists on disk. Call
   // Contains to verify existence on disk first.
   std::shared_ptr<const ManagedSnapshot::Archive> Get(const SnapshotUuid& uuid);
+
+  std::vector<SnapshotUuid> GetSnapshotUuids() const;
 
   // Deletes the snapshot for |uuid| from persistence. Returns true if successful.
   bool Delete(const SnapshotUuid& uuid);

@@ -45,6 +45,18 @@ constexpr StorageSize kReportStoreMaxSize = StorageSize::Megabytes(5u);
 constexpr StorageSize kReportStoreMaxCacheSize = StorageSize::Kilobytes(512);
 constexpr StorageSize kReportStoreMaxTmpSize = kReportStoreMaxSize - kReportStoreMaxCacheSize;
 
+// TODO(fxbug.dev/102479): Document implementation details.
+constexpr const char* kSnapshotStoreTmpPath = "/tmp/snapshots";
+constexpr const char* kSnapshotStoreCachePath = "/cache/snapshots";
+
+// TODO(fxbug.dev/102479): Move to BoardConfig. Increase size once implementation complete.
+constexpr StorageSize kSnapshotStoreMaxSize = StorageSize::Megabytes(0u);
+
+// TODO(fxbug.dev/102479): Move to BoardConfig. Increase size once implementation complete. Document
+// details.
+constexpr StorageSize kSnapshotStoreMaxCacheSize = StorageSize::Megabytes(0u);
+constexpr StorageSize kSnapshotStoreMaxTmpSize = kSnapshotStoreMaxSize - kSnapshotStoreMaxCacheSize;
+
 // If a crash report arrives within |kSnapshotSharedRequestWindow| of a call to
 // SnapshotManager::GetSnapshotUuid that schedules a call to
 // fuchsia.feedback.DataProvider/GetSnapshot, the returned snapshot will be used in the resulting

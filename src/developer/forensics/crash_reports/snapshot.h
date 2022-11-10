@@ -63,6 +63,7 @@ class MissingSnapshot {
 
   // Information from the snapshot manager on why the snapshot is missing.
   const feedback::Annotations& PresenceAnnotations() const { return presence_annotations_; }
+  feedback::Annotations& PresenceAnnotations() { return presence_annotations_; }
 
  private:
   feedback::Annotations annotations_;

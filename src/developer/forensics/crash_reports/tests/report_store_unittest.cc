@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <filesystem>
+#include <fstream>
 #include <map>
 #include <optional>
 #include <string>
@@ -15,6 +17,8 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback_data/constants.h"
+#include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/scoped_memfs_manager.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/sized_data.h"
@@ -48,19 +52,32 @@ SizedData MakeSizedData(const std::string& content) {
 class ReportStoreTest : public UnitTestFixture {
  public:
   ReportStoreTest() : annotation_manager_(dispatcher(), {}) {
-    MakeNewStore(StorageSize::Megabytes(1));
+    MakeNewStore(/*max_tmp_reports_size=*/StorageSize::Megabytes(1));
   }
 
  protected:
-  void MakeNewStore(const StorageSize max_tmp_size,
-                    const StorageSize max_cache_size = StorageSize::Bytes(0),
+  std::string GetTmpReportsDir() { return files::JoinPath(tmp_dir_.path(), "reports"); }
+  std::string GetCacheReportsDir() { return files::JoinPath(cache_dir_.path(), "reports"); }
+  std::string GetTmpSnapshotsDir() { return files::JoinPath(tmp_dir_.path(), "snapshots"); }
+  std::string GetCacheSnapshotsDir() { return files::JoinPath(cache_dir_.path(), "snapshots"); }
+
+  void MakeNewStore(const StorageSize max_tmp_reports_size,
+                    const StorageSize max_cache_reports_size = StorageSize::Bytes(0),
+                    const StorageSize max_tmp_snapshots_size = StorageSize::Bytes(0),
+                    const StorageSize max_cache_snapshots_size = StorageSize::Bytes(0),
                     const StorageSize max_archives_size = StorageSize::Megabytes(1)) {
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
     report_store_ = std::make_unique<ReportStore>(
         &tags_, info_context_, &annotation_manager_,
-        /*temp_root=*/ReportStore::Root{tmp_dir_.path(), max_tmp_size},
-        /*persistent_root=*/ReportStore::Root{cache_dir_.path(), max_cache_size},
+        /*temp_reports_root=*/
+        ReportStore::Root{GetTmpReportsDir(), max_tmp_reports_size},
+        /*persistent_reports_root=*/
+        ReportStore::Root{GetCacheReportsDir(), max_cache_reports_size},
+        /*temp_snapshots_root=*/
+        SnapshotPersistence::Root{GetTmpSnapshotsDir(), max_tmp_snapshots_size},
+        /*persistent_snapshots_root=*/
+        SnapshotPersistence::Root{GetCacheSnapshotsDir(), max_cache_snapshots_size},
         files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"), max_archives_size);
   }
 
@@ -125,7 +142,7 @@ class ReportStoreTest : public UnitTestFixture {
                std::map<std::string, std::string>* attachments_out,
                std::optional<std::string>* snapshot_uuid_out,
                std::optional<std::string>* minidump_out) {
-    return Read(tmp_dir_.path(), program_shortname, id, annotations_out, attachments_out,
+    return Read(GetTmpReportsDir(), program_shortname, id, annotations_out, attachments_out,
                 snapshot_uuid_out, minidump_out);
   }
 
@@ -134,7 +151,7 @@ class ReportStoreTest : public UnitTestFixture {
                  std::map<std::string, std::string>* attachments_out,
                  std::optional<std::string>* snapshot_uuid_out,
                  std::optional<std::string>* minidump_out) {
-    return Read(cache_dir_.path(), program_shortname, id, annotations_out, attachments_out,
+    return Read(GetCacheReportsDir(), program_shortname, id, annotations_out, attachments_out,
                 snapshot_uuid_out, minidump_out);
   }
 
@@ -204,13 +221,14 @@ class ReportStoreTest : public UnitTestFixture {
 
   std::vector<std::string> GetProgramShortnames() {
     std::vector<std::string> programs;
-    files::ReadDirContents(tmp_dir_.path(), &programs);
+    files::ReadDirContents(GetTmpReportsDir(), &programs);
 
     programs.erase(std::remove_if(programs.begin(), programs.end(),
                                   [](const std::string& filename) { return filename == "."; }),
                    programs.end());
     return programs;
   }
+
   timekeeper::TestClock clock_;
   LogTags tags_;
   std::shared_ptr<InfoContext> info_context_;
@@ -252,8 +270,8 @@ TEST_F(ReportStoreTest, Succeed_AddDefaultsToCache) {
     expected_report_size += v.size();
   }
 
-  MakeNewStore(/*max_tmp_size=*/StorageSize::Bytes(expected_report_size),
-               /*max_cache_size=*/StorageSize::Bytes(expected_report_size));
+  MakeNewStore(/*max_tmp_reports_size=*/StorageSize::Bytes(expected_report_size),
+               /*max_cache_reports_size=*/StorageSize::Bytes(expected_report_size));
 
   std::map<std::string, std::string> annotations;
   std::map<std::string, std::string> attachments;
@@ -374,8 +392,8 @@ TEST_F(ReportStoreTest, Succeed_Remove) {
 
 TEST_F(ReportStoreTest, NoCacheGarbageCollection) {
   // Cache only has space for one report.
-  MakeNewStore(/*tmp_max_size=*/StorageSize::Bytes(0),
-               /*cache_max_size=*/
+  MakeNewStore(/*max_tmp_reports_size=*/StorageSize::Bytes(0),
+               /*max_cache_reports_size=*/
                StorageSize::Bytes(2u /*the empty annotations.json*/));
   std::vector<ReportId> garbage_collected_reports;
 
@@ -535,7 +553,7 @@ TEST_F(ReportStoreTest, Succeed_RebuildCleansEmptyDirectories) {
     EXPECT_TRUE(garbage_collected_reports.empty());
   }
 
-  const std::string empty_dir = files::JoinPath(tmp_dir_.path(), "empty");
+  const std::string empty_dir = files::JoinPath(GetTmpReportsDir(), "empty");
   ASSERT_TRUE(files::CreateDirectory(empty_dir));
 
   MakeNewStore(StorageSize::Megabytes(1));
@@ -576,8 +594,14 @@ TEST_F(ReportStoreTest, UsesTmpUntilPersistentReady) {
   testing::ScopedMemFsManager scoped_mem_fs;
   report_store_ = std::make_unique<ReportStore>(
       &tags_, info_context_, &annotation_manager_,
-      /*temp_root=*/ReportStore::Root{tmp_dir_.path(), StorageSize::Bytes(expected_report_size)},
-      /*persistent_root=*/ReportStore::Root{cache_root, StorageSize::Bytes(expected_report_size)},
+      /*temp_reports_root=*/
+      ReportStore::Root{GetTmpReportsDir(), StorageSize::Bytes(expected_report_size)},
+      /*persistent_reports_root=*/
+      ReportStore::Root{cache_root, StorageSize::Bytes(expected_report_size)},
+      /*temp_snapshots_root=*/
+      SnapshotPersistence::Root{GetTmpSnapshotsDir(), StorageSize::Bytes(0u)},
+      /*persistent_snapshots_root=*/
+      SnapshotPersistence::Root{GetCacheSnapshotsDir(), StorageSize::Bytes(0u)},
       files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"),
       StorageSize::Bytes(expected_report_size));
 
@@ -651,10 +675,12 @@ TEST_F(ReportStoreTest, FallbackToTmp) {
     expected_report_size += v.size();
   }
 
-  MakeNewStore(StorageSize::Bytes(expected_report_size), StorageSize::Bytes(expected_report_size));
+  MakeNewStore(/*max_tmp_reports_size=*/StorageSize::Bytes(expected_report_size),
+               /*max_cache_reports_size=*/StorageSize::Bytes(expected_report_size));
 
   // Create a file under the cache directory where the next report directory should be created.
-  const std::string program_path = files::JoinPath(cache_dir_.path(), expected_program_shortname);
+  const std::string program_path =
+      files::JoinPath(GetCacheReportsDir(), expected_program_shortname);
   ASSERT_TRUE(files::CreateDirectory(program_path));
   const std::string report_path = files::JoinPath(program_path, std::to_string(next_report_id_));
   ASSERT_TRUE(files::WriteFile(report_path, "n/a"));

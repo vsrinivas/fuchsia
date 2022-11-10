@@ -40,6 +40,11 @@ class SnapshotPersistenceMetadata {
   void Add(const SnapshotUuid& uuid, StorageSize size, std::string_view archive_key);
   void Delete(const SnapshotUuid& uuid);
 
+  std::vector<SnapshotUuid> SnapshotUuids() const;
+
+  // Returns the size of the snapshot archive.
+  StorageSize SnapshotSize(const SnapshotUuid& uuid) const;
+
   // Returns the directory that contains the snapshot |uuid|.
   std::string SnapshotDirectory(const SnapshotUuid& uuid) const;
 

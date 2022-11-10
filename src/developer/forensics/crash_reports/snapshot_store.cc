@@ -23,9 +23,12 @@ std::shared_ptr<T> MakeShared(T&& t) {
 
 SnapshotStore::SnapshotStore(feedback::AnnotationManager* annotation_manager,
                              std::string garbage_collected_snapshots_path,
+                             const SnapshotPersistence::Root& temp_root,
+                             const SnapshotPersistence::Root& persistent_root,
                              StorageSize max_archives_size)
     : annotation_manager_(annotation_manager),
       garbage_collected_snapshots_path_(std::move(garbage_collected_snapshots_path)),
+      persistence_(temp_root, persistent_root),
       max_archives_size_(max_archives_size),
       current_archives_size_(0u),
       garbage_collected_snapshot_(kGarbageCollectedSnapshotUuid,
@@ -89,10 +92,16 @@ Snapshot SnapshotStore::GetSnapshot(const SnapshotUuid& uuid) {
     if (garbage_collected_snapshots_.find(uuid) != garbage_collected_snapshots_.end()) {
       return BuildMissing(garbage_collected_snapshot_);
     }
+
+    // TODO(fxbug.dev/102479): Check for snapshot in persistence.
     return BuildMissing(not_persisted_snapshot_);
   }
 
   return ManagedSnapshot(data->archive);
+}
+
+std::vector<SnapshotUuid> SnapshotStore::GetSnapshotUuids() const {
+  return persistence_.GetSnapshotUuids();
 }
 
 MissingSnapshot SnapshotStore::GetMissingSnapshot(const SnapshotUuid& uuid) {
@@ -103,6 +112,11 @@ MissingSnapshot SnapshotStore::GetMissingSnapshot(const SnapshotUuid& uuid) {
 }
 
 void SnapshotStore::DeleteSnapshot(const SnapshotUuid& uuid) {
+  if (persistence_.Contains(uuid)) {
+    persistence_.Delete(uuid);
+    return;
+  }
+
   auto* data = FindSnapshotData(uuid);
 
   // The snapshot was likely dropped due to size constraints.
@@ -110,7 +124,6 @@ void SnapshotStore::DeleteSnapshot(const SnapshotUuid& uuid) {
     return;
   }
 
-  // TODO(fxbug.dev/102479): drop from persistence instead if that's where the snapshot is located.
   DropArchive(data);
   RecordAsGarbageCollected(uuid);
   data_.erase(uuid);
@@ -132,8 +145,9 @@ void SnapshotStore::AddSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Att
   insertion_order_.push_back(uuid);
 
   while (!insertion_order_.empty() && SizeLimitsExceeded()) {
+    // We erase snapshots from |insertion_order_| when they get moved to disk.
     FX_CHECK(SnapshotLocation(insertion_order_.front()) == ItemLocation::kMemory)
-        << "Snapshot for uuid " << insertion_order_.front() << " doesn't exist";
+        << "Snapshot for uuid " << insertion_order_.front() << " doesn't exist in memory";
 
     EnforceSizeLimits(insertion_order_.front());
     insertion_order_.pop_front();
@@ -152,18 +166,40 @@ void SnapshotStore::EnforceSizeLimits(const SnapshotUuid& uuid) {
   }
 }
 
-bool SnapshotStore::SnapshotExists(const SnapshotUuid& uuid) {
+bool SnapshotStore::MoveToPersistence(const SnapshotUuid& uuid) {
   auto* data = FindSnapshotData(uuid);
-  return data != nullptr;
+  FX_CHECK(data);
+
+  if (!persistence_.Add(uuid, *data->archive, data->archive_size)) {
+    return false;
+  }
+
+  // Snapshot successfully moved to disk; no longer needed in memory.
+  insertion_order_.erase(std::remove(insertion_order_.begin(), insertion_order_.end(), uuid),
+                         insertion_order_.end());
+  DropArchive(data);
+  data_.erase(uuid);
+  return true;
+}
+
+void SnapshotStore::MoveToTmp(const SnapshotUuid& uuid) { return persistence_.MoveToTmp(uuid); }
+
+bool SnapshotStore::SnapshotExists(const SnapshotUuid& uuid) {
+  if (FindSnapshotData(uuid) != nullptr) {
+    return true;
+  }
+
+  // Snapshot not in memory; check disc.
+  return persistence_.Contains(uuid);
 }
 
 std::optional<ItemLocation> SnapshotStore::SnapshotLocation(const SnapshotUuid& uuid) {
-  auto* data = FindSnapshotData(uuid);
-  if (data != nullptr) {
+  if (FindSnapshotData(uuid) != nullptr) {
     return ItemLocation::kMemory;
   }
 
-  return std::nullopt;
+  // Snapshot not in memory; check disc.
+  return persistence_.SnapshotLocation(uuid);
 }
 
 size_t SnapshotStore::Size() const { return data_.size(); }

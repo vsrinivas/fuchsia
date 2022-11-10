@@ -21,10 +21,12 @@
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/constants.h"
+#include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/network_reachability_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
+#include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -184,10 +186,11 @@ class QueueTest : public UnitTestFixture {
     };
 
     std::vector<std::string> program_shortnames;
-    files::ReadDirContents(report_store_->GetCachePath(), &program_shortnames);
+    files::ReadDirContents(report_store_->GetCacheReportsPath(), &program_shortnames);
     RemoveCurDir(&program_shortnames);
     for (const auto& program_shortname : program_shortnames) {
-      const std::string path = files::JoinPath(report_store_->GetCachePath(), program_shortname);
+      const std::string path =
+          files::JoinPath(report_store_->GetCacheReportsPath(), program_shortname);
 
       std::vector<std::string> report_ids;
       files::ReadDirContents(path, &report_ids);
@@ -708,6 +711,213 @@ TEST_F(QueueTest, Check_SpecialCaseClientsRemoved) {
 
   // Queue should delete snapshot despite the report ending up with a special case snapshot uuid.
   EXPECT_FALSE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+}
+
+TEST_F(QueueTest, PreventStrandedSnapshot) {
+  report_store_ = std::make_unique<ScopedTestReportStore>(
+      &annotation_manager_, info_context_,
+      /*max_reports_tmp_size=*/crash_reports::kReportStoreMaxTmpSize,
+      /*max_reports_cache_size=*/StorageSize::Bytes(0),
+      /*max_snapshots_tmp_size=*/StorageSize::Megabytes(1),
+      /*max_snapshots_cache_size=*/StorageSize::Megabytes(1));
+
+  // Fail the first 2 uploads so the reports get moved to /tmp. Fail the last upload so we
+  // can verify the snapshot was moved from /cache to /tmp.
+  SetUpQueue({
+      kUploadFailed,
+      kUploadFailed,
+      kUploadSuccessful,
+      kUploadFailed,
+  });
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+
+  const auto report_id = AddNewReport(/*is_hourly_report=*/
+                                      false);
+  ASSERT_TRUE(report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  const auto report_id2 = AddNewReport(/*is_hourly_report=*/
+                                       false);
+  ASSERT_TRUE(report_id2);
+  EXPECT_TRUE(queue_->Contains(*report_id2));
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = kAttachmentKey;
+  FX_CHECK(fsl::VmoFromString("", &snapshot.value));
+  GetSnapshotStore()->AddSnapshot(kSnapshotUuidValue, std::move(snapshot));
+
+  ASSERT_TRUE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+  EXPECT_TRUE(GetSnapshotStore()->MoveToPersistence(kSnapshotUuidValue));
+  ASSERT_EQ(GetSnapshotStore()->SnapshotLocation(kSnapshotUuidValue), ItemLocation::kCache);
+
+  // Initial upload attempts + 15 minute retry.
+  RunLoopFor(2 * kUploadResponseDelay + zx::min(15));
+
+  EXPECT_EQ(GetSnapshotStore()->SnapshotLocation(kSnapshotUuidValue), ItemLocation::kTmp);
+}
+
+TEST_F(QueueTest, PreventStrandedSnapshot_FailedMove) {
+  report_store_ = std::make_unique<ScopedTestReportStore>(
+      &annotation_manager_, info_context_,
+      /*max_reports_tmp_size=*/crash_reports::kReportStoreMaxTmpSize,
+      /*max_reports_cache_size=*/StorageSize::Bytes(0),
+      /*max_snapshots_tmp_size=*/StorageSize::Bytes(0),
+      /*max_snapshots_cache_size=*/StorageSize::Megabytes(1));
+
+  // Fail the first 2 uploads so the reports get moved to /tmp. Fail the 4th upload so we
+  // can verify the snapshot was deleted after failing to move to /tmp. Succeed on the last upload
+  // so we can verify the debug.snapshot annotations added to the 2nd report.
+  SetUpQueue({
+      kUploadFailed,
+      kUploadFailed,
+      kUploadSuccessful,
+      kUploadFailed,
+      kUploadSuccessful,
+  });
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+
+  const auto report_id = AddNewReport(/*is_hourly_report=*/
+                                      false);
+  ASSERT_TRUE(report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  const auto report_id2 = AddNewReport(/*is_hourly_report=*/
+                                       false);
+  ASSERT_TRUE(report_id2);
+  EXPECT_TRUE(queue_->Contains(*report_id2));
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = kAttachmentKey;
+  FX_CHECK(fsl::VmoFromString("", &snapshot.value));
+  GetSnapshotStore()->AddSnapshot(kSnapshotUuidValue, std::move(snapshot));
+
+  ASSERT_TRUE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+  EXPECT_TRUE(GetSnapshotStore()->MoveToPersistence(kSnapshotUuidValue));
+  ASSERT_EQ(GetSnapshotStore()->SnapshotLocation(kSnapshotUuidValue), ItemLocation::kCache);
+
+  // Initial upload attempts + 15 minute retry.
+  RunLoopFor(2 * kUploadResponseDelay + zx::min(15));
+
+  EXPECT_FALSE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+
+  RunLoopFor(zx::min(15));
+
+  FX_CHECK(crash_server_);
+
+  EXPECT_THAT(crash_server_->latest_annotations().Raw(),
+              UnorderedElementsAreArray({
+                  Pair(kAnnotationKey, kAnnotationValue),
+                  Pair(feedback::kDebugSnapshotErrorKey, "failed move to tmp"),
+                  Pair(feedback::kDebugSnapshotPresentKey, "false"),
+              }));
+}
+
+TEST_F(QueueTest, Check_SnapshotClientsReloaded) {
+  report_store_ = std::make_unique<ScopedTestReportStore>(
+      &annotation_manager_, info_context_,
+      /*max_reports_tmp_size=*/crash_reports::kReportStoreMaxTmpSize,
+      /*max_reports_cache_size=*/crash_reports::kReportStoreMaxCacheSize,
+      /*max_snapshots_tmp_size=*/StorageSize::Bytes(0),
+      /*max_snapshots_cache_size=*/StorageSize::Megabytes(1));
+
+  Report report = MakeReport(report_id_, /*empty_annotations=*/false);
+
+  ++report_id_;
+  Report report2 = MakeReport(report_id_, /*empty_annotations=*/false);
+
+  const ReportId report_id = report.Id();
+  const ReportId report2_id = report2.Id();
+
+  std::vector<ReportId> garbage_collected_reports;
+  report_store_->GetReportStore().Add(std::move(report), &garbage_collected_reports);
+  report_store_->GetReportStore().Add(std::move(report2), &garbage_collected_reports);
+
+  ASSERT_TRUE(garbage_collected_reports.empty());
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = kAttachmentKey;
+  FX_CHECK(fsl::VmoFromString("", &snapshot.value));
+
+  GetSnapshotStore()->AddSnapshot(kSnapshotUuidValue, std::move(snapshot));
+  ASSERT_EQ(GetSnapshotStore()->SnapshotLocation(kSnapshotUuidValue), ItemLocation::kMemory);
+
+  EXPECT_TRUE(GetSnapshotStore()->MoveToPersistence(kSnapshotUuidValue));
+  ASSERT_EQ(GetSnapshotStore()->SnapshotLocation(kSnapshotUuidValue), ItemLocation::kCache);
+
+  // Verify report clients are reloaded by checking if the snapshot gets deleted prematurely.
+  SetUpQueue({
+      kUploadSuccessful,
+      kUploadSuccessful,
+  });
+
+  ASSERT_TRUE(queue_->Contains(report_id));
+  ASSERT_TRUE(queue_->Contains(report2_id));
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+  network_reachability_provider_->TriggerOnNetworkReachable(true);
+
+  RunLoopFor(kUploadResponseDelay);
+  EXPECT_FALSE(queue_->Contains(report_id));
+  EXPECT_TRUE(queue_->Contains(report2_id));
+
+  ASSERT_EQ(GetSnapshotStore()->SnapshotLocation(kSnapshotUuidValue), ItemLocation::kCache);
+
+  RunLoopFor(kUploadResponseDelay);
+  EXPECT_FALSE(queue_->Contains(report_id));
+  EXPECT_FALSE(queue_->Contains(report2_id));
+  EXPECT_FALSE(GetSnapshotStore()->SnapshotLocation(kSnapshotUuidValue).has_value());
+}
+
+TEST_F(QueueTest, Check_CleansUpStrandedSnapshotsInCache) {
+  report_store_ = std::make_unique<ScopedTestReportStore>(
+      &annotation_manager_, info_context_,
+      /*max_reports_tmp_size=*/crash_reports::kReportStoreMaxTmpSize,
+      /*max_reports_cache_size=*/crash_reports::kReportStoreMaxCacheSize,
+      /*max_snapshots_tmp_size=*/StorageSize::Bytes(0),
+      /*max_snapshots_cache_size=*/StorageSize::Megabytes(1));
+
+  SetUpQueue();
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = kAttachmentKey;
+  FX_CHECK(fsl::VmoFromString("", &snapshot.value));
+
+  const SnapshotUuid kTestUuid = "test uuid";
+  GetSnapshotStore()->AddSnapshot(kTestUuid, std::move(snapshot));
+  GetSnapshotStore()->MoveToPersistence(kTestUuid);
+
+  ASSERT_EQ(GetSnapshotStore()->SnapshotLocation(kTestUuid), ItemLocation::kCache);
+
+  // Queue should clean up stranded snapshots on construction.
+  SetUpQueue();
+
+  EXPECT_FALSE(GetSnapshotStore()->SnapshotExists(kTestUuid));
+}
+
+TEST_F(QueueTest, Check_CleansUpStrandedSnapshotsInTmp) {
+  report_store_ = std::make_unique<ScopedTestReportStore>(
+      &annotation_manager_, info_context_,
+      /*max_reports_tmp_size=*/crash_reports::kReportStoreMaxTmpSize,
+      /*max_reports_cache_size=*/crash_reports::kReportStoreMaxCacheSize,
+      /*max_snapshots_tmp_size=*/StorageSize::Megabytes(1),
+      /*max_snapshots_cache_size=*/StorageSize::Bytes(0));
+
+  SetUpQueue();
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = kAttachmentKey;
+  FX_CHECK(fsl::VmoFromString("", &snapshot.value));
+
+  const SnapshotUuid kTestUuid = "test uuid";
+  GetSnapshotStore()->AddSnapshot(kTestUuid, std::move(snapshot));
+  GetSnapshotStore()->MoveToPersistence(kTestUuid);
+
+  ASSERT_EQ(GetSnapshotStore()->SnapshotLocation(kTestUuid), ItemLocation::kTmp);
+
+  // Queue should clean up stranded snapshots on construction.
+  SetUpQueue();
+
+  EXPECT_FALSE(GetSnapshotStore()->SnapshotExists(kTestUuid));
 }
 
 }  // namespace

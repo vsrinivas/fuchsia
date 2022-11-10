@@ -10,9 +10,12 @@
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
+#include "src/developer/forensics/crash_reports/annotation_map.h"
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/info/queue_info.h"
+#include "src/developer/forensics/crash_reports/item_location.h"
 #include "src/developer/forensics/crash_reports/snapshot.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -38,10 +41,12 @@ void Queue::InitFromStore() {
   // Note: The upload attempt data is lost when the component stops and all reports start with
   // upload attempts of 0.
   for (const auto& report_id : report_store_->GetReports()) {
+    const SnapshotUuid uuid = report_store_->GetSnapshotUuid(report_id);
+
     // It could technically be an hourly snapshot, but the snapshot has not been persisted so it is
     // okay to have another one here.
-    blocked_reports_.emplace_back(report_id, report_store_->GetSnapshotUuid(report_id),
-                                  false /*not a known hourly report*/);
+    blocked_reports_.emplace_back(report_id, uuid, false /*not a known hourly report*/);
+    AddReportUsingSnapshot(uuid, report_id);
   }
 
   std::sort(blocked_reports_.begin(), blocked_reports_.end(),
@@ -55,6 +60,17 @@ void Queue::InitFromStore() {
       report_id_strs.push_back(std::to_string(pending_report.report_id));
     }
     FX_LOGS(INFO) << "Initializing queue with reports: " << ReportIdsStr(blocked_reports_);
+  }
+
+  // Clean up any stranded snapshots. While it shouldn't happen, a stranded snapshot here would be:
+  // * A snapshot in /cache with all associated reports in memory or /tmp that didn't survive a
+  //   device reboot or Feedback restart
+  // * A snapshot in /tmp with all associated reports in memory that didn't survive a Feedback
+  //   restart
+  for (const SnapshotUuid& uuid : report_store_->GetSnapshotStore()->GetSnapshotUuids()) {
+    if (DeleteSnapshotIfNoClients(uuid)) {
+      FX_LOGS(ERROR) << "Found stranded snapshot with uuid '" << uuid << "'";
+    }
   }
 }
 
@@ -244,9 +260,23 @@ void Queue::Upload() {
   }
 
   metrics_.IncrementUploadAttempts(active_report_->report_id);
+
+  // Don't overwrite annotations about why the snapshot is missing if the report already contains
+  // that information.
+  Snapshot snapshot = report_store_->GetSnapshotStore()->GetSnapshot(active_report_->snapshot_uuid);
+
+  if (const AnnotationMap& annotations = active_report_->report->Annotations();
+      std::holds_alternative<MissingSnapshot>(snapshot) &&
+      annotations.Contains(feedback::kDebugSnapshotErrorKey) &&
+      annotations.Contains(feedback::kDebugSnapshotPresentKey)) {
+    MissingSnapshot& s = std::get<MissingSnapshot>(snapshot);
+
+    s.PresenceAnnotations().erase(feedback::kDebugSnapshotErrorKey);
+    s.PresenceAnnotations().erase(feedback::kDebugSnapshotPresentKey);
+  }
+
   crash_server_->MakeRequest(
-      *active_report_->report,
-      report_store_->GetSnapshotStore()->GetSnapshot(active_report_->snapshot_uuid),
+      *active_report_->report, snapshot,
       [this, add_to_store](CrashServer::UploadStatus status, std::string server_report_id) mutable {
         switch (status) {
           case CrashServer::UploadStatus::kSuccess:
@@ -320,22 +350,67 @@ void Queue::Retire(const PendingReport pending_report, const Queue::RetireReason
   }
 
   DeleteSnapshotIfNoClients(pending_report.snapshot_uuid);
+  PreventStrandedSnapshot(pending_report.snapshot_uuid);
 }
 
 void Queue::AddReportUsingSnapshot(const SnapshotUuid& uuid, ReportId report) {
   snapshot_clients_[uuid].insert(report);
 }
 
-void Queue::DeleteSnapshotIfNoClients(const SnapshotUuid& uuid) {
+bool Queue::DeleteSnapshotIfNoClients(const SnapshotUuid& uuid) {
   if (NumReportsUsingSnapshot(uuid) == 0) {
     report_store_->GetSnapshotStore()->DeleteSnapshot(uuid);
+    return true;
   }
+
+  return false;
 }
 
 size_t Queue::NumReportsUsingSnapshot(const SnapshotUuid& uuid) {
   return (snapshot_clients_.find(uuid) != snapshot_clients_.end())
              ? snapshot_clients_.at(uuid).size()
              : 0;
+}
+
+void Queue::PreventStrandedSnapshot(const SnapshotUuid& uuid) {
+  const auto snapshot_location = report_store_->GetSnapshotStore()->SnapshotLocation(uuid);
+
+  if (!snapshot_location.has_value() || *snapshot_location != ItemLocation::kCache ||
+      SuggestedSnapshotLocation(uuid) != ItemLocation::kTmp) {
+    return;
+  }
+
+  // The snapshot is in /cache, but the suggested location is /tmp. This means we are at risk of a
+  // stranded snapshot after a device reboot.
+  report_store_->GetSnapshotStore()->MoveToTmp(uuid);
+  if (report_store_->GetSnapshotStore()->SnapshotExists(uuid)) {
+    return;
+  }
+
+  // Failed to move to /tmp - update reports still associated with this snapshot as to why the
+  // snapshot won't be attached.
+  for (const ReportId report_id : snapshot_clients_.at(uuid)) {
+    FX_CHECK(report_store_->Contains(report_id))
+        << "|snapshot_clients_| not in sync with |report_store_|";
+
+    report_store_->AddAnnotation(report_id, feedback::kDebugSnapshotErrorKey, "failed move to tmp");
+    report_store_->AddAnnotation(report_id, feedback::kDebugSnapshotPresentKey, "false");
+  }
+}
+
+ItemLocation Queue::SuggestedSnapshotLocation(const SnapshotUuid& uuid) {
+  const std::vector<ReportId> cache_reports = report_store_->GetCacheReports();
+
+  // Check if any reports in /cache are associated with the snapshot for |uuid|.
+  if (std::any_of(cache_reports.begin(), cache_reports.end(), [this, uuid](ReportId id) {
+        return report_store_->GetSnapshotUuid(id) == uuid;
+      })) {
+    return ItemLocation::kCache;
+  }
+
+  // No reports in /cache are associated with |uuid|, so there's no reason to store the snapshot for
+  // |uuid| in /cache.
+  return ItemLocation::kTmp;
 }
 
 void Queue::BlockAll() {

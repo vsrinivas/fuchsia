@@ -121,14 +121,23 @@ class Queue {
   void UnblockAllEveryFifteenMinutes();
 
   // Deletes the snapshot referred to by |uuid| if there are no reports associated with the snapshot
-  // in |snapshot_clients_|.
-  void DeleteSnapshotIfNoClients(const SnapshotUuid& uuid);
+  // in |snapshot_clients_|. Returns true if the snapshot was deleted.
+  bool DeleteSnapshotIfNoClients(const SnapshotUuid& uuid);
 
   // Returns the number of crash reports that use the snapshot referred to by |uuid|.
   //
   // Note: it's technically possible for this value to be too large if a report hasn't been added,
   // but its association to a snapshot has been recorded with AddSnapshotClient.
   size_t NumReportsUsingSnapshot(const SnapshotUuid& uuid);
+
+  // Attempts to remove the risk of the snapshot for |uuid| becoming a stranded snapshot. A
+  // stranded snapshot is a snapshot on disk that does not have any associated crash reports on the
+  // device.
+  void PreventStrandedSnapshot(const SnapshotUuid& uuid);
+
+  // Suggests where the snapshot for |uuid| should be stored based on the locations of crash reports
+  // associated with |uuid|.
+  ItemLocation SuggestedSnapshotLocation(const SnapshotUuid& uuid);
 
   std::string ReportIdsStr(const std::deque<PendingReport>& reports) const;
 

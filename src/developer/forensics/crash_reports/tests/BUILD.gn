@@ -210,6 +210,7 @@ executable("queue_unittest_exe") {
     "//src/developer/forensics/crash_reports:network_watcher",
     "//src/developer/forensics/crash_reports:queue",
     "//src/developer/forensics/crash_reports/info",
+    "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:cobalt",
@@ -348,6 +349,8 @@ executable("report_store_unittest_exe") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports:store",
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:scoped_memfs_manager",
     "//src/developer/forensics/testing:unit_test_fixture",

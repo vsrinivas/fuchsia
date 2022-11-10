@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <utility>
 
+#include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
@@ -31,6 +32,8 @@ bool SnapshotPersistenceMetadata::Contains(const SnapshotUuid& uuid) const {
 
 bool SnapshotPersistenceMetadata::RecreateFromFilesystem() {
   current_size_ = StorageSize::Bytes(0);
+  snapshot_metadata_.clear();
+
   if (!files::IsDirectory(snapshot_store_root_) && !files::CreateDirectory(snapshot_store_root_)) {
     FX_LOGS(WARNING) << "Failed to create " << snapshot_store_root_;
     is_directory_usable_ = false;
@@ -98,6 +101,21 @@ void SnapshotPersistenceMetadata::Delete(const SnapshotUuid& uuid) {
 
   current_size_ -= snapshot_metadata_[uuid].size;
   snapshot_metadata_.erase(uuid);
+}
+
+std::vector<SnapshotUuid> SnapshotPersistenceMetadata::SnapshotUuids() const {
+  std::vector<SnapshotUuid> uuids;
+  for (const auto& [uuid, _] : snapshot_metadata_) {
+    uuids.push_back(uuid);
+  }
+
+  return uuids;
+}
+
+StorageSize SnapshotPersistenceMetadata::SnapshotSize(const SnapshotUuid& uuid) const {
+  FX_CHECK(Contains(uuid));
+
+  return snapshot_metadata_.at(uuid).size;
 }
 
 std::string SnapshotPersistenceMetadata::SnapshotDirectory(const SnapshotUuid& uuid) const {

@@ -15,6 +15,7 @@
 #include <src/lib/fostr/fidl/fuchsia/mem/formatting.h>
 #include <src/lib/fostr/indent.h>
 
+#include "src/developer/forensics/crash_reports/item_location.h"
 #include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -53,6 +54,28 @@ inline void PrintTo(const ErrorOr<T>& error_or, std::ostream* os) {
     *os << ToString(error_or.Error());
   }
 }
+
+namespace crash_reports {
+
+// Pretty-prints ItemLocation in gTest matchers instead of the default byte string in case
+// of failed expectations.
+inline void PrintTo(const ItemLocation& location, std::ostream* os) {
+  std::string location_str;
+  switch (location) {
+    case ItemLocation::kMemory:
+      location_str = "MEMORY";
+      break;
+    case ItemLocation::kCache:
+      location_str = "CACHE";
+      break;
+    case ItemLocation::kTmp:
+      location_str = "TMP";
+      break;
+  }
+  *os << location_str;
+}
+
+}  // namespace crash_reports
 
 namespace feedback {
 

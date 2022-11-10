@@ -19,6 +19,7 @@
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -60,14 +61,22 @@ class SnapshotStoreTest : public UnitTestFixture {
   SnapshotStoreTest()
       : garbage_collected_snapshots_path_(
             files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt")) {
-    snapshot_store_ = std::make_unique<SnapshotStore>(
-        &annotation_manager_, garbage_collected_snapshots_path_, StorageSize::Megabytes(1u));
+    SetUpSnapshotStore();
   }
 
  protected:
-  void SetUpSnapshotStore(StorageSize max_archives_size = StorageSize::Megabytes(1)) {
+  void SetUpSnapshotStore(StorageSize max_archives_size = StorageSize::Megabytes(1),
+                          StorageSize max_tmp_size = StorageSize::Bytes(0),
+                          StorageSize max_cache_size = StorageSize::Bytes(0)) {
     snapshot_store_ = std::make_unique<SnapshotStore>(
-        &annotation_manager_, garbage_collected_snapshots_path_, max_archives_size);
+        &annotation_manager_, garbage_collected_snapshots_path_,
+        /*temp_root=*/
+        SnapshotPersistence::Root{files::JoinPath(tmp_dir_.path(), kSnapshotStoreTmpPath),
+                                  max_tmp_size},
+        /*persistent_root=*/
+        SnapshotPersistence::Root{files::JoinPath(tmp_dir_.path(), kSnapshotStoreCachePath),
+                                  max_cache_size},
+        max_archives_size);
   }
 
   fuchsia::feedback::Attachment GetDefaultAttachment() {
@@ -275,6 +284,33 @@ TEST_F(SnapshotStoreTest, Check_RemovesFromInsertionOrder) {
   EXPECT_FALSE(snapshot_store_->SnapshotLocation(kTestUuid3).has_value());
   EXPECT_EQ(snapshot_store_->SnapshotLocation(kTestUuid4), ItemLocation::kMemory);
   EXPECT_EQ(snapshot_store_->SnapshotLocation(kTestUuid5), ItemLocation::kMemory);
+}
+
+TEST_F(SnapshotStoreTest, Check_MoveToPersistence) {
+  // Initialize SnapshotStore to only hold 1 default archive in memory.
+  SetUpSnapshotStore(/*max_archives_size=*/StorageSize::Bytes(kDefaultArchiveKey.size()),
+                     /*max_tmp_size=*/StorageSize::Bytes(0),
+                     /*max_cache_size=*/StorageSize::Megabytes(1));
+
+  AddDefaultSnapshot();
+
+  EXPECT_EQ(snapshot_store_->SnapshotLocation(kTestUuid), ItemLocation::kMemory);
+
+  snapshot_store_->MoveToPersistence(kTestUuid);
+
+  ASSERT_EQ(snapshot_store_->SnapshotLocation(kTestUuid), ItemLocation::kCache);
+
+  // Trigger garbage collection by going over size limit. This will verify that MoveToPersistence
+  // removed |kTestUuid| from |insertion_order_|.
+  const SnapshotUuid kTestUuid2 = kTestUuid + "2";
+  AddDefaultSnapshot(kTestUuid2);
+
+  const SnapshotUuid kTestUuid3 = kTestUuid + "3";
+  AddDefaultSnapshot(kTestUuid3);
+
+  EXPECT_TRUE(snapshot_store_->SnapshotLocation(kTestUuid).has_value());
+  EXPECT_FALSE(snapshot_store_->SnapshotLocation(kTestUuid2).has_value());
+  EXPECT_TRUE(snapshot_store_->SnapshotLocation(kTestUuid3).has_value());
 }
 
 }  // namespace

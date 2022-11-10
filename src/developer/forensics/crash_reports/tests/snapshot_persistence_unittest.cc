@@ -256,5 +256,42 @@ TEST_F(SnapshotPersistenceTest, Succeed_Delete) {
   EXPECT_FALSE(Read(GetCacheDir(), kTestUuid, archive));
 }
 
+TEST_F(SnapshotPersistenceTest, Succeed_MoveToTmp) {
+  const SnapshotUuid kTestUuid = "test uuid";
+  const std::string kArchiveValue = "snapshot.data";
+
+  ASSERT_TRUE(AddArchive(kTestUuid, kArchiveValue));
+  ASSERT_EQ(persistence_->SnapshotLocation(kTestUuid), ItemLocation::kCache);
+
+  StringAttachment archive;
+  ASSERT_TRUE(Read(GetCacheDir(), kTestUuid, archive));
+  EXPECT_FALSE(archive.key.empty());
+  EXPECT_FALSE(archive.value.empty());
+
+  persistence_->MoveToTmp(kTestUuid);
+  ASSERT_EQ(persistence_->SnapshotLocation(kTestUuid), ItemLocation::kTmp);
+
+  StringAttachment archive2;
+  ASSERT_TRUE(Read(GetTmpDir(), kTestUuid, archive2));
+  EXPECT_FALSE(archive2.key.empty());
+  EXPECT_FALSE(archive2.value.empty());
+
+  EXPECT_FALSE(Read(GetCacheDir(), kTestUuid, archive2));
+}
+
+TEST_F(SnapshotPersistenceDeathTest, Check_FailMoveFromTmpToTmp) {
+  const SnapshotUuid kTestUuid = "test uuid";
+  const std::string kArchiveValue = "snapshot.data";
+
+  MakeNewPersistence(/*max_tmp_size=*/StorageSize::Megabytes(1),
+                     /*max_cache_size=*/StorageSize::Bytes(0));
+
+  ASSERT_TRUE(AddArchive(kTestUuid, kArchiveValue));
+  ASSERT_EQ(persistence_->SnapshotLocation(kTestUuid), ItemLocation::kTmp);
+
+  ASSERT_DEATH({ persistence_->MoveToTmp(kTestUuid); },
+               HasSubstr("MoveToTmp() will only move snapshots from /cache to /tmp"));
+}
+
 }  // namespace
 }  // namespace forensics::crash_reports

@@ -37,7 +37,11 @@ bool SpaceAvailable(const SnapshotPersistenceMetadata& root, StorageSize archive
 
 SnapshotPersistence::SnapshotPersistence(const Root& temp_root, const Root& persistent_root)
     : tmp_metadata_(temp_root.dir, temp_root.max_size),
-      cache_metadata_(persistent_root.dir, persistent_root.max_size) {}
+      cache_metadata_(persistent_root.dir, persistent_root.max_size) {
+  // |temp_root.dir| must be usable immediately.
+  FX_CHECK(tmp_metadata_.RecreateFromFilesystem());
+  cache_metadata_.RecreateFromFilesystem();
+}
 
 bool SnapshotPersistence::Add(const SnapshotUuid& uuid, const ManagedSnapshot::Archive& archive,
                               StorageSize archive_size) {
@@ -95,6 +99,28 @@ bool SnapshotPersistence::AddToRoot(const SnapshotUuid& uuid,
   return true;
 }
 
+void SnapshotPersistence::MoveToTmp(const SnapshotUuid& uuid) {
+  FX_CHECK(SnapshotLocation(uuid) == ItemLocation::kCache)
+      << "MoveToTmp() will only move snapshots from /cache to /tmp";
+
+  const auto snapshot = Get(uuid);
+  const StorageSize snapshot_size = cache_metadata_.SnapshotSize(uuid);
+
+  // Delete copy of snapshot from /cache before adding to /tmp to avoid the possibility of having
+  // the snapshot in multiple places if deletion from /cache were to fail.
+  if (!DeletePath(cache_metadata_.SnapshotDirectory(uuid))) {
+    FX_LOGS(ERROR) << "Failed to delete snapshot at " << cache_metadata_.SnapshotDirectory(uuid);
+    return;
+  }
+
+  cache_metadata_.Delete(uuid);
+
+  if (!tmp_metadata_.IsDirectoryUsable() || !SpaceAvailable(tmp_metadata_, snapshot_size) ||
+      !AddToRoot(uuid, *snapshot, snapshot_size, tmp_metadata_)) {
+    FX_LOGS(ERROR) << "Failed to move snapshot uuid '" << uuid << "' from /cache to /tmp";
+  }
+}
+
 bool SnapshotPersistence::Contains(const SnapshotUuid& uuid) const {
   return tmp_metadata_.Contains(uuid) || cache_metadata_.Contains(uuid);
 }
@@ -124,6 +150,14 @@ std::shared_ptr<const ManagedSnapshot::Archive> SnapshotPersistence::Get(const S
   }
 
   return std::make_shared<ManagedSnapshot::Archive>(snapshot_filename, std::move(archive));
+}
+
+std::vector<SnapshotUuid> SnapshotPersistence::GetSnapshotUuids() const {
+  auto all_uuids = tmp_metadata_.SnapshotUuids();
+  const auto cache_uuids = cache_metadata_.SnapshotUuids();
+  all_uuids.insert(all_uuids.end(), cache_uuids.begin(), cache_uuids.end());
+
+  return all_uuids;
 }
 
 bool SnapshotPersistence::Delete(const SnapshotUuid& uuid) {

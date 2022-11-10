@@ -21,14 +21,21 @@ CrashReports::CrashReports(async_dispatcher_t* dispatcher,
           std::make_shared<crash_reports::InfoContext>(inspect_root, clock, dispatcher, services)),
       tags_(),
       crash_server_(dispatcher, services, kCrashServerUrl, &tags_),
-      report_store_(&tags_, info_context_, annotation_manager,
-                    /*temp_root=*/
-                    crash_reports::ReportStore::Root{crash_reports::kReportStoreTmpPath,
-                                                     crash_reports::kReportStoreMaxTmpSize},
-                    /*persistent_root=*/
-                    crash_reports::ReportStore::Root{crash_reports::kReportStoreCachePath,
-                                                     crash_reports::kReportStoreMaxCacheSize},
-                    kGarbageCollectedSnapshotsPath, options.snapshot_store_max_archives_size),
+      report_store_(
+          &tags_, info_context_, annotation_manager,
+          /*temp_reports_root=*/
+          crash_reports::ReportStore::Root{crash_reports::kReportStoreTmpPath,
+                                           crash_reports::kReportStoreMaxTmpSize},
+          /*persistent_reports_root=*/
+          crash_reports::ReportStore::Root{crash_reports::kReportStoreCachePath,
+                                           crash_reports::kReportStoreMaxCacheSize},
+          /*temp_snapshots_root=*/
+          crash_reports::SnapshotPersistence::Root{crash_reports::kSnapshotStoreTmpPath,
+                                                   crash_reports::kSnapshotStoreMaxTmpSize},
+          /*persistent_snapshots_root=*/
+          crash_reports::SnapshotPersistence::Root{crash_reports::kSnapshotStoreCachePath,
+                                                   crash_reports::kSnapshotStoreMaxCacheSize},
+          kGarbageCollectedSnapshotsPath, options.snapshot_store_max_archives_size),
       crash_register_(info_context_, kCrashRegisterPath),
       crash_reporter_(dispatcher, services, clock, info_context_, options.config, &crash_register_,
                       &tags_, &crash_server_, &report_store_, data_provider,

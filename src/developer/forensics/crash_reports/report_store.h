@@ -33,16 +33,19 @@ class ReportStore {
     StorageSize max_size;
   };
 
-  // |temp_root| is where reports that don't need to survive a device reboot should be stored
-  // whereas reports that need to do will be stored under |persistent_root|.
+  // |temp_reports_root| is where reports that don't need to survive a device reboot should be
+  // stored whereas reports that need to do will be stored under |persistent_reports_root|.
   //
   // Regardless of which is actually used, reports will be stored in a similar manner. For example,
-  // if a report is filed for "foo" and it is determined that it will be stored under |temp_root|,
-  // that report will be stored in the filesystem under |temp_root|.dir/foo/<report ReportId>.
+  // if a report is filed for "foo" and it is determined that it will be stored under
+  // |temp_reports_root|, that report will be stored in the filesystem under
+  // |temp_reports_root|.dir/foo/<report ReportId>.
   ReportStore(LogTags* tags, std::shared_ptr<InfoContext> info_context,
-              feedback::AnnotationManager* annotation_manager, const Root& temp_root,
-              const Root& persistent_root, const std::string& garbage_collected_snapshots_path,
-              StorageSize max_archives_size);
+              feedback::AnnotationManager* annotation_manager, const Root& temp_reports_root,
+              const Root& persistent_reports_root,
+              const SnapshotPersistence::Root& temp_snapshots_root,
+              const SnapshotPersistence::Root& persistent_snapshots_root,
+              const std::string& garbage_collected_snapshots_path, StorageSize max_archives_size);
 
   // Adds a report to the store and returns the ReportIds of any report garbage collected in the
   // process.
@@ -62,6 +65,7 @@ class ReportStore {
   void RemoveAll();
 
   std::vector<ReportId> GetReports() const;
+  std::vector<ReportId> GetCacheReports() const;
   SnapshotUuid GetSnapshotUuid(ReportId id);
 
   bool Contains(ReportId id);
@@ -69,9 +73,11 @@ class ReportStore {
   SnapshotStore* GetSnapshotStore();
 
  private:
-  bool Add(ReportId report_id, const std::string& program_shortname, StorageSize report_size,
-           const std::map<std::string, SizedData>& attachments, ReportStoreMetadata& store_root,
-           std::vector<ReportId>* garbage_collected_reports);
+  // Adds a report to |store_root| and returns the ReportIds of any report garbage collected in the
+  // process. Returns true if successful.
+  bool AddToRoot(ReportId report_id, const std::string& program_shortname, StorageSize report_size,
+                 const std::map<std::string, SizedData>& attachments,
+                 ReportStoreMetadata& store_root, std::vector<ReportId>* garbage_collected_reports);
 
   // Recreates |store_root| from the filesystem and initializes necessary state.
   bool RecreateFromFilesystem(ReportStoreMetadata& store_root);

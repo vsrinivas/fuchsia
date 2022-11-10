@@ -9,6 +9,7 @@
 
 #include "src/developer/forensics/crash_reports/item_location.h"
 #include "src/developer/forensics/crash_reports/snapshot.h"
+#include "src/developer/forensics/crash_reports/snapshot_persistence.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/utils/storage_size.h"
 
@@ -23,13 +24,22 @@ namespace forensics::crash_reports {
 class SnapshotStore {
  public:
   SnapshotStore(feedback::AnnotationManager* annotation_manager,
-                std::string garbage_collected_snapshots_path, StorageSize max_archives_size);
+                std::string garbage_collected_snapshots_path,
+                const SnapshotPersistence::Root& temp_root,
+                const SnapshotPersistence::Root& persistent_root, StorageSize max_archives_size);
 
   // Stores the given data in memory for later retrieval.
   void AddSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Attachment archive);
 
   // Deletes the data for |uuid| from memory, if it still exists.
   void DeleteSnapshot(const SnapshotUuid& uuid);
+
+  // Moves the snapshot for |uuid| from memory to persistence, if possible. Returns true if
+  // successful.
+  bool MoveToPersistence(const SnapshotUuid& uuid);
+
+  // Attempts to move the snapshot for |uuid| from /cache to /tmp.
+  void MoveToTmp(const SnapshotUuid& uuid);
 
   // Returns true if data for |uuid| is currently stored in the SnapshotStore.
   bool SnapshotExists(const SnapshotUuid& uuid);
@@ -60,6 +70,8 @@ class SnapshotStore {
   // drop the Snapshot, freeing up space for new data.
   Snapshot GetSnapshot(const SnapshotUuid& uuid);
 
+  std::vector<SnapshotUuid> GetSnapshotUuids() const;
+
   // Returns the snapshot for |uuid|. Check-fails that |uuid| results in the return of a
   // MissingSnapshot. A MissingSnapshot is guaranteed to be generated if |uuid| is the uuid of a
   // SpecialCaseSnapshot.
@@ -86,6 +98,7 @@ class SnapshotStore {
   feedback::AnnotationManager* annotation_manager_;
 
   std::string garbage_collected_snapshots_path_;
+  SnapshotPersistence persistence_;
 
   StorageSize max_archives_size_;
   StorageSize current_archives_size_;
