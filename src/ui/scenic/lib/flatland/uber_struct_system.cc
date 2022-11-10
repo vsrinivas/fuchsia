@@ -91,12 +91,10 @@ void UberStructSystem::ForceUpdateAllSessions(size_t max_updates_per_queue) {
   // Pop entries from each queue until empty.
   for (auto& [session_id, queue] : pending_structs_queues_) {
     size_t update_count = 0;
-    auto pending_struct = queue->Pop();
-    while (pending_struct.has_value()) {
-      uber_struct_map_[session_id] = std::move(pending_struct.value().uber_struct);
-      pending_struct = queue->Pop();
+    while (auto pending_struct = queue->Pop()) {
+      uber_struct_map_[session_id] = std::move(pending_struct->uber_struct);
 
-      if (++update_count > max_updates_per_queue) {
+      if (++update_count == max_updates_per_queue) {
         break;
       }
     }
