@@ -17,7 +17,7 @@ _common_bootfs_deps = [
   "//src/devices/spi/drivers/aml-spi",
   "//src/devices/sysmem/drivers/sysmem",
   "//src/devices/tee/drivers/optee",
-  "//src/devices/thermal/drivers/aml-thermal-s905d2g",
+  "//src/devices/thermal/drivers/aml-thermal",
 ]
 
 board_bootfs_labels += _common_bootfs_deps

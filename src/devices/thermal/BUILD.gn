@@ -5,6 +5,7 @@
 group("drivers") {
   testonly = true
   deps = [
+    "drivers/aml-thermal",
     "drivers/aml-thermal-s905d2g",
     "drivers/aml-thermal-s905d2g-legacy",
     "drivers/aml-thermistor",

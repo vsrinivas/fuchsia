@@ -292,6 +292,7 @@
 //src/devices/tests/v2/v1_lifecycle:lifecycle_driver
 //src/devices/thermal/drivers/aml-thermal-s905d2g-legacy:aml-thermal-s905d2g-legacy-driver
 //src/devices/thermal/drivers/aml-thermal-s905d2g:aml-thermal-s905d2g-driver
+//src/devices/thermal/drivers/aml-thermal:aml-thermal-driver
 //src/devices/thermal/drivers/aml-thermistor:aml-thermistor-driver
 //src/devices/thermal/drivers/as370-thermal:as370-thermal-driver
 //src/devices/tpm/drivers/cr50-spi:fuchsia_driver

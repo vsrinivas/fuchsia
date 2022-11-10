@@ -1,0 +1,15 @@
+{
+    "short_description": "AMLogic thermal driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "A311D",
+        "S905D2G",
+        "T931",
+        "A5",
+        "A1"
+    ],
+    "areas": [
+        "Thermal"
+    ]
+}

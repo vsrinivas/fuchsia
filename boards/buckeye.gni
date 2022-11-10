@@ -26,7 +26,7 @@ _common_bootfs_deps = [
   "//src/devices/spi/drivers/aml-spi",
   "//src/devices/sysmem/drivers/sysmem",
   "//src/devices/tee/drivers/optee",
-  "//src/devices/thermal/drivers/aml-thermal-s905d2g",
+  "//src/devices/thermal/drivers/aml-thermal",
   "//src/devices/usb/drivers/aml-usb-crg-phy-v2",
   "//src/devices/usb/drivers/crg-udc",
   "//src/graphics/drivers/msd-vsi-vip",
