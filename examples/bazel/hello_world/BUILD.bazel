@@ -1,0 +1,82 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load(
+    "@rules_fuchsia//fuchsia:defs.bzl",
+    "fuchsia_cc_binary",
+    "fuchsia_cc_test",
+    "fuchsia_component",
+    "fuchsia_component_manifest",
+    "fuchsia_package",
+    "fuchsia_test_package",
+    "if_fuchsia",
+)
+
+fuchsia_cc_binary(
+    name = "hello_world",
+    srcs = [
+        "hello_world.cc",
+    ],
+    deps = [
+        "@fuchsia_sdk//pkg/fdio",
+        "@fuchsia_sdk//pkg/syslog",
+        "@internal_sdk//src/lib/fxl_fxl",
+        "@internal_sdk//src/lib/files_files",
+        # the fidl libraries below are not effectively used in the hello world sample, they are here just to validate that
+        # the Bazel build can include FIDL dependencies from both internal and partner SDK correctly:
+        "@fuchsia_sdk//fidl/fuchsia.component.config:fuchsia.component.config_cc",
+        "@internal_sdk//fidl/fuchsia.exception:fuchsia.exception_cc",
+    ],
+)
+
+fuchsia_component_manifest(
+    name = "manifest",
+    src = "meta/hello_world.cml",
+    includes = ["@fuchsia_sdk//pkg/syslog:client"],
+)
+
+fuchsia_component(
+    name = "component",
+    manifest = ":manifest",
+    deps = [":hello_world"],
+)
+
+fuchsia_package(
+    name = "pkg",
+    package_name = "hello_world",
+    visibility = ["//visibility:public"],
+    components = [
+        ":component",
+    ],
+)
+
+fuchsia_cc_test(
+    name = "hello_test",
+    size = "small",
+    srcs = ["hello_test.cc"],
+    deps = if_fuchsia([
+        "@fuchsia_sdk//pkg/fdio",
+        "@fuchsia_sdk//pkg/syslog",
+    ]),
+)
+
+fuchsia_cc_test(
+    name = "hello_gtest",
+    size = "small",
+    srcs = ["hello_gtest.cc"],
+    deps = ["@com_google_googletest//:gtest_main"] + if_fuchsia([
+        "@fuchsia_sdk//pkg/fdio",
+        "@fuchsia_sdk//pkg/syslog",
+    ]),
+)
+
+fuchsia_test_package(
+    name = "test_pkg",
+    package_name = "hello_test",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":hello_gtest",
+        ":hello_test",
+    ],
+)

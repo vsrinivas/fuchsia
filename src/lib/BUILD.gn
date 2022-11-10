@@ -27,6 +27,7 @@ group("lib") {
     "fuchsia-async-testloop",
     "fuchsia-url",
     "fuchsia_nix",
+    "fxl",
     "gcs($host_toolchain)",
     "http-sse:http_sse",
     "http-uri-ext",

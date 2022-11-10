@@ -172,6 +172,12 @@ fuchsia_sdk_repository(
     local_path = "../../../../sdk/exported/core",
 )
 
+fuchsia_sdk_repository(
+    name = "internal_sdk",
+    parent_sdk = "@fuchsia_sdk",
+    local_path = "../../../../sdk/exported/platform",
+)
+
 register_toolchains("@fuchsia_sdk//:fuchsia_toolchain_sdk")
 
 fuchsia_clang_repository(

@@ -53,18 +53,39 @@ import("//build/sdk/sdk_atom.gni")
 #     if they are already mentioned in 'sources').
 template("sdk_source_set") {
   assert(defined(invoker.category), "Must define an SDK category")
-  assert(defined(invoker.sdk_name), "Must define an SDK name")
+  assert(invoker.category == "internal" || defined(invoker.sdk_name),
+         "Non-internal sdk_source_set must define an SDK name")
 
-  # Not all code paths use this option.
-  not_needed(invoker, [ "private_headers" ])
+  not_needed(invoker, [ "private_headers" ])  # Avoid GN error as not all code
+                                              # paths use this parameter.
 
+  if (defined(invoker.sdk_name)) {
+    sdk_name = invoker.sdk_name
+    sdk_root_path = "pkg/${sdk_name}"
+  } else {
+    # if not defined by the invoker, the sdk_name is the fully qualified target name with some tweaks. For example:
+    #    //src/lib/fxl:fxl            sdk_name = //src/lib/fxl_fxl          sdk_root_path= src/lib/fxl_fxl
+    #    //src/lib/fxl:functional     sdk_name = //src/lib/fxl_functional   sdk_root_path= src/lib/fxl_functional
+    #    //src/lib/fxl/files:files    sdk_name = //src/lib/fxl/files_files  sdk_root_path= src/lib/fxl/files_files
+    full_label = get_label_info(":${invoker.target_name}", "label_no_toolchain")
+    path = get_label_info(full_label, "dir")
+    path = "${path}_${invoker.target_name}"
+
+    sdk_name = path
+    sdk_root_path = string_replace(path, "//", "")
+  }
+
+  sdk_id = "sdk://${sdk_root_path}"
+
+  # Only partner and public categories have API validation
   if (invoker.category == "partner" || invoker.category == "public") {
-    api_reference = "${invoker.sdk_name}.api"
+    api_reference = "${sdk_name}.api"
     if (defined(invoker.api)) {
       api_reference = invoker.api
     }
   }
 
+  # Create the native target (source_set or static_library) for the GN build
   main_target_name = target_name
   sdk_target_name = "${target_name}_sdk"
 
@@ -73,7 +94,6 @@ template("sdk_source_set") {
     target_type = "static_library"
   }
 
-  sdk_id = "sdk://pkg/${invoker.sdk_name}"
   target(target_type, main_target_name) {
     forward_variables_from(invoker,
                            "*",
@@ -83,12 +103,11 @@ template("sdk_source_set") {
                              "include_base",
                              "metadata",
                              "non_sdk_deps",
-                             "sdk_name",
                              "source_dir",
                            ])
 
     if (defined(visibility)) {
-      visibility += [ ":$sdk_target_name" ]
+      visibility += [ ":${sdk_target_name}" ]
     }
 
     metadata = {
@@ -99,14 +118,15 @@ template("sdk_source_set") {
         component_catalog = [
           {
             sdk_id = sdk_id
-            label = get_label_info(":$target_name", "label_with_toolchain")
+            label = get_label_info(":${target_name}", "label_with_toolchain")
           },
         ]
       }
     }
   }
 
-  # Identify dependencies and their metadata files.
+  # Walk over dependencies (deps and public_deps) and collect their names (dep_names), labels (all_deps), labels of corresponding
+  # sdk elements (sdk_deps) and location of their metadata files (sdk_metas)
   sdk_metas = []
   sdk_deps = []
   all_deps = []
@@ -118,51 +138,65 @@ template("sdk_source_set") {
     all_deps += invoker.public_deps
   }
   foreach(dep, all_deps) {
-    full_label = get_label_info(dep, "label_no_toolchain")
-    sdk_dep = "${full_label}_sdk"
+    dep_full_label = get_label_info(dep, "label_no_toolchain")
+    sdk_dep = "${dep_full_label}_sdk"
     sdk_deps += [ sdk_dep ]
 
     gen_dir = get_label_info(sdk_dep, "target_gen_dir")
     name = get_label_info(sdk_dep, "name")
-    sdk_metas += [ "$gen_dir/$name.meta.json" ]
+    sdk_metas += [ "${gen_dir}/${name}.meta.json" ]
     dep_names += [ get_label_info(dep, "name") ]
   }
 
-  # Sort headers vs. sources.
+  # Split invoker.sources into sources and headers.
+  # If invoker.public is defined, use that as the list of headers. Otherwise, *.h are headers, and the others are sources
   all_headers = []
   all_sources = []
-  source_headers_are_public = true
   if (defined(invoker.public)) {
-    source_headers_are_public = false
     all_headers += invoker.public
-  }
-  if (defined(invoker.sources)) {
-    foreach(source_file, invoker.sources) {
-      extension = get_path_info(source_file, "extension")
-      if (extension == "h" && source_headers_are_public) {
-        all_headers += [ source_file ]
-      } else {
-        all_sources += [ source_file ]
+    if (defined(invoker.sources)) {
+      all_sources += invoker.sources
+    }
+  } else {
+    if (defined(invoker.sources)) {
+      foreach(source_file, invoker.sources) {
+        extension = get_path_info(source_file, "extension")
+        if (extension == "h") {
+          all_headers += [ source_file ]
+        } else {
+          all_sources += [ source_file ]
+        }
       }
     }
-    not_needed([ "source_headers_are_public" ])
-  } else {
-    not_needed([ "source_headers_are_public" ])
   }
 
   # Determine destinations in the SDK for headers and sources.
-  file_base = "pkg/${invoker.sdk_name}"
   sdk_metadata_headers = []
   sdk_metadata_sources = []
   sdk_header_files = []
   sdk_files = []
-  foreach(header, all_headers) {
-    include_base = "include"
-    if (defined(invoker.include_base)) {
-      include_base = invoker.include_base
+
+  if (defined(invoker.include_base)) {
+    include_base = invoker.include_base
+  } else {
+    if (invoker.category == "internal") {
+      # by default, we want internal SDK elements to have their include path similar when used through
+      # an SDK (eg Bazel SDk) or directly (GN/Ninja), so that source code doesn't need to be changed
+      # when switching from one to the other.
+      include_base = "//"
+    } else {
+      include_base = "include"
     }
+  }
+  assert(include_base != "")  # Work around for unused variable warning when
+                              # all_headers is empty
+
+  include_dest = "${sdk_root_path}/include"
+
+  foreach(header, all_headers) {
     relative_destination = rebase_path(header, include_base)
-    destination = "$file_base/include/$relative_destination"
+    destination = "${include_dest}/${relative_destination}"
+
     sdk_metadata_headers += [ destination ]
     sdk_header_files += [
       {
@@ -173,11 +207,11 @@ template("sdk_source_set") {
   }
   sdk_files += sdk_header_files
   foreach(source, all_sources) {
-    sdk_metadata_sources += [ "$file_base/$source" ]
+    sdk_metadata_sources += [ "${sdk_root_path}/${source}" ]
     sdk_files += [
       {
         source = source
-        dest = "$file_base/$source"
+        dest = "${sdk_root_path}/${source}"
       },
     ]
   }
@@ -199,7 +233,7 @@ template("sdk_source_set") {
                                "all_deps",
                                "private_headers",
                              ])
-      file_base = file_base
+      file_base = sdk_root_path
     }
   }
 
@@ -218,11 +252,11 @@ template("sdk_source_set") {
       "--out",
       rebase_path(metadata_file, root_build_dir),
       "--name",
-      invoker.sdk_name,
+      sdk_name,
       "--root",
-      file_base,
+      sdk_root_path,
       "--include-dir",
-      "$file_base/include",
+      include_dest,
     ]
     args += [ "--deps" ] + rebase_path(sdk_metas, root_build_dir)
     args += [ "--dep_names" ] + dep_names
@@ -249,7 +283,7 @@ template("sdk_source_set") {
 
     meta = {
       source = metadata_file
-      dest = "$file_base/meta.json"
+      dest = "$sdk_root_path/meta.json"
       schema = "cc_source_library"
     }
 

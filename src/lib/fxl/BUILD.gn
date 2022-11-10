@@ -2,7 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("common") {
+import("//build/cpp/sdk_source_set.gni")
+
+sdk_source_set("common") {
+  category = "internal"
   visibility = [
     ":*",
     "//src/lib/files:*",
@@ -19,7 +22,8 @@ source_set("common") {
   ]
 }
 
-source_set("memory") {
+sdk_source_set("memory") {
+  category = "internal"
   visibility = [
     ":*",
     "//src/lib/files:*",
@@ -44,8 +48,12 @@ source_set("memory") {
   ]
 }
 
-source_set("third_party") {
-  visibility = [ ":strings" ]
+sdk_source_set("third_party") {
+  category = "internal"
+  visibility = [
+    ":*",
+    ":strings",
+  ]
 
   sources = [
     "third_party/icu/icu_utf.cc",
@@ -54,7 +62,8 @@ source_set("third_party") {
   configs += [ "//build/config:Wno-implicit-fallthrough" ]
 }
 
-source_set("string_printf") {
+sdk_source_set("string_printf") {
+  category = "internal"
   visibility = [
     ":*",
     "//src/lib/files:*",
@@ -69,7 +78,8 @@ source_set("string_printf") {
   public_deps = [ ":common" ]
 }
 
-source_set("strings") {
+sdk_source_set("strings") {
+  category = "internal"
   visibility = [
     ":*",
     "//src/lib/files:*",
@@ -102,7 +112,8 @@ source_set("strings") {
   ]
 }
 
-source_set("functional") {
+sdk_source_set("functional") {
+  category = "internal"
   visibility = [ ":*" ]
 
   sources = [
@@ -117,7 +128,8 @@ source_set("functional") {
   ]
 }
 
-static_library("fxl") {
+sdk_source_set("fxl") {
+  category = "internal"
   sources = [
     "command_line.cc",
     "command_line.h",

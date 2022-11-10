@@ -347,6 +347,33 @@ sdk_molecule("core_testing_idk") {
   ]
 }
 
+sdk_molecule("platform_fidls") {
+  visibility = [ ":*" ]
+  deps =
+      [ "//sdk/fidl/fuchsia.exception:fuchsia.exception_sdk($fidl_toolchain)" ]
+}
+
+sdk_molecule("platform_libs") {
+  visibility = [ ":*" ]
+
+  deps = [
+    ":version_history",
+    "//src/lib/fxl:fxl_sdk",
+    "//zircon/public/sysroot/sdk:sysroot_sdk",
+  ]
+}
+
+sdk("platform") {
+  id = sdk_id
+
+  category = "internal"
+
+  deps = [
+    ":platform_fidls",
+    ":platform_libs",
+  ]
+}
+
 sdk("core") {
   id = sdk_id
 
