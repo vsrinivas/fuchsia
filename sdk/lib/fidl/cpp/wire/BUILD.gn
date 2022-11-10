@@ -36,6 +36,7 @@ sdk_source_set("wire") {
     "include/lib/fidl/cpp/wire/decoded_value.h",
     "include/lib/fidl/cpp/wire/envelope.h",
     "include/lib/fidl/cpp/wire/incoming_message.h",
+    "include/lib/fidl/cpp/wire/internal/coding_config.h",
     "include/lib/fidl/cpp/wire/internal/display_error.h",
     "include/lib/fidl/cpp/wire/internal/transport.h",
     "include/lib/fidl/cpp/wire/message_storage.h",

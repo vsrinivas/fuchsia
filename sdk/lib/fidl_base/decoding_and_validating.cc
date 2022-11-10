@@ -11,6 +11,7 @@
 #include <stdalign.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
+#include <zircon/fidl.h>
 
 #include <cstdint>
 #include <cstdlib>
@@ -43,18 +44,6 @@ struct EnvelopeCheckpoint {
   uint32_t num_handles;
 };
 
-zx_status_t channel_decode_process_handle(fidl_handle_t* handle,
-                                          fidl::internal::HandleAttributes attr,
-                                          uint32_t metadata_index, const void* metadata_array,
-                                          const char** error) {
-  fidl_channel_handle_metadata_t v =
-      reinterpret_cast<const fidl_channel_handle_metadata_t*>(metadata_array)[metadata_index];
-  return FidlEnsureHandleRights(handle, v.obj_type, v.rights, attr.obj_type, attr.rights, error);
-}
-const fidl::internal::CodingConfig default_channel_encoding_configuration{
-    .decode_process_handle = channel_decode_process_handle,
-};
-
 constexpr zx_rights_t subtract_rights(zx_rights_t minuend, zx_rights_t subtrahend) {
   return minuend & ~subtrahend;
 }
@@ -75,23 +64,19 @@ void AssignInDecode(const T* ptr, U value) {
 }
 
 template <Mode mode>
-zx_status_t DecodeProcessHandle(const fidl::internal::CodingConfig& encoding_configuration,
-                                fidl_handle_t* handle, fidl::internal::HandleAttributes attr,
+zx_status_t DecodeProcessHandle(fidl_handle_t* handle, zx_obj_type_t obj_type, zx_rights_t rights,
                                 uint32_t metadata_index, const void* metadata_array,
                                 const char** error) {
   static_assert(mode == Mode::Decode, "process handles during decode");
-  if (!encoding_configuration.decode_process_handle) {
-    return ZX_OK;
-  }
-  return encoding_configuration.decode_process_handle(handle, attr, metadata_index, metadata_array,
-                                                      error);
+  fidl_channel_handle_metadata_t v =
+      reinterpret_cast<const fidl_channel_handle_metadata_t*>(metadata_array)[metadata_index];
+  return FidlEnsureHandleRights(handle, v.obj_type, v.rights, obj_type, rights, error);
 }
 
 template <Mode mode>
-zx_status_t DecodeProcessHandle(const fidl::internal::CodingConfig& encoding_configuration,
-                                const fidl_handle_t* handle, fidl::internal::HandleAttributes attr,
-                                uint32_t metadata_index, const void* metadata_array,
-                                const char** error) {
+zx_status_t DecodeProcessHandle(const fidl_handle_t* handle, zx_obj_type_t obj_type,
+                                zx_rights_t rights, uint32_t metadata_index,
+                                const void* metadata_array, const char** error) {
   static_assert(mode == Mode::Validate, "never used during validate");
   __builtin_unreachable();
 }
@@ -142,12 +127,10 @@ using BaseVisitor =
 template <Mode mode, FidlWireFormatVersion WireFormatVersion, typename Byte>
 class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
  public:
-  FidlDecoder(const fidl::internal::CodingConfig& encoding_configuration, Byte* bytes,
-              uint32_t num_bytes, const fidl_handle_t* handles, const void* handle_metadata,
-              uint32_t num_handles, uint32_t next_out_of_line, const char** out_error_msg,
-              bool hlcpp_mode)
-      : encoding_configuration_(encoding_configuration),
-        bytes_(bytes),
+  FidlDecoder(Byte* bytes, uint32_t num_bytes, const fidl_handle_t* handles,
+              const void* handle_metadata, uint32_t num_handles, uint32_t next_out_of_line,
+              const char** out_error_msg, bool hlcpp_mode)
+      : bytes_(bytes),
         num_bytes_(num_bytes),
         handles_(handles),
         handle_metadata_(handle_metadata),
@@ -243,13 +226,10 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
     if (mode == Mode::Decode) {
       AssignInDecode<mode>(handle, handles_[handle_idx_]);
 
-      fidl::internal::HandleAttributes attr = {
-          .obj_type = required_handle_subtype,
-          .rights = required_handle_rights,
-      };
       const char* error;
-      zx_status_t status = DecodeProcessHandle<mode>(encoding_configuration_, handle, attr,
-                                                     handle_idx_, handle_metadata_, &error);
+      zx_status_t status =
+          DecodeProcessHandle<mode>(handle, required_handle_subtype, required_handle_rights,
+                                    handle_idx_, handle_metadata_, &error);
       if (status != ZX_OK) {
         SetError(error);
         return Status::kConstraintViolationError;
@@ -380,7 +360,6 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
   }
 
   // Message state passed in to the constructor.
-  const fidl::internal::CodingConfig& encoding_configuration_;
   Byte* const bytes_;
   const uint32_t num_bytes_;
   const fidl_handle_t* handles_;
@@ -405,8 +384,7 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
 
 namespace {
 template <FidlWireFormatVersion WireFormatVersion>
-zx_status_t fidl_decode_impl(const fidl::internal::CodingConfig& encoding_configuration,
-                             const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                              const fidl_handle_t* handles, const void* handle_metadata,
                              uint32_t num_handles, const char** out_error_msg, bool hlcpp_mode) {
   auto drop_all_handles = [&]() { FidlHandleCloseMany(handles, num_handles); };
@@ -452,8 +430,8 @@ zx_status_t fidl_decode_impl(const fidl::internal::CodingConfig& encoding_config
   }
 
   FidlDecoder<Mode::Decode, WireFormatVersion, uint8_t> decoder(
-      encoding_configuration, b, num_bytes, handles, handle_metadata, num_handles, next_out_of_line,
-      out_error_msg, hlcpp_mode);
+      b, num_bytes, handles, handle_metadata, num_handles, next_out_of_line, out_error_msg,
+      hlcpp_mode);
   fidl::Walk<WireFormatVersion>(decoder, type, DecodingPosition<uint8_t>{b});
 
   if (unlikely(decoder.status() != ZX_OK)) {
@@ -476,14 +454,12 @@ zx_status_t fidl_decode_impl(const fidl::internal::CodingConfig& encoding_config
 }
 
 template <FidlWireFormatVersion WireFormatVersion>
-zx_status_t fidl_decode_impl_handle_info(const fidl::internal::CodingConfig& encoding_configuration,
-                                         const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+zx_status_t fidl_decode_impl_handle_info(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                                          const zx_handle_info_t* handle_infos, uint32_t num_handles,
                                          const char** out_error_msg, bool hlcpp_mode) {
   if (!handle_infos) {
-    return fidl_decode_impl<WireFormatVersion>(encoding_configuration, type, bytes, num_bytes,
-                                               nullptr, nullptr, num_handles, out_error_msg,
-                                               hlcpp_mode);
+    return fidl_decode_impl<WireFormatVersion>(type, bytes, num_bytes, nullptr, nullptr,
+                                               num_handles, out_error_msg, hlcpp_mode);
   }
   fidl_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -494,9 +470,8 @@ zx_status_t fidl_decode_impl_handle_info(const fidl::internal::CodingConfig& enc
         .rights = handle_infos[i].rights,
     };
   }
-  return fidl_decode_impl<WireFormatVersion>(encoding_configuration, type, bytes, num_bytes,
-                                             handles, handle_metadata, num_handles, out_error_msg,
-                                             hlcpp_mode);
+  return fidl_decode_impl<WireFormatVersion>(type, bytes, num_bytes, handles, handle_metadata,
+                                             num_handles, out_error_msg, hlcpp_mode);
 }
 }  // namespace
 
@@ -506,16 +481,14 @@ zx_status_t internal__fidl_decode_etc_hlcpp__v2__may_break(const fidl_type_t* ty
                                                            uint32_t num_handle_infos,
                                                            const char** error_msg_out) {
   return fidl_decode_impl_handle_info<FIDL_WIRE_FORMAT_VERSION_V2>(
-      default_channel_encoding_configuration, type, bytes, num_bytes, handle_infos,
-      num_handle_infos, error_msg_out, true);
+      type, bytes, num_bytes, handle_infos, num_handle_infos, error_msg_out, true);
 }
 
 zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                             const zx_handle_info_t* handle_infos, uint32_t num_handle_infos,
                             const char** error_msg_out) {
   return fidl_decode_impl_handle_info<FIDL_WIRE_FORMAT_VERSION_V2>(
-      default_channel_encoding_configuration, type, bytes, num_bytes, handle_infos,
-      num_handle_infos, error_msg_out, false);
+      type, bytes, num_bytes, handle_infos, num_handle_infos, error_msg_out, false);
 }
 
 zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
@@ -584,8 +557,7 @@ zx_status_t fidl_validate_impl(const fidl_type_t* type, const void* bytes, uint3
   }
 
   FidlDecoder<Mode::Validate, WireFormatVersion, const uint8_t> validator(
-      default_channel_encoding_configuration, b, num_bytes, nullptr, nullptr, num_handles,
-      next_out_of_line, out_error_msg, false);
+      b, num_bytes, nullptr, nullptr, num_handles, next_out_of_line, out_error_msg, false);
   fidl::Walk<WireFormatVersion>(validator, type, DecodingPosition<const uint8_t>{b});
 
   if (validator.status() == ZX_OK) {

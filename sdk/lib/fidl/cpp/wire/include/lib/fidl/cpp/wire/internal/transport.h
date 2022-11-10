@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_INTERNAL_TRANSPORT_H_
 
 #include <lib/fidl/coding.h>
+#include <lib/fidl/cpp/wire/internal/coding_config.h>
 #include <lib/fidl/cpp/wire/status.h>
 #include <lib/fit/function.h>
 #include <lib/fit/inline_any.h>
