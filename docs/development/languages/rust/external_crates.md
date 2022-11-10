@@ -284,7 +284,7 @@ graph, but it tends to be very slow and still has a few issues.
 The tool discovers which build targets depend on a given crate, which means it
 needs the metadata from the completion of a maximal "kitchen sink" build:
 
-1. Include `//bundles/buildbot/core` and `//bundles/kitchen_sink` in your build
+1. Run `fx set core.x64 --with //bundles/buildbot/core --with //bundles/kitchen_sink`
 2. Run `fx build`
 3. Run `fx update-3p-owners --rust-only --num-threads <NUM_THREADS>`. It's
    usually a good idea to limit the number of threads to 50% of available CPUs
