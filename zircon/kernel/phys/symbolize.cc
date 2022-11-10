@@ -192,24 +192,44 @@ void Symbolize::PrintBacktraces(const FramePointer& frame_pointers,
 
 void Symbolize::PrintStack(uintptr_t sp, ktl::optional<size_t> max_size_bytes) {
   const size_t configured_max = gBootOptions->phys_print_stack_max;
-  auto dump_stack = [max = max_size_bytes.value_or(configured_max), sp, this](
-                        const BootStack& stack, const char* which) {
-    Printf("%s: Partial dump of %s stack at [%p, %p):\n", name_, which, &stack, &stack + 1);
-    ktl::span whole(reinterpret_cast<const uint64_t*>(stack.stack),
-                    sizeof(stack.stack) / sizeof(uint64_t));
+  auto maybe_dump_stack = [max = max_size_bytes.value_or(configured_max), sp,
+                           this](const auto& stack) -> bool {
+    if (!stack.boot_stack.IsOnStack(sp)) {
+      return false;
+    }
+    Printf("%s: Partial dump of %V stack at [%p, %p):\n", name_, stack.name, &stack.boot_stack,
+           &stack.boot_stack + 1);
+    ktl::span whole(reinterpret_cast<const uint64_t*>(stack.boot_stack.stack),
+                    sizeof(stack.boot_stack.stack) / sizeof(uint64_t));
     const uintptr_t base = reinterpret_cast<uintptr_t>(whole.data());
     ktl::span used = whole.subspan((sp - base) / sizeof(uint64_t));
     hexdump(used.data(), ktl::min(max, used.size_bytes()));
+    return true;
   };
 
-  if (boot_stack.IsOnStack(sp)) {
-    dump_stack(boot_stack, "boot");
-  } else if (phys_exception_stack.IsOnStack(sp)) {
-    dump_stack(phys_exception_stack, "exception");
-  } else {
-    Printf("%s: Stack pointer is outside expected bounds [%p, %p) or [%p, %p)\n", name_,
-           &boot_stack, &boot_stack + 1, &phys_exception_stack, &phys_exception_stack + 1);
+  if (ktl::none_of(stacks_.begin(), stacks_.end(), maybe_dump_stack)) {
+    Printf("%s: Stack pointer is outside expected bounds:", name_);
+    for (const auto& stack : stacks_) {
+      Printf(" [%p, %p) ", &stack.boot_stack, &stack.boot_stack + 1);
+    }
+    Printf("\n");
   }
+}
+
+bool Symbolize::IsOnStack(uintptr_t sp) const {
+  return ktl::any_of(stacks_.begin(), stacks_.end(),
+                     [sp](auto&& stack) { return stack.boot_stack.IsOnStack(sp); });
+}
+
+ShadowCallStackBacktrace Symbolize::GetShadowCallStackBacktrace(uintptr_t scsp) const {
+  ShadowCallStackBacktrace backtrace;
+  for (const auto& stack : shadow_call_stacks_) {
+    backtrace = stack.boot_stack.BackTrace(scsp);
+    if (!backtrace.empty()) {
+      break;
+    }
+  }
+  return backtrace;
 }
 
 #ifndef __i386__
@@ -275,10 +295,11 @@ void Symbolize::PrintException(uint64_t vector, const char* vector_name,
   ShadowCallStackBacktrace scs_backtrace;
 
   const uint64_t fp = exc.fp();
-  auto fp_on = [fp](const BootStack& stack) {
-    return stack.IsOnStack(fp) && stack.IsOnStack(fp + sizeof(FramePointer));
-  };
-  if (fp % sizeof(uintptr_t) == 0 && (fp_on(boot_stack) || fp_on(phys_exception_stack))) {
+  if (fp % sizeof(uintptr_t) == 0 &&
+      ktl::any_of(stacks_.begin(), stacks_.end(), [fp](const auto& stack) {
+        return stack.boot_stack.IsOnStack(fp) &&
+               stack.boot_stack.IsOnStack(fp + sizeof(FramePointer));
+      })) {
     fp_backtrace = *reinterpret_cast<FramePointer*>(fp);
   }
 
@@ -301,11 +322,3 @@ void PrintPhysException(uint64_t vector, const char* vector_name, const PhysExce
 }
 
 #endif  // !__i386__
-
-MainSymbolize::MainSymbolize(const char* name) : Symbolize(name) {
-  gSymbolize = this;
-
-  if (!gBootOptions || gBootOptions->phys_verbose) {
-    Context();
-  }
-}

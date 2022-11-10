@@ -94,9 +94,6 @@ extern BootStack boot_stack, phys_exception_stack;
 extern BootUnsafeStack boot_unsafe_stack, phys_exception_unsafe_stack;
 extern BootShadowCallStack boot_shadow_call_stack, phys_exception_shadow_call_stack;
 
-// Returns true iff SP falls on the boot stack or the phys exception stack.
-bool IsOnStack(uintptr_t sp);
-
 #endif  // __ASSEMBLER__
 
 #endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_STACK_H_

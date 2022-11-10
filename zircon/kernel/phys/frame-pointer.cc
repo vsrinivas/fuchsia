@@ -7,8 +7,9 @@
 #include "phys/frame-pointer.h"
 
 #include <phys/stack.h>
+#include <phys/symbolize.h>
 
 FramePointer& FramePointer::operator++() {
-  *this = IsOnStack(reinterpret_cast<uintptr_t>(fp_)) ? *fp_ : end();
+  *this = (gSymbolize && gSymbolize->IsOnStack(reinterpret_cast<uintptr_t>(fp_))) ? *fp_ : end();
   return *this;
 }

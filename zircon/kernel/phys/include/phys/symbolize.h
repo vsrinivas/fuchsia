@@ -11,12 +11,14 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <ktl/algorithm.h>
 #include <ktl/byte.h>
 #include <ktl/declval.h>
 #include <ktl/optional.h>
 #include <ktl/span.h>
 #include <ktl/string_view.h>
 #include <phys/main.h>
+#include <phys/stack.h>
 
 class FramePointer;
 class ShadowCallStackBacktrace;
@@ -34,6 +36,12 @@ const char* ProgramName();
 
 class Symbolize {
  public:
+  template <class BootStackType>
+  struct Stack {
+    BootStackType& boot_stack;
+    std::string_view name;
+  };
+
   Symbolize() = delete;
   Symbolize(const Symbolize&) = delete;
 
@@ -41,6 +49,17 @@ class Symbolize {
       : name_(name), output_(f), writer_(Sink{output_}) {}
 
   const char* name() const { return name_; }
+
+  void set_stacks(ktl::span<const Stack<BootStack>> stacks) { stacks_ = stacks; }
+
+  void set_shadow_call_stacks(ktl::span<const Stack<BootShadowCallStack>> stacks) {
+    shadow_call_stacks_ = stacks;
+  }
+
+  bool IsOnStack(uintptr_t sp) const;
+
+  ShadowCallStackBacktrace GetShadowCallStackBacktrace(
+      uintptr_t scsp = GetShadowCallStackPointer()) const;
 
   // Return the hex string for the program's own build ID.
   ktl::string_view BuildIdString();
@@ -99,6 +118,8 @@ class Symbolize {
 
   const char* name_;
   FILE* output_;
+  ktl::span<const Stack<BootStack>> stacks_;
+  ktl::span<const Stack<BootShadowCallStack>> shadow_call_stacks_;
   symbolizer_markup::Writer<Sink> writer_;
   bool context_done_ = false;
 };

@@ -127,6 +127,7 @@ if (toolchain_environment == "kernel.phys" ||
 
     sources = [
       "frame-pointer.cc",
+      "main-symbolize.cc",
       "panic.cc",
       "stack.cc",
       "symbolize.cc",

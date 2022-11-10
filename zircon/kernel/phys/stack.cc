@@ -34,7 +34,3 @@ ShadowCallStackBacktrace BootShadowCallStack::BackTrace(uintptr_t scsp) const {
 }
 
 #endif  // __has_feature(shadow_call_stack)
-
-bool IsOnStack(uintptr_t sp) {
-  return boot_stack.IsOnStack(sp) || phys_exception_stack.IsOnStack(sp);
-}
