@@ -73,7 +73,7 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver, SessionObser
   }
 
   // SessionObserver implementation:
-  void DidConnect(const Err& err) override;
+  void DidResolveConnection(const Err& err) override;
 
   // ThreadObserver implementation:
   void DidCreateThread(Thread* thread) override;

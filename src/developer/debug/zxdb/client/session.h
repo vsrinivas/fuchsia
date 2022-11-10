@@ -111,6 +111,9 @@ class Session : public SettingStoreObserver {
   // Returns whether a connection is pending.
   bool HasPendingConnection() const { return pending_connection_.get(); }
 
+  // Returns the last connection error.
+  Err last_connection_error() const { return last_connection_error_; }
+
   // Information about the current connection.
   const std::string minidump_path() const { return minidump_path_; }
   const std::string connected_host() const { return connected_info_.host; }
@@ -280,6 +283,8 @@ class Session : public SettingStoreObserver {
   // The last connection that was made by the session. Will have an empty host and a 0 port
   // if there has never been a connection.
   SessionConnectionInfo last_connection_;
+
+  Err last_connection_error_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;
 };

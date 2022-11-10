@@ -48,9 +48,13 @@ DebugAdapterContext::DebugAdapterContext(Session* session, debug::StreamBuffer* 
         // If the session is connected or there's no pending connection, send the response
         // immediately. Otherwise, defer the response until the connection resolves.
         if (session_->IsConnected()) {
-          DidConnect(Err());
+          DidResolveConnection(Err());
         } else if (!session_->HasPendingConnection()) {
-          DidConnect(Err("Debugger not connected to device"));
+          Err err = session_->last_connection_error();
+          if (!err.has_error()) {
+            err = Err("Debugger not connected to device");
+          }
+          DidResolveConnection(err);
         }
       });
 
@@ -77,7 +81,7 @@ DebugAdapterContext::~DebugAdapterContext() {
   session_->RemoveObserver(this);
 }
 
-void DebugAdapterContext::DidConnect(const Err& err) {
+void DebugAdapterContext::DidResolveConnection(const Err& err) {
   if (!send_initialize_response_) {
     return;
   }

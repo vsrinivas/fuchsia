@@ -412,9 +412,10 @@ void Session::Connect(const SessionConnectionInfo& info, fit::callback<void(cons
             err = weak_this->ResolvePendingConnection(pending, reply, std::move(buffer));
           }
           for (auto& observer : weak_this->observers_) {
-            observer.DidConnect(err);
+            observer.DidResolveConnection(err);
           }
           cb(err);
+          weak_this->last_connection_error_ = err;
         }
       });
 }

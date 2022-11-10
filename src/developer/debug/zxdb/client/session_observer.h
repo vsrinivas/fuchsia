@@ -38,7 +38,7 @@ class SessionObserver {
   virtual void HandleProcessesInLimbo(const std::vector<debug_ipc::ProcessRecord>&) {}
 
   // Called when a connection is resolved, either successful or failed.
-  virtual void DidConnect(const Err& err) {}
+  virtual void DidResolveConnection(const Err& err) {}
 };
 
 }  // namespace zxdb
