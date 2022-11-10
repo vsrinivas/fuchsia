@@ -4,39 +4,38 @@
 
 #![recursion_limit = "512"]
 
-use {
-    anyhow::{format_err, Context as _, Error},
-    bt_a2dp::{
-        codec::{CodecNegotiation, MediaCodecConfig},
-        connected_peers::ConnectedPeers,
-        media_types::*,
-        peer::ControllerPool,
-        permits::Permits,
-        stream,
-    },
-    bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory, StreamEndpoint},
-    fidl_fuchsia_bluetooth_a2dp::{AudioModeRequest, AudioModeRequestStream, Role},
-    fidl_fuchsia_bluetooth_bredr as bredr,
-    fidl_fuchsia_media::{
-        AudioChannelId, AudioPcmMode, PcmFormat, SessionAudioConsumerFactoryMarker,
-    },
-    fidl_fuchsia_media_sessions2 as sessions2, fidl_fuchsia_metrics as cobalt,
-    fuchsia_async::{self as fasync, DurationExt},
-    fuchsia_bluetooth::{
-        assigned_numbers::AssignedNumber,
-        profile::{find_profile_descriptors, find_service_classes, profile_descriptor_to_assigned},
-        types::{PeerId, Uuid},
-    },
-    fuchsia_component::server::ServiceFs,
-    fuchsia_inspect as inspect,
-    fuchsia_inspect_derive::Inspect,
-    fuchsia_zircon as zx,
-    futures::{self, Stream, StreamExt},
-    parking_lot::Mutex,
-    profile_client as profile,
-    std::{collections::HashSet, convert::TryFrom, sync::Arc},
-    tracing::{debug, error, info, trace, warn},
+use anyhow::{format_err, Context as _, Error};
+use bt_a2dp::{
+    codec::{CodecNegotiation, MediaCodecConfig},
+    connected_peers::ConnectedPeers,
+    media_types::*,
+    peer::ControllerPool,
+    permits::Permits,
+    stream,
 };
+use bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory, StreamEndpoint};
+use fidl_fuchsia_bluetooth_a2dp::{AudioModeRequest, AudioModeRequestStream, Role};
+use fidl_fuchsia_bluetooth_bredr as bredr;
+use fidl_fuchsia_media::{
+    AudioChannelId, AudioPcmMode, PcmFormat, SessionAudioConsumerFactoryMarker,
+};
+use fidl_fuchsia_media_sessions2 as sessions2;
+use fidl_fuchsia_metrics as metrics;
+use fuchsia_async::{self as fasync, DurationExt};
+use fuchsia_bluetooth::{
+    assigned_numbers::AssignedNumber,
+    profile::{find_profile_descriptors, find_service_classes, profile_descriptor_to_assigned},
+    types::{PeerId, Uuid},
+};
+use fuchsia_component::server::ServiceFs;
+use fuchsia_inspect as inspect;
+use fuchsia_inspect_derive::Inspect;
+use fuchsia_zircon as zx;
+use futures::{Stream, StreamExt};
+use parking_lot::Mutex;
+use profile_client::{ProfileClient, ProfileEvent};
+use std::{collections::HashSet, convert::TryFrom, sync::Arc};
+use tracing::{debug, error, info, trace, warn};
 
 mod avrcp_relay;
 mod avrcp_target;
@@ -106,7 +105,7 @@ fn find_codec_cap<'a>(endpoint: &'a StreamEndpoint) -> Option<&'a ServiceCapabil
 
 #[derive(Clone)]
 struct StreamsBuilder {
-    cobalt_sender: Option<cobalt::MetricEventLoggerProxy>,
+    metrics_sender: Option<metrics::MetricEventLoggerProxy>,
     codec_negotiation: CodecNegotiation,
     domain: String,
     aac_available: bool,
@@ -116,7 +115,7 @@ struct StreamsBuilder {
 
 impl StreamsBuilder {
     async fn system_available(
-        cobalt_sender: Option<cobalt::MetricEventLoggerProxy>,
+        metrics_sender: Option<metrics::MetricEventLoggerProxy>,
         config: &A2dpConfiguration,
     ) -> Result<Self, Error> {
         // TODO(fxbug.dev/1126): detect codecs, add streams for each codec
@@ -158,7 +157,7 @@ impl StreamsBuilder {
         let codec_negotiation = CodecNegotiation::build(caps_available, avdtp::EndpointType::Sink)?;
 
         Ok(Self {
-            cobalt_sender,
+            metrics_sender,
             codec_negotiation,
             domain: config.domain.clone(),
             aac_available,
@@ -288,7 +287,7 @@ impl StreamsBuilder {
             >()
             .context("Failed to connect to AudioConsumerFactory")?;
             let sink_task_builder = sink_task::SinkTaskBuilder::new(
-                self.cobalt_sender.clone(),
+                self.metrics_sender.clone(),
                 publisher,
                 audio_consumer_factory,
                 domain,
@@ -324,6 +323,22 @@ impl StreamsBuilder {
     }
 }
 
+impl std::fmt::Display for StreamsBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[Codecs: SBC{}", if self.aac_available { ",AAC" } else { "" })?;
+        if self.sink_enabled {
+            write!(f, " Sink")?;
+        }
+        match self.source_type {
+            Some(AudioSourceType::BigBen) => write!(f, " Source(BigBen)")?,
+            Some(AudioSourceType::AudioOut) => write!(f, " Source")?,
+            None => (),
+        };
+        write!(f, "]")?;
+        Ok(())
+    }
+}
+
 /// Establishes the signaling channel after an `initiator_delay`.
 async fn connect_after_timeout(
     peer_id: PeerId,
@@ -334,11 +349,11 @@ async fn connect_after_timeout(
     trace!("waiting {}ms before connecting to peer {}.", initiator_delay.into_millis(), peer_id);
     fuchsia_async::Timer::new(initiator_delay.after_now()).await;
 
-    trace!("{}: trying to connect control channel..", peer_id);
+    trace!(%peer_id, "trying to connect control channel");
     let connect_fut = peers.lock().try_connect(peer_id.clone(), channel_parameters);
     let channel = match connect_fut.await {
-        Err(e) => return warn!(?peer_id, "Failed to connect control channel: {:?}", e),
-        Ok(None) => return warn!(?peer_id, "Control channel already connected"),
+        Err(e) => return warn!(%peer_id, ?e, "Failed to connect control channel"),
+        Ok(None) => return warn!(%peer_id, "Control channel already connected"),
         Ok(Some(channel)) => channel,
     };
 
@@ -391,21 +406,15 @@ fn handle_services_found(
                 .map(|a| format!("{} ({}.{})", a.name, p.major_version, p.minor_version))
         })
         .collect();
-    info!(
-        "Audio profile found on {}, classes: {:?}, profiles: {:?}",
-        peer_id, service_names, profile_names
-    );
+    info!("Audio profile on {peer_id}, classes: {service_names:?}, profiles: {profile_names:?}");
 
-    let profile = match profiles.first() {
-        Some(profile) => profile.clone(),
-        None => {
-            info!("Couldn't find profile in peer {} search results, ignoring.", peer_id);
-            return;
-        }
+    let Some(profile) = profiles.first() else {
+        info!("Couldn't find profile in peer {peer_id} search results, ignoring");
+        return;
     };
 
-    debug!("Marking peer {} found...", peer_id);
-    peers.lock().found(peer_id.clone(), profile, peer_preferred_directions);
+    debug!("Marking peer {peer_id} found");
+    peers.lock().found(peer_id.clone(), profile.clone(), peer_preferred_directions);
 
     if let Some(initiator_delay) = initiator_delay {
         fasync::Task::local(connect_after_timeout(
@@ -460,7 +469,7 @@ fn handle_audio_mode_connection(
 fn setup_profiles(
     proxy: bredr::ProfileProxy,
     config: &config::A2dpConfiguration,
-) -> Result<profile::ProfileClient, profile::Error> {
+) -> profile_client::Result<ProfileClient> {
     let mut service_defs = Vec::new();
     if config.source.is_some() {
         let source_uuid = Uuid::new16(bredr::ServiceClassProfileIdentifier::AudioSource as u16);
@@ -472,11 +481,8 @@ fn setup_profiles(
         service_defs.push(make_profile_service_definition(sink_uuid));
     }
 
-    let mut profile = profile::ProfileClient::advertise(
-        proxy,
-        &mut service_defs[..],
-        config.channel_parameters(),
-    )?;
+    let mut profile =
+        ProfileClient::advertise(proxy, &mut service_defs[..], config.channel_parameters())?;
 
     const ATTRS: [u16; 4] = [
         bredr::ATTR_PROTOCOL_DESCRIPTOR_LIST,
@@ -504,9 +510,10 @@ const ACTIVE_STREAM_LIMIT: usize = 1;
 #[fuchsia::main(logging_tags = ["bt-a2dp"])]
 async fn main() -> Result<(), Error> {
     let config = A2dpConfiguration::load_default()?;
+    let init_delay_ms = config.initiator_delay.into_millis();
+    info!("Starting, initiatior_delay {init_delay_ms}ms");
 
-    let initiator_delay =
-        if config.initiator_delay.into_millis() == 0 { None } else { Some(config.initiator_delay) };
+    let initiator_delay = (init_delay_ms != 0).then_some(config.initiator_delay);
 
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
@@ -516,6 +523,7 @@ async fn main() -> Result<(), Error> {
         error!("Can't encode SBC Audio: {:?}", e);
         return Ok(());
     }
+
     let controller_pool = Arc::new(ControllerPool::new());
 
     let mut fs = ServiceFs::new();
@@ -524,24 +532,23 @@ async fn main() -> Result<(), Error> {
     inspect_runtime::serve(&inspect, &mut fs)?;
 
     // The absolute volume relay is only needed if A2DP Sink is requested.
-    let _abs_vol_relay = if config.enable_sink {
+    let _abs_vol_relay = config.enable_sink.then(|| {
         volume_relay::VolumeRelay::start()
             .or_else(|e| {
                 warn!("Failed to start AbsoluteVolume Relay: {:?}", e);
                 Err(e)
             })
             .ok()
-    } else {
-        None
-    };
+    });
 
-    // Set up cobalt 1.1 logger.
-    let cobalt = bt_metrics::create_metrics_logger()
-        .await
-        .map_err(|e| warn!("Failed to create metrics: {e}"))
+    // Set up metrics logger.
+    let metrics_logger = bt_metrics::create_metrics_logger()
+        .map_err(|e| warn!("Failed to create metrics logger: {e}"))
         .ok();
 
-    let stream_builder = StreamsBuilder::system_available(cobalt.clone(), &config).await?;
+    let stream_builder = StreamsBuilder::system_available(metrics_logger.clone(), &config).await?;
+
+    info!("Enabled streams from system: {stream_builder}");
 
     let profile_svc = fuchsia_component::client::connect_to_protocol::<bredr::ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;
@@ -553,7 +560,7 @@ async fn main() -> Result<(), Error> {
         stream_builder.negotiation(),
         permits.clone(),
         profile_svc.clone(),
-        cobalt,
+        metrics_logger,
     );
     if let Err(e) = peers.iattach(&inspect.root(), "connected") {
         warn!("Failed to attach to inspect: {:?}", e);
@@ -566,17 +573,15 @@ async fn main() -> Result<(), Error> {
     });
 
     // The AVRCP Target component is needed if it is requested and A2DP Source is requested.
-    let _avrcp_target = if config.source.is_some() && config.enable_avrcp_target {
-        avrcp_target::start_avrcp_target()
-            .await
-            .or_else(|e| {
-                warn!("Couldn't launch AVRCP target: {}", e);
-                Err(e)
-            })
-            .ok()
-    } else {
-        None
-    };
+    if config.source.is_some() && config.enable_avrcp_target {
+        fasync::Task::spawn(async {
+            match avrcp_target::start_avrcp_target().await {
+                Err(e) => warn!("Couldn't launch AVRCP target: {e}"),
+                Ok(_) => info!("AVRCP target started"),
+            }
+        })
+        .detach();
+    }
 
     let peers = Arc::new(Mutex::new(peers));
 
@@ -592,6 +597,7 @@ async fn main() -> Result<(), Error> {
     if let Err(e) = fs.take_and_serve_directory_handle() {
         warn!("Unable to serve service directory: {}", e);
     }
+
     let _servicefs_task = fasync::Task::spawn(fs.collect::<()>());
 
     let profile = match setup_profiles(profile_svc.clone(), &config) {
@@ -607,19 +613,18 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn handle_profile_events(
-    mut profile: impl Stream<Item = Result<profile::ProfileEvent, profile::Error>> + Unpin,
+    mut profile: impl Stream<Item = profile_client::Result<ProfileEvent>> + Unpin,
     peers: Arc<Mutex<ConnectedPeers>>,
     channel_parameters: bredr::ChannelParameters,
     initiator_delay: Option<zx::Duration>,
 ) -> Result<(), Error> {
     while let Some(item) = profile.next().await {
-        let evt = match item {
-            Err(e) => return Err(format_err!("Profile client error: {:?}", e)),
-            Ok(evt) => evt,
+        let Ok(evt) = item else {
+            return Err(format_err!("Profile client error: {:?}", item.err()));
         };
         let peer_id = evt.peer_id().clone();
         match evt {
-            profile::ProfileEvent::PeerConnected { channel, .. } => {
+            ProfileEvent::PeerConnected { channel, .. } => {
                 info!(
                     "Connection from {}: mode {} max_tx {}",
                     peer_id,
@@ -631,7 +636,7 @@ async fn handle_profile_events(
                     warn!("Problem accepting peer connection: {}", e);
                 }
             }
-            profile::ProfileEvent::SearchResult { attributes, .. } => {
+            ProfileEvent::SearchResult { attributes, .. } => {
                 handle_services_found(
                     &peer_id,
                     &attributes,
