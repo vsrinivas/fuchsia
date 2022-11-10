@@ -15,7 +15,13 @@ namespace forensics::feedback {
 // Abstract base class for collecting attachments asynchronously.
 class AttachmentProvider {
  public:
-  virtual ::fpromise::promise<AttachmentValue> Get(zx::duration timeout) = 0;
+  // Returns a promise to the data collection, where collection can be terminated early with
+  // |ticket|
+  virtual ::fpromise::promise<AttachmentValue> Get(uint64_t ticket) = 0;
+
+  // Completes the data collection promise associated with |ticket| early, if it hasn't
+  // already completed.
+  virtual void ForceCompletion(uint64_t ticket, Error error) = 0;
 };
 
 }  // namespace forensics::feedback

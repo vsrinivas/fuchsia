@@ -37,10 +37,11 @@ class CollectKernelLogTest : public gtest::RealLoopFixture {
 
   void SetRedactor(std::unique_ptr<RedactorBase> redactor) { redactor_ = std::move(redactor); }
 
-  AttachmentValue GetKernelLog(const zx::duration timeout = zx::sec(10)) {
+  AttachmentValue GetKernelLog() {
+    const uint64_t kTicket = 1234;
     KernelLog kernel_log(dispatcher(), environment_services_, nullptr, redactor_.get());
     ::fpromise::result<AttachmentValue> attachment(::fpromise::error());
-    executor_.schedule_task(kernel_log.Get(timeout)
+    executor_.schedule_task(kernel_log.Get(kTicket)
                                 .and_then([&attachment](AttachmentValue& result) {
                                   attachment = ::fpromise::ok(std::move(result));
                                 })
@@ -93,10 +94,8 @@ TEST_F(CollectKernelLogTest, GetTerminatesDueToForceCompletion) {
   ::fpromise::result<AttachmentValue> attachment(::fpromise::error());
 
   KernelLog kernel_log(dispatcher(), environment_services_, nullptr, redactor_.get());
-  GetExecutor().schedule_task(
-      kernel_log.Get(kTicket, zx::sec(1)).and_then([&attachment](AttachmentValue& result) {
-        attachment = ::fpromise::ok(std::move(result));
-      }));
+  GetExecutor().schedule_task(kernel_log.Get(kTicket).and_then(
+      [&attachment](AttachmentValue& result) { attachment = ::fpromise::ok(std::move(result)); }));
   kernel_log.ForceCompletion(kTicket, Error::kDefault);
 
   RunLoopUntil([&attachment] { return attachment.is_ok(); });
@@ -118,10 +117,8 @@ TEST_F(CollectKernelLogTest, ForceCompletionCalledAfterTermination) {
   ::fpromise::result<AttachmentValue> attachment(::fpromise::error());
 
   KernelLog kernel_log(dispatcher(), environment_services_, nullptr, redactor_.get());
-  GetExecutor().schedule_task(
-      kernel_log.Get(kTicket, zx::sec(1)).and_then([&attachment](AttachmentValue& result) {
-        attachment = ::fpromise::ok(std::move(result));
-      }));
+  GetExecutor().schedule_task(kernel_log.Get(kTicket).and_then(
+      [&attachment](AttachmentValue& result) { attachment = ::fpromise::ok(std::move(result)); }));
 
   RunLoopUntil([&attachment] { return attachment.is_ok(); });
   log = attachment.take_value();
@@ -142,8 +139,8 @@ TEST_F(CollectKernelLogTest, GetCalledWithSameTicket) {
   // Expect a crash because a ticket cannot be reused.
   ASSERT_DEATH(
       {
-        const auto log1 = kernel_log.Get(kTicket, zx::sec(1));
-        const auto log2 = kernel_log.Get(kTicket, zx::sec(1));
+        const auto log1 = kernel_log.Get(kTicket);
+        const auto log2 = kernel_log.Get(kTicket);
       },
       "Ticket used twice: ");
 }

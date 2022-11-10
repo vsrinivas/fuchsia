@@ -17,7 +17,7 @@ AttachmentProviders::AttachmentProviders(async_dispatcher_t* dispatcher,
     : kernel_log_(dispatcher, services, AttachmentProviderBackoff(), redactor),
       system_log_(dispatcher, services, clock, redactor, feedback_data::kActiveLoggingPeriod),
       inspect_(dispatcher, services, AttachmentProviderBackoff(), inspect_data_budget),
-      attachment_manager_(allowlist, std::move(static_attachments),
+      attachment_manager_(dispatcher, allowlist, std::move(static_attachments),
                           {
                               {feedback_data::kAttachmentLogKernel, &kernel_log_},
                               {feedback_data::kAttachmentLogSystem, &system_log_},

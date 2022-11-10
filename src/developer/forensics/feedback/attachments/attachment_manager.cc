@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/feedback/attachments/attachment_manager.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -31,10 +32,13 @@ void EraseNotAllowlisted(std::map<std::string, T>& c, const std::set<std::string
 
 }  // namespace
 
-AttachmentManager::AttachmentManager(const std::set<std::string>& allowlist,
+AttachmentManager::AttachmentManager(async_dispatcher_t* dispatcher,
+                                     const std::set<std::string>& allowlist,
                                      Attachments static_attachments,
                                      std::map<std::string, AttachmentProvider*> providers)
-    : static_attachments_(std::move(static_attachments)), providers_(std::move(providers)) {
+    : dispatcher_(dispatcher),
+      static_attachments_(std::move(static_attachments)),
+      providers_(std::move(providers)) {
   // Remove any static attachments or providers that return attachments not in |allowlist_|.
   EraseNotAllowlisted(static_attachments_, allowlist);
   EraseNotAllowlisted(providers_, allowlist);
@@ -51,10 +55,24 @@ AttachmentManager::AttachmentManager(const std::set<std::string>& allowlist,
   std::vector<std::string> keys;
   std::vector<::fpromise::promise<AttachmentValue>> promises;
 
+  const uint64_t ticket = ++next_ticket_;
   for (auto& [k, p] : providers_) {
     keys.push_back(k);
-    promises.push_back(p->Get(timeout));
+    promises.push_back(p->Get(ticket));
   }
+
+  // Complete the collection after |timeout| elapses
+  auto self = weak_factory_.GetWeakPtr();
+  async::PostDelayedTask(
+      dispatcher_,
+      [ticket, self] {
+        if (self) {
+          for (auto& [k, p] : self->providers_) {
+            p->ForceCompletion(ticket, Error::kTimeout);
+          }
+        }
+      },
+      timeout);
 
   auto join = ::fpromise::join_promise_vector(std::move(promises));
   using result_t = decltype(join)::value_type;

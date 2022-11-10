@@ -49,12 +49,7 @@ KernelLog::KernelLog(async_dispatcher_t* dispatcher,
   services_->Connect(read_only_log_.NewRequest(dispatcher_));
 }
 
-::fpromise::promise<AttachmentValue> KernelLog::Get(const zx::duration timeout) {
-  return Get(internal_ticket_--, timeout);
-}
-
-::fpromise::promise<AttachmentValue> KernelLog::Get(const uint64_t ticket,
-                                                    const zx::duration timeout) {
+::fpromise::promise<AttachmentValue> KernelLog::Get(const uint64_t ticket) {
   FX_CHECK(completers_.count(ticket) == 0) << "Ticket used twice: " << ticket;
 
   if (!read_only_log_.is_bound()) {
@@ -78,14 +73,6 @@ KernelLog::KernelLog(async_dispatcher_t* dispatcher,
   completers_[ticket] = complete.share();
 
   auto self = ptr_factory_.GetWeakPtr();
-  async::PostDelayedTask(
-      dispatcher_,
-      [self, ticket]() mutable {
-        if (self) {
-          self->ForceCompletion(ticket, Error::kTimeout);
-        }
-      },
-      timeout);
 
   read_only_log_->Get([complete = complete.share()](zx::debuglog debuglog) mutable {
     if (complete != nullptr) {

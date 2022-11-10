@@ -14,6 +14,7 @@
 
 #include "src/developer/forensics/feedback/attachments/provider.h"
 #include "src/developer/forensics/feedback/attachments/types.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace forensics::feedback {
 
@@ -23,7 +24,7 @@ namespace forensics::feedback {
 // each time they're needed.
 class AttachmentManager {
  public:
-  explicit AttachmentManager(const std::set<std::string>& allowlist,
+  explicit AttachmentManager(async_dispatcher_t* dispatcher, const std::set<std::string>& allowlist,
                              Attachments static_attachments = {},
                              std::map<std::string, AttachmentProvider*> providers = {});
 
@@ -32,8 +33,12 @@ class AttachmentManager {
   void DropStaticAttachment(const AttachmentKey& key, Error error);
 
  private:
+  async_dispatcher_t* dispatcher_;
+
   Attachments static_attachments_;
   std::map<std::string, AttachmentProvider*> providers_;
+  uint64_t next_ticket_{0};
+  fxl::WeakPtrFactory<AttachmentManager> weak_factory_{this};
 };
 
 }  // namespace forensics::feedback

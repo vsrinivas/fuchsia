@@ -241,12 +241,7 @@ auto CompletesAndConsume() {
 
 }  // namespace
 
-::fpromise::promise<AttachmentValue> SystemLog::Get(const zx::duration timeout) {
-  return Get(internal_ticket_--, timeout);
-}
-
-::fpromise::promise<AttachmentValue> SystemLog::Get(const uint64_t ticket,
-                                                    const zx::duration timeout) {
+::fpromise::promise<AttachmentValue> SystemLog::Get(const uint64_t ticket) {
   FX_CHECK(completers_.count(ticket) == 0) << "Ticket used twice: " << ticket;
 
   if (!is_active_) {
@@ -263,16 +258,6 @@ auto CompletesAndConsume() {
 
   auto self = ptr_factory_.GetWeakPtr();
 
-  // Complete the call after |timeout| elapses or a message with a timestamp greater than or equal
-  // to the current uptime is added to |buffer_|.
-  async::PostDelayedTask(
-      dispatcher_,
-      [self, ticket] {
-        if (self) {
-          self->ForceCompletion(ticket, Error::kTimeout);
-        }
-      },
-      timeout);
   buffer_.ExecuteAfter(zx::nsec(clock_->Now().get()), std::move(complete_ok));
 
   return consume.then([self, ticket](const ::fpromise::result<void, Error>& result)

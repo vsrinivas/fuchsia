@@ -137,12 +137,7 @@ void InspectCollector::Run() {
 
 }  // namespace
 
-::fpromise::promise<AttachmentValue> Inspect::Get(const zx::duration timeout) {
-  return Get(internal_ticket_--, timeout);
-}
-
-::fpromise::promise<AttachmentValue> Inspect::Get(const uint64_t ticket,
-                                                  const zx::duration timeout) {
+::fpromise::promise<AttachmentValue> Inspect::Get(const uint64_t ticket) {
   FX_CHECK(completers_.count(ticket) == 0) << "Ticket used twice: " << ticket;
 
   if (!archive_accessor_.is_bound()) {
@@ -185,14 +180,6 @@ void InspectCollector::Run() {
   auto self = ptr_factory_.GetWeakPtr();
 
   collector->Run();
-  async::PostDelayedTask(
-      dispatcher_,
-      [self, ticket]() mutable {
-        if (self) {
-          self->ForceCompletion(ticket, Error::kTimeout);
-        }
-      },
-      timeout);
 
   // Keep |collector| alive until Inspect collection has completed (for any reason).
   return consume.then([self, ticket, collector = std::move(collector)](

@@ -83,9 +83,10 @@ class SystemLogTest : public UnitTestFixture {
   }
 
   AttachmentValue CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
+    const uint64_t kTicket = 1234;
     AttachmentValue result(Error::kNotSet);
     executor_.schedule_task(
-        system_log_.Get(timeout)
+        system_log_.Get(kTicket)
             .and_then([&result](AttachmentValue& res) { result = std::move(res); })
             .or_else([] { FX_LOGS(FATAL) << "Bad path"; }));
     RunLoopFor(timeout);
@@ -96,9 +97,8 @@ class SystemLogTest : public UnitTestFixture {
 
   SystemLog& GetSystemLog() { return system_log_; }
 
-  ::fpromise::promise<AttachmentValue> CollectSystemLog(const uint64_t ticket,
-                                                        const zx::duration timeout = zx::sec(1)) {
-    return system_log_.Get(ticket, timeout).or_else([]() -> ::fpromise::result<AttachmentValue> {
+  ::fpromise::promise<AttachmentValue> CollectSystemLog(const uint64_t ticket) {
+    return system_log_.Get(ticket).or_else([]() -> ::fpromise::result<AttachmentValue> {
       FX_LOGS(FATAL) << "Bad path";
       return ::fpromise::error();
     });
@@ -133,32 +133,23 @@ TEST_F(SystemLogTest, GetTerminatesDueToLogTimestamp) {
 )");
 }
 
-TEST_F(SystemLogTest, GetTerminatesDueToTimeout) {
-  SetUpLogServer(Messages());
-
-  // Prime the clock so log collection won't be completed due to message timestamps.
-  RunLoopFor(kLogTimestamp + zx::sec(1));
-
-  const auto log = CollectSystemLog(zx::min(1));
-  ASSERT_TRUE(log.HasError());
-  EXPECT_EQ(log.Error(), Error::kTimeout);
-
-  ASSERT_TRUE(log.HasValue());
-  EXPECT_EQ(log.Value(), R"([01234.000][00200][00300][tag_1] INFO: Message 1
-[01234.000][00200][00300][tag_2] INFO: Message 2
-[01234.000][00200][00300][tag_3] INFO: Message 3
-)");
-}
-
-TEST_F(SystemLogTest, GetTerminatesDueToTimeoutWithEmptyLog) {
+TEST_F(SystemLogTest, GetTerminatesDueToForceCompletionWithEmptyLog) {
+  const uint64_t kTicket = 1234;
   SetUpLogServer({});
 
-  // Prime the clock so log collection won't be completed due to message timestamps.
   RunLoopFor(kLogTimestamp + zx::sec(1));
 
-  const auto log = CollectSystemLog(zx::min(1));
+  AttachmentValue log(Error::kNotSet);
+  GetExecutor().schedule_task(CollectSystemLog(kTicket).and_then(
+      [&log](AttachmentValue& result) { log = std::move(result); }));
+
+  RunLoopUntilIdle();
+
+  GetSystemLog().ForceCompletion(kTicket, Error::kDefault);
+
+  RunLoopUntilIdle();
   ASSERT_TRUE(log.HasError());
-  EXPECT_EQ(log.Error(), Error::kTimeout);
+  EXPECT_EQ(log.Error(), Error::kDefault);
 
   EXPECT_FALSE(log.HasValue());
 }
@@ -209,20 +200,11 @@ TEST_F(SystemLogTest, ForceCompletionCalledAfterTermination) {
 )");
 }
 
-TEST_F(SystemLogTest, GetTerminatesDueToLogTimestampWithEmptyLog) {
-  SetUpLogServer({});
-
-  const auto log = CollectSystemLog();
-  ASSERT_TRUE(log.HasError());
-  EXPECT_EQ(log.Error(), Error::kTimeout);
-
-  EXPECT_FALSE(log.HasValue());
-}
-
 TEST_F(SystemLogTest, ActivePeriodExpires) {
+  const uint64_t kTicket = 1234;
   SetUpLogServer(Messages());
 
-  auto log = CollectSystemLog();
+  AttachmentValue log = CollectSystemLog();
   ASSERT_FALSE(log.HasError());
 
   ASSERT_TRUE(log.HasValue());
@@ -235,20 +217,28 @@ TEST_F(SystemLogTest, ActivePeriodExpires) {
   RunLoopFor(kActivePeriod);
   ASSERT_FALSE(LogServer().IsBound());
 
-  log = CollectSystemLog();
+  log = Error::kNotSet;
 
-  // Get empty logs because the original data was cleared and the server doesn't respond.
+  GetExecutor().schedule_task(CollectSystemLog(kTicket).and_then(
+      [&log](AttachmentValue& result) { log = std::move(result); }));
+
+  RunLoopUntilIdle();
+
+  GetSystemLog().ForceCompletion(kTicket, Error::kDefault);
+
+  RunLoopUntilIdle();
+
   ASSERT_TRUE(log.HasError());
-  EXPECT_EQ(log.Error(), Error::kTimeout);
+  EXPECT_EQ(log.Error(), Error::kDefault);
 
-  // Ensure reconnection happened.
-  EXPECT_TRUE(LogServer().IsBound());
+  ASSERT_TRUE(LogServer().IsBound());
 }
 
 TEST_F(SystemLogTest, ActivePeriodResets) {
+  const uint64_t kTicket = 1234;
   SetUpLogServer(Messages());
 
-  auto log = CollectSystemLog(zx::min(1));
+  AttachmentValue log = CollectSystemLog(zx::min(1));
   ASSERT_FALSE(log.HasError());
 
   ASSERT_TRUE(log.HasValue());
@@ -260,25 +250,22 @@ TEST_F(SystemLogTest, ActivePeriodResets) {
   RunLoopFor(kActivePeriod / 2);
   ASSERT_TRUE(LogServer().IsBound());
 
-  log = CollectSystemLog();
+  log = Error::kNotSet;
 
-  // Expect a timeout because the stub isn't supposed to respond.
+  GetExecutor().schedule_task(CollectSystemLog(kTicket).and_then(
+      [&log](AttachmentValue& result) { log = std::move(result); }));
+
+  RunLoopFor(kActivePeriod / 2);
+
+  GetSystemLog().ForceCompletion(kTicket, Error::kDefault);
+
+  RunLoopUntilIdle();
+
   ASSERT_TRUE(log.HasError());
-  EXPECT_EQ(log.Error(), Error::kTimeout);
+  EXPECT_EQ(log.Error(), Error::kDefault);
 
-  // And the original data wasn't cleared.
-  ASSERT_TRUE(log.HasValue());
-  EXPECT_EQ(log.Value(), R"([01234.000][00200][00300][tag_1] INFO: Message 1
-[01234.000][00200][00300][tag_2] INFO: Message 2
-[01234.000][00200][00300][tag_3] INFO: Message 3
-)");
-
-  // Become disconnected |kActivePeriod| after the last collection request completes.
-  RunLoopFor(kActivePeriod / 2);
+  // Connection is still open because active period was reset with the last call to Get
   ASSERT_TRUE(LogServer().IsBound());
-
-  RunLoopFor(kActivePeriod / 2);
-  ASSERT_FALSE(LogServer().IsBound());
 }
 
 TEST_F(SystemLogTest, GetCalledWithSameTicket) {

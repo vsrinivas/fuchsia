@@ -92,13 +92,14 @@ class InspectTest : public UnitTestFixture {
 };
 
 TEST_F(InspectTest, DataBudget) {
+  const uint64_t kTicket = 1234;
   fuchsia::diagnostics::StreamParameters parameters;
   SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchiveCaptureParameters>(&parameters));
 
   const size_t kBudget = DataBudget()->SizeInBytes().value();
   Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
 
-  inspect.Get(zx::duration::infinite());
+  inspect.Get(kTicket);
   RunLoopUntilIdle();
 
   ASSERT_TRUE(parameters.has_performance_configuration());
@@ -108,13 +109,14 @@ TEST_F(InspectTest, DataBudget) {
 }
 
 TEST_F(InspectTest, NoDataBudget) {
+  const uint64_t kTicket = 1234;
   fuchsia::diagnostics::StreamParameters parameters;
   SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchiveCaptureParameters>(&parameters));
 
   DisableDataBudget();
   Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
 
-  inspect.Get(zx::duration::infinite());
+  inspect.Get(kTicket);
   RunLoopUntilIdle();
 
   EXPECT_FALSE(parameters.has_performance_configuration());
@@ -129,7 +131,7 @@ TEST_F(InspectTest, Get) {
       }))));
 
   Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
-  const auto attachment = Run(inspect.Get(zx::duration::infinite()));
+  const auto attachment = Run(inspect.Get(1234));
 
   EXPECT_FALSE(attachment.HasError());
 
@@ -141,24 +143,6 @@ bar1
 ])");
 }
 
-TEST_F(InspectTest, GetTimeout) {
-  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
-      std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
-          std::vector<std::string>({"foo1", "foo2"}))));
-
-  Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
-  const auto attachment = Run(inspect.Get(zx::sec(10)), zx::sec(10));
-
-  ASSERT_TRUE(attachment.HasError());
-  EXPECT_EQ(attachment.Error(), Error::kTimeout);
-
-  ASSERT_TRUE(attachment.HasValue());
-  EXPECT_EQ(attachment.Value(), R"([
-foo1,
-foo2
-])");
-}
-
 TEST_F(InspectTest, GetTerminatesDueToForceCompletion) {
   const uint64_t kTicket = 1234;
   SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
@@ -166,7 +150,7 @@ TEST_F(InspectTest, GetTerminatesDueToForceCompletion) {
           std::vector<std::string>({"foo1", "foo2"}))));
 
   Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
-  const auto attachment = Run(inspect.Get(kTicket, zx::sec(1)));
+  const auto attachment = Run(inspect.Get(kTicket));
 
   // Giving some time to actually collect some inspect data
   RunLoopUntilIdle();
@@ -189,23 +173,24 @@ foo2
 TEST_F(InspectTest, ForceCompletionCalledAfterTermination) {
   const uint64_t kTicket = 1234;
   SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
-      std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
-          std::vector<std::string>({"foo1", "foo2"}))));
+      std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
+          {"foo1", "foo2"},
+          {"bar1"},
+          {},
+      }))));
 
   Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
-  const auto attachment = Run(inspect.Get(kTicket, zx::sec(1)));
-
-  RunLoopFor(zx::sec(1));
+  const auto attachment = Run(inspect.Get(kTicket));
 
   inspect.ForceCompletion(kTicket, Error::kDefault);
 
-  ASSERT_TRUE(attachment.HasError());
-  EXPECT_EQ(attachment.Error(), Error::kTimeout);
+  ASSERT_FALSE(attachment.HasError());
 
   ASSERT_TRUE(attachment.HasValue());
   EXPECT_EQ(attachment.Value(), R"([
 foo1,
-foo2
+foo2,
+bar1
 ])");
 }
 
@@ -216,17 +201,18 @@ TEST_F(InspectTest, GetCalledWithSameTicket) {
   // Expect a crash because a ticket cannot be reused.
   ASSERT_DEATH(
       {
-        const auto attachment1 = inspect.Get(kTicket, zx::sec(1));
-        const auto attachment2 = inspect.Get(kTicket, zx::sec(1));
+        const auto attachment1 = inspect.Get(kTicket);
+        const auto attachment2 = inspect.Get(kTicket);
       },
       "Ticket used twice: ");
 }
 
 TEST_F(InspectTest, GetConnectionError) {
+  const uint64_t kTicket = 1234;
   SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchiveClosesIteratorConnection>());
 
   Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
-  const auto attachment = Run(inspect.Get(zx::duration::infinite()));
+  const auto attachment = Run(inspect.Get(kTicket));
 
   ASSERT_TRUE(attachment.HasError());
   EXPECT_EQ(attachment.Error(), Error::kConnectionError);
@@ -235,11 +221,12 @@ TEST_F(InspectTest, GetConnectionError) {
 }
 
 TEST_F(InspectTest, GetIteratorReturnsError) {
+  const uint64_t kTicket = 1234;
   SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
       std::make_unique<stubs::DiagnosticsBatchIteratorReturnsError>()));
 
   Inspect inspect(dispatcher(), services(), MonotonicBackoff::Make(), DataBudget());
-  const auto attachment = Run(inspect.Get(zx::duration::infinite()));
+  const auto attachment = Run(inspect.Get(kTicket));
 
   ASSERT_TRUE(attachment.HasError());
   EXPECT_EQ(attachment.Error(), Error::kMissingValue);

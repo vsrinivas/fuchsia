@@ -41,34 +41,42 @@ class SimpleAttachmentProvider : public AttachmentProvider {
   SimpleAttachmentProvider(async_dispatcher_t* dispatcher, zx::duration delay, AttachmentValue data)
       : dispatcher_(dispatcher), delay_(delay), data_(std::move(data)) {}
 
-  ::fpromise::promise<AttachmentValue> Get(zx::duration timeout) override {
+  ::fpromise::promise<AttachmentValue> Get(const uint64_t ticket) override {
     ::fpromise::bridge<AttachmentValue> bridge;
+
+    completers_[ticket] = std::move(bridge.completer);
 
     async::PostDelayedTask(
         dispatcher_,
-        [this, timeout, completer = std::move(bridge.completer)]() mutable {
-          if (delay_ <= timeout) {
-            completer.complete_ok(data_);
-          } else {
-            completer.complete_ok(AttachmentValue(Error::kTimeout));
+        [this, ticket]() mutable {
+          if (completers_[ticket]) {
+            completers_[ticket].complete_ok(data_);
           }
         },
-        (delay_ <= timeout) ? delay_ : timeout);
+        delay_);
 
     return bridge.consumer.promise_or(::fpromise::error());
   }
 
+  void ForceCompletion(const uint64_t ticket, const Error error) override {
+    if (completers_[ticket] && completers_.count(ticket) != 0) {
+      completers_[ticket].complete_ok(error);
+    }
+  }
+
  private:
   async_dispatcher_t* dispatcher_;
+
   zx::duration delay_;
   AttachmentValue data_;
+  std::map<uint64_t, ::fpromise::completer<AttachmentValue>> completers_;
 };
 
 using AttachmentManagerTest = UnitTestFixture;
 
 TEST_F(AttachmentManagerTest, Static) {
   async::Executor executor(dispatcher());
-  AttachmentManager manager({"static"}, {{"static", AttachmentValue("value")}});
+  AttachmentManager manager(dispatcher(), {"static"}, {{"static", AttachmentValue("value")}});
 
   Attachments attachments;
   executor.schedule_task(
@@ -82,7 +90,7 @@ TEST_F(AttachmentManagerTest, Static) {
 
 TEST_F(AttachmentManagerTest, DropStatic) {
   async::Executor executor(dispatcher());
-  AttachmentManager manager({"static"}, {{"static", AttachmentValue("value")}});
+  AttachmentManager manager(dispatcher(), {"static"}, {{"static", AttachmentValue("value")}});
 
   manager.DropStaticAttachment("static", Error::kConnectionError);
   manager.DropStaticAttachment("unused", Error::kConnectionError);
@@ -104,7 +112,7 @@ TEST_F(AttachmentManagerTest, Dynamic) {
   SimpleAttachmentProvider provider1(dispatcher(), zx::sec(1), AttachmentValue("value1"));
   SimpleAttachmentProvider provider2(dispatcher(), zx::sec(3), AttachmentValue("value2"));
 
-  AttachmentManager manager({"dynamic1", "dynamic2"}, {},
+  AttachmentManager manager(dispatcher(), {"dynamic1", "dynamic2"}, {},
                             {
                                 {"dynamic1", &provider1},
                                 {"dynamic2", &provider2},
@@ -137,7 +145,7 @@ TEST_F(AttachmentManagerTest, Dynamic) {
 }
 
 TEST_F(AttachmentManagerTest, NoProvider) {
-  ASSERT_DEATH({ AttachmentManager manager({"unknown.attachment"}); },
+  ASSERT_DEATH({ AttachmentManager manager(dispatcher(), {"unknown.attachment"}); },
                HasSubstr("Attachment \"unknown.attachment\" collected by 0 providers"));
 }
 
