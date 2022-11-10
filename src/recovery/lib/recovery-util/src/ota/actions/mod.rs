@@ -3,3 +3,4 @@
 // found in the LICENSE file.
 
 pub mod error;
+pub mod factory_reset;

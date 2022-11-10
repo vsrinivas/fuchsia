@@ -11,6 +11,7 @@ rustc_library("recovery-util") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_rust",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_rust",
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
     "//src/lib/fdio/rust:fdio",
@@ -24,6 +25,7 @@ rustc_library("recovery-util") {
     "//third_party/rust_crates:futures",
   ]
   test_deps = [
+    "//src/lib/fuchsia",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:mockall",
@@ -33,6 +35,7 @@ rustc_library("recovery-util") {
     "src/lib.rs",
     "src/ota/action.rs",
     "src/ota/actions/error.rs",
+    "src/ota/actions/factory_reset.rs",
     "src/ota/actions/mod.rs",
     "src/ota/controller.rs",
     "src/ota/mod.rs",
