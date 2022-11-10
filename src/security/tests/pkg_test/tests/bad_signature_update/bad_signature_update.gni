@@ -1,0 +1,212 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/components/fuchsia_test_component.gni")
+import("//build/components/fuchsia_test_package.gni")
+import("//build/rust/rustc_test.gni")
+import(
+    "//src/security/tests/pkg_test/assemblies/assemble_security_pkg_test_system.gni")
+
+template("bad_signature_update") {
+  assert(defined(invoker.base_packages),
+         "base_packages must be defined for $target_name")
+  assert(defined(invoker.test_config),
+         "test_config must be defined for $target_name")
+  assert(defined(invoker.root_ssl_cert),
+         "root_ssl_cert must be defined for $target_name")
+  assert(defined(invoker.pkg_server_certchain),
+         "pkg_server_certchain must be defined for $target_name")
+  assert(defined(invoker.pkg_server_key),
+         "pkg_server_key must be defined for $target_name")
+
+  assembly_base_packages = invoker.base_packages
+  root_ssl_cert = invoker.root_ssl_cert
+  pkg_server_certchain = invoker.pkg_server_certchain
+  pkg_server_key = invoker.pkg_server_key
+
+  test_name = target_name
+
+  # System assembly for base system version at start of test.
+  assemble_security_pkg_test_system("${test_name}_v0") {
+    test_config = invoker.test_config
+    board_name = board_name
+    root_ssl_cert = root_ssl_cert
+    base_packages = [ "//src/security/tests/pkg_test/assemblies/hello_world_v0:hello_world-package" ] + assembly_base_packages
+    packaged_assembly_directory = "hello_world_v0"
+    system_version_file =
+        "//src/security/tests/pkg_test/assemblies/v0_version.txt"
+
+    # Calculated on local build from 2022-02-08. See equivalent
+    # access_ota_blob_as_executable rule for details.
+    fvm_truncate_to_length = 49429406
+  }
+
+  # System assembly for system version to OTA from package server.
+  assemble_security_pkg_test_system("${test_name}_v1") {
+    test_config = invoker.test_config
+    board_name = board_name
+    root_ssl_cert = root_ssl_cert
+    base_packages = [ "//src/security/tests/pkg_test/assemblies/hello_world_v1:hello_world-package" ] + assembly_base_packages
+    packaged_assembly_directory = "hello_world_v1"
+    system_version_file =
+        "//src/security/tests/pkg_test/assemblies/v1_version.txt"
+
+    # Note: v1 never instantiated as base system from FVM, hence no need to
+    # specify `fvm_truncate_to_length`.
+  }
+
+  # `resource`/`resource_group` targets should be built on the
+  # `target_toolchain`. Other toolchains should depend on the `target_toolchain`
+  # outputs.
+  if (current_toolchain == target_toolchain) {
+    # Resources and component for package server configured to serve "v1" OTA.
+    resource_group("${test_name}_v1-pkg_server-tls_resources") {
+      testonly = true
+      files = [
+        {
+          source = pkg_server_certchain
+          dest = "data/pkg_server/tls/pkg_server.certchain"
+        },
+        {
+          source = pkg_server_key
+          dest = "data/pkg_server/tls/pkg_server.rsa"
+        },
+      ]
+    }
+
+    # Resources that constitute inputs to the test component.
+    resource_group("${test_name}_test-resources") {
+      testonly = true
+      files = [
+        {
+          source = invoker.test_config
+          dest = "data/test_config.json5"
+        },
+      ]
+    }
+
+    # Create and resource v1 TUF repo with poisoned signature.
+    compiled_action("${test_name}_poisoned_v1_pm_publish_archive") {
+      testonly = true
+      tool = "//src/security/tests/pkg_test/poison_tuf_signature"
+      deps = [ ":${test_name}_v1_pm_publish_archive" ]
+
+      pm_publish_archive_outputs =
+          get_target_outputs(":${test_name}_v1_pm_publish_archive")
+      input = pm_publish_archive_outputs[0]
+
+      output = "${target_out_dir}/poisoned_v1_tuf_repo.zip"
+
+      inputs = [ input ]
+      outputs = [ output ]
+      args = [
+        "--input",
+        rebase_path(input, root_build_dir),
+        "--output",
+        rebase_path(output, root_build_dir),
+
+        # TODO: Add params to specify what target to poison.
+      ]
+    }
+    zip_resource("${test_name}_poisoned_v1_tuf_repo_resources") {
+      testonly = true
+      deps = [ ":${test_name}_poisoned_v1_pm_publish_archive" ]
+      poisoned_pm_publish_archive_outputs =
+          get_target_outputs(":${test_name}_poisoned_v1_pm_publish_archive")
+      file = poisoned_pm_publish_archive_outputs[0]
+
+      # TODO: This is computed internally by
+      # `assemble_security_pkg_test_system()` based on
+      # `packaged_assembly_directory`; logic is duplicated here.
+      dest_prefix = "data/assemblies/hello_world_v1/repository"
+    }
+  } else {
+    group("${test_name}_v1-pkg_server-tls_resources") {
+      testonly = true
+      public_deps =
+          [ ":${test_name}_v1-pkg_server-tls_resources($target_toolchain)" ]
+    }
+    group("${test_name}_test-resources") {
+      testonly = true
+      public_deps = [ ":${test_name}_test-resources($target_toolchain)" ]
+    }
+    group("${test_name}_poisoned_v1_tuf_repo_resources") {
+      testonly = true
+      public_deps =
+          [ ":${test_name}_poisoned_v1_tuf_repo_resources($target_toolchain)" ]
+    }
+  }
+
+  # Note: Despite being independent of template parameters, this target must
+  # be templated because `fuchsia_test_package` requires that all
+  # `test_components` be defined in the same build directory due to its use of
+  # `get_target_outputs()`. See
+  # https://gn.googlesource.com/gn/+/main/docs/reference.md#func_get_target_outputs
+  # for details.
+  fuchsia_test_component("${test_name}-component") {
+    # Note: Test package must include all files designated by cmdline args in
+    # component manifest. See cml and source for details. These files are not
+    # included as explicit deps here because they vary across different
+    # packagings/configurations of the test.
+    component_name = "bad_signature_update"
+    manifest = "//src/security/tests/pkg_test/tests/bad_signature_update/meta/bad_signature_update.cml"
+    deps = [ "//src/security/tests/pkg_test/tests/bad_signature_update:bad_signature_update-test" ]
+  }
+
+  fuchsia_test_package("${test_name}-package") {
+    package_name = test_name
+    test_components = [ ":${test_name}-component" ]
+    deps = [
+      # Package server configured to serve "v1" OTA update.
+      "//src/security/tests/pkg_test/tests:pkg_server-v1-component",
+
+      # Filesystem host for test system.
+      "//src/security/tests/pkg_test/tests:fshost_v0-component",
+
+      # Fake services for update flow.
+      "//src/security/tests/pkg_test/dns_resolver:security_pkg_dns_resolver-component",
+      "//src/security/tests/pkg_test/paver:security_pkg_paver-component",
+      "//src/security/tests/pkg_test/reboot:security_pkg_reboot-component",
+
+      # Production SWD components.
+      "//src/sys/pkg/bin/pkg-cache:production-component-and-config",
+      "//src/sys/pkg/bin/pkg-resolver:component",
+      "//src/sys/pkg/bin/system-update-committer:component",
+      "//src/sys/pkg/bin/system-updater:component",
+
+      # Production network components for OTA update.
+      "//src/connectivity/network/netstack:component",
+
+      # Mock SWD component dependencies.
+      "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+      "//src/security/tests/pkg_test/tests:fake_boot_arguments_v0-component",
+
+      #
+      # Test resources that depend on template parameters:
+      #
+
+      # General shared test resources.
+      ":${test_name}_test-resources",
+
+      # System resources for bringing up v0 system.
+      ":${test_name}_v0_system_resources",
+
+      # Package server/update resources for delivering v1 OTA update.
+      ":${test_name}_v1-pkg_server-tls_resources",
+      ":${test_name}_poisoned_v1_tuf_repo_resources",
+      ":${test_name}_v1_update_package_resource",
+    ]
+
+    # TODO(fxbug.dev/88453): Complete test dependency composition to eliminate
+    # error logs:
+    # - system-updater: "Failed to read vbmeta hash: while opening the file:
+    #   open failed with status: NOT_FOUND: NOT_FOUND".
+    test_specs = {
+      log_settings = {
+        max_severity = "FATAL"
+      }
+    }
+  }
+}

@@ -7,16 +7,17 @@ import("//build/rust/rustc_test.gni")
 
 # Top-level test component that composes its own filesystem host, SWD stack, and
 # package server for receiving OTA.
-rustc_test("bad_signature_update-test") {
-  output_name = "bad_signature_update"
+rustc_test("access_ota_blob_as_executable-test") {
+  output_name = "access_ota_blob_as_executable"
   edition = "2021"
   source_root = "src/main.rs"
   data_deps = [
-    "//src/security/pkg_test/assemblies/hello_world_v0:meta_far",
-    "//src/security/pkg_test/assemblies/hello_world_v1:meta_far",
+    "//src/security/tests/pkg_test/assemblies/hello_world_v0:meta_far",
+    "//src/security/tests/pkg_test/assemblies/hello_world_v1:meta_far",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fidl/rust/fidl",
@@ -24,8 +25,9 @@ rustc_test("bad_signature_update-test") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
-    "//src/security/pkg_test/pkg_server:test.security.pkg_rust",
-    "//src/security/pkg_test/util",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/security/tests/pkg_test/pkg_server:test.security.pkg_rust",
+    "//src/security/tests/pkg_test/util",
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer_rust",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-merkle",
@@ -34,5 +36,5 @@ rustc_test("bad_signature_update-test") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
   ]
-  sources = [ "//src/security/pkg_test/tests/bad_signature_update/src/main.rs" ]
+  sources = [ "//src/security/tests/pkg_test/tests/access_ota_blob_as_executable/src/main.rs" ]
 }

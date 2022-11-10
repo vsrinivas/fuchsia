@@ -13,7 +13,7 @@ if (is_host) {
     sources = [ "src/main.rs" ]
     deps = [
       "//src/lib/fuchsia-url",
-      "//src/security/pkg_test/util",
+      "//src/security/tests/pkg_test/util",
       "//src/sys/pkg/lib/update-package",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",

@@ -73,8 +73,8 @@ group("non_hermetic_deps") {
   visibility += [
     "//build/images/*",
     "//src/security/lib/scrutiny/tests/*",
-    "//src/security/pkg_test/tests/*",
     "//src/security/tests/ffx_test/*",
+    "//src/security/tests/pkg_test/tests/*",
     "//src/sys/component_manager/tests/fuchsia_boot_resolver:*",
     "//src/tests/assembly/*",
     "//third_party/network-conformance/images/*",

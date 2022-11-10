@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/security/pkg_test/fshost/meta/fshost.shard.cml" ],
+    include: [ "//src/security/tests/pkg_test/fake_boot_arguments/meta/fake_boot_arguments.shard.cml" ],
     program: {
         args: [
-            "--fvm-block-file-path",
-            "/pkg/data/assemblies/hello_world_v0/fvm.blk",
+            "--system-image-path",
+            "/pkg/data/assemblies/hello_world_v0/base.far",
         ],
     },
 }

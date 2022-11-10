@@ -48,9 +48,7 @@ if (current_toolchain == default_toolchain) {
   assembled_system("test_zbi") {
     testonly = true
     bootfs_labels = []
-    bootfs_package_labels = [
-      "//src/security/pkg_test/assemblies/hello_world_v1:hello_world-package",
-    ]
+    bootfs_package_labels = [ "//src/security/tests/pkg_test/assemblies/hello_world_v1:hello_world-package" ]
     base_packages = [
       ":empty-pkg",
       ":empty_config",

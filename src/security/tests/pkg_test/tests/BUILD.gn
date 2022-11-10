@@ -14,16 +14,14 @@ fuchsia_test_component("fshost_v0-component") {
   # included as explicit deps here because they vary across different
   # packagings/configurations of the test.
   manifest = "meta/fshost_v0.cml"
-  deps = [ "//src/security/pkg_test/fshost:fshost-binary" ]
+  deps = [ "//src/security/tests/pkg_test/fshost:fshost-binary" ]
 }
 
 # Fake boot arguments for base (v0) system.
 fuchsia_test_component("fake_boot_arguments_v0-component") {
   component_name = "fake_boot_arguments_v0"
   manifest = "meta/fake_boot_arguments_v0.cml"
-  deps = [
-    "//src/security/pkg_test/fake_boot_arguments:fake_boot_arguments-binary",
-  ]
+  deps = [ "//src/security/tests/pkg_test/fake_boot_arguments:fake_boot_arguments-binary" ]
 }
 
 # Package server for updated (v1) system.
@@ -35,15 +33,15 @@ fuchsia_test_component("pkg_server-v1-component") {
   # files are not included as explicit deps here because they vary across
   # different packagings/configurations of the test.
   manifest = "meta/pkg_server.cml"
-  deps = [ "//src/security/pkg_test/pkg_server:pkg_server-binary" ]
+  deps = [ "//src/security/tests/pkg_test/pkg_server:pkg_server-binary" ]
 }
 
 access_ota_blob_as_executable("core_access_ota_blob_as_executable") {
   base_packages =
-      [ "//src/security/pkg_test/config:pkg_resolver_repository_config" ]
+      [ "//src/security/tests/pkg_test/config:pkg_resolver_repository_config" ]
 
   # Inject config file for test component.
-  test_config = "//src/security/pkg_test/config/tests/core_ota.json5"
+  test_config = "//src/security/tests/pkg_test/config/tests/core_ota.json5"
 
   # Configure compatible root cert, certchain, pkg_server private key.
   root_ssl_cert = "//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert"
@@ -55,10 +53,10 @@ access_ota_blob_as_executable("core_access_ota_blob_as_executable") {
 
 bad_signature_update("core_bad_signature_update") {
   base_packages =
-      [ "//src/security/pkg_test/config:pkg_resolver_repository_config" ]
+      [ "//src/security/tests/pkg_test/config:pkg_resolver_repository_config" ]
 
   # Inject config file for test component.
-  test_config = "//src/security/pkg_test/config/tests/core_ota.json5"
+  test_config = "//src/security/tests/pkg_test/config/tests/core_ota.json5"
 
   # Configure compatible root cert, certchain, pkg_server private key.
   root_ssl_cert = "//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert"

@@ -13,7 +13,7 @@ import("//build/config.gni")
 import("//build/dist/resource.gni")
 import("//build/dist/zip_resource.gni")
 import("//build/rust/rustc_binary.gni")
-import("//src/security/pkg_test/assemblies/build_info.gni")
+import("//src/security/tests/pkg_test/assemblies/build_info.gni")
 
 # Construct a system assembly for use in product security tests.
 #
@@ -238,7 +238,7 @@ template("assemble_security_pkg_test_system") {
   # binding strategy used in production.
   compiled_action(labels.packages_json) {
     testonly = true
-    tool = "//src/security/pkg_test/rewrite_packages_json_domain"
+    tool = "//src/security/tests/pkg_test/rewrite_packages_json_domain"
     deps = [ ":${labels.assembly}" ]
     inputs = [
       files.assembly_out_packages_json,

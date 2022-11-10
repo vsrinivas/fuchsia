@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/security/pkg_test/pkg_server/meta/pkg_server.shard.cml" ],
+    include: [ "//src/security/tests/pkg_test/pkg_server/meta/pkg_server.shard.cml" ],
     program: {
         args: [
             "--tls-certificate-chain-path",

@@ -25,7 +25,7 @@ Create a CL that:
   [//src/sys/pkg/lib/fuchsia-pkg-testing/src/update_package.rs](/src/sys/pkg/lib/fuchsia-pkg-testing/src/update_package.rs
   to match the new epoch.
 * updates `epoch` in
-  [//src/security/pkg_test/assesmblies/assemble_security_pkg_test_system.gni](/src/security/pkg_test/assemblies/assemble_security_pkg_test_system.gni)
+  [//src/security/tests/pkg_test/assesmblies/assemble_security_pkg_test_system.gni](/src/security/pkg_test/assemblies/assemble_security_pkg_test_system.gni)
   to match the new epoch.
 
 ## Step 3: Send your CL for approval and submit
