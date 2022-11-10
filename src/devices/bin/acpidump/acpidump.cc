@@ -162,13 +162,13 @@ void PrintRaw(const fbl::Array<uint8_t>& data) { fwrite(data.begin(), 1, data.si
 //
 // Example output:
 //
-// DSDT
+// DSDT @ (nil)
 //     0000: 44 53 44 54 B4 1F 00 00 01 9B 42 4F 43 48 53 20  DSDT......BOCHS
 //     0010: 42 58 50 43 44 53 44 54 01 00 00 00 42 58 50 43  BXPCDSDT....BXPC
 // (...)
 void PrintHex(const char* name, const fbl::Array<uint8_t>& data) {
   // Print table name.
-  printf("%s\n", name);
+  printf("%s @ (nil)\n", name);
 
   // Print hex dump of data.
   for (size_t address = 0; address < data.size(); address += 16) {
