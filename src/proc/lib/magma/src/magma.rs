@@ -48,6 +48,10 @@ pub const __USE_POSIX199506: u32 = 1;
 pub const __USE_XOPEN2K: u32 = 1;
 pub const __USE_XOPEN2K8: u32 = 1;
 pub const _ATFILE_SOURCE: u32 = 1;
+pub const __WORDSIZE: u32 = 64;
+pub const __WORDSIZE_TIME64_COMPAT32: u32 = 1;
+pub const __SYSCALL_WORDSIZE: u32 = 64;
+pub const __TIMESIZE: u32 = 64;
 pub const __USE_MISC: u32 = 1;
 pub const __USE_ATFILE: u32 = 1;
 pub const __USE_FORTIFY_LEVEL: u32 = 0;
@@ -55,26 +59,25 @@ pub const __GLIBC_USE_DEPRECATED_GETS: u32 = 0;
 pub const __GLIBC_USE_DEPRECATED_SCANF: u32 = 0;
 pub const _STDC_PREDEF_H: u32 = 1;
 pub const __STDC_IEC_559__: u32 = 1;
+pub const __STDC_IEC_60559_BFP__: u32 = 201404;
 pub const __STDC_IEC_559_COMPLEX__: u32 = 1;
+pub const __STDC_IEC_60559_COMPLEX__: u32 = 201404;
 pub const __STDC_ISO_10646__: u32 = 201706;
 pub const __GNU_LIBRARY__: u32 = 6;
 pub const __GLIBC__: u32 = 2;
-pub const __GLIBC_MINOR__: u32 = 33;
+pub const __GLIBC_MINOR__: u32 = 35;
 pub const _SYS_CDEFS_H: u32 = 1;
 pub const __glibc_c99_flexarr_available: u32 = 1;
-pub const __WORDSIZE: u32 = 64;
-pub const __WORDSIZE_TIME64_COMPAT32: u32 = 1;
-pub const __SYSCALL_WORDSIZE: u32 = 64;
 pub const __LDOUBLE_REDIRECTS_TO_FLOAT128_ABI: u32 = 0;
 pub const __HAVE_GENERIC_SELECTION: u32 = 1;
 pub const __GLIBC_USE_LIB_EXT2: u32 = 0;
 pub const __GLIBC_USE_IEC_60559_BFP_EXT: u32 = 0;
 pub const __GLIBC_USE_IEC_60559_BFP_EXT_C2X: u32 = 0;
+pub const __GLIBC_USE_IEC_60559_EXT: u32 = 0;
 pub const __GLIBC_USE_IEC_60559_FUNCS_EXT: u32 = 0;
 pub const __GLIBC_USE_IEC_60559_FUNCS_EXT_C2X: u32 = 0;
 pub const __GLIBC_USE_IEC_60559_TYPES_EXT: u32 = 0;
 pub const _BITS_TYPES_H: u32 = 1;
-pub const __TIMESIZE: u32 = 64;
 pub const _BITS_TYPESIZES_H: u32 = 1;
 pub const __OFF_T_MATCHES_OFF64_T: u32 = 1;
 pub const __INO_T_MATCHES_INO64_T: u32 = 1;
@@ -735,40 +738,6 @@ extern "C" {
 }
 extern "C" {
     #[doc = ""]
-    #[doc = " \\brief DEPRECATED. Maps a number of pages from the given buffer onto the GPU in the connection's"]
-    #[doc = "        address space at the given address. Depending on the MSD this may automatically commit"]
-    #[doc = "        and populate that range."]
-    #[doc = " \\param connection An open connection."]
-    #[doc = " \\param buffer A valid buffer."]
-    #[doc = " \\param page_offset Offset into the buffer in pages."]
-    #[doc = " \\param page_count Number of pages to map."]
-    #[doc = " \\param gpu_va Destination GPU virtual address for the mapping."]
-    #[doc = " \\param map_flags A valid MAGMA_GPU_MAP_FLAGS value."]
-    #[doc = ""]
-    pub fn magma_map_buffer_gpu(
-        connection: magma_connection_t,
-        buffer: magma_buffer_t,
-        page_offset: u64,
-        page_count: u64,
-        gpu_va: u64,
-        map_flags: u64,
-    ) -> magma_status_t;
-}
-extern "C" {
-    #[doc = ""]
-    #[doc = " \\brief DEPRECATED. Releases the mapping at the given address from the GPU."]
-    #[doc = " \\param connection An open connection."]
-    #[doc = " \\param buffer A valid buffer."]
-    #[doc = " \\param gpu_va A GPU virtual address associated with an existing mapping of the given buffer."]
-    #[doc = ""]
-    pub fn magma_unmap_buffer_gpu(
-        connection: magma_connection_t,
-        buffer: magma_buffer_t,
-        gpu_va: u64,
-    );
-}
-extern "C" {
-    #[doc = ""]
     #[doc = " \\brief Exports the given buffer, returning a handle that may be imported into another"]
     #[doc = "        connection."]
     #[doc = " \\param connection An open connection."]
@@ -1282,8 +1251,6 @@ pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_CLEAN_CACHE: virtio_magma_ctrl
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_SET_CACHE_POLICY: virtio_magma_ctrl_type = 4111;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_GET_BUFFER_CACHE_POLICY: virtio_magma_ctrl_type =
     4112;
-pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_MAP_BUFFER_GPU: virtio_magma_ctrl_type = 4119;
-pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_UNMAP_BUFFER_GPU: virtio_magma_ctrl_type = 4120;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_EXPORT: virtio_magma_ctrl_type = 4122;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_IMPORT: virtio_magma_ctrl_type = 4123;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_EXECUTE_IMMEDIATE_COMMANDS2:
@@ -1348,8 +1315,6 @@ pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_CLEAN_CACHE: virtio_magma_ctr
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_SET_CACHE_POLICY: virtio_magma_ctrl_type = 8207;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_CACHE_POLICY: virtio_magma_ctrl_type =
     8208;
-pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_MAP_BUFFER_GPU: virtio_magma_ctrl_type = 8215;
-pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_UNMAP_BUFFER_GPU: virtio_magma_ctrl_type = 8216;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_EXPORT: virtio_magma_ctrl_type = 8218;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_IMPORT: virtio_magma_ctrl_type = 8219;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_EXECUTE_IMMEDIATE_COMMANDS2:
@@ -1585,40 +1550,6 @@ pub struct virtio_magma_get_buffer_cache_policy_resp {
     pub result_return: u64,
 }
 pub type virtio_magma_get_buffer_cache_policy_resp_t = virtio_magma_get_buffer_cache_policy_resp;
-#[repr(C, packed)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct virtio_magma_map_buffer_gpu_ctrl {
-    pub hdr: virtio_magma_ctrl_hdr_t,
-    pub connection: u64,
-    pub buffer: u64,
-    pub page_offset: u64,
-    pub page_count: u64,
-    pub gpu_va: u64,
-    pub map_flags: u64,
-}
-pub type virtio_magma_map_buffer_gpu_ctrl_t = virtio_magma_map_buffer_gpu_ctrl;
-#[repr(C, packed)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct virtio_magma_map_buffer_gpu_resp {
-    pub hdr: virtio_magma_ctrl_hdr_t,
-    pub result_return: u64,
-}
-pub type virtio_magma_map_buffer_gpu_resp_t = virtio_magma_map_buffer_gpu_resp;
-#[repr(C, packed)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct virtio_magma_unmap_buffer_gpu_ctrl {
-    pub hdr: virtio_magma_ctrl_hdr_t,
-    pub connection: u64,
-    pub buffer: u64,
-    pub gpu_va: u64,
-}
-pub type virtio_magma_unmap_buffer_gpu_ctrl_t = virtio_magma_unmap_buffer_gpu_ctrl;
-#[repr(C, packed)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct virtio_magma_unmap_buffer_gpu_resp {
-    pub hdr: virtio_magma_ctrl_hdr_t,
-}
-pub type virtio_magma_unmap_buffer_gpu_resp_t = virtio_magma_unmap_buffer_gpu_resp;
 #[repr(C, packed)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct virtio_magma_export_ctrl {
@@ -2227,8 +2158,8 @@ pub type virtio_magma_map_buffer_resp_t = virtio_magma_map_buffer_resp;
 pub struct virtio_magma_unmap_buffer_ctrl {
     pub hdr: virtio_magma_ctrl_hdr_t,
     pub connection: u64,
-    pub buffer: u64,
     pub hw_va: u64,
+    pub buffer: u64,
 }
 pub type virtio_magma_unmap_buffer_ctrl_t = virtio_magma_unmap_buffer_ctrl;
 #[repr(C, packed)]
