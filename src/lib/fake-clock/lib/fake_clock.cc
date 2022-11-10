@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.testing.deadline/cpp/wire.h>
 #include <fidl/fuchsia.testing/cpp/wire.h>
-#include <lib/fdio/directory.h>
+#include <lib/component/cpp/incoming/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/port.h>
 #include <zircon/syscalls.h>
@@ -15,37 +15,33 @@
 #include <src/lib/fake-clock/named-timer/named_timer.h>
 
 namespace fake_clock = fuchsia_testing;
-namespace fake_clock_deadline = fuchsia_testing_deadline;
 
 namespace {
-zx::unowned_channel GetService() {
+fidl::UnownedClientEnd<fake_clock::FakeClock> GetService() {
   static std::once_flag svc_connect_once;
-  static zx::channel fake_clock;
+  static fidl::ClientEnd<fake_clock::FakeClock> fake_clock;
 
   std::call_once(svc_connect_once, []() {
     if (!fake_clock.is_valid()) {
-      zx::channel req;
-      if (zx::channel::create(0, &fake_clock, &req) != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to create channel to FakeClock service";
-        fake_clock.reset();
-        return;
+      zx::result result = component::Connect<fake_clock::FakeClock>();
+      if (result.is_error()) {
+        FX_PLOGS(ERROR, result.status_value())
+            << "Failed to connect to fuchsia.testing.FakeClock service";
       }
-      if (fdio_service_connect("/svc/fuchsia.testing.FakeClock", req.release()) != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to connect to fuchsia.testing.FakeClock service";
-        fake_clock.reset();
-        return;
-      }
+      fake_clock = std::move(result.value());
     }
   });
-  return zx::unowned_channel(fake_clock);
+  return fake_clock.borrow();
 }
 
 zx::eventpair MakeEvent(zx_time_t deadline) {
   zx::eventpair l, r;
-  ZX_ASSERT(zx::eventpair::create(0, &l, &r) == ZX_OK);
-  ZX_ASSERT(fidl::WireCall<fake_clock::FakeClock>(GetService())
-                ->RegisterEvent(std::move(r), deadline)
-                .ok());
+  if (zx_status_t status = zx::eventpair::create(0, &l, &r); status != ZX_OK) {
+    ZX_PANIC("%s", zx_status_get_string(status));
+  }
+  const fidl::WireResult result =
+      fidl::WireCall(GetService())->RegisterEvent(std::move(r), deadline);
+  ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   return l;
 }
 
@@ -70,8 +66,8 @@ __EXPORT zx_status_t zx_channel_call(zx_handle_t handle, uint32_t options, zx_ti
 }
 
 __EXPORT zx_time_t zx_clock_get_monotonic() {
-  auto result = fidl::WireCall<fake_clock::FakeClock>(GetService())->Get();
-  ZX_ASSERT(result.ok());
+  const fidl::WireResult result = fidl::WireCall(GetService())->Get();
+  ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   return result.value().time;
 }
 
@@ -80,9 +76,11 @@ __EXPORT zx_time_t zx_deadline_after(zx_duration_t duration) {
 }
 
 __EXPORT zx_status_t zx_nanosleep(zx_time_t deadline) {
-  auto e = MakeEvent(deadline);
-  ZX_ASSERT(_zx_object_wait_one(e.get(), ZX_EVENTPAIR_SIGNALED, ZX_TIME_INFINITE, nullptr) ==
-            ZX_OK);
+  zx::eventpair e = MakeEvent(deadline);
+  if (zx_status_t status =
+          _zx_object_wait_one(e.get(), ZX_EVENTPAIR_SIGNALED, ZX_TIME_INFINITE, nullptr) != ZX_OK) {
+    ZX_PANIC("%s", zx_status_get_string(status));
+  }
   return ZX_OK;
 }
 
@@ -93,19 +91,29 @@ __EXPORT zx_status_t zx_object_wait_one(zx_handle_t handle, zx_signals_t signals
   if (deadline == ZX_TIME_INFINITE || deadline == 0) {
     return _zx_object_wait_one(handle, signals, deadline, observed);
   }
-  auto e = MakeEvent(deadline);
-  zx_wait_item_t items[] = {{.handle = e.get(), .waitfor = ZX_EVENTPAIR_SIGNALED, .pending = 0},
-                            {.handle = handle, .waitfor = signals, .pending = 0}};
+  zx::eventpair e = MakeEvent(deadline);
+  zx_wait_item_t items[] = {
+      {
+          .handle = e.get(),
+          .waitfor = ZX_EVENTPAIR_SIGNALED,
+      },
+      {
+          .handle = handle,
+          .waitfor = signals,
+      },
+  };
 
-  auto status = _zx_object_wait_many(items, 2, ZX_TIME_INFINITE);
+  zx_status_t status = _zx_object_wait_many(items, 2, ZX_TIME_INFINITE);
   if (observed) {
     *observed = items[1].pending;
   }
-  if (status != ZX_OK || (items[0].pending & ZX_EVENTPAIR_SIGNALED) == 0) {
+  if (status != ZX_OK) {
     return status;
-  } else {
+  }
+  if ((items[0].pending & ZX_EVENTPAIR_SIGNALED) != 0) {
     return ZX_ERR_TIMED_OUT;
   }
+  return ZX_OK;
 }
 
 // wait_many is implemented by adding an extra eventpair handle extracted from fake-clock to the
@@ -116,20 +124,25 @@ __EXPORT zx_status_t zx_object_wait_many(zx_wait_item_t* items, size_t num_items
                                          zx_time_t deadline) {
   if (deadline == ZX_TIME_INFINITE || deadline == 0 || num_items > ZX_WAIT_MANY_MAX_ITEMS) {
     return _zx_object_wait_many(items, num_items, deadline);
-  } else if (num_items == ZX_WAIT_MANY_MAX_ITEMS) {
+  }
+  if (num_items == ZX_WAIT_MANY_MAX_ITEMS) {
     // can't add a new item, we need to build a port and wait on it.
     zx::port port;
-    ZX_ASSERT(zx::port::create(0, &port) == ZX_OK);
-    zx_status_t status;
+    if (zx_status_t status = zx::port::create(0, &port); status != ZX_OK) {
+      ZX_PANIC("%s", zx_status_get_string(status));
+    }
     for (size_t i = 0; i < num_items; i++) {
-      if ((status = zx_object_wait_async(items[i].handle, port.get(), i, items[i].waitfor, 0)) !=
-          ZX_OK) {
+      if (zx_status_t status =
+              zx::unowned_handle(items[i].handle)->wait_async(port, i, items[i].waitfor, 0);
+          status != ZX_OK) {
         return status;
       }
     }
-    auto event = MakeEvent(deadline);
-    ZX_ASSERT(zx_object_wait_async(event.get(), port.get(), num_items, ZX_EVENTPAIR_SIGNALED, 0) ==
-              ZX_OK);
+    zx::eventpair event = MakeEvent(deadline);
+    if (zx_status_t status = event.wait_async(port, num_items, ZX_EVENTPAIR_SIGNALED, 0);
+        status != ZX_OK) {
+      ZX_PANIC("%s", zx_status_get_string(status));
+    }
 
     auto update_item = [&items, num_items](const zx_port_packet& packet) {
       if (packet.key == num_items) {
@@ -137,14 +150,13 @@ __EXPORT zx_status_t zx_object_wait_many(zx_wait_item_t* items, size_t num_items
           return true;
         }
       } else {
-        auto* item = &items[packet.key];
-        item->pending = packet.signal.observed;
+        items[packet.key].pending = packet.signal.observed;
       }
       return false;
     };
 
     zx_port_packet_t packet;
-    if ((status = port.wait(zx::time::infinite(), &packet)) != ZX_OK) {
+    if (zx_status_t status = port.wait(zx::time::infinite(), &packet); status != ZX_OK) {
       return status;
     }
     // update_item will return true if the first packet out of the port is a timeout.
@@ -159,23 +171,25 @@ __EXPORT zx_status_t zx_object_wait_many(zx_wait_item_t* items, size_t num_items
       }
     }
     return ZX_OK;
-  } else {
-    // we can just add an extra item, but we'll need to copy all the wait items
-    zx_wait_item_t tmp[ZX_WAIT_MANY_MAX_ITEMS];
-    memcpy(tmp, items, num_items * sizeof(zx_wait_item_t));
-    auto event = MakeEvent(deadline);
-    tmp[num_items].pending = 0;
-    tmp[num_items].waitfor = ZX_EVENTPAIR_SIGNALED;
-    tmp[num_items].handle = event.get();
-    auto status = _zx_object_wait_many(tmp, num_items + 1, ZX_TIME_INFINITE);
-    // copy everything back:
-    memcpy(items, tmp, num_items * sizeof(zx_wait_item_t));
-    if (status != ZX_OK || (tmp[num_items].pending & ZX_EVENTPAIR_SIGNALED) == 0) {
-      return status;
-    } else {
-      return ZX_ERR_TIMED_OUT;
-    }
   }
+  // we can just add an extra item, but we'll need to copy all the wait items
+  zx_wait_item_t tmp[ZX_WAIT_MANY_MAX_ITEMS];
+  std::copy_n(items, num_items, tmp);
+  zx::eventpair event = MakeEvent(deadline);
+  tmp[num_items].pending = 0;
+  tmp[num_items].waitfor = ZX_EVENTPAIR_SIGNALED;
+  tmp[num_items].handle = event.get();
+  zx_status_t status = _zx_object_wait_many(tmp, num_items + 1, ZX_TIME_INFINITE);
+  // copy everything back:
+  std::copy_n(tmp, num_items, items);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if ((tmp[num_items].pending & ZX_EVENTPAIR_SIGNALED) != 0) {
+    return ZX_ERR_TIMED_OUT;
+  }
+
+  return ZX_OK;
 }
 
 // port_wait adds an extra fake-clock eventpair handle to the port and changes the deadline to
@@ -186,22 +200,25 @@ __EXPORT zx_status_t zx_port_wait(zx_handle_t handle, zx_time_t deadline,
     return _zx_port_wait(handle, deadline, packet);
   }
 
-  auto event = MakeEvent(deadline);
+  zx::eventpair event = MakeEvent(deadline);
   uint64_t key = 0xFACEFACE00000000 | event.get();
-  ZX_ASSERT(zx_object_wait_async(event.get(), handle, key, ZX_EVENTPAIR_SIGNALED, 0) == ZX_OK);
+  if (zx_status_t status = zx_object_wait_async(event.get(), handle, key, ZX_EVENTPAIR_SIGNALED, 0);
+      status != ZX_OK) {
+    ZX_PANIC("%s", zx_status_get_string(status));
+  }
   zx_port_packet_t tmp;
-  auto status = _zx_port_wait(handle, ZX_TIME_INFINITE, &tmp);
+  zx_status_t status = _zx_port_wait(handle, ZX_TIME_INFINITE, &tmp);
   // always cancel the wait in case it wasn't a timeout
-  zx_port_cancel(handle, event.get(), key);
+  zx::unowned_port(handle)->cancel(event, key);
   if (status != ZX_OK) {
     return status;
-  } else if (tmp.type == ZX_PKT_TYPE_SIGNAL_ONE && tmp.key == key &&
-             tmp.signal.observed == ZX_EVENTPAIR_SIGNALED) {
-    return ZX_ERR_TIMED_OUT;
-  } else {
-    *packet = tmp;
-    return ZX_OK;
   }
+  if (tmp.type == ZX_PKT_TYPE_SIGNAL_ONE && tmp.key == key &&
+      tmp.signal.observed == ZX_EVENTPAIR_SIGNALED) {
+    return ZX_ERR_TIMED_OUT;
+  }
+  *packet = tmp;
+  return ZX_OK;
 }
 
 // timer_create changes the type of returned handle from an actual timer to one side of an eventpair
@@ -224,37 +241,39 @@ __EXPORT zx_status_t zx_timer_create(uint32_t options, zx_clock_t clock_id, zx_h
 
 __EXPORT zx_status_t zx_timer_set(zx_handle_t handle, zx_time_t deadline, zx_duration_t slack) {
   zx::eventpair e;
-  zx_status_t status;
-  if ((status = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, e.reset_and_get_address())) !=
-      ZX_OK) {
+  if (zx_status_t status = zx::unowned_eventpair(handle)->duplicate(ZX_RIGHT_SAME_RIGHTS, &e);
+      status != ZX_OK) {
     return status;
   }
   // reschedule the event with the fake clock service:
-  ZX_ASSERT(fidl::WireCall<fake_clock::FakeClock>(GetService())
-                ->RescheduleEvent(std::move(e), deadline)
-                .ok());
+  const fidl::WireResult result =
+      fidl::WireCall(GetService())->RescheduleEvent(std::move(e), deadline);
+  ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   return ZX_OK;
 }
 
 __EXPORT zx_status_t zx_timer_cancel(zx_handle_t handle) {
   zx::eventpair e;
-  zx_status_t status;
-  if ((status = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, e.reset_and_get_address())) !=
-      ZX_OK) {
+  if (zx_status_t status = zx::unowned_eventpair(handle)->duplicate(ZX_RIGHT_SAME_RIGHTS, &e);
+      status != ZX_OK) {
     return status;
   }
-  ZX_ASSERT(fidl::WireCall<fake_clock::FakeClock>(GetService())->CancelEvent(std::move(e)).ok());
+  const fidl::WireResult result = fidl::WireCall(GetService())->CancelEvent(std::move(e));
+  ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   return ZX_OK;
 }
 
 __EXPORT bool create_named_deadline(char* component, size_t component_len, char* code,
                                     size_t code_len, zx_time_t duration, zx_time_t* out) {
-  fake_clock_deadline::wire::DeadlineId id;
-  id.component_id = fidl::StringView::FromExternal(component, component_len);
-  id.code = fidl::StringView::FromExternal(code, code_len);
-  auto result = fidl::WireCall<fake_clock::FakeClock>(GetService())
-                    ->CreateNamedDeadline(std::move(id), duration);
-  ZX_ASSERT(result.ok());
+  const fidl::WireResult result =
+      fidl::WireCall(GetService())
+          ->CreateNamedDeadline(
+              {
+                  .component_id = fidl::StringView::FromExternal(component, component_len),
+                  .code = fidl::StringView::FromExternal(code, code_len),
+              },
+              duration);
+  ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   *out = result.value().deadline;
   return true;
 }

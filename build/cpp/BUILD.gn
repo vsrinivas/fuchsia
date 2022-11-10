@@ -114,7 +114,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/graphics/tests/goldfish_test:goldfish_test_bin",
     "//src/graphics/tests/vkloop",
     "//src/graphics/tests/vkloop:vkloop_bin",
-    "//src/lib/fake-clock/lib",
     "//src/lib/fidl/c/llcpp_interop_tests:bin",
     "//src/lib/fidl/c/walker_tests:test_sources",
     "//src/lib/loader_service",

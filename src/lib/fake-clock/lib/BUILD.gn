@@ -26,16 +26,12 @@ shared_library("lib") {
   sources = [ "fake_clock.cc" ]
 
   deps = [
-    "//sdk/lib/fdio",
+    "//sdk/lib/component/cpp/incoming",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fake-clock/fidl:fidl_cpp_wire",
     "//src/lib/fake-clock/named-timer:named-timer-headers",
-    "//src/lib/fxl",
   ]
 
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
   public_configs = [ "//src/lib/fake-clock/lib:rust-link-fake-time" ]
 }
 
