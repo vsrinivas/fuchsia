@@ -23,8 +23,6 @@ namespace {
 
 class StepPLT : public E2eTest {
  public:
-  StepPLT() { ConfigureSymbolsWithFile("exe.unstripped/step_plt"); }
-
   void Run() {
     expected_stopped_line_ = 12;
     console().ProcessInputLine("break step_plt.cc:12");

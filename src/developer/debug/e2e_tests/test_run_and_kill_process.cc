@@ -27,11 +27,6 @@ namespace {
 // killing the program.
 class RunAndKillProcess : public E2eTest {
  public:
-  RunAndKillProcess() {
-    // Add symbols for crasher.
-    ConfigureSymbolsWithFile("exe.unstripped/crasher");
-  }
-
   void Run() {
     console().ProcessInputLine(
         "break blind_write",

@@ -25,11 +25,6 @@ constexpr std::string_view kRunTestCommand =
 // make sure we make and catch an exception.
 class RunFailingTestComponent : public E2eTest {
  public:
-  RunFailingTestComponent() {
-    // Add symbols for crasher_test.
-    ConfigureSymbolsWithFile("exe.unstripped/crasher_test");
-  }
-
   void Run() {
     // Actually kick off inferior program.
     console().ProcessInputLine(kRunTestCommand.data());

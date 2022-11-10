@@ -16,6 +16,12 @@ namespace zxdb {
 E2eTest::E2eTest() {
   session_ = std::make_unique<Session>();
 
+  // Setup symbols.
+  std::filesystem::path symbol_dir =
+      std::filesystem::path(GetSelfPath()).parent_path() / ZXDB_E2E_TESTS_SYMBOL_DIR;
+  session_->system().settings().SetList(ClientSettings::System::kBuildIdDirs,
+                                        {symbol_dir.string()});
+
   session_->breakpoint_observers().AddObserver(this);
   session_->component_observers().AddObserver(this);
   session_->process_observers().AddObserver(this);
@@ -49,15 +55,6 @@ E2eTest::~E2eTest() {
   session_->thread_observers().RemoveObserver(this);
 
   session_.reset();
-}
-
-void E2eTest::ConfigureSymbolsWithFile(std::string_view symbol_file_path) {
-  std::filesystem::path symbol_file =
-      std::filesystem::path(GetSelfPath()).parent_path().parent_path();
-  symbol_file /= symbol_file_path;
-
-  session_->system().settings().SetList(ClientSettings::System::kSymbolPaths,
-                                        {symbol_file.string()});
 }
 
 Err E2eTest::ConnectToDebugAgent() {

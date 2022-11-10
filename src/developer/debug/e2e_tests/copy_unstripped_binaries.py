@@ -4,55 +4,54 @@
 
 from pathlib import Path
 import os
+from shutil import rmtree
 import sys
+import time
+
+# Import //build/images/elfinfo.py
+sys.path.insert(0, os.path.dirname(__file__) + '/../../../../build/images')
+import elfinfo
 
 
-# This simple script expects the following:
-#   argv[1] = file containing a list of paths
-#   argv[2] = stamp file name to write (this is unused but is required for the GN action)
-#
-# It will proceed to hardlink the (non-host) files listed in the file specified with argv[1] into
-# the directory specified by argv[3]. This is mainly helpful for variant builds where the unstripped
-# binaries do not automatically get copied to $root_build_dir/exe.unstripped like in non-variant
-# builds. If argv[3] exists at the time this script is run, nothing is done (which should indicate
-# that this is a non-variant build).
+def try_link(binary: str, build_id_dir: Path):
+    info = elfinfo.get_elf_info(binary)
+    build_id = info.build_id
+    if info.stripped or not build_id or len(build_id) <= 2:
+        return
+    dest_dir = build_id_dir / build_id[:2]
+    dest_dir.mkdir(exist_ok=True)
+    dest = dest_dir / (build_id[2:] + '.debug')
+    if not dest.exists():  # When two source binaries resolves to the same.
+        os.link(binary, dest)
+
+
 def main():
-    dest_dir = Path(sys.argv[3])
+    assert len(sys.argv) == 5, "Incorrect number of arguments"
 
-    # Always write a stamp file to make the action output happy.
-    Path(sys.argv[2]).touch()
+    unstripped_binaries_list_file = Path(sys.argv[1])
+    build_id_dir = Path(sys.argv[2])
+    depfile = Path(sys.argv[3])
+    unstripped_libc = sys.argv[4]
 
-    # Create the dest_dir if it's not present.
-    if not dest_dir.exists():
-        dest_dir.mkdir()
+    # Always rebuild the build-id directory for garbage collection, and os.link is fast.
+    if build_id_dir.exists():
+        rmtree(build_id_dir)
 
-    # This is the list of files that came from link_output_rspfile.
-    with open(sys.argv[1], 'r') as f:
-        for file in f:
-            # Only copy files that are built for the target.
-            if file.startswith('host_'):
+    build_id_dir.mkdir(parents=True)
+
+    depfile_content = str(build_id_dir) + ":"
+    with unstripped_binaries_list_file.open() as f:
+        for line in f:
+            binary = line.rstrip('\n')
+            if binary.startswith('host_'):
                 continue
+            depfile_content += " " + binary
+            try_link(binary, build_id_dir)
 
-            source_file = Path(file.rstrip())
-            dest_file = dest_dir.joinpath(source_file.name)
+    depfile_content += " " + unstripped_libc
+    try_link(unstripped_libc, build_id_dir)
 
-            if source_file == dest_file:
-                continue
-
-            try:
-                if dest_file.samefile(source_file):
-                    continue
-            except OSError:
-                pass
-
-            try:
-                os.unlink(dest_file)
-            except OSError:
-                pass
-
-            os.link(source_file, dest_file)
-
-    return 0
+    depfile.write_text(depfile_content + '\n')
 
 
 if __name__ == '__main__':

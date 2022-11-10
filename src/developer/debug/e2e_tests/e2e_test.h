@@ -20,8 +20,6 @@ class E2eTest : public TestWithLoop,
   E2eTest();
   ~E2eTest() override;
 
-  void ConfigureSymbolsWithFile(std::string_view symbol_file_path);
-
   Session& session() const { return *session_; }
   MockConsole& console() const { return *console_; }
 
