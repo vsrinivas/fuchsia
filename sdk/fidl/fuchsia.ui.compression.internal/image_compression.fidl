@@ -1,0 +1,34 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.compression.internal;
+
+using zx;
+using fuchsia.math;
+
+type ImageCompressionError = flexible enum {
+    /// One or more required arguments are missing in the table argument.
+    MISSING_ARGS = 1;
+    /// One or more of the arguments was not valid.
+    INVALID_ARGS = 2;
+    /// A general error occurred during the method call.
+    BAD_OPERATION = 3;
+};
+
+/// Compresses images for the screenshot API in a secure way by isolating the
+/// use of the insecure libpng library to a separate component.
+protocol ImageCompressor {
+    EncodePng(resource table {
+        /// VMO holding the image-to-be-encoded in packaged, BGRA_RAW format.
+        1: raw_vmo zx.handle:VMO;
+
+        /// The width and height of the input image.
+        2: image_dimensions fuchsia.math.SizeU;
+
+        /// Resultant VMO in PNG format. This VMO's allocated size should be at
+        /// least 4KB larger than the input image's width*height*pixel_size to
+        /// account for format padding.
+        3: png_vmo zx.handle:VMO;
+    }) -> () error ImageCompressionError;
+};

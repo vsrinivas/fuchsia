@@ -1,0 +1,54 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("image-compression") {
+  testonly = true
+  deps = [
+    ":package",
+    "tests:tests",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "image_compression.cc",
+    "image_compression.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.compression.internal:fuchsia.ui.compression.internal_cpp",
+    "//sdk/fidl/fuchsia.ui.compression.internal:fuchsia.ui.compression.internal_cpp_hlcpp_conversion",
+    "//sdk/fidl/fuchsia.ui.compression.internal:fuchsia.ui.compression.internal_hlcpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}
+
+executable("bin") {
+  output_name = "image-compression"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":lib",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("component") {
+  component_name = "image-compression"
+  manifest = "meta/image_compression.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("package") {
+  package_name = "image-compression"
+  deps = [ ":component" ]
+}

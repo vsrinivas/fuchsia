@@ -29,6 +29,7 @@ executable("bin") {
     "//src/ui/scenic/lib/flatland/renderer",
     "//src/ui/scenic/lib/focus",
     "//src/ui/scenic/lib/gfx",
+    "//src/ui/scenic/lib/image-compression:component",
     "//src/ui/scenic/lib/input",
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry",
     "//src/ui/scenic/lib/screen_capture",
