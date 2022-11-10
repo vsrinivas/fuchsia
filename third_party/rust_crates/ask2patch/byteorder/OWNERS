@@ -17,8 +17,8 @@ include /src/lib/diagnostics/OWNERS
 include /src/lib/diagnostics/inspect/format/rust/OWNERS
 include /src/lib/storage/OWNERS
 include /src/media/OWNERS
-include /src/security/kms/OWNERS
-include /src/security/scrutiny/OWNERS
+include /src/security/bin/kms/OWNERS
+include /src/security/lib/scrutiny/OWNERS
 include /src/storage/OWNERS
 include /src/sys/OWNERS
 include /src/sys/component_manager/OWNERS

@@ -8,8 +8,8 @@ include /src/developer/ffx/OWNERS
 include /src/diagnostics/validator/inspect/OWNERS
 include /src/lib/diagnostics/hierarchy/rust/OWNERS
 include /src/lib/gcs/OWNERS
-include /src/security/kms/OWNERS
-include /src/security/scrutiny/OWNERS
+include /src/security/bin/kms/OWNERS
+include /src/security/lib/scrutiny/OWNERS
 include /src/sys/time/OWNERS
 include /src/testing/sl4f/OWNERS
 include /third_party/rust_crates/forks/rustls/OWNERS

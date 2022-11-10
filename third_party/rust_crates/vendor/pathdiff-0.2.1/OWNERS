@@ -5,5 +5,5 @@
 include /build/sdk/OWNERS
 include /src/connectivity/network/OWNERS
 include /src/lib/assembly/OWNERS
-include /src/security/scrutiny/OWNERS
+include /src/security/lib/scrutiny/OWNERS
 include /tools/pbtool/OWNERS

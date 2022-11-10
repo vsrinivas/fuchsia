@@ -28,7 +28,7 @@ include /src/developer/fuchsia-criterion/OWNERS
 include /src/diagnostics/OWNERS
 include /src/fonts/OWNERS
 include /src/identity/OWNERS
-include /src/identity/bin/credential_manager/OWNERS
+include /src/security/bin/credential_manager/OWNERS
 include /src/identity/bin/password_authenticator/OWNERS
 include /src/intl/OWNERS
 include /src/lib/analytics/OWNERS
@@ -40,8 +40,8 @@ include /src/lib/testing/temp_test_env/OWNERS
 include /src/power/OWNERS
 include /src/recovery/system/OWNERS
 include /src/security/OWNERS
-include /src/security/kms/OWNERS
-include /src/security/scrutiny/OWNERS
+include /src/security/bin/kms/OWNERS
+include /src/security/lib/scrutiny/OWNERS
 include /src/storage/OWNERS
 include /src/sys/OWNERS
 include /src/sys/component_manager/OWNERS

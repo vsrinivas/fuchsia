@@ -19,7 +19,7 @@ include /src/lib/fuchsia-component-test/OWNERS
 include /src/lib/fuchsia-url/OWNERS
 include /src/lib/gcs/OWNERS
 include /src/lib/rust_url/OWNERS
-include /src/security/scrutiny/OWNERS
+include /src/security/lib/scrutiny/OWNERS
 include /src/sys/fuzzing/OWNERS
 include /src/sys/lib/cm_fidl_validator/OWNERS
 include /src/sys/lib/cm_types/OWNERS

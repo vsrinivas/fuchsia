@@ -8,7 +8,7 @@ include /src/developer/ffx/plugins/fuzz/OWNERS
 include /src/developer/ffx/plugins/inspect/OWNERS
 include /src/developer/ffx/plugins/log/OWNERS
 include /src/developer/ffx/plugins/platform/preflight/OWNERS
-include /src/security/scrutiny/OWNERS
+include /src/security/lib/scrutiny/OWNERS
 include /src/sys/fuzzing/OWNERS
 include /third_party/rust_crates/vendor/tui-0.16.0/OWNERS
 include /tools/create/OWNERS

@@ -12,7 +12,7 @@ include /src/lib/gcs/OWNERS
 include /src/lib/ui/OWNERS
 include /src/lib/ui/carnelian/OWNERS
 include /src/proc/OWNERS
-include /src/security/scrutiny/OWNERS
+include /src/security/lib/scrutiny/OWNERS
 include /src/storage/OWNERS
 include /src/sys/component_manager/OWNERS
 include /src/sys/lib/routing/OWNERS
