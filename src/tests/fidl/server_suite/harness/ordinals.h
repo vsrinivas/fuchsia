@@ -12,8 +12,8 @@ namespace server_suite {
 // To find all ordinals:
 //
 //     cat
-//     out/default/fidling/gen/src/tests/fidl/server_suite/fidl/fidl.serversuite/llcpp/fidl/fidl.serversuite/cpp/wire_messaging.cc
-//     | grep -e 'constexpr.*kTarget.*Ordinal' -A 1
+//     out/default/fidling/gen/src/tests/fidl/server_suite/fidl/fidl.serversuite/cpp/fidl/fidl.serversuite/cpp/wire_messaging.cc
+//     | grep -e 'constexpr.*k.*Target.*Ordinal'
 //
 // While using `jq` would be much nicer, large numbers are mishandled and the
 // displayed ordinal ends up being incorrect.
@@ -51,6 +51,20 @@ static const uint64_t kOrdinalFlexibleTwoWay = 1871583035380534385lu;
 static const uint64_t kOrdinalFlexibleTwoWayFields = 5173692443570239348lu;
 static const uint64_t kOrdinalFlexibleTwoWayErr = 372287587009602464lu;
 static const uint64_t kOrdinalFlexibleTwoWayFieldsErr = 1925250685993373878lu;
+
+// Large Message Target Ordinals
+static const uint64_t kDecodeBoundedKnownToBeSmall = 2306971119517306736lu;
+static const uint64_t kDecodeBoundedMaybeLarge = 5061649281640605843lu;
+static const uint64_t kDecodeSemiBoundedBelievedToBeSmall = 6267011314496147240lu;
+static const uint64_t kDecodeSemiBoundedMaybeLarge = 8625659505308376247lu;
+static const uint64_t kDecodeUnboundedMaybeLargeValue = 5552436485873084095lu;
+static const uint64_t kDecodeUnboundedMaybeLargeResource = 1931645207321881641lu;
+static const uint64_t kEncodeBoundedKnownToBeSmall = 1557210557872420809lu;
+static const uint64_t kEncodeBoundedMaybeLarge = 4347053200570386303lu;
+static const uint64_t kEncodeSemiBoundedBelievedToBeSmall = 9144416634292442896lu;
+static const uint64_t kEncodeSemiBoundedMaybeLarge = 8310545671826894614lu;
+static const uint64_t kEncodeUnboundedMaybeLargeValue = 6832881755814955776lu;
+static const uint64_t kEncodeUnboundedMaybeLargeResource = 5234496335459325332lu;
 
 // Common Ordinals
 static const uint64_t kOrdinalEpitaph = 0xfffffffffffffffflu;

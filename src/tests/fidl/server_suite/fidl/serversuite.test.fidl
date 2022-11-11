@@ -185,6 +185,16 @@ open protocol OpenTarget {
 // The Target is the server under test. This target is used for tests which specifically involve
 // FIDL's ability to send overly large (>64KiB) messages using a VMO, rather than the traditional
 // channel transport.
+//
+// Every `Encode*(...) -> (...);` method should be implemented to simply echo back the payload it
+// receives (with one exception; see `EncodeUnboundedMaybeLargeResource` below).
+//
+// There is a bit of redundancy here - each of these methods actually duplicates the work of their
+// corresponding `Decode*(...);` methods, as they must necessarily decode the supplied messges in
+// order to echo them back. The reason this was done this way is that it makes "good" encoding tests
+// much more language server agnostic - each language server no longer needs to know the specifics
+// of how to build the type to be encoded, it just blindly echoes back the decoded type it receives
+// from the request instead. This setup makes language server specific bugs less likely.
 open protocol LargeMessageTarget {
     strict DecodeBoundedKnownToBeSmall(BoundedKnownToBeSmall);
     strict DecodeBoundedMaybeLarge(BoundedMaybeLarge);
@@ -197,26 +207,35 @@ open protocol LargeMessageTarget {
     strict DecodeUnboundedMaybeLargeResource(UnboundedMaybeLargeResource);
 
     // All replies sent back for this method must be small messages.
-    strict EncodeBoundedKnownToBeSmall() -> (BoundedKnownToBeSmall);
-    strict EncodeBoundedMaybeLarge(struct {
-        want_large_message bool;
-    }) -> (BoundedMaybeLarge);
+    strict EncodeBoundedKnownToBeSmall(BoundedKnownToBeSmall) -> (BoundedKnownToBeSmall);
+    strict EncodeBoundedMaybeLarge(BoundedMaybeLarge) -> (BoundedMaybeLarge);
 
     // All replies sent back for this method must be small messages, since it is impossible to
     // request an encoding of an unknown variant.
-    strict EncodeSemiBoundedBelievedToBeSmall() -> (SemiBoundedBelievedToBeSmall);
-    strict EncodeSemiBoundedMaybeLarge(struct {
-        want_large_message bool;
-    }) -> (SemiBoundedMaybeLarge);
-    strict EncodeUnboundedMaybeLargeValue(struct {
-        want_large_message bool;
-    }) -> (UnboundedMaybeLargeValue);
-    strict EncodeUnboundedMaybeLargeResource(struct {
-        want_message strict enum {
-            SMALL_MESSAGE_64_HANDLES = 1;
-            LARGE_MESSAGE_63_HANDLES = 2;
-            LARGE_MESSAGE_64_HANDLES = 3;
-        };
+    strict EncodeSemiBoundedBelievedToBeSmall(SemiBoundedBelievedToBeSmall) -> (SemiBoundedBelievedToBeSmall);
+    strict EncodeSemiBoundedMaybeLarge(SemiBoundedMaybeLarge) -> (SemiBoundedMaybeLarge);
+    strict EncodeUnboundedMaybeLargeValue(UnboundedMaybeLargeValue) -> (UnboundedMaybeLargeValue);
+
+    // If `populate_unset_handles` is false, the implementation should echo back `data` unchanged.
+    // If `populate_unset_handles` is true, the implementation should check if any handle field is
+    // absent, and fill those fields with valid handles, then send back the `data` populated with
+    // those additional handles.
+    //
+    // Unlike the remaining methods for this target, `EncodeUnboundedMaybeLargeResource` needs to
+    // test a case where a bad encoding is possible: a large message with 64 handles. To enable
+    // this, the incoming type is wrapped in a container struct with an extra flag specifying
+    // whether or not to "fill in" all unset optional handles, thereby forcing the return message to
+    // carry 64 of them. For both of the "good" cases (small-message-with-64-handles and
+    // large-message-with-63-handles), there should be no need to set this flag, as the harness-sent
+    // type can be echoed back without issue.
+    //
+    // Note that because this method only tests encoding, and not decoding, it's fine if the size of
+    // the incoming message is a bit off due to the extra bytes used by the flag - the only behavior
+    // under test is the encoding of the response message, so the exact properties of the request
+    // message are irrelevant as long as the response is properly sized to be large/small as needed.
+    strict EncodeUnboundedMaybeLargeResource(resource struct {
+        data UnboundedMaybeLargeResource;
+        populate_unset_handles bool;
     }) -> (UnboundedMaybeLargeResource);
 };
 
@@ -358,46 +377,46 @@ type Test = flexible enum : uint32 {
     // //////////////////////////////////////////////////////////////////////////////////
 
     // Call the `DecodeBoundedKnownToBeSmall(...)` method with the largest possible small message.
-    GOOD_DECODE_REQUEST_BOUNDED_KNOWN_SMALL_MESSAGE = 65;
+    GOOD_DECODE_BOUNDED_KNOWN_SMALL_MESSAGE = 65;
 
     // Call the `DecodeBoundedMaybeLarge(...)` method with the largest possible small message.
-    GOOD_DECODE_REQUEST_BOUNDED_MAYBE_SMALL_MESSAGE = 66;
+    GOOD_DECODE_BOUNDED_MAYBE_SMALL_MESSAGE = 66;
 
     // Call the `DecodeBoundedMaybeLarge(...)` method with the smallest possible large message.
-    GOOD_DECODE_REQUEST_BOUNDED_MAYBE_LARGE_MESSAGE = 67;
+    GOOD_DECODE_BOUNDED_MAYBE_LARGE_MESSAGE = 67;
 
     // Call the `DecodeSemiBoundedBelievedToBeSmall(...)` method with the largest possible small
     // message. It is "unknownable" because a flexible type like the one used here might always be
     // larger than expected at decode time, due to possible oevolution on the part of the encoder.
-    GOOD_DECODE_REQUEST_SEMI_BOUNDED_UNKNOWABLE_SMALL_MESSAGE = 68;
+    GOOD_DECODE_SEMI_BOUNDED_UNKNOWABLE_SMALL_MESSAGE = 68;
 
     // Call the `DecodeSemiBoundedBelievedToBeSmall(...)` method with the smallest possible large
     // message. To accomplish this, the test harness will need to send an unkonwn variant exactly
     // identical to the known one, but one byte (plus the requisite padding) larger, thereby pushing
     // it into large message territory.
-    GOOD_DECODE_REQUEST_SEMI_BOUNDED_UNKNOWABLE_LARGE_MESSAGE = 69;
+    GOOD_DECODE_SEMI_BOUNDED_UNKNOWABLE_LARGE_MESSAGE = 69;
 
     // Call the `DecodeSemiBoundedMaybeLarge(...)` method with the smallest possible large message.
-    GOOD_DECODE_REQUEST_SEMI_BOUNDED_MAYBE_SMALL_MESSAGE = 70;
+    GOOD_DECODE_SEMI_BOUNDED_MAYBE_SMALL_MESSAGE = 70;
 
     // Call the `DecodeSemiBoundedMaybeLarge(...)` method with the largest possible small message.
-    GOOD_DECODE_REQUEST_SEMI_BOUNDED_MAYBE_LARGE_MESSAGE = 71;
+    GOOD_DECODE_SEMI_BOUNDED_MAYBE_LARGE_MESSAGE = 71;
 
     // Call the `DecodeUnboundedMaybeLargeValue(...)` method with the largest possible small
     // message.
-    GOOD_DECODE_REQUEST_UNBOUNDED_SMALL_MESSAGE = 72;
+    GOOD_DECODE_UNBOUNDED_SMALL_MESSAGE = 72;
 
     // Call the `DecodeUnboundedMaybeLargeValue(...)` method with the smallest possible large
     // message.
-    GOOD_DECODE_REQUEST_UNBOUNDED_LARGE_MESSAGE = 73;
+    GOOD_DECODE_UNBOUNDED_LARGE_MESSAGE = 73;
 
     // Call the `DecodeUnboundedMaybeLargeResource(...)` method with the largest, highest handle
     // count small message possible.
-    GOOD_DECODE_HANDLE_COUNT_64_SMALL_MESSAGE = 74;
+    GOOD_DECODE_64_HANDLE_SMALL_MESSAGE = 74;
 
     // Call the `DecodeUnboundedMaybeLargeResource(...)` method with the smallest, highest handle
     // count large message possible.
-    GOOD_DECODE_HANDLE_COUNT_63_LARGE_MESSAGE = 75;
+    GOOD_DECODE_63_HANDLE_LARGE_MESSAGE = 75;
 
     // These tests ensure that otherwise well-formed unknown messages of either size are correctly
     // read by a protocol with large message aware methods. They don't use any of the named methods
@@ -409,37 +428,37 @@ type Test = flexible enum : uint32 {
 
     // Call the `EncodeBoundedKnownToBeSmall(...) -> (...)` method with the largest possible small
     // message.
-    GOOD_ENCODE_EVENT_BOUNDED_KNOWN_SMALL_MESSAGE = 78;
+    GOOD_ENCODE_BOUNDED_KNOWN_SMALL_MESSAGE = 78;
 
     // Call the `EncodeBoundedMaybeLarge(...) -> (...)` method with the largest possible small
     // message.
-    GOOD_ENCODE_EVENT_BOUNDED_MAYBE_SMALL_MESSAGE = 79;
+    GOOD_ENCODE_BOUNDED_MAYBE_SMALL_MESSAGE = 79;
 
     // Call the `EncodeBoundedMaybeLarge(...) -> (...)` method with the smallest possible large
     // message.
-    GOOD_ENCODE_EVENT_BOUNDED_MAYBE_LARGE_MESSAGE = 80;
+    GOOD_ENCODE_BOUNDED_MAYBE_LARGE_MESSAGE = 80;
 
     // Call the `EncodeSemiBoundedBelievedToBeSmall(...) -> (...)` method with the largest possible
     // small message. Even though the method is called "believed to be small", this is only a
     // "belief" at decode time. At encode time, it is a certainty, because the encode-side code
     // always knows the boundedness of the type. This means that there is no need for a similar test
-    // for `GOOD_ENCODE_EVENT_SEMI_BOUNDED_KNOWN_LARGE_MESSAGE`, as such a thing is impossible
-    // without encoding unknown data, which is not allowed.
-    GOOD_ENCODE_EVENT_SEMI_BOUNDED_KNOWN_SMALL_MESSAGE = 81;
+    // for `GOOD_ENCODE_SEMI_BOUNDED_KNOWN_LARGE_MESSAGE`, as such a thing is impossible without
+    // encoding unknown data, which is not allowed.
+    GOOD_ENCODE_SEMI_BOUNDED_KNOWN_SMALL_MESSAGE = 81;
 
     // Call the `EncodeSemiBoundedMaybeLarge(...) -> (...)` method with the smallest possible large
     // message.
-    GOOD_ENCODE_EVENT_SEMI_BOUNDED_MAYBE_SMALL_MESSAGE = 82;
+    GOOD_ENCODE_SEMI_BOUNDED_MAYBE_SMALL_MESSAGE = 82;
 
     // Call the `EncodeSemiBoundedMaybeLarge(...) -> (...)` method with the largest possible small
     // message.
-    GOOD_ENCODE_EVENT_SEMI_BOUNDED_MAYBE_LARGE_MESSAGE = 83;
+    GOOD_ENCODE_SEMI_BOUNDED_MAYBE_LARGE_MESSAGE = 83;
 
     // Call `EncodeUnboundedMaybeLargeValue(...) -> (...)` with the largest possible small message.
-    GOOD_ENCODE_EVENT_UNBOUNDED_SMALL_MESSAGE = 84;
+    GOOD_ENCODE_UNBOUNDED_SMALL_MESSAGE = 84;
 
     // Call `EncodeUnboundedMaybeLargeValue(...) -> (...)` with the smallest possible large message.
-    GOOD_ENCODE_EVENT_UNBOUNDED_LARGE_MESSAGE = 85;
+    GOOD_ENCODE_UNBOUNDED_LARGE_MESSAGE = 85;
 
     // Call `EncodeUnboundedMaybeLargeResource(...) -> (...)` with the largest possible small
     // message and 63 handles.
