@@ -96,6 +96,7 @@ generate_prebuilt_rust_toolchain_repository(
 register_toolchains(
     "@fuchsia_prebuilt_rust//:rust_{host_tag_alt}",
     "@fuchsia_prebuilt_rust//:rust_fuchsia_x64",
+    "@fuchsia_prebuilt_rust//:rust_fuchsia_arm64",
 )
 
 # buildifier: disable=load-on-top

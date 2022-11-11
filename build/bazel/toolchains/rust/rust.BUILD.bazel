@@ -4,12 +4,12 @@
 
 """Top level BUILD.bazel in the @fuchsia_rust_toolchain repository."""
 
+load("@//:fuchsia_build_config.bzl", "build_config")
 load("@rules_rust//rust:toolchain.bzl", "rust_stdlib_filegroup", "rust_toolchain")
-load("//:generated_constants.bzl", "constants")
 
-host_os = constants.host_os
-host_arch = constants.host_arch
-host_triple = constants.host_triple
+host_os = build_config.host_os
+host_arch = build_config.host_arch
+host_triple = build_config.host_target_triple
 
 rust_stdlib_filegroup(
     name = "rust_std",
@@ -36,11 +36,12 @@ rust_toolchain(
 toolchain(
     name = "rust_%s_%s" % (host_os, host_arch),
     exec_compatible_with = [
-        constants.host_platform_cpu_constraint,
+        build_config.host_platform_cpu_constraint,
+        build_config.host_platform_os_constraint,
     ],
     target_compatible_with = [
-        constants.host_platform_cpu_constraint,  # e.g. "@platforms//cpu:x86_64",
-        constants.host_platform_os_constraint,  # e.g. "@platforms//os:linux",
+        build_config.host_platform_cpu_constraint,  # e.g. "@platforms//cpu:x86_64",
+        build_config.host_platform_os_constraint,  # e.g. "@platforms//os:linux",
     ],
     toolchain = ":rust_%s_%s_toolchain" % (host_os, host_arch),
     toolchain_type = "@rules_rust//rust:toolchain",

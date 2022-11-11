@@ -4,6 +4,7 @@
 
 """BUILD.bazel file for @prebuilt_clang repository."""
 
+load("@//:fuchsia_build_config.bzl", "build_config")
 load(":generated_constants.bzl", "constants")
 load(
     "@//:build/bazel/toolchains/clang/toolchains.bzl",
@@ -67,20 +68,20 @@ filegroup(
     name = "headers",
     srcs = glob(["lib/clang/" + constants.clang_long_version + "/include/**"]) +
            glob(["include/c++/v1/**"]) +
-           glob(["include/%s/c++/v1/**" % constants.target_triple]),
+           glob(["include/%s/c++/v1/**" % build_config.host_target_triple]),
 )
 
 filegroup(
     name = "runtime_libraries",
-    srcs = glob(["lib/%s/**" % constants.target_triple]) +
-           glob(["lib/clang/%s/lib/%s/libclang_rt.builtins.a" % (constants.clang_long_version, constants.target_triple)]),
+    srcs = glob(["lib/%s/**" % build_config.host_target_triple]) +
+           glob(["lib/clang/%s/lib/%s/libclang_rt.builtins.a" % (constants.clang_long_version, build_config.host_target_triple)]),
 )
 
 exports_files(
     glob(["**/*"]),
 )
 
-define_host_prebuilt_clang_cc_toolchains("host_clang", constants.host_os, constants.host_arch)
+define_host_prebuilt_clang_cc_toolchains("host_clang", build_config.host_os, build_config.host_arch)
 
 include_clang_utilities_test_suite(
     name = "test_suite",

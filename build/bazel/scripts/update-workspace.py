@@ -198,10 +198,10 @@ def generate_fuchsia_build_config(fuchsia_dir):
     host_tag = get_host_tag()
 
     host_target_triple = {
-        "linux_x64": "x86_64-unknown-gnu-linux",
-        "linux_arm64": "aarch64-unknown-gnu-linux",
-        "mac_x64": "x86_64-apple-darwin",
-        "mac_arm64": "aarch64-apple-darwin",
+        "linux-x64": "x86_64-unknown-linux-gnu",
+        "linux-arm64": "aarch64-unknown-linux-gnu",
+        "mac-x64": "x86_64-apple-darwin",
+        "mac-arm64": "aarch64-apple-darwin",
     }.get(host_tag)
 
     host_os_constraint = {

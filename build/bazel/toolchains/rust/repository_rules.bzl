@@ -6,9 +6,6 @@
 
 load(
     "//:build/bazel/repository_utils.bzl",
-    "get_clang_target_triple",
-    "get_fuchsia_host_arch",
-    "get_fuchsia_host_os",
     "workspace_root_path",
 )
 
@@ -27,37 +24,6 @@ def _generate_prebuilt_rust_toolchain_repository_impl(repo_ctx):
         ],
         quiet = False,  # False for debugging!
     )
-
-    # Generate a .bzl file containing constants specific to the current host machine.
-    host_os = get_fuchsia_host_os(repo_ctx)
-    host_arch = get_fuchsia_host_arch(repo_ctx)
-    host_triple = get_clang_target_triple(host_os, host_arch)
-
-    host_os_constraint = {
-        "linux": "@platforms//os:linux",
-        "mac": "@platforms//os:macos",
-    }.get(host_os)
-
-    host_cpu_constraint = {
-        "x64": "@platforms//cpu:x86_64",
-        "arm64": "@platforms//cpu:aarch64",
-    }.get(host_arch)
-
-    repo_ctx.file("generated_constants.bzl", content = '''
-constants = struct(
-    host_os = "{host_os}",
-    host_arch = "{host_arch}",
-    host_triple = "{host_triple}",
-    host_platform_os_constraint = "{host_os_constraint}",
-    host_platform_cpu_constraint = "{host_cpu_constraint}",
-)
-'''.format(
-        host_os = host_os,
-        host_arch = host_arch,
-        host_triple = host_triple,
-        host_os_constraint = host_os_constraint,
-        host_cpu_constraint = host_cpu_constraint,
-    ))
 
     # Symlink the BUILD.bazel file.
     repo_ctx.symlink(
