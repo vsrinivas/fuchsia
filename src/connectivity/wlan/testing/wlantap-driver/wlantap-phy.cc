@@ -12,6 +12,7 @@
 #include <zircon/status.h>
 
 #include <array>
+#include <chrono>
 #include <mutex>
 
 #include <wlan/common/dispatcher.h>
@@ -152,15 +153,6 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
     auto name = self->name_;
     zxlogf(INFO, "%s: Unbinding PHY device.", name.c_str());
 
-    // Flush any remaining tasks in the event loop before destroying
-    // the interfaces
-    ::async::PostTask(self->loop_, [self] {
-      {
-        std::lock_guard<std::mutex> guard(self->wlan_softmac_lock_);
-        self->wlan_softmac_devices_.ReleaseAll();
-      }
-    });
-
     // This call will be ignored by ServerBindingRef it is has
     // already been called, i.e., in the case that DdkUnbind precedes
     // normal shutdowns.
@@ -171,9 +163,34 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
   }
 
   static void DdkRelease(void* ctx) {
-    auto name = static_cast<WlantapPhy*>(ctx)->name_;
+    auto self = static_cast<WlantapPhy*>(ctx);
+    auto name = self->name_;
     zxlogf(INFO, "%s: DdkRelease", name.c_str());
-    delete static_cast<WlantapPhy*>(ctx);
+
+    // Flush any remaining tasks in the event loop before destroying the iface.
+    // Placed in a block to avoid m, lk, and cv from unintentionally escaping
+    // their specific use here.
+    {
+      std::mutex m;
+      std::unique_lock lk(m);
+      std::condition_variable cv;
+      ::async::PostTask(self->loop_, [&lk, &cv]() mutable {
+        lk.unlock();
+        cv.notify_one();
+      });
+      auto status = cv.wait_for(lk, self->kFidlServerShutdownTimeout);
+      if (status == std::cv_status::timeout) {
+        zxlogf(ERROR, "%s: timed out waiting for FIDL server dispatcher to complete.",
+               name.c_str());
+        zxlogf(WARNING, "%s: Deleting wlansoftmac devices while FIDL server dispatcher running.",
+               name.c_str());
+      }
+    }
+
+    std::lock_guard<std::mutex> guard(self->wlan_softmac_lock_);
+    self->wlan_softmac_devices_.ReleaseAll();
+
+    delete self;
     zxlogf(INFO, "%s: DdkRelease done", name.c_str());
   }
 
@@ -493,6 +510,7 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
   fidl::ServerBindingRef<fuchsia_wlan_tap::WlantapPhy> user_binding_
       __TA_GUARDED(fidl_server_lock_);
   bool fidl_server_unbound_ = false;
+  const std::chrono::seconds kFidlServerShutdownTimeout = std::chrono::seconds(1);
   bool shutdown_called_ = false;
   size_t report_tx_status_count_ = 0;
 };  // namespace
