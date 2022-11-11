@@ -157,7 +157,8 @@ gvisor_tests = [
 
   # "pwritev2_test",
   # "raw_socket_icmp_test",
-  # "raw_socket_test",
+  "raw_socket_test",
+
   # "readahead_test",
   "read_test",
   "readv_socket_test",

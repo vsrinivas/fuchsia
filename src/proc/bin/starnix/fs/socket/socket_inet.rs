@@ -11,11 +11,14 @@ use crate::logging::not_implemented;
 use crate::mm::MemoryAccessorExt;
 use crate::task::*;
 use crate::types::*;
+use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_posix_socket as fposix_socket;
+use fidl_fuchsia_posix_socket_raw as fposix_socket_raw;
 use fuchsia_component::client::connect_channel_to_protocol;
 use fuchsia_zircon as zx;
-use fuchsia_zircon::sys::{ZX_ERR_INTERNAL, ZX_ERR_NO_MEMORY, ZX_OK};
+use fuchsia_zircon::sys::{ZX_ERR_INTERNAL, ZX_ERR_INVALID_ARGS, ZX_ERR_NO_MEMORY, ZX_OK};
 use fuchsia_zircon::HandleBased;
+use std::ffi::CStr;
 use std::sync::Arc;
 use syncio::zxio::{zx_handle_t, zx_status_t, zxio_object_type_t, zxio_socket, zxio_storage_t};
 use syncio::{RecvMessageInfo, Zxio};
@@ -26,21 +29,35 @@ use syncio::{RecvMessageInfo, Zxio};
 ///
 /// On success, `provider_handle` will contain a handle to the protocol.
 ///
-/// SAFETY: Dereferences the raw pointer `provider_handle`
+/// SAFETY: Dereferences the raw pointers `service_name` and `provider_handle`.
 unsafe extern "C" fn socket_provider(
-    _service_name: *const c_char,
+    service_name: *const c_char,
     provider_handle: *mut zx_handle_t,
 ) -> zx_status_t {
     let (client_end, server_end) = match zx::Channel::create() {
         Err(e) => return e.into_raw(),
         Ok((c, s)) => (c, s),
     };
-    if let Err(e) = connect_channel_to_protocol::<fposix_socket::ProviderMarker>(server_end) {
-        if let Some(err) = e.downcast_ref::<zx::Status>() {
-            return err.into_raw();
-        }
+
+    let service = match CStr::from_ptr(service_name).to_str() {
+        Ok(s) => s,
+        Err(_) => return ZX_ERR_INVALID_ARGS,
+    };
+
+    let result = if service == fposix_socket_raw::ProviderMarker::DEBUG_NAME {
+        connect_channel_to_protocol::<fposix_socket_raw::ProviderMarker>(server_end)
+    } else if service == fposix_socket::ProviderMarker::DEBUG_NAME {
+        connect_channel_to_protocol::<fposix_socket::ProviderMarker>(server_end)
+    } else {
         return ZX_ERR_INTERNAL;
     };
+
+    if let Err(err) = result {
+        if let Some(status) = err.downcast_ref::<zx::Status>() {
+            return status.into_raw();
+        }
+        return ZX_ERR_INTERNAL;
+    }
 
     *provider_handle = client_end.into_handle().into_raw();
     ZX_OK

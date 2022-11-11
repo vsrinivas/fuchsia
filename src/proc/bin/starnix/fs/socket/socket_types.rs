@@ -90,7 +90,7 @@ impl SocketType {
         match raw {
             SOCK_STREAM => Some(SocketType::Stream),
             SOCK_DGRAM => Some(SocketType::Datagram),
-            SOCK_RAW => Some(SocketType::Datagram),
+            SOCK_RAW => Some(SocketType::Raw),
             SOCK_SEQPACKET => Some(SocketType::SeqPacket),
             _ => None,
         }
@@ -106,7 +106,7 @@ impl SocketType {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct SocketProtocol(u32);
 
 impl SocketProtocol {
