@@ -251,6 +251,13 @@ pub fn sys_bpf(
             install_bpf_fd(current_task, Program)
         }
 
+        // Attach an eBPF program to a target_fd at the specified attach_type hook.
+        bpf_cmd_BPF_PROG_ATTACH => {
+            log_trace!(current_task, "BPF_PROG_ATTACH");
+            not_implemented!("?", "Bpf::BPF_PROG_ATTACH is stubbed");
+            Ok(SUCCESS)
+        }
+
         // Pin an eBPF program or map referred by the specified bpf_fd to the provided pathname on
         // the filesystem.
         bpf_cmd_BPF_OBJ_PIN => {
