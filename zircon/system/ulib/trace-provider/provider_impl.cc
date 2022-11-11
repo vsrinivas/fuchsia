@@ -24,15 +24,10 @@ constexpr bool kVerboseTraceErrors = false;
 TraceProviderImpl::TraceProviderImpl(async_dispatcher_t* dispatcher,
                                      fidl::ServerEnd<fuchsia_tracing_provider::Provider> server_end)
     : dispatcher_(dispatcher) {
-  fidl::BindServer(dispatcher_, std::move(server_end), this,
-                   [](TraceProviderImpl* impl, fidl::UnbindInfo info,
-                      fidl::ServerEnd<fuchsia_tracing_provider::Provider> server_end) {
-                     if (!info.is_dispatcher_shutdown()) {
-                       fprintf(stderr, "TraceProvider: FIDL server unbound: info=%s\n",
-                               info.FormatDescription().c_str());
-                     }
-                     OnClose();
-                   });
+  fidl::BindServer(
+      dispatcher_, std::move(server_end), this,
+      [](TraceProviderImpl* impl, fidl::UnbindInfo info,
+         fidl::ServerEnd<fuchsia_tracing_provider::Provider> server_end) { OnClose(); });
 }
 
 TraceProviderImpl::~TraceProviderImpl() = default;
