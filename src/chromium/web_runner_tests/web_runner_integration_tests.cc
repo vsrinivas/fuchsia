@@ -92,7 +92,8 @@ class MockNavigationEventListener : public fuchsia::web::NavigationEventListener
   fit::function<void(fuchsia::web::NavigationState)> on_navigation_state_changed_;
 };
 
-class ChromiumAppTest : public gtest::RealLoopFixture {
+class ChromiumAppTest : public gtest::RealLoopFixture,
+                        public ::testing::WithParamInterface<fuchsia::web::ContextFeatureFlags> {
  protected:
   ChromiumAppTest() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
     auto realm_builder = RealmBuilder::Create();
@@ -117,7 +118,7 @@ class ChromiumAppTest : public gtest::RealLoopFixture {
 
     fuchsia::web::CreateContextParams params;
     params.set_service_directory(std::move(incoming_service_clone));
-    params.set_features(fuchsia::web::ContextFeatureFlags::NETWORK);
+    params.set_features(fuchsia::web::ContextFeatureFlags::NETWORK | GetParam());
     web_context_provider->Create(std::move(params), web_context_.NewRequest());
     web_context_.set_error_handler([](zx_status_t status) {
       FX_LOGS(ERROR) << "web_context_: " << zx_status_get_string(status);
@@ -150,7 +151,7 @@ class ChromiumAppTest : public gtest::RealLoopFixture {
 //
 // See also
 // https://chromium.googlesource.com/chromium/src/+/HEAD/fuchsia/engine/browser/context_impl_browsertest.cc
-TEST_F(ChromiumAppTest, CreateAndNavigate) {
+TEST_P(ChromiumAppTest, CreateAndNavigate) {
   MockNavigationEventListener navigation_event_listener;
   fidl::Binding<fuchsia::web::NavigationEventListener> navigation_event_listener_binding(
       &navigation_event_listener);
@@ -206,5 +207,9 @@ TEST_F(ChromiumAppTest, CreateAndNavigate) {
   EXPECT_EQ(url, observed_url);
   EXPECT_EQ("Test title!", observed_title);
 }
+
+INSTANTIATE_TEST_SUITE_P(ContextFeatureFlags, ChromiumAppTest,
+                         ::testing::Values(fuchsia::web::ContextFeatureFlags::HEADLESS,
+                                           fuchsia::web::ContextFeatureFlags()));
 
 }  // namespace
