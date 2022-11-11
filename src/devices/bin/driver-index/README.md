@@ -6,7 +6,7 @@ vends the
 
 Driver Manager uses the Driver Index to find a Driver to bind to a given Device. Driver Index does
 this by running all of the Driver
-[bind programs](/docs/concepts/drivers/device_driver_model/driver-binding.md) against a given
+[bind rules](/docs/development/drivers/concepts/device_driver_model/driver-binding.md) against a given
 Device and returning the Driver that matches the Device the best.
 
 Driver Index will be used by the Drivers-As-Components effort.
