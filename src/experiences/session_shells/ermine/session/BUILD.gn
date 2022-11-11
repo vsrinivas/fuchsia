@@ -54,12 +54,38 @@ fuchsia_component("workstation_routing") {
   }
 }
 
+# Launch workstation_routing from this package for an ermine-based workstation
+# session.
 fuchsia_package("workstation_session_pkg") {
   package_name = "workstation_session"
   deps = [
+    ":application_shell_config_ermine",
     ":session_component",
     ":workstation_routing",
   ]
+}
+
+# Launch workstation_routing from this package for a gazelle-based workstation
+# session.
+fuchsia_package("workstation_session_gazelle_pkg") {
+  package_name = "workstation_session_gazelle"
+  deps = [
+    ":application_shell_config_gazelle",
+    ":session_component",
+    ":workstation_routing",
+  ]
+}
+
+# This JSON file configures which application shell (ermine or gazelle) should
+# run after login.
+resource("application_shell_config_ermine") {
+  sources = [ "config/application_shell_ermine.json" ]
+  outputs = [ "config/application_shell/application_shell.json" ]
+}
+
+resource("application_shell_config_gazelle") {
+  sources = [ "config/application_shell_gazelle.json" ]
+  outputs = [ "config/application_shell/application_shell.json" ]
 }
 
 group("session") {

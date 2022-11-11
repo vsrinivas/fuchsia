@@ -9,6 +9,9 @@ group("gazelle") {
     "element_router",
     "shell",
     "wm",
+
+    # Include the flavor of `workstation_session` that launches gazelle.
+    "//src/experiences/session_shells/ermine/session:workstation_session_gazelle_pkg",
   ]
 }
 

@@ -178,6 +178,14 @@
             from: "parent",
             to: "#login_shell",
         },
+        {
+            // Pass along a directory with a config file indicating whether to
+            // launch ermine or gazelle.
+            directory: "application_shell_config",
+            from: "parent",
+            as: "application_shell_config",
+            to: "#login_shell",
+        },
 
         // Note: The "data" storage capability used to store
         // device data is not passed to login_shell, components

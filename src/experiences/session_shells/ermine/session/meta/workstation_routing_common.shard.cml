@@ -6,7 +6,7 @@
     children: [
         {
             name: "workstation_session",
-            url: "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_session.cm",
+            url: "#meta/workstation_session.cm",
             startup: "eager",
             environment: "#workstation_session_env",
         },
@@ -93,6 +93,16 @@
             directory: "root-ssl-certificates",
             from: "parent",
             to: [ "#workstation_session" ],
+        },
+        {
+            // The config/application_shell directory in our package contains a
+            // file indicating whether to launch ermine or gazelle. We pass the
+            // directory down the stack to login.cm.
+            directory: "pkg",
+            from: "framework",
+            as: "application_shell_config",
+            to: [ "#workstation_session" ],
+            subdir: "config/application_shell",
         },
         {
             // TODO(fxbug.dev/105828): These additional `protocol` offers to

@@ -23,7 +23,8 @@ import 'package:mobx/mobx.dart';
 import 'package:zircon/zircon.dart';
 import 'package:fidl_fuchsia_element/fidl_async.dart' as felement;
 
-const kApplicationShellConfigPath = '/pkg/config/application_shell.json';
+const kApplicationShellConfigPath =
+    '/config/application_shell/application_shell.json';
 
 const kApplicationShellCollectionName = 'application_shell';
 

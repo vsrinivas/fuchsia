@@ -92,6 +92,15 @@
             rights: [ "r*" ],
             path: "/config/data",
         },
+
+        // Directory containing information about whether to launch ermine or
+        // gazelle. See "shell_service.dart" for more information.
+        {
+            directory: "application_shell_config",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/application_shell",
+        },
         {
             storage: "tmp",
             path: "/tmp",

@@ -7,7 +7,6 @@ import("//build/dart/dart_library.gni")
 import("//build/fidl/fidl.gni")
 import("//build/flutter/flutter_component.gni")
 import("//build/testing/flutter_driver.gni")
-import("//src/experiences/session_shells/development_flags.gni")
 
 declare_args() {
   # Whether or not to provide the data sharing consent step in OOBE
@@ -108,7 +107,6 @@ flutter_component("component") {
   manifest = "meta/login.cml"
 
   deps = [
-    ":application_shell_config",
     ":default_config",
     ":images",
     ":lib",
@@ -125,22 +123,6 @@ resource("resources") {
           "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf") ]
 
   outputs = [ "data/{{source_file_part}}" ]
-}
-
-# This JSON file configures which application shell (ermine or gazelle) should
-# run after login.
-#
-# TODO(fxbug.dev/100284): Push the ermine vs gazelle decision higher up into the
-# topology: you should be able to run `ffx session launch` and get either one
-# without recompiling.
-resource("application_shell_config") {
-  if (application_shell == "ermine") {
-    sources = [ "config/application_shell_ermine.json" ]
-  } else if (application_shell == "gazelle") {
-    sources = [ "config/application_shell_gazelle.json" ]
-  }
-
-  outputs = [ "config/application_shell.json" ]
 }
 
 # With this JSON, data sharing setup step will be provided in OOBE.
