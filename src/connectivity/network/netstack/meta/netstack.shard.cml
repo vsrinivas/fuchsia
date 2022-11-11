@@ -31,6 +31,12 @@
             ],
         },
     ],
+    use: [
+        {
+            protocol: [ "fuchsia.diagnostics.persist.DataPersistence-netstack" ],
+            availability: "optional",
+        },
+    ],
     expose: [
         {
             protocol: [

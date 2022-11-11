@@ -525,6 +525,11 @@ func Main() {
 	// xargs echo | base64 --decode > goroutine
 	componentCtx.OutgoingService.AddDiagnostics("pprof", pprof.NewNode())
 
+	// Periodically request that the persistence service save counters. This,
+	// along with persisted logs, makes it easier to debug connectivity issues
+	// before a reboot.
+	startPersistClient(ctx, componentCtx, stk.Clock())
+
 	{
 		stub := netstack.NetstackWithCtxStub{Impl: &netstackImpl{ns: ns}}
 		componentCtx.OutgoingService.AddService(

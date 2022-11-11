@@ -71,6 +71,11 @@
             to: [ "#netstack" ],
         },
         {
+            protocol: [ "fuchsia.diagnostics.persist.DataPersistence-netstack" ],
+            from: "parent",
+            to: [ "#netstack" ],
+        },
+        {
             protocol: [ "fuchsia.net.dhcp.Server" ],
             from: "#dhcpd",
             to: [ "#netcfg" ],

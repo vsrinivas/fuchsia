@@ -162,7 +162,7 @@ func (c *Context) Environment() *sys.EnvironmentWithCtxInterface {
 			panic(err)
 		}
 		c.environment.EnvironmentWithCtxInterface = p
-		c.Connector().ConnectToEnvService(r)
+		c.ConnectToEnvService(r)
 	})
 	return c.environment.EnvironmentWithCtxInterface
 }
@@ -174,25 +174,29 @@ func (c *Context) Launcher() *sys.LauncherWithCtxInterface {
 			panic(err)
 		}
 		c.launcher.LauncherWithCtxInterface = p
-		c.Connector().ConnectToEnvService(r)
+		c.ConnectToEnvService(r)
 	})
 	return c.launcher.LauncherWithCtxInterface
 }
 
 func (c *Context) ConnectToEnvService(r fidl.ServiceRequest) {
-	c.Connector().ConnectToEnvService(r)
+	if err := c.ConnectToProtocolAtPath(r.Name(), r); err != nil {
+		panic(err)
+	}
 }
 
-func (c *Connector) ConnectToEnvService(r fidl.ServiceRequest) {
-	if err := c.serviceRoot.Open(
+func (c *Context) ConnectToProtocolAtPath(path string, r fidl.ServiceRequest) error {
+	return c.Connector().ConnectToProtocolAtPath(path, r)
+}
+
+func (c *Connector) ConnectToProtocolAtPath(path string, r fidl.ServiceRequest) error {
+	return c.serviceRoot.Open(
 		context.Background(),
 		io.OpenFlagsRightReadable|io.OpenFlagsRightWritable,
 		0,
-		r.Name(),
+		path,
 		io.NodeWithCtxInterfaceRequest{
 			Channel: r.ToChannel(),
 		},
-	); err != nil {
-		panic(err)
-	}
+	)
 }
