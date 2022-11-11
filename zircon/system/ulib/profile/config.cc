@@ -463,14 +463,12 @@ fit::result<fit::failed, Role> ParseRoleSelector(const std::string& role_selecto
 fit::result<fit::failed, MediaRole> MaybeMediaRole(const Role& role) {
   const auto realm_iter = role.selectors.find("realm");
   if (realm_iter == role.selectors.end() || realm_iter->second != "media") {
-    FX_LOGF(INFO, "ProfileProvider", "Role \"%s\" is not a media role.", role.name.c_str());
     return fit::failed{};
   }
 
   const auto capacity_iter = role.selectors.find("capacity");
   const auto deadline_iter = role.selectors.find("deadline");
   if (capacity_iter == role.selectors.end() || deadline_iter == role.selectors.end()) {
-    FX_LOGF(WARNING, "ProfileProvider", "Malformed media role \"%s\"!", role.name.c_str());
     return fit::failed{};
   }
 
