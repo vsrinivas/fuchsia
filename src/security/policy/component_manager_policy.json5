@@ -642,7 +642,12 @@
                     "/core/network/netstack",
                     "/core/lowpan-ot-driver",
                     "/core/starnix_manager",
+                    "/core/starnix_manager/starmium",
+                    "/core/starnix_manager/stardroid",
                     "/core/starnix_manager/starbionic",
+                    "/core/starnix_manager/starless",
+                    "/core/test_manager",
+                    "/core/test_manager/starnix-tests:**",
                 ],
             },
             {
