@@ -43,6 +43,8 @@ Not grouped defines.
 
 ### Constructor{:#MyClass::MyClass}
 
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/grouping.h#37)
+
 <pre class="devsite-disable-click-to-copy">
 MyClass::<b>MyClass</b>();
 MyClass::<b>MyClass</b>(<span class="typ">int</span> a);
@@ -50,6 +52,8 @@ MyClass::<b>MyClass</b>(<span class="typ">int</span> a);
 
 These two constructors are grouped and this is the comment for them.
 
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/grouping.h#40)
 
 <pre class="devsite-disable-click-to-copy">
 MyClass::<b>MyClass</b>(<span class="typ">int</span> a,
@@ -60,6 +64,8 @@ This constructor will go in a separate section due to this separate documentatio
 
 
 ### Iterator functions {:#MyClass::begin}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/grouping.h#48)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> MyClass::<b>begin</b>();
@@ -72,6 +78,8 @@ These functions are explicitly grouped.
 
 ### MyClass::size() {:#MyClass::size}
 
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/grouping.h#42)
+
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int &amp;</span> MyClass::<b>size</b>();
 <span class="typ">const int &amp;</span> MyClass::<b>size</b>();
@@ -79,6 +87,8 @@ These functions are explicitly grouped.
 
 
 ## Explicitly grouped functions. {:#GroupedExplicitlyOne}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/grouping.h#24)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">void</span> <b>GroupedExplicitlyOne</b>(<span class="typ">int</span> this_is_a_vary_long_name_that_forces_the_next_line_break,
@@ -93,6 +103,8 @@ them, and there is a single comment beginning with a heading, they go into their
 
 ## GroupedImplicitly(…) {:#GroupedImplicitly}
 
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/grouping.h#17)
+
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">void</span> <b>GroupedImplicitly</b>(<span class="typ">int</span> a);
 <span class="typ">void</span> <b>GroupedImplicitly</b>(<span class="typ">double</span> a);
@@ -103,6 +115,8 @@ These two are grouped because the name is the same, even though there is no expl
 
 ## UngroupedOne() {:#UngroupedOne}
 
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/grouping.h#9)
+
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">void</span> <b>UngroupedOne</b>();
 </pre>
@@ -111,6 +125,8 @@ These two are not grouped because there's no heading and the names are not the s
 
 
 ## UngroupedTwo() {:#UngroupedTwo}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/grouping.h#10)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">void</span> <b>UngroupedTwo</b>();

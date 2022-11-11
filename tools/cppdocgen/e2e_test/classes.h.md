@@ -12,6 +12,8 @@
 
 ### BaseClass1::BaseClass1Function() {:#BaseClass1::BaseClass1Function}
 
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#55)
+
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> BaseClass1::<b>BaseClass1Function</b>();
 </pre>
@@ -28,6 +30,8 @@ Complicated documentation for BaseClass1Function.
 </pre>
 
 ### BaseClass2::BaseClass2Function() {:#BaseClass2::BaseClass2Function}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#61)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">void</span> BaseClass2::<b>BaseClass2Function</b>();
@@ -53,6 +57,8 @@ Insightful documentation for BaseClass2Function.
 
 ### DerivedClass::BaseClass2Function() {:#DerivedClass::BaseClass2Function}
 
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#67)
+
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">void</span> DerivedClass::<b>BaseClass2Function</b>();
 </pre>
@@ -67,6 +73,8 @@ An override with documentation. Note that the BaseClass1Function() is not overri
 This class should not have a generated declaration becaose of the  annotation.
 
 ### NoDeclarationClass::SomeFunction() {:#NoDeclarationClass::SomeFunction}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#79)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> NoDeclarationClass::<b>SomeFunction</b>();
@@ -98,6 +106,8 @@ End-of-line comment. Scary!
 
 ### Constructor{:#SimpleTestClass::SimpleTestClass}
 
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#10)
+
 <pre class="devsite-disable-click-to-copy">
 SimpleTestClass::<b>SimpleTestClass</b>();
 SimpleTestClass::<b>SimpleTestClass</b>(<span class="typ">int</span> a);
@@ -108,10 +118,14 @@ SimpleTestClass::<b>SimpleTestClass</b>(<span class="typ">int</span> a = 1,
 
 ### SimpleTestClass::FunctionWithNoGeneratedDeclaration() {:#SimpleTestClass::FunctionWithNoGeneratedDeclaration}
 
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#43)
+
 This member shouldn't have a declaration because of the  annotation.
 
 
 ### SimpleTestClass::TheFunction() {:#SimpleTestClass::TheFunction}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#37)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> SimpleTestClass::<b>TheFunction</b>();

@@ -4,6 +4,8 @@
 
 ## Custom title function. {:#CustomTitleFunction}
 
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/functions.h#16)
+
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">double</span> <b>CustomTitleFunction</b>(<span class="typ">int</span> a,
                            <span class="typ">int</span> b);
@@ -14,6 +16,8 @@ This function has a custom title and two parameters.
 
 
 ## GetStringFromVectors(…) {:#GetStringFromVectors}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/functions.h#22)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">std::string</span> <b>GetStringFromVectors</b>(<span class="typ">const std::vector&lt;int&gt; &amp;</span> vector1 = std::vector<int>(),
@@ -29,10 +33,14 @@ the [FIDL wire format](/docs/reference/fidl/language/wire-format) which should n
 
 ## ThisShouldHaveNoDeclaration() {:#ThisShouldHaveNoDeclaration}
 
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/functions.h#30)
+
 This function should have no emitted declaration because of: 
 
 
 ## UndocumentedFunction() {:#UndocumentedFunction}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/functions.h#11)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">void</span> <b>UndocumentedFunction</b>();

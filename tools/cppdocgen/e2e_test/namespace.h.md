@@ -39,12 +39,16 @@ Here is a link to <code><a href="namespace.h.md#myns::FunctionInsideNamespace">m
 
 ### Constructor{:#myns::ClassInsideNamespace::ClassInsideNamespace}
 
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/namespace.h#36)
+
 <pre class="devsite-disable-click-to-copy">
 ClassInsideNamespace::<b>ClassInsideNamespace</b>();
 </pre>
 
 
 ### ClassInsideNamespace::SomeFunction() {:#myns::ClassInsideNamespace::SomeFunction}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/namespace.h#38)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> ClassInsideNamespace::<b>SomeFunction</b>();
@@ -68,6 +72,8 @@ ClassInsideNamespace::<b>ClassInsideNamespace</b>();
 Here is a link to <code><a href="namespace.h.md#myns::EnumInsideNamespace">myns::EnumInsideNamespace</a></code>.
 
 ## myns::FunctionInsideNamespace() {:#myns::FunctionInsideNamespace}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/namespace.h#31)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> myns::<b>FunctionInsideNamespace</b>();

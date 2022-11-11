@@ -105,6 +105,6 @@ func WriteHeaderReference(settings WriteSettings, index *Index, h *Header, f io.
 
 	// Functions.
 	for _, g := range h.FunctionGroups {
-		writeFunctionGroupSection(index, g, f)
+		writeFunctionGroupSection(settings, index, g, f)
 	}
 }

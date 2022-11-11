@@ -146,7 +146,7 @@ func writeRecordReference(settings WriteSettings, index *Index, h *Header, r *cl
 	if len(groupedCtors) > 0 {
 		fmt.Fprintf(f, "### Constructor{:#%s}\n\n", functionHtmlId(ctors[0]))
 		for _, g := range groupedCtors {
-			writeFunctionGroupBody(index, g, namePrefix, false, f)
+			writeFunctionGroupBody(settings, index, g, namePrefix, false, f)
 		}
 	}
 
@@ -189,7 +189,7 @@ func writeRecordReference(settings WriteSettings, index *Index, h *Header, r *cl
 				fmt.Fprintf(f, "### %s::%s%s {:#%s}\n\n", r.Name, g.Funcs[0].Name, functionGroupEllipsesParens(g), functionGroupHtmlId(g))
 			}
 
-			writeFunctionGroupBody(index, g, namePrefix, true, f)
+			writeFunctionGroupBody(settings, index, g, namePrefix, true, f)
 		}
 	}
 }
