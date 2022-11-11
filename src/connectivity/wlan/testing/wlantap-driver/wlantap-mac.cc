@@ -86,8 +86,13 @@ struct WlantapMacImpl : WlantapMac,
   }
 
   void DdkUnbind(ddk::UnbindTxn txn) {
+    // ddk::UnbindTxn::Reply() will be called when the WlanSoftmacIfc dispatcher is shutdown. This
+    // DdkUnbind triggers the following sequence.
+    //
+    //   1. WlanSoftmac dispatcher ShutdownAsync() called.
+    //   2. WlanSoftmac dispatcher shutdown handler calls WlanSoftmacIfc dispatcher ShutdownAsync().
+    //   3. WlanSoftmacIfc dispatcher shutdown handler calls ddk::UnbindTxn::Reply().
     unbind_txn_ = std::move(txn);
-    Unbind();
     server_dispatcher_.ShutdownAsync();
   }
 
@@ -284,14 +289,8 @@ struct WlantapMacImpl : WlantapMac,
     }
   }
 
-  void Unbind() {
-    { std::lock_guard<std::mutex> guard(lock_); }
-    device_unbind_reply(device_);
-  }
+  virtual void RemoveDevice() override { DdkAsyncRemove(); }
 
-  virtual void RemoveDevice() override { device_async_remove(device_); }
-
-  zx_device_t* device_ = nullptr;
   uint16_t id_;
   wlan_common::WlanMacRole role_;
   std::mutex lock_;
