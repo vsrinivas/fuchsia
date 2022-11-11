@@ -974,7 +974,7 @@ TEST_F(GfxObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectingForG
 
   // The view is not included in the response because it has not rendered any content.
   EXPECT_FALSE(HasViewConnected(view_tree_watcher, child_view_ref_koid));
-
+  FX_LOGS(INFO) << "HasViewConnected completed";
   // Watch for child focused event.
   std::optional<bool> child_focused;
   child_focused_ptr->Watch([&child_focused](auto update) {
@@ -984,6 +984,7 @@ TEST_F(GfxObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectingForG
 
   // Use the |view_properties| received from the root_view to create a rectangle on the screen.
   RunLoopUntil([&view_properties] { return view_properties.has_value(); });
+  FX_LOGS(INFO) << "Received view properties";
   CreateContent(child_session, child_view, ViewSize(*view_properties).x,
                 ViewSize(*view_properties).y);
 
@@ -996,6 +997,7 @@ TEST_F(GfxObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectingForG
         return HasViewConnected(view_tree_watcher, child_view_ref_koid);
       },
       kWatchTimeout));
+  FX_LOGS(INFO) << "View connected";
 
   // Root view moves focus to the child view after it shows up in the fuog_ViewTreeSnapshot.
   std::optional<bool> request_processed;
@@ -1007,6 +1009,7 @@ TEST_F(GfxObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectingForG
   RunLoopUntil([&request_processed, &child_focused] {
     return request_processed.has_value() && child_focused.has_value();
   });
+  FX_LOGS(INFO) << "RequestFocus Complete";
 
   // Child view should receive focus when it gets connected to the root view.
   EXPECT_TRUE(request_processed.value());
