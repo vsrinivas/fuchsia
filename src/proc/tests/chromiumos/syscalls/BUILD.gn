@@ -20,7 +20,7 @@ test("syscalls_test_bin") {
   sources = [
     "bpf_test.cc",
     "custom_artifact_test.cc",
-    "fcntl_lock_test.cc",
+    "fcntl_test.cc",
     "fs_test.cc",
     "mmap_test.cc",
     "mount_test.cc",

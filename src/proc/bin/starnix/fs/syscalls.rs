@@ -61,12 +61,14 @@ pub fn sys_fcntl(
     arg: u64,
 ) -> Result<SyscallResult, Errno> {
     match cmd {
-        F_DUPFD => {
-            let newfd = current_task.files.duplicate(fd, None, FdFlags::empty())?;
-            Ok(newfd.into())
-        }
-        F_DUPFD_CLOEXEC => {
-            let newfd = current_task.files.duplicate(fd, None, FdFlags::CLOEXEC)?;
+        F_DUPFD | F_DUPFD_CLOEXEC => {
+            let fd_number = arg as i32;
+            let flags = if cmd == F_DUPFD_CLOEXEC { FdFlags::CLOEXEC } else { FdFlags::empty() };
+            let newfd = current_task.files.duplicate(
+                fd,
+                TargetFdNumber::Minimum(FdNumber::from_raw(fd_number)),
+                flags,
+            )?;
             Ok(newfd.into())
         }
         F_GETOWN => {
@@ -1068,7 +1070,7 @@ pub fn sys_symlinkat(
 }
 
 pub fn sys_dup(current_task: &CurrentTask, oldfd: FdNumber) -> Result<FdNumber, Errno> {
-    current_task.files.duplicate(oldfd, None, FdFlags::empty())
+    current_task.files.duplicate(oldfd, TargetFdNumber::Default, FdFlags::empty())
 }
 
 pub fn sys_dup2(
@@ -1096,7 +1098,7 @@ pub fn sys_dup3(
         return error!(EINVAL);
     }
     let fd_flags = get_fd_flags(flags);
-    current_task.files.duplicate(oldfd, Some(newfd), fd_flags)?;
+    current_task.files.duplicate(oldfd, TargetFdNumber::Specific(newfd), fd_flags)?;
     Ok(newfd)
 }
 

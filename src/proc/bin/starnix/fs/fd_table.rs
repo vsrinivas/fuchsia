@@ -55,6 +55,17 @@ pub struct FdTable {
     table: RwLock<HashMap<FdNumber, FdTableEntry>>,
 }
 
+pub enum TargetFdNumber {
+    /// The duplicated FdNumber will be the smallest available FdNumber.
+    Default,
+
+    /// The duplicated FdNumber should be this specific FdNumber.
+    Specific(FdNumber),
+
+    /// The duplicated FdNumber should be greater than this FdNumber.
+    Minimum(FdNumber),
+}
+
 impl FdTable {
     pub fn new() -> Arc<FdTable> {
         Default::default()
@@ -91,7 +102,7 @@ impl FdTable {
 
     pub fn add_with_flags(&self, file: FileHandle, flags: FdFlags) -> Result<FdNumber, Errno> {
         let mut table = self.table.write();
-        let fd = self.get_lowest_available_fd(&table);
+        let fd = self.get_lowest_available_fd(&table, FdNumber::from_raw(0));
         table.insert(fd, FdTableEntry::new(file, self.id(), flags));
         Ok(fd)
     }
@@ -101,7 +112,7 @@ impl FdTable {
     pub fn duplicate(
         &self,
         oldfd: FdNumber,
-        newfd: Option<FdNumber>,
+        target: TargetFdNumber,
         flags: FdFlags,
     ) -> Result<FdNumber, Errno> {
         // Drop the file object only after releasing the writer lock in case
@@ -111,11 +122,16 @@ impl FdTable {
             let mut table = self.table.write();
             let file =
                 table.get(&oldfd).map(|entry| entry.file.clone()).ok_or_else(|| errno!(EBADF))?;
-            let fd = if let Some(fd) = newfd {
-                _removed_file = table.remove(&fd);
-                fd
-            } else {
-                self.get_lowest_available_fd(&table)
+
+            let fd = match target {
+                TargetFdNumber::Specific(fd) => {
+                    _removed_file = table.remove(&fd);
+                    fd
+                }
+                TargetFdNumber::Minimum(fd) => self.get_lowest_available_fd(&table, fd),
+                TargetFdNumber::Default => {
+                    self.get_lowest_available_fd(&table, FdNumber::from_raw(0))
+                }
             };
             table.insert(fd, FdTableEntry::new(file, self.id(), flags));
             Ok(fd)
@@ -164,8 +180,12 @@ impl FdTable {
             .ok_or_else(|| errno!(EBADF))
     }
 
-    fn get_lowest_available_fd(&self, table: &HashMap<FdNumber, FdTableEntry>) -> FdNumber {
-        let mut fd = FdNumber::from_raw(0);
+    fn get_lowest_available_fd(
+        &self,
+        table: &HashMap<FdNumber, FdTableEntry>,
+        minfd: FdNumber,
+    ) -> FdNumber {
+        let mut fd = minfd;
         while table.contains_key(&fd) {
             fd = FdNumber::from_raw(fd.raw() + 1);
         }

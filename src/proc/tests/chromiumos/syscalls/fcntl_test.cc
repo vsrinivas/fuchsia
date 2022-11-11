@@ -177,4 +177,13 @@ TEST(FcntlLockTest, CheckErrors) {
   ASSERT_EQ(errno, EINVAL);
 }
 
+TEST(FcntlTest, FdDup) {
+  int fd = OpenTestFile();
+
+  int new_fd = SAFE_SYSCALL(fcntl(fd, F_DUPFD, 1000));
+  ASSERT_GE(new_fd, 1000);
+  new_fd = SAFE_SYSCALL(fcntl(fd, F_DUPFD, 0));
+  ASSERT_LT(new_fd, 1000);
+}
+
 }  // namespace
