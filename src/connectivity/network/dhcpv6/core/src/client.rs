@@ -1637,11 +1637,10 @@ struct ServerDiscovery {
     configured_non_temporary_addresses: HashMap<v6::IAID, HashSet<Ipv6Addr>>,
     /// The delegated prefixes the client is configured to negotiate.
     configured_delegated_prefixes: HashMap<v6::IAID, HashSet<Subnet<Ipv6Addr>>>,
-    /// The time of the first solicit. `None` before a solicit is sent. Used in
-    /// calculating the [elapsed time].
+    /// The time of the first solicit. Used in calculating the [elapsed time].
     ///
     /// [elapsed time]:https://datatracker.ietf.org/doc/html/rfc8415#section-21.9
-    first_solicit_time: Option<Instant>,
+    first_solicit_time: Instant,
     /// The solicit retransmission timeout.
     retrans_timeout: Duration,
     /// The [SOL_MAX_RT] used by the client.
@@ -1676,7 +1675,7 @@ impl ServerDiscovery {
             client_id,
             configured_non_temporary_addresses,
             configured_delegated_prefixes,
-            first_solicit_time: None,
+            first_solicit_time: now,
             retrans_timeout: Duration::default(),
             solicit_max_rt,
             collected_advertise: BinaryHeap::new(),
@@ -1722,10 +1721,7 @@ impl ServerDiscovery {
             collected_sol_max_rt,
         } = self;
 
-        let (start_time, elapsed_time) = match first_solicit_time {
-            None => (now, 0),
-            Some(start_time) => (start_time, elapsed_time_in_centisecs(start_time, now)),
-        };
+        let elapsed_time = elapsed_time_in_centisecs(first_solicit_time, now);
 
         // Per RFC 8415, section 18.2.1:
         //
@@ -1797,7 +1793,7 @@ impl ServerDiscovery {
                 client_id,
                 configured_non_temporary_addresses,
                 configured_delegated_prefixes,
-                first_solicit_time: Some(start_time),
+                first_solicit_time,
                 retrans_timeout,
                 solicit_max_rt,
                 collected_advertise,
@@ -2252,12 +2248,10 @@ struct Requesting {
     /// [server discovery]:
     /// https://datatracker.ietf.org/doc/html/rfc8415#section-18
     collected_advertise: BinaryHeap<AdvertiseMessage>,
-    /// The time of the first request. `None` before a request is sent. Used in
-    /// calculating the [elapsed time].
+    /// The time of the first request. Used in calculating the [elapsed time].
     ///
-    /// [elapsed time]:
-    /// https://datatracker.ietf.org/doc/html/rfc8415#section-21.9
-    first_request_time: Option<Instant>,
+    /// [elapsed time]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.9
+    first_request_time: Instant,
     /// The request retransmission timeout.
     retrans_timeout: Duration,
     /// The number of request messages transmitted.
@@ -3166,7 +3160,7 @@ impl Requesting {
             delegated_prefixes,
             server_id,
             collected_advertise,
-            first_request_time: None,
+            first_request_time: now,
             retrans_timeout: Duration::default(),
             transmission_count: 0,
             solicit_max_rt,
@@ -3244,12 +3238,7 @@ impl Requesting {
             solicit_max_rt,
         } = self;
         let retrans_timeout = Self::retransmission_timeout(prev_retrans_timeout, rng);
-
-        let mut elapsed_time = 0;
-        let first_request_time = Some(first_request_time.map_or(now, |start_time| {
-            elapsed_time = elapsed_time_in_centisecs(start_time, now);
-            start_time
-        }));
+        let elapsed_time = elapsed_time_in_centisecs(first_request_time, now);
 
         // Per RFC 8415, section 18.2.2:
         //
@@ -3809,8 +3798,11 @@ struct RenewingOrRebindingInner {
     server_id: Vec<u8>,
     /// Stores the DNS servers received from the reply.
     dns_servers: Vec<Ipv6Addr>,
+    /// The time of the first renew/rebind. Used in calculating the
+    /// [elapsed time].
+    ///
     /// [elapsed time](https://datatracker.ietf.org/doc/html/rfc8415#section-21.9).
-    start_time: Option<Instant>,
+    start_time: Instant,
     /// The renew/rebind message retransmission timeout.
     retrans_timeout: Duration,
     /// The [SOL_MAX_RT](https://datatracker.ietf.org/doc/html/rfc8415#section-21.24)
@@ -3855,7 +3847,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
             delegated_prefixes,
             server_id,
             dns_servers,
-            start_time: None,
+            start_time: now,
             retrans_timeout: Duration::default(),
             solicit_max_rt,
         })
@@ -3896,10 +3888,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
             retrans_timeout: prev_retrans_timeout,
             solicit_max_rt,
         }) = self;
-        let (start_time, elapsed_time) = match start_time {
-            None => (now, 0),
-            Some(start_time) => (start_time, elapsed_time_in_centisecs(start_time, now)),
-        };
+        let elapsed_time = elapsed_time_in_centisecs(start_time, now);
 
         // As per RFC 8415 section 18.2.4,
         //
@@ -3981,7 +3970,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                     delegated_prefixes,
                     server_id,
                     dns_servers,
-                    start_time: Some(start_time),
+                    start_time,
                     retrans_timeout,
                     solicit_max_rt,
                 };
@@ -4775,7 +4764,7 @@ pub(crate) mod testutil {
                     client_id: got_client_id,
                     configured_non_temporary_addresses: got_configured_non_temporary_addresses,
                     configured_delegated_prefixes: got_configured_delegated_prefixes,
-                    first_solicit_time: Some(_),
+                    first_solicit_time: _,
                     retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
                     solicit_max_rt: MAX_SOLICIT_TIMEOUT,
                     collected_advertise,
@@ -9004,7 +8993,7 @@ mod tests {
                 delegated_prefixes,
                 server_id,
                 dns_servers,
-                start_time,
+                start_time: _,
                 retrans_timeout: _,
                 solicit_max_rt,
             } = with_state(state);
@@ -9012,7 +9001,6 @@ mod tests {
             assert_eq!(*non_temporary_addresses, expected_non_temporary_addresses);
             assert_eq!(*delegated_prefixes, expected_delegated_prefixes);
             assert_eq!(*server_id, SERVER_ID[0]);
-            assert!(start_time.is_some());
             assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
             assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
         }
