@@ -96,7 +96,7 @@ class ChannelDispatcher final
     uint64_t max{};
   };
   MessageCounts get_message_counts() const TA_EXCL(&channel_lock_) {
-    Guard<Mutex> guard{&channel_lock_};
+    Guard<CriticalMutex> guard{&channel_lock_};
     return {messages_.size(), max_message_count_};
   }
 
@@ -137,7 +137,7 @@ class ChannelDispatcher final
   //
   // When acquiring both |get_lock()| and |channel_lock_| be sure to acquire
   // |get_lock()| first.
-  mutable DECLARE_MUTEX(ChannelDispatcher) channel_lock_ TA_ACQ_AFTER(get_lock());
+  mutable DECLARE_CRITICAL_MUTEX(ChannelDispatcher) channel_lock_ TA_ACQ_AFTER(get_lock());
   MessageList messages_ TA_GUARDED(channel_lock_);
   uint64_t max_message_count_ TA_GUARDED(channel_lock_) = 0;
 

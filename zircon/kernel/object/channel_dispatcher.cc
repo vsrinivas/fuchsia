@@ -157,7 +157,7 @@ void ChannelDispatcher::set_owner(zx_koid_t new_owner) {
   }
 
   Guard<CriticalMutex> get_lock_guard{get_lock()};
-  Guard<Mutex> messages_guard{&channel_lock_};
+  Guard<CriticalMutex> messages_guard{&channel_lock_};
   owner_ = new_owner;
 }
 
@@ -169,7 +169,7 @@ void ChannelDispatcher::OnPeerZeroHandlesLocked() {
   canary_.Assert();
 
   {
-    Guard<Mutex> messages_guard{&channel_lock_};
+    Guard<CriticalMutex> messages_guard{&channel_lock_};
     peer_has_closed_ = true;
   }
 
@@ -192,7 +192,7 @@ zx_status_t ChannelDispatcher::Read(zx_koid_t owner, uint32_t* msg_size, uint32_
   auto max_size = *msg_size;
   auto max_handle_count = *msg_handle_count;
 
-  Guard<Mutex> guard{&channel_lock_};
+  Guard<CriticalMutex> guard{&channel_lock_};
 
   if (owner != owner_) {
     return ZX_ERR_BAD_HANDLE;
@@ -441,7 +441,7 @@ void ChannelDispatcher::WriteSelf(MessagePacketPtr msg) {
   // already active).
   zx_signals_t previous_signals;
   {
-    Guard<Mutex> guard{&channel_lock_};
+    Guard<CriticalMutex> guard{&channel_lock_};
 
     messages_.push_back(ktl::move(msg));
     previous_signals = RaiseSignalsLocked(ZX_CHANNEL_READABLE);
