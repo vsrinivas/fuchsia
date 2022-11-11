@@ -45,19 +45,13 @@ impl Into<Update> for HttpsSample {
 pub struct Poll {
     /// The round trip latency observed during this poll.
     pub round_trip_time: zx::Duration,
-    /// An estimate of the offset of the center of the poll from the system UTC time.
-    /// TODO(fxbug.dev/67668): This value is collected for improving the error estimate produced by
-    /// HTTPSDate but violates the time architecture principle where sources shouldn't use system
-    /// time because that may introduce circular dependencies. This should be removed once the
-    /// estimate is improved.
-    pub center_offset: Option<zx::Duration>,
 }
 
 #[cfg(test)]
 impl Poll {
     /// Construct a `Poll` with the given round trip time and no offset.
     pub fn with_round_trip_time(round_trip_time: zx::Duration) -> Self {
-        Self { round_trip_time, center_offset: None }
+        Self { round_trip_time }
     }
 }
 

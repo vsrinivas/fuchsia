@@ -59,7 +59,6 @@ pub struct Config {
 pub struct SampleConfig {
     max_attempts: u32,
     num_polls: u32,
-    measure_offset: bool,
 }
 
 impl From<httpsdate_config::Config> for Config {

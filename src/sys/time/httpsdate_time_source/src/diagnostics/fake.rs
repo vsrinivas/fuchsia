@@ -86,10 +86,7 @@ mod test {
             monotonic: zx::Time::from_nanos(222_222_222),
             standard_deviation: zx::Duration::from_millis(235),
             final_bound_size: zx::Duration::from_millis(100),
-            polls: vec![Poll {
-                round_trip_time: zx::Duration::from_nanos(23),
-                center_offset: None
-            }],
+            polls: vec![Poll { round_trip_time: zx::Duration::from_nanos(23) }],
         };
         static ref TEST_SUCCESS: Event<'static> = Event::Success(&*TEST_SAMPLE);
         static ref TEST_SAMPLE_2: HttpsSample = {
