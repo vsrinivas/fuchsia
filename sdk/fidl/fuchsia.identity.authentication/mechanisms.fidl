@@ -95,6 +95,9 @@ type PasswordError = flexible union {
     /// the caller must wait for the `wait_until` condition before any other
     /// response will be returned.
     4: must_wait Empty;
+    /// (authentication and enrollment) `SetPassword` was called while state was
+    /// not "waiting" with a condition of "set_password".
+    5: not_waiting_for_password Empty;
 };
 
 
