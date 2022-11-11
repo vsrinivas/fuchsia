@@ -20,9 +20,8 @@ use {
 /// A trait for types that can determine whether a supplied password is either
 /// valid or potentially valid. A validator either supports enrollment or
 /// authentication.
-pub trait Validator {
-    // TODO(fxb/108842): Return an AttemptedEvent instead of ().
-    fn validate(&self) -> Result<(), PasswordError>;
+pub trait Validator<T: Sized> {
+    fn validate(&self) -> Result<T, PasswordError>;
 }
 
 type NotifyFn = Box<
@@ -42,19 +41,23 @@ type PasswordInteractionStatePublisher = Publisher<
 >;
 
 /// Tracks the state of PasswordInteraction events.
-pub struct PasswordInteractionHandler<V> {
+pub struct PasswordInteractionHandler<V, T>
+where
+    V: Validator<T>,
+{
     hanging_get: RefCell<PasswordInteractionStateHangingGet>,
     stream: RefCell<PasswordInteractionRequestStream>,
     publisher: RefCell<Option<PasswordInteractionStatePublisher>>,
     validator: V,
+    _phantom: std::marker::PhantomData<T>,
 }
 
-impl<V> PasswordInteractionHandler<V>
+impl<V, T> PasswordInteractionHandler<V, T>
 where
-    V: Validator,
+    V: Validator<T>,
 {
     pub fn new(stream: PasswordInteractionRequestStream, validator: V) -> Self {
-        let hanging_get = PasswordInteractionHandler::<V>::init_hanging_get(
+        let hanging_get = PasswordInteractionHandler::<V, T>::init_hanging_get(
             PasswordInteractionWatchStateResponse::Waiting(vec![]),
         );
 
@@ -63,6 +66,7 @@ where
             stream: RefCell::new(stream),
             publisher: RefCell::new(None),
             validator,
+            _phantom: std::marker::PhantomData,
         }
     }
 
@@ -82,7 +86,7 @@ where
 
     fn handle_password_interaction_request_stream(
         self: Rc<Self>,
-    ) -> impl futures::Future<Output = Result<(), Error>> {
+    ) -> impl futures::Future<Output = Result<T, Error>> {
         let subscriber = self.hanging_get.borrow_mut().new_subscriber();
 
         async move {
@@ -91,8 +95,9 @@ where
                     Ok(PasswordInteractionRequest::SetPassword { password: _, control_handle }) => {
                         //  TODO(fxb/108842): Check that the state is waiting::set_password before calling validate.
                         match self.validator.validate() {
-                            Ok(()) => {
+                            Ok(res) => {
                                 control_handle.shutdown_with_epitaph(zx::Status::OK);
+                                return Ok(res);
                             }
                             Err(e) => {
                                 let state_publisher = self.hanging_get.borrow().new_publisher();
@@ -124,7 +129,7 @@ where
                     }
                 }
             }
-            Ok(())
+            return Err(anyhow!("Channel closed before successful validation."));
         }
     }
 }
@@ -143,20 +148,22 @@ mod tests {
     };
 
     struct TestValidateSuccess {}
-    impl Validator for TestValidateSuccess {
+    impl Validator<()> for TestValidateSuccess {
         fn validate(&self) -> Result<(), PasswordError> {
             Ok(())
         }
     }
 
     struct TestValidateError {}
-    impl Validator for TestValidateError {
+    impl Validator<()> for TestValidateError {
         fn validate(&self) -> Result<(), PasswordError> {
             Err(PasswordError::TooShort(6))
         }
     }
 
-    fn make_proxy<V: Validator + 'static>(validate: V) -> PasswordInteractionProxy {
+    fn make_proxy<V: Validator<T> + 'static, T: Sized + 'static>(
+        validate: V,
+    ) -> PasswordInteractionProxy {
         let (proxy, stream) = create_proxy_and_stream::<PasswordInteractionMarker>()
             .expect("Failed to create password interaction proxy");
         let password_interaction_handler = PasswordInteractionHandler::new(stream, validate);
