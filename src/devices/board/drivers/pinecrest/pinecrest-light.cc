@@ -32,17 +32,13 @@ zx_status_t Pinecrest::LightInit() {
   gpio_impl_.Write(4, 0);
   gpio_impl_.Write(4, 1);
 
-  // TODO(fxbug.dev/111722): Update this list for Pinecrest.
   constexpr LightsConfig kConfigs[] = {
-      {.brightness = true, .rgb = true, .init_on = false, .group_id = 1},
       {.brightness = true, .rgb = true, .init_on = false, .group_id = 0},
       {.brightness = true, .rgb = true, .init_on = false, .group_id = 0},
       {.brightness = true, .rgb = true, .init_on = false, .group_id = 0},
       {.brightness = true, .rgb = true, .init_on = false, .group_id = 0},
-      {.brightness = true, .rgb = true, .init_on = false, .group_id = 1},
   };
-  using LightName = char[ZX_MAX_NAME_LEN];
-  constexpr LightName kLightGroupNames[] = {"GROUP_OF_4", "GROUP_OF_2"};
+  constexpr char kLightGroupName[ZX_MAX_NAME_LEN] = "GROUP_OF_4";
   std::vector<fpbus::Metadata> light_metadata{
       {{
           .type = DEVICE_METADATA_LIGHTS,
@@ -53,8 +49,8 @@ zx_status_t Pinecrest::LightInit() {
       {{
           .type = DEVICE_METADATA_LIGHTS_GROUP_NAME,
           .data = std::vector<uint8_t>(
-              reinterpret_cast<const uint8_t*>(&kLightGroupNames),
-              reinterpret_cast<const uint8_t*>(&kLightGroupNames) + sizeof(kLightGroupNames)),
+              reinterpret_cast<const uint8_t*>(kLightGroupName),
+              reinterpret_cast<const uint8_t*>(kLightGroupName) + sizeof(kLightGroupName)),
       }},
   };
 
