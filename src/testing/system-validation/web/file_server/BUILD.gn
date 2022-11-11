@@ -1,0 +1,61 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("server") {
+  name = "server"
+  edition = "2021"
+  with_unit_tests = true
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-fs",
+    "//src/lib/fuchsia-hyper",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:tracing",
+  ]
+  source_root = "src/server.rs"
+  sources = [ "src/server.rs" ]
+}
+
+rustc_binary("bin") {
+  output_name = "file_server"
+  edition = "2018"
+  deps = [
+    ":server",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:anyhow",
+  ]
+  data_deps = [ ":server_data" ]
+  sources = [ "src/main.rs" ]
+}
+
+resource_group("server_data") {
+  files = [
+    {
+      source = "data/test_video.webm"
+      dest = "data/sample_video.webm"
+    },
+    {
+      source = "data/fuchsia_logo.png"
+      dest = "data/fuchsia_logo.png"
+    },
+  ]
+}
+
+fuchsia_component("file_server_component") {
+  component_name = "file_server"
+  manifest = "meta/file_server.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("file_server_package") {
+  package_name = "file_server"
+  deps = [ ":file_server_component" ]
+}

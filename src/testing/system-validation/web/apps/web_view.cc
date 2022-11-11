@@ -24,7 +24,7 @@ fuchsia::mem::Buffer LoadFileToBuffer(const std::string& filePath) {
   zx::vmo vmo;
 
   FILE* fp = fopen(filePath.c_str(), "rb");
-  FX_CHECK(fp) << "failed to opoen file " << filePath;
+  FX_CHECK(fp) << "failed to open file " << filePath;
 
   fseek(fp, 0, SEEK_END);
   uint64_t num_bytes = ftell(fp);

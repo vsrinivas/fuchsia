@@ -12,10 +12,10 @@ System validation sets up the test with following capability routing relationshi
                 |  parent to
                 V
     web_system_validation (runs `ui_app_instrumentor.rs`)
-         /  parent to  \
-        /               \
-        V                V
-    sample-app  <-->  web_engine#meta/context_provider.cm
+         /  parent to  |           \
+        /              |            \
+        V              V             V
+    sample-app  <-->  web_engine    file_server (startup: eager)
 (ex: `web_view.cm`)
 ```
 
@@ -40,4 +40,5 @@ fx serve
 ```
 $ fx test fuchsia-pkg://fuchsia.com/dynamic_elements_web_system_validation#meta/web_view_system_validation.cm --ffx-output-directory /path/to/output/dir
 $ fx test fuchsia-pkg://fuchsia.com/simple_png_web_system_validation#meta/web_view_system_validation.cm --ffx-output-directory /path/to/output/dir
+$ fx test fuchsia-pkg://fuchsia.com/simple_video_web_system_validation#meta/web_view_system_validation.cm --ffx-output-directory /path/to/output/dir
 ```

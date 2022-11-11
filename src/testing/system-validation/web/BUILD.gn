@@ -25,6 +25,7 @@ fuchsia_test_package("simple_png_web_system_validation_test_pkg") {
   }
   deps = [
     "//src/testing/system-validation/web/apps:simple_png_web_view_component",
+    "//src/testing/system-validation/web/file_server:file_server_component",
   ]
 }
 
@@ -38,5 +39,27 @@ fuchsia_test_package("dynamic_elements_web_system_validation_test_pkg") {
       max_severity = "ERROR"
     }
   }
-  deps = [ "//src/testing/system-validation/web/apps:dynamic_element_web_view_component" ]
+  deps = [
+    "//src/testing/system-validation/web/apps:dynamic_element_web_view_component",
+    "//src/testing/system-validation/web/file_server:file_server_component",
+  ]
+}
+
+# To run tests:
+# fx test fuchsia-pkg://fuchsia.com/simple_video_web_system_validation#meta/web_view_system_validation.cm
+fuchsia_test_package("simple_video_web_system_validation_test_pkg") {
+  package_name = "simple_video_web_system_validation"
+  test_components = [ ":web_view_system_validation_component" ]
+
+  # Do not fail test on ERROR log. When the test ends, elf_test_runner will shut down the system-validation test component
+  # and its children, which causes web_engine to log an error upon getting disconnected.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  deps = [
+    "//src/testing/system-validation/web/apps:simple_video_web_view_component",
+    "//src/testing/system-validation/web/file_server:file_server_component",
+  ]
 }

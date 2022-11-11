@@ -11,6 +11,7 @@ group("tests") {
     "ui:system_validation_test_pkg",
     "web:dynamic_elements_web_system_validation_test_pkg",
     "web:simple_png_web_system_validation_test_pkg",
+    "web:simple_video_web_system_validation_test_pkg",
     "//src/chromium:web_engine",
   ]
 }

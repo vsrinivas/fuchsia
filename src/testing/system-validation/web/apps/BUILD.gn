@@ -26,6 +26,7 @@ resource("javascripts") {
   sources = [
     "data/dynamic_elements.js",
     "data/simple_png.js",
+    "data/simple_video.js",
   ]
   outputs = [ "data/javascripts/{{source_file_part}}" ]
 }
@@ -46,6 +47,13 @@ fuchsia_structured_config_values("simple_png_config") {
   }
 }
 
+fuchsia_structured_config_values("simple_video_config") {
+  cm_label = ":web_view_manifest"
+  values = {
+    javascript_file = "/pkg/data/javascripts/simple_video.js"
+  }
+}
+
 fuchsia_structured_config_values("dynamic_element_config") {
   cm_label = ":web_view_manifest"
   values = {
@@ -61,6 +69,14 @@ fuchsia_component("simple_png_web_view_component") {
   ]
 }
 
+fuchsia_component("simple_video_web_view_component") {
+  cm_label = ":web_view_manifest"
+  deps = [
+    ":bin",
+    ":simple_video_config",
+  ]
+}
+
 fuchsia_component("dynamic_element_web_view_component") {
   cm_label = ":web_view_manifest"
   deps = [
@@ -73,6 +89,7 @@ fuchsia_package("simple_png_web_view") {
   package_name = "simple_png_web_view"
   deps = [ ":simple_png_web_view_component" ]
 }
+
 fuchsia_package("dynamic_element_web_view") {
   package_name = "dynamic_element_web_view"
   deps = [ ":dynamic_element_web_view_component" ]

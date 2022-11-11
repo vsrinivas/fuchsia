@@ -17,6 +17,11 @@
             name: "sample-app",
             url: "#meta/web_view.cm",
         },
+        {
+            name: "file-server",
+            url: "#meta/file_server.cm",
+            startup: "eager",
+        },
     ],
     use: [
         {
@@ -30,6 +35,14 @@
             protocol: "fuchsia.web.ContextProvider",
             from: "#context_provider",
             to: "#sample-app",
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "parent",
+            to: "#file-server",
         },
         {
             protocol: [
@@ -66,7 +79,6 @@
             protocol: [
                 //  web_engine_feature_network.shard
                 "fuchsia.net.interfaces.State",
-                "fuchsia.netstack.Netstack",
                 "fuchsia.posix.socket.Provider",
             ],
             from: "parent",
