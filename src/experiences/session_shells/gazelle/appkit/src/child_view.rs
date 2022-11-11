@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Error},
-    fidl::endpoints::{create_proxy, Proxy},
-    fidl_fuchsia_element as felement, fidl_fuchsia_math as fmath,
-    fidl_fuchsia_ui_composition as ui_comp, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_async as fasync,
-    futures::TryStreamExt,
-    tracing::*,
-};
+use anyhow::{format_err, Error};
+use fidl::endpoints::{create_proxy, Proxy};
+use fidl_fuchsia_element as felement;
+use fidl_fuchsia_math as fmath;
+use fidl_fuchsia_ui_composition as ui_comp;
+use fidl_fuchsia_ui_views as ui_views;
+use fuchsia_async as fasync;
+use futures::TryStreamExt;
+use tracing::*;
 
 use crate::{
-    event::{ChildViewEvent, Event, ViewSpecHolder},
-    utils::EventSender,
+    event::{ChildViewEvent, Event, EventSender, ViewSpecHolder},
     window::WindowId,
 };
 
@@ -85,7 +84,7 @@ impl<T> ChildView<T> {
             event_sender.clone(),
         );
 
-        let _running_tasks = if let Some(view_controller_request) =
+        let running_tasks = if let Some(view_controller_request) =
             view_spec_holder.view_controller_request.take()
         {
             let view_watcher_fut = Self::serve_view_controller(
@@ -107,7 +106,7 @@ impl<T> ChildView<T> {
             view_ref: None,
             _window_id: window_id,
             _event_sender: event_sender,
-            _running_tasks,
+            _running_tasks: running_tasks,
         })
     }
 

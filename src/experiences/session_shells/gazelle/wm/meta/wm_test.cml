@@ -12,30 +12,10 @@
     program: {
         binary: "bin/wm_bin_test",
     },
-    children: [
-        {
-            name: "test-ui-stack",
-            url: "#meta/test-ui-stack.cm",
-        },
-    ],
     use: [
         {
             protocol: "fuchsia.sysmem.Allocator",
             from: "parent",
-        },
-        {
-            protocol: [
-                "fuchsia.element.GraphicalPresenter",
-                "fuchsia.session.scene.Manager",
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.composition.Screenshot",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.shortcut2.Registry",
-                "fuchsia.ui.test.input.Registry",
-                "fuchsia.ui.test.scene.Controller",
-            ],
-            from: "#test-ui-stack",
         },
         {
             storage: "custom_artifacts",
@@ -53,7 +33,7 @@
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
-            to: "#test-ui-stack",
+            to: "#realm_builder",
         },
     ],
     facets: {

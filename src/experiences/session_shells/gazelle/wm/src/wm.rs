@@ -9,7 +9,7 @@ use fidl_fuchsia_ui_composition as ui_comp;
 use fidl_fuchsia_ui_input3::KeyEventStatus;
 use fidl_fuchsia_ui_shortcut2 as ui_shortcut2;
 use fidl_fuchsia_ui_views as ui_views;
-use futures::{channel::mpsc::UnboundedReceiver, StreamExt};
+use futures::{channel::mpsc::UnboundedReceiver, Stream, StreamExt};
 use indexmap::IndexMap;
 use num::FromPrimitive;
 use tracing::{debug, error, warn};
@@ -25,7 +25,7 @@ const APP_LAUNCHER_HEIGHT: u32 = 40;
 
 /// Defines an enumeration of events used to implement the window manager.
 #[derive(Debug)]
-pub(crate) enum WMEvent {}
+pub enum WMEvent {}
 
 /// Defines a type for holding the state of the window manager.
 ///
@@ -39,6 +39,8 @@ pub(crate) enum WMEvent {}
 ///              Top layer:    -----     shell views         -----
 ///
 pub(crate) struct WindowManager {
+    // The event sender used to route events.
+    event_sender: EventSender<WMEvent>,
     // The main application [Window] of the Window Manager.
     window: Window<WMEvent>,
     // The map of all launched [ChildView] views by their [ChildViewId].
@@ -60,14 +62,22 @@ pub(crate) struct WindowManager {
     width: u32,
     // The current height of the application window.
     height: u32,
+    // The flag to indicate that WindowManager is ready after receiving the first resize event.
+    is_ready: bool,
+    // The view specs to present ChildViews that arrived before the main window is created.
+    pending_child_view_present_specs: Vec<ViewSpecHolder>,
 }
 
 impl WindowManager {
-    fn new(
+    pub fn new(
         event_sender: EventSender<WMEvent>,
-        token: ui_views::ViewCreationToken,
+        view_creation_token: ui_views::ViewCreationToken,
+        pending_child_view_present_specs: Vec<ViewSpecHolder>,
+        protocol_connector: Box<dyn ProtocolConnector>,
     ) -> Result<WindowManager, Error> {
-        let mut window = Window::new(event_sender.clone()).with_view_creation_token(token);
+        let mut window = Window::new(event_sender.clone())
+            .with_view_creation_token(view_creation_token)
+            .with_protocol_connector(protocol_connector.box_clone());
         window.create_view()?;
 
         window.register_shortcuts(all_shortcuts());
@@ -87,6 +97,7 @@ impl WindowManager {
         flatland.add_child(&mut root_transform_id, &mut shell_views_layer)?;
 
         Ok(WindowManager {
+            event_sender,
             window,
             child_views: IndexMap::new(),
             pending_child_views: IndexMap::new(),
@@ -96,6 +107,8 @@ impl WindowManager {
             _shell_views_layer: shell_views_layer,
             width: 0,
             height: 0,
+            is_ready: false,
+            pending_child_view_present_specs,
         })
     }
 
@@ -104,10 +117,8 @@ impl WindowManager {
         let flatland = self.window.get_flatland();
 
         // Drop child_views and the associated child_view_transforms.
-        while let Some((child_view_id, child_view)) = self.child_views.first() {
-            let mut child_view_content_id = child_view.get_content_id();
+        while let Some((child_view_id, _)) = self.child_views.first() {
             self.remove_child_view(*child_view_id)?;
-            flatland.release_viewport(&mut child_view_content_id).await?;
         }
 
         let mut root_transform_id = self.window.get_root_transform_id();
@@ -119,55 +130,72 @@ impl WindowManager {
         flatland.release_transform(&mut self.child_views_layer)?;
 
         flatland.release_filled_rect(&mut self.background_content)?;
+        flatland.clear()?;
+
         self.window.redraw();
+
+        self.window.close()?;
 
         Ok(())
     }
 
     pub async fn run(
-        event_sender: EventSender<WMEvent>,
-        mut receiver: UnboundedReceiver<Event<WMEvent>>,
+        &mut self,
+        mut receiver: impl Stream<Item = Event<WMEvent>> + std::marker::Unpin,
     ) -> Result<(), Error> {
-        // This is THE window manager instance. It is created after receiving a ViewCreationToken
-        // from a ViewProvider request stream through [SystemEvent::ViewCreationToken].
-        let mut wm: Option<WindowManager> = None;
-
         while let Some(event) = receiver.next().await {
             debug!("{:?}", event);
             match event {
                 Event::SystemEvent { event } => match event {
-                    // Create the application from ViewProvider's ViewCreationToken.
-                    SystemEvent::ViewCreationToken { token } => {
-                        wm = Some(WindowManager::new(event_sender.clone(), token)?);
+                    // Ignore subsequent ViewProvider::CreateView requests. We only allow one
+                    // instance of WindowManager to exist.
+                    SystemEvent::ViewCreationToken { .. } => {
+                        warn!("Received another ViewProvider::CreateView2 request. Ignoring.");
                     }
 
                     // Create a [ChildView] from GraphicalPresenter's ViewSpec.
                     SystemEvent::PresentViewSpec { view_spec_holder } => {
-                        if let Some(wm) = wm.as_mut() {
-                            let child_view = wm.window.create_child_view(
+                        if self.is_ready {
+                            let child_view = self.window.create_child_view(
                                 view_spec_holder,
-                                wm.width,
-                                wm.height - APP_LAUNCHER_HEIGHT,
-                                event_sender.clone(),
+                                self.width,
+                                self.height - APP_LAUNCHER_HEIGHT,
+                                self.event_sender.clone(),
                             )?;
+                            self.window.redraw();
+
                             // Save child_view to pending_child_views until it's component has
-                            // finished loading and rendered a frame. The child view is available
-                            // to be attached to the display tree in [ChildViewEvent::Available].
-                            wm.pending_child_views.insert(child_view.id(), child_view);
+                            // finished loading and rendered a frame. The child view can then be
+                            // attached to the display tree in [ChildViewEvent::Available].
+                            self.pending_child_views.insert(child_view.id(), child_view);
                         } else {
-                            // TODO(https://fxbug.dev/113709): Consider queueing these requests.
-                            warn!("WM window does not exist. Ignoring GraphicalPresenter requests");
+                            self.pending_child_view_present_specs.push(view_spec_holder);
                         }
                     }
                 },
 
                 Event::WindowEvent { event: window_event, .. } => {
-                    let wm = wm.as_mut().expect("wm instance should exist before WindowEvents");
-
                     match window_event {
                         WindowEvent::Resized { width, height, .. } => {
-                            wm.resize(width, height)?;
-                            wm.window.redraw();
+                            self.resize(width, height)?;
+                            self.window.redraw();
+
+                            self.is_ready = true;
+                            // Handle any pending childview specs.
+                            for view_spec_holder in self.pending_child_view_present_specs.drain(..)
+                            {
+                                self.event_sender
+                                    .send(Event::SystemEvent {
+                                        event: SystemEvent::PresentViewSpec { view_spec_holder },
+                                    })
+                                    .expect("failed to send SystemEvent::PresentViewSpec");
+                            }
+                        }
+
+                        WindowEvent::Focused { focused } => {
+                            if focused {
+                                self.refocus();
+                            }
                         }
 
                         WindowEvent::Keyboard { responder, .. } => {
@@ -183,27 +211,27 @@ impl WindowManager {
                             if let Some(action) = ShortcutAction::from_u32(id) {
                                 match action {
                                     ShortcutAction::FocusNext => {
-                                        wm.focus_next()?;
-                                        wm.layout()?;
-                                        wm.refocus();
+                                        self.focus_next()?;
+                                        self.layout()?;
+                                        self.refocus();
                                     }
 
                                     ShortcutAction::FocusPrev => {
-                                        wm.focus_previous()?;
-                                        wm.layout()?;
-                                        wm.refocus();
+                                        self.focus_previous()?;
+                                        self.layout()?;
+                                        self.refocus();
                                     }
 
                                     ShortcutAction::Close => {
-                                        if let Some((child_view_id, _)) = wm.child_views.last() {
-                                            wm.remove_child_view(*child_view_id)?;
-                                            wm.layout()?;
-                                            wm.refocus();
+                                        if let Some((child_view_id, _)) = self.child_views.last() {
+                                            self.remove_child_view(*child_view_id)?;
+                                            self.layout()?;
+                                            self.refocus();
                                         }
                                     }
                                 }
 
-                                wm.window.redraw();
+                                self.window.redraw();
                             } else {
                                 error!("Received unknown shortcut invocation: {:?}", id);
                             }
@@ -211,40 +239,33 @@ impl WindowManager {
                             responder.send(ui_shortcut2::Handled::Handled)?;
                         }
                         WindowEvent::NeedsRedraw { .. }
-                        | WindowEvent::Focused { .. }
                         | WindowEvent::Closed { .. }
                         | WindowEvent::Pointer { .. } => {}
                     }
                 }
 
-                Event::ChildViewEvent { child_view_id, event, .. } => {
-                    let wm = wm.as_mut().expect("wm instance should exist before WindowEvents");
+                Event::ChildViewEvent { child_view_id, event, .. } => match event {
+                    ChildViewEvent::Available => {
+                        self.add_child_view(child_view_id)?;
+                        self.window.redraw();
+                    }
 
-                    match event {
-                        ChildViewEvent::Available => {
-                            wm.add_child_view(child_view_id)?;
-                            wm.window.redraw();
-                        }
-
-                        ChildViewEvent::Attached { view_ref } => {
-                            if let Some(child_view) = wm.child_views.get_mut(&child_view_id) {
-                                child_view.set_view_ref(view_ref);
-                                wm.window.request_focus(
-                                    child_view
-                                        .get_view_ref()
-                                        .expect("Failed to get child view ref"),
-                                );
-                            }
-                        }
-
-                        ChildViewEvent::Detached | ChildViewEvent::Dismissed => {
-                            wm.remove_child_view(child_view_id)?;
-                            wm.layout()?;
-                            wm.refocus();
-                            wm.window.redraw();
+                    ChildViewEvent::Attached { view_ref } => {
+                        if let Some(child_view) = self.child_views.get_mut(&child_view_id) {
+                            child_view.set_view_ref(view_ref);
+                            self.window.request_focus(
+                                child_view.get_view_ref().expect("Failed to get child view ref"),
+                            );
                         }
                     }
-                }
+
+                    ChildViewEvent::Detached | ChildViewEvent::Dismissed => {
+                        self.remove_child_view(child_view_id)?;
+                        self.layout()?;
+                        self.refocus();
+                        self.window.redraw();
+                    }
+                },
 
                 Event::Exit => break,
 
@@ -252,11 +273,7 @@ impl WindowManager {
             }
         }
 
-        if let Some(mut wm) = wm {
-            wm.release().await?;
-        }
-
-        receiver.close();
+        self.release().await?;
 
         Ok(())
     }
@@ -405,4 +422,29 @@ impl WindowManager {
 
         Ok(())
     }
+}
+
+/// Returns the first ViewCreationToken received by ViewProvider service and all requests to
+/// present a view to the GraphicalPresenter service, while consuming all other events.
+pub async fn get_first_view_creation_token(
+    receiver: &mut UnboundedReceiver<Event<WMEvent>>,
+) -> (ui_views::ViewCreationToken, Vec<ViewSpecHolder>) {
+    let mut view_spec_holders = vec![];
+    while let Some(event) = receiver.next().await {
+        match event {
+            Event::Init => continue,
+            Event::SystemEvent { event } => match event {
+                SystemEvent::ViewCreationToken { token } => {
+                    return (token, view_spec_holders);
+                }
+                SystemEvent::PresentViewSpec { view_spec_holder } => {
+                    view_spec_holders.push(view_spec_holder);
+                }
+            },
+            _ => {
+                warn!("Ignoring {:?} while waiting for ViewProvider::CreateView2 request", event)
+            }
+        }
+    }
+    unreachable!()
 }

@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fidl::endpoints::{ClientEnd, ServerEnd},
-    fidl_fuchsia_element as felement, fidl_fuchsia_ui_input3 as ui_input3,
-    fidl_fuchsia_ui_shortcut2 as ui_shortcut2, fidl_fuchsia_ui_views as ui_views,
-    pointer_fusion::PointerEvent,
-};
+use anyhow::Error;
+use fidl::endpoints::{ClientEnd, ServerEnd};
+use fidl_fuchsia_element as felement;
+use fidl_fuchsia_ui_input3 as ui_input3;
+use fidl_fuchsia_ui_shortcut2 as ui_shortcut2;
+use fidl_fuchsia_ui_views as ui_views;
+use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
+use pointer_fusion::PointerEvent;
+use tracing::log::error;
 
 use crate::{child_view::ChildViewId, window::WindowId};
 
@@ -86,4 +89,38 @@ pub struct ViewSpecHolder {
     pub annotation_controller: Option<ClientEnd<felement::AnnotationControllerMarker>>,
     pub view_controller_request: Option<ServerEnd<felement::ViewControllerMarker>>,
     pub responder: Option<felement::GraphicalPresenterPresentViewResponder>,
+}
+
+/// Defines a thin wrapper over [futures::channel::mpsc::unbounded] channel to send and receive
+/// [Event]s. This is primarily used for implementing a "message-loop" in process system-wide
+/// messages in one-place.
+#[derive(Debug)]
+pub struct EventSender<T>(pub UnboundedSender<Event<T>>);
+
+impl<T> Clone for EventSender<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<T> EventSender<T> {
+    pub fn new() -> (Self, UnboundedReceiver<Event<T>>) {
+        let (sender, receiver) = futures::channel::mpsc::unbounded::<Event<T>>();
+
+        let event_sender = EventSender::<T>(sender);
+        event_sender.send(Event::<T>::Init).expect("Failed to send Event::Init event");
+
+        (event_sender, receiver)
+    }
+
+    pub fn close(&mut self) {
+        self.0.disconnect()
+    }
+
+    pub fn send(&self, event: Event<T>) -> Result<(), Error> {
+        if let Err(e) = self.0.unbounded_send(event) {
+            error!("Failed to send event: {:?}", e);
+        }
+        Ok(())
+    }
 }

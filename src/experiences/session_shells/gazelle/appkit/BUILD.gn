@@ -48,6 +48,7 @@ rustc_library("appkit") {
     "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input_rust",
     "//sdk/fidl/fuchsia.ui.test.scene:fuchsia.ui.test.scene_rust",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
   ]
   inputs = [ "test_data/checkerboard_100.png" ]
 }
@@ -61,7 +62,6 @@ fuchsia_unittest_package("appkit-tests") {
     "//src/ui/testing/test_ui_stack:test-ui-stack-component",
   ]
   test_specs = {
-    parallel = 1
     log_settings = {
       max_severity = "ERROR"
     }

@@ -2,21 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::Error,
-    appkit::{
-        load_image_from_bytes, load_png, Event, EventSender, Image, ImageData, Window, WindowEvent,
-        WindowId,
-    },
-    fidl_fuchsia_input::Key,
-    fidl_fuchsia_math as fmath, fidl_fuchsia_ui_composition as ui_comp,
-    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventStatus, KeyEventType},
-    futures::StreamExt,
-    std::collections::HashMap,
-    std::convert::TryInto,
-    std::io::Cursor,
-    tracing::*,
+use std::{collections::HashMap, convert::TryInto, io::Cursor};
+
+use anyhow::Error;
+use appkit::{
+    load_image_from_bytes, load_png, Event, EventSender, Image, ImageData, Window, WindowEvent,
+    WindowId,
 };
+use fidl_fuchsia_input::Key;
+use fidl_fuchsia_math as fmath;
+use fidl_fuchsia_ui_composition as ui_comp;
+use fidl_fuchsia_ui_input3::{KeyEvent, KeyEventStatus, KeyEventType};
+use futures::StreamExt;
+use tracing::*;
 
 struct Bouncer {
     flatland: ui_comp::FlatlandProxy,

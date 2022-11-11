@@ -30,6 +30,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
     "//src/experiences/session_shells/gazelle/appkit",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -41,9 +42,12 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
+    "//sdk/fidl/fuchsia.ui.observation.geometry:fuchsia.ui.observation.geometry_rust",
     "//sdk/fidl/fuchsia.ui.test.scene:fuchsia.ui.test.scene_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/ui/fuchsia-scenic",
   ]
 }
@@ -56,7 +60,6 @@ fuchsia_unittest_package("wm-tests") {
     "//src/ui/testing/test_ui_stack:test-ui-stack-component",
   ]
   test_specs = {
-    parallel = 1
     log_settings = {
       max_severity = "ERROR"
     }

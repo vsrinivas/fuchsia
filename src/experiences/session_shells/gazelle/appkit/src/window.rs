@@ -2,34 +2,80 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{anyhow, Error},
-    async_utils::hanging_get::client::HangingGetStream,
-    fidl::endpoints::{
-        create_endpoints, create_proxy, create_request_stream, ClientEnd, ServerEnd,
-    },
-    fidl::AsHandleRef,
-    fidl_fuchsia_element as felement, fidl_fuchsia_math as fmath,
-    fidl_fuchsia_ui_composition as ui_comp, fidl_fuchsia_ui_input3 as ui_input3,
-    fidl_fuchsia_ui_pointer as fptr, fidl_fuchsia_ui_shortcut2 as ui_shortcut2,
-    fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol,
-    fuchsia_scenic::flatland::{IdGenerator, ViewCreationTokenPair},
-    futures::{
-        channel::mpsc::UnboundedSender, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
-    },
-    pointer_fusion::*,
-    std::collections::HashMap,
-    std::sync::{Arc, Mutex},
-    tracing::*,
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
 };
+
+use anyhow::{anyhow, Error};
+use async_utils::hanging_get::client::HangingGetStream;
+use fidl::{
+    endpoints::{create_endpoints, create_proxy, create_request_stream, ClientEnd, ServerEnd},
+    AsHandleRef,
+};
+use fidl_fuchsia_element as felement;
+use fidl_fuchsia_math as fmath;
+use fidl_fuchsia_ui_composition as ui_comp;
+use fidl_fuchsia_ui_input3 as ui_input3;
+use fidl_fuchsia_ui_pointer as fptr;
+use fidl_fuchsia_ui_shortcut2 as ui_shortcut2;
+use fidl_fuchsia_ui_views as ui_views;
+use fuchsia_async as fasync;
+use fuchsia_scenic::flatland::{IdGenerator, ViewCreationTokenPair};
+use futures::{
+    channel::mpsc::UnboundedSender, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
+};
+use pointer_fusion::*;
+use tracing::*;
 
 use crate::{
     child_view::ChildView,
-    event::{Event, ViewSpecHolder, WindowEvent},
-    image::Image,
-    utils::{EventSender, ImageData, Presenter},
+    event::{Event, EventSender, ViewSpecHolder, WindowEvent},
+    image::{Image, ImageData},
+    utils::{ProductionProtocolConnector, ProtocolConnector},
 };
+
+struct Presenter {
+    flatland: ui_comp::FlatlandProxy,
+    can_update: bool,
+    needs_update: bool,
+}
+
+impl Presenter {
+    pub fn new(flatland: ui_comp::FlatlandProxy) -> Self {
+        Presenter { flatland, can_update: true, needs_update: false }
+    }
+
+    pub fn on_next_frame(
+        &mut self,
+        _next_frame_info: ui_comp::OnNextFrameBeginValues,
+    ) -> Result<(), Error> {
+        if self.needs_update {
+            self.needs_update = false;
+            self.can_update = false;
+            self.present()
+        } else {
+            self.can_update = true;
+            Ok(())
+        }
+    }
+
+    pub fn redraw(&mut self) -> Result<(), Error> {
+        if self.can_update {
+            self.needs_update = false;
+            self.can_update = false;
+            self.present()
+        } else {
+            self.needs_update = true;
+            Ok(())
+        }
+    }
+
+    fn present(&self) -> Result<(), Error> {
+        self.flatland.present(ui_comp::PresentArgs::EMPTY)?;
+        Ok(())
+    }
+}
 
 /// Defines a type to hold an id to the window. This implementation uses the value of
 /// [ViewCreationToken] to be the window id.
@@ -59,7 +105,7 @@ pub struct Window<T> {
     attributes: WindowAttributes,
     id: WindowId,
     id_generator: IdGenerator,
-    flatland: ui_comp::FlatlandProxy,
+    flatland: Option<ui_comp::FlatlandProxy>,
     view_ref: ui_views::ViewRef,
     view_identity: ui_views::ViewIdentityOnCreation,
     annotations: Option<Vec<felement::Annotation>>,
@@ -69,23 +115,14 @@ pub struct Window<T> {
     shortcut_task: Option<fasync::Task<()>>,
     event_sender: EventSender<T>,
     running_tasks: Vec<fasync::Task<()>>,
-    presenter: Arc<Mutex<Presenter>>,
+    presenter: Option<Arc<Mutex<Presenter>>>,
+    protocol_connector: Box<dyn ProtocolConnector>,
 }
 
 impl<T> Window<T> {
     pub fn new(event_sender: EventSender<T>) -> Window<T> {
         let id_generator = IdGenerator::new_with_first_id(ROOT_TRANSFORM_ID.value);
-        let flatland = connect_to_protocol::<ui_comp::FlatlandMarker>()
-            .expect("Failed to connect to fuchsia.ui.comp.Flatland");
-        flatland
-            .create_transform(&mut ROOT_TRANSFORM_ID.clone())
-            .expect("Failed to create transform");
-        flatland
-            .set_root_transform(&mut ROOT_TRANSFORM_ID.clone())
-            .expect("Failed to set root transform");
-
         let id = WindowId(0);
-        let presenter = Arc::new(Mutex::new(Presenter::new(flatland.clone())));
         let attributes = WindowAttributes::default();
         let view_ref_pair =
             fuchsia_scenic::ViewRefPair::new().expect("Failed to create ViewRefPair");
@@ -93,11 +130,13 @@ impl<T> Window<T> {
             .expect("Failed to duplicate ViewRef");
         let view_identity = ui_views::ViewIdentityOnCreation::from(view_ref_pair);
 
+        let protocol_connector = Box::new(ProductionProtocolConnector());
+
         Self {
             attributes,
             id,
             id_generator,
-            flatland,
+            flatland: None,
             view_ref,
             view_identity,
             annotations: None,
@@ -107,7 +146,8 @@ impl<T> Window<T> {
             shortcut_task: None,
             event_sender,
             running_tasks: vec![],
-            presenter,
+            presenter: None,
+            protocol_connector,
         }
     }
 
@@ -121,12 +161,20 @@ impl<T> Window<T> {
         self
     }
 
+    pub fn with_protocol_connector(
+        mut self,
+        protocol_connector: Box<dyn ProtocolConnector>,
+    ) -> Window<T> {
+        self.protocol_connector = protocol_connector;
+        self
+    }
+
     pub fn id(&self) -> WindowId {
         self.id
     }
 
     pub fn get_flatland(&self) -> ui_comp::FlatlandProxy {
-        self.flatland.clone()
+        self.flatland.clone().expect("Not connected to Flatland. Window may not be created yet")
     }
 
     pub fn get_root_transform_id(&self) -> ui_comp::TransformId {
@@ -146,15 +194,17 @@ impl<T> Window<T> {
         mut transform_id: ui_comp::TransformId,
         mut content_id: ui_comp::ContentId,
     ) {
-        self.flatland
+        self.get_flatland()
             .set_content(&mut transform_id, &mut content_id)
             .expect("Failed to set content");
     }
 
     pub fn close(&mut self) -> Result<(), Error> {
+        // If we have a ViewController through GraphicalPresenter, notify it of window close.
         if let Some(view_controller_proxy) = self.view_controller_proxy.take() {
             view_controller_proxy.dismiss()?;
         }
+
         Ok(())
     }
 
@@ -180,9 +230,12 @@ impl<T> Window<T> {
         let window_id = self.id();
         let event_sender = self.event_sender.clone();
 
+        let registry = self
+            .protocol_connector
+            .connect_to_shortcuts_registry()
+            .expect("failed to connect to fuchsia.ui.shortcut2.Registry");
+
         let task = fasync::Task::spawn(async move {
-            let registry = connect_to_protocol::<ui_shortcut2::RegistryMarker>()
-                .expect("failed to connect to fuchsia.ui.shortcut2.Registry");
             let (listener_client_end, mut listener_stream) =
                 create_request_stream::<ui_shortcut2::ListenerMarker>()
                     .expect("Failed to create shortcut listener stream");
@@ -221,14 +274,19 @@ impl<T> Window<T> {
             }
         });
 
-        // Hold a reference to `fasync::Task` to keep the shortcut listener alive. This will also
-        // release any previous shortcut registrations and their listener.
+        // Hold a reference to `fasync::Task` to keep the shortcut listener alive. First cancel
+        // previous task.
+        if let Some(task) = self.shortcut_task.take() {
+            let _ = task.cancel();
+        }
         self.shortcut_task = Some(task);
     }
 
     pub fn redraw(&mut self) {
         let _lock = self
             .presenter
+            .as_ref()
+            .expect("Not connected to Flatland. Window may not be created yet")
             .try_lock()
             .map(|mut presenter| presenter.redraw())
             .expect("Failed to lock presenter");
@@ -242,6 +300,20 @@ impl<T> Window<T> {
         if self.id != WindowId(0) {
             return Err(anyhow!("create_view already called!"));
         }
+
+        let flatland = self
+            .protocol_connector
+            .connect_to_flatland()
+            .expect("Failed to connect to fuchsia.ui.comp.Flatland");
+        flatland
+            .create_transform(&mut ROOT_TRANSFORM_ID.clone())
+            .expect("Failed to create transform");
+        flatland
+            .set_root_transform(&mut ROOT_TRANSFORM_ID.clone())
+            .expect("Failed to set root transform");
+
+        let presenter = Arc::new(Mutex::new(Presenter::new(flatland.clone())));
+
         let (mut view_creation_token, viewport_creation_token) =
             // Check if view_creation_token was passed from ViewProvider.
             match self.attributes.view_creation_token.take() {
@@ -271,7 +343,10 @@ impl<T> Window<T> {
             ..ui_comp::ViewBoundProtocols::EMPTY
         };
 
-        self.flatland.create_view2(
+        self.flatland = Some(flatland);
+        self.presenter = Some(presenter);
+
+        self.get_flatland().create_view2(
             &mut view_creation_token,
             &mut self.view_identity,
             view_bound_protocols,
@@ -284,8 +359,8 @@ impl<T> Window<T> {
 
         let flatland_events_fut = serve_flatland_events(
             window_id,
-            self.flatland.clone(),
-            self.presenter.clone(),
+            self.get_flatland(),
+            self.presenter.clone().expect("Failed to clone Presenter"),
             event_sender.clone(),
         );
 
@@ -308,12 +383,18 @@ impl<T> Window<T> {
                     create_proxy::<felement::ViewControllerMarker>()?;
                 let view_ref_for_graphical_presenter =
                     fuchsia_scenic::duplicate_view_ref(&self.view_ref)?;
+                let graphical_presenter = self
+                    .protocol_connector
+                    .connect_to_graphical_presenter()
+                    .expect("Failed to connect to GraphicalPresenter");
+
                 self.annotation_controller_request_stream =
-                    Some(annotation_controller_server_end.into_stream().unwrap());
+                    Some(annotation_controller_server_end.into_stream().expect("FIDL error"));
                 self.view_controller_proxy = Some(view_controller_proxy.clone());
                 self.annotations = annotations_from_window_attributes(&self.attributes);
                 (
-                    connect_to_graphical_presenter(
+                    present_to_graphical_presenter(
+                        graphical_presenter,
                         self.annotations.take(),
                         viewport_creation_token,
                         view_ref_for_graphical_presenter,
@@ -333,8 +414,16 @@ impl<T> Window<T> {
         };
 
         let view_ref_for_keyboard = fuchsia_scenic::duplicate_view_ref(&self.view_ref)?;
-        let keyboard_fut =
-            serve_keyboard_listener(window_id, view_ref_for_keyboard, event_sender.clone()).boxed();
+        let keyboard =
+            self.protocol_connector.connect_to_keyboard().expect("Failed to connect to Keyboard");
+
+        let keyboard_fut = serve_keyboard_listener(
+            window_id,
+            view_ref_for_keyboard,
+            keyboard,
+            event_sender.clone(),
+        )
+        .boxed();
 
         // Collect all futures into an abortable spawned task. The task is aborted in [Drop].
         let task = fasync::Task::spawn(async move {
@@ -342,19 +431,31 @@ impl<T> Window<T> {
             graphical_presenter_fut.await;
 
             // Wait for first layout information.
-            let layout_info = parent_viewport_watcher
-                .get_layout()
-                .await
-                .expect("Failed to get first layout info");
+            let result = parent_viewport_watcher.get_layout().await;
 
-            let (width, height, pixel_ratio) = dimensions_from_layout_info(layout_info);
-
-            event_sender
-                .send(Event::WindowEvent {
-                    window_id,
-                    event: WindowEvent::Resized { width, height, pixel_ratio },
-                })
-                .expect("Failed to send WindowEvent::Resized event");
+            let pixel_ratio = match result {
+                Ok(layout_info) => {
+                    let (width, height, pixel_ratio) = dimensions_from_layout_info(layout_info);
+                    event_sender
+                        .send(Event::WindowEvent {
+                            window_id,
+                            event: WindowEvent::Resized { width, height, pixel_ratio },
+                        })
+                        .expect("Failed to send WindowEvent::Resized event");
+                    pixel_ratio
+                }
+                Err(fidl::Error::ClientChannelClosed { .. }) => {
+                    warn!("ParentViewportWatcher connection closed.");
+                    event_sender
+                        .send(Event::WindowEvent { window_id, event: WindowEvent::Closed })
+                        .expect("Failed to send WindowEvent::Closed event");
+                    return;
+                }
+                Err(fidl_error) => {
+                    warn!("ParentViewportWatcher GetLayout() error: {:?}", fidl_error);
+                    return;
+                }
+            };
 
             // For pointer fusion, we need the device_pixel_ratio to convert pointer coordinates
             // from logical to physical coordinates.
@@ -395,7 +496,7 @@ impl<T> Window<T> {
     {
         let viewport_content_id = self.next_content_id();
         let child_view = ChildView::new(
-            self.flatland.clone(),
+            self.get_flatland(),
             self.id,
             viewport_content_id,
             view_spec_holder,
@@ -437,7 +538,7 @@ impl<T> Window<T> {
     /// [ui_comp::BufferCollectionImportToken] token at [vmo_index].
     pub fn create_image(&mut self, image_data: &mut ImageData) -> Result<Image, Error> {
         let content_id = self.next_content_id();
-        Image::new(image_data, self.flatland.clone(), content_id)
+        Image::new(image_data, self.get_flatland(), content_id)
     }
 }
 
@@ -604,8 +705,8 @@ async fn serve_touch_source_watcher(
                                 interactions.insert(interaction, vec![]);
                             }
 
-                            if interactions.contains_key(&interaction) {
-                                interactions.get_mut(&interaction).unwrap().push(event.clone());
+                            if let Some(interaction) = interactions.get_mut(&interaction) {
+                                interaction.push(event.clone());
                             } else {
                                 input_sender
                                     .unbounded_send(InputEvent::TouchEvent(event.clone()))
@@ -623,13 +724,13 @@ async fn serve_touch_source_watcher(
                             if result.status == fptr::TouchInteractionStatus::Granted
                                 && interactions.contains_key(&interaction)
                             {
-                                for event in interactions.get_mut(&interaction).unwrap().drain(0..)
-                                {
-                                    input_sender
-                                        .unbounded_send(InputEvent::TouchEvent(event.clone()))
-                                        .expect("Failed to send InputEvent::TouchEvent");
+                                if let Some(events) = interactions.remove(&interaction) {
+                                    for event in events {
+                                        input_sender
+                                            .unbounded_send(InputEvent::TouchEvent(event.clone()))
+                                            .expect("Failed to send InputEvent::TouchEvent");
+                                    }
                                 }
-                                interactions.remove(&interaction);
                             }
                         }
 
@@ -661,16 +762,14 @@ async fn serve_pointer_events<T>(
     }
 }
 
-async fn connect_to_graphical_presenter(
+async fn present_to_graphical_presenter(
+    graphical_presenter: felement::GraphicalPresenterProxy,
     annotations: Option<Vec<felement::Annotation>>,
     viewport_creation_token: ui_views::ViewportCreationToken,
     view_ref: ui_views::ViewRef,
     annotation_controller_client_end: ClientEnd<felement::AnnotationControllerMarker>,
     view_controller_request_stream: ServerEnd<felement::ViewControllerMarker>,
 ) {
-    let graphical_presenter = connect_to_protocol::<felement::GraphicalPresenterMarker>()
-        .expect("Failed to connect to GraphicalPresenter");
-
     // TODO(https://fxbug.dev/107983): Remove view_ref once Ermine is updated to not need it.
     let view_spec = felement::ViewSpec {
         viewport_creation_token: Some(viewport_creation_token),
@@ -705,10 +804,9 @@ async fn wait_for_view_controller_close<T>(
 async fn serve_keyboard_listener<T>(
     window_id: WindowId,
     mut view_ref: ui_views::ViewRef,
+    keyboard: ui_input3::KeyboardProxy,
     event_sender: EventSender<T>,
 ) {
-    let keyboard =
-        connect_to_protocol::<ui_input3::KeyboardMarker>().expect("Failed to connect to Keyboard");
     let (listener_client_end, mut listener_stream) =
         create_request_stream::<ui_input3::KeyboardListenerMarker>()
             .expect("failed to create listener stream");
