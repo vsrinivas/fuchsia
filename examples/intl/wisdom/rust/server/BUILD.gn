@@ -32,6 +32,8 @@ rustc_binary("intl_wisdom_server_rust") {
   ]
   non_rust_deps = [ "${icu_root}:icu" ]
 
+  test_deps = [ "//third_party/rust_crates:regex" ]
+
   sources = [
     "src/main.rs",
     "src/wisdom_server_impl.rs",

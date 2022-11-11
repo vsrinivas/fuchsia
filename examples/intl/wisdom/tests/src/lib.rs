@@ -75,7 +75,7 @@ async fn wisdom_integration_test() -> Result<(), Error> {
         let regex = Regex::new(&line_regex_str).expect("regex");
         assert!(
             regex.is_match(log_msg),
-            "line_regex: {:?}, actual: {:?}",
+            "\n\tline_regex: {:?}\n\tactual    : {:?}",
             &line_regex_str,
             &log_msg
         );
