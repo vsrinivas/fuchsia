@@ -712,3 +712,9 @@
 	name = third_party/github.com/google/mobly
 	ignore = all
 	active = false
+[submodule "third_party/python_portpicker/src"]
+	path = third_party/python_portpicker/src
+	url = https://fuchsia.googlesource.com/third_party/github.com/google/python_portpicker
+	name = third_party/github.com/google/python_portpicker
+	ignore = all
+	active = false
