@@ -20,11 +20,10 @@ common --experimental_downloader_config={config_file}
 
 # Ensure the embedded JDK that comes with Bazel is always used
 # This prevents Bazel from downloading extra host JDKs from the
-# network, even when a project never usues Java-related  rules
+# network, even when a project never uses Java-related  rules
 # (for some still-very-mysterious reasons!)
 build --java_runtime_version=embedded_jdk
-build --host_javabase=@embedded_jdk//:jdk
-build --javabase=@embedded_jdk//:jdk
+build --tool_java_runtime_version=embedded_jdk
 
 # Setup remote build
 build:remote --remote_instance_name={remote_instance_name}
