@@ -458,7 +458,7 @@ void main() {
                     'name': 'lib_tests',
                     'os': 'fuchsia',
                     'package_url':
-                        'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cmx',
+                        'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cm',
                     'runtime_deps':
                         'host_x64/gen/scripts/lib/lib_tests.deps.json'
                   }
@@ -483,7 +483,7 @@ void main() {
                     'name': 'lib_tests',
                     'os': 'fuchsia',
                     'package_url':
-                        'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cmx',
+                        'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cm',
                     'runtime_deps':
                         'host_x64/gen/scripts/lib/lib_tests.deps.json'
                   }
@@ -508,7 +508,7 @@ void main() {
                     'name': 'lib_tests',
                     'os': 'fuchsia',
                     'package_url':
-                        'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cmx',
+                        'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cm',
                     'runtime_deps':
                         'host_x64/gen/scripts/lib/lib_tests.deps.json'
                   }
@@ -556,7 +556,7 @@ void main() {
                         'host_x64/gen/scripts/e2e/e2e_tests.deps.json'
                   }
                 },
-                // component test
+                // suite test
                 {
                   'environments': [],
                   'test': {
@@ -566,7 +566,7 @@ void main() {
                     'name': 'lib_tests',
                     'os': 'fuchsia',
                     'package_url':
-                        'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cmx',
+                        'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cm',
                     'runtime_deps':
                         'host_x64/gen/scripts/lib/lib_tests.deps.json'
                   }

@@ -7,7 +7,6 @@ import 'package:fxtest/fxtest.dart';
 /// Concrete flag for an individual test, indicating how it should be executed.
 enum TestType {
   command,
-  component,
   host,
   suite,
 
@@ -65,9 +64,6 @@ class ExecutionHandle {
   ExecutionHandle.command(this.handle, this.os, {this.environment = const {}})
       : testType = TestType.command,
         flags = [];
-  ExecutionHandle.component(this.handle, this.os,
-      {this.flags = const [], this.environment = const {}})
-      : testType = TestType.component;
   ExecutionHandle.e2e(this.handle, this.os, {this.environment = const {}})
       : testType = TestType.e2e,
         flags = [];
@@ -100,8 +96,6 @@ class ExecutionHandle {
   CommandTokens getInvocationTokens(List<String> runnerFlags) {
     if (testType == TestType.command) {
       return _getCommandTokens();
-    } else if (testType == TestType.component) {
-      return _getComponentTokens(runnerFlags);
     } else if (testType == TestType.host) {
       return _getHostTokens();
     } else if (testType == TestType.suite) {
@@ -135,14 +129,6 @@ class ExecutionHandle {
       );
     }
     return CommandTokens(commandTokens);
-  }
-
-  /// Handler for `tests.json` entries containing the `packageUrl` key ending
-  /// in ".cmx".
-  CommandTokens _getComponentTokens(List<String> runnerFlags) {
-    List<String> subCommand = ['shell', 'run-test-component']
-      ..addAll(runnerFlags.map((flag) => "'$flag'"));
-    return CommandTokens(['fx', ...subCommand, ...flags, handle]);
   }
 
   /// Handler for `tests.json` entries containing the `packageUrl` key ending

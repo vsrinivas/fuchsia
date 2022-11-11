@@ -7,44 +7,6 @@ import 'package:test/test.dart';
 
 void main() {
   group('TestBundle', () {
-    test('should assemble correct arguments for component tests', () {
-      const componentUrl =
-          'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cmx';
-      final testDef = TestDefinition.fromJson(
-        {
-          'environments': [],
-          'test': {
-            'cpu': 'x64',
-            'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
-            'name': 'lib_tests',
-            'os': 'fuchsia',
-            'package_url': componentUrl,
-            'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
-          }
-        },
-        buildDir: '/whatever',
-      );
-      final commandTokens =
-          testDef.createExecutionHandle().getInvocationTokens([]);
-      expect(
-        commandTokens.fullCommand,
-        ['fx', 'shell', 'run-test-component', componentUrl].join(' '),
-      );
-      final commandTokens2 = testDef
-          .createExecutionHandle()
-          .getInvocationTokens(['--max-log-severity=WARN']);
-      expect(
-        commandTokens2.fullCommand,
-        [
-          'fx',
-          'shell',
-          'run-test-component',
-          "'--max-log-severity=WARN'",
-          componentUrl
-        ].join(' '),
-      );
-    });
-
     test('should assemble correct arguments for component suite tests', () {
       const componentUrl =
           'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cm';

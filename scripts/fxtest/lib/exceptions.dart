@@ -14,6 +14,13 @@ class FxRunException implements Exception {
       'Exit Code: $exitCode';
 }
 
+class InvalidOption implements Exception {
+  final String message;
+  InvalidOption(this.message);
+  @override
+  String toString() => 'Invalid option: $message';
+}
+
 class TestFrameworkUnavailableError implements Exception {
   @override
   String toString() => 'Could not connect to Test Manager.\n'

@@ -159,9 +159,8 @@ class TestsManifestReader {
           _handleUnsupportedTest(testDefinition, testsConfig, eventEmitter);
           continue;
         } else if (testType == TestType.unsupportedDeviceTest) {
-          // Intentional no-op to avoid spammy output.
-          // DeviceTests warnings are handled at runtime, meaning if none are
-          // matched, a user doesn't have to think or worry about them.
+          _handleUnsupportedTest(testDefinition, testsConfig, eventEmitter);
+          continue;
         }
       }
 

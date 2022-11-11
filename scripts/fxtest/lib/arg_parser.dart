@@ -114,8 +114,8 @@ Note: The -s flag used to be an abbreviation for --simple.''')
   ..addOption('realm',
       abbr: 'R',
       defaultsTo: null,
-      help: '''run tests in a named realm instead of a
-randomized one.''')
+      help: '''unused. This flag was relevant for components v1 tests and is
+now a no-op. It will soon be removed.''')
   ..addOption('min-severity-logs',
       help: '''filter log output to only messages with this for device tests.
 Valid severities: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.''')

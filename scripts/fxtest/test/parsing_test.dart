@@ -46,7 +46,7 @@ void main() {
             'name': '//src/sys/run_test_component/test:run_test_component_test',
             'os': 'fuchsia',
             'package_url':
-                'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cmx',
+                'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cm',
             'log_settings': {'max_severity': 'ERROR'},
           }
         },
@@ -65,7 +65,7 @@ void main() {
       expect(tds[0].os, testJson[0]['test']['os']);
       expect(tds[0].maxLogSeverity,
           testJson[0]['test']['log_settings']['max_severity']);
-      expect(tds[0].testType, TestType.component);
+      expect(tds[0].testType, TestType.suite);
     });
 
     test('for device tests with no max_severity', () {
@@ -80,7 +80,7 @@ void main() {
             'name': '//src/sys/run_test_component/test:run_test_component_test',
             'os': 'fuchsia',
             'package_url':
-                'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cmx',
+                'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cm',
             'log_settings': {},
           }
         },
@@ -98,12 +98,52 @@ void main() {
       expect(tds[0].cpu, testJson[0]['test']['cpu']);
       expect(tds[0].os, testJson[0]['test']['os']);
       expect(tds[0].maxLogSeverity, null);
-      expect(tds[0].testType, TestType.component);
+      expect(tds[0].testType, TestType.suite);
     });
 
     test('for device tests with no log_settings', () {
       TestsManifestReader tr = TestsManifestReader();
       List<dynamic> testJson = [
+        {
+          'environments': [],
+          'test': {
+            'cpu': 'arm64',
+            'path':
+                '/pkgfs/packages/run_test_component_test/0/test/run_test_component_test',
+            'name': '//src/sys/run_test_component/test:run_test_component_test',
+            'os': 'fuchsia',
+            'package_url':
+                'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cm',
+          }
+        },
+      ];
+      List<TestDefinition> tds = tr.parseManifest(
+        testJson: testJson,
+        buildDir: FakeFxEnv.shared.outputDir,
+        fxLocation: FakeFxEnv.shared.fx,
+      );
+      expect(tds, hasLength(1));
+      expect(tds[0].packageUrl.toString(), testJson[0]['test']['package_url']);
+      expect(tds[0].runtimeDeps, '');
+      expect(tds[0].path, testJson[0]['test']['path']);
+      expect(tds[0].name, testJson[0]['test']['name']);
+      expect(tds[0].cpu, testJson[0]['test']['cpu']);
+      expect(tds[0].os, testJson[0]['test']['os']);
+      expect(tds[0].maxLogSeverity, null);
+      expect(tds[0].testType, TestType.suite);
+    });
+
+    test('for unsupported tests', () {
+      TestsManifestReader tr = TestsManifestReader();
+      List<dynamic> testJson = [
+        {
+          'environments': [],
+          'test': {
+            'cpu': 'arm64',
+            'name': '//src/sys/run_test_component/test:run_test_component_test',
+            'os': 'fuchsia',
+          }
+        },
         {
           'environments': [],
           'test': {
@@ -122,37 +162,10 @@ void main() {
         buildDir: FakeFxEnv.shared.outputDir,
         fxLocation: FakeFxEnv.shared.fx,
       );
-      expect(tds, hasLength(1));
-      expect(tds[0].packageUrl.toString(), testJson[0]['test']['package_url']);
-      expect(tds[0].runtimeDeps, '');
-      expect(tds[0].path, testJson[0]['test']['path']);
-      expect(tds[0].name, testJson[0]['test']['name']);
-      expect(tds[0].cpu, testJson[0]['test']['cpu']);
-      expect(tds[0].os, testJson[0]['test']['os']);
-      expect(tds[0].maxLogSeverity, null);
-      expect(tds[0].testType, TestType.component);
-    });
-
-    test('for unsupported tests', () {
-      TestsManifestReader tr = TestsManifestReader();
-      List<dynamic> testJson = [
-        {
-          'environments': [],
-          'test': {
-            'cpu': 'arm64',
-            'name': '//src/sys/run_test_component/test:run_test_component_test',
-            'os': 'fuchsia',
-          }
-        },
-      ];
-      List<TestDefinition> tds = tr.parseManifest(
-        testJson: testJson,
-        buildDir: FakeFxEnv.shared.outputDir,
-        fxLocation: FakeFxEnv.shared.fx,
-      );
-      expect(tds, hasLength(1));
+      expect(tds, hasLength(2));
       expect(tds[0].path, '');
       expect(tds[0].testType, TestType.unsupported);
+      expect(tds[1].testType, TestType.unsupportedDeviceTest);
     });
 
     test('for unsupported device tests', () {
@@ -184,13 +197,6 @@ void main() {
     void _ignoreEvents(TestEvent _) {}
     TestsManifestReader tr = TestsManifestReader();
     List<TestDefinition> testDefinitions = [
-      TestDefinition(
-        buildDir: FakeFxEnv.shared.outputDir,
-        os: 'fuchsia',
-        packageUrl: PackageUrl.fromString(
-            'fuchsia-pkg://fuchsia.com/a_fancy_package#meta/test_component_1.cmx'),
-        name: 'device_test_v1',
-      ),
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
@@ -266,16 +272,16 @@ void main() {
     test('when the --exact flag is passed for a test packageUrl', () {
       // --exact correctly catches exact packageUrl matches
       ParsedManifest parsedManifest = parseFromArgs(args: [
-        'fuchsia-pkg://fuchsia.com/a_fancy_package#meta/test_component_1.cmx',
+        'fuchsia-pkg://fuchsia.com/another_package#meta/test_component_2.cm',
         '--exact'
       ]);
       expect(parsedManifest.testBundles, hasLength(1));
       expect(
-          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v1');
+          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v2');
 
       // --exact kills partial packageUrl matches
       parsedManifest = parseFromArgs(
-          args: ['fuchsia-pkg://fuchsia.com/a_fancy_package', '--exact']);
+          args: ['fuchsia-pkg://fuchsia.com/another_package', '--exact']);
       expect(parsedManifest.testBundles, hasLength(0));
     });
 
@@ -289,32 +295,32 @@ void main() {
     test('when the -d flag is passed', () {
       ParsedManifest parsedManifest = parseFromArgs(
         args: [
-          'fuchsia-pkg://fuchsia.com/a_fancy_package#meta/test_component_1.cmx',
+          'fuchsia-pkg://fuchsia.com/another_package#meta/test_component_2.cm',
           '--device'
         ],
       );
       expect(parsedManifest.testBundles, hasLength(1));
       expect(
-          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v1');
+          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v2');
     });
 
     test('when no flags are passed', () {
       ParsedManifest parsedManifest = parseFromArgs();
-      expect(parsedManifest.testBundles, hasLength(3));
+      expect(parsedManifest.testBundles, hasLength(2));
     });
 
     test('when packageUrl.resourcePath is matched', () {
       ParsedManifest parsedManifest =
-          parseFromArgs(args: ['test_component_1.cmx']);
+          parseFromArgs(args: ['test_component_2.cm']);
       expect(parsedManifest.testBundles, hasLength(1));
       expect(
-          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v1');
+          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v2');
     });
     test('when packageUrl.rawResource is matched', () {
-      ParsedManifest parsedManifest = parseFromArgs(args: ['test_component_1']);
+      ParsedManifest parsedManifest = parseFromArgs(args: ['test_component_2']);
       expect(parsedManifest.testBundles, hasLength(1));
       expect(
-          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v1');
+          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v2');
     });
 
     test('when packageUrl.resourcePath are not components', () {
@@ -342,7 +348,7 @@ void main() {
 
     test('when packageUrl.packageName is matched', () {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(
-        rawArgs: ['a_fancy_package'],
+        rawArgs: ['another_package'],
         fxEnv: FakeFxEnv.shared,
       );
       var cmd = FuchsiaTestCommand.fromConfig(
@@ -357,7 +363,7 @@ void main() {
       );
       expect(parsedManifest.testBundles, hasLength(1));
       expect(
-          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v1');
+          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v2');
     });
 
     test(
@@ -427,9 +433,10 @@ void main() {
         ..addAll([
           TestDefinition(
             buildDir: FakeFxEnv.shared.outputDir,
-            name: 'awesome device test',
             os: 'fuchsia',
-            path: '/pkgfs/stuff',
+            packageUrl: PackageUrl.fromString(
+                'fuchsia-pkg://fuchsia.com/another_package#meta/test_component_3.cm'),
+            name: 'device_test_3',
           ),
         ]);
       var cmd = FuchsiaTestCommand.fromConfig(
@@ -460,7 +467,7 @@ void main() {
 
     test('when some supplied arguments match', () {
       ParsedManifest parsedManifest =
-          parseFromArgs(args: ['a_fancy_package', 'no-match']);
+          parseFromArgs(args: ['another_package', 'no-match']);
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.unusedConfigs, hasLength(1));
       expect(parsedManifest.unusedConfigs?[0].testNameGroup,
@@ -469,7 +476,7 @@ void main() {
 
     test('when multiple arguments match the same test', () {
       ParsedManifest parsedManifest =
-          parseFromArgs(args: ['a_fancy_package', 'test_component_1']);
+          parseFromArgs(args: ['another_package', 'test_component_2']);
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.unusedConfigs, hasLength(0));
     });
@@ -568,21 +575,21 @@ void main() {
         buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
         packageUrl: PackageUrl.fromString(
-            'fuchsia-pkg://fuchsia.com/pkg1#meta/test1.cmx'),
+            'fuchsia-pkg://fuchsia.com/pkg1#meta/test1.cm'),
         name: 'pkg 1 test 1',
       ),
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
         packageUrl:
-            PackageUrl.fromString('fuchsia-pkg://fuchsia.com/pkg1#test2.cmx'),
+            PackageUrl.fromString('fuchsia-pkg://fuchsia.com/pkg1#test2.cm'),
         name: 'pkg 1 test 2',
       ),
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
         packageUrl:
-            PackageUrl.fromString('fuchsia-pkg://fuchsia.com/pkg2#test1.cmx'),
+            PackageUrl.fromString('fuchsia-pkg://fuchsia.com/pkg2#test1.cm'),
         name: 'pkg 2 test 1',
         path: '//gnsubtree',
       ),

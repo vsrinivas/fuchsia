@@ -23,8 +23,6 @@ class Flags {
   /// The maximum number of tests to run. If 0, all tests will be executed.
   final int limit;
 
-  /// The realm name to run the test inside of. If null, a random name is used.
-  final String? realm;
   final String? minSeverityLogs;
   final bool allOutput;
   final bool shouldRebuild;
@@ -62,7 +60,6 @@ class Flags {
     this.dryRun = false,
     this.isVerbose = false,
     this.limit = 0,
-    this.realm,
     this.minSeverityLogs,
     this.allOutput = false,
     this.e2e = false,
@@ -95,9 +92,16 @@ class Flags {
   });
 
   factory Flags.fromArgResults(ArgResults argResults) {
+    // Attempt to parse flags that are int but are stored as string
+    // to ensure they are formed correctly.
     int.parse(argResults['count'] ?? '0');
     int.parse(argResults['timeout'] ?? '0');
     int.parse(argResults['parallel'] ?? '0');
+
+    if (argResults['realm'] != null) {
+      throw InvalidOption('--realm is a no-op and will soon be removed.\n'
+          'Please remove it from your invocation');
+    }
     return Flags(
         allOutput: argResults['output'],
         dryRun: argResults['info'] || argResults['dry'],
@@ -110,7 +114,6 @@ class Flags {
         logPath: argResults['logpath'],
         matchLength:
             argResults['exact'] ? MatchLength.full : MatchLength.partial,
-        realm: argResults['realm'],
         minSeverityLogs: argResults['min-severity-logs'],
         simpleOutput: argResults['simple'],
         shouldFailFast: argResults['fail'],
@@ -149,7 +152,6 @@ class Flags {
   limit: $limit
   logPath: $logPath,
   matchLength: ${matchLength.toString()},
-  realm: $realm
   min-severity-logs: $minSeverityLogs,
   shouldFailFast: $shouldFailFast
   simpleOutput: $simpleOutput,
@@ -251,14 +253,6 @@ class TestsConfig {
     );
     Flags flags = Flags.fromArgResults(_testArguments.parsedArgs);
 
-    var v1runnerTokens = <String>[];
-    if (flags.realm != null) {
-      v1runnerTokens.add('--realm-label=${flags.realm}');
-    }
-    if (flags.minSeverityLogs != null) {
-      v1runnerTokens.add('--min-severity-logs=${flags.minSeverityLogs}');
-    }
-
     var v2runnerTokens = <String>[];
     var v2dynamicTokens = <DynamicRunnerToken>[];
 
@@ -308,12 +302,8 @@ class TestsConfig {
     return TestsConfig(
       flags: flags,
       fxEnv: fxEnv,
-      runnerTokens: {
-        TestType.component: v1runnerTokens,
-        TestType.suite: v2runnerTokens
-      },
+      runnerTokens: {TestType.suite: v2runnerTokens},
       dynamicRunnerTokens: {
-        TestType.component: [],
         TestType.suite: v2dynamicTokens,
       },
       testArguments: _testArguments,

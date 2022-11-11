@@ -104,10 +104,10 @@ class TestDefinition {
     } else if (packageUrl != null) {
       // The order of `component` / `suite` does not currently matter
 
-      // .cmx tests are considered components
       if (packageUrl!.fullComponentName?.endsWith('.cmx') ?? false) {
-        return TestType.component;
-        // .cm tests are considered suites
+        // We don't support cmx anymore, return unsupported explicitly
+        // for a clearer message than malformed
+        return TestType.unsupportedDeviceTest;
       } else if (packageUrl!.fullComponentName?.endsWith('.cm') ?? false) {
         return TestType.suite;
       }
@@ -145,15 +145,6 @@ class TestDefinition {
     bool useRunTestSuiteForV2 = false,
   }) {
     switch (testType) {
-      case TestType.component:
-        List<String> flags = [];
-        if (timeoutSecondsOverride != null) {
-          flags.addAll(['--timeout=$timeoutSecondsOverride']);
-        } else if (timeoutSeconds != null) {
-          flags.addAll(['--timeout=$timeoutSeconds']);
-        }
-        return ExecutionHandle.component(decoratedPackageUrl.toString(), os,
-            flags: flags);
       case TestType.suite:
         List<String> flags = [];
         if (parallelOverride != null) {
