@@ -266,7 +266,7 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 	if flags.imageDeps || flags.hermeticDeps || flags.ffxDeps {
 		for _, s := range shards {
 			if flags.ffxDeps {
-				if err := testsharder.AddFFXDeps(s, flags.buildDir, flags.pave); err != nil {
+				if err := testsharder.AddFFXDeps(s, flags.buildDir, m.Images(), flags.pave); err != nil {
 					return err
 				}
 			}

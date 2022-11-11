@@ -38,9 +38,10 @@ func TestAddFFXDeps(t *testing.T) {
 			want:       baseDeps,
 		},
 		{
-			name:       "NUC deps",
+			name:       "NUC bootloader boot deps",
 			targetCPU:  "x64",
 			deviceType: "NUC",
+			want:       []string{"zircon-a.zbi", "zircon-a.vbmeta"},
 		},
 		{
 			name:       "AEMU x64 deps",
@@ -74,7 +75,11 @@ func TestAddFFXDeps(t *testing.T) {
 				},
 				Tests: []Test{{Test: build.Test{CPU: tc.targetCPU}}},
 			}
-			if err := AddFFXDeps(s, buildDir, false); err != nil {
+			if err := AddFFXDeps(s, buildDir, []build.Image{
+				{Name: "zircon-a", Path: "zircon-a.zbi", Type: "zbi"},
+				{Name: "zircon-a", Path: "zircon-a.vbmeta", Type: "vbmeta"},
+				{Name: "fuchsia", Path: "fuchsia.zbi", Type: "zbi"},
+			}, false); err != nil {
 				t.Errorf("failed to add ffx deps: %s", err)
 			}
 			sort.Strings(tc.want)

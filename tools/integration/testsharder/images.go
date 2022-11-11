@@ -57,7 +57,7 @@ func isUsedForTesting(s *Shard, image build.Image, pave bool) bool {
 	}
 	if s.Env.IsEmu {
 		// This provisions the images used by EMU targets in botanist:
-		// https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/botanist/target/qemu.go?q=zbi_zircon
+		// https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/botanist/targets/qemu.go?q=zbi_zircon
 		return image.Name == "qemu-kernel" || image.Name == "storage-full" || image.Name == "zircon-a"
 	}
 	if isFlashingDep(image) {
