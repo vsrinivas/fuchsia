@@ -85,7 +85,7 @@ zx_status_t MkfsWorker::GetDeviceInfo() {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (info.flags & fuchsia_hardware_block::wire::kFlagReadonly) {
+  if (info.flags & static_cast<uint32_t>(fuchsia_hardware_block::wire::Flag::kReadonly)) {
     std::cerr << "Error: Failed to format f2fs: read only block device" << std::endl;
     return ZX_ERR_INVALID_ARGS;
   }

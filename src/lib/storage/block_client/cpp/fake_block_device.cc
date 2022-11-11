@@ -25,7 +25,7 @@ FakeBlockDevice::FakeBlockDevice(const FakeBlockDevice::Config& config)
   ZX_ASSERT(max_transfer_size_ == fuchsia_hardware_block::wire::kMaxTransferUnbounded ||
             max_transfer_size_ % block_size_ == 0);
   if (config.supports_trim) {
-    block_info_flags_ |= fuchsia_hardware_block::wire::kFlagTrimSupport;
+    block_info_flags_ |= fuchsia_hardware_block::wire::Flag::kTrimSupport;
   }
 }
 
@@ -60,7 +60,7 @@ void FakeBlockDevice::ResetBlockCounts() {
   write_block_count_ = 0;
 }
 
-void FakeBlockDevice::SetInfoFlags(uint32_t flags) {
+void FakeBlockDevice::SetInfoFlags(fuchsia_hardware_block::wire::Flag flags) {
   fbl::AutoLock lock(&lock_);
   block_info_flags_ = flags;
 }
@@ -189,7 +189,7 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
       }
       case BLOCKIO_TRIM:
         UpdateStats(false, start_tick, requests[i]);
-        if (!(block_info_flags_ & fuchsia_hardware_block::wire::kFlagTrimSupport)) {
+        if (!(block_info_flags_ & fuchsia_hardware_block::wire::Flag::kTrimSupport)) {
           return ZX_ERR_NOT_SUPPORTED;
         }
         if (requests[i].vmoid != BLOCK_VMOID_INVALID) {
@@ -217,7 +217,7 @@ zx_status_t FakeBlockDevice::BlockGetInfo(fuchsia_hardware_block::wire::BlockInf
   fbl::AutoLock lock(&lock_);
   out_info->block_count = block_count_;
   out_info->block_size = block_size_;
-  out_info->flags = block_info_flags_;
+  out_info->flags = static_cast<uint32_t>(block_info_flags_);
   out_info->max_transfer_size = max_transfer_size_;
   return ZX_OK;
 }

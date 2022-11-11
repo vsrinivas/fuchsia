@@ -30,7 +30,7 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
 // Formatting filesystems should fail on devices that cannot be written.
 TEST(FormatFilesystemTest, CannotFormatReadOnlyDevice) {
   auto device = std::make_unique<FakeBlockDevice>(1 << 20, 512);
-  device->SetInfoFlags(fuchsia_hardware_block::wire::kFlagReadonly);
+  device->SetInfoFlags(fuchsia_hardware_block::wire::Flag::kReadonly);
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED, FormatFilesystem(device.get()));
 }
 

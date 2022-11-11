@@ -75,7 +75,7 @@ class FakeBlockDevice : public BlockDevice {
   uint64_t GetWriteBlockCount() const;
   void ResetBlockCounts();
 
-  void SetInfoFlags(uint32_t flags);
+  void SetInfoFlags(fuchsia_hardware_block::wire::Flag flags);
   void SetBlockCount(uint64_t block_count);
   void SetBlockSize(uint32_t block_size);
   bool IsRegistered(vmoid_t vmoid) const;
@@ -139,7 +139,7 @@ class FakeBlockDevice : public BlockDevice {
 
   uint64_t block_count_ __TA_GUARDED(lock_) = 0;
   uint32_t block_size_ __TA_GUARDED(lock_) = 0;
-  uint32_t block_info_flags_ __TA_GUARDED(lock_) = 0;
+  fuchsia_hardware_block::wire::Flag block_info_flags_ __TA_GUARDED(lock_) = {};
   uint32_t max_transfer_size_ __TA_GUARDED(lock_) = 0;
   std::map<vmoid_t, zx::vmo> vmos_ __TA_GUARDED(lock_);
   zx::vmo block_device_ __TA_GUARDED(lock_);

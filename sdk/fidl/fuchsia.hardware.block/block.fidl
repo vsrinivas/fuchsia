@@ -7,17 +7,19 @@ using fuchsia.io;
 using zx;
 using fuchsia.storage.metrics as storage_metrics;
 
-/// All writes to the block device will fail.
-const FLAG_READONLY uint32 = 0x00000001;
+type Flag = strict bits : uint32 {
+    /// All writes to the block device will fail.
+    READONLY = 0x00000001;
 
-/// The block device may be removed from the device during operation.
-const FLAG_REMOVABLE uint32 = 0x00000002;
+    /// The block device may be removed from the device during operation.
+    REMOVABLE = 0x00000002;
 
-/// The device has a bootdata partition map.
-const FLAG_BOOTPART uint32 = 0x00000004;
+    /// The device has a bootdata partition map.
+    BOOTPART = 0x00000004;
 
-/// The device provides trim support.
-const FLAG_TRIM_SUPPORT uint32 = 0x00000008;
+    /// The device provides trim support.
+    TRIM_SUPPORT = 0x00000008;
+};
 
 /// The maximum value for a transfer size, identifying that there
 /// effectively exists no maximum for a single operation.
@@ -36,7 +38,7 @@ type BlockInfo = struct {
     /// Set to MAX_TRANSFER_UNBOUNDED if no such maximum exists.
     max_transfer_size uint32;
 
-    /// Identifiers about the device; refer to the "FLAG_*" documentation above.
+    /// Identifiers about the device.
     flags uint32;
 
     reserved uint32;

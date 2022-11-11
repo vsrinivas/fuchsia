@@ -41,7 +41,7 @@ void CheckDefaultJournalBlocks(std::unique_ptr<BlockDevice> device) {
 // Formatting filesystems should fail on devices that cannot be written.
 TEST(FormatFilesystemTest, CannotFormatReadOnlyDevice) {
   auto device = std::make_unique<FakeBlockDevice>(1 << 20, 512);
-  device->SetInfoFlags(fuchsia_hardware_block::wire::kFlagReadonly);
+  device->SetInfoFlags(fuchsia_hardware_block::wire::Flag::kReadonly);
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED, FormatFilesystem(device.get(), FilesystemOptions{}));
 }
 
@@ -226,7 +226,7 @@ TEST(FormatFilesystemTest, DeviceNotWritableAutoConvertReadonly) {
   const uint32_t kBlockSize = kBlobfsBlockSize;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
   ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
-  device->SetInfoFlags(fuchsia_hardware_block::wire::kFlagReadonly);
+  device->SetInfoFlags(fuchsia_hardware_block::wire::Flag::kReadonly);
 
   MountOptions mount_options = {};
   mount_options.writability = Writability::Writable;
@@ -243,7 +243,7 @@ TEST(FormatFilesystemTest, FormatDeviceWithJournalCannotAutoConvertReadonly) {
   const uint32_t kBlockSize = kBlobfsBlockSize;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
   ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
-  device->SetInfoFlags(fuchsia_hardware_block::wire::kFlagReadonly);
+  device->SetInfoFlags(fuchsia_hardware_block::wire::Flag::kReadonly);
 
   MountOptions options = {};
   options.writability = Writability::Writable;

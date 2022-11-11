@@ -270,7 +270,7 @@ zx::result<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::Init
       return zx::error(response.status);
     }
 
-    if ((response.info->flags & block::wire::kFlagRemovable) != 0) {
+    if ((response.info->flags & static_cast<uint32_t>(block::wire::Flag::kRemovable)) != 0) {
       continue;
     }
 

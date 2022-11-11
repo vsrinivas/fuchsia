@@ -44,7 +44,7 @@ TEST(FakeBlockDeviceTest, NonEmptyDevice) {
   ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
   EXPECT_EQ(kBlockCountDefault, info.block_count);
   EXPECT_EQ(kBlockSizeDefault, info.block_size);
-  EXPECT_TRUE(info.flags & fuchsia_hardware_block::wire::kFlagTrimSupport);
+  EXPECT_TRUE(info.flags & static_cast<uint32_t>(fuchsia_hardware_block::wire::Flag::kTrimSupport));
   EXPECT_EQ(kBlockCountDefault * 8, info.max_transfer_size);
 }
 

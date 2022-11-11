@@ -52,7 +52,8 @@ zx::result<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockD
 
   CreateBcacheResult result{
       .bcache = std::move(bcache_or.value()),
-      .is_read_only = static_cast<bool>(info.flags & fuchsia_hardware_block::wire::kFlagReadonly),
+      .is_read_only = static_cast<bool>(
+          info.flags & static_cast<uint32_t>(fuchsia_hardware_block::wire::Flag::kReadonly)),
   };
   return zx::ok(std::move(result));
 }

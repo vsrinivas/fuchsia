@@ -10,13 +10,6 @@ using zx;
 // - //src/lib/storage/block_client/rust/src/lib.rs;
 // - //zircon/public/system/public/zircon/device/block.h.
 
-const BLOCK_FLAG_READONLY uint32 = 0x00000001;
-const BLOCK_FLAG_REMOVABLE uint32 = 0x00000002;
-/// Block device has bootdata partition map provided by device metadata.
-const BLOCK_FLAG_BOOTPART uint32 = 0x00000004;
-/// Flag advertising trim support.
-const BLOCK_FLAG_TRIM_SUPPORT uint32 = 0x00000008;
-
 const BLOCK_MAX_TRANSFER_UNBOUNDED uint32 = 0xFFFFFFFF;
 
 type BlockInfo = struct {
@@ -30,7 +23,21 @@ type BlockInfo = struct {
     /// there is no restriction.
     max_transfer_size uint32;
 
-    flags uint32;
+    /// Identifiers about the device.
+    flags @generated_name("BlockFlag") strict bits : uint32 {
+        /// All writes to the block device will fail.
+        READONLY = 0x00000001;
+
+        /// The block device may be removed from the device during operation.
+        REMOVABLE = 0x00000002;
+
+        /// The device has a bootdata partition map.
+        BOOTPART = 0x00000004;
+
+        /// The device provides trim support.
+        TRIM_SUPPORT = 0x00000008;
+    };
+
     reserved uint32;
 };
 

@@ -49,7 +49,8 @@ zx::result<std::unique_ptr<Bcache>> CreateBcache(std::unique_ptr<block_client::B
   }
 
   if (out_readonly) {
-    *out_readonly = static_cast<bool>(info.flags & fuchsia_hardware_block::wire::kFlagReadonly);
+    *out_readonly = static_cast<bool>(
+        info.flags & static_cast<uint32_t>(fuchsia_hardware_block::wire::Flag::kReadonly));
   }
 
   return Bcache::Create(std::move(device), block_count, kBlockSize);
@@ -222,7 +223,7 @@ zx_status_t Bcache::RunRequests(const std::vector<storage::BufferedOperation>& o
 
 zx_status_t Bcache::Trim(block_t start, block_t num) {
 #ifdef __Fuchsia__
-  if (!(info_.flags & fuchsia_hardware_block::wire::kFlagTrimSupport)) {
+  if (!(info_.flags & static_cast<uint32_t>(fuchsia_hardware_block::wire::Flag::kTrimSupport))) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
