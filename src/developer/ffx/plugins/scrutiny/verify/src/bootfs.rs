@@ -54,10 +54,10 @@ pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<
         launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
 
     let unscrutinized_dirs = std::collections::HashSet::from([
-        // /blob dir files are unscrutinized, because their presence is dictated
+        // blob dir files are unscrutinized, because their presence is dictated
         // by the boot package index, which itself is scrutinized the same way
         // static_packages is scrutinized.
-        Some(Path::new("/blob")),
+        Some(Path::new("blob")),
     ]);
 
     let bootfs_files: Vec<String> = serde_json::from_str(&scrutiny_output)
