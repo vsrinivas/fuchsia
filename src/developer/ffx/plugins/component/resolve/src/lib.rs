@@ -4,12 +4,15 @@
 
 use {
     anyhow::Result,
-    errors::{ffx_bail, ffx_error},
-    ffx_component::connect_to_lifecycle_controller,
+    errors::ffx_bail,
+    ffx_component::{
+        query::get_cml_moniker_from_query,
+        rcs::{connect_to_lifecycle_controller, connect_to_realm_explorer},
+    },
     ffx_component_resolve_args::ComponentResolveCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::AbsoluteMoniker,
 };
 
 #[ffx_plugin]
@@ -18,16 +21,18 @@ pub async fn resolve(
     cmd: ComponentResolveCommand,
 ) -> Result<()> {
     let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
-    resolve_impl(lifecycle_controller, cmd.moniker, &mut std::io::stdout()).await
+
+    let realm_explorer = connect_to_realm_explorer(&rcs_proxy).await?;
+    let moniker = get_cml_moniker_from_query(&cmd.query, &realm_explorer).await?;
+
+    resolve_impl(lifecycle_controller, moniker, &mut std::io::stdout()).await
 }
 
 async fn resolve_impl<W: std::io::Write>(
     lifecycle_controller: fsys::LifecycleControllerProxy,
-    moniker: String,
+    moniker: AbsoluteMoniker,
     writer: &mut W,
 ) -> Result<()> {
-    let moniker = AbsoluteMoniker::parse_str(&moniker)
-        .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
     writeln!(writer, "Moniker: {}", moniker)?;
     writeln!(writer, "Resolving component instance...")?;
 
@@ -47,7 +52,10 @@ async fn resolve_impl<W: std::io::Write>(
 
 #[cfg(test)]
 mod test {
-    use {super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt};
+    use {
+        super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt,
+        moniker::AbsoluteMonikerBase,
+    };
 
     fn setup_fake_lifecycle_controller(
         expected_moniker: &'static str,
@@ -74,7 +82,7 @@ mod test {
         let lifecycle_controller = setup_fake_lifecycle_controller("./core/ffx-laboratory:test");
         let response = resolve_impl(
             lifecycle_controller,
-            "/core/ffx-laboratory:test".to_string(),
+            AbsoluteMoniker::parse_str("/core/ffx-laboratory:test").unwrap(),
             &mut output,
         )
         .await;

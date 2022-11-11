@@ -8,12 +8,14 @@ use {
     crate::diagnosis::{Analysis, Diagnosis},
     anyhow::{Context, Result},
     errors::{ffx_bail, ffx_error},
+    ffx_component::{
+        query::get_cml_moniker_from_query,
+        rcs::{connect_to_realm_explorer, connect_to_realm_query, connect_to_route_validator},
+    },
     ffx_component_doctor_args::DoctorCommand,
     ffx_core::ffx_plugin,
     ffx_writer::Writer,
-    fidl::Status,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     prettytable::{cell, format::consts::FORMAT_CLEAN, row, Row, Table},
     std::collections::BTreeMap,
     std::io::Write,
@@ -26,26 +28,6 @@ const UNKNOWN_TITLE: &'static str = "Unknown Capability";
 const DEFAULT_SUMMARY_TEXT: &'static str = "N/A";
 const CAPABILITY_COLUMN_WIDTH: usize = 35;
 const SUMMARY_COLUMN_WIDTH: usize = 85;
-
-pub async fn start_proxies(
-    rcs: rc::RemoteControlProxy,
-) -> Result<(fsys::RealmQueryProxy, fsys::RouteValidatorProxy)> {
-    let (realm_query, query_server) = fidl::endpoints::create_proxy::<fsys::RealmQueryMarker>()
-        .context("creating RealmQuery proxy")?;
-    rcs.root_realm_query(query_server)
-        .await?
-        .map_err(|i| Status::ok(i).unwrap_err())
-        .context("opening root RealmQuery")?;
-
-    let (route_validator, validator_server) =
-        fidl::endpoints::create_proxy::<fsys::RouteValidatorMarker>()
-            .context("creating RouteValidator proxy")?;
-    rcs.root_route_validator(validator_server)
-        .await?
-        .map_err(|i| Status::ok(i).unwrap_err())
-        .context("opening root RouteValidator")?;
-    Ok((realm_query, route_validator))
-}
 
 // Create a new table with the given title.
 fn new_table(title: &str) -> Table {
@@ -186,16 +168,16 @@ pub async fn doctor(
     cmd: DoctorCommand,
     #[ffx(machine = Analysis)] mut writer: Writer,
 ) -> Result<()> {
+    let realm_explorer = connect_to_realm_explorer(&rcs).await?;
+    let realm_query = connect_to_realm_query(&rcs).await?;
+    let route_validator = connect_to_route_validator(&rcs).await?;
+
     // Check the moniker.
-    let moniker = AbsoluteMoniker::parse_str(&cmd.moniker)
-        .map_err(|_| ffx_error!("Invalid moniker: {}", &cmd.moniker))?
-        .to_string();
+    let moniker = get_cml_moniker_from_query(&cmd.query, &realm_explorer).await?;
     let rel_moniker = format!(".{}", &moniker);
 
     // Query the Component Manager for information about this instance.
-    writeln!(writer, "Querying component manager for {}", &moniker)?;
-    let (realm_query, route_validator) = start_proxies(rcs).await
-        .map_err(|e| ffx_error!("Error reaching the target: {}\nIs your device/emulator up and shown in `ffx target list`?", e))?;
+    writeln!(writer, "Moniker: {}", &moniker)?;
 
     // Obtain the basic information about the component.
     let (info, state) = match realm_query.get_instance_info(&rel_moniker).await? {

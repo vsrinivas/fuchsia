@@ -7,7 +7,7 @@ use {
     component_debug::capability::{
         find_instances_that_expose_or_use_capability, MatchingInstances,
     },
-    ffx_component::{connect_to_realm_explorer, connect_to_realm_query},
+    ffx_component::rcs::{connect_to_realm_explorer, connect_to_realm_query},
     ffx_component_capability_args::ComponentCapabilityCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc,

@@ -17,6 +17,6 @@ use {argh::FromArgs, ffx_core::ffx_command};
 )]
 pub struct ComponentStartCommand {
     #[argh(positional)]
-    /// A moniker to a component instance
-    pub moniker: String,
+    /// component URL, moniker or instance ID. Partial matches allowed.
+    pub query: String,
 }

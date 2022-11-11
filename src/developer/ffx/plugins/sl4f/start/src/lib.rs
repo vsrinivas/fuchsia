@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     errors::{ffx_bail, ffx_error},
-    ffx_component::{connect_to_lifecycle_controller, verify_fuchsia_pkg_cm_url},
+    ffx_component::{rcs::connect_to_lifecycle_controller, verify_fuchsia_pkg_cm_url},
     ffx_core::ffx_plugin,
     ffx_sl4f_start_args::StartCommand,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,

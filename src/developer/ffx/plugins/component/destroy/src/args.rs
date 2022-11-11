@@ -18,7 +18,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 pub struct DestroyComponentCommand {
     #[argh(positional)]
-    /// moniker of an existing component instance in a collection.
+    /// component URL, moniker or instance ID. Partial matches allowed.
     /// This component instance will be removed from the collection if this command succeeds.
-    pub moniker: String,
+    pub query: String,
 }

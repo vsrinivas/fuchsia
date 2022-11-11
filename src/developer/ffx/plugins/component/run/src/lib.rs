@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     errors::{ffx_bail, ffx_error},
-    ffx_component::connect_to_lifecycle_controller,
+    ffx_component::rcs::connect_to_lifecycle_controller,
     ffx_component_run_args::RunComponentCommand,
     ffx_core::ffx_plugin,
     ffx_log::{log_impl, LogOpts},

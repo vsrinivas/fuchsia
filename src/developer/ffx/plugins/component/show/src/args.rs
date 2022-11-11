@@ -17,10 +17,10 @@ following commands are valid:
     $ ffx component show fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cm
     $ ffx component show meta/brightness_manager.cm
     $ ffx component show brightness_manager",
-    note = "This command supports partial matches over the moniker and URL"
+    note = "This command supports partial matches over the moniker, URL and instance ID"
 )]
 pub struct ComponentShowCommand {
     #[argh(positional)]
-    /// URL or moniker of component instance. Partial matches allowed.
+    /// component URL, moniker or instance ID. Partial matches allowed.
     pub filter: String,
 }

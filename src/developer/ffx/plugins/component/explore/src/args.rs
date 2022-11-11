@@ -40,8 +40,8 @@ The environment also contains the following directories, irrespective of the exp
 
 pub struct ExploreComponentCommand {
     #[argh(positional)]
-    /// moniker of the component instance to explore.
-    pub moniker: String,
+    /// component URL, moniker or instance ID. Partial matches allowed.
+    pub query: String,
 
     #[argh(option)]
     /// URL of a tools package to include in the shell environment.

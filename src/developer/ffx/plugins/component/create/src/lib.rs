@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     errors::ffx_error,
-    ffx_component::connect_to_lifecycle_controller,
+    ffx_component::rcs::connect_to_lifecycle_controller,
     ffx_component_create_args::CreateComponentCommand,
     ffx_component_create_lib::{create_component, IfExists, LIFECYCLE_ERROR_HELP},
     ffx_core::ffx_plugin,

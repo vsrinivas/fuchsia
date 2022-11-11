@@ -19,8 +19,8 @@ This will run checks on the capabilities configuration of the component, checkin
 )]
 pub struct DoctorCommand {
     #[argh(positional)]
-    /// the component's moniker. Example: `/core/appmgr`.
-    pub moniker: String,
+    /// component URL, moniker or instance ID. Partial matches allowed.
+    pub query: String,
 
     #[argh(switch, long = "plain", short = 'p')]
     /// whether or not to display the output without color and wrapping.

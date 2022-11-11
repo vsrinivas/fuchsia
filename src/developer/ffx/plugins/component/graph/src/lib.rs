@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     component_debug::list::{get_all_instances, Instance, InstanceState},
-    ffx_component::{connect_to_realm_explorer, connect_to_realm_query},
+    ffx_component::rcs::{connect_to_realm_explorer, connect_to_realm_query},
     ffx_component_graph_args::{ComponentGraphCommand, GraphOrientation},
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc,

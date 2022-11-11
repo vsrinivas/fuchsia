@@ -17,8 +17,8 @@ use {argh::FromArgs, ffx_core::ffx_command};
 )]
 pub struct ComponentStopCommand {
     #[argh(positional)]
-    /// A moniker to a component instance
-    pub moniker: String,
+    /// component URL, moniker or instance ID. Partial matches allowed.
+    pub query: String,
     #[argh(switch, short = 'r')]
     /// whether or not to stop the component recursively
     pub recursive: bool,

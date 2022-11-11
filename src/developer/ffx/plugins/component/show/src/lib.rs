@@ -7,7 +7,7 @@ use {
     anyhow::Result,
     component_debug::show::{find_instances, Instance, Resolved},
     errors::ffx_bail,
-    ffx_component::{connect_to_realm_explorer, connect_to_realm_query},
+    ffx_component::rcs::{connect_to_realm_explorer, connect_to_realm_query},
     ffx_component_show_args::ComponentShowCommand,
     ffx_core::ffx_plugin,
     ffx_writer::Writer,

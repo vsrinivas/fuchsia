@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, bail, Context, Result},
     chrono::{Local, TimeZone},
     errors::{ffx_bail, ffx_error},
-    ffx_component::connect_to_lifecycle_controller,
+    ffx_component::rcs::connect_to_lifecycle_controller,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_io as fio,
     fuchsia_async::unblock,

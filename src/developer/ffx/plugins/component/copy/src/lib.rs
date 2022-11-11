@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result, component_debug::copy::copy, ffx_component::connect_to_realm_query,
+    anyhow::Result, component_debug::copy::copy, ffx_component::rcs::connect_to_realm_query,
     ffx_component_copy_args::CopyComponentCommand, ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc,
 };

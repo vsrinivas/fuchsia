@@ -5,7 +5,10 @@
 use {
     anyhow::Result,
     errors::{ffx_bail, ffx_error},
-    ffx_component::connect_to_lifecycle_controller,
+    ffx_component::{
+        query::get_cml_moniker_from_query,
+        rcs::{connect_to_lifecycle_controller, connect_to_realm_explorer},
+    },
     ffx_component_destroy_args::DestroyComponentCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
@@ -22,16 +25,20 @@ pub async fn destroy(
     cmd: DestroyComponentCommand,
 ) -> Result<()> {
     let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
-    destroy_impl(lifecycle_controller, cmd.moniker, &mut std::io::stdout()).await
+
+    let realm_explorer = connect_to_realm_explorer(&rcs_proxy).await?;
+    let moniker = get_cml_moniker_from_query(&cmd.query, &realm_explorer).await?;
+
+    destroy_impl(lifecycle_controller, moniker, &mut std::io::stdout()).await
 }
 
 async fn destroy_impl<W: std::io::Write>(
     lifecycle_controller: fsys::LifecycleControllerProxy,
-    moniker: String,
+    moniker: AbsoluteMoniker,
     writer: &mut W,
 ) -> Result<()> {
-    let moniker = AbsoluteMoniker::parse_str(&moniker)
-        .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
+    writeln!(writer, "Moniker: {}", moniker)?;
+
     let parent = moniker
         .parent()
         .ok_or(ffx_error!("Component moniker cannot be the root. {}", MONIKER_ERROR_HELP))?;
@@ -43,7 +50,6 @@ async fn destroy_impl<W: std::io::Write>(
         .ok_or(ffx_error!("Moniker references a static component. {}", MONIKER_ERROR_HELP))?;
     let name = leaf.name();
 
-    writeln!(writer, "Moniker: {}", moniker)?;
     writeln!(writer, "Destroying component instance...")?;
 
     let mut child =
@@ -73,7 +79,10 @@ async fn destroy_impl<W: std::io::Write>(
 
 #[cfg(test)]
 mod test {
-    use {super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt};
+    use {
+        super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt,
+        moniker::AbsoluteMonikerBase,
+    };
 
     fn setup_fake_lifecycle_controller(
         expected_moniker: &'static str,
@@ -110,7 +119,7 @@ mod test {
             setup_fake_lifecycle_controller("./core", "ffx-laboratory", "test");
         let response = destroy_impl(
             lifecycle_controller,
-            "/core/ffx-laboratory:test".to_string(),
+            AbsoluteMoniker::parse_str("/core/ffx-laboratory:test").unwrap(),
             &mut output,
         )
         .await;

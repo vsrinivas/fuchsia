@@ -5,47 +5,11 @@
 use {
     anyhow::Result,
     errors::{ffx_bail, ffx_error},
-    fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
     fuchsia_url::AbsoluteComponentUrl,
-    fuchsia_zircon_status::Status,
 };
 
-/// Obtain the root LifecycleController protocol using the RemoteControl protocol.
-pub async fn connect_to_lifecycle_controller(
-    rcs_proxy: &rc::RemoteControlProxy,
-) -> Result<fsys::LifecycleControllerProxy> {
-    let (lifecycle_controller, server_end) = create_proxy::<fsys::LifecycleControllerMarker>()?;
-    rcs_proxy
-        .root_lifecycle_controller(server_end)
-        .await?
-        .map_err(|i| ffx_error!("Could not open LifecycleController: {}", Status::from_raw(i)))?;
-    Ok(lifecycle_controller)
-}
-
-/// Obtain the root RealmQuery protocol using the RemoteControl protocol.
-pub async fn connect_to_realm_query(
-    rcs_proxy: &rc::RemoteControlProxy,
-) -> Result<fsys::RealmQueryProxy> {
-    let (realm_query, server_end) = create_proxy::<fsys::RealmQueryMarker>()?;
-    rcs_proxy
-        .root_realm_query(server_end)
-        .await?
-        .map_err(|i| ffx_error!("Could not open RealmQuery: {}", Status::from_raw(i)))?;
-    Ok(realm_query)
-}
-
-/// Obtain the root RealmExplorer protocol using the RemoteControl protocol.
-pub async fn connect_to_realm_explorer(
-    rcs_proxy: &rc::RemoteControlProxy,
-) -> Result<fsys::RealmExplorerProxy> {
-    let (realm_explorer, server_end) = create_proxy::<fsys::RealmExplorerMarker>()?;
-    rcs_proxy
-        .root_realm_explorer(server_end)
-        .await?
-        .map_err(|i| ffx_error!("Could not open RealmExplorer: {}", Status::from_raw(i)))?;
-    Ok(realm_explorer)
-}
+pub mod query;
+pub mod rcs;
 
 /// Verifies that `url` can be parsed as a fuchsia-pkg CM URL
 /// Returns the name of the component manifest, if the parsing was successful.

@@ -4,12 +4,15 @@
 
 use {
     anyhow::Result,
-    errors::{ffx_bail, ffx_error},
-    ffx_component::connect_to_lifecycle_controller,
+    errors::ffx_bail,
+    ffx_component::{
+        query::get_cml_moniker_from_query,
+        rcs::{connect_to_lifecycle_controller, connect_to_realm_explorer},
+    },
     ffx_component_start_args::ComponentStartCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::AbsoluteMoniker,
 };
 
 static LIFECYCLE_ERROR_HELP: &'static str = "To learn more, see \
@@ -18,17 +21,19 @@ https://fuchsia.dev/go/components/run-errors";
 #[ffx_plugin()]
 pub async fn start(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentStartCommand) -> Result<()> {
     let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
-    start_impl(lifecycle_controller, cmd.moniker, &mut std::io::stdout()).await?;
+
+    let realm_explorer = connect_to_realm_explorer(&rcs_proxy).await?;
+    let moniker = get_cml_moniker_from_query(&cmd.query, &realm_explorer).await?;
+
+    start_impl(lifecycle_controller, moniker, &mut std::io::stdout()).await?;
     Ok(())
 }
 
 async fn start_impl<W: std::io::Write>(
     lifecycle_controller: fsys::LifecycleControllerProxy,
-    moniker: String,
+    moniker: AbsoluteMoniker,
     writer: &mut W,
 ) -> Result<fsys::StartResult> {
-    let moniker = AbsoluteMoniker::parse_str(&moniker)
-        .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
     writeln!(writer, "Moniker: {}", moniker)?;
 
     // LifecycleController accepts RelativeMonikers only
@@ -65,7 +70,7 @@ async fn start_impl<W: std::io::Write>(
 mod test {
     use {
         super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt,
-        std::io::BufWriter,
+        moniker::AbsoluteMonikerBase,
     };
 
     fn setup_fake_lifecycle_controller(
@@ -95,26 +100,30 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_success() -> Result<()> {
-        let mut output = String::new();
-        let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output = Vec::new();
         let lifecycle_controller =
             setup_fake_lifecycle_controller("./core/ffx-laboratory:test", false);
-        let response =
-            start_impl(lifecycle_controller, "/core/ffx-laboratory:test".to_string(), &mut writer)
-                .await;
+        let response = start_impl(
+            lifecycle_controller,
+            AbsoluteMoniker::parse_str("/core/ffx-laboratory:test").unwrap(),
+            &mut output,
+        )
+        .await;
         assert_eq!(response.unwrap(), fsys::StartResult::Started);
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_already_started() -> Result<()> {
-        let mut output = String::new();
-        let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output = Vec::new();
         let lifecycle_controller =
             setup_fake_lifecycle_controller("./core/ffx-laboratory:test", true);
-        let response =
-            start_impl(lifecycle_controller, "/core/ffx-laboratory:test".to_string(), &mut writer)
-                .await;
+        let response = start_impl(
+            lifecycle_controller,
+            AbsoluteMoniker::parse_str("/core/ffx-laboratory:test").unwrap(),
+            &mut output,
+        )
+        .await;
         assert_eq!(response.unwrap(), fsys::StartResult::AlreadyStarted);
         Ok(())
     }

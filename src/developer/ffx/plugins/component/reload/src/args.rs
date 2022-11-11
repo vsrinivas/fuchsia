@@ -18,6 +18,6 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 pub struct ReloadComponentCommand {
     #[argh(positional)]
-    /// moniker of a component instance or realm
-    pub moniker: String,
+    /// component URL, moniker or instance ID. Partial matches allowed.
+    pub query: String,
 }

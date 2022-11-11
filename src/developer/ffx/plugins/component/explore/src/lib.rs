@@ -6,12 +6,12 @@ use {
     anyhow::{anyhow, Error, Result},
     atty::Stream,
     errors::{ffx_bail, ffx_error},
+    ffx_component::{query::get_cml_moniker_from_query, rcs::connect_to_realm_explorer},
     ffx_component_explore_args::ExploreComponentCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_dash::{DashNamespaceLayout, LauncherError, LauncherEvent, LauncherProxy},
-    fidl_fuchsia_io as fio,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     futures::prelude::*,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::io::{Read, StdoutLock, Write},
     termion::raw::{IntoRawMode, RawTerminal},
 };
@@ -63,9 +63,15 @@ impl Terminal<'_> {
 
 // TODO(https://fxbug.dev/102835): This plugin needs E2E tests.
 #[ffx_plugin(LauncherProxy = "core/debug-dash-launcher:expose:fuchsia.dash.Launcher")]
-pub async fn explore(launcher_proxy: LauncherProxy, cmd: ExploreComponentCommand) -> Result<()> {
-    let moniker = AbsoluteMoniker::parse_str(&cmd.moniker)
-        .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
+pub async fn explore(
+    rcs: rc::RemoteControlProxy,
+    launcher_proxy: LauncherProxy,
+    cmd: ExploreComponentCommand,
+) -> Result<()> {
+    let realm_explorer = connect_to_realm_explorer(&rcs).await?;
+    let moniker = get_cml_moniker_from_query(&cmd.query, &realm_explorer).await?;
+
+    println!("Moniker: {}", moniker);
 
     // LifecycleController accepts RelativeMonikers only.
     let relative_moniker = format!(".{}", moniker.to_string());
