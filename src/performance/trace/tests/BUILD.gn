@@ -418,11 +418,8 @@ fuchsia_test_package("trace_tests_package") {
     ":run_awhile",
     ":shared_provider_app",
     ":two_providers_one_engine",
-    "//src/performance/cpuperf_provider:component",
-    "//src/performance/ktrace_provider:component",
-    "//src/performance/perfetto-bridge:component",
     "//src/performance/trace:bin",
-    "//src/performance/trace_manager:component",
+    "//src/performance/trace_manager:component_hermetic",
   ]
   test_specs = {
     log_settings = {

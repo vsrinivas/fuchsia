@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 {
     include: [
-        "//sdk/lib/sys/testing/system-test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -42,11 +41,7 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.tracing.kernel.Controller",
-                "fuchsia.tracing.kernel.Reader",
-            ],
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: "#trace_manager",
         },
@@ -54,11 +49,6 @@
             protocol: "fuchsia.tracing.controller.Controller",
             from: "#trace_manager",
             to: "#trace",
-        },
-        {
-            directory: "sys",
-            from: "parent",
-            to: "#trace_manager",
         },
     ],
 }
