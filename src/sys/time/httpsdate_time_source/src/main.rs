@@ -63,8 +63,31 @@ pub struct SampleConfig {
 
 impl From<httpsdate_config::Config> for Config {
     fn from(source: httpsdate_config::Config) -> Self {
-        // TODO(fxb/114459): populate from httpsdate_config::Config.
-        let sample_config_by_urgency = HashMap::new();
+        let sample_config_by_urgency = [
+            (
+                Urgency::Low,
+                SampleConfig {
+                    max_attempts: source.max_attempts_urgency_low,
+                    num_polls: source.num_polls_urgency_low,
+                },
+            ),
+            (
+                Urgency::Medium,
+                SampleConfig {
+                    max_attempts: source.max_attempts_urgency_medium,
+                    num_polls: source.num_polls_urgency_medium,
+                },
+            ),
+            (
+                Urgency::High,
+                SampleConfig {
+                    max_attempts: source.max_attempts_urgency_high,
+                    num_polls: source.num_polls_urgency_high,
+                },
+            ),
+        ]
+        .into_iter()
+        .collect();
         Config {
             https_timeout: zx::Duration::from_seconds(source.https_timeout_sec.into()),
             standard_deviation_bound_percentage: source.standard_deviation_bound_percentage,

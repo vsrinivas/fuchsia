@@ -13,4 +13,23 @@
 
     // By default, `fuchsia.time.external.PushSource` is provided.
     use_pull_api: false,
+
+    // Initial value.
+    max_attempts_urgency_low: 3,
+
+    // As per estimations, increasing further wouldn't bring sizeable benefits.
+    num_polls_urgency_low: 7,
+
+    // Initial value.
+    max_attempts_urgency_medium: 3,
+
+    // Fastest sample that gives a bound size within desired target range based on a typical
+    // oscillator tolerance.
+    num_polls_urgency_medium: 5,
+
+    // Initial value.
+    max_attempts_urgency_high: 3,
+
+    // Fastest possible sample that gives an acceptable worst case slew duration.
+    num_polls_urgency_high: 3,
 }

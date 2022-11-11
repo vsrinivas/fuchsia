@@ -49,5 +49,23 @@
         // If enabled, `fuchsia.time.external.PullSource` is provided instead of
         // `fuchsia.time.external.PushSource`.
         use_pull_api: { type: "bool" },
+
+        // Max number fetch attempts for `fuchsia.time.external.Urgency.Low`.
+        max_attempts_urgency_low: { type: "uint32" },
+
+        // Number of polls per sample for `fuchsia.time.external.Urgency.Low`.
+        num_polls_urgency_low: { type: "uint32" },
+
+        // Max number fetch attempts for `fuchsia.time.external.Urgency.Medium`.
+        max_attempts_urgency_medium: { type: "uint32" },
+
+        // Number of polls per sample for `fuchsia.time.external.Urgency.Medium`.
+        num_polls_urgency_medium: { type: "uint32" },
+
+        // Max number fetch attempts for `fuchsia.time.external.Urgency.High`.
+        max_attempts_urgency_high: { type: "uint32" },
+
+        // Number of polls per sample for `fuchsia.time.external.Urgency.High`.
+        num_polls_urgency_high: { type: "uint32" },
     },
 }
