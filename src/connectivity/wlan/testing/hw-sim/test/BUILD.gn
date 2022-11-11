@@ -65,12 +65,6 @@ fuchsia_component("handle-tx-event-hooks") {
   deps = [ "handle_tx_event_hooks" ]
 }
 
-fuchsia_component("multi-ifaces") {
-  testonly = true
-  manifest = "meta/multi_ifaces.cml"
-  deps = [ "multi_ifaces" ]
-}
-
 fuchsia_component("multiple-clients-ap") {
   testonly = true
   manifest = "meta/multiple_clients_ap.cml"
@@ -142,7 +136,6 @@ hw_sim_test_components_for_all_privacies = [
   ":connect-with-wrong-credential-type",
   ":ethernet-tx-rx",
   ":handle-tx-event-hooks",
-  ":multi-ifaces",
   ":multiple-clients-ap",
   ":open-ap-connect",
   ":reconnect-to-wpa2-network",

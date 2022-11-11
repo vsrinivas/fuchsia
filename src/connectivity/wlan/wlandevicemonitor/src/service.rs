@@ -1455,6 +1455,100 @@ mod tests {
     }
 
     #[test]
+    fn create_multiple_ifaces() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let mut test_values = test_setup();
+        let service_fut = serve_monitor_requests(
+            test_values.monitor_req_stream,
+            test_values.phys.clone(),
+            test_values.ifaces,
+            test_values.watcher_service,
+            test_values.dev_proxy.clone(),
+            test_values.new_iface_sink,
+        );
+        pin_mut!(service_fut);
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+        // Request the list of available ifaces.
+        let list_fut = test_values.monitor_proxy.list_ifaces();
+        pin_mut!(list_fut);
+        assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Pending);
+
+        // Progress the service loop.
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+        // The future to list the ifaces should complete and no ifaces should be present.
+        assert_variant!(exec.run_until_stalled(&mut list_fut),Poll::Ready(Ok(ifaces)) => {
+            assert!(ifaces.is_empty())
+        });
+
+        let (phy, mut phy_stream) = fake_phy();
+        let phy_id = 10;
+        test_values.phys.insert(phy_id, phy);
+
+        for (sta_addr, phy_assigned_iface_id, sme_assigned_iface_id) in
+            [([0x0, 0x1, 0x2, 0x3, 0x4, 0x5], 123, 1), ([0x6, 0x7, 0x8, 0x9, 0xa, 0xb], 0x123, 2)]
+        {
+            let create_iface_fut =
+                test_values.monitor_proxy.create_iface(&mut fidl_svc::CreateIfaceRequest {
+                    phy_id,
+                    role: fidl_wlan_common::WlanMacRole::Client,
+                    sta_addr,
+                });
+            pin_mut!(create_iface_fut);
+            assert_variant!(exec.run_until_stalled(&mut create_iface_fut), Poll::Pending);
+            assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+            // Validate the PHY request
+            assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::CreateIface { req, responder }))) => {
+                assert_eq!(fidl_wlan_common::WlanMacRole::Client, req.role);
+                assert_eq!(req.init_sta_addr, sta_addr);
+                responder.send(&mut Ok(phy_assigned_iface_id)).expect("failed to send iface id");
+            });
+
+            // Progress the interface creation process so that the new MLME channel is passed to the
+            // device service.
+            assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+            assert_variant!(
+            exec.run_until_stalled(&mut test_values.dev_req_stream.next()),
+            Poll::Ready(Some(Ok(fidl_svc::DeviceServiceRequest::AddIface { req, responder}))) => {
+                assert_eq!(req.phy_id, phy_id);
+                assert_eq!(req.assigned_iface_id, phy_assigned_iface_id);
+                responder.send(
+                    zx::Status::OK.into_raw(),
+                    Some(&mut fidl_svc::AddIfaceResponse { iface_id: sme_assigned_iface_id })).expect("failed to send AddIface response");
+            });
+
+            // The original future should resolve into a response.
+            assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+            assert_variant!(exec.run_until_stalled(&mut create_iface_fut),
+            Poll::Ready(Ok((zx::sys::ZX_OK, Some(response)))) => {
+                assert_eq!(sme_assigned_iface_id, response.iface_id);
+            });
+
+            assert_variant!(
+                exec.run_until_stalled(&mut test_values.new_iface_stream.next()),
+                Poll::Ready(Some(NewIface { .. })),
+            );
+        }
+
+        // Request the list of available ifaces.
+        let list_fut = test_values.monitor_proxy.list_ifaces();
+        pin_mut!(list_fut);
+        assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Pending);
+
+        // Progress the service loop.
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+        // The future to list the ifaces should complete and the iface should be present.
+        assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Ready(Ok(mut ifaces)) => {
+            ifaces.sort();
+            assert_eq!(vec![1, 2], ifaces);
+        });
+    }
+
+    #[test]
     fn create_iface_on_invalid_phy_id() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let test_values = test_setup();
