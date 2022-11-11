@@ -24,6 +24,7 @@
 #include "src/storage/blobfs/test/blobfs_test_setup.h"
 #include "src/storage/blobfs/test/test_scoped_vnode_open.h"
 #include "src/storage/blobfs/transaction.h"
+#include "zircon/time.h"
 
 namespace blobfs {
 namespace {
@@ -408,6 +409,13 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
   ASSERT_EQ(root->Unlink(infos[5]->path, false), ZX_OK);
   ASSERT_EQ(root->Unlink(infos[6]->path, false), ZX_OK);
 
+  // Ensure that all reserved extents get returned.
+  {
+    sync_completion_t sync_done;
+    root->Sync([&sync_done](zx_status_t) { sync_completion_signal(&sync_done); });
+    sync_completion_wait(&sync_done, ZX_TIME_INFINITE);
+  }
+
   {
     FragmentationStats expected{};
     expected.total_nodes = setup.blobfs()->Info().inode_count;
@@ -441,13 +449,15 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     expected.total_nodes = setup.blobfs()->Info().inode_count;
     expected.files_in_use = kSmallBlobCount - kBlobsDeleted + 1;
     expected.extent_containers_in_use = 1;
-    expected.free_fragments[2] = 1;
-    expected.free_fragments[last_free_fragment - kLargeFileNumBlocks] = 1;
+    // The end gets pushed out by the new blob minus the 4 blocks it took from the old blobs.
+    expected.free_fragments[last_free_fragment - blocks + 4 - 1] = 1;
     expected.extents_per_file[1] = kSmallBlobCount - kBlobsDeleted;
     // The large file we create should span three extents.
-    expected.extents_per_file[3] = 1;
-    expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted + 2;
-    expected.in_use_fragments[kLargeFileNumBlocks - 1] = 1;
+    expected.extents_per_file[4] = 1;
+    // 2 small blobs were deleted side-by-side. They merge into one fragment.
+    expected.in_use_fragments[1] = kSmallBlobCount - 2;
+    expected.in_use_fragments[2] = 1;
+    expected.in_use_fragments[blocks - kBlobsDeleted] = 1;
     FragmentationStats actual;
     setup.blobfs()->CalculateFragmentationMetrics(stub_metrics, &actual);
     ASSERT_NO_FATAL_FAILURE(FragmentationStatsEqual(expected, actual));
