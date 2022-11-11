@@ -18,8 +18,8 @@ TEST(FuchsiaTctiTests, TpmSendArgumentValidation) {
   ASSERT_NE(result, 0);
   result = fuchsia_tpm_send(context.get(), 1, command.data(), 0);
   ASSERT_NE(result, 0);
-  result = fuchsia_tpm_send(
-    context.get(), 1, command.data(), fuchsia_tpm::wire::kMaxCommandLen + 1);
+  result =
+      fuchsia_tpm_send(context.get(), 1, command.data(), fuchsia_tpm::wire::kMaxCommandLen + 1);
   ASSERT_NE(result, 0);
 }
 
