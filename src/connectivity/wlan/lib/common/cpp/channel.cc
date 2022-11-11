@@ -135,14 +135,7 @@ bool IsValidChan5Ghz(const wlan_common_wire::WlanChannel& channel) {
 }
 
 bool IsValidChan(const wlan_common_wire::WlanChannel& channel) {
-  auto result = Is2Ghz(channel) ? IsValidChan2Ghz(channel) : IsValidChan5Ghz(channel);
-
-  // TODO(porce): Revisit if wlan library may have active logging
-  // Prefer logging in the caller only
-  if (!result) {
-    errorf("invalid channel value: %s\n", ChanStr(channel).c_str());
-  }
-  return result;
+  return Is2Ghz(channel) ? IsValidChan2Ghz(channel) : IsValidChan5Ghz(channel);
 }
 
 Mhz GetCenterFreq(const wlan_common_wire::WlanChannel& channel) {

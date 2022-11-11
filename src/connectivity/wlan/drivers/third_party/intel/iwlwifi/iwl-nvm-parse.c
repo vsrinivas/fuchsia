@@ -295,7 +295,6 @@ static size_t iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg
 
     // TODO(fxbug.dev/69717): Remove this workaround for IWL_NVM_EXT.
     if (!ieee80211_is_valid_chan(nvm_chan[ch_idx])) {
-      IWL_WARN(channel, "Ignored invalid channel %d from NVM\n", nvm_chan[ch_idx]);
       continue;
     }
 
