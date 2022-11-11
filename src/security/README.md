@@ -19,7 +19,3 @@ When adding code to this directory follow the following conventions:
   libraries and mocks.
 * [//src/security/tools](//src/security/tools): For any tools or scripts that
   are not included as part of any build.
-
-## Technical Debt
-All directories don't currently follow this pattern, however they are in the
-process of being migrated.
