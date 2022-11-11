@@ -18,6 +18,7 @@ typedef void opaque_ctx_t;
 
 // Initializes the Fuchsia TCTI interface by binding to "/dev/class/tpm" and returning
 // a FuchsiaInternalContext as an opaque_ctx.
+// The ownership of opaque_ctx_t is transferred to the caller.
 opaque_ctx_t* fuchsia_tpm_init(void);
 
 // Unwraps the opaque_ctx into a FuchsiaInternalContext and then calls the TPM driver FIDL
