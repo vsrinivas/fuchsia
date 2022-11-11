@@ -44,7 +44,7 @@ class PasswordPrompt extends StatelessWidget {
             validator: info.validator,
             onFieldSubmitted: (text) {
               if (info.validator?.call(text) == null) {
-                Form.of(context)?.save();
+                Form.of(context).save();
                 Navigator.pop(context, info.defaultAction ?? info.actions.last);
               }
             },
