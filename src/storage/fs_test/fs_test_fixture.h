@@ -27,9 +27,13 @@ struct PowerCutOptions {
 
 class BaseFilesystemTest : public testing::Test {
  public:
-  BaseFilesystemTest(const TestFilesystemOptions& options)
-      : fs_(TestFilesystem::Create(options).value()) {}
-  ~BaseFilesystemTest();
+  explicit BaseFilesystemTest(const TestFilesystemOptions& options)
+      : fs_([&options]() {
+          zx::result result = TestFilesystem::Create(options);
+          ZX_ASSERT_MSG(result.is_ok(), "%s", result.status_string());
+          return std::move(result.value());
+        }()) {}
+  ~BaseFilesystemTest() override;
 
   std::string GetPath(std::string_view relative_path) const {
     std::string path = fs_.mount_path();
