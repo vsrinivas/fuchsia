@@ -244,13 +244,18 @@ void WlanSoftmacDevice::ConfigureBss(ConfigureBssRequestView request, fdf::Arena
                                      ConfigureBssCompleter::Sync& completer) {
   zx_status_t status = ZX_OK;
   if (ap_mvm_sta_ != nullptr) {
-    IWL_ERR(this, "%s() Ap sta already exist.\n", __func__);
-    completer.buffer(arena).ReplyError(ZX_ERR_ALREADY_BOUND);
-    return;
+    IWL_INFO(this, "AP sta already exist.  Unassociate it first.\n");
+    if ((status = mac_unconfigure_bss(mvmvif_)) != ZX_OK) {
+      IWL_ERR(this, "failed mac unconfigure bss: %s\n",
+              zx_status_get_string(status));
+      completer.buffer(arena).ReplyError(status);
+      return;
+    }
+    ap_mvm_sta_.reset();
   }
   CHECK_DELETE_IN_PROGRESS_WITH_ERRSYNTAX(mvmvif_);
   if ((status = mac_configure_bss(mvmvif_, &request->config)) != ZX_OK) {
-    IWL_ERR(this, "%s() failed mac configure bss: %s\n", __func__, zx_status_get_string(status));
+    IWL_ERR(this, "failed mac configure bss: %s\n", zx_status_get_string(status));
     completer.buffer(arena).ReplyError(status);
     return;
   }
@@ -258,7 +263,7 @@ void WlanSoftmacDevice::ConfigureBss(ConfigureBssRequestView request, fdf::Arena
   ZX_DEBUG_ASSERT(mvmvif_->mac_role == WLAN_MAC_ROLE_CLIENT);
   std::unique_ptr<MvmSta> ap_mvm_sta;
   if ((status = MvmSta::Create(mvmvif_, request->config.bssid.begin(), &ap_mvm_sta)) != ZX_OK) {
-    IWL_ERR(this, "%s() failed creating MvmSta: %s\n", __func__, zx_status_get_string(status));
+    IWL_ERR(this, "failed creating MvmSta: %s\n", zx_status_get_string(status));
     completer.buffer(arena).ReplyError(status);
     return;
   }

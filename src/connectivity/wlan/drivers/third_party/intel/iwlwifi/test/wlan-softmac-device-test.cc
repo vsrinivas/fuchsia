@@ -853,7 +853,25 @@ TEST_F(MacInterfaceTest, TestConfigureBss) {
 TEST_F(MacInterfaceTest, DuplicateConfigureBss) {
   ASSERT_OK(SetChannel(&kChannel));
   ASSERT_OK(ConfigureBss(&kBssConfig));
-  ASSERT_EQ(ZX_ERR_ALREADY_BOUND, ConfigureBss(&kBssConfig));
+
+  // The second configuration will unconfigure the previous one first.
+  ExpectSendCmd(expected_cmd_id_list({
+      // called by mac_unconfigure_bss().
+      MockCommand(WIDE_ID(LONG_GROUP, MAC_CONTEXT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, TXPATH_FLUSH)),
+      MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
+      MockCommand(WIDE_ID(LONG_GROUP, TXPATH_FLUSH)),
+      MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
+      MockCommand(WIDE_ID(LONG_GROUP, SCD_QUEUE_CFG)),
+      MockCommand(WIDE_ID(LONG_GROUP, REMOVE_STA)),
+
+      // mac_configure_bss()
+      MockCommand(WIDE_ID(LONG_GROUP, MAC_CONTEXT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
+      MockCommand(WIDE_ID(LONG_GROUP, SCD_QUEUE_CFG)),
+      MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
+  }));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
 }
 
 // Test unsupported bss_type.
