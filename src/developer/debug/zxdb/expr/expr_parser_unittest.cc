@@ -110,6 +110,16 @@ TEST_F(ExprParserTest, Block) {
       "BLOCK\n"
       " LITERAL(1)\n",
       GetParseString("{ 1; }"));
+
+  // Our blocks allow the final statement to omit the semicolon (like Rust) even in C because
+  // it allows standalone expressions to be parsed in "block" mode (allowing multiple statements
+  // separated by semicolons) while not requiring a semicolon in the standalone expression case
+  // (you don't want to have to terminate every "print" command with a semicolon).
+  EXPECT_EQ(
+      "BLOCK\n"
+      " LITERAL(1)\n",
+      GetParseString("{ 1 }"));
+
   EXPECT_EQ(
       "BLOCK\n"
       " BINARY_OP(+)\n"
@@ -147,14 +157,6 @@ TEST_F(ExprParserTest, Block) {
       " BLOCK\n",
       GetParseString("{{{}};1;;2;{;}}", ExprLanguage::kRust));
 
-  // C requires a semicolon as the last element.
-  auto result = Parse("{1}");
-  EXPECT_FALSE(result);
-  EXPECT_EQ("Expected ';'.", parser().err().msg());
-  result = Parse("{1;2}");
-  EXPECT_FALSE(result);
-  EXPECT_EQ("Expected ';'.", parser().err().msg());
-
   // Rust blocks as expressions. Our parser will currenly accept this in C as well but it will get
   // rejected during execution since blocks don't return anything.
   EXPECT_EQ(
@@ -166,14 +168,14 @@ TEST_F(ExprParserTest, Block) {
       GetParseString("a = {1;2}", ExprLanguage::kRust));
 
   // Missing terminating "}".
-  result = Parse("{1;");
+  auto result = Parse("{1;");
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected '}'. Hit the end of input instead.", parser().err().msg());
 
   // No separator between elements.
   result = Parse("{1 {}}");
   EXPECT_FALSE(result);
-  EXPECT_EQ("Expected ';'.", parser().err().msg());
+  EXPECT_EQ("Unexpected token, did you forget an operator or a semicolon?", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, Identifier) {
@@ -235,7 +237,7 @@ TEST_F(ExprParserTest, DotNumberNoRust) {
   ASSERT_FALSE(result);
 
   // This is parsed as an identifier followed by a floating-point number.
-  EXPECT_EQ("Unexpected input, did you forget an operator?", parser().err().msg());
+  EXPECT_EQ("Unexpected input, did you forget an operator or a semicolon?", parser().err().msg());
   EXPECT_EQ(4u, parser().error_token().byte_offset());
   EXPECT_EQ(".0", parser().error_token().value());
 }
@@ -302,7 +304,7 @@ TEST_F(ExprParserTest, UnexpectedInput) {
   auto result = Parse("foo 5");
   ASSERT_FALSE(result);
 
-  EXPECT_EQ("Unexpected input, did you forget an operator?", parser().err().msg());
+  EXPECT_EQ("Unexpected input, did you forget an operator or a semicolon?", parser().err().msg());
   EXPECT_EQ(4u, parser().error_token().byte_offset());
 }
 
@@ -477,7 +479,8 @@ TEST_F(ExprParserTest, Identifiers) {
 
   result = Parse("foo bar");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Unexpected identifier, did you forget an operator?", parser().err().msg());
+  EXPECT_EQ("Unexpected identifier, did you forget an operator or a semicolon?",
+            parser().err().msg());
 
   // It's valid to have identifiers with colons in them to access class members (this is how you
   // provide an explicit base class).
@@ -642,7 +645,8 @@ TEST_F(ExprParserTest, FunctionCall) {
   // Arguments not separated by commas.
   result = Parse("Call(a b)");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Unexpected identifier, did you forget an operator?", parser().err().msg());
+  EXPECT_EQ("Unexpected identifier, did you forget an operator or a semicolon?",
+            parser().err().msg());
 
   // Empty parameter
   result = Parse("Call(a, , b)");
@@ -908,7 +912,7 @@ TEST_F(ExprParserTest, C_Cast) {
   // Looks like a cast but it's not a type.
   auto result = Parse("(NotType)a");
   EXPECT_FALSE(result);
-  EXPECT_EQ("Unexpected input, did you forget an operator?", parser().err().msg());
+  EXPECT_EQ("Unexpected input, did you forget an operator or a semicolon?", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, RustCast) {
@@ -997,7 +1001,8 @@ TEST_F(ExprParserTest, RustCast) {
   // Rust cast but we're not in rust
   result = Parse("a as Type", ExprLanguage::kC);
   EXPECT_FALSE(result);
-  EXPECT_EQ("Unexpected identifier, did you forget an operator?", parser().err().msg());
+  EXPECT_EQ("Unexpected identifier, did you forget an operator or a semicolon?",
+            parser().err().msg());
 }
 
 TEST_F(ExprParserTest, BadRustArrays) {
@@ -1524,7 +1529,8 @@ TEST_F(ExprParserTest, RustWhileLoop) {
   // No {}.
   result = Parse("while foo j;", ExprLanguage::kRust);
   EXPECT_FALSE(result);
-  EXPECT_EQ("Unexpected identifier, did you forget an operator?", parser().err().msg());
+  EXPECT_EQ("Unexpected identifier, did you forget an operator or a semicolon?",
+            parser().err().msg());
 }
 
 TEST_F(ExprParserTest, RustLoop) {

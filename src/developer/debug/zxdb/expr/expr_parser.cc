@@ -249,7 +249,7 @@ fxl::RefPtr<ExprNode> ExprParser::ParseStandaloneExpression() {
   // That should have consumed everything, as we don't support multiple expressions being next to
   // each other (probably the user forgot an operator and wrote something like "foo 5"
   if (!has_error() && !at_end()) {
-    SetError(cur_token(), "Unexpected input, did you forget an operator?");
+    SetError(cur_token(), "Unexpected input, did you forget an operator or a semicolon?");
     return nullptr;
   }
   return result;
@@ -394,7 +394,7 @@ fxl::RefPtr<BlockExprNode> ExprParser::ParseBlockContents(BlockEnd block_end) {
   std::vector<fxl::RefPtr<ExprNode>> statements;
   while (!at_end() && !LookAhead(kBlockEndTokenType)) {
     if (!previous_had_statement_end) {
-      SetError(cur_token(), "Expected ';'.");
+      SetError(cur_token(), "Unexpected token, did you forget an operator or a semicolon?");
       return nullptr;
     }
 
@@ -407,14 +407,13 @@ fxl::RefPtr<BlockExprNode> ExprParser::ParseBlockContents(BlockEnd block_end) {
       statements.push_back(std::move(stmt));
   }
 
-  // C++ requires a statement terminator for everything. In Rust we can skip this check since the
-  // last semicolon is optional.
-  if (language_ == ExprLanguage::kC) {
-    if (!previous_had_statement_end) {
-      SetErrorAtCur("Expected ';'.");
-      return nullptr;
-    }
-  }
+  // Don't check the final statement in a block for a statement end. In Rust, this is not necessary
+  // because it indicates that the statement is the result of the block (although we do the same
+  // thing with the semicolon). In C we allow the same to allow all expressions to be parsed using
+  // the block code path. This allows cases like:
+  //   print expression1               // No semicolon, but there could have been more statements.
+  //   print expression1; expression2  // Semicolon separated statements last ';' is optional.
+  // If we wanted to require semicolons, we would check previous_had_statement_end here.
 
   // Validate the correct end of the block.
   switch (block_end) {
@@ -614,7 +613,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
           result.ident.AppendComponent(GetIdentifierComponent());
         } else {
           // Anything else like "std::vector foo" or "foo bar".
-          SetError(token, "Unexpected identifier, did you forget an operator?");
+          SetError(token, "Unexpected identifier, did you forget an operator or a semicolon?");
           return ParseNameResult();
         }
 

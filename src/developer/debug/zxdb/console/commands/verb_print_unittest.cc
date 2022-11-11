@@ -25,7 +25,7 @@ TEST_F(VerbPrint, LanguagePreference) {
   console().GetOutputEvent();  // Eat output from the set.
   console().ProcessInputLine("print 3 as u64");
   auto event = console().GetOutputEvent();
-  EXPECT_EQ("Unexpected input, did you forget an operator?\n  3 as u64\n    ^",
+  EXPECT_EQ("Unexpected token, did you forget an operator or a semicolon?\n  3 as u64\n    ^",
             event.output.AsString());
 
   console().ProcessInputLine("set language rust");
@@ -38,7 +38,7 @@ TEST_F(VerbPrint, LanguagePreference) {
   console().GetOutputEvent();  // Eat output from the set.
   console().ProcessInputLine("print 3 as u64");
   event = console().GetOutputEvent();
-  EXPECT_EQ("Unexpected input, did you forget an operator?\n  3 as u64\n    ^",
+  EXPECT_EQ("Unexpected token, did you forget an operator or a semicolon?\n  3 as u64\n    ^",
             event.output.AsString());
 }
 

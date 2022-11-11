@@ -57,7 +57,10 @@ void EvalExpression(const std::string& input, const fxl::RefPtr<EvalContext>& co
     return cb(tokenizer.err());
 
   ExprParser parser(tokenizer.TakeTokens(), tokenizer.language(), context);
-  auto node = parser.ParseStandaloneExpression();
+  // Parse as a block with no required {} so that the user can supply both a single expression with
+  // no semicolon at the end (the parser doesn't require a final ';'), or a sequence of statements
+  // separated by semicolons.
+  auto node = parser.ParseBlock(ExprParser::BlockDelimiter::kImplicit);
   if (parser.err().has_error()) {
     // Add context information since we have the original input string (the
     // parser doesn't have this).

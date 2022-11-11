@@ -94,7 +94,7 @@ TEST_F(InputLocationParserTest, EvalGlobalInputLocation) {
   result = SyncEvalGlobalInputLocation(eval_context, existing_location, "foo/bar.cc:");
   ASSERT_TRUE(result.loc.has_error());
   // This message is a bit odd, it would be better if it described the missing number.
-  EXPECT_EQ(result.loc.err().msg(), "Unexpected input, did you forget an operator?");
+  EXPECT_EQ(result.loc.err().msg(), "Unexpected input, did you forget an operator or a semicolon?");
 
   // 0 line number.
   result = SyncEvalGlobalInputLocation(eval_context, existing_location, "foo/bar.cc:0");

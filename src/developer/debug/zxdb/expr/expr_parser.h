@@ -48,7 +48,8 @@ class ExprParser {
   // which case the error message can be read from err() and error_token()
   fxl::RefPtr<ExprNode> ParseStandaloneExpression();
 
-  // Parses a block. { and } will be consumed. The input is counted as being complete.
+  // Parses a block. { and } will be consumed (these are optional if the block delimiter is set to
+  // implicit). The input is counted as being complete.
   fxl::RefPtr<BlockExprNode> ParseBlock(BlockDelimiter delimiter);
 
   // Attempts to parse the given string as an identifier. The returned err indicates whether the
