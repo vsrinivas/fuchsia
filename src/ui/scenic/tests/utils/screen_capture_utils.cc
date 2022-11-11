@@ -153,7 +153,7 @@ std::vector<uint8_t> ExtractScreenCapture(
   // is actually a 608x1024 "pixel" buffer, since 2432/4=608. We must account for that 8 byte
   // padding when copying the bytes over to be inspected.
   EXPECT_EQ(ZX_OK, buffer_collection_info.buffers[buffer_id].vmo.op_range(
-                       ZX_VMO_OP_CACHE_INVALIDATE, 0,
+                       ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, 0,
                        buffer_collection_info.settings.buffer_settings.size_bytes, nullptr, 0));
 
   uint32_t pixels_per_row =

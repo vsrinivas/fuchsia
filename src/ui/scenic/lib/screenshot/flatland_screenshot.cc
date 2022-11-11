@@ -184,6 +184,9 @@ void FlatlandScreenshot::HandleFrameRender() {
 
   fuchsia::ui::composition::ScreenshotTakeResponse response;
 
+  FX_CHECK(ZX_OK == buffer_collection_info_.buffers[kBufferIndex].vmo.op_range(
+                        ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, 0,
+                        buffer_collection_info_.settings.buffer_settings.size_bytes, nullptr, 0));
   zx::vmo response_vmo;
   zx_status_t status = buffer_collection_info_.buffers[kBufferIndex].vmo.duplicate(
       ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_GET_PROPERTY, &response_vmo);
