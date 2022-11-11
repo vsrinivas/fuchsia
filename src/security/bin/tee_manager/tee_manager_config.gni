@@ -36,7 +36,7 @@ template("tee_manager_pkg_with_config") {
   fuchsia_component("tee_manager_cmp") {
     manifest = "meta/tee_manager.cml"
     component_name = "tee_manager"
-    deps = [ "//src/security/tee_manager:bin" ]
+    deps = [ "//src/security/bin/tee_manager:bin" ]
   }
 
   fuchsia_package("tee_manager") {

@@ -67,7 +67,7 @@ executable("use_media_decoder") {
 
 fuchsia_component("tee_manager") {
   manifest = "meta/tee_manager.cml"
-  deps = [ "//src/security/tee_manager:bin" ]
+  deps = [ "//src/security/bin/tee_manager:bin" ]
 }
 
 # This test target uses the AAC decoder the same way as the example program and

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/security/tee_manager/meta/tee_manager.base.cml" ],
+    include: [ "//src/security/bin/tee_manager/meta/tee_manager.base.cml" ],
     capabilities: [
         {
             protocol: [ "fuchsia.tee.Application.41fe9859-71e4-4bf4-bbaa-d71435b127ae" ],
