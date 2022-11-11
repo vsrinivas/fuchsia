@@ -1365,6 +1365,14 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset,
   if (!page) {
     return ZX_ERR_NO_MEMORY;
   }
+  // The slot might have started empty and in error paths we will not fill it, so make sure it gets
+  // returned in that case.
+  auto return_slot = fit::defer([page, offset, this] {
+    if (unlikely(page->IsEmpty())) {
+      AssertHeld(lock_ref());
+      page_list_.ReturnEmptySlot(offset);
+    }
+  });
 
   // We cannot overwrite any kind of content.
   if (overwrite == CanOverwriteContent::None) {
@@ -1683,16 +1691,6 @@ zx_status_t VmCowPages::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* f
                                                  LazyPageRequest* page_request) {
   DEBUG_ASSERT(parent_);
 
-  // Ensure we have a slot as we'll need it later.
-  const VmPageOrMarker* slot = page_list_.LookupOrAllocate(offset);
-
-  if (!slot) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  // We cannot be forking a page to here if there's already something.
-  DEBUG_ASSERT(slot->IsEmpty());
-
   DEBUG_ASSERT(!page_source_ || page_source_->DebugIsPageOk(page, offset));
 
   // Need to make sure the page is duplicated as far as our parent. Then we can pretend
@@ -1706,6 +1704,19 @@ zx_status_t VmCowPages::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* f
       return result;
     }
   }
+
+  // Before forking/moving the page, ensure a slot is available so that we know AddPageLocked cannot
+  // fail below. In the scenario where |slot| is empty, we do not need to worry about calling
+  // ReturnEmptySlot, since there are no failure paths from here and we are guaranteed to fill the
+  // slot.
+  const VmPageOrMarker* slot = page_list_.LookupOrAllocate(offset);
+
+  if (!slot) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  // We cannot be forking a page to here if there's already something.
+  DEBUG_ASSERT(slot->IsEmpty());
 
   bool left = this == &(parent_->left_child_locked());
   // Page is in our parent. Check if its uni accessible, if so we can free it.

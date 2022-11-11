@@ -495,7 +495,19 @@ class VmPageList final {
   // The returned slot, if not a `nullptr`, may generally be freely manipulated with the exception
   // that if it started !Empty, then it is an error to set it to Empty. In this case the
   // `RemovePage` method must be used.
+  //
+  // If the returned slot started Empty, as it not made !Empty, then the slot must be returned with
+  // ReturnEmptySlot, to ensure no empty nodes are retained.
   VmPageOrMarker* LookupOrAllocate(uint64_t offset);
+
+  // Returns a slot that was empty after LookupOrAllocate, and that the caller did not end up
+  // filling.
+  // This ensures that if LookupOrAllocate allocated a new underlying list node, then that list node
+  // needs to be free'd otherwise it might not get cleaned up for the lifetime of the page list.
+  //
+  // This is only correct to call on an offset for which LookupOrAllocate had just returned a non
+  // null slot, and that slot was Empty and is still Empty.
+  void ReturnEmptySlot(uint64_t offset);
 
   // Removes any item at |offset| from the list and returns it, or VmPageOrMarker::Empty() if none.
   VmPageOrMarker RemoveContent(uint64_t offset);
