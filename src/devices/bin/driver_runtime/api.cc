@@ -143,8 +143,9 @@ __EXPORT async_dispatcher_t* fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_
   return dispatcher->GetAsyncDispatcher();
 }
 
-__EXPORT fdf_dispatcher_t* fdf_dispatcher_from_async_dispatcher(async_dispatcher_t* dispatcher) {
-  return static_cast<fdf_dispatcher*>(fdf_dispatcher::FromAsyncDispatcher(dispatcher));
+__EXPORT fdf_dispatcher_t* fdf_dispatcher_downcast_async_dispatcher(
+    async_dispatcher_t* dispatcher) {
+  return static_cast<fdf_dispatcher*>(fdf_dispatcher::DowncastAsyncDispatcher(dispatcher));
 }
 
 __EXPORT uint32_t fdf_dispatcher_get_options(const fdf_dispatcher_t* dispatcher) {

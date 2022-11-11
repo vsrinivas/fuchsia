@@ -380,7 +380,7 @@ zx_status_t Dispatcher::Create(uint32_t options, std::string_view name,
 }
 
 // static
-Dispatcher* Dispatcher::FromAsyncDispatcher(async_dispatcher_t* dispatcher) {
+Dispatcher* Dispatcher::DowncastAsyncDispatcher(async_dispatcher_t* dispatcher) {
   auto ret = static_cast<Dispatcher*>(dispatcher);
   ret->canary_.Assert();
   return ret;

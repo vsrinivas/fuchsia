@@ -117,7 +117,7 @@ async_dispatcher_t* fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_t* dispat
 
 // Returns an unowned dispatcher provided an async dispatcher. If |async_dispatcher| was not
 // retrieved via |fdf_dispatcher_get_async_dispatcher|, the call will result in a crash.
-fdf_dispatcher_t* fdf_dispatcher_from_async_dispatcher(async_dispatcher_t* async_dispatcher);
+fdf_dispatcher_t* fdf_dispatcher_downcast_async_dispatcher(async_dispatcher_t* async_dispatcher);
 
 // Returns the current thread's dispatcher.
 // This will return NULL if not called from a dispatcher managed thread.

@@ -154,7 +154,7 @@ void DriverWaiter::HandleChannelRead(fdf_dispatcher_t* dispatcher, fdf::ChannelR
 }
 
 zx_status_t DriverWaiter::Begin() {
-  zx_status_t status = channel_read_.Begin(fdf_dispatcher_from_async_dispatcher(dispatcher_));
+  zx_status_t status = channel_read_.Begin(fdf_dispatcher_downcast_async_dispatcher(dispatcher_));
   if (status == ZX_ERR_UNAVAILABLE) {
     // Begin() is called when the dispatcher is shutting down.
     return ZX_ERR_CANCELED;
@@ -163,7 +163,7 @@ zx_status_t DriverWaiter::Begin() {
 }
 
 fidl::internal::DriverWaiter::CancellationResult DriverWaiter::Cancel() {
-  fdf_dispatcher_t* dispatcher = fdf_dispatcher_from_async_dispatcher(dispatcher_);
+  fdf_dispatcher_t* dispatcher = fdf_dispatcher_downcast_async_dispatcher(dispatcher_);
   uint32_t options = fdf_dispatcher_get_options(dispatcher);
 
   if (options & FDF_DISPATCHER_OPTION_UNSYNCHRONIZED) {

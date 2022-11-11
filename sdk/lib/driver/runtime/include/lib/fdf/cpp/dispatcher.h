@@ -117,8 +117,8 @@ class Dispatcher {
 
   // Returns an unowned dispatcher provided an async dispatcher. If |async_dispatcher| was not
   // retrieved via |fdf_dispatcher_get_async_dispatcher|, the call will result in a crash.
-  static Unowned<Dispatcher> From(async_dispatcher_t* async_dispatcher) {
-    return Unowned<Dispatcher>(fdf_dispatcher_from_async_dispatcher(async_dispatcher));
+  static Unowned<Dispatcher> Downcast(async_dispatcher_t* async_dispatcher) {
+    return Unowned<Dispatcher>(fdf_dispatcher_downcast_async_dispatcher(async_dispatcher));
   }
 
   explicit Dispatcher(fdf_dispatcher_t* dispatcher = nullptr) : dispatcher_(dispatcher) {}

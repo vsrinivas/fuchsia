@@ -133,7 +133,7 @@ class Dispatcher : public async_dispatcher_t,
                             Dispatcher** out_dispatcher);
 
   // |dispatcher| must have been retrieved via `GetAsyncDispatcher`.
-  static Dispatcher* FromAsyncDispatcher(async_dispatcher_t* dispatcher);
+  static Dispatcher* DowncastAsyncDispatcher(async_dispatcher_t* dispatcher);
   async_dispatcher_t* GetAsyncDispatcher();
   void ShutdownAsync();
   void Destroy();

@@ -15,7 +15,7 @@ Symbols:
   - { Name: fdf_channel_write, Type: Func }
   - { Name: fdf_dispatcher_create, Type: Func }
   - { Name: fdf_dispatcher_destroy, Type: Func }
-  - { Name: fdf_dispatcher_from_async_dispatcher, Type: Func }
+  - { Name: fdf_dispatcher_downcast_async_dispatcher, Type: Func }
   - { Name: fdf_dispatcher_get_async_dispatcher, Type: Func }
   - { Name: fdf_dispatcher_get_current_dispatcher, Type: Func }
   - { Name: fdf_dispatcher_get_options, Type: Func }

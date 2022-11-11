@@ -1252,7 +1252,7 @@ TEST_F(DispatcherTest, TasksDoNotCallDirectly) {
   completion.Wait();
 }
 
-TEST_F(DispatcherTest, FromAsyncDispatcher) {
+TEST_F(DispatcherTest, DowncastAsyncDispatcher) {
   fdf_dispatcher_t* dispatcher;
   ASSERT_NO_FATAL_FAILURE(
       CreateDispatcher(0, __func__, "scheduler_role", CreateFakeDriver(), &dispatcher));
@@ -1260,7 +1260,7 @@ TEST_F(DispatcherTest, FromAsyncDispatcher) {
   async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher);
   ASSERT_NOT_NULL(async_dispatcher);
 
-  ASSERT_EQ(fdf_dispatcher_from_async_dispatcher(async_dispatcher), dispatcher);
+  ASSERT_EQ(fdf_dispatcher_downcast_async_dispatcher(async_dispatcher), dispatcher);
 }
 
 TEST_F(DispatcherTest, CancelTask) {
