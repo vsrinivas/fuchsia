@@ -50,6 +50,11 @@
             from: "parent",
             to: [ "#starnix_unit_test_runner" ],
         },
+        {
+            protocol: [ "fuchsia.posix.socket.raw.Provider" ],
+            from: "parent",
+            to: [ "#starnix_test_runner" ],
+        },
     ],
     expose: [
         {

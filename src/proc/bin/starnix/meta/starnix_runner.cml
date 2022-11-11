@@ -36,6 +36,7 @@
             protocol: [
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.posix.socket.Provider",
+                "fuchsia.posix.socket.raw.Provider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
             ],

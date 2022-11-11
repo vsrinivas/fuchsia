@@ -15,5 +15,10 @@
             dependency: "weak",
             source_availability: "unknown",
         },
+        {
+            protocol: [ "fuchsia.posix.socket.raw.Provider" ],
+            from: "#network",
+            to: "#starnix_manager",
+        },
     ],
 }
