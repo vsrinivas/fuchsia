@@ -119,7 +119,22 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 	}
 
 	// Build the actual command invocation.
-	cmd := []string{n.Bin, "--disable_clone_newcgroup"}
+	cmd := []string{
+		n.Bin,
+		"--disable_clone_newcgroup",
+		"--quiet",
+	}
+	// Overwrite some default nsjail rlimits with our system soft maximums as
+	// the defaults are too restrictive. We should probably tune this a bit
+	// more in the future to absolute values.
+	cmd = append(
+		cmd,
+		"--rlimit_as", "soft",
+		"--rlimit_fsize", "soft",
+		"--rlimit_nofile", "soft",
+		"--rlimit_nproc", "soft",
+	)
+
 	if !n.IsolateNetwork {
 		cmd = append(cmd, "--disable_clone_newnet")
 	}
@@ -159,17 +174,6 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 	for target, linkName := range n.Symlinks {
 		cmd = append(cmd, "--symlink", fmt.Sprintf("%s:%s", target, linkName))
 	}
-
-	// Overwrite some default nsjail rlimits with our system soft maximums as
-	// the defaults are too restrictive. We should probably tune this a bit
-	// more in the future to absolute values.
-	cmd = append(
-		cmd,
-		"--rlimit_as", "soft",
-		"--rlimit_fsize", "soft",
-		"--rlimit_nofile", "soft",
-		"--rlimit_nproc", "soft",
-	)
 
 	// Sort the environment variables to guarantee stable ordering.
 	var envKeys []string

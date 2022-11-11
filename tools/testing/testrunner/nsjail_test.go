@@ -11,6 +11,16 @@ import (
 )
 
 func TestBuild(t *testing.T) {
+	cmdStart := []string{
+		"/path/to/nsjail",
+		"--disable_clone_newcgroup",
+		"--quiet",
+		"--rlimit_as", "soft",
+		"--rlimit_fsize", "soft",
+		"--rlimit_nofile", "soft",
+		"--rlimit_nproc", "soft",
+	}
+
 	testCases := []struct {
 		name       string
 		cmdBuilder *NsJailCmdBuilder
@@ -37,16 +47,11 @@ func TestBuild(t *testing.T) {
 				IsolateNetwork: true,
 			},
 			subcmd: []string{"/foo/bar"},
-			want: []string{
-				"/path/to/nsjail",
-				"--disable_clone_newcgroup",
-				"--rlimit_as", "soft",
-				"--rlimit_fsize", "soft",
-				"--rlimit_nofile", "soft",
-				"--rlimit_nproc", "soft",
+			want: append(
+				cmdStart,
 				"--",
 				"/foo/bar",
-			},
+			),
 		},
 		{
 			name: "Test disabling network isolation",
@@ -54,17 +59,12 @@ func TestBuild(t *testing.T) {
 				Bin: "/path/to/nsjail",
 			},
 			subcmd: []string{"/foo/bar"},
-			want: []string{
-				"/path/to/nsjail",
-				"--disable_clone_newcgroup",
+			want: append(
+				cmdStart,
 				"--disable_clone_newnet",
-				"--rlimit_as", "soft",
-				"--rlimit_fsize", "soft",
-				"--rlimit_nofile", "soft",
-				"--rlimit_nproc", "soft",
 				"--",
 				"/foo/bar",
-			},
+			),
 		},
 		{
 			name: "Test mount points",
@@ -90,21 +90,16 @@ func TestBuild(t *testing.T) {
 				},
 			},
 			subcmd: []string{"/foo/bar"},
-			want: []string{
-				"/path/to/nsjail",
-				"--disable_clone_newcgroup",
+			want: append(
+				cmdStart,
 				"--disable_clone_newnet",
 				"--tmpfsmount", "/i/am/temporary",
 				"--bindmount_ro", "/root/name:/jail/name",
 				"--bindmount_ro", "/readonly:/readonly",
 				"--bindmount", "/readwrite:/readwrite",
-				"--rlimit_as", "soft",
-				"--rlimit_fsize", "soft",
-				"--rlimit_nofile", "soft",
-				"--rlimit_nproc", "soft",
 				"--",
 				"/foo/bar",
-			},
+			),
 		},
 		{
 			name: "Test current working directory",
@@ -113,18 +108,13 @@ func TestBuild(t *testing.T) {
 				Cwd: "/cwd",
 			},
 			subcmd: []string{"/foo/bar"},
-			want: []string{
-				"/path/to/nsjail",
-				"--disable_clone_newcgroup",
+			want: append(
+				cmdStart,
 				"--disable_clone_newnet",
 				"--cwd", "/cwd",
-				"--rlimit_as", "soft",
-				"--rlimit_fsize", "soft",
-				"--rlimit_nofile", "soft",
-				"--rlimit_nproc", "soft",
 				"--",
 				"/foo/bar",
-			},
+			),
 		},
 		{
 			name: "Test environment variables",
@@ -135,18 +125,13 @@ func TestBuild(t *testing.T) {
 				},
 			},
 			subcmd: []string{"/foo/bar"},
-			want: []string{
-				"/path/to/nsjail",
-				"--disable_clone_newcgroup",
+			want: append(
+				cmdStart,
 				"--disable_clone_newnet",
-				"--rlimit_as", "soft",
-				"--rlimit_fsize", "soft",
-				"--rlimit_nofile", "soft",
-				"--rlimit_nproc", "soft",
 				"--env", "TEST=test",
 				"--",
 				"/foo/bar",
-			},
+			),
 		},
 		{
 			name: "Test symlinks",
@@ -157,18 +142,13 @@ func TestBuild(t *testing.T) {
 				},
 			},
 			subcmd: []string{"/foo/bar"},
-			want: []string{
-				"/path/to/nsjail",
-				"--disable_clone_newcgroup",
+			want: append(
+				cmdStart,
 				"--disable_clone_newnet",
 				"--symlink", "/bin/bash:/bin/sh",
-				"--rlimit_as", "soft",
-				"--rlimit_fsize", "soft",
-				"--rlimit_nofile", "soft",
-				"--rlimit_nproc", "soft",
 				"--",
 				"/foo/bar",
-			},
+			),
 		},
 	}
 	for _, tc := range testCases {

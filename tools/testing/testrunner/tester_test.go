@@ -150,6 +150,7 @@ func TestSubprocessTester(t *testing.T) {
 				"./fake_nsjail",
 				"--disable_clone_newcgroup",
 				"--disable_clone_newnet",
+				"--quiet",
 				"--bindmount_ro",
 				"/bin:/bin",
 				"--bindmount_ro",
