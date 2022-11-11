@@ -27,9 +27,10 @@ class SnapshotPersistence {
 
   SnapshotPersistence(const Root& temp_root, const Root& persistent_root);
 
-  // Adds a snapshot to persistence. Returns true if successful.
+  // Adds a snapshot to persistence. If |only_consider_tmp| is true, only /tmp will be
+  // considered as a possible storage location. Returns true if successful.
   bool Add(const SnapshotUuid& uuid, const ManagedSnapshot::Archive& archive,
-           StorageSize archive_size);
+           StorageSize archive_size, bool only_consider_tmp);
 
   // Returns true if a snapshot for |uuid| exists on disk.
   bool Contains(const SnapshotUuid& uuid) const;
@@ -59,9 +60,10 @@ class SnapshotPersistence {
   // The root that the snapshot for |uuid| is stored under.
   SnapshotPersistenceMetadata& RootFor(const SnapshotUuid& uuid);
 
-  // Pick the root to store an archive with size of |archive_size| under. Returns nullptr if neither
+  // Pick the root to store an archive with size of |archive_size| under. If |only_consider_tmp| is
+  // true, only /tmp will be considered as a possible storage location. Returns nullptr if neither
   // root has enough space for the archive.
-  SnapshotPersistenceMetadata* PickRootForStorage(StorageSize archive_size);
+  SnapshotPersistenceMetadata* PickRootForStorage(StorageSize archive_size, bool only_consider_tmp);
 
   // Returns a storage root that can be used if |root| fails.
   SnapshotPersistenceMetadata& FallbackRoot(const SnapshotPersistenceMetadata& root);

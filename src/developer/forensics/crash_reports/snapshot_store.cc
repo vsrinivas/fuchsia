@@ -166,11 +166,11 @@ void SnapshotStore::EnforceSizeLimits(const SnapshotUuid& uuid) {
   }
 }
 
-bool SnapshotStore::MoveToPersistence(const SnapshotUuid& uuid) {
+bool SnapshotStore::MoveToPersistence(const SnapshotUuid& uuid, const bool only_consider_tmp) {
   auto* data = FindSnapshotData(uuid);
   FX_CHECK(data);
 
-  if (!persistence_.Add(uuid, *data->archive, data->archive_size)) {
+  if (!persistence_.Add(uuid, *data->archive, data->archive_size, only_consider_tmp)) {
     return false;
   }
 

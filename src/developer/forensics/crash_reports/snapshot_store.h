@@ -34,9 +34,9 @@ class SnapshotStore {
   // Deletes the data for |uuid| from memory, if it still exists.
   void DeleteSnapshot(const SnapshotUuid& uuid);
 
-  // Moves the snapshot for |uuid| from memory to persistence, if possible. Returns true if
-  // successful.
-  bool MoveToPersistence(const SnapshotUuid& uuid);
+  // Moves the snapshot for |uuid| from memory to persistence, if possible. If |only_consider_tmp|
+  // is true, only /tmp will be considered as a valid storage location. Returns true if successful.
+  bool MoveToPersistence(const SnapshotUuid& uuid, bool only_consider_tmp);
 
   // Attempts to move the snapshot for |uuid| from /cache to /tmp.
   void MoveToTmp(const SnapshotUuid& uuid);

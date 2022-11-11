@@ -44,8 +44,8 @@ SnapshotPersistence::SnapshotPersistence(const Root& temp_root, const Root& pers
 }
 
 bool SnapshotPersistence::Add(const SnapshotUuid& uuid, const ManagedSnapshot::Archive& archive,
-                              StorageSize archive_size) {
-  SnapshotPersistenceMetadata* root_metadata = PickRootForStorage(archive_size);
+                              StorageSize archive_size, const bool only_consider_tmp) {
+  SnapshotPersistenceMetadata* root_metadata = PickRootForStorage(archive_size, only_consider_tmp);
 
   if (root_metadata == nullptr) {
     FX_LOGS(ERROR) << "Failed to add snapshot to persistence; snapshot storage limits reached";
@@ -187,14 +187,17 @@ SnapshotPersistenceMetadata& SnapshotPersistence::RootFor(const SnapshotUuid& uu
   return cache_metadata_;
 }
 
-SnapshotPersistenceMetadata* SnapshotPersistence::PickRootForStorage(StorageSize archive_size) {
+SnapshotPersistenceMetadata* SnapshotPersistence::PickRootForStorage(StorageSize archive_size,
+                                                                     const bool only_consider_tmp) {
   // Attempt to make |cache_metadata_| usable if it isn't already.
   if (!cache_metadata_.IsDirectoryUsable()) {
     cache_metadata_.RecreateFromFilesystem();
   }
 
-  // Only use a root if it's valid and there's enough space to put the archive there.
-  if (cache_metadata_.IsDirectoryUsable() && SpaceAvailable(cache_metadata_, archive_size)) {
+  // Only use a root if it's valid and there's enough space to put the archive there. Don't use
+  // /cache if |only_consider_tmp| is true.
+  if (!only_consider_tmp && cache_metadata_.IsDirectoryUsable() &&
+      SpaceAvailable(cache_metadata_, archive_size)) {
     return &cache_metadata_;
   }
 

@@ -89,7 +89,7 @@ class SnapshotPersistenceTest : public UnitTestFixture {
     auto archive_size = StorageSize::Bytes(archive.key.size());
     archive_size += StorageSize::Bytes(archive.value.size());
 
-    return persistence_->Add(uuid, archive, archive_size);
+    return persistence_->Add(uuid, archive, archive_size, /*only_consider_tmp=*/false);
   }
 
   std::unique_ptr<SnapshotPersistence> persistence_;
@@ -291,6 +291,28 @@ TEST_F(SnapshotPersistenceDeathTest, Check_FailMoveFromTmpToTmp) {
 
   ASSERT_DEATH({ persistence_->MoveToTmp(kTestUuid); },
                HasSubstr("MoveToTmp() will only move snapshots from /cache to /tmp"));
+}
+
+TEST_F(SnapshotPersistenceTest, Check_AddOnlyConsiderTmp) {
+  const SnapshotUuid kTestUuid = "test uuid";
+  const std::string kArchiveValue = "snapshot.data";
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = feedback_data::kSnapshotFilename;
+  FX_CHECK(fsl::VmoFromString(kArchiveValue, &snapshot.value));
+
+  const auto expected_archive = ManagedSnapshot::Archive(snapshot);
+  auto expected_archive_size = StorageSize::Bytes(expected_archive.key.size());
+  expected_archive_size += StorageSize::Bytes(expected_archive.value.size());
+
+  persistence_->Add(kTestUuid, expected_archive, expected_archive_size, /*only_consider_tmp=*/true);
+
+  StringAttachment archive;
+  ASSERT_TRUE(Read(GetTmpDir(), kTestUuid, archive));
+  EXPECT_FALSE(archive.key.empty());
+  EXPECT_FALSE(archive.value.empty());
+
+  EXPECT_FALSE(Read(GetCacheDir(), kTestUuid, archive));
 }
 
 }  // namespace

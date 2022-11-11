@@ -296,7 +296,7 @@ TEST_F(SnapshotStoreTest, Check_MoveToPersistence) {
 
   EXPECT_EQ(snapshot_store_->SnapshotLocation(kTestUuid), ItemLocation::kMemory);
 
-  snapshot_store_->MoveToPersistence(kTestUuid);
+  snapshot_store_->MoveToPersistence(kTestUuid, /*only_consider_tmp=*/false);
 
   ASSERT_EQ(snapshot_store_->SnapshotLocation(kTestUuid), ItemLocation::kCache);
 
