@@ -2260,8 +2260,8 @@ struct Requesting {
     first_request_time: Option<Instant>,
     /// The request retransmission timeout.
     retrans_timeout: Duration,
-    /// The request retransmission count.
-    retrans_count: u8,
+    /// The number of request messages transmitted.
+    transmission_count: u8,
     /// The [SOL_MAX_RT] used by the client.
     ///
     /// [SOL_MAX_RT]:
@@ -3168,7 +3168,7 @@ impl Requesting {
             collected_advertise,
             first_request_time: None,
             retrans_timeout: Duration::default(),
-            retrans_count: 0,
+            transmission_count: 0,
             solicit_max_rt,
         }
         .send_and_reschedule_retransmission(
@@ -3240,7 +3240,7 @@ impl Requesting {
             collected_advertise,
             first_request_time,
             retrans_timeout: prev_retrans_timeout,
-            mut retrans_count,
+            transmission_count,
             solicit_max_rt,
         } = self;
         let retrans_timeout = Self::retransmission_timeout(prev_retrans_timeout, rng);
@@ -3248,7 +3248,6 @@ impl Requesting {
         let mut elapsed_time = 0;
         let first_request_time = Some(first_request_time.map_or(now, |start_time| {
             elapsed_time = elapsed_time_in_centisecs(start_time, now);
-            retrans_count += 1;
             start_time
         }));
 
@@ -3304,7 +3303,7 @@ impl Requesting {
                 collected_advertise,
                 first_request_time,
                 retrans_timeout,
-                retrans_count,
+                transmission_count: transmission_count + 1,
                 solicit_max_rt,
             }),
             actions: initial_actions
@@ -3362,11 +3361,22 @@ impl Requesting {
             collected_advertise,
             first_request_time,
             retrans_timeout,
-            retrans_count,
+            transmission_count,
             solicit_max_rt,
         } = self;
-        if retrans_count != REQUEST_MAX_RC {
-            return Self {
+        if transmission_count > REQUEST_MAX_RC {
+            request_from_alternate_server_or_restart_server_discovery(
+                client_id,
+                non_temporary_addresses,
+                delegated_prefixes,
+                &options_to_request,
+                collected_advertise,
+                solicit_max_rt,
+                rng,
+                now,
+            )
+        } else {
+            Self {
                 client_id,
                 non_temporary_addresses,
                 delegated_prefixes,
@@ -3374,7 +3384,7 @@ impl Requesting {
                 collected_advertise,
                 first_request_time,
                 retrans_timeout,
-                retrans_count,
+                transmission_count,
                 solicit_max_rt,
             }
             .send_and_schedule_retransmission(
@@ -3383,18 +3393,8 @@ impl Requesting {
                 rng,
                 now,
                 std::iter::empty(),
-            );
+            )
         }
-        request_from_alternate_server_or_restart_server_discovery(
-            client_id,
-            non_temporary_addresses,
-            delegated_prefixes,
-            &options_to_request,
-            collected_advertise,
-            solicit_max_rt,
-            rng,
-            now,
-        )
     }
 
     fn reply_message_received<R: Rng, B: ByteSlice>(
@@ -3412,7 +3412,7 @@ impl Requesting {
             collected_advertise,
             first_request_time,
             retrans_timeout,
-            retrans_count,
+            transmission_count,
             mut solicit_max_rt,
         } = self;
         let ProcessedReplyWithLeases {
@@ -3514,7 +3514,7 @@ impl Requesting {
                                     collected_advertise,
                                     first_request_time,
                                     retrans_timeout,
-                                    retrans_count,
+                                    transmission_count,
                                     solicit_max_rt,
                                 }
                                 .send_and_reschedule_retransmission(
@@ -3574,7 +3574,7 @@ impl Requesting {
                                 collected_advertise,
                                 first_request_time,
                                 retrans_timeout,
-                                retrans_count,
+                                transmission_count,
                                 solicit_max_rt,
                             }),
                             actions: Vec::new(),
@@ -3593,7 +3593,7 @@ impl Requesting {
                         collected_advertise,
                         first_request_time,
                         retrans_timeout,
-                        retrans_count,
+                        transmission_count,
                         solicit_max_rt,
                     }),
                     actions: Vec::new(),
@@ -4446,7 +4446,7 @@ impl ClientState {
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count: _,
+                transmission_count: _,
                 solicit_max_rt: _,
             }) => Vec::new(),
         }
@@ -5160,7 +5160,7 @@ pub(crate) mod testutil {
                 server_id: got_server_id,
                 collected_advertise,
                 retrans_timeout,
-                retrans_count,
+                transmission_count,
                 solicit_max_rt,
                 non_temporary_addresses: _,
                 delegated_prefixes: _,
@@ -5174,7 +5174,7 @@ pub(crate) mod testutil {
                 collected_advertise
             );
             assert_eq!(*retrans_timeout, INITIAL_REQUEST_TIMEOUT);
-            assert_eq!(*retrans_count, 0);
+            assert_eq!(*transmission_count, 1);
             assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
         }
         (client, request_transaction_id)
@@ -6709,7 +6709,7 @@ mod tests {
             collected_advertise: _,
             first_request_time: _,
             retrans_timeout: _,
-            retrans_count: _,
+            transmission_count: _,
             solicit_max_rt: _,
         } = assert_matches!(
             state,
@@ -6902,7 +6902,7 @@ mod tests {
             collected_advertise,
             first_request_time: _,
             retrans_timeout: _,
-            retrans_count: _,
+            transmission_count: _,
             solicit_max_rt: _,
         } = assert_matches!(
             state,
@@ -6986,7 +6986,7 @@ mod tests {
                 client_id: _,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count: _,
+                transmission_count: _,
                 solicit_max_rt: _,
             } = assert_matches!(&state, ClientState::Requesting(requesting) => requesting);
             assert_eq!(server_id[..], SERVER_ID[0]);
@@ -7028,7 +7028,7 @@ mod tests {
                 collected_advertise,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count: _,
+                transmission_count: _,
                 solicit_max_rt: _,
             } = assert_matches!(&state, ClientState::Requesting(requesting) => requesting);
             assert_eq!(server_id[..], SERVER_ID[0]);
@@ -7075,7 +7075,7 @@ mod tests {
                 collected_advertise,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count: _,
+                transmission_count: _,
                 solicit_max_rt: _,
             } = assert_matches!(
                 &state,
@@ -7121,7 +7121,7 @@ mod tests {
                 delegated_prefixes: _,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count: _,
+                transmission_count: _,
                 solicit_max_rt: _,
             } = assert_matches!(
                 state,
@@ -7691,7 +7691,7 @@ mod tests {
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count: _,
+                transmission_count: _,
                 solicit_max_rt: _,
             })) => {
                 assert_eq!(&server_id, &SERVER_ID[2]);
@@ -7793,7 +7793,7 @@ mod tests {
                 collected_advertise,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count: _,
+                transmission_count,
                 solicit_max_rt: _,
             } = assert_matches!(state, Some(ClientState::Requesting(requesting)) => requesting);
             assert_eq!(
@@ -7801,9 +7801,10 @@ mod tests {
                 want_collected_advertise.clone().into_sorted_vec()
             );
             assert_eq!(server_id[..], SERVER_ID[0]);
+            assert_eq!(*transmission_count, 1);
         }
 
-        for count in 1..REQUEST_MAX_RC + 1 {
+        for count in 2..=(REQUEST_MAX_RC + 1) {
             assert_matches!(
                 &client.handle_timeout(ClientTimerType::Retransmission, time)[..],
                [
@@ -7823,7 +7824,7 @@ mod tests {
                 collected_advertise,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count,
+                transmission_count,
                 solicit_max_rt: _,
             } = assert_matches!(state, Some(ClientState::Requesting(requesting)) => requesting);
             assert_eq!(
@@ -7831,7 +7832,7 @@ mod tests {
                 want_collected_advertise.clone().into_sorted_vec()
             );
             assert_eq!(server_id[..], SERVER_ID[0]);
-            assert_eq!(*retrans_count, count);
+            assert_eq!(*transmission_count, count);
         }
 
         // When the retransmission count reaches REQUEST_MAX_RC, the client
@@ -7854,14 +7855,14 @@ mod tests {
             collected_advertise,
             first_request_time: _,
             retrans_timeout: _,
-            retrans_count,
+            transmission_count,
             solicit_max_rt: _,
         } = assert_matches!(state, Some(ClientState::Requesting(requesting)) => requesting);
         assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         assert_eq!(server_id[..], SERVER_ID[1]);
-        assert_eq!(*retrans_count, 0);
+        assert_eq!(*transmission_count, 1);
 
-        for count in 1..REQUEST_MAX_RC + 1 {
+        for count in 2..=(REQUEST_MAX_RC + 1) {
             assert_matches!(
                 &client.handle_timeout(ClientTimerType::Retransmission, time)[..],
                [
@@ -7881,12 +7882,12 @@ mod tests {
                 collected_advertise,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count,
+                transmission_count,
                 solicit_max_rt: _,
             } = assert_matches!(state, Some(ClientState::Requesting(requesting)) => requesting);
             assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
             assert_eq!(server_id[..], SERVER_ID[1]);
-            assert_eq!(*retrans_count, count);
+            assert_eq!(*transmission_count, count);
         }
 
         // When the retransmission count reaches REQUEST_MAX_RC, and the client
@@ -8053,7 +8054,7 @@ mod tests {
                 server_id: _,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count: _,
+                transmission_count: _,
             } = assert_matches!(&state, ClientState::Requesting(requesting) => requesting);
             assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
             assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
@@ -8097,7 +8098,7 @@ mod tests {
                 server_id: _,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count: _,
+                transmission_count: _,
             } = assert_matches!(&state, ClientState::Requesting(requesting) => requesting);
             assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
             assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
@@ -8134,7 +8135,7 @@ mod tests {
                 server_id: _,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count: _,
+                transmission_count: _,
             } = assert_matches!(&state, ClientState::Requesting(requesting) => requesting);
             assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
             assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
@@ -9711,7 +9712,7 @@ mod tests {
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
-                retrans_count: _,
+                transmission_count: _,
                 solicit_max_rt,
             } = assert_matches!(
                 &state,
