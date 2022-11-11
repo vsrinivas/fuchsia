@@ -812,7 +812,7 @@ config("Wno-conversion") {
     "//src/performance/lib/gperftools/tests:*",
     "//src/performance/lib/perfmon:*",
     "//src/performance/lib/trace_converters:*",
-    "//src/security/tee_manager:*",
+    "//src/security/bin/tee_manager:*",
     "//src/sys/appmgr:*",
     "//src/sys/appmgr/integration_tests/mock_runner:*",
     "//src/sys/appmgr/integration_tests/sandbox/features/storage:*",

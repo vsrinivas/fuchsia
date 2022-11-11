@@ -12,7 +12,6 @@ group("tests") {
   deps = [
     "bin:tests",
     "lib:tests",
-    "tee_manager:tests",
     "tests/",
     "tools:tests",
   ]

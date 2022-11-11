@@ -110,7 +110,7 @@ fuchsia_component("system-update-configurator-integration-test-cmp") {
 fuchsia_component("tee-manager-test-cmp") {
   manifest = "meta/tee-manager.test.cml"
   component_name = "tee_manager"
-  deps = [ "//src/security/tee_manager:bin" ]
+  deps = [ "//src/security/bin/tee_manager:bin" ]
 }
 
 fuchsia_test_package("system-update-configurator-integration-test") {

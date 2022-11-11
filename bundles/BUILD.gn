@@ -46,7 +46,7 @@ group("amlogic_hw_dependent_tests") {
     "//src/media/stream_processors:hw_dependent_tests",
 
     # Verify communication with amlogic optee.
-    "//src/security/tee_manager:optee_smoke_test",
+    "//src/security/bin/tee_manager:optee_smoke_test",
   ]
 }
 

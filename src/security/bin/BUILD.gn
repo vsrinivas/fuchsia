@@ -8,5 +8,6 @@ group("tests") {
     "cr50_agent:tests",
     "credential_manager:tests",
     "kms:tests",
+    "tee_manager:tests",
   ]
 }

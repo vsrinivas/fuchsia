@@ -1,0 +1,42 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "tee_manager",
+            url: "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.tee.DeviceInfo",
+            from: "#tee_manager",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#tee_manager",
+        },
+        {
+            directory: "dev-class",
+            from: "parent",
+            as: "dev-tee",
+            to: "#tee_manager",
+            subdir: "tee",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: "#tee_manager",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#tee_manager",
+            subdir: "tee_manager",
+        },
+    ],
+}

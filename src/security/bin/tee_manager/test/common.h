@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SECURITY_TEE_MANAGER_TEST_COMMON_H_
-#define SRC_SECURITY_TEE_MANAGER_TEST_COMMON_H_
+#ifndef SRC_SECURITY_BIN_TEE_MANAGER_TEST_COMMON_H_
+#define SRC_SECURITY_BIN_TEE_MANAGER_TEST_COMMON_H_
 
 #include <fuchsia/tee/cpp/fidl.h>
 
@@ -97,4 +97,4 @@ class SessionGuard {
 }  // namespace test
 }  // namespace optee
 
-#endif  // SRC_SECURITY_TEE_MANAGER_TEST_COMMON_H_
+#endif  // SRC_SECURITY_BIN_TEE_MANAGER_TEST_COMMON_H_
