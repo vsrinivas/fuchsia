@@ -162,9 +162,6 @@ pub struct FlatlandSceneManager {
     // Flatland connection between the physical display and the rest of the scene graph.
     _display: ui_comp::FlatlandDisplayProxy,
 
-    // Layout info received from the display.
-    layout_info: ui_comp::LayoutInfo,
-
     // The size that will ultimately be assigned to the View created with the
     // `fuchsia.session.scene.Manager` protocol.
     client_viewport_size: math::SizeU,
@@ -340,10 +337,8 @@ impl SceneManager for FlatlandSceneManager {
     }
 
     fn get_pointerinjection_display_size(&self) -> Size {
-        let logical_size = self.layout_info.logical_size.unwrap();
-        let width: f32 = logical_size.width as f32;
-        let height: f32 = logical_size.height as f32;
-        Size { width, height }
+        // Input pipeline expects size in physical pixels.
+        self.display_metrics.size_in_pixels()
     }
 
     fn get_pointerinjector_viewport_watcher_subscription(&self) -> InjectorViewportSubscriber {
@@ -403,22 +398,21 @@ impl FlatlandSceneManager {
             &mut id_generator,
         )?;
 
-        // Set the device pixel ratio of FlatlandDisplay.
-        {
-            let info = singleton_display_info.get_metrics().await?;
-            let extent_in_px =
-                info.extent_in_px.ok_or(anyhow::anyhow!("Did not receive display size"))?;
-            let display_metrics = DisplayMetrics::new(
-                Size { width: extent_in_px.width as f32, height: extent_in_px.height as f32 },
-                display_pixel_density,
-                viewing_distance,
-                None,
-            );
-            display.set_device_pixel_ratio(&mut fmath::VecF {
-                x: display_metrics.pixels_per_pip(),
-                y: display_metrics.pixels_per_pip(),
-            })?;
-        }
+        // Create display metrics, and set the device pixel ratio of FlatlandDisplay.
+        let info = singleton_display_info.get_metrics().await?;
+        let extent_in_px =
+            info.extent_in_px.ok_or(anyhow::anyhow!("Did not receive display size"))?;
+        let display_metrics = DisplayMetrics::new(
+            Size { width: extent_in_px.width as f32, height: extent_in_px.height as f32 },
+            display_pixel_density,
+            viewing_distance,
+            None,
+        );
+
+        display.set_device_pixel_ratio(&mut fmath::VecF {
+            x: display_metrics.pixels_per_pip(),
+            y: display_metrics.pixels_per_pip(),
+        })?;
 
         // Connect the FlatlandDisplay to |root_flatland|'s view.
         {
@@ -433,22 +427,13 @@ impl FlatlandSceneManager {
             )?;
         }
 
-        // Obtain layout info from the display.
+        // Obtain layout info from FlatlandDisplay. Logical size may be different from the
+        // display size if DPR is applied.
         let layout_info = root_flatland.parent_viewport_watcher.get_layout().await?;
         let root_viewport_size = layout_info
             .logical_size
             .ok_or(anyhow::anyhow!("Did not receive layout info from the display"))?;
 
-        // Combine the layout info with passed-in display properties.
-        let display_metrics = DisplayMetrics::new(
-            Size {
-                width: root_viewport_size.width as f32,
-                height: root_viewport_size.height as f32,
-            },
-            display_pixel_density,
-            viewing_distance,
-            None,
-        );
         let (
             display_rotation_enum,
             injector_viewport_translation,
@@ -460,14 +445,14 @@ impl FlatlandSceneManager {
                 // specified |display_rotation| value). Winding in the opposite direction is equal
                 // to -90 degrees, which is equivalent to 270.
                 ui_comp::Orientation::Ccw270Degrees,
-                math::Vec_ { x: display_metrics.width_in_pixels() as i32, y: 0 },
+                math::Vec_ { x: root_viewport_size.width as i32, y: 0 },
                 true,
             )),
             180 => Ok((
                 ui_comp::Orientation::Ccw180Degrees,
                 math::Vec_ {
-                    x: display_metrics.width_in_pixels() as i32,
-                    y: display_metrics.height_in_pixels() as i32,
+                    x: root_viewport_size.width as i32,
+                    y: root_viewport_size.height as i32,
                 },
                 false,
             )),
@@ -476,20 +461,18 @@ impl FlatlandSceneManager {
                 // specified |display_rotation| value). Winding in the opposite direction is equal
                 // to -270 degrees, which is equivalent to 90.
                 ui_comp::Orientation::Ccw90Degrees,
-                math::Vec_ { x: 0, y: display_metrics.height_in_pixels() as i32 },
+                math::Vec_ { x: 0, y: root_viewport_size.height as i32 },
                 true,
             )),
             _ => Err(anyhow::anyhow!("Invalid display rotation; must be {{0,90,180,270}}")),
         }?;
         let client_viewport_size = match flip_injector_viewport_dimensions {
-            true => math::SizeU {
-                width: display_metrics.height_in_pixels(),
-                height: display_metrics.width_in_pixels(),
-            },
-            false => math::SizeU {
-                width: display_metrics.width_in_pixels(),
-                height: display_metrics.height_in_pixels(),
-            },
+            true => {
+                math::SizeU { width: root_viewport_size.height, height: root_viewport_size.width }
+            }
+            false => {
+                math::SizeU { width: root_viewport_size.width, height: root_viewport_size.height }
+            }
         };
 
         // Create the pointerinjector view and embed it as a child of the root view.
@@ -655,13 +638,13 @@ impl FlatlandSceneManager {
 
         let viewport_hanging_get: Arc<Mutex<InjectorViewportHangingGet>> =
             scene_manager::create_viewport_hanging_get({
-                let logical_size =
+                let _logical_size =
                     layout_info.logical_size.ok_or(anyhow!("LayoutInfo must have logical_size"))?;
 
                 InjectorViewportSpec {
-                    width: logical_size.width as f32,
-                    height: logical_size.height as f32,
-                    scale: 1.,
+                    width: display_metrics.width_in_pixels() as f32,
+                    height: display_metrics.height_in_pixels() as f32,
+                    scale: 1. / display_metrics.pixels_per_pip(),
                     x_offset: 0.,
                     y_offset: 0.,
                 }
@@ -678,7 +661,6 @@ impl FlatlandSceneManager {
 
         Ok(FlatlandSceneManager {
             _display: display,
-            layout_info,
             client_viewport_size,
             root_flatland,
             _pointerinjector_flatland: pointerinjector_flatland,
