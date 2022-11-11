@@ -47,11 +47,13 @@ sdk_source_set("driver_runtime_cpp") {
   public_configs = [ ":include" ]
   public_deps = [
     ":driver_runtime",
+    "//sdk/lib/fidl/cpp/wire",
     "//sdk/lib/fit",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
   sources = [
+    "arena.cc",
     "channel_read.cc",
     "protocol.cc",
   ]

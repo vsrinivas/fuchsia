@@ -4,6 +4,10 @@
 
 #include "src/devices/bin/driver_runtime/arena.h"
 
+#include <lib/fdf/cpp/arena.h>
+
+#include <unordered_set>
+
 #include <zxtest/zxtest.h>
 
 TEST(fdf_arena, AllocateMultiple) {
@@ -94,4 +98,75 @@ TEST(fdf_arena, InitialBufferContains) {
   EXPECT_FALSE(arena->Contains(increment_ptr(addr, 0x500), 0x500));
 
   arena->Destroy();
+}
+
+TEST(fdf_arena, FidlArena) {
+  fdf::Arena arena('TEST');
+
+  uint8_t* ptr = arena.Allocate(4000, 1, nullptr);
+  ASSERT_NOT_NULL(ptr);
+  memset(ptr, 1, 4000);
+  ASSERT_TRUE(std::all_of(ptr, ptr + 4000, [](uint8_t i) { return i == 1; }));
+
+  uint8_t* ptr2 = arena.Allocate(8000, 1, nullptr);
+  ASSERT_NOT_NULL(ptr2);
+  memset(ptr2, 2, 8000);
+  ASSERT_TRUE(std::all_of(ptr2, ptr2 + 8000, [](uint8_t i) { return i == 2; }));
+  ASSERT_NE(ptr, ptr2);
+
+  uint8_t* ptr3 = arena.Allocate(20000, 1, nullptr);
+  ASSERT_NOT_NULL(ptr3);
+  memset(ptr3, 3, 20000);
+  ASSERT_TRUE(std::all_of(ptr3, ptr3 + 20000, [](uint8_t i) { return i == 3; }));
+  ASSERT_NE(ptr, ptr3);
+  ASSERT_NE(ptr2, ptr3);
+}
+
+// Tests that we get unique pointers for allocations from the same |fidl::AnyArena|.
+TEST(fdf_arena, FidlArenaAllocateMany) {
+  constexpr uint32_t kAllocSize = 1000u;
+  constexpr uint32_t kAllocCount = 1;
+  constexpr uint32_t kIterations = 1000;
+
+  std::unordered_set<uint8_t*> allocations;
+
+  fdf::Arena arena('TEST');
+  for (uint32_t i = 0; i < kIterations; i++) {
+    auto ptr = arena.Allocate(kAllocSize, kAllocCount, nullptr);
+    ASSERT_NOT_NULL(ptr);
+    ASSERT_EQ(allocations.find(ptr), allocations.end());
+    allocations.insert(ptr);
+  }
+}
+
+TEST(fdf_arena, FidlArenaDestructorFunctionCalled) {
+  bool destructor_called = false;
+
+  // We will receive a pointer to |destructor_called| in |data|.
+  auto destructor = [](uint8_t* data, size_t count) {
+    bool** called_ptr = reinterpret_cast<bool**>(data);
+    bool* called = *called_ptr;
+    *called = true;
+  };
+
+  {
+    fdf::Arena arena('TEST');
+    auto ptr = arena.Allocate(0x1000, 1, destructor);
+    bool** called_ptr = reinterpret_cast<bool**>(ptr);
+    *called_ptr = &destructor_called;
+  }
+  ASSERT_TRUE(destructor_called);
+}
+
+// Tests that we are freeing allocated |fidl::AnyArena| allocations correctly.
+TEST(fdf_arena, FidlArenaAllocationsAreFreed) {
+  constexpr uint32_t kAllocSize = 1000 * 1000;
+  constexpr uint32_t kAllocCount = 1;
+  constexpr uint32_t kIterations = 100000;
+
+  for (uint32_t i = 0; i < kIterations; i++) {
+    fdf::Arena arena('TEST');
+    auto ptr = arena.Allocate(kAllocSize, kAllocCount, nullptr);
+    ASSERT_NOT_NULL(ptr);
+  }
 }

@@ -70,17 +70,23 @@ class LeafDriver : public driver::DriverBase {
   static constexpr const uint32_t kMagic = 123456;
 
   fpromise::promise<void, zx_status_t> CallSetter() {
-    return fidl_fpromise::as_promise(setter_->Set({kMagic}))
-        .then([&](fpromise::result<void, fidl::ErrorsIn<ft::Setter::Set>>& result)
-                  -> fpromise::promise<void, zx_status_t> {
-          if (result.is_error()) {
-            zx_status_t status = result.error().is_domain_error()
-                                     ? result.error().domain_error()
-                                     : result.error().framework_error().status();
-            return fpromise::make_error_promise(status);
-          }
-          return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
-        });
+    fdf::Arena arena('TEST');
+
+    ft::WrappedValue wrapped_value;
+    wrapped_value.value() = kMagic;
+    auto arg = fidl::ToWire(arena, wrapped_value);
+
+    fpromise::bridge<void, zx_status_t> bridge;
+    auto callback = [completer = std::move(bridge.completer)](
+                        fdf::WireUnownedResult<ft::Setter::Set>& result) mutable {
+      if (!result.ok()) {
+        completer.complete_error(result.status());
+        return;
+      }
+      completer.complete_ok();
+    };
+    setter_.buffer(arena)->Set(arg).ThenExactlyOnce(std::move(callback));
+    return bridge.consumer.promise();
   }
 
   fpromise::promise<void, zx_status_t> CallGetter() {
@@ -114,7 +120,8 @@ class LeafDriver : public driver::DriverBase {
   async::Executor executor_;
   fidl::WireSharedClient<fdf::Node> node_;
 
-  fdf::Client<ft::Setter> setter_;
+  // This is specifically a |WireClient| so we can test using |fdf::Arena|.
+  fdf::WireClient<ft::Setter> setter_;
   fdf::Client<ft::Getter> getter_;
   fidl::Client<ft::Waiter> waiter_;
 

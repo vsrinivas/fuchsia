@@ -6,6 +6,7 @@
 #define LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_ARENA_H_
 
 #include <lib/fdf/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/zx/result.h>
 #include <zircon/assert.h>
@@ -35,7 +36,7 @@ namespace fdf {
 //   void* addr2 = arena.Allocate(arena, 0x2000);
 //
 //   // Use the allocated memory...
-class Arena {
+class Arena : public fidl::AnyArena {
  public:
   explicit Arena(fdf_arena_t* arena) : arena_(arena) {}
 
@@ -72,6 +73,8 @@ class Arena {
 
   // Arena can be moved. Once moved, invoking a method on an instance will
   // yield undefined behavior.
+  //
+  // Moving the arena does not move any data allocated for |fidl::AnyArena|.
   Arena(Arena&& other) noexcept : Arena(other.release()) {}
   Arena& operator=(Arena&& other) noexcept {
     reset(other.release());
@@ -111,6 +114,7 @@ class Arena {
       fdf_arena_destroy(arena_);
       arena_ = nullptr;
     }
+    fidl_arena_.Clean();
   }
 
   fdf_arena_t* release() {
@@ -119,9 +123,83 @@ class Arena {
     return ret;
   }
 
+  // Implementation of |fidl::AnyArena|.
+  uint8_t* Allocate(size_t item_size, size_t count,
+                    void (*destructor_function)(uint8_t* data, size_t count)) override {
+    return fidl_arena_.Allocate(item_size, count, destructor_function);
+  }
+
   fdf_arena_t* get() const { return arena_; }
 
  private:
+  struct FidlArena {
+   public:
+    // Struct used to store the data needed to deallocate an allocation (to call
+    // the destructor).
+    struct Destructor {
+      Destructor(Destructor* next, size_t count, void (*destructor)(uint8_t*, size_t))
+          : next(next), count(count), destructor(destructor) {}
+
+      Destructor* const next;
+      const size_t count;
+      void (*const destructor)(uint8_t*, size_t);
+    };
+
+    // Struct used for allocation buffers on the heap.
+    struct Block {
+     private:
+      // Separately define the header of the block, to provide a sizeof.
+      struct Header {
+        // Next block to deallocate (block allocated before this one).
+        Block* next_block;
+
+        // Size of the |data_| portion. Note: although |data_| is declared to have
+        // a fixed size, in practice an |Block| might be allocated with a
+        // bespoke bigger size to serve a particular big object.
+        size_t size;
+      };
+
+     public:
+      // The size of the block without the data portion.
+      static constexpr size_t kBlockHeaderSize = sizeof(Header);
+
+      // In most cases, the size is big enough to only need one allocation.
+      // It's also small enough to not use too much heap memory. The actual
+      // allocated size for the Block struct will be 16 KiB.
+      static constexpr size_t kDefaultBlockSize = 16lu * 1024 - kBlockHeaderSize;
+
+      explicit Block(Block* next_block, size_t size)
+          : header_(Header{
+                .next_block = next_block,
+                .size = size,
+            }) {}
+
+      Block* next_block() const { return header_.next_block; }
+      uint8_t* data() { return data_; }
+      size_t size() const { return header_.size; }
+
+     private:
+      Header header_;
+      // The usable data.
+      alignas(FIDL_ALIGNMENT) uint8_t data_[kDefaultBlockSize];
+    };
+
+    void Clean();
+
+    uint8_t* Allocate(size_t item_size, size_t count,
+                      void (*destructor_function)(uint8_t* data, size_t count));
+
+   private:
+    // Pointer to the next available data.
+    uint8_t* next_data_available_ = nullptr;
+    // Size of the data available at next_data_available_.
+    size_t available_size_ = 0;
+    // Linked list of the destructors to call starting with the last allocation.
+    Destructor* last_destructor_ = nullptr;
+    // Linked list of the blocks used for the allocation.
+    Block* last_block_ = nullptr;
+  };
+
   static fdf_arena_t* CreateArenaOrAssert(uint32_t tag) {
     fdf_arena_t* arena;
     zx_status_t status = fdf_arena_create(0, tag, &arena);
@@ -130,6 +208,7 @@ class Arena {
   }
 
   fdf_arena_t* arena_;
+  FidlArena fidl_arena_;
 };
 
 }  // namespace fdf

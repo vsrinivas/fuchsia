@@ -6,11 +6,15 @@ library fuchsia.runtime.test;
 
 using zx;
 
+type WrappedValue = table {
+    1: value uint32;
+};
+
 @discoverable
 @transport("Driver")
 protocol Setter {
     Set(struct {
-        value uint32;
+        wrapped_value WrappedValue;
     }) -> () error zx.status;
 };
 

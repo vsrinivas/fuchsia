@@ -70,7 +70,7 @@ class RootDriver : public driver::DriverBase,
 
   // fdf::Server<ft::Setter>
   void Set(SetRequest& request, SetCompleter::Sync& completer) override {
-    child_value_ = request.value();
+    child_value_ = request.wrapped_value().value();
     completer.Reply(fit::ok());
   }
 

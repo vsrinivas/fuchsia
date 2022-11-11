@@ -29,7 +29,8 @@ class [[nodiscard]] NaturalThenable : private ThenableBase {
   // |MessageSendOp| executes custom logic to send a message after |Then{ExactlyOnce}|.
   // TODO(fxbug.dev/94402): Encapsulate them inside |NaturalMessageEncoder|.
   using MessageSendOp =
-      fit::inline_callback<void(ThenableBase*, NaturalMessageEncoder&, ResponseContext*)>;
+      fit::inline_callback<void(ThenableBase*, NaturalMessageEncoder&, ResponseContext*),
+                           sizeof(void*) * 6>;  // We need to be able to fit |fdf::Arena|.
 
  public:
   template <typename EncodeCallback>
