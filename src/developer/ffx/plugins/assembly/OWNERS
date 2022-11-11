@@ -1,6 +1,6 @@
 aaronwood@google.com
 awolter@google.com
 
-per-file BUILD.gn,src/args.rs,src/operations/size_check*,src/operations/template/*=samans@google.com,gopichitluri@google.com
+per-file BUILD.gn,src/args.rs,src/operations/size_check*,src/operations/template/*=gopichitluri@google.com
 
 # COMPONENT: ProductAssembly
