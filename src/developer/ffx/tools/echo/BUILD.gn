@@ -60,6 +60,8 @@ compiled_action("metadata") {
   tool_output_name = "ffx-echo"
   outputs = [ "${host_tools_dir}/ffx-echo.json" ]
   args = [
+    "--config",
+    "ffx.analytics.disabled=true",
     "metadata",
     rebase_path("${host_tools_dir}/ffx-echo.json", root_build_dir),
   ]
