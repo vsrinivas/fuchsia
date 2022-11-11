@@ -81,6 +81,9 @@ class Lp50xxLight : public Lp50xxLightType, public ddk::EmptyProtocol<ZX_PROTOCO
   zx_status_t SetRgbValue(uint32_t index, fuchsia_hardware_light::wire::Rgb rgb);
   zx_status_t GetRgbValue(uint32_t index, fuchsia_hardware_light::wire::Rgb* rgb);
 
+  zx_status_t SetBrightness(uint32_t index, double brightness);
+  zx_status_t GetBrightness(uint32_t index, double* brightness);
+
   uint32_t pid_ = 0;
   fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
 
@@ -94,6 +97,7 @@ class Lp50xxLight : public Lp50xxLightType, public ddk::EmptyProtocol<ZX_PROTOCO
   uint32_t led_count_ = 0;
   uint32_t led_color_addr_ = 0;
   uint32_t reset_addr_ = 0;
+  uint32_t brightness_addr_ = 0;
   fbl::Array<char> group_names_;
   std::map<uint32_t, std::vector<uint32_t>> group2led_;
 };

@@ -90,28 +90,32 @@ zx_status_t Lp50xxLight::Lp50xxRegConfig() {
       led_count = 6;
       led_color_addr_ = 0x0f;
       reset_addr_ = 0x27;
+      brightness_addr_ = 0x7;
       break;
     case PDEV_PID_TI_LP5024:
       led_count = 8;
       led_color_addr_ = 0x0f;
       reset_addr_ = 0x27;
+      brightness_addr_ = 0x7;
       break;
     case PDEV_PID_TI_LP5030:
       led_count = 10;
       led_color_addr_ = 0x14;
       reset_addr_ = 0x38;
+      brightness_addr_ = 0x8;
       break;
     case PDEV_PID_TI_LP5036:
       led_count = 12;
       led_color_addr_ = 0x14;
       reset_addr_ = 0x38;
+      brightness_addr_ = 0x8;
       break;
     default:
       zxlogf(ERROR, "unsupported PID %u", pid_);
       return ZX_ERR_NOT_SUPPORTED;
   }
-  if (led_count != led_count_) {
-    zxlogf(ERROR, "incorrect number of LEDs %u != %u", led_count_, led_count);
+  if (led_count < led_count_) {
+    zxlogf(ERROR, "incorrect number of LEDs %u > %u", led_count_, led_count);
     return ZX_ERR_INTERNAL;
   }
 
@@ -166,6 +170,43 @@ zx_status_t Lp50xxLight::GetRgbValue(uint32_t index, fuchsia_hardware_light::wir
   return ZX_OK;
 }
 
+zx_status_t Lp50xxLight::SetBrightness(uint32_t index, double brightness) {
+  constexpr auto kMaxBrightnessRegValue = std::numeric_limits<BrightnessReg::ValueType>::max();
+
+  if (brightness > 1.0 || brightness < 0.0 || std::isnan(brightness)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  const double rounded_reg_value = std::round(brightness * kMaxBrightnessRegValue);
+  const auto reg_value =
+      std::min(static_cast<BrightnessReg::ValueType>(rounded_reg_value), kMaxBrightnessRegValue);
+
+  zx_status_t status = BrightnessReg::Get(brightness_addr_, index)
+                           .FromValue(0)
+                           .set_brightness(reg_value)
+                           .WriteTo(i2c_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to write to brightness register: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Lp50xxLight::GetBrightness(uint32_t index, double* brightness) {
+  constexpr auto kMaxBrightnessRegValue = std::numeric_limits<BrightnessReg::ValueType>::max();
+
+  auto brightness_reg = BrightnessReg::Get(brightness_addr_, index).FromValue(0);
+  zx_status_t status = brightness_reg.ReadFrom(i2c_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to read to brightness register: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  *brightness = static_cast<double>(brightness_reg.brightness()) / kMaxBrightnessRegValue;
+  return ZX_OK;
+}
+
 void Lp50xxLight::GetNumLights(GetNumLightsCompleter::Sync& completer) {
   completer.Reply(led_count_);
 }
@@ -209,12 +250,31 @@ void Lp50xxLight::SetSimpleValue(SetSimpleValueRequestView request,
 
 void Lp50xxLight::GetCurrentBrightnessValue(GetCurrentBrightnessValueRequestView request,
                                             GetCurrentBrightnessValueCompleter::Sync& completer) {
-  completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
+  if (request->index >= led_count_) {
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kInvalidIndex);
+    return;
+  }
+
+  double brightness;
+  if (GetBrightness(request->index, &brightness) == ZX_OK) {
+    completer.ReplySuccess(brightness);
+  } else {
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kFailed);
+  }
 }
 
 void Lp50xxLight::SetBrightnessValue(SetBrightnessValueRequestView request,
                                      SetBrightnessValueCompleter::Sync& completer) {
-  completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
+  if (request->index >= led_count_) {
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kInvalidIndex);
+    return;
+  }
+
+  if (SetBrightness(request->index, request->value) == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kFailed);
+  }
 }
 
 void Lp50xxLight::GetCurrentRgbValue(GetCurrentRgbValueRequestView request,
@@ -281,12 +341,55 @@ void Lp50xxLight::SetGroupSimpleValue(SetGroupSimpleValueRequestView request,
 void Lp50xxLight::GetGroupCurrentBrightnessValue(
     GetGroupCurrentBrightnessValueRequestView request,
     GetGroupCurrentBrightnessValueCompleter::Sync& completer) {
-  completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
+  if (request->group_id >= group2led_.size()) {
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kInvalidIndex);
+    return;
+  }
+
+  std::vector<double> out;
+  for (auto led : group2led_[request->group_id]) {
+    if (led >= led_count_) {
+      completer.ReplyError(fuchsia_hardware_light::wire::LightError::kInvalidIndex);
+      return;
+    }
+
+    double brightness;
+    if (zx_status_t status = GetBrightness(led, &brightness) != ZX_OK) {
+      completer.ReplyError(fuchsia_hardware_light::wire::LightError::kFailed);
+      return;
+    }
+    out.push_back(brightness);
+  }
+
+  completer.ReplySuccess(fidl::VectorView<double>::FromExternal(out));
 }
 
 void Lp50xxLight::SetGroupBrightnessValue(SetGroupBrightnessValueRequestView request,
                                           SetGroupBrightnessValueCompleter::Sync& completer) {
-  completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
+  if (request->group_id >= group2led_.size()) {
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kInvalidIndex);
+    return;
+  }
+
+  const std::vector<uint32_t>& leds = group2led_[request->group_id];
+  if (request->values.count() != leds.size()) {
+    completer.ReplyError(fuchsia_hardware_light::wire::LightError::kInvalidIndex);
+    return;
+  }
+
+  for (uint32_t i = 0; i < leds.size(); i++) {
+    if (leds[i] >= led_count_) {
+      completer.ReplyError(fuchsia_hardware_light::wire::LightError::kInvalidIndex);
+      return;
+    }
+
+    if (SetBrightness(leds[i], request->values[i]) != ZX_OK) {
+      completer.ReplyError(fuchsia_hardware_light::wire::LightError::kFailed);
+      return;
+    }
+  }
+
+  completer.ReplySuccess();
 }
 
 void Lp50xxLight::GetGroupCurrentRgbValue(GetGroupCurrentRgbValueRequestView request,

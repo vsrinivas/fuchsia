@@ -45,6 +45,14 @@ class Lp50xxLightTest : public Lp50xxLight {
     return Lp50xxLight::SetRgbValue(index, rgb);
   }
 
+  zx_status_t SetBrightness(uint32_t index, double brightness) {
+    return Lp50xxLight::SetBrightness(index, brightness);
+  }
+
+  zx_status_t GetBrightness(uint32_t index, double* brightness) {
+    return Lp50xxLight::GetBrightness(index, brightness);
+  }
+
   void Verify() { mock_i2c.VerifyAndClear(); }
 
   mock_i2c::MockI2c mock_i2c;
@@ -96,6 +104,52 @@ TEST(Lp50xxLightTest, SetRgbTest) {
       .ExpectWriteStop({0x0f, 0xCC});
 
   EXPECT_OK(dut.SetRgb(0, rgb));
+
+  dut.Verify();
+}
+
+TEST(Lp50xxLightTest, SetBrightnessTest) {
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  Lp50xxLightTest dut(fake_parent.get());
+  EXPECT_OK(dut.Init());
+
+  dut.mock_i2c
+      .ExpectWriteStop({0x0a, 128})  // Rounded up
+      .ExpectWriteStop({0x0c, 191})  // Rounded down
+      .ExpectWriteStop({0x07, 0})
+      .ExpectWriteStop({0x09, 255});
+
+  EXPECT_OK(dut.SetBrightness(3, 0.5));
+  EXPECT_OK(dut.SetBrightness(5, 0.75));
+  EXPECT_OK(dut.SetBrightness(0, 0));
+  EXPECT_OK(dut.SetBrightness(2, 1.0));
+
+  dut.Verify();
+}
+
+TEST(Lp50xxLightTest, GetBrightnessTest) {
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  Lp50xxLightTest dut(fake_parent.get());
+  EXPECT_OK(dut.Init());
+
+  dut.mock_i2c.ExpectWrite({0x0a})
+      .ExpectReadStop({128})
+      .ExpectWrite({0x0c})
+      .ExpectReadStop({191})
+      .ExpectWrite({0x07})
+      .ExpectReadStop({0})
+      .ExpectWrite({0x09})
+      .ExpectReadStop({255});
+
+  double brightness;
+  EXPECT_OK(dut.GetBrightness(3, &brightness));
+  EXPECT_EQ(static_cast<uint32_t>(std::round(brightness * 1000)), 502);
+  EXPECT_OK(dut.GetBrightness(5, &brightness));
+  EXPECT_EQ(static_cast<uint32_t>(std::round(brightness * 1000)), 749);
+  EXPECT_OK(dut.GetBrightness(0, &brightness));
+  EXPECT_EQ(static_cast<uint32_t>(std::round(brightness * 1000)), 0);
+  EXPECT_OK(dut.GetBrightness(2, &brightness));
+  EXPECT_EQ(static_cast<uint32_t>(std::round(brightness * 1000)), 1000);
 
   dut.Verify();
 }

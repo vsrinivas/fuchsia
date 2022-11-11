@@ -25,6 +25,15 @@ class DeviceConfig1Reg : public hwreg::I2cRegisterBase<DeviceConfig1Reg, uint8_t
   static auto Get() { return hwreg::I2cRegisterAddr<DeviceConfig1Reg>(0x01); }
 };
 
+class BrightnessReg : public hwreg::I2cRegisterBase<BrightnessReg, uint8_t, sizeof(uint8_t)> {
+ public:
+  DEF_FIELD(7, 0, brightness);
+
+  static auto Get(uint32_t brightness_addr, uint32_t index) {
+    return hwreg::I2cRegisterAddr<BrightnessReg>(brightness_addr + index);
+  }
+};
+
 class BlueColorReg : public hwreg::I2cRegisterBase<BlueColorReg, uint8_t, sizeof(uint8_t)> {
  public:
   static auto Get(uint32_t led_color_addr, uint32_t index) {
