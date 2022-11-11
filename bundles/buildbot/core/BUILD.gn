@@ -19,7 +19,11 @@ group("core") {
     "//bundles/fidl:tests",
     "//sdk:tests",
     "//src",
-    "//tools",
+
+    # TODO(http://fxbug.dev/114960) Re-instate these tests when they correctly
+    # select the environments that they can run on.
+    #
+    # "//tools:e2e_tests",
   ]
 
   # Ensure paths to known e2e test libs are always up-to-date.
@@ -48,7 +52,6 @@ group("no_e2e_dep") {
   deps = [
     "//build:tests",
     "//bundles/packages/tests:all",
-    "//bundles/tools",
     "//examples",
     "//examples:tests",
     "//scripts:tests",
@@ -59,7 +62,6 @@ group("no_e2e_dep") {
     "//src/media/bundles:services",
     "//src/media/bundles:tools",
     "//third_party/go:tests",
-    "//tools",
 
     # The following groups have known e2e tests explicitly excluded.
     "//bundles/fidl:tests_no_e2e",
