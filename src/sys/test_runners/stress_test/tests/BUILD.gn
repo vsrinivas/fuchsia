@@ -37,6 +37,19 @@ fuchsia_test_package("stress-runner-integration-test") {
     "test_data",
     "//src/sys/test_manager:test_manager_for_test_cmp",
   ]
+
+  # TODO(fxbug.dev/114727): Flaky test disabled on coverage.
+  # Please fix the flake and remove the condition below.
+  if (is_coverage) {
+    test_specs = {
+      environments = [
+        {
+          dimensions = qemu_env
+          tags = [ "disabled" ]
+        },
+      ]
+    }
+  }
 }
 
 group("tests") {
