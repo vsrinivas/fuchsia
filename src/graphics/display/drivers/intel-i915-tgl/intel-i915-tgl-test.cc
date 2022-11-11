@@ -65,6 +65,8 @@ namespace {
 class MockNoCpuBufferCollection
     : public fidl::testing::WireTestBase<fuchsia_sysmem::BufferCollection> {
  public:
+  void set_format_modifier(uint64_t format_modifier) { format_modifier_ = format_modifier; }
+
   bool set_constraints_called() const { return set_constraints_called_; }
   void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& _completer) override {
@@ -80,7 +82,7 @@ class MockNoCpuBufferCollection
     auto& constraints = info.settings.image_format_constraints;
     for (size_t i = 0; i < constraints_.image_format_constraints_count; i++) {
       if (constraints_.image_format_constraints[i].pixel_format.format_modifier.value ==
-          fuchsia_sysmem::wire::kFormatModifierLinear) {
+          format_modifier_) {
         constraints = constraints_.image_format_constraints[i];
         break;
       }
@@ -97,6 +99,7 @@ class MockNoCpuBufferCollection
 
  private:
   bool set_constraints_called_ = false;
+  uint64_t format_modifier_ = fuchsia_sysmem::wire::kFormatModifierLinear;
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints_;
 };
 
@@ -339,6 +342,46 @@ TEST_F(TglIntegrationTest, SysmemImport) {
   EXPECT_OK(ctx->DisplayControllerImplImportImage(&image, client_channel.get(), 0));
 
   const GttRegion& region = ctx->SetupGttImage(&image, FRAME_TRANSFORM_IDENTITY);
+  EXPECT_LT(image.width * 4, kBytesPerRowDivisor);
+  EXPECT_EQ(kBytesPerRowDivisor, region.bytes_per_row());
+  ctx->DisplayControllerImplReleaseImage(&image);
+}
+
+TEST_F(TglIntegrationTest, SysmemRotated) {
+  ASSERT_OK(Controller::Create(parent()));
+
+  // There should be two published devices: one "intel_i915" device rooted at `parent()`, and a
+  // grandchild "intel-gpu-core" device.
+  ASSERT_EQ(1u, parent()->child_count());
+  auto dev = parent()->GetLatestChild();
+  Controller* ctx = dev->GetDeviceContext<Controller>();
+
+  zx::channel server_channel, client_channel;
+  ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
+
+  MockNoCpuBufferCollection collection;
+  collection.set_format_modifier(fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  image_t image = {};
+  image.pixel_format = ZX_PIXEL_FORMAT_ARGB_8888;
+  image.width = 128;
+  image.height = kImageHeight;
+  // Must match set_format_modifier above, and also be y or yf tiled so rotation is allowed.
+  image.type = IMAGE_TYPE_Y_LEGACY_TILED;
+  ASSERT_OK(
+      fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &collection));
+
+  EXPECT_OK(ctx->DisplayControllerImplSetBufferCollectionConstraints(&image, client_channel.get()));
+
+  loop.RunUntilIdle();
+  EXPECT_TRUE(collection.set_constraints_called());
+  loop.StartThread();
+  image.type = IMAGE_TYPE_Y_LEGACY_TILED;
+  EXPECT_OK(ctx->DisplayControllerImplImportImage(&image, client_channel.get(), 0));
+
+  // Check that rotating the image doesn't hang.
+  const GttRegion& region = ctx->SetupGttImage(&image, FRAME_TRANSFORM_ROT_90);
   EXPECT_LT(image.width * 4, kBytesPerRowDivisor);
   EXPECT_EQ(kBytesPerRowDivisor, region.bytes_per_row());
   ctx->DisplayControllerImplReleaseImage(&image);
