@@ -51,6 +51,14 @@ void VirtioQueueFake::Configure(zx_gpaddr_t data_addr, size_t data_len) {
   data_end_ = data_addr + data_len;
 }
 
+VirtioQueueFake::AllocResult VirtioQueueFake::AllocData(size_t len) {
+  void* data = phys_mem_.ptr(data_begin_, len);
+  zx_gpaddr_t driver_mem = data_begin_;
+  data_begin_ += len;
+  data_begin_ = align_addr(data_begin_);
+  return VirtioQueueFake::AllocResult{data, driver_mem};
+}
+
 zx_status_t VirtioQueueFake::WriteDesc(void** buf, uint32_t len, uint16_t flags,
                                        uint16_t* desc_idx) {
   *desc_idx = next_desc_++ % ring_.size;
@@ -59,7 +67,7 @@ zx_status_t VirtioQueueFake::WriteDesc(void** buf, uint32_t len, uint16_t flags,
   }
 
   void* data = phys_mem_.ptr(data_begin_, len);
-  if (flags & VRING_DESC_F_WRITE) {
+  if (flags & VRING_DESC_F_WRITE && !(flags & VRING_DESC_F_INDIRECT)) {
     *buf = data;
   } else {
     memcpy(data, *buf, len);
