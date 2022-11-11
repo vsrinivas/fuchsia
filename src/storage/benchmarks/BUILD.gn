@@ -3,44 +3,22 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//src/storage/testing/driver_test_realm.gni")
 
-rustc_binary("storage-benchmarks") {
+rustc_library("framework") {
   edition = "2021"
   testonly = true
   name = "storage_benchmarks"
   sources = [
-    "src/benchmarks.rs",
-    "src/framework.rs",
-    "src/framework/block_device.rs",
-    "src/framework/filesystem.rs",
-    "src/main.rs",
+    "src/block_device.rs",
+    "src/filesystem.rs",
+    "src/io_benchmarks.rs",
+    "src/lib.rs",
+    "src/trace.rs",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
-    "//sdk/fidl/fuchsia.fs:fuchsia.fs_rust",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-component",
-    "//src/lib/storage/fs_management/rust:fs_management",
-    "//src/lib/storage/ramdevice_client",
-    "//src/lib/trace/rust:trace",
-    "//src/lib/trace/rust:trace-provider",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/storage/bin/blobfs:blobfs-component",
-    "//src/storage/bin/minfs:minfs-component",
-    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_rust",
-    "//src/storage/fxfs:fuchsia.fxfs_rust",
-    "//src/storage/testing/rust:storage-isolated-driver-manager",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:either",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:prettytable-rs",
     "//third_party/rust_crates:rand",
@@ -50,50 +28,36 @@ rustc_binary("storage-benchmarks") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tracing",
   ]
-  data_deps = [ "//src/storage/bin/f2fs" ]
+  if (is_fuchsia) {
+    deps += [ "//src/lib/trace/rust:trace" ]
+  }
   test_deps = [
-    "//src/lib/test_util",
+    "//src/lib/fuchsia",
+    "//src/sys/test_runners:tmp_storage",
     "//third_party/rust_crates:futures",
   ]
   with_unit_tests = true
 }
 
-fuchsia_test_component("storage-benchmarks-component") {
-  component_name = "storage-benchmarks"
-  manifest = "meta/storage-benchmarks.cml"
-  deps = [ ":storage-benchmarks" ]
-}
-
-fuchsia_test_package("benchmarks") {
-  package_name = "storage-benchmarks"
-  test_components = [ ":storage-benchmarks-component" ]
-  deps = [
-    "//src/storage/benchmarks/memfs-component",
-    "//src/storage/fxfs:fxfs_component",
-    "//src/storage/fxfs-crypt",
-  ]
-}
-
-storage_driver_test_realm_v2_component("storage-benchmarks-tests-component") {
-  component_name = "storage-benchmarks-tests"
-  manifest = "meta/storage-benchmarks-tests.cml"
-  deps = [ ":storage-benchmarks_test" ]
-}
-
-fuchsia_test_package("storage-benchmarks-tests-package") {
-  package_name = "storage-benchmarks-tests"
-  test_components = [ ":storage-benchmarks-tests-component" ]
-  deps = [
-    "//src/storage/benchmarks/memfs-component",
-    "//src/storage/fxfs:fxfs_component",
-    "//src/storage/fxfs-crypt",
-  ]
+fuchsia_unittest_package("storage-benchmarks-framework-tests") {
+  deps = [ ":framework_test" ]
   test_specs = {
     parallel = 1
   }
 }
 
+group("benchmarks") {
+  testonly = true
+  deps = [
+    "fuchsia:benchmarks",
+    "host:benchmarks",
+  ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":storage-benchmarks-tests-package" ]
+  deps = [
+    ":storage-benchmarks-framework-tests",
+    "fuchsia:tests",
+  ]
 }

@@ -1,0 +1,87 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/storage/testing/driver_test_realm.gni")
+
+rustc_binary("fuchsia-storage-benchmarks") {
+  edition = "2021"
+  testonly = true
+  name = "fuchsia_storage_benchmarks"
+  sources = [
+    "src/block_devices.rs",
+    "src/filesystems.rs",
+    "src/main.rs",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_rust",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/storage/fs_management/rust:fs_management",
+    "//src/lib/storage/ramdevice_client",
+    "//src/lib/trace/rust:trace-provider",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/storage/benchmarks:framework",
+    "//src/storage/bin/blobfs:blobfs-component",
+    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_rust",
+    "//src/storage/fxfs:fuchsia.fxfs_rust",
+    "//src/storage/testing/rust:storage-isolated-driver-manager",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:either",
+    "//third_party/rust_crates:regex",
+  ]
+  data_deps = [ "//src/storage/bin/f2fs" ]
+  test_deps = [ "//src/lib/test_util" ]
+  with_unit_tests = true
+}
+
+fuchsia_test_component("fuchsia-storage-benchmarks-component") {
+  component_name = "storage-benchmarks"
+  manifest = "meta/storage-benchmarks.cml"
+  deps = [ ":fuchsia-storage-benchmarks" ]
+}
+
+fuchsia_test_package("benchmarks") {
+  package_name = "storage-benchmarks"
+  test_components = [ ":fuchsia-storage-benchmarks-component" ]
+  deps = [
+    "//src/storage/benchmarks/fuchsia/memfs-component",
+    "//src/storage/bin/minfs:minfs-component",
+    "//src/storage/fxfs:fxfs_component",
+    "//src/storage/fxfs-crypt",
+  ]
+}
+
+storage_driver_test_realm_v2_component(
+    "fuchsia-storage-benchmarks-tests-component") {
+  component_name = "fuchsia-storage-benchmarks-tests"
+  manifest = "meta/fuchsia-storage-benchmarks-tests.cml"
+  deps = [ ":fuchsia-storage-benchmarks_test" ]
+}
+
+fuchsia_test_package("fuchsia-storage-benchmarks-tests") {
+  test_components = [ ":fuchsia-storage-benchmarks-tests-component" ]
+  deps = [
+    "//src/storage/benchmarks/fuchsia/memfs-component",
+    "//src/storage/bin/minfs:minfs-component",
+    "//src/storage/fxfs:fxfs_component",
+    "//src/storage/fxfs-crypt",
+  ]
+  test_specs = {
+    parallel = 1
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fuchsia-storage-benchmarks-tests" ]
+}

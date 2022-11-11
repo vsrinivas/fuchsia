@@ -13,7 +13,7 @@
         "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "bin/storage_benchmarks_bin_test",
+        binary: "bin/fuchsia_storage_benchmarks_bin_test",
     },
     children: [
         {

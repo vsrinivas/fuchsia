@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("host-storage-benchmarks") {
+  edition = "2021"
+  testonly = true
+  name = "storage-benchmarks"
+  sources = [ "src/main.rs" ]
+  deps = [
+    "//src/lib/fuchsia",
+    "//src/storage/benchmarks:framework",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:regex",
+  ]
+}
+
+install_host_tools("benchmarks") {
+  testonly = true
+  deps = [ ":host-storage-benchmarks" ]
+  outputs = [ "storage-benchmarks" ]
+}

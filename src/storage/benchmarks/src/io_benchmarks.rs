@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::framework::{Benchmark, Filesystem, OperationDuration, OperationTimer},
+    crate::{trace_duration, Benchmark, Filesystem, OperationDuration, OperationTimer},
     async_trait::async_trait,
-    fuchsia_trace as trace,
     rand::{seq::SliceRandom, Rng, SeedableRng},
     rand_xorshift::XorShiftRng,
     std::{
@@ -34,13 +33,13 @@ impl ReadSequentialCold {
 #[async_trait]
 impl Benchmark for ReadSequentialCold {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
-        trace::duration!(
+        trace_duration!(
             "benchmark",
             "ReadSequentialCold",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
-        let file_path = fs.mount_point().join("file");
+        let file_path = fs.benchmark_dir().join("file");
 
         // Setup
         let mut file = OpenOptions::new().write(true).create_new(true).open(&file_path).unwrap();
@@ -75,13 +74,13 @@ impl ReadSequentialWarm {
 #[async_trait]
 impl Benchmark for ReadSequentialWarm {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
-        trace::duration!(
+        trace_duration!(
             "benchmark",
             "ReadSequentialWarm",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
-        let file_path = fs.mount_point().join("file");
+        let file_path = fs.benchmark_dir().join("file");
 
         // Setup
         let mut file =
@@ -115,13 +114,13 @@ impl ReadRandomCold {
 #[async_trait]
 impl Benchmark for ReadRandomCold {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
-        trace::duration!(
+        trace_duration!(
             "benchmark",
             "ReadRandomCold",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
-        let file_path = fs.mount_point().join("file");
+        let file_path = fs.benchmark_dir().join("file");
 
         // Setup
         let mut file = OpenOptions::new().write(true).create_new(true).open(&file_path).unwrap();
@@ -157,13 +156,13 @@ impl ReadRandomWarm {
 #[async_trait]
 impl Benchmark for ReadRandomWarm {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
-        trace::duration!(
+        trace_duration!(
             "benchmark",
             "ReadRandomWarm",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
-        let file_path = fs.mount_point().join("file");
+        let file_path = fs.benchmark_dir().join("file");
 
         // Setup
         let mut file =
@@ -196,13 +195,13 @@ impl WriteSequentialCold {
 #[async_trait]
 impl Benchmark for WriteSequentialCold {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
-        trace::duration!(
+        trace_duration!(
             "benchmark",
             "WriteSequentialCold",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
-        let file_path = fs.mount_point().join("file");
+        let file_path = fs.benchmark_dir().join("file");
         let mut file = OpenOptions::new().write(true).create_new(true).open(&file_path).unwrap();
         write_sequential(&mut file, self.op_size, self.op_count)
     }
@@ -229,13 +228,13 @@ impl WriteSequentialWarm {
 #[async_trait]
 impl Benchmark for WriteSequentialWarm {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
-        trace::duration!(
+        trace_duration!(
             "benchmark",
             "WriteSequentialWarm",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
-        let file_path = fs.mount_point().join("file");
+        let file_path = fs.benchmark_dir().join("file");
 
         // Setup
         let mut file = OpenOptions::new().write(true).create_new(true).open(&file_path).unwrap();
@@ -267,13 +266,13 @@ impl WriteRandomCold {
 #[async_trait]
 impl Benchmark for WriteRandomCold {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
-        trace::duration!(
+        trace_duration!(
             "benchmark",
             "WriteRandomCold",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
-        let file_path = fs.mount_point().join("file");
+        let file_path = fs.benchmark_dir().join("file");
         let mut file = OpenOptions::new().write(true).create_new(true).open(&file_path).unwrap();
         let mut rng = XorShiftRng::seed_from_u64(RNG_SEED);
         write_random(&mut file, self.op_size, self.op_count, &mut rng)
@@ -301,13 +300,13 @@ impl WriteRandomWarm {
 #[async_trait]
 impl Benchmark for WriteRandomWarm {
     async fn run(&self, fs: &mut dyn Filesystem) -> Vec<OperationDuration> {
-        trace::duration!(
+        trace_duration!(
             "benchmark",
             "WriteRandomWarm",
             "op_size" => self.op_size as u64,
             "op_count" => self.op_count as u64
         );
-        let file_path = fs.mount_point().join("file");
+        let file_path = fs.benchmark_dir().join("file");
 
         // Setup
         let mut file = OpenOptions::new().write(true).create_new(true).open(&file_path).unwrap();
@@ -340,7 +339,7 @@ fn read_sequential<F: AsRawFd>(
     let mut durations = Vec::new();
     let fd = file.as_raw_fd();
     for i in 0..op_count {
-        trace::duration!("benchmark", "read", "op_number" => i as u64);
+        trace_duration!("benchmark", "read", "op_number" => i as u64);
         let timer = OperationTimer::start();
         let result = unsafe { libc::read(fd, data.as_mut_ptr() as *mut libc::c_void, data.len()) };
         durations.push(timer.stop());
@@ -359,7 +358,7 @@ fn write_sequential<F: AsRawFd>(
     let mut durations = Vec::new();
     let fd = file.as_raw_fd();
     for i in 0..op_count {
-        trace::duration!("benchmark", "write", "op_number" => i as u64);
+        trace_duration!("benchmark", "write", "op_number" => i as u64);
         let timer = OperationTimer::start();
         let result = unsafe { libc::write(fd, data.as_ptr() as *const libc::c_void, data.len()) };
         durations.push(timer.stop());
@@ -390,7 +389,7 @@ fn read_random<F: AsRawFd, R: Rng>(
     let mut durations = Vec::new();
     let fd = file.as_raw_fd();
     for (i, offset) in offsets.iter().enumerate() {
-        trace::duration!("benchmark", "pread", "op_number" => i as u64, "offset" => *offset);
+        trace_duration!("benchmark", "pread", "op_number" => i as u64, "offset" => *offset);
         let timer = OperationTimer::start();
         let result =
             unsafe { libc::pread(fd, data.as_mut_ptr() as *mut libc::c_void, data.len(), *offset) };
@@ -414,7 +413,7 @@ fn write_random<F: AsRawFd, R: Rng>(
     let mut durations = Vec::new();
     let fd = file.as_raw_fd();
     for (i, offset) in offsets.iter().enumerate() {
-        trace::duration!("benchmark", "pwrite", "op_number" => i as u64, "offset" => *offset);
+        trace_duration!("benchmark", "pwrite", "op_number" => i as u64, "offset" => *offset);
         let timer = OperationTimer::start();
         let result =
             unsafe { libc::pwrite(fd, data.as_ptr() as *const libc::c_void, data.len(), *offset) };
@@ -426,16 +425,16 @@ fn write_random<F: AsRawFd, R: Rng>(
 
 #[cfg(test)]
 mod tests {
-
     use {
         super::*,
-        crate::framework::{filesystem::Memfs, Filesystem},
+        crate::{filesystem::MountedFilesystemInstance, Filesystem},
         futures::lock::Mutex,
-        std::sync::Arc,
+        std::{path::Path, sync::Arc},
     };
 
     const OP_SIZE: usize = 8;
     const OP_COUNT: usize = 2;
+    const BENCHMARK_DIR: &str = "/tmp/benchmarks";
 
     /// Filesystem implementation that records `clear_cache` calls for validating warm and cold
     /// benchmarks.
@@ -445,15 +444,16 @@ mod tests {
     }
 
     struct TestFilesystemInner {
-        memfs: Option<Box<Memfs>>,
+        fs: Option<Box<MountedFilesystemInstance>>,
         clear_cache_count: u64,
     }
 
     impl TestFilesystem {
         async fn new() -> Self {
+            std::fs::create_dir(BENCHMARK_DIR).unwrap();
             Self {
                 inner: Arc::new(Mutex::new(TestFilesystemInner {
-                    memfs: Some(Box::new(Memfs::new().await)),
+                    fs: Some(Box::new(MountedFilesystemInstance::new(BENCHMARK_DIR))),
                     clear_cache_count: 0,
                 })),
             }
@@ -465,12 +465,15 @@ mod tests {
         async fn clear_cache(&mut self) {
             let mut inner = self.inner.lock().await;
             inner.clear_cache_count += 1;
-            inner.memfs.as_mut().unwrap().clear_cache().await;
         }
 
         async fn shutdown(self: Box<Self>) {
             let mut inner = self.inner.lock().await;
-            inner.memfs.take().unwrap().shutdown().await;
+            inner.fs.take().unwrap().shutdown().await;
+        }
+
+        fn benchmark_dir(&self) -> &Path {
+            &Path::new(BENCHMARK_DIR)
         }
     }
 

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::framework::{BlockDevice, BlockDeviceConfig, BlockDeviceFactory},
     async_trait::async_trait,
     either::Either,
     fidl::encoding::Decodable,
@@ -14,7 +13,7 @@ use {
     fidl_fuchsia_io as fio,
     fs_management::{
         filesystem::{ServingMultiVolumeFilesystem, ServingSingleVolumeFilesystem},
-        Blobfs, F2fs, FSConfig, Fxfs, Minfs,
+        FSConfig,
     },
     fuchsia_component::client::{
         connect_channel_to_protocol, connect_to_childs_protocol, open_childs_exposed_directory,
@@ -24,71 +23,26 @@ use {
         path::Path,
         sync::{Arc, Once},
     },
+    storage_benchmarks::{
+        BlockDevice, BlockDeviceConfig, BlockDeviceFactory, Filesystem, FilesystemConfig,
+    },
 };
 
 const MOUNT_PATH: &str = "/benchmark";
 
-/// Which filesystem to run a benchmark against.
-#[derive(Clone, Copy)]
-#[allow(dead_code)] // Blobfs is not currently used in any benchmarks.
-pub enum FilesystemConfig {
-    Blobfs,
-    Fxfs,
-    F2fs,
-    Memfs,
-    Minfs,
-}
-
-impl FilesystemConfig {
-    pub async fn start_filesystem<BDF: BlockDeviceFactory>(
-        &self,
-        block_device_factory: &BDF,
-    ) -> Box<dyn Filesystem> {
-        match self {
-            Self::Blobfs => Box::new(create_blobfs(block_device_factory).await),
-            Self::Fxfs => Box::new(create_fxfs(block_device_factory).await),
-            Self::F2fs => Box::new(create_f2fs(block_device_factory).await),
-            Self::Memfs => Box::new(Memfs::new().await),
-            Self::Minfs => Box::new(create_minfs(block_device_factory).await),
-        }
-    }
-
-    pub fn name(&self) -> String {
-        match self {
-            Self::Blobfs => "blobfs".to_owned(),
-            Self::Fxfs => "fxfs".to_owned(),
-            Self::F2fs => "f2fs".to_owned(),
-            Self::Memfs => "memfs".to_owned(),
-            Self::Minfs => "minfs".to_owned(),
-        }
-    }
-}
-
-/// A trait representing a mounted filesystem.
-#[async_trait]
-pub trait Filesystem: Send {
-    /// Clears all cached files in the filesystem. This method is used in "cold" benchmarks to
-    /// ensure that the filesystem isn't using cached data from the setup phase in the benchmark
-    /// phase.
-    async fn clear_cache(&mut self);
-
-    async fn shutdown(self: Box<Self>);
-
-    fn mount_point(&self) -> &Path {
-        Path::new(MOUNT_PATH)
-    }
-}
-
-struct FsmFilesystem<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> {
+struct FsmFilesystem<FSC: FSConfig + Send + Sync> {
     fs: fs_management::filesystem::Filesystem<FSC>,
     serving_filesystem: Option<Either<ServingSingleVolumeFilesystem, ServingMultiVolumeFilesystem>>,
-    _block_device: BD,
+    _block_device: Box<dyn BlockDevice>,
 }
 
-impl<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> FsmFilesystem<FSC, BD> {
-    pub async fn new(config: FSC, block_device: BD) -> Self {
-        let mut fs =
-            fs_management::filesystem::Filesystem::from_node(block_device.get_node(), config);
+impl<FSC: FSConfig + Send + Sync> FsmFilesystem<FSC> {
+    pub async fn new(config: FSC, block_device: Box<dyn BlockDevice>) -> Self {
+        let mut fs = fs_management::filesystem::Filesystem::from_path(
+            block_device.get_path().to_str().unwrap(),
+            config,
+        )
+        .unwrap();
         fs.format().await.expect("Failed to format the filesystem");
         let serving_filesystem = if fs.config().is_multi_volume() {
             let mut serving_filesystem =
@@ -109,7 +63,7 @@ impl<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> FsmFilesystem<FSC, BD>
 }
 
 #[async_trait]
-impl<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> Filesystem for FsmFilesystem<FSC, BD> {
+impl<FSC: FSConfig + Send + Sync> Filesystem for FsmFilesystem<FSC> {
     async fn clear_cache(&mut self) {
         // Remount the filesystem to guarantee that all cached data from reads and write is cleared.
         let serving_filesystem = self.serving_filesystem.take().unwrap();
@@ -144,15 +98,36 @@ impl<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> Filesystem for FsmFile
             }
         }
     }
+
+    fn benchmark_dir(&self) -> &Path {
+        Path::new(MOUNT_PATH)
+    }
 }
 
-async fn create_blobfs<BDF: BlockDeviceFactory>(
-    block_device_factory: &BDF,
-) -> FsmFilesystem<Blobfs, <BDF as BlockDeviceFactory>::BlockDevice> {
-    let block_device = block_device_factory
-        .create_block_device(&BlockDeviceConfig { use_zxcrypt: false, fvm_volume_size: None })
-        .await;
-    FsmFilesystem::new(Blobfs::default(), block_device).await
+pub struct Blobfs {}
+
+impl Blobfs {
+    #[allow(dead_code)] // Blobfs is not currently used in any benchmarks.
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[async_trait]
+impl FilesystemConfig for Blobfs {
+    async fn start_filesystem(
+        &self,
+        block_device_factory: &dyn BlockDeviceFactory,
+    ) -> Box<dyn Filesystem> {
+        let block_device = block_device_factory
+            .create_block_device(&BlockDeviceConfig { use_zxcrypt: false, fvm_volume_size: None })
+            .await;
+        Box::new(FsmFilesystem::new(fs_management::Blobfs::default(), block_device).await)
+    }
+
+    fn name(&self) -> String {
+        "blobfs".to_owned()
+    }
 }
 
 fn get_crypt_client() -> zx::Channel {
@@ -202,33 +177,70 @@ fn get_crypt_client() -> zx::Channel {
     client_end
 }
 
-async fn create_fxfs<BDF: BlockDeviceFactory>(
-    block_device_factory: &BDF,
-) -> FsmFilesystem<Fxfs, <BDF as BlockDeviceFactory>::BlockDevice> {
-    let block_device = block_device_factory
-        .create_block_device(&BlockDeviceConfig {
-            use_zxcrypt: false,
-            fvm_volume_size: Some(60 * 1024 * 1024),
-        })
-        .await;
-    FsmFilesystem::new(Fxfs::with_crypt_client(Arc::new(get_crypt_client)), block_device).await
+pub struct Fxfs {}
+
+impl Fxfs {
+    pub fn new() -> Self {
+        Self {}
+    }
 }
 
-async fn create_f2fs<BDF: BlockDeviceFactory>(
-    block_device_factory: &BDF,
-) -> FsmFilesystem<F2fs, <BDF as BlockDeviceFactory>::BlockDevice> {
-    let block_device = block_device_factory
-        .create_block_device(&BlockDeviceConfig {
-            use_zxcrypt: true,
-            fvm_volume_size: Some(60 * 1024 * 1024),
-        })
+#[async_trait]
+impl FilesystemConfig for Fxfs {
+    async fn start_filesystem(
+        &self,
+        block_device_factory: &dyn BlockDeviceFactory,
+    ) -> Box<dyn Filesystem> {
+        let block_device = block_device_factory
+            .create_block_device(&BlockDeviceConfig {
+                use_zxcrypt: false,
+                fvm_volume_size: Some(60 * 1024 * 1024),
+            })
+            .await;
+        let fxfs = FsmFilesystem::new(
+            fs_management::Fxfs::with_crypt_client(Arc::new(get_crypt_client)),
+            block_device,
+        )
         .await;
-    FsmFilesystem::new(F2fs::default(), block_device).await
+        Box::new(fxfs)
+    }
+
+    fn name(&self) -> String {
+        "fxfs".to_owned()
+    }
 }
 
-pub struct Memfs {}
+pub struct F2fs {}
 
-impl Memfs {
+impl F2fs {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[async_trait]
+impl FilesystemConfig for F2fs {
+    async fn start_filesystem(
+        &self,
+        block_device_factory: &dyn BlockDeviceFactory,
+    ) -> Box<dyn Filesystem> {
+        let block_device = block_device_factory
+            .create_block_device(&BlockDeviceConfig {
+                use_zxcrypt: true,
+                fvm_volume_size: Some(60 * 1024 * 1024),
+            })
+            .await;
+        Box::new(FsmFilesystem::new(fs_management::F2fs::default(), block_device).await)
+    }
+
+    fn name(&self) -> String {
+        "f2fs".to_owned()
+    }
+}
+
+struct MemfsInstance {}
+
+impl MemfsInstance {
     pub async fn new() -> Self {
         let startup = connect_to_childs_protocol::<StartupMarker>("memfs".to_string(), None)
             .await
@@ -266,7 +278,7 @@ impl Memfs {
 }
 
 #[async_trait]
-impl Filesystem for Memfs {
+impl Filesystem for MemfsInstance {
     async fn clear_cache(&mut self) {}
 
     async fn shutdown(mut self: Box<Self>) {
@@ -278,22 +290,64 @@ impl Filesystem for Memfs {
         let namespace = fdio::Namespace::installed().expect("Failed to get local namespace");
         namespace.unbind(MOUNT_PATH).expect("Failed to unbind memfs");
     }
+
+    fn benchmark_dir(&self) -> &Path {
+        Path::new(MOUNT_PATH)
+    }
 }
 
-async fn create_minfs<BDF: BlockDeviceFactory>(
-    block_device_factory: &BDF,
-) -> FsmFilesystem<Minfs, <BDF as BlockDeviceFactory>::BlockDevice> {
-    let block_device = block_device_factory
-        .create_block_device(&BlockDeviceConfig { use_zxcrypt: true, fvm_volume_size: None })
-        .await;
-    FsmFilesystem::new(Minfs::default(), block_device).await
+pub struct Memfs {}
+
+impl Memfs {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[async_trait]
+impl FilesystemConfig for Memfs {
+    async fn start_filesystem(
+        &self,
+        _block_device_factory: &dyn BlockDeviceFactory,
+    ) -> Box<dyn Filesystem> {
+        Box::new(MemfsInstance::new().await)
+    }
+
+    fn name(&self) -> String {
+        "memfs".to_owned()
+    }
+}
+
+pub struct Minfs {}
+
+impl Minfs {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[async_trait]
+impl FilesystemConfig for Minfs {
+    async fn start_filesystem(
+        &self,
+        block_device_factory: &dyn BlockDeviceFactory,
+    ) -> Box<dyn Filesystem> {
+        let block_device = block_device_factory
+            .create_block_device(&BlockDeviceConfig { use_zxcrypt: true, fvm_volume_size: None })
+            .await;
+        Box::new(FsmFilesystem::new(fs_management::Minfs::default(), block_device).await)
+    }
+
+    fn name(&self) -> String {
+        "minfs".to_owned()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::framework::RamdiskFactory,
+        crate::block_devices::RamdiskFactory,
         std::{
             fs::OpenOptions,
             io::{Read, Write},
@@ -309,8 +363,8 @@ mod tests {
         const BLOB_CONTENTS: &str = "blob-contents";
 
         let ramdisk_factory = RamdiskFactory::new(BLOCK_SIZE, BLOCK_COUNT).await;
-        let mut fs = FilesystemConfig::Blobfs.start_filesystem(&ramdisk_factory).await;
-        let blob_path = fs.mount_point().join(BLOB_NAME);
+        let mut fs = Blobfs::new().start_filesystem(&ramdisk_factory).await;
+        let blob_path = fs.benchmark_dir().join(BLOB_NAME);
 
         {
             let mut file = OpenOptions::new()
@@ -333,13 +387,13 @@ mod tests {
         fs.shutdown().await;
     }
 
-    async fn check_filesystem(config: FilesystemConfig) {
+    async fn check_filesystem(filesystem: &dyn FilesystemConfig) {
         const FILE_CONTENTS: &str = "file-contents";
 
         let ramdisk_factory = RamdiskFactory::new(BLOCK_SIZE, BLOCK_COUNT).await;
-        let mut fs = config.start_filesystem(&ramdisk_factory).await;
+        let mut fs = filesystem.start_filesystem(&ramdisk_factory).await;
 
-        let file_path = fs.mount_point().join("filename");
+        let file_path = fs.benchmark_dir().join("filename");
         {
             let mut file =
                 OpenOptions::new().create_new(true).write(true).open(&file_path).unwrap();
@@ -357,21 +411,21 @@ mod tests {
 
     #[fuchsia::test]
     async fn start_fxfs() {
-        check_filesystem(FilesystemConfig::Fxfs).await;
+        check_filesystem(&Fxfs::new()).await;
     }
 
     #[fuchsia::test]
     async fn start_f2fs() {
-        check_filesystem(FilesystemConfig::F2fs).await;
+        check_filesystem(&F2fs::new()).await;
     }
 
     #[fuchsia::test]
     async fn start_minfs() {
-        check_filesystem(FilesystemConfig::Minfs).await;
+        check_filesystem(&Minfs::new()).await;
     }
 
     #[fuchsia::test]
     async fn start_memfs() {
-        check_filesystem(FilesystemConfig::Memfs).await;
+        check_filesystem(&Memfs::new()).await;
     }
 }

@@ -11,7 +11,7 @@
         "//src/storage/fxfs/meta/test_fxfs.shard.cml",
     ],
     program: {
-        binary: "bin/storage_benchmarks",
+        binary: "bin/fuchsia_storage_benchmarks",
     },
     children: [
         {

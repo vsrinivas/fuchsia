@@ -9,12 +9,12 @@ use {
     fidl_fuchsia_hardware_block_volume::{
         VolumeManagerMarker, VolumeManagerProxy, VolumeSynchronousProxy,
     },
-    fidl_fuchsia_io as fio,
     fs_management::BLOBFS_TYPE_GUID,
     fuchsia_component::client::{connect_channel_to_protocol_at_path, connect_to_protocol_at_path},
     fuchsia_zircon::{self as zx},
     ramdevice_client::RamdiskClient,
     std::path::{Path, PathBuf},
+    storage_benchmarks::{BlockDevice, BlockDeviceConfig, BlockDeviceFactory},
     storage_isolated_driver_manager::{
         create_random_guid, fvm, wait_for_block_device, wait_for_ramctl, zxcrypt,
         BlockDeviceMatcher, Guid,
@@ -22,33 +22,7 @@ use {
 };
 
 const RAMDISK_FVM_SLICE_SIZE: usize = 1024 * 1024;
-
 const BLOBFS_VOLUME_NAME: &str = "blobfs";
-
-/// Block device configuration options.
-pub struct BlockDeviceConfig {
-    /// If true, zxcrypt is initialized on top of the block device.
-    pub use_zxcrypt: bool,
-
-    /// For filesystem that are not FVM-aware, this option can be used to pre-allocate space inside
-    /// of the FVM volume.
-    pub fvm_volume_size: Option<u64>,
-}
-
-/// A trait representing a block device.
-pub trait BlockDevice {
-    /// Returns a `NodeProxy` to the block device.
-    fn get_node(&self) -> fio::NodeProxy;
-}
-
-/// A trait for constructing block devices.
-#[async_trait]
-pub trait BlockDeviceFactory {
-    type BlockDevice: BlockDevice + Send + 'static;
-
-    /// Constructs a new block device.
-    async fn create_block_device(&self, config: &BlockDeviceConfig) -> Self::BlockDevice;
-}
 
 /// Creates block devices on ramdisks.
 pub struct RamdiskFactory {
@@ -66,16 +40,15 @@ impl RamdiskFactory {
 
 #[async_trait]
 impl BlockDeviceFactory for RamdiskFactory {
-    type BlockDevice = Ramdisk;
-    async fn create_block_device(&self, config: &BlockDeviceConfig) -> Ramdisk {
-        Ramdisk::new(self.block_size, self.block_count, config).await
+    async fn create_block_device(&self, config: &BlockDeviceConfig) -> Box<dyn BlockDevice> {
+        Box::new(Ramdisk::new(self.block_size, self.block_count, config).await)
     }
 }
 
 /// A ramdisk backed block device.
 pub struct Ramdisk {
     _ramdisk: RamdiskClient,
-    node: fio::NodeProxy,
+    path: PathBuf,
 }
 
 impl Ramdisk {
@@ -93,15 +66,14 @@ impl Ramdisk {
         } else {
             volume_path
         };
-        let node = connect_to_protocol_at_path::<fio::NodeMarker>(path.to_str().unwrap()).unwrap();
 
-        Self { _ramdisk: ramdisk, node }
+        Self { _ramdisk: ramdisk, path }
     }
 }
 
 impl BlockDevice for Ramdisk {
-    fn get_node(&self) -> fio::NodeProxy {
-        Clone::clone(&self.node)
+    fn get_path(&self) -> &Path {
+        self.path.as_path()
     }
 }
 
@@ -148,16 +120,15 @@ impl FvmVolumeFactory {
 
 #[async_trait]
 impl BlockDeviceFactory for FvmVolumeFactory {
-    type BlockDevice = FvmVolume;
-    async fn create_block_device(&self, config: &BlockDeviceConfig) -> FvmVolume {
-        FvmVolume::new(&self.fvm, config).await
+    async fn create_block_device(&self, config: &BlockDeviceConfig) -> Box<dyn BlockDevice> {
+        Box::new(FvmVolume::new(&self.fvm, config).await)
     }
 }
 
 /// A block device created on top of the system's FVM instance.
 pub struct FvmVolume {
     volume: VolumeSynchronousProxy,
-    node: fio::NodeProxy,
+    path: PathBuf,
 }
 
 impl FvmVolume {
@@ -172,15 +143,14 @@ impl FvmVolume {
         } else {
             volume_path
         };
-        let node = connect_to_protocol_at_path::<fio::NodeMarker>(path.to_str().unwrap()).unwrap();
 
-        Self { volume, node }
+        Self { volume, path }
     }
 }
 
 impl BlockDevice for FvmVolume {
-    fn get_node(&self) -> fio::NodeProxy {
-        Clone::clone(&self.node)
+    fn get_path(&self) -> &Path {
+        self.path.as_path()
     }
 }
 
@@ -236,22 +206,15 @@ async fn set_up_fvm_volume(
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        fidl::endpoints::{create_endpoints, ProtocolMarker, Proxy},
-        fidl_fuchsia_hardware_block_volume::VolumeMarker,
-        test_util::assert_gt,
+        super::*, fidl::endpoints::ProtocolMarker,
+        fidl_fuchsia_hardware_block_volume::VolumeMarker, test_util::assert_gt,
     };
 
     const BLOCK_SIZE: u64 = 4 * 1024;
     const BLOCK_COUNT: u64 = 1024;
 
-    fn open_connection_as<T: ProtocolMarker>(ramdisk: &impl BlockDevice) -> T::Proxy {
-        let node = ramdisk.get_node();
-        let (client_end, server_end) = create_endpoints().unwrap();
-        node.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server_end).unwrap();
-        <T as ProtocolMarker>::Proxy::from_channel(
-            fidl::AsyncChannel::from_channel(client_end.into_channel()).unwrap(),
-        )
+    fn open_connection_as<T: ProtocolMarker>(ramdisk: &dyn BlockDevice) -> T::Proxy {
+        connect_to_protocol_at_path::<T>(ramdisk.get_path().to_str().unwrap()).unwrap()
     }
 
     #[fuchsia::test]
@@ -260,7 +223,7 @@ mod tests {
         let ramdisk = ramdisk_factory
             .create_block_device(&BlockDeviceConfig { use_zxcrypt: true, fvm_volume_size: None })
             .await;
-        let controller = open_connection_as::<ControllerMarker>(&ramdisk);
+        let controller = open_connection_as::<ControllerMarker>(ramdisk.as_ref());
         let path = controller
             .get_topological_path()
             .await
@@ -276,7 +239,7 @@ mod tests {
         let ramdisk = ramdisk_factory
             .create_block_device(&BlockDeviceConfig { use_zxcrypt: false, fvm_volume_size: None })
             .await;
-        let controller = open_connection_as::<ControllerMarker>(&ramdisk);
+        let controller = open_connection_as::<ControllerMarker>(ramdisk.as_ref());
         let path = controller
             .get_topological_path()
             .await
@@ -296,7 +259,7 @@ mod tests {
         let ramdisk = ramdisk_factory
             .create_block_device(&BlockDeviceConfig { use_zxcrypt: false, fvm_volume_size: None })
             .await;
-        let volume = open_connection_as::<VolumeMarker>(&ramdisk);
+        let volume = open_connection_as::<VolumeMarker>(ramdisk.as_ref());
         let volume_info = volume.get_volume_info().await.unwrap();
         zx::ok(volume_info.0).unwrap();
         let volume_info = volume_info.2.unwrap();
@@ -312,7 +275,7 @@ mod tests {
                 fvm_volume_size: Some(RAMDISK_FVM_SLICE_SIZE as u64 * 3),
             })
             .await;
-        let volume = open_connection_as::<VolumeMarker>(&ramdisk);
+        let volume = open_connection_as::<VolumeMarker>(ramdisk.as_ref());
         let volume_info = volume.get_volume_info().await.unwrap();
         zx::ok(volume_info.0).unwrap();
         let volume_info = volume_info.2.unwrap();
@@ -386,7 +349,7 @@ mod tests {
             .create_block_device(&BlockDeviceConfig { use_zxcrypt: true, fvm_volume_size: None })
             .await;
 
-        let controller = open_connection_as::<ControllerMarker>(&volume);
+        let controller = open_connection_as::<ControllerMarker>(volume.as_ref());
         let path = controller
             .get_topological_path()
             .await
@@ -404,7 +367,7 @@ mod tests {
             .create_block_device(&BlockDeviceConfig { use_zxcrypt: false, fvm_volume_size: None })
             .await;
 
-        let controller = open_connection_as::<ControllerMarker>(&volume);
+        let controller = open_connection_as::<ControllerMarker>(volume.as_ref());
         let path = controller
             .get_topological_path()
             .await
