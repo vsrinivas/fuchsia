@@ -6,6 +6,16 @@
 #define SRC_STORAGE_F2FS_TEST_COMPATIBILITY_V2_COMPATIBILITY_H_
 
 #include <lib/fdio/fdio.h>
+#include <lib/fit/defer.h>
+
+#include <cinttypes>
+#include <cstddef>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include <fbl/ref_ptr.h>
 
 #include "src/storage/f2fs/f2fs.h"
 #include "src/storage/f2fs/test/compatibility/v2/file_backed_block_device.h"
@@ -17,7 +27,63 @@ constexpr size_t kTestBlockSize = 4096;
 constexpr size_t kTestBlockCount = 25600;
 constexpr size_t kTestBlockDeviceSize = kTestBlockSize * kTestBlockCount;
 
+const std::string linux_path_prefix = "//";
+
 class F2fsDebianGuest;
+
+class TestFile {
+ public:
+  virtual ~TestFile() = default;
+
+  virtual bool IsValid() const = 0;
+
+  virtual ssize_t Read(void* buf, size_t count) = 0;
+  virtual ssize_t Write(const void* buf, size_t count) = 0;
+  virtual int Fchmod(mode_t mode) = 0;
+  virtual int Fstat(struct stat* file_stat) = 0;
+  virtual int Ftruncate(off_t len) = 0;
+  virtual int Fallocate(int mode, off_t offset, off_t len) = 0;
+};
+
+class LinuxTestFile : public TestFile {
+ public:
+  explicit LinuxTestFile() {}
+
+  bool IsValid() const final { return false; }
+
+  ssize_t Read(void* buf, size_t count) final { return -1; }
+  ssize_t Write(const void* buf, size_t count) final { return -1; }
+  int Fchmod(mode_t mode) final { return -1; }
+  int Fstat(struct stat* file_stat) final { return -1; }
+  int Ftruncate(off_t len) final { return -1; }
+  int Fallocate(int mode, off_t offset, off_t len) final { return -1; }
+};
+
+class FuchsiaTestFile : public TestFile {
+ public:
+  explicit FuchsiaTestFile(fbl::RefPtr<VnodeF2fs> vnode) : vnode_(std::move(vnode)) {}
+  ~FuchsiaTestFile() {
+    if (vnode_ != nullptr) {
+      vnode_->Close();
+    }
+  }
+
+  bool IsValid() const final { return (vnode_ != nullptr); }
+
+  ssize_t Read(void* buf, size_t count) final { return -1; }
+  ssize_t Write(const void* buf, size_t count) final { return -1; }
+  int Fchmod(mode_t mode) final { return -1; }
+  int Fstat(struct stat* file_stat) final { return -1; }
+  int Ftruncate(off_t len) final { return -1; }
+  int Fallocate(int mode, off_t offset, off_t len) final { return -1; }
+
+  VnodeF2fs* GetRawVnodePtr() { return vnode_.get(); }
+
+ private:
+  fbl::RefPtr<VnodeF2fs> vnode_;
+  // TODO: Add Lseek to adjust |offset_|
+  [[maybe_unused]] size_t offset_ = 0;
+};
 
 class CompatibilityTestOperator {
  public:
@@ -26,6 +92,14 @@ class CompatibilityTestOperator {
 
   virtual void Mkfs() = 0;
   virtual void Fsck() = 0;
+  virtual void Mount() = 0;
+  virtual void Umount() = 0;
+
+  virtual void Mkdir(std::string_view path, mode_t mode) = 0;
+  // Return value is 0 on success, -1 on error.
+  virtual int Rmdir(std::string_view path) = 0;
+  virtual std::unique_ptr<TestFile> Open(std::string_view path, int flags, mode_t mode) = 0;
+  virtual void Rename(std::string_view oldpath, std::string_view newpath) = 0;
 
  protected:
   const std::string test_device_;
@@ -36,12 +110,27 @@ class LinuxOperator : public CompatibilityTestOperator {
   explicit LinuxOperator(std::string_view test_device, F2fsDebianGuest* debian_guest)
       : CompatibilityTestOperator(test_device), debian_guest_(debian_guest) {}
 
-  void Mkfs() final { Mkfs(std::string_view{}); }
+  void Mkfs() final { Mkfs(std::string_view{""}); }
   void Mkfs(std::string_view opt);
   void Fsck() final;
+  void Mount() final { Mount(std::string_view{""}); }
+  void Mount(std::string_view opt);
+  void Umount() final;
+
+  void Mkdir(std::string_view path, mode_t mode) final;
+  int Rmdir(std::string_view path) final { return -1; }
+  std::unique_ptr<TestFile> Open(std::string_view path, int flags, mode_t mode) final {
+    return std::unique_ptr<TestFile>(new LinuxTestFile());
+  }
+  void Rename(std::string_view oldpath, std::string_view newpath) final {}
+
+  zx_status_t Execute(const std::vector<std::string>& argv, std::string* result = nullptr);
+  void ExecuteWithAssert(const std::vector<std::string>& argv, std::string* result = nullptr);
+  std::string ConvertPath(std::string_view path);
 
  private:
   F2fsDebianGuest* debian_guest_;
+  const std::string mount_path_ = "compat_mnt";
 };
 
 class FuchsiaOperator : public CompatibilityTestOperator {
@@ -55,16 +144,33 @@ class FuchsiaOperator : public CompatibilityTestOperator {
     if (bc_or.is_ok()) {
       bc_ = std::move(*bc_or);
     }
+    loop_.StartThread();
+  }
+  ~FuchsiaOperator() {
+    loop_.RunUntilIdle();
+    loop_.Quit();
+    loop_.JoinThreads();
   }
 
   void Mkfs() final { Mkfs(MkfsOptions{}); }
   void Mkfs(MkfsOptions opt);
   void Fsck() final;
+  void Mount() final { Mount(MountOptions{}); }
+  void Mount(MountOptions opt);
+  void Umount() final;
+
+  void Mkdir(std::string_view path, mode_t mode) final {}
+  int Rmdir(std::string_view path) final { return -1; }
+  std::unique_ptr<TestFile> Open(std::string_view path, int flags, mode_t mode) final;
+  void Rename(std::string_view oldpath, std::string_view newpath) final {}
 
  private:
   size_t block_count_;
   size_t block_size_;
   std::unique_ptr<Bcache> bc_;
+  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  std::unique_ptr<F2fs> fs_;
+  fbl::RefPtr<VnodeF2fs> root_;
 };
 
 const std::string test_device_id = "f2fs_test_device";
@@ -137,6 +243,8 @@ class F2fsDebianGuest : public DebianEnclosedGuest {
   std::unique_ptr<LinuxOperator> linux_operator_;
   std::unique_ptr<FuchsiaOperator> fuchsia_operator_;
 };
+
+fs::VnodeConnectionOptions ConvertFlag(int flags);
 
 }  // namespace f2fs
 

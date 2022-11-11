@@ -48,6 +48,7 @@ test("f2fs-compatibility-test-v2") {
   sources = [
     "v2/compatibility.cc",
     "v2/compatibility.h",
+    "v2/dir.cc",
     "v2/file_backed_block_device.cc",
     "v2/file_backed_block_device.h",
     "v2/mkfs_fsck_test.cc",
