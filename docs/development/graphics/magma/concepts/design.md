@@ -71,8 +71,8 @@ headers (example:
 During the Fuchsia boot sequence, a Magma system driver is instantiated for each
 physical device capable of accelerated graphics.  The instantiation creates a
 device binding in the class gpu; for example, in a single gpu system the device
-is bound to /dev/class/gpu/000.  With appropriate application privilege, client
-drivers may scan for the presence of one or more gpu class devices, and open
+is bound to a node under /dev/class/gpu.  With appropriate application privilege,
+client drivers may scan for the presence of one or more gpu class devices, and open
 them.  Synchronous queries may be performed on the device file descriptor to
 return various parameters, some of which may be useful for helping the
 application decide which physical devices, under which configuration, to work
