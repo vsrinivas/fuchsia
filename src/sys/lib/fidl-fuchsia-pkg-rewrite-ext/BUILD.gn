@@ -23,7 +23,6 @@ rustc_library("fidl-fuchsia-pkg-rewrite-ext") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:serde_json",
   ]
 

@@ -111,11 +111,7 @@ impl Rule {
 
         let full_path = uri.path();
         let new_path = if self.path_prefix_match.ends_with('/') {
-            if !full_path.starts_with(self.path_prefix_match.as_str()) {
-                return None;
-            }
-
-            let (_, rest) = full_path.split_at(self.path_prefix_match.len());
+            let rest = full_path.strip_prefix(&self.path_prefix_match)?;
 
             format!("{}{}", self.path_prefix_replacement, rest)
         } else {
@@ -131,24 +127,6 @@ impl Rule {
             &new_path,
             uri.hash(),
         ))
-    }
-
-    /// Determines the replacement source id, if this rule rewrites all of "fuchsia.com".
-    pub fn fuchsia_replacement(&self) -> Option<String> {
-        if self.host_match.host() == "fuchsia.com" && self.path_prefix_match == "/" {
-            if let Some(n) = self.host_replacement.host().rfind(".fuchsia.com") {
-                let (host_replacement, _) = self.host_replacement.host().split_at(n);
-                host_replacement
-                    .split('.')
-                    .nth(1)
-                    .map(|s| s.to_owned())
-                    .or_else(|| Some(self.host_replacement.host().to_string()))
-            } else {
-                Some(self.host_replacement.host().to_string())
-            }
-        } else {
-            None
-        }
     }
 }
 
@@ -367,7 +345,6 @@ mod serde_tests {
 mod rule_tests {
     use super::*;
     use assert_matches::assert_matches;
-    use proptest::prelude::*;
 
     macro_rules! test_new_error {
         (
@@ -588,90 +565,5 @@ mod rule_tests {
             rule.apply(&"fuchsia-pkg://fuchsia.com/foo".parse().unwrap()),
             Some(Err(ParseError::InvalidName(_)))
         );
-    }
-
-    prop_compose! {
-        fn random_hostname()(s in "[a-z]{1,63}(\\.[a-z]{1,62}){0,3}") -> String {
-            s
-        }
-    }
-
-    prop_compose! {
-        fn random_path_prefix_no_ending_slash()(s in "(/[.--/]{1,10})+") -> String {
-            s
-        }
-    }
-
-    prop_compose! {
-        fn random_rule()(
-            host_match in random_hostname(),
-            host_replacement in random_hostname(),
-            mut path_prefix_match in random_path_prefix_no_ending_slash(),
-            mut path_prefix_replacment in random_path_prefix_no_ending_slash(),
-            append_slash_to_path_prefix in proptest::bool::ANY
-        ) -> Rule {
-            if append_slash_to_path_prefix {
-                path_prefix_match.push_str("/");
-                path_prefix_replacment.push_str("/");
-            }
-            Rule::new(
-                host_match,
-                host_replacement,
-                path_prefix_match,
-                path_prefix_replacment
-            ).expect("failed to create random rule")
-        }
-    }
-
-    #[test]
-    fn test_non_fuchsia_replacement_nontrivial_match_path() {
-        let rules = [
-            Rule::new("fuchsia.com", "fuchsia.com", "/foo", "/bar").unwrap(),
-            Rule::new("fuchsia.com", "fuchsia.com", "/foo/", "/").unwrap(),
-        ];
-
-        for rule in &rules {
-            assert_eq!(rule.fuchsia_replacement(), None);
-        }
-    }
-
-    #[test]
-    fn test_non_fuchsia_replacement_wrong_domain() {
-        let rules = [
-            Rule::new("subdomain.fuchsia.com", "fuchsia.com", "/", "/").unwrap(),
-            Rule::new("example.com", "fuchsia.com", "/", "/").unwrap(),
-        ];
-
-        for rule in &rules {
-            assert_eq!(rule.fuchsia_replacement(), None);
-        }
-    }
-
-    #[test]
-    fn test_fuchsia_replacement_accepts_any_replacements() {
-        let rules = [
-            Rule::new("fuchsia.com", "example.com", "/", "/").unwrap(),
-            Rule::new("fuchsia.com", "fuchsia.com", "/", "/bar/").unwrap(),
-        ];
-
-        for rule in &rules {
-            assert!(rule.fuchsia_replacement().is_some());
-        }
-    }
-
-    fn verify_fuchsia_replacement(
-        host_replacement: impl Into<String>,
-        source_id: impl Into<String>,
-    ) {
-        let rule = Rule::new("fuchsia.com", host_replacement, "/", "/").unwrap();
-        assert_eq!(rule.fuchsia_replacement(), Some(source_id.into()));
-    }
-
-    #[test]
-    fn test_fuchsia_replacement() {
-        verify_fuchsia_replacement("test.example.com", "test.example.com");
-        verify_fuchsia_replacement("test.fuchsia.com", "test.fuchsia.com");
-        verify_fuchsia_replacement("a.b-c.d.fuchsia.com", "b-c");
-        verify_fuchsia_replacement("a.b-c.d.example.com", "a.b-c.d.example.com");
     }
 }
