@@ -20,7 +20,9 @@ cpp_docgen("docgen_e2e_docs") {
   include_dir = ".."
   library_name = "e2e"
   out_dir = generated_doc_dir
-  toc_path = "/docs/e2e_test"
+
+  # This is not used since this target is never staged to devsite.
+  reference_repo_path = "e2e_test"
 
   # There is no actual library for these headers so we have nothing here, but the cpp_docgen
   # template asserts that there are deps to catch the common case of the caller forgetting to depend

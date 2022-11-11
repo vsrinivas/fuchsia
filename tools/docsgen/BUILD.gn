@@ -235,6 +235,10 @@ ref_docs = [
     target = "//bundles:create_all_drivers_doc"
     file = "all_drivers_doc.yaml"
   },
+  {
+    target = "//sdk/lib/fdio:docs"
+    file = "fdio.zip"
+  },
 ]
 
 ref_doc_files = []

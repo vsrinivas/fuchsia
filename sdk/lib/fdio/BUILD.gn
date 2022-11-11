@@ -4,6 +4,7 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/zircon/zx_library.gni")
+import("//tools/cppdocgen/cpp_docgen.gni")
 
 group("tests") {
   testonly = true
@@ -28,6 +29,21 @@ if (is_fuchsia) {
   }
 }
 
+# Headers exposed by fdio that we also want to use for the documentation target.
+fdio_public_headers = [
+  "include/lib/fdio/directory.h",
+  "include/lib/fdio/fd.h",
+  "include/lib/fdio/fdio.h",
+  "include/lib/fdio/io.h",
+  "include/lib/fdio/limits.h",
+  "include/lib/fdio/namespace.h",
+  "include/lib/fdio/private.h",
+  "include/lib/fdio/spawn.h",
+  "include/lib/fdio/unsafe.h",
+  "include/lib/fdio/vfs.h",
+  "include/lib/fdio/watcher.h",
+]
+
 # TODO(fxbug.dev/38226): This is a kludge to make "foosan-fuzzer" builds actually just use
 # the plain "foosan" build of libfdio.  This works around the problem that
 # libfuzzer itself calls into libfdio and so its own calls pollute the data
@@ -51,19 +67,11 @@ if (is_fuzzer) {
     configs += [ "//build/config:all_source" ]
     sdk = "shared"
     sdk_publishable = true
-    sdk_headers = [
-      "lib/fdio/directory.h",
-      "lib/fdio/fd.h",
-      "lib/fdio/fdio.h",
-      "lib/fdio/io.h",
-      "lib/fdio/limits.h",
-      "lib/fdio/namespace.h",
-      "lib/fdio/private.h",
-      "lib/fdio/spawn.h",
-      "lib/fdio/unsafe.h",
-      "lib/fdio/vfs.h",
-      "lib/fdio/watcher.h",
-    ]
+
+    # This list is relative to the include/ directory and also includes the
+    # internal header.
+    sdk_headers =
+        rebase_path(fdio_public_headers, "include") + [ "lib/fdio/private.h" ]
 
     sources = [
       "bsdsocket.cc",
@@ -150,31 +158,12 @@ source_set("cleanpath") {
   deps = [ "//zircon/system/ulib/fbl" ]
 }
 
-# Extract Markdown documentation from the FDIO library. The extraction tool is experimental so this
-# is currently disabled by default. To use, set the condition to "true" and reference the
-# "docs" target from somewhere in the default build.
-if (false) {
-  import("//tools/cppdocgen/cpp_docgen.gni")
+cpp_docgen("docs") {
+  headers = fdio_public_headers
+  overview = "README.md"
 
-  cpp_docgen("docs") {
-    headers = [
-      "include/lib/fdio/directory.h",
-      "include/lib/fdio/fd.h",
-      "include/lib/fdio/fdio.h",
-      "include/lib/fdio/io.h",
-      "include/lib/fdio/limits.h",
-      "include/lib/fdio/namespace.h",
-      "include/lib/fdio/spawn.h",
-      "include/lib/fdio/unsafe.h",
-      "include/lib/fdio/vfs.h",
-      "include/lib/fdio/watcher.h",
-    ]
-    overview = "README.md"
-
-    include_dir = "include"
-    library_name = "fdio"
-    toc_path = "/docs/lib/fdio"
-    out_dir = "$root_out_dir/docs/fdio"
-    deps = [ ":fdio" ]
-  }
+  include_dir = "include"
+  library_name = "fdio"
+  reference_repo_path = "sdk/lib/fdio"
+  deps = [ ":fdio" ]
 }

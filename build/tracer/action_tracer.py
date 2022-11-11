@@ -913,6 +913,7 @@ def main():
             src_root, "prebuilt", "third_party", "clang", "linux-x64",
             "include/"),
         os.path.join(src_root, "prebuilt", "third_party", "sysroot/"),
+        os.path.join(os.getcwd(), "gen", "zircon", "public", "sysroot/"),
 
         ### Python
         # Python scripts access Python prebuilts for the interpreter,

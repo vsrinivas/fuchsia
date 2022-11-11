@@ -35,13 +35,19 @@ import("//tools/cppdocgen/clang_doc.gni")
 #       the paths in _toc.yaml which must be absolute. This will be something like
 #       "/docs/reference/libs/mylib"
 #
+#   reference_repo_path [string] (required)
+#       The relative path in https://fuchsia.googlesource.com/reference-docs/ where the output will
+#       be staged by the bots. Generally something like "sdk/lib/mylib". The output will appear
+#       on the site in /reference/sdk/lib/mylib
+#
 #   deps, visibility
 #       Normal meaning.
 #
 # ZIP FILE OUTPUT
 #
-#   out_zip [string] (required for zip output)
-#       Name of the zip file to generate with the generated markdown documentation.
+#   out_zip [string] (optional for zip output)
+#       Name of the zip file to generate with the generated markdown documentation. This will
+#       default to "$target_out_dir/$library_name.zip"
 #
 # RAW .md FILE OUTPUT (for manual testing only)
 #
@@ -53,7 +59,8 @@ import("//tools/cppdocgen/clang_doc.gni")
 
 template("cpp_docgen") {
   assert(defined(invoker.headers), "'headers' must be defined for cpp_docgen")
-  assert(defined(invoker.toc_path), "'toc_path' must be defined for cpp_docgen")
+  assert(defined(invoker.reference_repo_path),
+         "'reference_repo_path' must be defined for cpp_docgen")
   assert(defined(invoker.library_name),
          "'library_name' must be defined for cpp_docgen")
   clang_doc_zip = "$target_gen_dir/${target_name}_clang_doc.zip"
@@ -97,8 +104,11 @@ template("cpp_docgen") {
       rebase_path(include_base, root_build_dir),
       "--source-url",
       "https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/",
+
+      # Everything gets put inside the "reference" folder so add that when generating the
+      # absolute "TOC" path for devsite.
       "--toc-path",
-      invoker.toc_path,
+      "/reference/${invoker.reference_repo_path}",
     ]
 
     if (defined(invoker.overview)) {
@@ -108,14 +118,7 @@ template("cpp_docgen") {
       ]
     }
 
-    if (defined(invoker.out_zip)) {
-      # Normal zip file output.
-      outputs = [ invoker.out_zip ]
-      args += [
-        "--out-zip",
-        rebase_path(invoker.out_zip, root_build_dir),
-      ]
-    } else if (defined(invoker.out_dir)) {
+    if (defined(invoker.out_dir)) {
       # Expect .md files in the output directory with the names of each header ("header.h.md"),
       # plus the "index.md" and "_toc.yaml" files.
       outputs = process_file_template(
@@ -130,7 +133,38 @@ template("cpp_docgen") {
         rebase_path(invoker.out_dir, root_build_dir),
       ]
     } else {
-      assert(false, "out_dir or out_zip must be set in cpp_docgen target")
+      # Normal zip file output.
+      if (defined(invoker.out_zip)) {
+        out_zip = invoker.out_zip
+      } else {
+        # Default zip file output name.
+        out_zip = "$target_out_dir/${invoker.library_name}.zip"
+      }
+
+      outputs = [ out_zip ]
+      args += [
+        "--out-zip",
+        rebase_path(out_zip, root_build_dir),
+      ]
+
+      metadata = {
+        # Record metadata for the //tools/docsgen build API. This is available only for zip output.
+        generated_docset = [
+          {
+            # This name is mostly just used for the commit messages for automated commits.
+            name = invoker.library_name
+
+            archive = {
+              origin_file = rebase_path(out_zip, root_build_dir)
+            }
+
+            # This is the folder inside of the
+            #   https://fuchsia.googlesource.com/reference-docs/
+            # repo where the output will be automatically copied by the bots.
+            dest_folder = invoker.reference_repo_path
+          },
+        ]
+      }
     }
 
     args += rebase_path(invoker.headers, root_build_dir)
