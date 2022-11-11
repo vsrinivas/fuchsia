@@ -179,7 +179,6 @@ group("cmx_allowlist") {
     "//src/ui/bin/root_presenter:component_v1_manifest_compile",
     "//src/ui/bin/text:text_manager_comp_manifest_compile",
     "//src/ui/examples/flatland-view-provider:flatland-view-provider-v1_manifest_compile",
-    "//src/ui/examples/simplest_app:simplest_app_component_manifest_compile",
     "//src/ui/scenic:component_manifest_compile",
     "//src/ui/tools/tiles:tiles-flatland_manifest_compile",
     "//src/ui/tools/tiles:tiles-gfx_manifest_compile",

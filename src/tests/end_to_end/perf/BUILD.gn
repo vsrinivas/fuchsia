@@ -270,7 +270,6 @@ group("package_deps") {
     # These are used by input_latency_benchmarks.
     "//src/sys/activity",
     "//src/ui/bin/input-pipeline:component-for-test",
-    "//src/ui/examples/simplest_app",
 
     # These are used by storage_benchmarks_test
     "//src/storage/benchmarks",

@@ -208,15 +208,6 @@ There are some examples available:
   - **Build dependency:** `//src/ui/examples/flatland-view-provider`
   - **Package URI:** `fuchsia-pkg://fuchsia.com/flatland-examples#meta/flatland-view-provider.cm`
 
-#### Examples below this point are GFX and therefore deprecated, pending removal
-* **simplest_app**
-  - An application that changes background color with every user touch input, which uses root
-    presenter for its implementation of `BaseView`. It tracks input callbacks from Scenic and draws
-    elements using `scenic::Material`.
-  - **Source:** [`//src/ui/examples/simplest_app`](/src/ui/examples/simplest_app)
-  - **Build dependency:** `//src/ui/examples/simplest_app`
-  - **Package URI:** `fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx`
-
 To run these applications, you need to include the following dependency in your `fx set`
 configuration:
 
