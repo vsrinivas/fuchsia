@@ -342,6 +342,19 @@ starbionic_test_package("starnix_gvisor_tests") {
   foreach(test_name, gvisor_tests) {
     test_components += [ ":${test_name}" ]
   }
+
+  # TODO(fxbug.dev/114774): Flaky test disabled on coverage.
+  # Please fix the flake and remove the condition below.
+  if (is_coverage) {
+    test_specs = {
+      environments = [
+        {
+          dimensions = qemu_env
+          tags = [ "disabled" ]
+        },
+      ]
+    }
+  }
 }
 
 starbionic_test_package("starnix_gvisor_benchmarks") {
