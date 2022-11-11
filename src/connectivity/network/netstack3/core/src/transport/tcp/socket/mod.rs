@@ -488,6 +488,7 @@ impl SocketMapAddrStateSpec for MaybeListenerId {
         &'b mut self,
         (): &'a (),
     ) -> Result<&'b mut Vec<MaybeListenerId>, IncompatibleError> {
+        // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
         Err(IncompatibleError)
     }
 
@@ -495,6 +496,7 @@ impl SocketMapAddrStateSpec for MaybeListenerId {
         &self,
         _new_sharing_state: &Self::SharingState,
     ) -> Result<(), IncompatibleError> {
+        // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
         Err(IncompatibleError)
     }
 }

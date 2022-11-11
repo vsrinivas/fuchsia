@@ -258,12 +258,12 @@ impl<I: Debug + Eq> SocketMapAddrStateSpec for PosixAddrState<I> {
         &'b mut self,
         new_sharing_state: &'a PosixSharingOptions,
     ) -> Result<&'b mut Vec<I>, IncompatibleError> {
-        match self {
-            PosixAddrState::Exclusive(_) => Err(IncompatibleError),
-            PosixAddrState::ReusePort(ids) => match new_sharing_state {
-                PosixSharingOptions::Exclusive => Err(IncompatibleError),
-                PosixSharingOptions::ReusePort => Ok(ids),
-            },
+        match (self, new_sharing_state) {
+            (PosixAddrState::Exclusive(_), _)
+            | (PosixAddrState::ReusePort(_), PosixSharingOptions::Exclusive) => {
+                Err(IncompatibleError)
+            }
+            (PosixAddrState::ReusePort(ids), PosixSharingOptions::ReusePort) => Ok(ids),
         }
     }
 
@@ -271,12 +271,11 @@ impl<I: Debug + Eq> SocketMapAddrStateSpec for PosixAddrState<I> {
         &self,
         new_sharing_state: &Self::SharingState,
     ) -> Result<(), IncompatibleError> {
-        match self {
-            PosixAddrState::Exclusive(_) => Err(IncompatibleError),
-            PosixAddrState::ReusePort(_) => match new_sharing_state {
-                PosixSharingOptions::Exclusive => Err(IncompatibleError),
-                PosixSharingOptions::ReusePort => Ok(()),
-            },
+        match (self, new_sharing_state) {
+            (PosixAddrState::Exclusive(_), _) | (_, PosixSharingOptions::Exclusive) => {
+                Err(IncompatibleError)
+            }
+            (PosixAddrState::ReusePort(_), PosixSharingOptions::ReusePort) => Ok(()),
         }
     }
 
