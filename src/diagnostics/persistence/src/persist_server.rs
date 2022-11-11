@@ -25,6 +25,7 @@ const INSPECT_SERVICE_PATH: &str = "/svc/fuchsia.diagnostics.FeedbackArchiveAcce
 
 // Keys for JSON per-tag metadata to be persisted and published
 const TIMESTAMPS_KEY: &str = "@timestamps";
+const SIZE_KEY: &str = "@persist_size";
 const ERROR_KEY: &str = ":error";
 const ERROR_DESCRIPTION_KEY: &str = "description";
 
@@ -139,6 +140,51 @@ enum FoldError {
     MonikerNotString(Value),
 }
 
+fn fold_entries(items: impl IntoIterator<Item = Value>) -> Result<Map<String, Value>, FoldError> {
+    items.into_iter().try_fold(Map::new(), |mut entries, mut item| {
+        let moniker = item["moniker"].take();
+        let payload = item["payload"].take();
+
+        // Use the "root" entry if there is one; otherwise treat the entire payload as
+        // the root.
+        let payload = match payload {
+            Value::Object(mut payload) => {
+                if let Some(root) = payload.remove("root") {
+                    root
+                } else {
+                    payload.into()
+                }
+            }
+            _ => payload,
+        };
+
+        match moniker {
+            Value::String(moniker) => match entries.entry(moniker) {
+                Entry::Occupied(mut o) => match (o.get_mut(), payload) {
+                    (Value::Object(root_map), Value::Object(payload)) => root_map.extend(payload),
+                    // Merging in Null is a no-op.
+                    (_, Value::Null) => (),
+                    // Replace Null values with new values.
+                    (map_value @ Value::Null, payload) => {
+                        *map_value = payload;
+                    }
+                    (obj, payload) => {
+                        return Err(FoldError::MergeError {
+                            existing: value_type_name(&obj),
+                            retrieved: value_type_name(&payload),
+                        });
+                    }
+                },
+                Entry::Vacant(v) => {
+                    let _ = v.insert(payload);
+                }
+            },
+            bad_moniker => return Err(FoldError::MonikerNotString(bad_moniker)),
+        };
+        Ok(entries)
+    })
+}
+
 fn string_to_save(inspect_data: &str, timestamps: &Timestamps, max_save_length: usize) -> String {
     fn compose_error(timestamps: &Timestamps, description: String) -> Value {
         json!({
@@ -151,77 +197,36 @@ fn string_to_save(inspect_data: &str, timestamps: &Timestamps, max_save_length: 
 
     let json_inspect: Value = serde_json::from_str(&inspect_data).expect("parsing json failed.");
     let json_timestamps = json!(timestamps);
-    let timestamps_length = TIMESTAMPS_KEY.len() + json_timestamps.to_string().len() + 4;
-    let mut save_string = match json_inspect {
+    let save_entries: Result<Map<String, Value>, Value> = match json_inspect {
         Value::Array(items) => {
-            let entries = items.into_iter().try_fold(Map::new(), |mut entries, mut item| {
-                let moniker = item["moniker"].take();
-                let payload = item["payload"].take();
-
-                // Use the "root" entry if there is one; otherwise treat the entire payload as
-                // the root.
-                let payload = match payload {
-                    Value::Object(mut payload) => {
-                        if let Some(root) = payload.remove("root") {
-                            root
-                        } else {
-                            payload.into()
-                        }
-                    }
-                    _ => payload,
-                };
-
-                match moniker {
-                    Value::String(moniker) => match entries.entry(moniker) {
-                        Entry::Occupied(mut o) => match (o.get_mut(), payload) {
-                            (Value::Object(root_map), Value::Object(payload)) => {
-                                root_map.extend(payload)
-                            }
-                            // Merging in Null is a no-op.
-                            (_, Value::Null) => (),
-                            // Replace Null values with new values.
-                            (map_value @ Value::Null, payload) => {
-                                *map_value = payload;
-                            }
-                            (obj, payload) => {
-                                return Err(FoldError::MergeError {
-                                    existing: value_type_name(&obj),
-                                    retrieved: value_type_name(&payload),
-                                });
-                            }
-                        },
-                        Entry::Vacant(v) => {
-                            let _ = v.insert(payload);
-                        }
-                    },
-                    bad_moniker => return Err(FoldError::MonikerNotString(bad_moniker)),
-                };
-                Ok(entries)
-            });
-            match entries {
-                Ok(mut entries) => {
-                    entries.insert(TIMESTAMPS_KEY.to_string(), json_timestamps);
-                    Value::Object(entries)
-                }
-                Err(e) => {
-                    let msg = format!("Fold error: {}", e);
-                    compose_error(timestamps, msg)
-                }
-            }
+            let entries = fold_entries(items);
+            entries.map_err(|e| compose_error(timestamps, format!("Fold error: {}", e)))
         }
         _ => {
             error!("Inspect wasn't an array");
-            compose_error(timestamps, "Internal error: Inspect wasn't an array".to_string())
+            Err(compose_error(timestamps, "Internal error: Inspect wasn't an array".to_string()))
         }
+    };
+    match save_entries {
+        Ok(entries) => {
+            let mut entries = Value::Object(entries);
+            let data_length = entries.to_string().len();
+            if data_length > max_save_length {
+                let error_description =
+                    format!("Data too big: {} > max length {}", data_length, max_save_length,);
+                compose_error(timestamps, error_description)
+            } else {
+                // Unwrap is safe because entries was just created as a
+                // `Value::Object` above.
+                let entries_map = entries.as_object_mut().unwrap();
+                entries_map.insert(TIMESTAMPS_KEY.to_string(), json_timestamps);
+                entries_map.insert(SIZE_KEY.to_string(), data_length.into());
+                entries
+            }
+        }
+        Err(e) => e,
     }
-    .to_string();
-    let data_length = save_string.len() - timestamps_length;
-    if data_length > max_save_length {
-        let error_description =
-            format!("Data too big: {} > max length {}", data_length, max_save_length,);
-        save_string = compose_error(timestamps, error_description).to_string();
-    }
-    save_string
+    .to_string()
 }
 
 struct FetcherArgs {
@@ -411,6 +416,7 @@ mod tests {
                     "before_monotonic": 100,
                     "before_utc": 110,
                 },
+                "@persist_size": 46,
                 "core/fake-moniker": {"some/inspect/path": 55},
             })
         );
@@ -472,6 +478,7 @@ mod tests {
                     "before_monotonic": 100,
                     "before_utc": 110,
                 },
+                "@persist_size": 89,
                 "core/fake-moniker": {
                     "some/inspect/path": 1,
                     "a/duplicate/path": 3,
@@ -513,6 +520,7 @@ mod tests {
                     "before_monotonic": 100,
                     "before_utc": 110,
                 },
+                "@persist_size": 111,
                 "core/fake-moniker": {
                     "some/non-root/inspect/path": 55,
                     "other/non-root/inspect/path": 66,

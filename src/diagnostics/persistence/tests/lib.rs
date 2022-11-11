@@ -276,6 +276,7 @@ fn unbrittle_too_big_message(contents: Option<String>) -> Option<String> {
 
 // Verifies that the file changes from the old state to the new state within the specified time
 // window. This involves polling; the granularity for retries is 100 msec.
+#[track_caller]
 fn expect_file_change(rules: FileChange<'_>) {
     // Returns None if the file isn't there. If the file is there but contains "[]" then it tries
     // again (this avoids a file-writing race condition). Any other string will be returned.
@@ -352,12 +353,10 @@ fn expect_file_change(rules: FileChange<'_>) {
             }
             return;
         }
-        error!("File contents don't match old or new target.");
         error!("Old : {:?}", old_string);
         error!("New : {:?}", new_string);
         error!("File: {:?}", contents);
-        assert!(false);
-        break;
+        panic!("File contents don't match old or new target.");
     }
 }
 
@@ -470,16 +469,22 @@ async fn verify_diagnostics_persistence_publication(published: Published) {
 }
 
 fn expected_stored_data(number: Option<i32>) -> String {
-    let variant = match number {
-        None => "".to_string(),
-        Some(number) => format!("\"optional\": {},", number),
+    const BASE_SIZE: usize = 86;
+    let (persist_size, variant) = match number {
+        None => (BASE_SIZE, "".to_string()),
+        Some(number) => {
+            let variant = format!("\"optional\": {},", number);
+            (BASE_SIZE + variant.len() - 1, variant)
+        }
     };
     r#"
   {"realm_builder/single_counter": { "samples" : { %VARIANT% "integer_1": 10 } },
+   "@persist_size": %PERSIST_SIZE%,
    "@timestamps": {"before_utc":0, "after_utc":0, "before_monotonic":0, "after_monotonic":0}
   }
     "#
     .replace("%VARIANT%", &variant)
+    .replace("%PERSIST_SIZE%", &persist_size.to_string())
 }
 
 fn expected_size_error() -> String {
@@ -505,7 +510,7 @@ fn expected_diagnostics_persistence_inspect(published: Published) -> String {
             "#
         .replace("%SIZE_ERROR%", &expected_size_error()),
         Published::Int(number) => {
-            let number_text = format!("\"optional\": {},", number);
+            let number_str = number.to_string();
             r#"
                 "test-service": {
                     "test-component-metric": {
@@ -515,16 +520,17 @@ fn expected_diagnostics_persistence_inspect(published: Published) -> String {
                             "before_monotonic":0,
                             "after_monotonic":0
                         },
+                        "@persist_size": 100,
                         "realm_builder/single_counter": {
                             "samples": {
-                                %NUMBER_TEXT%
+                                "optional": %NUMBER%,
                                 "integer_1": 10
                             }
                         }
                     }
                 }
                 "#
-            .replace("%NUMBER_TEXT%", &number_text)
+            .replace("%NUMBER%", &number_str)
         }
     };
     r#"[
