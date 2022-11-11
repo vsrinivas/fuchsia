@@ -105,7 +105,7 @@ func (r *Runner) Run(ctx context.Context, command []string, options RunOptions) 
 		}
 	}
 	if len(cmd.Env) > 0 {
-		logger.Debugf(ctx, "environment of subprocess: %v", cmd.Env)
+		logger.Tracef(ctx, "environment of subprocess: %v", cmd.Env)
 	}
 
 	// Ensure that the context still exists before running the subprocess.
