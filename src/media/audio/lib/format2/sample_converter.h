@@ -27,7 +27,7 @@ inline constexpr int32_t kFloatToInt16 = -kMinInt16;
 inline constexpr float kInt16ToFloat = 1.0f / static_cast<float>(kFloatToInt16);
 
 // Conversion constants for `SampleType::kInt32`.
-// TODO(fxbug.dev/87651): should we switch to pure int32? this code is kept for backwards
+// TODO(fxbug.dev/114920): should we switch to pure int32? this code is kept for backwards
 // compatibility, where the old APIs used int24in32, not int32.
 inline constexpr int32_t kMaxInt24 = std::numeric_limits<int32_t>::max() >> 8;
 inline constexpr int32_t kMinInt24 = std::numeric_limits<int32_t>::min() >> 8;

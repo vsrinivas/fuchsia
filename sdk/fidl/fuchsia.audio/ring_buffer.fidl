@@ -101,7 +101,7 @@ using zx;
 ///
 /// The `PresentationOffset` is defined as a field of this `RingBuffer` type.
 ///
-/// TODO(fxbug.dev/87651): If the ring buffer is used by a client as part of an
+/// TODO(fxbug.dev/114907): If the ring buffer is used by a client as part of an
 /// output pipeline, the presentation offset (aka "lead time") is variable as it
 /// depends on where the audio stream gets routed, which may change over time.
 /// It's unclear how this should be supported.
@@ -159,7 +159,7 @@ type RingBuffer = resource table {
     5: reference_clock zx.handle:CLOCK;
 
     /// Domain of `reference_clock`. See `fuchsia.hardware.audio.ClockDomain`.
-    /// TODO(fxbug.dev/87651): If fuchsia.hardware.audio doesn't need to import
+    /// TODO(fxbug.dev/114923): If fuchsia.hardware.audio doesn't need to import
     /// fuchsia.audio, we can use that type directly below.
     ///
     /// Optional. If not specified, defaults to CLOCK_DOMAIN_EXTERNAL.

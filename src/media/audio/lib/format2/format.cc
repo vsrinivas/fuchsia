@@ -72,7 +72,7 @@ fpromise::result<Format, std::string> Format::Create(Args args) {
                              std::to_string(fidl::ToUnderlying(args.sample_type)) + "'");
   }
 
-  // TODO(fxbug.dev/87651): validate channel and fps limits once those are defined
+  // TODO(fxbug.dev/114921): Validate channel and fps limits once those are defined.
   // For now just validate they are not zero.
   if (args.channels == 0) {
     return fpromise::error("bad channel_count '" + std::to_string(args.channels) + "'");

@@ -44,9 +44,9 @@ class ClockSynchronizer {
   static std::shared_ptr<ClockSynchronizer> Create(std::shared_ptr<Clock> leader,
                                                    std::shared_ptr<Clock> follower, Mode mode);
 
-  // Given two clocks represnting the source and destination side of a Mixer node,
-  // select the synchronization mode to use and call Create.
-  // TODO(fxbug.dev/87651): this is only for backwards compatibility with AudioCore's mixer
+  // Given two clocks representing the source and destination side of a `Mixer` node, selects the
+  // synchronization mode to use and calls `Create`.
+  // TODO(fxbug.dev/114920): This is only for backwards compatibility with AudioCore's mixer
   // and can be removed after we have transitioned to the new mixer.
   static std::shared_ptr<ClockSynchronizer> SelectModeAndCreate(std::shared_ptr<Clock> source,
                                                                 std::shared_ptr<Clock> dest);

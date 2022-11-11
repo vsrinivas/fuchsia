@@ -191,8 +191,6 @@ fuchsia_mediastreams::wire::AudioFormat DefaultFormatWithChannels(uint32_t chann
   };
 }
 
-// TODO(fxbug.dev/87651): Remove `ConfigOptions` above and directly pass in `CustomStage::Args`
-// instead of processor `config`.
 PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr source_stage) {
   PipelineStagePtr custom_stage = std::make_shared<CustomStage>(CustomStage::Args{
       .name = "CustomStage",

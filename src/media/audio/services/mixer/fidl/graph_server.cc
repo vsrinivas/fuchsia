@@ -519,7 +519,7 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
       return;
     }
 
-    // TODO(fxbug.dev/87651): each time the producer's downstream delay changes, validate that
+    // TODO(fxbug.dev/114907): each time the producer's downstream delay changes, validate that
     // consumer_frames >= downstream delay.
 
     source = std::move(result.value().ring_buffer);
@@ -1226,7 +1226,7 @@ void GraphServer::CreateGraphControlledReferenceClock(
                                          fence = std::move(local_fence), wait_it](
                                             async_dispatcher_t* dispatcher, async::WaitOnce* wait,
                                             zx_status_t status, const zx_packet_signal_t* signal) {
-    // TODO(fxbug.dev/87651): need to tell clock_registry_ to stop adjusting `clock`
+    // TODO(fxbug.dev/114909): Need to tell `clock_registry_` to stop adjusting `clock`.
     pending_one_shot_waiters_.erase(wait_it);
   });
 

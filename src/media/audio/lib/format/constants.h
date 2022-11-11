@@ -11,7 +11,7 @@
 
 namespace media::audio {
 
-// TODO(fxbug.dev/87651): Temporary alias to avoid extra noise in the existing audio_core codebase.
+// TODO(fxbug.dev/114920): Temporary alias to avoid extra noise in the existing audio_core codebase.
 using Fixed = media_audio::Fixed;
 inline constexpr int32_t kPtsFractionalBits = media_audio::kPtsFractionalBits;
 inline constexpr Fixed kOneFrame = media_audio::kOneFrame;

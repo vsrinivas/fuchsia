@@ -339,7 +339,7 @@ void MixerSource::PrepareSourceGainForNextMix(MixJobContext& ctx,
   }
 
   const auto maybe_backfill_gain_scales_fn = [&]() {
-    // TODO(fxbug.dev/87651): `GainType::kRamping` is misleading here, we should rename to reflect
+    // TODO(fxbug.dev/114910): `GainType::kRamping` is misleading here, we should rename to reflect
     // this behavior where it only indicates that `Sampler::Gain::scale_ramp` should be used.
     if (gain_.type != GainType::kRamping) {
       // We lazily fill the previous frames only when needed.

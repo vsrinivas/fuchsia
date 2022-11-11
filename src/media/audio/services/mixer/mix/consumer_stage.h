@@ -67,7 +67,7 @@ class ConsumerStage : public BaseConsumerStage {
     // is guaranteed to return StoppedStatus for all calls `RunMixJob(ctx, start, period)` where
     // `start + period < next_mix_job_start_time`. If not specified, the next start time is unknown.
     //
-    // TODO(fxbug.dev/87651): The above guarantee may not hold preciely if the delay is dynamically
+    // TODO(fxbug.dev/114907): The above guarantee may not hold preciely if the delay is dynamically
     // changing
     std::optional<zx::time> next_mix_job_start_time;
   };

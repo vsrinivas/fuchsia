@@ -76,7 +76,7 @@ class Clock {
   // Duplicates the underlying zx::clock without ZX_RIGHTS_WRITE, or std::nullopt if there is no
   // underlying zx::clock or it cannot be duplicated.
   //
-  // TODO(fxbug.dev/87651): This is needed by old audio_core code only. It's used by FIDL
+  // TODO(fxbug.dev/114920): This is needed by old audio_core code only. It's used by FIDL
   // GetReferenceClock implementations which won't be present in the mixer service. Once all uses
   // are removed, this can be deleted.
   virtual std::optional<zx::clock> DuplicateZxClockReadOnly() const = 0;

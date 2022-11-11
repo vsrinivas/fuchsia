@@ -30,7 +30,7 @@ class ClockFactory {
 
   // Creates a graph-controlled clock with the given. The return value includes an actual Clock
   // object along with a zx::clock handle which must have the same koid as the Clock. The returned
-  // Clock mjust be adjustable. The returned handle must have ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER
+  // Clock must be adjustable. The returned handle must have ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER
   // and must not have ZX_RIGHT_WRITE.
   //
   // Errors:
@@ -84,9 +84,9 @@ class ClockRegistry {
   // * ZX_ERR_NOT_FOUND if a clock with the same koid does not exist.
   zx::result<std::shared_ptr<Clock>> Find(const zx::clock& handle);
 
-  // TODO(fxbug.dev/87651): also add
-  // CreateSynchronizer(source_clock, dest_clock)
-  // RemoveSynchronizer(source_clock, dest_clock)
+  // TODO(fxbug.dev/114902): Consider adding `CreateSynchronizer(source_clock, dest_clock)` and
+  // `RemoveSynchronizer(source_clock, dest_clock)` to be able to reuse `ClockSynchronizer`s with
+  // the same source and destination clocks.
 
  private:
   std::unordered_map<zx_koid_t, std::weak_ptr<Clock>> clocks_;

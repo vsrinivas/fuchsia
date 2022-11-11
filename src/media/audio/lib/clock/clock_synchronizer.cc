@@ -108,7 +108,7 @@ bool ClockSynchronizer::NeedsSynchronization() const {
       leader_at_reset.generation == leader_->to_clock_mono_snapshot().generation) {
     // Force synchronization if the Reset snapshot was not IdenticalToMonotonic.
     //
-    // TODO(fxbug.dev/87651): This check is not necessary but preserves identical behavior
+    // TODO(fxbug.dev/114920): This check is not necessary but preserves identical behavior
     // with the old code from audio_core. Some unit tests require this check because they
     // setup the clocks inconsistently relative to internal Mix parameters (e.g. some
     // MixStagePositionTests).
@@ -162,7 +162,7 @@ std::optional<int32_t> ClockSynchronizer::ComputeNewAdjustPpm(zx::time mono_now,
   constexpr bool kEnableFollowerPosErrChecks = false;
 
   if (!NeedsSynchronization()) {
-    // TODO(fxbug.dev/87651): Enable this check. It currently cannot be enabled because unit tests
+    // TODO(fxbug.dev/114920): Enable this check. It currently cannot be enabled because unit tests
     // (e.g. mix_stage_unittest.cc) change internal Mix parameters (e.g. info.source_pos_error) in
     // ways that are inconsistent with the test's clocks.
     if constexpr (kEnableFollowerPosErrChecks) {
@@ -176,7 +176,7 @@ std::optional<int32_t> ClockSynchronizer::ComputeNewAdjustPpm(zx::time mono_now,
   // If the leader and follower are in the same clock domain, they have the same rate,
   // therefore they must not diverge.
   if (leader_->domain() == follower_->domain() && leader_->domain() != Clock::kExternalDomain) {
-    // TODO(fxbug.dev/87651): Enable this check. See above comment.
+    // TODO(fxbug.dev/114920): Enable this check. See above comment.
     if constexpr (kEnableFollowerPosErrChecks) {
       FX_CHECK(follower_pos_error == zx::nsec(0))
           << "measured non-zero position error " << follower_pos_error.to_nsecs()

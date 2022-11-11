@@ -23,7 +23,7 @@ class StreamConverter {
                                                  const Format& dest_format);
 
   // Like Create, but assume the source format is `float`.
-  // TODO(fxbug.dev/87651): remove when old audio_core code is gone
+  // TODO(fxbug.dev/114920): remove when old audio_core code is gone
   static std::shared_ptr<StreamConverter> CreateFromFloatSource(const Format& dest_format);
 
   const Format& source_format() const { return source_format_; }

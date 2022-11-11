@@ -159,7 +159,7 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(const GraphContext& ctx
 
   const bool is_dest_mixer = (dest->type() == Node::Type::kMixer);
   if (is_dest_mixer) {
-    // TODO(fxbug.dev/87651): Refactor this based on the new clock leader assignment rules.
+    // TODO(fxbug.dev/114699): Refactor this based on the new clock leader assignment rules.
     add_source_options.clock_sync =
         ClockSynchronizer::SelectModeAndCreate(source->reference_clock(), dest->reference_clock());
     add_source_options.sampler = Sampler::Create(source_format, dest_format, options.sampler_type);
@@ -219,7 +219,7 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(const GraphContext& ctx
 
         ScopedThreadChecker checker(dest_stage->thread()->checker());
         if (is_source_mixer || is_dest_mixer) {
-          // TODO(fxbug.dev/87651): Consider generalizing this logic for `PipelineStage` without
+          // TODO(fxbug.dev/114918): Consider generalizing this logic for `PipelineStage` without
           // having to do an explicit cast.
           auto* mixer_stage =
               static_cast<MixerStage*>(is_dest_mixer ? dest_stage.get() : source_stage.get());
@@ -342,7 +342,7 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
         ScopedThreadChecker checker(dest_stage->thread()->checker());
         dest_stage->RemoveSource(source_stage);
         if (!newly_removed_gains.empty()) {
-          // TODO(fxbug.dev/87651): Consider generalizing this logic for `PipelineStage` without
+          // TODO(fxbug.dev/114918): Consider generalizing this logic for `PipelineStage` without
           // having to do an explicit cast.
           auto& gain_controls =
               static_cast<MixerStage*>(is_dest_mixer ? dest_stage.get() : source_stage.get())

@@ -38,7 +38,7 @@ namespace media_audio {
 // All methods are safe to call from any thread.
 class RecoveredClock : public Clock {
  public:
-  // TODO(fxbug.dev/87651): move PidControl to media_audio.
+  // TODO(fxbug.dev/114922): move PidControl to media_audio.
   using PidControl = media::audio::clock::PidControl;
 
   // Creates a RecoveredClock which drives the given `backing_clock`, which must be adjustable.

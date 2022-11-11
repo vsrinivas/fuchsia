@@ -40,7 +40,7 @@ class GainControlServer
     std::shared_ptr<Clock> reference_clock;
 
     // Global task queue to pass gain control commands into mixers.
-    // TODO(fxbug.dev/87651): Consider using a dedicated `ThreadSafeQueue` in `MixerStage` instead.
+    // TODO(fxbug.dev/114911): Consider using a dedicated `ThreadSafeQueue` in `MixerStage` instead.
     std::shared_ptr<GlobalTaskQueue> global_task_queue;
   };
   static std::shared_ptr<GainControlServer> Create(

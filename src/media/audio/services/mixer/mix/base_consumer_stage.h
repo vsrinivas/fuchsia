@@ -35,7 +35,7 @@ class BaseConsumerStage : public PipelineStage {
   // Consumers always write data on integral boundaries. Hence these functions use `int64_t` frames
   // instead of `Fixed` frames to avoid ambiguity and unnecessary `Floor()` operations.
   //
-  // TODO(fxbug.dev/87651): Further clarify the semantics: is start_frame allowed to go backwards?
+  // TODO(fxbug.dev/114904): Further clarify the semantics: is start_frame allowed to go backwards?
   class Writer {
    public:
     virtual ~Writer() = default;
