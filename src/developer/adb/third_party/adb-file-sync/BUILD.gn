@@ -1,0 +1,24 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("adb-file-sync-headers") {
+  include_dirs = [ "." ]
+}
+
+source_set("adb-file-sync") {
+  sources = [
+    "adb-file-sync-base.h",
+    "file_sync_service.cc",
+    "file_sync_service.h",
+    "util.cc",
+    "util.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
+  ]
+  public_configs = [ ":adb-file-sync-headers" ]
+}
