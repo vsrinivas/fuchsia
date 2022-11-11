@@ -64,9 +64,6 @@ using component_testing::Route;
 // Alias for Component child name as provided to Realm Builder.
 using ChildName = std::string;
 
-// Alias for Component Legacy URL as provided to Realm Builder.
-using LegacyUrl = std::string;
-
 // Maximum pointer movement during a clickpad press for the gesture to
 // be guaranteed to be interpreted as a click. For movement greater than
 // this value, upper layers may, e.g., interpret the gesture as a drag.
@@ -179,13 +176,9 @@ class MouseInputBase : public ui_testing::PortableUITest {
     ASSERT_EQ(mouse_input_listener_->SizeOfEvents(), 0u);
   }
 
-  // Subclass should implement this method to add components to the test realm
-  // next to the base ones added.
-  virtual std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() { return {}; }
-
   // Subclass should implement this method to add v2 components to the test realm
   // next to the base ones added.
-  virtual std::vector<std::pair<ChildName, std::string>> GetTestV2Components() { return {}; }
+  virtual std::vector<std::pair<ChildName, std::string>> GetTestComponents() { return {}; }
 
   // Subclass should implement this method to add capability routes to the test
   // realm next to the base ones added.
@@ -250,12 +243,7 @@ class MouseInputBase : public ui_testing::PortableUITest {
     realm_builder()->SetConfigValue(kTestUIStack, "use_flatland", ConfigValue::Bool(true));
     realm_builder()->SetConfigValue(kTestUIStack, "display_rotation", ConfigValue::Uint32(0));
 
-    // Add components specific for this test case to the realm.
     for (const auto& [name, component] : GetTestComponents()) {
-      realm_builder()->AddLegacyChild(name, component);
-    }
-
-    for (const auto& [name, component] : GetTestV2Components()) {
       realm_builder()->AddChild(name, component);
     }
 
@@ -278,7 +266,7 @@ class MouseInputBase : public ui_testing::PortableUITest {
 
 class FlutterInputTest : public MouseInputBase {
  protected:
-  std::vector<std::pair<ChildName, std::string>> GetTestV2Components() override {
+  std::vector<std::pair<ChildName, std::string>> GetTestComponents() override {
     return {
         std::make_pair(kMouseInputFlutter, kMouseInputFlutterUrl),
     };
@@ -603,19 +591,14 @@ TEST_F(FlutterInputTest, FlutterMouseWheel) {
 
 class ChromiumInputTest : public MouseInputBase {
  protected:
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
-    return {
-        std::make_pair(kWebContextProvider, kWebContextProviderUrl),
-    };
-  }
-
-  std::vector<std::pair<ChildName, std::string>> GetTestV2Components() override {
+  std::vector<std::pair<ChildName, std::string>> GetTestComponents() override {
     return {
         std::make_pair(kMouseInputChromium, kMouseInputChromiumUrl),
         std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),
         std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
         std::make_pair(kNetstack, kNetstackUrl),
         std::make_pair(kMockCobalt, kMockCobaltUrl),
+        std::make_pair(kWebContextProvider, kWebContextProviderUrl),
     };
   }
 
@@ -666,7 +649,7 @@ class ChromiumInputTest : public MouseInputBase {
         {.capabilities = {Protocol{fuchsia::sys::Environment::Name_},
                           Protocol{fuchsia::logger::LogSink::Name_}},
          .source = ParentRef(),
-         .targets = {target}},
+         .targets = {target, ChildRef{kWebContextProvider}}},
         {.capabilities = {Protocol{fuchsia::metrics::MetricEventLoggerFactory::Name_}},
          .source = ChildRef{kMockCobalt},
          .targets = {ChildRef{kMemoryPressureProvider}}},
@@ -732,7 +715,7 @@ class ChromiumInputTest : public MouseInputBase {
 
   static constexpr auto kWebContextProvider = "web_context_provider";
   static constexpr auto kWebContextProviderUrl =
-      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
+      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cm";
 
   static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
   static constexpr auto kMemoryPressureProviderUrl = "#meta/memory_monitor.cm";

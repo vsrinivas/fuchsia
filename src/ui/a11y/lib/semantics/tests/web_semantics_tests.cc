@@ -126,7 +126,7 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
 
   static constexpr auto kWebContextProvider = "web_context_provider";
   static constexpr auto kWebContextProviderUrl =
-      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
+      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cm";
 
   static constexpr auto kBuildInfoProvider = "build_info_provider";
   static constexpr auto kBuildInfoProviderUrl = "#meta/fake_build_info.cm";
@@ -145,7 +145,7 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
     realm()->AddChild(kIntl, kIntlUrl);
     realm()->AddChild(kMemoryPressureProvider, kMemoryPressureProviderUrl);
     realm()->AddChild(kNetstack, kNetstackUrl);
-    realm()->AddLegacyChild(kWebContextProvider, kWebContextProviderUrl);
+    realm()->AddChild(kWebContextProvider, kWebContextProviderUrl);
     realm()->AddChild(kBuildInfoProvider, kBuildInfoProviderUrl);
     realm()->AddChild(kMockCobalt, kMockCobaltUrl);
 

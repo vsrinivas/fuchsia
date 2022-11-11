@@ -83,6 +83,12 @@ std::vector<ui_testing::UITestRealm::Config> SemanticsIntegrationTestV2::UIConfi
 
     config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+
+    config.passthrough_capabilities = {
+        {
+            Protocol{fuchsia::sys::Environment::Name_},
+        },
+    };
     configs.push_back(config);
   }
 
@@ -95,6 +101,12 @@ std::vector<ui_testing::UITestRealm::Config> SemanticsIntegrationTestV2::UIConfi
 
     config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+
+    config.passthrough_capabilities = {
+        {
+            Protocol{fuchsia::sys::Environment::Name_},
+        },
+    };
     configs.push_back(config);
   }
 

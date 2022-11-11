@@ -80,9 +80,6 @@ using component_testing::Route;
 // Alias for Component child name as provided to Realm Builder.
 using ChildName = std::string;
 
-// Alias for Component Legacy URL as provided to Realm Builder.
-using LegacyUrl = std::string;
-
 constexpr auto kResponseListener = "response_listener";
 
 // The type used to measure UTC time. The integer value here does not matter so
@@ -116,6 +113,11 @@ std::vector<ui_testing::UITestRealm::Config> UIConfigurationsToTest() {
     config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
     config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
     config.ui_to_client_services = protocols_required;
+    config.passthrough_capabilities = {
+        {
+            Protocol{fuchsia::sys::Environment::Name_},
+        },
+    };
     configs.push_back(std::move(config));
   }
 
@@ -126,6 +128,11 @@ std::vector<ui_testing::UITestRealm::Config> UIConfigurationsToTest() {
     config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
     config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
     config.ui_to_client_services = protocols_required;
+    config.passthrough_capabilities = {
+        {
+            Protocol{fuchsia::sys::Environment::Name_},
+        },
+    };
     configs.push_back(std::move(config));
   }
 
@@ -139,6 +146,11 @@ std::vector<ui_testing::UITestRealm::Config> UIConfigurationsToTest() {
     config.ui_to_client_services = protocols_required;
     config.ui_to_client_services.push_back(fuchsia::ui::composition::Flatland::Name_);
     config.ui_to_client_services.push_back(fuchsia::ui::composition::Allocator::Name_);
+    config.passthrough_capabilities = {
+        {
+            Protocol{fuchsia::sys::Environment::Name_},
+        },
+    };
     configs.push_back(std::move(config));
   }
   return configs;
@@ -194,7 +206,7 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture,
     // Build realm.
     FX_LOGS(INFO) << "Building realm";
     realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
-    BuildRealm(this->GetTestComponents(), this->GetTestRoutes(), this->GetTestV2Components());
+    BuildRealm(this->GetTestComponents(), this->GetTestRoutes());
 
     // Get display dimensions.
     auto [width, height] = ui_test_manager_->GetDisplayDimensions();
@@ -208,15 +220,11 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture,
 
   // Subclass should implement this method to add components to the test realm
   // next to the base ones added.
-  virtual std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() { return {}; }
+  virtual std::vector<std::pair<ChildName, std::string>> GetTestComponents() { return {}; }
 
   // Subclass should implement this method to add capability routes to the test
   // realm next to the base ones added.
   virtual std::vector<Route> GetTestRoutes() { return {}; }
-
-  // Subclass should implement this method to add components to the test realm
-  // next to the base ones added.
-  virtual std::vector<std::pair<ChildName, std::string>> GetTestV2Components() { return {}; }
 
   void RegisterInjectionDevice() {
     registry_ = realm_exposed_services()->Connect<fuchsia::input::injection::InputDeviceRegistry>();
@@ -299,20 +307,14 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture,
   sys::ServiceDirectory* realm_exposed_services() { return realm_exposed_services_.get(); }
 
  private:
-  void BuildRealm(const std::vector<std::pair<ChildName, LegacyUrl>>& components,
-                  const std::vector<Route>& routes,
-                  const std::vector<std::pair<ChildName, std::string>>& v2_components) {
+  void BuildRealm(const std::vector<std::pair<ChildName, std::string>>& components,
+                  const std::vector<Route>& routes) {
     // Key part of service setup: have this test component vend the
     // |ResponseListener| service in the constructed realm.
     response_listener_ = std::make_unique<InputPositionListenerServer>(dispatcher());
     realm_->AddLocalChild(kResponseListener, response_listener_.get());
 
-    // Add components specific for this test case to the realm.
     for (const auto& [name, component] : components) {
-      realm_->AddLegacyChild(name, component);
-    }
-
-    for (const auto& [name, component] : v2_components) {
       realm_->AddChild(name, component);
     }
 
@@ -350,13 +352,7 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture,
 
 class WebEngineTest : public VirtualKeyboardBase {
  protected:
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
-    return {
-        std::make_pair(kWebContextProvider, kWebContextProviderUrl),
-    };
-  }
-
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
+  std::vector<std::pair<ChildName, std::string>> GetTestComponents() override {
     return {
         std::make_pair(kWebVirtualKeyboardClient, kWebVirtualKeyboardUrl),
         std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),
@@ -365,6 +361,7 @@ class WebEngineTest : public VirtualKeyboardBase {
         std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
         std::make_pair(kMockCobalt, kMockCobaltUrl),
         std::make_pair(kNetstack, kNetstackUrl),
+        std::make_pair(kWebContextProvider, kWebContextProviderUrl),
     };
   }
 
@@ -462,7 +459,11 @@ class WebEngineTest : public VirtualKeyboardBase {
          .source = ChildRef{kBuildInfoProvider},
          .targets = {target, ChildRef{kWebContextProvider}}},
         {
-            .capabilities = {Protocol{fuchsia::logger::LogSink::Name_}},
+            .capabilities =
+                {
+                    Protocol{fuchsia::logger::LogSink::Name_},
+                    Protocol{fuchsia::sys::Environment::Name_},
+                },
             .source = ParentRef(),
             .targets = {ChildRef{kWebContextProvider}},
         },
@@ -490,7 +491,7 @@ class WebEngineTest : public VirtualKeyboardBase {
 
   static constexpr auto kWebContextProvider = "web_context_provider";
   static constexpr auto kWebContextProviderUrl =
-      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
+      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cm";
 
   static constexpr auto kBuildInfoProvider = "build_info_provider";
   static constexpr auto kBuildInfoProviderUrl = "#meta/fake_build_info.cm";

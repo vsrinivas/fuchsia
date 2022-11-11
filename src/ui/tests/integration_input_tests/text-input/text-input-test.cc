@@ -73,8 +73,6 @@ using component_testing::Route;
 
 using ChildName = std::string;
 
-using LegacyUrl = std::string;
-
 // Max timeout in failure cases.
 // Set this as low as you can that still works across all test platforms.
 constexpr zx::duration kTimeout = zx::min(5);
@@ -393,7 +391,7 @@ class ChromiumInputBase : public gtest::RealLoopFixture {
         fuchsia::ui::scenic::Scenic::Name_,
     };
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
-    AssembleRealm(GetTestComponents(), GetTestV2Components(), GetTestRoutes());
+    AssembleRealm(GetTestComponents(), GetTestRoutes());
 
     // Get the display dimensions.
     FX_LOGS(INFO) << "Waiting for scenic display info";
@@ -415,13 +413,9 @@ class ChromiumInputBase : public gtest::RealLoopFixture {
     RegisterKeyboard();
   }
 
-  // Subclass should implement this method to add components to the test realm
-  // next to the base ones added.
-  virtual std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() { return {}; }
-
   // Subclass should implement this method to add v2 components to the test realm
   // next to the base ones added.
-  virtual std::vector<std::pair<ChildName, std::string>> GetTestV2Components() { return {}; }
+  virtual std::vector<std::pair<ChildName, std::string>> GetTestComponents() { return {}; }
 
   // Subclass should implement this method to add capability routes to the test
   // realm next to the base ones added.
@@ -481,8 +475,7 @@ class ChromiumInputBase : public gtest::RealLoopFixture {
     FX_LOGS(INFO) << "Taps canceled as our window is in focus";
   }
 
-  void AssembleRealm(const std::vector<std::pair<ChildName, LegacyUrl>>& components,
-                     const std::vector<std::pair<ChildName, std::string>>& components_v2,
+  void AssembleRealm(const std::vector<std::pair<ChildName, std::string>>& components,
                      const std::vector<Route>& routes) {
     FX_LOGS(INFO) << "Building realm";
     realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
@@ -491,12 +484,7 @@ class ChromiumInputBase : public gtest::RealLoopFixture {
     // |ResponseListener| service in the constructed realm.
     realm_->AddLocalChild(kResponseListener, response_listener());
 
-    // Add components specific for this test case to the realm.
     for (const auto& [name, component] : components) {
-      realm_->AddLegacyChild(name, component);
-    }
-
-    for (const auto& [name, component] : components_v2) {
       realm_->AddChild(name, component);
     }
 
@@ -574,9 +562,7 @@ class ChromiumInputTest : public ChromiumInputBase {
   static constexpr auto kIntl = "intl";
   static constexpr auto kIntlUrl = "#meta/intl_property_manager.cm";
 
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override { return {}; }
-
-  std::vector<std::pair<ChildName, std::string>> GetTestV2Components() override {
+  std::vector<std::pair<ChildName, std::string>> GetTestComponents() override {
     return {
         std::make_pair(kTextInputChromium, kTextInputChromiumUrl),
         std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),

@@ -17,6 +17,7 @@
             // TODO(fxbug.dev/81446): Remove this list.
             protocol: [
                 "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sys.Environment",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",

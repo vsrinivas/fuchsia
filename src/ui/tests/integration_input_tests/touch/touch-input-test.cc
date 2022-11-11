@@ -125,9 +125,6 @@ using RealmBuilder = component_testing::RealmBuilder;
 // Alias for Component child name as provided to Realm Builder.
 using ChildName = std::string;
 
-// Alias for Component Legacy URL as provided to Realm Builder.
-using LegacyUrl = std::string;
-
 // Max timeout in failure cases.
 // Set this as low as you can that still works across all test platforms.
 constexpr zx::duration kTimeout = zx::min(5);
@@ -392,17 +389,13 @@ class TouchInputBase : public ui_testing::PortableUITest,
     RegisterTouchScreen();
   }
 
-  // Subclass should implement this method to add components to the test realm
-  // next to the base ones added.
-  virtual std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() { return {}; }
-
   // Subclass should implement this method to add capability routes to the test
   // realm next to the base ones added.
   virtual std::vector<Route> GetTestRoutes() { return {}; }
 
   // Subclass should implement this method to add components to the test realm
   // next to the base ones added.
-  virtual std::vector<std::pair<ChildName, std::string>> GetTestV2Components() { return {}; }
+  virtual std::vector<std::pair<ChildName, std::string>> GetTestComponents() { return {}; }
 
   bool LastEventReceivedMatches(float expected_x, float expected_y, std::string component_name) {
     const auto& events_received = response_listener_->events_received();
@@ -521,10 +514,6 @@ class TouchInputBase : public ui_testing::PortableUITest,
 
     // Add components specific for this test case to the realm.
     for (const auto& [name, component] : GetTestComponents()) {
-      realm_builder()->AddLegacyChild(name, component);
-    }
-
-    for (const auto& [name, component] : GetTestV2Components()) {
       realm_builder()->AddChild(name, component);
     }
 
@@ -546,7 +535,7 @@ class TouchInputBase : public ui_testing::PortableUITest,
 template <typename... Ts>
 class FlutterInputTestBase : public TouchInputBase<Ts...> {
  protected:
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
+  std::vector<std::pair<ChildName, std::string>> GetTestComponents() override {
     return {
         std::make_pair(kFlutterRealm, kFlutterRealmUrl),
     };
@@ -639,7 +628,7 @@ class CppInputTestIpBase : public TouchInputBase<Ts...> {
  protected:
   virtual std::string_view GetViewProvider() = 0;
 
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
+  std::vector<std::pair<ChildName, std::string>> GetTestComponents() override {
     return {std::make_pair(kCppGfxClient, kCppGfxClientUrl),
             std::make_pair(kCppFlatlandClient, kCppFlatlandClientUrl)};
   }
@@ -740,13 +729,7 @@ TEST_P(CppSwipeTest, CppClientSwipeTest) {
 
 class WebEngineTestIp : public TouchInputBase<> {
  protected:
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
-    return {
-        std::make_pair(kWebContextProvider, kWebContextProviderUrl),
-    };
-  }
-
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
+  std::vector<std::pair<ChildName, std::string>> GetTestComponents() override {
     return {
         std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),
         std::make_pair(kFontsProvider, kFontsProviderUrl),
@@ -756,6 +739,7 @@ class WebEngineTestIp : public TouchInputBase<> {
         std::make_pair(kNetstack, kNetstackUrl),
         std::make_pair(kOneChromiumClient, kOneChromiumUrl),
         std::make_pair(kTextManager, kTextManagerUrl),
+        std::make_pair(kWebContextProvider, kWebContextProviderUrl),
     };
   }
 
@@ -828,6 +812,10 @@ class WebEngineTestIp : public TouchInputBase<> {
         {.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
          .source = ChildRef{kWebContextProvider},
          .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::sys::Environment::Name_},
+                          Protocol{fuchsia::logger::LogSink::Name_}},
+         .source = ParentRef(),
+         .targets = {target, ChildRef{kWebContextProvider}}},
         {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
          .source = ParentRef(),
          .targets = {ChildRef{kFontsProvider}}},
@@ -876,7 +864,7 @@ class WebEngineTestIp : public TouchInputBase<> {
 
   static constexpr auto kWebContextProvider = "web_context_provider";
   static constexpr auto kWebContextProviderUrl =
-      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
+      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cm";
 
   static constexpr auto kBuildInfoProvider = "build_info_provider";
   static constexpr auto kBuildInfoProviderUrl = "#meta/fake_build_info.cm";
@@ -933,7 +921,7 @@ TEST_P(WebEngineTestIp, ChromiumTap) {
 class EmbeddingFlutterTestIp {
  protected:
   // Components needed for Embedding Flutter to be in realm.
-  static std::vector<std::pair<ChildName, LegacyUrl>> GetEmbeddingFlutterComponents() {
+  static std::vector<std::pair<ChildName, std::string>> GetEmbeddingFlutterComponents() {
     return {
         std::make_pair(kEmbeddingFlutter, kEmbeddingFlutterUrl),
     };
@@ -971,9 +959,9 @@ class EmbeddingFlutterTestIp {
 
 class FlutterInFlutterTestIp : public FlutterInputTest, public EmbeddingFlutterTestIp {
  protected:
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
+  std::vector<std::pair<ChildName, std::string>> GetTestComponents() override {
     return merge({EmbeddingFlutterTestIp::GetEmbeddingFlutterComponents(),
-                  FlutterInputTest::GetTestV2Components()});
+                  FlutterInputTest::GetTestComponents()});
   }
 
   std::vector<Route> GetTestRoutes() override {
@@ -1023,14 +1011,10 @@ TEST_P(FlutterInFlutterTestIp, FlutterInFlutterTap) {
 
 class WebInFlutterTestIp : public WebEngineTestIp, public EmbeddingFlutterTestIp {
  protected:
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
-    return WebEngineTestIp::GetTestComponents();
-  }
-
-  std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
+  std::vector<std::pair<ChildName, std::string>> GetTestComponents() override {
     return merge({
         GetEmbeddingFlutterComponents(),
-        WebEngineTestIp::GetTestV2Components(),
+        WebEngineTestIp::GetTestComponents(),
     });
   }
 
