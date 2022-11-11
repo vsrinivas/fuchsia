@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
+#include <fcntl.h>
 #include <fuchsia/gpu/magma/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl_test_base.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
@@ -15,6 +17,33 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+
+namespace {
+
+std::optional<std::string> FindGpuDevice(const std::string dir_name) {
+  DIR* dir = opendir(dir_name.c_str());
+  if (!dir)
+    return {};
+
+  std::optional<std::string> device;
+
+  while (true) {
+    struct dirent* dir_entry = readdir(dir);
+    if (!dir_entry)
+      break;
+
+    std::string entry(dir_entry->d_name);
+
+    if (entry.length() == 3 && std::all_of(entry.begin(), entry.end(), ::isdigit)) {
+      device = dir_name + "/" + entry;
+      break;
+    }
+  }
+
+  closedir(dir);
+  return device;
+}
+}  // namespace
 
 class StreamProcessorImpl final : public fuchsia::media::testing::StreamProcessor_TestBase {
   void NotImplemented_(const std::string& name) override {
@@ -70,8 +99,14 @@ int main(int argc, const char* const* argv) {
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Validate that /dev/class/gpu is accessible.
+  std::optional<std::string> device_name = FindGpuDevice("/dev/class/gpu");
+  if (!device_name) {
+    fprintf(stderr, "No GPU devices found\n");
+    return -1;
+  }
+
   fuchsia::gpu::magma::IcdLoaderDeviceSyncPtr device;
-  fdio_service_connect("/dev/class/gpu/000", device.NewRequest().TakeChannel().release());
+  fdio_service_connect(device_name->c_str(), device.NewRequest().TakeChannel().release());
   std::vector<fuchsia::gpu::magma::IcdInfo> list;
   zx_status_t status = device->GetIcdList(&list);
   if (status != ZX_OK) {
