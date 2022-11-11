@@ -134,15 +134,9 @@ protocol at {
 }
 
 TEST(OrdinalsTests, BadSelectorValueWrongFormat) {
-  TestLibrary library(R"FIDL(
-library not.important;
+  TestLibrary library;
+  library.AddFile("bad/fi-0082.test.fidl");
 
-protocol at {
-    // missing two components after the slash
-    @selector("a.b.c/selector")
-    all();
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidSelectorValue);
 }
 

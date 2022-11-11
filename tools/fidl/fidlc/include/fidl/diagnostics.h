@@ -183,7 +183,7 @@ constexpr ErrorDef<79, std::string_view, std::string_view, SourceSpan, std::stri
 constexpr ErrorDef<80> ErrGeneratedZeroValueOrdinal("Ordinal value 0 disallowed.");
 constexpr ErrorDef<81, SourceSpan> ErrDuplicateMethodOrdinal(
     "Multiple methods with the same ordinal in a protocol; previous was at {}.");
-constexpr UndocumentedErrorDef<82> ErrInvalidSelectorValue(
+constexpr ErrorDef<82> ErrInvalidSelectorValue(
     "invalid selector value, must be a method name or a fully qualified method name");
 constexpr UndocumentedErrorDef<83> ErrFuchsiaIoExplicitOrdinals(
     "fuchsia.io must have explicit ordinals (https://fxbug.dev/77623)");
