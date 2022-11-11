@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use regex::Regex;
 use {
     anyhow::{self, Error},
     diagnostics_reader::{ArchiveReader, Logs},
@@ -67,9 +68,17 @@ async fn wisdom_integration_test() -> Result<(), Error> {
     let mut lines = io::BufReader::new(goldens).lines();
 
     // Verify each line matches the log output
-    while let Some(line) = lines.next() {
+    while let Some(line_regex) = lines.next() {
         let logs = log_stream.next().await.expect("got log result")?;
-        assert_eq!(logs.msg().unwrap(), line.unwrap());
+        let log_msg = logs.msg().unwrap();
+        let line_regex_str = line_regex.expect("line_regex");
+        let regex = Regex::new(&line_regex_str).expect("regex");
+        assert!(
+            regex.is_match(log_msg),
+            "line_regex: {:?}, actual: {:?}",
+            &line_regex_str,
+            &log_msg
+        );
     }
 
     // Clean up the realm instance
