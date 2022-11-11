@@ -41,8 +41,25 @@ class PipeTest : public ::testing::Test {
 
 namespace {
 
-uint64_t GetGttImageHandle(const image_t* image, uint32_t rotation) {
-  return image->handle + 0xf0000000;
+class TestGttRegionImpl : public GttRegion {
+ public:
+  explicit TestGttRegionImpl(uint64_t handle) : handle_(handle) {}
+
+  uint64_t bytes_per_row() const override { return 64; }
+  uint64_t base() const override { return handle_ + 0xf0000000; }
+
+ private:
+  uint64_t handle_ = 0;
+};
+
+std::map<uint64_t, TestGttRegionImpl> region_map;
+
+const GttRegion& GetGttImageHandle(const image_t* image, uint32_t rotation) {
+  auto it = region_map.find(image->handle);
+  if (it != region_map.end()) {
+    return it->second;
+  }
+  return region_map.try_emplace(image->handle, image->handle).first->second;
 }
 
 layer_t CreatePrimaryLayerConfig(uint64_t handle, uint32_t z_index = 1u) {

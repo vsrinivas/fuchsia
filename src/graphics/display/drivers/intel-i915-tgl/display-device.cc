@@ -207,8 +207,11 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config,
   }
 
   if (pipe_) {
-    pipe_->ApplyConfiguration(config, config_stamp,
-                              fit::bind_member<&Controller::SetupGttImage>(controller_));
+    pipe_->ApplyConfiguration(
+        config, config_stamp,
+        [controller = controller_](const image_t* image, uint32_t rotation) -> const GttRegion& {
+          return controller->SetupGttImage(image, rotation);
+        });
   }
 }
 

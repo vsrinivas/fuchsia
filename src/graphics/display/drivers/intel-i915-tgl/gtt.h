@@ -26,8 +26,22 @@ class Gtt;
 
 class GttRegion {
  public:
-  GttRegion(Gtt* gtt, RegionAllocator::Region::UPtr region);
-  ~GttRegion();
+  virtual ~GttRegion() = default;
+  GttRegion(const GttRegion&) = delete;
+  GttRegion& operator=(const GttRegion&) = delete;
+
+  // This is the same as stride in units of bytes.
+  virtual uint64_t bytes_per_row() const = 0;
+  virtual uint64_t base() const = 0;
+
+ protected:
+  GttRegion() = default;
+};
+
+class GttRegionImpl : public GttRegion {
+ public:
+  GttRegionImpl(Gtt* gtt, RegionAllocator::Region::UPtr region);
+  ~GttRegionImpl() override;
 
   void SetRotation(uint32_t rotation, const image_t& image);
 
@@ -35,8 +49,10 @@ class GttRegion {
                              bool writable = false);
   void ClearRegion();
 
-  uint64_t base() const { return region_->base; }
+  uint64_t base() const override { return region_->base; }
   uint64_t size() const { return region_->size; }
+  uint64_t bytes_per_row() const override { return bytes_per_row_; }
+  void set_bytes_per_row(uint64_t bytes_per_row) { bytes_per_row_ = bytes_per_row; }
 
  private:
   RegionAllocator::Region::UPtr region_;
@@ -50,6 +66,8 @@ class GttRegion {
   zx_handle_t vmo_ = ZX_HANDLE_INVALID;
 
   bool is_rotated_ = false;
+  // Populated immediately after construction. Only valid for images (not arbitrary GTT regions).
+  size_t bytes_per_row_ = 0;
 };
 
 class Gtt {
@@ -64,13 +82,13 @@ class Gtt {
   // |fb_offset|: The offset to the end of the bootloader framebuffer in GTT-mapped memory.
   zx_status_t Init(const ddk::Pci& pci, fdf::MmioBuffer buffer, uint32_t fb_offset);
   zx_status_t AllocRegion(uint32_t length, uint32_t align_pow2,
-                          std::unique_ptr<GttRegion>* region_out);
+                          std::unique_ptr<GttRegionImpl>* region_out);
   void SetupForMexec(uintptr_t stolen_fb, uint32_t length);
 
   uint64_t size() const { return gfx_mem_size_; }
 
  private:
-  friend class GttRegion;
+  friend class GttRegionImpl;
 
   std::optional<fdf::MmioBuffer> buffer_;
 

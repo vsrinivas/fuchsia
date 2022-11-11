@@ -119,7 +119,7 @@ zx_status_t Gtt::Init(const ddk::Pci& pci, fdf::MmioBuffer buffer, uint32_t fb_o
 }
 
 zx_status_t Gtt::AllocRegion(uint32_t length, uint32_t align_pow2,
-                             std::unique_ptr<GttRegion>* region_out) {
+                             std::unique_ptr<GttRegionImpl>* region_out) {
   uint32_t region_length = ZX_ROUNDUP(length, PAGE_SIZE);
   RegionAllocator::Region::UPtr region;
   if (region_allocator_.GetRegion(region_length, align_pow2, region) != ZX_OK) {
@@ -127,7 +127,7 @@ zx_status_t Gtt::AllocRegion(uint32_t length, uint32_t align_pow2,
   }
 
   fbl::AllocChecker ac;
-  auto r = fbl::make_unique_checked<GttRegion>(&ac, this, std::move(region));
+  auto r = fbl::make_unique_checked<GttRegionImpl>(&ac, this, std::move(region));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -146,12 +146,12 @@ void Gtt::SetupForMexec(uintptr_t stolen_fb, uint32_t length) {
   buffer_->Read<uint32_t>(get_pte_offset(pte_idx - 1));  // Posting read
 }
 
-GttRegion::GttRegion(Gtt* gtt, RegionAllocator::Region::UPtr region)
+GttRegionImpl::GttRegionImpl(Gtt* gtt, RegionAllocator::Region::UPtr region)
     : region_(std::move(region)), gtt_(gtt) {}
-GttRegion::~GttRegion() { ClearRegion(); }
+GttRegionImpl::~GttRegionImpl() { ClearRegion(); }
 
-zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset, uint64_t length,
-                                      bool writable) {
+zx_status_t GttRegionImpl::PopulateRegion(zx_handle_t vmo, uint64_t page_offset, uint64_t length,
+                                          bool writable) {
   if (length > region_->size) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -206,7 +206,7 @@ zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset, uin
   return ZX_OK;
 }
 
-void GttRegion::ClearRegion() {
+void GttRegionImpl::ClearRegion() {
   if (!region_) {
     return;
   }
@@ -238,7 +238,7 @@ void GttRegion::ClearRegion() {
   vmo_ = ZX_HANDLE_INVALID;
 }
 
-void GttRegion::SetRotation(uint32_t rotation, const image_t& image) {
+void GttRegionImpl::SetRotation(uint32_t rotation, const image_t& image) {
   bool rotated = (rotation == FRAME_TRANSFORM_ROT_90 || rotation == FRAME_TRANSFORM_ROT_270);
   if (rotated == is_rotated_) {
     return;

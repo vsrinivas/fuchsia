@@ -164,8 +164,8 @@ class Controller : public DeviceType,
 
   // For every frame, in order to use the imported image, it is required to set
   // up the image based on given rotation in GTT and use the handle offset in
-  // GTT. Returns the image base address used for display registers.
-  uint64_t SetupGttImage(const image_t* image, uint32_t rotation);
+  // GTT. Returns the Gtt region representing the image.
+  const GttRegion& SetupGttImage(const image_t* image, uint32_t rotation);
 
  private:
   // Perform short-running initialization of all subcomponents and instruct the DDK to publish the
@@ -175,7 +175,7 @@ class Controller : public DeviceType,
   // Long-running initialization is performed in the DdkInit hook.
   zx_status_t Init();
 
-  const std::unique_ptr<GttRegion>& GetGttRegion(uint64_t handle);
+  const std::unique_ptr<GttRegionImpl>& GetGttRegionImpl(uint64_t handle);
   void InitDisplays();
 
   // Reads the memory latency information needed to confiugre pipes and planes.
@@ -255,9 +255,9 @@ class Controller : public DeviceType,
   Gtt gtt_ __TA_GUARDED(gtt_lock_);
   mtx_t gtt_lock_;
   // These regions' VMOs are not owned
-  fbl::Vector<std::unique_ptr<GttRegion>> imported_images_ __TA_GUARDED(gtt_lock_);
+  fbl::Vector<std::unique_ptr<GttRegionImpl>> imported_images_ __TA_GUARDED(gtt_lock_);
   // These regions' VMOs are owned
-  fbl::Vector<std::unique_ptr<GttRegion>> imported_gtt_regions_ __TA_GUARDED(gtt_lock_);
+  fbl::Vector<std::unique_ptr<GttRegionImpl>> imported_gtt_regions_ __TA_GUARDED(gtt_lock_);
 
   IgdOpRegion igd_opregion_;  // Read only, no locking
   Interrupts interrupts_;     // Internal locking

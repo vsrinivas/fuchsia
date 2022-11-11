@@ -31,6 +31,8 @@
 namespace sysmem = fuchsia_sysmem;
 
 namespace {
+constexpr uint32_t kBytesPerRowDivisor = 1024;
+constexpr uint32_t kImageHeight = 32;
 
 // Module-scope global data structure that acts as the data source for the zx_framebuffer_get_info
 // implementation below.
@@ -69,6 +71,24 @@ class MockNoCpuBufferCollection
     set_constraints_called_ = true;
     EXPECT_FALSE(request->constraints.buffer_memory_constraints.inaccessible_domain_supported);
     EXPECT_FALSE(request->constraints.buffer_memory_constraints.cpu_domain_supported);
+    constraints_ = request->constraints;
+  }
+
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) override {
+    fuchsia_sysmem::wire::BufferCollectionInfo2 info;
+    info.settings.has_image_format_constraints = true;
+    auto& constraints = info.settings.image_format_constraints;
+    for (size_t i = 0; i < constraints_.image_format_constraints_count; i++) {
+      if (constraints_.image_format_constraints[i].pixel_format.format_modifier.value ==
+          fuchsia_sysmem::wire::kFormatModifierLinear) {
+        constraints = constraints_.image_format_constraints[i];
+        break;
+      }
+    }
+    constraints.bytes_per_row_divisor = kBytesPerRowDivisor;
+    info.buffer_count = 1;
+    EXPECT_OK(zx::vmo::create(kBytesPerRowDivisor * kImageHeight, 0, &info.buffers[0].vmo));
+    completer.Reply(ZX_OK, std::move(info));
   }
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
@@ -77,6 +97,7 @@ class MockNoCpuBufferCollection
 
  private:
   bool set_constraints_called_ = false;
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints_;
 };
 
 class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
@@ -126,6 +147,8 @@ class TglIntegrationTest : public ::testing::Test {
         "pci");
     loop_.StartThread("pci-fidl-server-thread");
   }
+
+  void TearDown() override { parent_ = nullptr; }
 
   MockDevice* parent() const { return parent_.get(); }
 
@@ -284,6 +307,41 @@ TEST_F(TglIntegrationTest, GttAllocationDoesNotOverlapBootloaderFramebuffer) {
   uint64_t addr;
   EXPECT_EQ(ZX_OK, ctx->IntelGpuCoreGttAlloc(1, &addr));
   EXPECT_EQ(ZX_ROUNDUP(kHeight * kStride * 3, PAGE_SIZE), addr);
+}
+
+TEST_F(TglIntegrationTest, SysmemImport) {
+  ASSERT_OK(Controller::Create(parent()));
+
+  // There should be two published devices: one "intel_i915" device rooted at `parent()`, and a
+  // grandchild "intel-gpu-core" device.
+  ASSERT_EQ(1u, parent()->child_count());
+  auto dev = parent()->GetLatestChild();
+  Controller* ctx = dev->GetDeviceContext<Controller>();
+
+  zx::channel server_channel, client_channel;
+  ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
+
+  MockNoCpuBufferCollection collection;
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  image_t image = {};
+  image.pixel_format = ZX_PIXEL_FORMAT_ARGB_8888;
+  image.width = 128;
+  image.height = kImageHeight;
+  ASSERT_OK(
+      fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &collection));
+
+  EXPECT_OK(ctx->DisplayControllerImplSetBufferCollectionConstraints(&image, client_channel.get()));
+
+  loop.RunUntilIdle();
+  EXPECT_TRUE(collection.set_constraints_called());
+  loop.StartThread();
+  EXPECT_OK(ctx->DisplayControllerImplImportImage(&image, client_channel.get(), 0));
+
+  const GttRegion& region = ctx->SetupGttImage(&image, FRAME_TRANSFORM_IDENTITY);
+  EXPECT_LT(image.width * 4, kBytesPerRowDivisor);
+  EXPECT_EQ(kBytesPerRowDivisor, region.bytes_per_row());
+  ctx->DisplayControllerImplReleaseImage(&image);
 }
 
 }  // namespace
