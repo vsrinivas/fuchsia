@@ -5,7 +5,7 @@
 use anyhow::{Context, Error};
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_bluetooth_fastpair::{
-    ProviderHandleMarker, ProviderHandleRequestStream, ProviderMarker,
+    ProviderMarker, ProviderWatcherMarker, ProviderWatcherRequestStream,
 };
 use fidl_fuchsia_bluetooth_sys::{
     InputCapability, OutputCapability, PairingDelegateMarker, PairingDelegateRequest,
@@ -15,7 +15,7 @@ use fuchsia_component::client::connect_to_protocol;
 use futures::{pin_mut, select, stream::TryStreamExt, FutureExt};
 use tracing::{info, warn};
 
-async fn process_provider_events(mut stream: ProviderHandleRequestStream) -> Result<(), Error> {
+async fn process_provider_events(mut stream: ProviderWatcherRequestStream) -> Result<(), Error> {
     while let Some(request) = stream.try_next().await? {
         let (id, responder) = request.into_on_pairing_complete().expect("only one method");
         let _ = responder.send();
@@ -54,7 +54,7 @@ async fn main() -> Result<(), Error> {
         .context("failed to connect to `fastpair.Provider` service")?;
     let pairing_svc = connect_to_protocol::<PairingMarker>()
         .context("failed to connect to `sys.Pairing` service")?;
-    let (fastpair_client, fastpair_server) = create_request_stream::<ProviderHandleMarker>()?;
+    let (fastpair_client, fastpair_server) = create_request_stream::<ProviderWatcherMarker>()?;
 
     if let Err(e) = fast_pair_svc.enable(fastpair_client).await {
         warn!("Couldn't enable Fast Pair Provider service: {:?}", e);

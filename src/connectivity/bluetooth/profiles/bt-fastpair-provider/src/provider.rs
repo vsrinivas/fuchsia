@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use async_helpers::maybe_stream::MaybeStream;
-use fidl_fuchsia_bluetooth_fastpair::{ProviderEnableResponder, ProviderHandleProxy};
+use fidl_fuchsia_bluetooth_fastpair::{ProviderEnableResponder, ProviderWatcherProxy};
 use fidl_fuchsia_bluetooth_gatt2 as gatt;
 use fidl_fuchsia_bluetooth_sys::{HostWatcherMarker, PairingMarker, PairingProxy};
 use fuchsia_bluetooth::types::PeerId;
@@ -30,7 +30,7 @@ pub enum ServiceRequest {
     /// A request to set the Pairing Delegate.
     Pairing(PairingArgs),
     /// A request to enable the Fast Pair Provider service.
-    EnableFastPair { handle: ProviderHandleProxy, responder: ProviderEnableResponder },
+    EnableFastPair { watcher: ProviderWatcherProxy, responder: ProviderEnableResponder },
 }
 
 /// State associated with the Fast Pair Provider server.
@@ -414,8 +414,8 @@ impl Provider {
                     warn!("Pairing Delegate is already active, ignoring..");
                 }
             }
-            ServiceRequest::EnableFastPair { handle, responder } => {
-                match self.upstream.set(handle) {
+            ServiceRequest::EnableFastPair { watcher, responder } => {
+                match self.upstream.set(watcher) {
                     Ok(()) => {
                         let _ = responder.send(&mut Ok(()));
                         if let Some(discoverable) = self.host_watcher.pairing_mode() {

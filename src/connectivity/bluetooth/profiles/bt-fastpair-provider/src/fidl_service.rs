@@ -64,10 +64,10 @@ fn handle_fastpair_client_connection(
     async move {
         while let Some(request) = stream.next().await {
             match request {
-                Ok(ProviderRequest::Enable { handle, responder }) => match handle.into_proxy() {
-                    Ok(handle) => {
+                Ok(ProviderRequest::Enable { watcher, responder }) => match watcher.into_proxy() {
+                    Ok(watcher) => {
                         if let Err(e) =
-                            sender.send(ServiceRequest::EnableFastPair { handle, responder }).await
+                            sender.send(ServiceRequest::EnableFastPair { watcher, responder }).await
                         {
                             warn!("Couldn't relay Fast Pair enable request to component: {:?}", e);
                         }
