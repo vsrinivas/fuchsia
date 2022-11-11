@@ -33,11 +33,46 @@ bool SpaceAvailable(const SnapshotPersistenceMetadata& root, StorageSize archive
   return root.RemainingSpace() >= archive_size;
 }
 
+// Get the contents of a directory without ".".
+std::vector<std::string> GetDirectoryContents(const std::string& dir) {
+  std::vector<std::string> contents;
+  files::ReadDirContents(dir, &contents);
+
+  contents.erase(std::remove(contents.begin(), contents.end(), "."), contents.end());
+  return contents;
+}
+
+// Recursively delete empty directories under |root|, including |root| if it is empty or becomes
+// empty.
+void RemoveEmptyDirectories(const std::string& root) {
+  const std::vector<std::string> contents = GetDirectoryContents(root);
+  if (contents.empty()) {
+    DeletePath(root);
+    return;
+  }
+
+  for (const auto& content : contents) {
+    const std::string path = files::JoinPath(root, content);
+    if (files::IsDirectory(path)) {
+      RemoveEmptyDirectories(path);
+    }
+  }
+
+  if (GetDirectoryContents(root).empty()) {
+    DeletePath(root);
+  }
+}
+
 }  // namespace
 
 SnapshotPersistence::SnapshotPersistence(const Root& temp_root, const Root& persistent_root)
     : tmp_metadata_(temp_root.dir, temp_root.max_size),
       cache_metadata_(persistent_root.dir, persistent_root.max_size) {
+  // Clean up any empty directories in snapshot persistence. This may happen if the component stops
+  // running while it is deleting a snapshot.
+  RemoveEmptyDirectories(tmp_metadata_.RootDir());
+  RemoveEmptyDirectories(cache_metadata_.RootDir());
+
   // |temp_root.dir| must be usable immediately.
   FX_CHECK(tmp_metadata_.RecreateFromFilesystem());
   cache_metadata_.RecreateFromFilesystem();

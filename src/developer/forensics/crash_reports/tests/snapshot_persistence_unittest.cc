@@ -315,5 +315,21 @@ TEST_F(SnapshotPersistenceTest, Check_AddOnlyConsiderTmp) {
   EXPECT_FALSE(Read(GetCacheDir(), kTestUuid, archive));
 }
 
+TEST_F(SnapshotPersistenceTest, Check_RemovesEmptyDirectories) {
+  const SnapshotUuid kTestUuid = "test uuid";
+  const std::string snapshot_cache_dir = files::JoinPath(GetCacheDir(), kTestUuid);
+  const std::string snapshot_tmp_dir = files::JoinPath(GetTmpDir(), kTestUuid);
+
+  ASSERT_TRUE(files::CreateDirectory(snapshot_cache_dir));
+  ASSERT_TRUE(files::IsDirectory(snapshot_cache_dir));
+
+  ASSERT_TRUE(files::CreateDirectory(snapshot_tmp_dir));
+  ASSERT_TRUE(files::IsDirectory(snapshot_tmp_dir));
+
+  MakeNewPersistence();
+  EXPECT_FALSE(files::IsDirectory(snapshot_cache_dir));
+  EXPECT_FALSE(files::IsDirectory(snapshot_tmp_dir));
+}
+
 }  // namespace
 }  // namespace forensics::crash_reports
