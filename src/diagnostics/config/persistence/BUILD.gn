@@ -5,7 +5,10 @@
 import("//build/config.gni")
 
 # TODO(cphoenix) re-enable tests in this file similar to config/triage/BUILD.gn
-persistence_files = [ "wlan.persist" ]
+persistence_files = [
+  "netstack.persist",
+  "wlan.persist",
+]
 
 config_data("persistence") {
   for_pkg = "diagnostics-persistence"

@@ -1,0 +1,18 @@
+[
+    {
+        tag: "netstack-counters",
+        service_name: "netstack",
+        max_bytes: 16000,
+        min_seconds_between_fetch: 60,
+        selectors: [
+            "INSPECT:core/network/netstack:Networking\\ Stat\\ Counters:*",
+            "INSPECT:core/network/netstack:Networking\\ Stat\\ Counters/*:*",
+            "INSPECT:core/network/netstack:Networking\\ Stat\\ Counters/*/*:*",
+            "INSPECT:core/network/netstack:Networking\\ Stat\\ Counters/*/*/*:*",
+            "INSPECT:core/network/netstack:NICS/*/Network\\ Endpoint\\ Stats:*",
+            "INSPECT:core/network/netstack:NICS/*/Network\\ Endpoint\\ Stats/*:*",
+            "INSPECT:core/network/netstack:NICS/*/Network\\ Endpoint\\ Stats/*/*:*",
+            "INSPECT:core/network/netstack:NICS/*/Network\\ Endpoint\\ Stats/*/*/*:*",
+        ],
+    },
+]
