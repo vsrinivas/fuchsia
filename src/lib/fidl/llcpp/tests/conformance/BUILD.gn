@@ -65,10 +65,14 @@ fidl("manual.conformance.large") {
 # cannot compile on host.
 test("fidl_llcpp_manual_conformance_tests_bin") {
   output_name = "fidl_llcpp_manual_conformance_tests"
-  sources = [ "manual_conformance_test.cc" ]
+  sources = [
+    "manual_conformance_test.cc",
+    "persistence_test.cc",
+  ]
   deps = [
     ":manual.conformance.large_cpp_wire",
     "//sdk/testing/fidl:fidl_test_cpp_wire",
+    "//sdk/testing/fidl/types_tests:test.types_cpp_wire",
     "//src/lib/fidl/llcpp/tests/conformance:conformance_utils",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

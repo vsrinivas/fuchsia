@@ -104,6 +104,13 @@ class UnionMemberView final {
   }
 };
 
+// Use it like `template <typename T, EnableIfNaturalType<T> = nullptr>` to enable the
+// declaration only for natural types.
+template <typename FidlType>
+using EnableIfNaturalType = std::enable_if_t<static_cast<bool>(
+    internal::NaturalCodingTraits<FidlType,
+                                  internal::NaturalCodingConstraintEmpty>::inline_size_v2)>*;
+
 class NaturalEncodeResult final : public EncodeResult {
  public:
   template <typename F>
@@ -140,11 +147,8 @@ OwnedEncodeResult EncodeWithTransport(FidlType&& value) {
       });
 }
 
-std::vector<uint8_t> ConcatMetadataAndMessage(fidl::WireFormatMetadata metadata,
-                                              fidl::OutgoingMessage& message);
-
 fit::result<fidl::Error, std::tuple<fidl::WireFormatMetadata, std::vector<uint8_t>>>
-SplitMetadataAndMessage(cpp20::span<const uint8_t> persisted);
+OwnedSplitMetadataAndMessage(cpp20::span<const uint8_t> persisted);
 
 }  // namespace internal
 
@@ -177,8 +181,7 @@ SplitMetadataAndMessage(cpp20::span<const uint8_t> persisted);
 //     // 2. Copy the bytes to contiguous storage.
 //     fidl::OutgoingMessage::CopiedBytes bytes = encoded.message().CopyBytes();
 //
-template <typename FidlType, size_t kEnabled = internal::NaturalCodingTraits<
-                                 FidlType, internal::NaturalCodingConstraintEmpty>::inline_size_v2>
+template <typename FidlType, internal::EnableIfNaturalType<FidlType> = nullptr>
 OwnedEncodeResult Encode(FidlType value) {
   return internal::EncodeWithTransport<fidl::internal::ChannelTransport>(std::move(value));
 }
@@ -242,7 +245,7 @@ template <typename FidlType>
 //
 // [persistence-convention]:
 // https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format?hl=en#convention_for_data_persistence
-template <typename FidlType>
+template <typename FidlType, internal::EnableIfNaturalType<FidlType> = nullptr>
 fit::result<fidl::Error, std::vector<uint8_t>> Persist(const FidlType& value) {
   static_assert(fidl::IsFidlType<FidlType>::value, "|FidlType| must be a FIDL domain object.");
   static_assert(
@@ -267,7 +270,7 @@ fit::result<fidl::Error, std::vector<uint8_t>> Persist(const FidlType& value) {
 //
 // Example:
 //
-//     std::vector<uint8_t> data = ...;
+//     const std::vector<uint8_t> data = ...;
 //     fit::result result = fidl::Unpersist<fuchsia_my_lib::SomeType>(cpp20::span(data));
 //     if (result.is_error()) {
 //       // Handle errors...
@@ -285,7 +288,7 @@ fit::result<fidl::Error, FidlType> Unpersist(cpp20::span<const uint8_t> data) {
       "|FidlType| cannot be a resource type. Resources cannot be persisted. "
       "If you need to send resource types to another process, consider using a FIDL protocol.");
 
-  fit::result split = internal::SplitMetadataAndMessage(data);
+  fit::result split = internal::OwnedSplitMetadataAndMessage(data);
   if (split.is_error()) {
     return split.take_error();
   }

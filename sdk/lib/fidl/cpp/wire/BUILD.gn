@@ -127,6 +127,7 @@ sdk_source_set("wire") {
     "wire_decoder.cc",
     "wire_encoder.cc",
     "wire_messaging.cc",
+    "wire_types.cc",
   ]
   if (is_fuchsia) {
     sources += [

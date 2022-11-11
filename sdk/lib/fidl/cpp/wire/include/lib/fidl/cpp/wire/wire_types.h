@@ -75,6 +75,13 @@ namespace internal {
 template <typename FidlTable, typename Builder>
 class WireTableBaseBuilder;
 
+// Use it like `template <typename T, EnableIfWireType<T> = nullptr>` to enable the
+// declaration only for wire types.
+template <typename FidlType>
+using EnableIfWireType =
+    std::enable_if_t<static_cast<bool>(internal::TopLevelCodingTraits<FidlType>::inline_size)>*;
+
+// The wire format version used when encoding.
 constexpr WireFormatVersion kLLCPPWireFormatVersion = WireFormatVersion::kV2;
 
 // Marker to allow references/pointers to the unowned input objects in OwnedEncodedMessage.
@@ -231,6 +238,12 @@ class EncodeResult {
 // without changing API.
 using AnyEncodeResult = fit::pinned_inline_any<EncodeResult, /* Reserve */ 2048, /* Align */ 16>;
 
+std::vector<uint8_t> ConcatMetadataAndMessage(fidl::WireFormatMetadata metadata,
+                                              fidl::OutgoingMessage& message);
+
+fit::result<fidl::Error, std::tuple<fidl::WireFormatMetadata, cpp20::span<uint8_t>>>
+SplitMetadataAndMessage(cpp20::span<uint8_t> persisted);
+
 }  // namespace internal
 
 // |OwnedEncodeResult| holds a message encoded for writing, along with the
@@ -298,8 +311,7 @@ class OwnedEncodeResult {
 //     // 2. Copy the bytes to contiguous storage.
 //     fidl::OutgoingMessage::CopiedBytes bytes = encoded.message().CopyBytes();
 //
-template <typename FidlType,
-          size_t kEnabled = internal::TopLevelCodingTraits<FidlType>::inline_size>
+template <typename FidlType, internal::EnableIfWireType<FidlType> = nullptr>
 OwnedEncodeResult Encode(FidlType& value) {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types are supported");
 
@@ -360,6 +372,89 @@ template <typename FidlType>
     return ::fit::error(status);
   }
   return ::fit::ok(DecodedValue<FidlType>(reinterpret_cast<FidlType*>(message.bytes().data())));
+}
+
+// |Persist| encodes a wire domain object |FidlType| into bytes, following the
+// [convention for FIDL data persistence][persistence-convention]: the wire
+// format metadata followed by the encoded bytes. |FidlType| needs to satisfy
+// these requirements:
+//
+// - |FidlType| is a wire struct/union/table.
+// - |FidlType| is not a resource type.
+//
+// Example:
+//
+//     fuchsia_my_lib::wire::SomeType obj = ...;
+//     fit::result result = fidl::Persist(obj);
+//     if (result.is_error()) {
+//       // Handle errors...
+//     }
+//     // Get the persisted data.
+//     std::vector<uint8_t>& data = result.value();
+//
+// [persistence-convention]:
+// https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format?hl=en#convention_for_data_persistence
+template <typename FidlType, internal::EnableIfWireType<FidlType> = nullptr>
+fit::result<fidl::Error, std::vector<uint8_t>> Persist(const FidlType& value) {
+  static_assert(fidl::IsFidlType<FidlType>::value, "|FidlType| must be a FIDL domain object.");
+  static_assert(
+      !fidl::IsResource<FidlType>::value,
+      "|FidlType| cannot be a resource type. Resources cannot be persisted. "
+      "If you need to send resource types to another process, consider using a FIDL protocol.");
+
+  // Const safety: because there are no handles in non-resource types,
+  // encoding will not mutate the input tree of values.
+  fidl::OwnedEncodeResult encoded = fidl::Encode(const_cast<FidlType&>(value));
+  if (!encoded.message().ok()) {
+    return fit::error(encoded.message().error());
+  }
+  return fit::ok(
+      internal::ConcatMetadataAndMessage(encoded.wire_format_metadata(), encoded.message()));
+}
+
+// |InplaceUnpersist| borrows a sequence of bytes stored in the [convention for
+// FIDL data persistence][persistence-convention] and decodes them into an
+// instance of |FidlType| in-place, mutating those bytes. |FidlType| needs to
+// satisfy these requirements:
+//
+// - |FidlType| is a wire struct/union/table.
+// - |FidlType| is not a resource type.
+//
+// The bytes referenced by |data| must remain alive if one needs to
+// access the decoded result.
+//
+// Example:
+//
+//     std::vector<uint8_t> data = ...;
+//     fit::result result = fidl::InplaceUnpersist<
+//         fuchsia_my_lib::wire::SomeType>(cpp20::span(data));
+//     if (result.is_error()) {
+//       // Handle errors...
+//     }
+//     // Get the decoded object.
+//     fuchsia_my_lib::wire::SomeType& obj = *result.value();
+//
+// [persistence-convention]:
+// https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format?hl=en#convention_for_data_persistence
+template <typename FidlType>
+fit::result<fidl::Error, fidl::ObjectView<FidlType>> InplaceUnpersist(cpp20::span<uint8_t> data) {
+  static_assert(fidl::IsFidlType<FidlType>::value, "|FidlType| must be a FIDL domain object.");
+  static_assert(
+      !fidl::IsResource<FidlType>::value,
+      "|FidlType| cannot be a resource type. Resources cannot be persisted. "
+      "If you need to send resource types to another process, consider using a FIDL protocol.");
+
+  fit::result split = internal::SplitMetadataAndMessage(data);
+  if (split.is_error()) {
+    return split.take_error();
+  }
+  auto [metadata, bytes] = split.value();
+  fit::result decoded =
+      fidl::InplaceDecode<FidlType>(fidl::EncodedMessage::Create(bytes), metadata);
+  if (decoded.is_error()) {
+    return decoded.take_error();
+  }
+  return fit::ok(fidl::ObjectView<FidlType>::FromExternal(decoded.value().pointer()));
 }
 
 }  // namespace fidl
