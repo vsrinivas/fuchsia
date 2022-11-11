@@ -211,10 +211,20 @@ void SpiChild::SpiConnectServer(zx::channel server) {
   }
 }
 
-void SpiChild::OnUnbound() {
+zx_status_t SpiChild::Open() {
+  fbl::AutoLock lock(&lock_);
+  if (connected_) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+  connected_ = true;
+  return ZX_OK;
+}
+
+zx_status_t SpiChild::Close() {
   fbl::AutoLock lock(&lock_);
   spi_.ReleaseRegisteredVmos(cs_);
   connected_ = false;
+  return ZX_OK;
 }
 
 void SpiChild::DdkUnbind(ddk::UnbindTxn txn) {
@@ -226,20 +236,6 @@ void SpiChild::DdkRelease() {
   // The DDK is releasing its reference to this object, so create a RefPtr to it without
   // incrementing the counter. When it goes out of scope this object will be freed if needed.
   fbl::RefPtr<SpiChild> thiz = fbl::ImportFromRawPtr(this);
-}
-
-zx_status_t SpiChild::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
-  fbl::AutoLock lock(&lock_);
-  if (connected_) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
-  connected_ = true;
-  return ZX_OK;
-}
-
-zx_status_t SpiChild::DdkClose(uint32_t flags) {
-  OnUnbound();
-  return ZX_OK;
 }
 
 void SpiFidlChild::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
@@ -301,6 +297,10 @@ zx_status_t SpiFidlChild::SetUpOutgoingDirectory(
 }
 
 void SpiBanjoChild::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
+
+zx_status_t SpiBanjoChild::DdkOpen(zx_device_t** dev_out, uint32_t flags) { return spi_->Open(); }
+
+zx_status_t SpiBanjoChild::DdkClose(uint32_t flags) { return spi_->Close(); }
 
 zx_status_t SpiBanjoChild::SpiTransmit(const uint8_t* txdata_list, size_t txdata_count) {
   return spi_->SpiTransmit(txdata_list, txdata_count);

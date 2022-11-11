@@ -212,7 +212,7 @@ void SpiDevice::ConnectServer(zx::channel server, fbl::RefPtr<SpiChild> child) {
                    [](SpiChild* ref_counted_child, fidl::UnbindInfo info,
                       fidl::ServerEnd<fuchsia_hardware_spi::Device> server) {
                      fbl::RefPtr<SpiChild> child_ref_ptr = fbl::ImportFromRawPtr(ref_counted_child);
-                     child_ref_ptr->OnUnbound();
+                     child_ref_ptr->Close();
                    });
 }
 

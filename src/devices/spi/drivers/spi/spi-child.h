@@ -36,8 +36,8 @@ namespace spi {
 class SpiDevice;
 
 class SpiChild;
-using SpiChildType = ddk::Device<SpiChild, ddk::Messageable<fuchsia_hardware_spi::Device>::Mixin,
-                                 ddk::Unbindable, ddk::Openable, ddk::Closable>;
+using SpiChildType =
+    ddk::Device<SpiChild, ddk::Messageable<fuchsia_hardware_spi::Device>::Mixin, ddk::Unbindable>;
 
 class SpiChild : public SpiChildType, public fbl::RefCounted<SpiChild> {
  public:
@@ -51,8 +51,6 @@ class SpiChild : public SpiChildType, public fbl::RefCounted<SpiChild> {
 
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-  zx_status_t DdkClose(uint32_t flags);
 
   void TransmitVector(TransmitVectorRequestView request,
                       TransmitVectorCompleter::Sync& completer) override;
@@ -80,7 +78,8 @@ class SpiChild : public SpiChildType, public fbl::RefCounted<SpiChild> {
                           size_t rxdata_count, size_t* out_rxdata_actual);
   void SpiConnectServer(zx::channel server);
 
-  void OnUnbound();
+  zx_status_t Open();
+  zx_status_t Close();
 
  private:
   const ddk::SpiImplProtocolClient spi_;
@@ -147,7 +146,7 @@ class SpiFidlChild : public SpiFidlChildType {
 class SpiBanjoChild;
 using SpiBanjoChildType =
     ddk::Device<SpiBanjoChild, ddk::Messageable<fuchsia_hardware_spi::Device>::Mixin,
-                ddk::Unbindable>;
+                ddk::Unbindable, ddk::Openable, ddk::Closable>;
 
 class SpiBanjoChild : public SpiBanjoChildType,
                       public ddk::SpiProtocol<SpiBanjoChild, ddk::base_protocol> {
@@ -156,6 +155,8 @@ class SpiBanjoChild : public SpiBanjoChildType,
 
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
+  zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
+  zx_status_t DdkClose(uint32_t flags);
 
   // Banjo implementation
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);
