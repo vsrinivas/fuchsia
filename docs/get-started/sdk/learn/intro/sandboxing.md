@@ -82,9 +82,9 @@ ffx component explore /core/network/http-client
 **Inside the explore shell**, list the contents of the root directory using the
 `ls` command:
 
-```posix-terminal
-ls
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[explore shell] $ </span>ls
+</pre>
 
 ```none {:.devsite-disable-click-to-copy}
 bin
@@ -102,9 +102,9 @@ environment.
 
 **Inside the explore shell**, list the contents of the namespace:
 
-```posix-terminal
-ls /ns
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[explore shell] $ </span>ls /ns
+</pre>
 
 ```none {:.devsite-disable-click-to-copy}
 config
@@ -123,9 +123,9 @@ directory. This directory contains
 [service nodes](https://fuchsia.dev/reference/fidl/fuchsia.io#NodeInfo)
 representing the system services provided to this component.
 
-```posix-terminal
-ls /ns/svc
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[explore shell] $ </span>ls /ns/svc
+</pre>
 
 ```none {:.devsite-disable-click-to-copy}
 fuchsia.logger.LogSink
@@ -141,9 +141,9 @@ later on.
 **Inside the explore shell**, type `exit` to return to the shell on your
 development machine:
 
-```posix-terminal
-exit
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[explore shell] $ </span>exit
+</pre>
 
 <aside class="key-point">
   <b>Extra Credit</b>
