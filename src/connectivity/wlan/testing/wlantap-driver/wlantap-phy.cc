@@ -12,6 +12,7 @@
 #include <zircon/status.h>
 
 #include <array>
+#include <mutex>
 
 #include <wlan/common/dispatcher.h>
 #include <wlan/common/phy.h>
@@ -126,28 +127,47 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
             [this](WlantapPhy* server_impl, fidl::UnbindInfo info,
                    fidl::ServerEnd<fuchsia_wlan_tap::WlantapPhy> server_end) {
               auto name = name_;
-              zxlogf(INFO, "%s: unbinding device because the channel was closed", name.c_str());
+              fidl_server_unbound_ = true;
+
+              if (shutdown_called_) {
+                zxlogf(INFO, "%s: Unbinding WlantapPhy FIDL server.", name.c_str());
+              } else {
+                zxlogf(ERROR, "%s: Unbinding WlantapPhy FIDL server before Shutdown() called. %s",
+                       name.c_str(), info.FormatDescription().c_str());
+              }
+
               if (report_tx_status_count_) {
                 zxlogf(INFO, "Tx Status Reports sent during device lifetime: %zu",
                        report_tx_status_count_);
               }
-              if (info.is_peer_closed()) {
-                zxlogf(INFO, "Client disconnected");
-              }
-              Unbind();
-              zxlogf(INFO, "%s: done unbinding", name.c_str());
+
+              zxlogf(INFO, "%s: Removing PHY device asynchronously.", name.c_str());
+              device_async_remove(device_);
+
+              zxlogf(INFO, "%s: WlantapPhy FIDL server unbind complete.", name.c_str());
             })) {}
 
   static void DdkUnbind(void* ctx) {
     auto self = static_cast<WlantapPhy*>(ctx);
     auto name = self->name_;
-    zxlogf(INFO, "%s: unbinding device per request from DDK", name.c_str());
-    if (self->report_tx_status_count_) {
-      zxlogf(INFO, "Tx Status Reports sent druing device lifetime: %zu",
-             self->report_tx_status_count_);
-    }
-    self->Unbind();
-    zxlogf(INFO, "%s: done unbinding", name.c_str());
+    zxlogf(INFO, "%s: Unbinding PHY device.", name.c_str());
+
+    // Flush any remaining tasks in the event loop before destroying
+    // the interfaces
+    ::async::PostTask(self->loop_, [self] {
+      {
+        std::lock_guard<std::mutex> guard(self->wlan_softmac_lock_);
+        self->wlan_softmac_devices_.ReleaseAll();
+      }
+    });
+
+    // This call will be ignored by ServerBindingRef it is has
+    // already been called, i.e., in the case that DdkUnbind precedes
+    // normal shutdowns.
+    std::lock_guard<std::mutex> guard(self->fidl_server_lock_);
+    self->user_binding_.Unbind();
+
+    zxlogf(INFO, "%s: PHY device unbind complete.", name.c_str());
   }
 
   static void DdkRelease(void* ctx) {
@@ -155,21 +175,6 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
     zxlogf(INFO, "%s: DdkRelease", name.c_str());
     delete static_cast<WlantapPhy*>(ctx);
     zxlogf(INFO, "%s: DdkRelease done", name.c_str());
-  }
-
-  void Unbind() {
-    std::lock_guard<std::mutex> guard(lock_);
-    user_binding_.Unbind();
-
-    // Flush any remaining tasks in the event loop before destroying the
-    // interfaces
-    ::async::PostTask(loop_, [this] {
-      {
-        std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
-        wlan_softmac_devices_.ReleaseAll();
-      }
-      device_async_remove(device_);
-    });
   }
 
   // wlanphy-impl DDK interface
@@ -257,7 +262,7 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
     }
     zxlogf(INFO, "%s: SetCountry() to [%s]", name_.c_str(),
            wlan::common::Alpha2ToStr(country->alpha2).c_str());
-    std::lock_guard<std::mutex> guard(lock_);
+    std::lock_guard<std::mutex> guard(fidl_server_lock_);
 
     zxlogf(INFO, "%s: SetCountry() to [%s] received", name_.c_str(),
            wlan::common::Alpha2ToStr(country->alpha2).c_str());
@@ -290,10 +295,18 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
 
   void Shutdown(ShutdownCompleter::Sync& completer) override {
     zxlogf(INFO, "%s: Shutdown", name_.c_str());
-    std::lock_guard<std::mutex> guard(lock_);
-    stopped_ = true;
+    std::lock_guard<std::mutex> guard(fidl_server_lock_);
+
+    if (shutdown_called_) {
+      zxlogf(WARNING, "%s: PHY device shutdown already initiated.", name_.c_str());
+      completer.Reply();
+      return;
+    }
+    shutdown_called_ = true;
+
+    zxlogf(INFO, "%s: PHY device shutdown initiated.", name_.c_str());
+    user_binding_.Unbind();
     completer.Reply();
-    zxlogf(DEBUG, "%s: Shutdown done", name_.c_str());
   }
 
   void Rx(RxRequestView request, RxCompleter::Sync& completer) override {
@@ -343,8 +356,8 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
 
   virtual void WlantapMacStart(uint16_t wlan_softmac_id) override {
     zxlogf(INFO, "%s: WlantapMacStart id=%u", name_.c_str(), wlan_softmac_id);
-    std::lock_guard<std::mutex> guard(lock_);
-    if (stopped_) {
+    std::lock_guard<std::mutex> guard(fidl_server_lock_);
+    if (fidl_server_unbound_) {
       return;
     }
     fidl::Status status =
@@ -369,8 +382,8 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
              wlan_softmac_id, pkt_size, report_tx_status_count_);
     }
 
-    std::lock_guard<std::mutex> guard(lock_);
-    if (stopped_) {
+    std::lock_guard<std::mutex> guard(fidl_server_lock_);
+    if (fidl_server_unbound_) {
       zxlogf(INFO, "%s: WlantapMacQueueTx ignored, shutting down", name_.c_str());
       return;
     }
@@ -392,8 +405,8 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
       zxlogf(INFO, "%s: WlantapMacSetChannel id=%u, channel=%u", name_.c_str(), wlan_softmac_id,
              channel.primary);
     }
-    std::lock_guard<std::mutex> guard(lock_);
-    if (stopped_) {
+    std::lock_guard<std::mutex> guard(fidl_server_lock_);
+    if (fidl_server_unbound_) {
       zxlogf(INFO, "%s: WlantapMacSetChannel ignored, shutting down", name_.c_str());
       return;
     }
@@ -414,8 +427,8 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
   virtual void WlantapMacConfigureBss(uint16_t wlan_softmac_id,
                                       const wlan_internal::BssConfig& config) override {
     zxlogf(INFO, "%s: WlantapMacConfigureBss id=%u", name_.c_str(), wlan_softmac_id);
-    std::lock_guard<std::mutex> guard(lock_);
-    if (stopped_) {
+    std::lock_guard<std::mutex> guard(fidl_server_lock_);
+    if (fidl_server_unbound_) {
       zxlogf(INFO, "%s: WlantapMacConfigureBss ignored, shutting down", name_.c_str());
       return;
     }
@@ -433,8 +446,8 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
 
   virtual void WlantapMacStartScan(uint16_t wlan_softmac_id, const uint64_t scan_id) override {
     zxlogf(INFO, "%s: WlantapMacStartScan id=%u", name_.c_str(), wlan_softmac_id);
-    std::lock_guard<std::mutex> guard(lock_);
-    if (stopped_) {
+    std::lock_guard<std::mutex> guard(fidl_server_lock_);
+    if (fidl_server_unbound_) {
       zxlogf(INFO, "%s: WlantapMacStartScan ignored, shutting down", name_.c_str());
       return;
     }
@@ -454,8 +467,8 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
   virtual void WlantapMacSetKey(uint16_t wlan_softmac_id,
                                 const wlan_softmac::WlanKeyConfig& key_config) override {
     zxlogf(INFO, "%s: WlantapMacSetKey id=%u", name_.c_str(), wlan_softmac_id);
-    std::lock_guard<std::mutex> guard(lock_);
-    if (stopped_) {
+    std::lock_guard<std::mutex> guard(fidl_server_lock_);
+    if (fidl_server_unbound_) {
       zxlogf(INFO, "%s: WlantapMacSetKey ignored, shutting down", name_.c_str());
       return;
     }
@@ -475,11 +488,13 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
   async_dispatcher_t* loop_;
   std::mutex wlan_softmac_lock_;
   DevicePool<WlantapMac, kMaxMacDevices> wlan_softmac_devices_ __TA_GUARDED(wlan_softmac_lock_);
-  std::mutex lock_;
   std::string name_;
-  fidl::ServerBindingRef<fuchsia_wlan_tap::WlantapPhy> user_binding_ __TA_GUARDED(lock_);
+  std::mutex fidl_server_lock_;
+  fidl::ServerBindingRef<fuchsia_wlan_tap::WlantapPhy> user_binding_
+      __TA_GUARDED(fidl_server_lock_);
+  bool fidl_server_unbound_ = false;
+  bool shutdown_called_ = false;
   size_t report_tx_status_count_ = 0;
-  bool stopped_ = false;
 };  // namespace
 
 }  // namespace

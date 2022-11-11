@@ -139,7 +139,7 @@ mod tests {
         // Create an intentionally unused variable instead of a plain
         // underscore. Otherwise, this end of the channel will be
         // dropped and cause the phy device to begin unbinding.
-        let _wlantap_phy =
+        let wlantap_phy =
             wlantap.create_phy(create_wlantap_config()).expect("failed to create PHY");
         exec.run_singlethreaded(async {
             phy_watcher
@@ -151,7 +151,13 @@ mod tests {
             if let Poll::Ready(..) = poll!(phy_watcher.next()) {
                 panic!("phy_watcher found more than one phy");
             }
-        })
+        });
+
+        let shutdown_fut = wlantap_phy.shutdown();
+        pin_mut!(shutdown_fut);
+        exec.run_singlethreaded(async {
+            shutdown_fut.await.expect("shutdown operation failed");
+        });
     }
 
     #[test]
