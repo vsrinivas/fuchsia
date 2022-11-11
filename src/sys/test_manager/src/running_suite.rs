@@ -42,11 +42,11 @@ use {
         FutureExt,
     },
     lazy_static::lazy_static,
-    maplit::{hashmap, hashset},
+    maplit::hashset,
     moniker::RelativeMonikerBase,
     resolver::AllowedPackages,
     std::{
-        collections::{HashMap, HashSet},
+        collections::HashSet,
         convert::{TryFrom, TryInto},
         sync::{
             atomic::{AtomicU32, Ordering},
@@ -491,14 +491,6 @@ impl CaseMatcher {
 }
 
 lazy_static! {
-    // Exception map for specific test urls. This map would allow us to transition to world where
-    // hermetic resolver is default. The map will contain ctf and OOT test urls.
-    static ref TEST_URL_ALLOWED_PACKAGE_MAP: HashMap<&'static str, AllowedPackages> = hashmap! {
-        "fuchsia-pkg://fuchsia.com/driver_test_realm_cts_test_10.20221012.0.1#meta/driver_test_realm_cts_test.cm" => AllowedPackages::from_iter(["driver_test_realm".to_string()]),
-        "fuchsia-pkg://fuchsia.com/driver_test_realm_cts_test_9.20221010.3.16#meta/driver_test_realm_cts_test.cm" => AllowedPackages::from_iter(["driver_test_realm".to_string()]),
-    };
-
-
     // Allows tests running in following collection to resolve any package. This will contain
     // collections used to for executing out of tree tests.
     static ref TEST_COLLECTION_ALLOW_ALL_PACKAGES: HashSet<&'static str> = hashset! {
@@ -520,8 +512,6 @@ fn get_allowed_package_value(test_url: &str, suite_facet: &facet::SuiteFacets) -
         } else {
             AllowedPackages::zero_allowed_pkgs()
         }
-    } else if let Some(allowed_pkgs) = TEST_URL_ALLOWED_PACKAGE_MAP.get(test_url) {
-        allowed_pkgs.clone()
     } else {
         match *collection {
             HERMETIC_TESTS_COLLECTION => AllowedPackages::zero_allowed_pkgs(),
