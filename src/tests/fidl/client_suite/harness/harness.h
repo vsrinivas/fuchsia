@@ -145,6 +145,15 @@ class ClientTest : public ::loop_fixture::RealLoop, public ::testing::Test {
   bool ran_callback_ = false;
 };
 
+// Transaction ID to use for one-way methods. This is the actual value that's
+// always used in production.
+const zx_txid_t kOneWayTxid = 0;
+
+// Transaction ID to use for two-way methods in tests. This is a randomly chosen representative
+// value which is only for this particular test. Tests should avoid using |0x6b1b7b0e| for other
+// sentinel values, to make binary output easier to scan.
+const zx_txid_t kTwoWayTxid = 0x6b1b7b0e;
+
 }  // namespace client_suite
 
 #endif  // SRC_TESTS_FIDL_CLIENT_SUITE_HARNESS_HARNESS_H_

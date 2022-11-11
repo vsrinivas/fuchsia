@@ -41,7 +41,7 @@ CLOSED_SERVER_TEST(UnknownOrdinalCausesClose) {
 // Check that the server closes the channel when an unknown magic number is received.
 CLOSED_SERVER_TEST(BadMagicNumberCausesClose) {
   ASSERT_OK(client_end().write(as_bytes(fidl_message_header_t{
-      .txid = 123,
+      .txid = kTwoWayTxid,
       .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
       .dynamic_flags = FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD,
       .magic_number = 0xff,  // Chosen to be invalid
@@ -56,7 +56,7 @@ CLOSED_SERVER_TEST(BadMagicNumberCausesClose) {
 CLOSED_SERVER_TEST(IgnoresUnrecognizedAtRestFlags) {
   Bytes bytes_in = {
       as_bytes(fidl_message_header_t{
-          .txid = 123,
+          .txid = kTwoWayTxid,
           .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2 | 100, 200},
           .dynamic_flags = FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD,
           .magic_number = kFidlWireFormatMagicNumberInitial,
@@ -68,7 +68,7 @@ CLOSED_SERVER_TEST(IgnoresUnrecognizedAtRestFlags) {
   ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
 
   Bytes bytes_out = {
-      header(123, kOrdinalTwoWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalTwoWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod),
   };
   ASSERT_OK(client_end().read_and_check(bytes_out));
 }
@@ -77,7 +77,7 @@ CLOSED_SERVER_TEST(IgnoresUnrecognizedAtRestFlags) {
 CLOSED_SERVER_TEST(IgnoresUnrecognizedDynamicFlags) {
   Bytes bytes_in = {
       as_bytes(fidl_message_header_t{
-          .txid = 123,
+          .txid = kTwoWayTxid,
           .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
           .dynamic_flags = 100,
           .magic_number = kFidlWireFormatMagicNumberInitial,
@@ -89,7 +89,7 @@ CLOSED_SERVER_TEST(IgnoresUnrecognizedDynamicFlags) {
   ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
 
   Bytes bytes_out = {
-      header(123, kOrdinalTwoWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalTwoWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod),
   };
   ASSERT_OK(client_end().read_and_check(bytes_out));
 }

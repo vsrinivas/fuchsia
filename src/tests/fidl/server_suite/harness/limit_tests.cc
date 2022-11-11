@@ -14,11 +14,10 @@ constexpr uint32_t maxVecBytesInMsg =
 constexpr uint32_t maxVecHandlesInMsg = ZX_CHANNEL_MAX_MSG_HANDLES;
 
 CLOSED_SERVER_TEST(RequestMatchesByteLimit) {
-  constexpr zx_txid_t kTxid = 123u;
   constexpr uint32_t n = maxVecBytesInMsg;
 
   Bytes bytes_in = {
-      header(kTxid, kOrdinalByteVectorSize, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalByteVectorSize, fidl::MessageDynamicFlags::kStrictMethod),
       vector_header(n),
       repeat(0).times(n),
   };
@@ -27,7 +26,7 @@ CLOSED_SERVER_TEST(RequestMatchesByteLimit) {
   ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
 
   Bytes bytes_out = {
-      header(kTxid, kOrdinalByteVectorSize, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalByteVectorSize, fidl::MessageDynamicFlags::kStrictMethod),
       u32(n),
       padding(4),
   };
@@ -35,11 +34,10 @@ CLOSED_SERVER_TEST(RequestMatchesByteLimit) {
 }
 
 CLOSED_SERVER_TEST(RequestMatchesHandleLimit) {
-  constexpr zx_txid_t kTxid = 123u;
   constexpr uint32_t n = maxVecHandlesInMsg;
 
   Bytes bytes_in = {
-      header(kTxid, kOrdinalHandleVectorSize, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalHandleVectorSize, fidl::MessageDynamicFlags::kStrictMethod),
       vector_header(n),
       repeat(0xff).times(n * sizeof(zx_handle_t)),
   };
@@ -59,7 +57,7 @@ CLOSED_SERVER_TEST(RequestMatchesHandleLimit) {
   ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
 
   Bytes bytes_out = {
-      header(kTxid, kOrdinalHandleVectorSize, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalHandleVectorSize, fidl::MessageDynamicFlags::kStrictMethod),
       u32(n),
       padding(4),
   };
@@ -67,11 +65,10 @@ CLOSED_SERVER_TEST(RequestMatchesHandleLimit) {
 }
 
 CLOSED_SERVER_TEST(ResponseMatchesByteLimit) {
-  constexpr zx_txid_t kTxid = 123u;
   constexpr uint32_t n = maxVecBytesInMsg;
 
   Bytes bytes_in = {
-      header(kTxid, kOrdinalCreateNByteVector, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalCreateNByteVector, fidl::MessageDynamicFlags::kStrictMethod),
       u32(n),
       padding(4),
   };
@@ -80,7 +77,7 @@ CLOSED_SERVER_TEST(ResponseMatchesByteLimit) {
   ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
 
   Bytes bytes_out = {
-      header(kTxid, kOrdinalCreateNByteVector, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalCreateNByteVector, fidl::MessageDynamicFlags::kStrictMethod),
       vector_header(n),
       repeat(0).times(n),
   };
@@ -88,11 +85,10 @@ CLOSED_SERVER_TEST(ResponseMatchesByteLimit) {
 }
 
 CLOSED_SERVER_TEST(ResponseExceedsByteLimit) {
-  constexpr zx_txid_t kTxid = 123u;
   constexpr uint32_t n = maxVecBytesInMsg + 1;
 
   Bytes bytes_in = {
-      header(kTxid, kOrdinalCreateNByteVector, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalCreateNByteVector, fidl::MessageDynamicFlags::kStrictMethod),
       u32(n),
       padding(4),
   };
@@ -103,11 +99,10 @@ CLOSED_SERVER_TEST(ResponseExceedsByteLimit) {
 }
 
 CLOSED_SERVER_TEST(ResponseMatchesHandleLimit) {
-  constexpr zx_txid_t kTxid = 123u;
   constexpr uint32_t n = maxVecHandlesInMsg;
 
   Bytes bytes_in = {
-      header(kTxid, kOrdinalCreateNHandleVector, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalCreateNHandleVector, fidl::MessageDynamicFlags::kStrictMethod),
       u32(n),
       padding(4),
   };
@@ -116,7 +111,7 @@ CLOSED_SERVER_TEST(ResponseMatchesHandleLimit) {
   ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
 
   Bytes bytes_out = {
-      header(kTxid, kOrdinalCreateNHandleVector, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalCreateNHandleVector, fidl::MessageDynamicFlags::kStrictMethod),
       vector_header(n),
       repeat(0xff).times(n * sizeof(zx_handle_t)),
   };
@@ -131,11 +126,10 @@ CLOSED_SERVER_TEST(ResponseMatchesHandleLimit) {
 }
 
 CLOSED_SERVER_TEST(ResponseExceedsHandleLimit) {
-  constexpr zx_txid_t kTxid = 123u;
   constexpr uint32_t n = maxVecHandlesInMsg + 1;
 
   Bytes bytes_in = {
-      header(kTxid, kOrdinalCreateNHandleVector, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalCreateNHandleVector, fidl::MessageDynamicFlags::kStrictMethod),
       u32(n),
       padding(4),
   };

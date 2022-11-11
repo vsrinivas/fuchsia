@@ -15,30 +15,26 @@ CLOSED_SERVER_TEST(Setup) {}
 // Check that a one-way call is received at Target.
 CLOSED_SERVER_TEST(OneWayNoPayload) {
   ASSERT_OK(client_end().write(
-      header(0, kOrdinalOneWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod)));
+      header(kOneWayTxid, kOrdinalOneWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod)));
 
   WAIT_UNTIL([this]() { return reporter().received_one_way_no_payload(); });
 }
 
 // Check that Target replies to a two-way call.
 CLOSED_SERVER_TEST(TwoWayNoPayload) {
-  constexpr zx_txid_t kTxid = 123u;
-
   ASSERT_OK(client_end().write(
-      header(kTxid, kOrdinalTwoWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod)));
+      header(kTwoWayTxid, kOrdinalTwoWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod)));
 
   ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
 
   ASSERT_OK(client_end().read_and_check(
-      header(kTxid, kOrdinalTwoWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod)));
+      header(kTwoWayTxid, kOrdinalTwoWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod)));
 }
 
 CLOSED_SERVER_TEST(TwoWayStructPayload) {
-  constexpr zx_txid_t kTxid = 123u;
-
   Bytes bytes = {
-      header(kTxid, kOrdinalTwoWayStructPayload, fidl::MessageDynamicFlags::kStrictMethod),
-      u8(123),
+      header(kTwoWayTxid, kOrdinalTwoWayStructPayload, fidl::MessageDynamicFlags::kStrictMethod),
+      u8(kSomeByte),
       padding(7),
   };
   ASSERT_OK(client_end().write(bytes));
@@ -49,16 +45,14 @@ CLOSED_SERVER_TEST(TwoWayStructPayload) {
 }
 
 CLOSED_SERVER_TEST(TwoWayTablePayload) {
-  constexpr zx_txid_t kTxid = 123u;
-
   Bytes bytes = {
       // clang-format off
-    header(kTxid, kOrdinalTwoWayTablePayload, fidl::MessageDynamicFlags::kStrictMethod),
+    header(kTwoWayTxid, kOrdinalTwoWayTablePayload, fidl::MessageDynamicFlags::kStrictMethod),
 
     table_max_ordinal(1),
     pointer_present(),
 
-    inline_envelope(u8(123), false),
+    inline_envelope(u8(kSomeByte), false),
       // clang-format on
   };
   ASSERT_OK(client_end().write(bytes));
@@ -69,14 +63,12 @@ CLOSED_SERVER_TEST(TwoWayTablePayload) {
 }
 
 CLOSED_SERVER_TEST(TwoWayUnionPayload) {
-  constexpr zx_txid_t kTxid = 123u;
-
   Bytes bytes = {
       // clang-format off
-    header(kTxid, kOrdinalTwoWayUnionPayload, fidl::MessageDynamicFlags::kStrictMethod),
+    header(kTwoWayTxid, kOrdinalTwoWayUnionPayload, fidl::MessageDynamicFlags::kStrictMethod),
 
     union_ordinal(1),
-    inline_envelope(u8(123), false),
+    inline_envelope(u8(kSomeByte), false),
       // clang-format on
   };
   ASSERT_OK(client_end().write(bytes));
@@ -88,11 +80,9 @@ CLOSED_SERVER_TEST(TwoWayUnionPayload) {
 
 // Check that Target replies to a two-way call with a result (for a method using error syntax).
 CLOSED_SERVER_TEST(TwoWayResultWithPayload) {
-  constexpr zx_txid_t kTxid = 123u;
-
   Bytes bytes_in = {
       // clang-format off
-      header(kTxid, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),
       union_ordinal(1), out_of_line_envelope(24, 0),
       string_header(3),
       'a','b','c', padding(5),
@@ -104,7 +94,7 @@ CLOSED_SERVER_TEST(TwoWayResultWithPayload) {
 
   Bytes bytes_out = {
       // clang-format off
-      header(kTxid, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),
       union_ordinal(1), out_of_line_envelope(24, 0),
       string_header(3),
       'a','b','c', padding(5),
@@ -115,12 +105,10 @@ CLOSED_SERVER_TEST(TwoWayResultWithPayload) {
 
 // Check that Target replies to a two-way call with an error (for a method using error syntax).
 CLOSED_SERVER_TEST(TwoWayResultWithError) {
-  constexpr zx_txid_t kTxid = 123u;
-
   Bytes bytes_in = {
       // clang-format off
-      header(kTxid, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),
-      union_ordinal(2), inline_envelope(u32(123), false),
+      header(kTwoWayTxid, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),
+      union_ordinal(2), inline_envelope(u32(kSomeByte), false),
       // clang-format on
   };
   ASSERT_OK(client_end().write(bytes_in));
@@ -129,8 +117,8 @@ CLOSED_SERVER_TEST(TwoWayResultWithError) {
 
   Bytes bytes_out = {
       // clang-format off
-      header(kTxid, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),
-      union_ordinal(2), inline_envelope(u32(123), false),
+      header(kTwoWayTxid, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),
+      union_ordinal(2), inline_envelope(u32(kSomeByte), false),
       // clang-format on
   };
   ASSERT_OK(client_end().read_and_check(bytes_out));

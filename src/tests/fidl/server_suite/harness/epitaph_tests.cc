@@ -11,10 +11,10 @@ namespace server_suite {
 
 // The server sends epitaphs to clients.
 CLOSED_SERVER_TEST(ServerSendsEpitaph) {
-  constexpr zx_status_t sent_status = 123;
+  constexpr zx_status_t sent_status = 456;
 
   Bytes bytes_out = {
-      header(0, kOrdinalCloseWithEpitaph, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kOneWayTxid, kOrdinalCloseWithEpitaph, fidl::MessageDynamicFlags::kStrictMethod),
       i32(sent_status),
       padding(4),
   };
@@ -23,7 +23,7 @@ CLOSED_SERVER_TEST(ServerSendsEpitaph) {
   ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
 
   Bytes bytes_in = {
-      header(0, kOrdinalEpitaph, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kOneWayTxid, kOrdinalEpitaph, fidl::MessageDynamicFlags::kStrictMethod),
       i32(sent_status),
       padding(4),
   };
@@ -36,8 +36,8 @@ CLOSED_SERVER_TEST(ServerSendsEpitaph) {
 // It is not permissible to send epitaphs to servers.
 CLOSED_SERVER_TEST(ServerReceivesEpitaphInvalid) {
   Bytes bytes_out = {
-      header(0, kOrdinalEpitaph, fidl::MessageDynamicFlags::kStrictMethod),
-      i32(123),
+      header(kOneWayTxid, kOrdinalEpitaph, fidl::MessageDynamicFlags::kStrictMethod),
+      i32(456),
       padding(4),
   };
   ASSERT_OK(client_end().write(bytes_out));

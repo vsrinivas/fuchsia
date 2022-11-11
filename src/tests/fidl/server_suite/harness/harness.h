@@ -92,6 +92,20 @@ class ServerTest : private ::loop_fixture::RealLoop, public ::testing::Test {
   Reporter reporter_;
 };
 
+// Transaction ID to use for one-way methods. This is the actual value that's
+// always used in production.
+const zx_txid_t kOneWayTxid = 0;
+
+// Transaction ID to use for two-way methods in tests. This is a randomly chosen representative
+// value which is only for this particular test. Tests should avoid using |0x174d3b6a| for other
+// sentinel values, to make binary output easier to scan.
+const zx_txid_t kTwoWayTxid = 0x174d3b6a;
+
+// This byte is purposely set to a random chosen value that is neither |0x00| nor |0xff|, to help
+// easily distinguish its appearance in encoded FIDL relative to present/absent headers, padding,
+// and the like.
+const uint8_t kSomeByte = 0x42;
+
 }  // namespace server_suite
 
 #endif  // SRC_TESTS_FIDL_SERVER_SUITE_HARNESS_HARNESS_H_

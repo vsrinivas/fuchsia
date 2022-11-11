@@ -11,14 +11,6 @@ using namespace channel_util;
 
 namespace server_suite {
 
-// Transaction ID to use for one-way methods. This is the actual value that's
-// always used in production.
-const zx_txid_t kOneWayTxid = 0;
-
-// Transaction ID to use for two-way methods in tests. This is a randomly chosen
-// representative value which is only for this particular test.
-const zx_txid_t kTwoWayTxid = 40320932;
-
 const fidl_xunion_tag_t kResultUnionSuccess = 1;
 const fidl_xunion_tag_t kResultUnionError = 2;
 const fidl_xunion_tag_t kResultUnionTransportError = 3;

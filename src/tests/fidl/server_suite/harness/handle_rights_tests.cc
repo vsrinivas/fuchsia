@@ -13,13 +13,12 @@ namespace server_suite {
 
 // The channel should close when a handle is needed but not sent.
 CLOSED_SERVER_TEST(ClientSendsTooFewHandles) {
-  constexpr zx_txid_t kTxid = 123u;
-
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
 
   Bytes bytes = {
-      header(kTxid, kOrdinalGetSignalableEventRights, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalGetSignalableEventRights,
+             fidl::MessageDynamicFlags::kStrictMethod),
       handle_present(),
       padding(4),
   };
@@ -31,13 +30,12 @@ CLOSED_SERVER_TEST(ClientSendsTooFewHandles) {
 
 // The channel should close when the wrong handle type is sent.
 CLOSED_SERVER_TEST(ClientSendsWrongHandleType) {
-  constexpr zx_txid_t kTxid = 123u;
-
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
 
   Bytes bytes = {
-      header(kTxid, kOrdinalGetSignalableEventRights, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalGetSignalableEventRights,
+             fidl::MessageDynamicFlags::kStrictMethod),
       handle_present(),
       padding(4),
   };
@@ -56,8 +54,6 @@ CLOSED_SERVER_TEST(ClientSendsWrongHandleType) {
 
 // When a handle with too many rights is sent, the rights should be reduced.
 CLOSED_SERVER_TEST(ClientSendsTooManyRights) {
-  constexpr zx_txid_t kTxid = 123u;
-
   zx::event event;
   ASSERT_OK(zx::event::create(0, &event));
 
@@ -69,7 +65,8 @@ CLOSED_SERVER_TEST(ClientSendsTooManyRights) {
   static_assert(ZX_DEFAULT_EVENT_RIGHTS & ~ZX_RIGHT_SIGNAL);
 
   Bytes bytes_in = {
-      header(kTxid, kOrdinalGetSignalableEventRights, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalGetSignalableEventRights,
+             fidl::MessageDynamicFlags::kStrictMethod),
       handle_present(),
       padding(4),
   };
@@ -85,7 +82,8 @@ CLOSED_SERVER_TEST(ClientSendsTooManyRights) {
   ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
 
   Bytes bytes_out = {
-      header(kTxid, kOrdinalGetSignalableEventRights, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalGetSignalableEventRights,
+             fidl::MessageDynamicFlags::kStrictMethod),
       u32(ZX_RIGHT_SIGNAL),
       padding(4),
   };
@@ -94,8 +92,6 @@ CLOSED_SERVER_TEST(ClientSendsTooManyRights) {
 
 // The channel should close when a channel with too few rights is sent.
 CLOSED_SERVER_TEST(ClientSendsTooFewRights) {
-  constexpr zx_txid_t kTxid = 123u;
-
   zx::event event;
   ASSERT_OK(zx::event::create(0, &event));
 
@@ -103,7 +99,8 @@ CLOSED_SERVER_TEST(ClientSendsTooFewRights) {
   ASSERT_OK(event.replace(ZX_RIGHT_TRANSFER, &reduced_rights_event));
 
   Bytes bytes_in = {
-      header(kTxid, kOrdinalGetSignalableEventRights, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalGetSignalableEventRights,
+             fidl::MessageDynamicFlags::kStrictMethod),
       handle_present(),
       padding(4),
   };
@@ -123,13 +120,11 @@ CLOSED_SERVER_TEST(ClientSendsTooFewRights) {
 // Server bindings need to implement special cases for ZX_RIGHT_SAME_RIGHTS and ZX_OBJ_TYPE_NONE.
 // This tests that these special cases correctly pass through the existing object type and rights.
 CLOSED_SERVER_TEST(ClientSendsObjectOverPlainHandle) {
-  constexpr zx_txid_t kTxid = 123u;
-
   zx::event event;
   ASSERT_OK(zx::event::create(0, &event));
 
   Bytes bytes_in = {
-      header(kTxid, kOrdinalGetHandleRights, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalGetHandleRights, fidl::MessageDynamicFlags::kStrictMethod),
       handle_present(),
       padding(4),
   };
@@ -145,7 +140,7 @@ CLOSED_SERVER_TEST(ClientSendsObjectOverPlainHandle) {
   ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
 
   Bytes bytes_out = {
-      header(kTxid, kOrdinalGetHandleRights, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalGetHandleRights, fidl::MessageDynamicFlags::kStrictMethod),
       u32(ZX_DEFAULT_EVENT_RIGHTS),
       padding(4),
   };
@@ -154,13 +149,11 @@ CLOSED_SERVER_TEST(ClientSendsObjectOverPlainHandle) {
 
 // The channel should close when the wrong handle type is sent.
 CLOSED_SERVER_TEST(ServerSendsWrongHandleType) {
-  constexpr zx_txid_t kTxid = 123u;
-
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
 
   Bytes bytes = {
-      header(kTxid, kOrdinalEchoAsTransferableSignalableEvent,
+      header(kTwoWayTxid, kOrdinalEchoAsTransferableSignalableEvent,
              fidl::MessageDynamicFlags::kStrictMethod),
       handle_present(),
       padding(4),
@@ -174,8 +167,6 @@ CLOSED_SERVER_TEST(ServerSendsWrongHandleType) {
 
 // When a handle with too many rights is sent, the rights should be reduced.
 CLOSED_SERVER_TEST(ServerSendsTooManyRights) {
-  constexpr zx_txid_t kTxid = 123u;
-
   zx::event event;
   ASSERT_OK(zx::event::create(0, &event));
 
@@ -187,7 +178,7 @@ CLOSED_SERVER_TEST(ServerSendsTooManyRights) {
   static_assert(ZX_DEFAULT_EVENT_RIGHTS & ~ZX_RIGHT_SIGNAL);
 
   Bytes bytes_in = {
-      header(kTxid, kOrdinalEchoAsTransferableSignalableEvent,
+      header(kTwoWayTxid, kOrdinalEchoAsTransferableSignalableEvent,
              fidl::MessageDynamicFlags::kStrictMethod),
       handle_present(),
       padding(4),
@@ -204,7 +195,7 @@ CLOSED_SERVER_TEST(ServerSendsTooManyRights) {
   ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
 
   Bytes bytes_out = {
-      header(kTxid, kOrdinalEchoAsTransferableSignalableEvent,
+      header(kTwoWayTxid, kOrdinalEchoAsTransferableSignalableEvent,
              fidl::MessageDynamicFlags::kStrictMethod),
       handle_present(),
       padding(4),
@@ -220,8 +211,6 @@ CLOSED_SERVER_TEST(ServerSendsTooManyRights) {
 
 // The channel should close when a channel with too few rights is sent.
 CLOSED_SERVER_TEST(ServerSendsTooFewRights) {
-  constexpr zx_txid_t kTxid = 123u;
-
   zx::event event;
   ASSERT_OK(zx::event::create(0, &event));
 
@@ -229,7 +218,7 @@ CLOSED_SERVER_TEST(ServerSendsTooFewRights) {
   ASSERT_OK(event.replace(ZX_RIGHT_TRANSFER, &reduced_rights_event));
 
   Bytes bytes_in = {
-      header(kTxid, kOrdinalEchoAsTransferableSignalableEvent,
+      header(kTwoWayTxid, kOrdinalEchoAsTransferableSignalableEvent,
              fidl::MessageDynamicFlags::kStrictMethod),
       handle_present(),
       padding(4),

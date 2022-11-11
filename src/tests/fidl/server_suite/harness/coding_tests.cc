@@ -13,7 +13,7 @@ namespace server_suite {
 CLOSED_SERVER_TEST(BadPayloadEncoding) {
   Bytes bytes_in = {
       // clang-format off
-      header(123, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),
+      header(kTwoWayTxid, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),
       // Ordinal 3 is unknown in the FIDL schema, but the union is strict.
       union_ordinal(3), out_of_line_envelope(0, 0),
       // clang-format on
@@ -27,7 +27,7 @@ CLOSED_SERVER_TEST(BadPayloadEncoding) {
 CLOSED_SERVER_TEST(V1TwoWayNoPayload) {
   Bytes bytes_in = {
       as_bytes(fidl_message_header_t{
-          .txid = 123,
+          .txid = kTwoWayTxid,
           // at rest flags, without the V2 indicator
           .at_rest_flags = {0, 0},
           .dynamic_flags = FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD,
@@ -45,7 +45,7 @@ CLOSED_SERVER_TEST(V1TwoWayStructPayload) {
   Bytes bytes_in = {
       // header
       as_bytes(fidl_message_header_t{
-          .txid = 123,
+          .txid = kTwoWayTxid,
           // at rest flags, without the V2 indicator
           .at_rest_flags = {0, 0},
           .dynamic_flags = FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD,
