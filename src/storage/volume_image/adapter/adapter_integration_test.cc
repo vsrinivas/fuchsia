@@ -226,7 +226,7 @@ void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
   for (const auto& partition : fvm_descriptor.partitions()) {
     std::string partition_path;
     fs_management::PartitionMatcher matcher{
-        .type_guid = partition.volume().type.data(),
+        .type_guids = {uuid::Uuid(partition.volume().type.data())},
     };
     auto partition_fd_or =
         fs_management::OpenPartition(matcher, zx::sec(10).get(), &partition_path);

@@ -69,7 +69,6 @@
 namespace {
 
 using VolumeManagerInfo = fuchsia_hardware_block_volume::wire::VolumeManagerInfo;
-using BlockGuid = std::array<uint8_t, BLOCK_GUID_LEN>;
 using BlockName = std::array<char, BLOCK_NAME_LEN>;
 
 constexpr char kMountPath[] = "/test/minfs_test_mountpath";
@@ -151,8 +150,8 @@ class FvmTest : public zxtest::Test {
 
   struct AllocatePartitionRequest {
     size_t slice_count = 1;
-    const BlockGuid& type;
-    const BlockGuid& guid;
+    const uuid::Uuid& type;
+    const uuid::Uuid& guid;
     const BlockName& name;
     uint32_t flags = 0;
   };
@@ -161,15 +160,15 @@ class FvmTest : public zxtest::Test {
     alloc_req_t req;
     req.slice_count = request.slice_count;
     req.flags = request.flags;
-    static_assert(sizeof(req.type) == std::tuple_size<BlockGuid>::value);
-    static_assert(sizeof(req.guid) == std::tuple_size<BlockGuid>::value);
+    static_assert(sizeof(req.type) == uuid::kUuidSize);
+    static_assert(sizeof(req.guid) == uuid::kUuidSize);
     static_assert(sizeof(req.name) == std::tuple_size<BlockName>::value);
-    memcpy(req.type, request.type.data(), sizeof(req.type));
-    memcpy(req.guid, request.guid.data(), sizeof(req.guid));
+    memcpy(req.type, request.type.bytes(), sizeof(req.type));
+    memcpy(req.guid, request.guid.bytes(), sizeof(req.guid));
     memcpy(req.name, request.name.data(), sizeof(req.name));
 
     return fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fvm_device().get(),
-                                                        &req);
+                                                        req);
   }
 
  protected:
@@ -268,10 +267,10 @@ zx::result<std::string> GetPartitionPath(int fd) {
 
 /////////////////////// Helper functions, definitions
 
-constexpr BlockGuid kTestUniqueGuid1 = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                                        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
-constexpr BlockGuid kTestUniqueGuid2 = {0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-                                        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
+constexpr uuid::Uuid kTestUniqueGuid1 = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                         0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+constexpr uuid::Uuid kTestUniqueGuid2 = {0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+                                         0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
 
 // Intentionally avoid aligning these GUIDs with
 // the actual system GUIDs; otherwise, limited versions
@@ -279,27 +278,27 @@ constexpr BlockGuid kTestUniqueGuid2 = {0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16
 // partitions automatically.
 
 constexpr BlockName kTestPartDataName = {'d', 'a', 't', 'a'};
-constexpr BlockGuid kTestPartDataGuid = {
+constexpr uuid::Uuid kTestPartDataGuid = {
     0xAA, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
 };
 
 constexpr BlockName kTestPartBlobName = {'b', 'l', 'o', 'b'};
-constexpr BlockGuid kTestPartBlobGuid = {
+constexpr uuid::Uuid kTestPartBlobGuid = {
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0xAA, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99,
 };
 
 constexpr BlockName kTestPartSystemName = {'s', 'y', 's', 't', 'e', 'm'};
-constexpr BlockGuid kTestPartSystemGuid = {
+constexpr uuid::Uuid kTestPartSystemGuid = {
     0xEE, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
 };
 
-constexpr fs_management::PartitionMatcher kPartition1Matcher = {
-    .type_guid = kTestPartDataGuid.data(),
-    .instance_guid = kTestUniqueGuid1.data(),
+const fs_management::PartitionMatcher kPartition1Matcher = {
+    .type_guids = {kTestPartDataGuid},
+    .instance_guids = {kTestUniqueGuid1},
 };
-constexpr fs_management::PartitionMatcher kPartition2Matcher = {
-    .type_guid = kTestPartDataGuid.data(),
-    .instance_guid = kTestUniqueGuid2.data(),
+const fs_management::PartitionMatcher kPartition2Matcher = {
+    .type_guids = {kTestPartDataGuid},
+    .instance_guids = {kTestUniqueGuid2},
 };
 
 class VmoBuf;
@@ -501,12 +500,12 @@ void CheckDeadConnection(int fd) {
   ASSERT_TRUE(is_dead);
 }
 
-void Upgrade(const fdio_cpp::FdioCaller& caller, const BlockGuid& old_guid,
-             const BlockGuid& new_guid, zx_status_t result) {
+void Upgrade(const fdio_cpp::FdioCaller& caller, const uuid::Uuid& old_guid,
+             const uuid::Uuid& new_guid, zx_status_t result) {
   fuchsia_hardware_block_partition::wire::Guid old_guid_fidl;
-  memcpy(&old_guid_fidl.value, old_guid.data(), old_guid.size());
+  std::copy(old_guid.cbegin(), old_guid.cend(), old_guid_fidl.value.begin());
   fuchsia_hardware_block_partition::wire::Guid new_guid_fidl;
-  memcpy(&new_guid_fidl.value, new_guid.data(), new_guid.size());
+  std::copy(new_guid.cbegin(), new_guid.cend(), new_guid_fidl.value.begin());
 
   auto response = fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_volume::VolumeManager>())
                       ->Activate(old_guid_fidl, new_guid_fidl);
@@ -1626,7 +1625,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
   constexpr size_t kSliceCount = 1;
   typedef struct vdata {
     fbl::unique_fd fd;
-    const BlockGuid& guid;
+    const uuid::Uuid& guid;
     const BlockName& name;
     size_t slices_used;
   } vdata_t;
@@ -1773,7 +1772,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
   constexpr size_t kSliceCount = 1;
   typedef struct vdata {
     fbl::unique_fd fd;
-    const BlockGuid& guid;
+    const uuid::Uuid& guid;
     const BlockName& name;
     size_t slices_used;
     size_t last_slice;
@@ -2343,7 +2342,7 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
     ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't open volume");
   }
 
-  BlockGuid fake_guid = {};
+  uuid::Uuid fake_guid = {};
   Upgrade(volume_manager, fake_guid, kTestUniqueGuid2, ZX_OK);
 
   // Release FVM device that we opened earlier

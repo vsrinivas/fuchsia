@@ -101,12 +101,12 @@ zx::result<fbl::unique_fd> AllocateFvmPartitions(const fbl::unique_fd& fvm_devic
   std::copy(data_guid.bytes(), data_guid.bytes() + uuid::kUuidSize, data_partition.guid);
 
   // Allocate new empty blob and data partitions.
-  zx::result blob_fd = fs_management::FvmAllocatePartition(fvm_device.get(), &blob_partition);
+  zx::result blob_fd = fs_management::FvmAllocatePartition(fvm_device.get(), blob_partition);
   if (blob_fd.is_error()) {
     FX_LOGS(ERROR) << "Failed to allocate blob partition: " << blob_fd.status_string();
     return blob_fd;
   }
-  if (zx::result status = fs_management::FvmAllocatePartition(fvm_device.get(), &data_partition);
+  if (zx::result status = fs_management::FvmAllocatePartition(fvm_device.get(), data_partition);
       status.is_error()) {
     FX_LOGS(ERROR) << "Failed to allocate data partition: " << status.status_string();
     return status;

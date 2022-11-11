@@ -203,7 +203,7 @@ zx::result<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
 
   ZX_DEBUG_ASSERT(!config_.ramdisk_prefix().empty());
   const fs_management::PartitionMatcher fvm_matcher{
-      .detected_disk_format = fs_management::kDiskFormatFvm,
+      .detected_formats = {fs_management::kDiskFormatFvm},
       .ignore_prefix = config_.ramdisk_prefix(),
   };
   auto fvm = OpenPartition(fvm_matcher, kOpenPartitionDuration, nullptr);
@@ -219,16 +219,10 @@ zx::result<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
     format = fs_management::kDiskFormatF2fs;
   }
 
-  const std::string data_partition_names[] = {std::string(kDataPartitionLabel),
-                                              std::string(kLegacyDataPartitionLabel)};
-  const char* c_data_partition_names[] = {data_partition_names[0].c_str(),
-                                          data_partition_names[1].c_str()};
-  constexpr uint8_t kDataGuid[] = GUID_DATA_VALUE;
   std::string fvm_path = GetTopologicalPath(fvm->get());
   const fs_management::PartitionMatcher data_matcher{
-      .type_guid = kDataGuid,
-      .labels = c_data_partition_names,
-      .num_labels = 2,
+      .type_guids = {GUID_DATA_VALUE},
+      .labels = {kDataPartitionLabel, kLegacyDataPartitionLabel},
       .parent_device = fvm_path,
       .ignore_if_path_contains = "zxcrypt/unsealed",
   };
@@ -245,9 +239,8 @@ zx::result<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
     // (if needed) by the block watcher.
     std::string zxcrypt_path = GetTopologicalPath(partition.value().get()) + "/zxcrypt/unsealed";
     const fs_management::PartitionMatcher zxcrypt_matcher{
-        .type_guid = kDataGuid,
-        .labels = c_data_partition_names,
-        .num_labels = 2,
+        .type_guids = {GUID_DATA_VALUE},
+        .labels = {kDataPartitionLabel, kLegacyDataPartitionLabel},
         .parent_device = zxcrypt_path,
     };
     partition = OpenPartition(zxcrypt_matcher, kOpenPartitionDuration, nullptr);

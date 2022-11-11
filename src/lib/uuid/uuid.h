@@ -5,8 +5,8 @@
 #ifndef SRC_LIB_UUID_UUID_H_
 #define SRC_LIB_UUID_UUID_H_
 
-#include <stdint.h>
-
+#include <array>
+#include <cstdint>
 #include <iosfwd>
 #include <optional>
 #include <string>
@@ -87,6 +87,12 @@ class Uuid {
 
   // Raw fields of the UUID.
   const RawUuid& raw() const { return raw_; }
+
+  uint8_t* begin() { return bytes_; }
+  uint8_t* end() { return bytes_ + kUuidSize; }
+
+  const uint8_t* cbegin() const { return bytes_; }
+  const uint8_t* cend() const { return bytes_ + kUuidSize; }
 
  private:
   union {

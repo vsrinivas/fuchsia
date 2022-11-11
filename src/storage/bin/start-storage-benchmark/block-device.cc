@@ -208,8 +208,8 @@ zx::result<FvmVolume> FvmVolume::Create(fidl::ClientEnd<VolumeManager> &fvm_clie
   }
 
   fs_management::PartitionMatcher matcher{
-      .type_guid = type_guid.value.data(),
-      .instance_guid = instance_guid.value.data(),
+      .type_guids = {uuid::Uuid(type_guid.value.data())},
+      .instance_guids = {uuid::Uuid(instance_guid.value.data())},
   };
   std::string path;
   auto fd = fs_management::OpenPartition(matcher, ZX_SEC(10), &path);

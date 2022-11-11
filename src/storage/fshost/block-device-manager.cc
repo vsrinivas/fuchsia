@@ -324,7 +324,7 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
     const auto kGuidDataType = std::array<uint8_t, BLOCK_GUID_LEN>(GUID_DATA_VALUE);
     memcpy(alloc_req.type, kGuidDataType.data(), kGuidDataType.size());
     alloc_req.flags = fuchsia_hardware_block_volume::wire::kAllocatePartitionFlagInactive;
-    auto vp_fd = fs_management::FvmAllocatePartition(fvm_caller.fd().get(), &alloc_req);
+    auto vp_fd = fs_management::FvmAllocatePartition(fvm_caller.fd().get(), alloc_req);
     if (vp_fd.status_value() != ZX_OK) {
       FX_PLOGS(WARNING, vp_fd.status_value())
           << "Failed to allocate Fxfs partition for data migration.";

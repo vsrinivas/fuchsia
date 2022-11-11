@@ -257,7 +257,7 @@ std::unique_ptr<TemporaryFvmPartition> TemporaryFvmPartition::Create(int fvm_fd,
 
   // Create a new partition.
   fbl::unique_fd fd;
-  if (auto fd_or = fs_management::FvmAllocatePartition(fvm_fd, &request); fd_or.is_error()) {
+  if (auto fd_or = fs_management::FvmAllocatePartition(fvm_fd, request); fd_or.is_error()) {
     fprintf(stderr, "Error: Could not allocate and open FVM partition\n");
     return nullptr;
   } else {
@@ -266,11 +266,11 @@ std::unique_ptr<TemporaryFvmPartition> TemporaryFvmPartition::Create(int fvm_fd,
 
   std::string partition_path;
   fs_management::PartitionMatcher matcher{
-      .type_guid = kTestPartGUID.bytes(),
-      .instance_guid = unique_guid.bytes(),
+      .type_guids = {kTestPartGUID},
+      .instance_guids = {unique_guid},
   };
   if (auto fd_or = fs_management::OpenPartition(matcher, 0, &partition_path); fd_or.is_error()) {
-    fs_management::DestroyPartition(unique_guid.bytes(), kTestPartGUID.bytes());
+    fs_management::DestroyPartition(matcher);
     fprintf(stderr, "Could not locate FVM partition\n");
     return nullptr;
   }
@@ -283,7 +283,8 @@ TemporaryFvmPartition::TemporaryFvmPartition(std::string partition_path, uuid::U
     : partition_path_(std::move(partition_path)), unique_guid_(unique_guid) {}
 
 TemporaryFvmPartition::~TemporaryFvmPartition() {
-  ZX_ASSERT(fs_management::DestroyPartition(unique_guid_.bytes(), kTestPartGUID.bytes()) == ZX_OK);
+  ZX_ASSERT(fs_management::DestroyPartition(
+                {.type_guids = {kTestPartGUID}, .instance_guids = {unique_guid_}}) == ZX_OK);
 }
 
 std::string TemporaryFvmPartition::GetPartitionPath() { return partition_path_; }
@@ -399,7 +400,7 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
 void DestroyFlashTestPartitions(StatusLine* status) {
   uint32_t count = 0;
   // Remove any partitions from previous tests
-  while (fs_management::DestroyPartition(nullptr, kTestPartGUID.bytes()) == ZX_OK) {
+  while (fs_management::DestroyPartition({.type_guids = {kTestPartGUID}}) == ZX_OK) {
     count++;
   }
   status->Log("Deleted %u partitions", count);

@@ -125,9 +125,8 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
   auto result = AttachFvm(ram_disk_or.value().path());
   ASSERT_TRUE(result.is_ok());
 
-  uint8_t minfs_guid[] = GUID_DATA_VALUE;
   fs_management::PartitionMatcher matcher{
-      .type_guid = minfs_guid,
+      .type_guids = {GUID_DATA_VALUE},
   };
 
   ASSERT_EQ(
@@ -155,10 +154,9 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
 
   // Attempt to fsck blobfs.
   {
-    uint8_t blobfs_guid[] = GUID_BLOB_VALUE;
     std::string path;
     fs_management::PartitionMatcher matcher{
-        .type_guid = blobfs_guid,
+        .type_guids = {GUID_BLOB_VALUE},
     };
     ASSERT_EQ(
         fs_management::OpenPartition(matcher, zx::duration::infinite().get(), &path).status_value(),

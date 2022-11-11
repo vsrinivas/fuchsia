@@ -202,9 +202,10 @@ std::unique_ptr<VPartitionAdapter> VPartitionAdapter::Create(const fbl::unique_f
   }
 
   std::string out_path;
+
   fs_management::PartitionMatcher matcher{
-      .type_guid = type.data(),
-      .instance_guid = guid.data(),
+      .type_guids = {uuid::Uuid(type.data())},
+      .instance_guids = {uuid::Uuid(guid.data())},
   };
   zx::result device_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root.get(), matcher,
                                                                   kDeviceWaitTime.get(), &out_path);
@@ -217,7 +218,11 @@ std::unique_ptr<VPartitionAdapter> VPartitionAdapter::Create(const fbl::unique_f
 }
 
 VPartitionAdapter::~VPartitionAdapter() {
-  fs_management::DestroyPartitionWithDevfs(devfs_root_.get(), guid_.data(), type_.data());
+  fs_management::DestroyPartitionWithDevfs(devfs_root_.get(),
+                                           {
+                                               .type_guids = {uuid::Uuid(type_.data())},
+                                               .instance_guids = {uuid::Uuid(guid_.data())},
+                                           });
 }
 
 zx_status_t VPartitionAdapter::Extend(uint64_t offset, uint64_t length) {
@@ -232,8 +237,8 @@ zx_status_t VPartitionAdapter::Extend(uint64_t offset, uint64_t length) {
 
 zx_status_t VPartitionAdapter::Reconnect() {
   fs_management::PartitionMatcher matcher{
-      .type_guid = type_.data(),
-      .instance_guid = guid_.data(),
+      .type_guids = {uuid::Uuid(type_.data())},
+      .instance_guids = {uuid::Uuid(guid_.data())},
   };
   zx::result fd = fs_management::OpenPartitionWithDevfs(devfs_root_.get(), matcher,
                                                         zx::duration::infinite().get(), &path_);

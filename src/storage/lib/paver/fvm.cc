@@ -532,7 +532,7 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
     memcpy(&alloc.name, part_info.pd->name, sizeof(alloc.name));
     LOG("Allocating partition %s consisting of %zu slices\n", alloc.name, alloc.slice_count);
     if (auto fd_or =
-            fs_management::FvmAllocatePartitionWithDevfs(devfs_root.get(), fvm_fd.get(), &alloc);
+            fs_management::FvmAllocatePartitionWithDevfs(devfs_root.get(), fvm_fd.get(), alloc);
         fd_or.is_error()) {
       ERROR("Couldn't allocate partition\n");
       return ZX_ERR_NO_SPACE;
@@ -605,7 +605,7 @@ zx_status_t WipeAllFvmPartitionsWithGuid(const fbl::unique_fd& fvm_fd, const uin
   }
 
   fs_management::PartitionMatcher matcher{
-      .type_guid = type_guid,
+      .type_guids = {uuid::Uuid(&type_guid[0])},
       .parent_device = fvm_topo_path,
   };
   for (;;) {

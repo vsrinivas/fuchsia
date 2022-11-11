@@ -280,12 +280,12 @@ TEST(Flash, DeletePartition) {
   memcpy(request.type, kTestPartGUID.bytes(), sizeof(request.type));
 
   // Create a partition.
-  ASSERT_EQ(fs_management::FvmAllocatePartition(fvm_fd.get(), &request).status_value(), ZX_OK);
+  ASSERT_EQ(fs_management::FvmAllocatePartition(fvm_fd.get(), request).status_value(), ZX_OK);
 
   StatusLine status;
   DestroyFlashTestPartitions(&status);
   fs_management::PartitionMatcher matcher{
-      .type_guid = kTestPartGUID.bytes(),
+      .type_guids = {kTestPartGUID},
   };
   ASSERT_NE(fs_management::OpenPartition(matcher, 0, nullptr).status_value(), ZX_OK);
 }

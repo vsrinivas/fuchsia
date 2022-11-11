@@ -18,11 +18,11 @@
 
 namespace storage {
 
-constexpr uint8_t kTestPartGUID[] = {0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
-                                     0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+constexpr uuid::Uuid kTestPartGUID = {0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+                                      0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 
-constexpr uint8_t kTestUniqueGUID[] = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                                       0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+constexpr uuid::Uuid kTestUniqueGUID = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
 zx::result<> BindFvm(fidl::UnownedClientEnd<fuchsia_device::Controller> device) {
   auto resp = fidl::WireCall(device)->Bind("fvm.so");
@@ -85,10 +85,11 @@ zx::result<std::string> CreateFvmPartition(const std::string& device_path, size_
   alloc_req_t request = {.slice_count = options.initial_fvm_slice_count};
   memcpy(request.name, options.name.data(), options.name.size());
   request.name[options.name.size()] = 0;
-  memcpy(request.type, options.type ? options.type->data() : kTestPartGUID, sizeof(request.type));
-  memcpy(request.guid, kTestUniqueGUID, sizeof(request.guid));
+  memcpy(request.type, options.type ? options.type->data() : kTestPartGUID.bytes(),
+         sizeof(request.type));
+  memcpy(request.guid, kTestUniqueGUID.bytes(), sizeof(request.guid));
 
-  if (auto fd_or = fs_management::FvmAllocatePartition(fvm_fd.get(), &request); fd_or.is_error()) {
+  if (auto fd_or = fs_management::FvmAllocatePartition(fvm_fd.get(), request); fd_or.is_error()) {
     FX_LOGS(ERROR) << "Could not allocate FVM partition (slice count: "
                    << options.initial_fvm_slice_count << ")";
     return fd_or.take_error();
@@ -97,8 +98,8 @@ zx::result<std::string> CreateFvmPartition(const std::string& device_path, size_
 
   std::string partition_path;
   fs_management::PartitionMatcher matcher{
-      .type_guid = request.type,
-      .instance_guid = kTestUniqueGUID,
+      .type_guids = {uuid::Uuid(request.type)},
+      .instance_guids = {kTestUniqueGUID},
   };
   if (auto fd_or = fs_management::OpenPartition(matcher, 0, &partition_path); fd_or.is_error()) {
     FX_LOGS(ERROR) << "Could not locate FVM partition";
