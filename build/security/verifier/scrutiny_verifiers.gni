@@ -158,6 +158,7 @@ template("scrutiny_verifiers") {
           "${invoker.assembly_image_name}_verify_bootfs_filelist") {
         forward_variables_from(invoker,
                                [
+                                 "deps",
                                  "testonly",
                                  "visiblity",
                                ])
@@ -176,6 +177,7 @@ template("scrutiny_verifiers") {
           "${invoker.assembly_image_name}_verify_kernel_cmdline") {
         forward_variables_from(invoker,
                                [
+                                 "deps",
                                  "testonly",
                                  "visiblity",
                                ])
