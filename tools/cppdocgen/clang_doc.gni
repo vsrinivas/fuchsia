@@ -23,6 +23,9 @@ import("//build/config/clang/clang.gni")
 #   source [string] (required)
 #       The .c/.cc source file to pass to clang-doc. See above for requirements.
 #
+#   inputs [list of strings]
+#       The list of headers that the source will explicitly include.
+#
 #   out_zip [string] (required)
 #       Name of the .zip file to put the .yaml files from clang-doc into.
 #
@@ -33,10 +36,12 @@ template("clang_doc_invoke") {
   assert(defined(invoker.out_zip))
 
   action(target_name) {
+    clang_doc_path = "${clang_prefix}/clang-doc"
+
     script = "//tools/cppdocgen/clang_doc_invoke.py"
     args = [
       "--clang-doc",
-      rebase_path("${clang_prefix}/clang-doc", root_build_dir),
+      rebase_path(clang_doc_path, root_build_dir),
 
       # The temp directory will be generated as a random file inside of the target_out_dir.
       "--temp-dir-parent",
@@ -51,6 +56,13 @@ template("clang_doc_invoke") {
       "compile_commands.json",  # In build root, no need to rebase.
     ]
 
+    inputs = [
+      clang_doc_path,
+      invoker.source,
+    ]
+    if (defined(invoker.inputs)) {
+      inputs += invoker.inputs
+    }
     outputs = [ invoker.out_zip ]
 
     forward_variables_from(invoker,
@@ -58,14 +70,6 @@ template("clang_doc_invoke") {
                              "deps",
                              "visibility",
                            ])
-
-    # This action runs Clang-doc which in turn loads the header files we depend on and many of the
-    # headers from the Clang prebuilt. Since clang-doc doesn't support depfiles, we can't know
-    # about all of these implicit header dependencies.
-    #
-    # But since the output of this is normally processed by cpp_docgen which explicitly ignores
-    # any system headers and types, the final output shouldn't be dependent on the prebuilt headers.
-    hermetic_deps = false
   }
 }
 
@@ -140,13 +144,14 @@ template("clang_doc_headers") {
   # even if the output is never used for anything).
   source_set(compile_source_target_name) {
     sources = [ generated_cc_file ]
-    deps = [ ":$generate_source_target_name" ]
+    public_deps = [ ":$generate_source_target_name" ]
     visibility = [ ":$final_target_name" ]
   }
 
   # Actually run clang-doc (see below).
   clang_doc_invoke(target_name) {
     source = generated_cc_file
+    inputs = invoker.headers
     forward_variables_from(invoker,
                            [
                              "out_zip",
