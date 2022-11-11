@@ -11,18 +11,23 @@ host_os = build_config.host_os
 host_arch = build_config.host_arch
 host_triple = build_config.host_target_triple
 
-rust_stdlib_filegroup(
-    name = "rust_std",
-    srcs = glob(["lib/rustlib/**/*.rlib"]),
-    visibility = ["//visibility:private"],
+filegroup(
+    name = "rustc_lib",
+    srcs = glob(["lib/*.so"]),
 )
 
 # Define the host Rust toolchain.
 
+rust_stdlib_filegroup(
+    name = "rust_std_host",
+    srcs = glob(["lib/rustlib/%s/lib/*" % host_triple]),
+)
+
 rust_toolchain(
     name = "rust_%s_%s_toolchain" % (host_os, host_arch),
     rustc = "//:bin/rustc",
-    rust_std = "//:rust_std",
+    rustc_lib = "//:rustc_lib",
+    rust_std = "//:rust_std_host",
     rust_doc = "//:bin/rustdoc",
     binary_ext = "",
     staticlib_ext = ".a",
@@ -49,10 +54,16 @@ toolchain(
 
 # Define the Fuchsia/x64 Rust toolchain
 
+rust_stdlib_filegroup(
+    name = "rust_std_fuchsia_x64",
+    srcs = glob(["lib/rustlib/x86_64-fuchsia/lib/*"]),
+)
+
 rust_toolchain(
     name = "rust_fuchsia_x64_toolchain",
     rustc = "//:bin/rustc",
-    rust_std = "//:rust_std",
+    rustc_lib = "//:rustc_lib",
+    rust_std = "//:rust_std_fuchsia_x64",
     rust_doc = "//:bin/rustdoc",
     binary_ext = "",
     staticlib_ext = ".a",
@@ -78,10 +89,16 @@ toolchain(
 
 # Define the Fuchsia/arm64 Rust toolchain
 
+rust_stdlib_filegroup(
+    name = "rust_std_fuchsia_arm64",
+    srcs = glob(["lib/rustlib/aarch64-fuchsia/lib/*"]),
+)
+
 rust_toolchain(
     name = "rust_fuchsia_arm64_toolchain",
     rustc = "//:bin/rustc",
-    rust_std = "//:rust_std",
+    rustc_lib = "//:rustc_lib",
+    rust_std = "//:rust_std_fuchsia_arm64",
     rust_doc = "//:bin/rustdoc",
     binary_ext = "",
     staticlib_ext = ".a",
