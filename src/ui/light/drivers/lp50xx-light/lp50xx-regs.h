@@ -36,22 +36,22 @@ class BrightnessReg : public hwreg::I2cRegisterBase<BrightnessReg, uint8_t, size
 
 class BlueColorReg : public hwreg::I2cRegisterBase<BlueColorReg, uint8_t, sizeof(uint8_t)> {
  public:
-  static auto Get(uint32_t led_color_addr, uint32_t index) {
-    return hwreg::I2cRegisterAddr<BlueColorReg>(led_color_addr + (index * 3));
+  static auto Get(uint32_t blue_addr, uint32_t index) {
+    return hwreg::I2cRegisterAddr<BlueColorReg>(blue_addr + (index * 3));
   }
 };
 
 class RedColorReg : public hwreg::I2cRegisterBase<RedColorReg, uint8_t, sizeof(uint8_t)> {
  public:
-  static auto Get(uint32_t led_color_addr, uint32_t index) {
-    return hwreg::I2cRegisterAddr<RedColorReg>(led_color_addr + (index * 3) + 1);
+  static auto Get(uint32_t red_addr, uint32_t index) {
+    return hwreg::I2cRegisterAddr<RedColorReg>(red_addr + (index * 3));
   }
 };
 
 class GreenColorReg : public hwreg::I2cRegisterBase<GreenColorReg, uint8_t, sizeof(uint8_t)> {
  public:
-  static auto Get(uint32_t led_color_addr, uint32_t index) {
-    return hwreg::I2cRegisterAddr<GreenColorReg>(led_color_addr + (index * 3) + 2);
+  static auto Get(uint32_t green_addr, uint32_t index) {
+    return hwreg::I2cRegisterAddr<GreenColorReg>(green_addr + (index * 3));
   }
 };
 

@@ -37,6 +37,8 @@ class Lp50xxLightTest : public Lp50xxLight {
     return loop_.StartThread();
   }
 
+  void set_is_visalia(bool is_visalia) { is_visalia_ = is_visalia; }
+
   zx_status_t GetRgb(uint32_t index, fuchsia_hardware_light::wire::Rgb* rgb) {
     return Lp50xxLight::GetRgbValue(index, rgb);
   }
@@ -104,6 +106,66 @@ TEST(Lp50xxLightTest, SetRgbTest) {
       .ExpectWriteStop({0x0f, 0xCC});
 
   EXPECT_OK(dut.SetRgb(0, rgb));
+
+  dut.Verify();
+}
+
+TEST(Lp50xxLightTest, GetRgbTestVisalia) {
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  Lp50xxLightTest dut(fake_parent.get());
+  EXPECT_OK(dut.Init());
+  dut.set_is_visalia(true);
+
+  dut.mock_i2c.ExpectWrite({0x10})
+      .ExpectReadStop({0xAA})
+      .ExpectWrite({0x11})
+      .ExpectReadStop({0xBB})
+      .ExpectWrite({0x0f})
+      .ExpectReadStop({0xCC});
+
+  fuchsia_hardware_light::wire::Rgb rgb = {};
+  EXPECT_OK(dut.GetRgb(0, &rgb));
+  EXPECT_EQ(rgb.red, static_cast<float>((0xAA * 1.0) / (UINT8_MAX * 1.0)));
+  EXPECT_EQ(rgb.green, static_cast<float>((0xBB * 1.0) / (UINT8_MAX * 1.0)));
+  EXPECT_EQ(rgb.blue, static_cast<float>((0xCC * 1.0) / (UINT8_MAX * 1.0)));
+
+  dut.mock_i2c.ExpectWrite({0x13})
+      .ExpectReadStop({0xAA})
+      .ExpectWrite({0x12})
+      .ExpectReadStop({0xBB})
+      .ExpectWrite({0x14})
+      .ExpectReadStop({0xCC});
+
+  EXPECT_OK(dut.GetRgb(1, &rgb));
+  EXPECT_EQ(rgb.red, static_cast<float>((0xAA * 1.0) / (UINT8_MAX * 1.0)));
+  EXPECT_EQ(rgb.green, static_cast<float>((0xBB * 1.0) / (UINT8_MAX * 1.0)));
+  EXPECT_EQ(rgb.blue, static_cast<float>((0xCC * 1.0) / (UINT8_MAX * 1.0)));
+
+  dut.Verify();
+}
+
+TEST(Lp50xxLightTest, SetRgbTestVisalia) {
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  Lp50xxLightTest dut(fake_parent.get());
+  EXPECT_OK(dut.Init());
+  dut.set_is_visalia(true);
+
+  fuchsia_hardware_light::wire::Rgb rgb = {};
+  rgb.red = static_cast<float>((0xAA * 1.0) / (UINT8_MAX * 1.0));
+  rgb.green = static_cast<float>((0xBB * 1.0) / (UINT8_MAX * 1.0));
+  rgb.blue = static_cast<float>((0xCC * 1.0) / (UINT8_MAX * 1.0));
+
+  dut.mock_i2c.ExpectWriteStop({0x10, 0xAA})
+      .ExpectWriteStop({0x11, 0xBB})
+      .ExpectWriteStop({0x0f, 0xCC});
+
+  EXPECT_OK(dut.SetRgb(0, rgb));
+
+  dut.mock_i2c.ExpectWriteStop({0x13, 0xAA})
+      .ExpectWriteStop({0x12, 0xBB})
+      .ExpectWriteStop({0x14, 0xCC});
+
+  EXPECT_OK(dut.SetRgb(1, rgb));
 
   dut.Verify();
 }

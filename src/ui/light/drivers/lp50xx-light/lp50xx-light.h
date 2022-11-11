@@ -84,15 +84,17 @@ class Lp50xxLight : public Lp50xxLightType, public ddk::EmptyProtocol<ZX_PROTOCO
   zx_status_t SetBrightness(uint32_t index, double brightness);
   zx_status_t GetBrightness(uint32_t index, double* brightness);
 
-  uint32_t pid_ = 0;
-  fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
-
  private:
   friend class Lp50xxLightTest;
 
   zx_status_t Lp50xxRegConfig();
 
   static constexpr size_t kNameLength = ZX_MAX_NAME_LEN;
+
+  uint32_t pid_ = 0;
+  bool is_visalia_ = false;
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
+
   fbl::Array<char[kNameLength]> names_;
   uint32_t led_count_ = 0;
   uint32_t led_color_addr_ = 0;

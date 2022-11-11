@@ -29,6 +29,34 @@
 #include "lp50xx-regs.h"
 #include "src/ui/light/drivers/lp50xx-light/lp50xx_light-bind.h"
 
+namespace {
+
+constexpr size_t kRed = 0;
+constexpr size_t kGreen = 1;
+constexpr size_t kBlue = 2;
+
+// The LP50xx datasheets don't specify the colors for each PWM channel, so we have to map from RGB
+// to color register offset. The values below are the addresses of the first registers for each
+// color, relative to led_color_addr_.
+
+// Blue and green are swapped for LEDs 1-4 on Visalia, so this holds the mapping to be used for each
+// light index.
+// clang-format off
+constexpr uint32_t kVisaliaRgbAddressMap[6][3] = {
+    {1, 2, 0},  // RGB -> BRG
+    {1, 0, 2},  // RGB -> GRB
+    {1, 0, 2},
+    {1, 0, 2},
+    {1, 0, 2},
+    {1, 2, 0},  // RGB -> BRG
+};
+// clang-format on
+
+// Other boards use BRG ordering.
+constexpr uint32_t kOtherRgbAddressMap[3] = {1, 2, 0};
+
+}  // namespace
+
 namespace lp50xx_light {
 
 static bool run_blink_test(void* ctx, zx_device_t* parent, zx_handle_t channel) {
@@ -129,21 +157,31 @@ zx_status_t Lp50xxLight::SetRgbValue(uint32_t index, fuchsia_hardware_light::wir
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto status = RedColorReg::Get(led_color_addr_, index)
+  // Callers validate index, but make sure we are using a chip with enough LEDs.
+  ZX_DEBUG_ASSERT(index < std::size(kVisaliaRgbAddressMap) || !is_visalia_);
+
+  const uint32_t* const address_map =
+      is_visalia_ ? kVisaliaRgbAddressMap[index] : kOtherRgbAddressMap;
+
+  const uint32_t red_addr = led_color_addr_ + address_map[kRed];
+  const uint32_t green_addr = led_color_addr_ + address_map[kGreen];
+  const uint32_t blue_addr = led_color_addr_ + address_map[kBlue];
+
+  auto status = RedColorReg::Get(red_addr, index)
                     .FromValue(static_cast<uint8_t>(rgb.red * UINT8_MAX))
                     .WriteTo(i2c_);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = GreenColorReg::Get(led_color_addr_, index)
+  status = GreenColorReg::Get(green_addr, index)
                .FromValue(static_cast<uint8_t>(rgb.green * UINT8_MAX))
                .WriteTo(i2c_);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = BlueColorReg::Get(led_color_addr_, index)
+  status = BlueColorReg::Get(blue_addr, index)
                .FromValue(static_cast<uint8_t>(rgb.blue * UINT8_MAX))
                .WriteTo(i2c_);
   if (status != ZX_OK) {
@@ -154,9 +192,18 @@ zx_status_t Lp50xxLight::SetRgbValue(uint32_t index, fuchsia_hardware_light::wir
 }
 
 zx_status_t Lp50xxLight::GetRgbValue(uint32_t index, fuchsia_hardware_light::wire::Rgb* rgb) {
-  auto red = RedColorReg::Get(led_color_addr_, index).FromValue(0);
-  auto green = GreenColorReg::Get(led_color_addr_, index).FromValue(0);
-  auto blue = BlueColorReg::Get(led_color_addr_, index).FromValue(0);
+  ZX_DEBUG_ASSERT(index < std::size(kVisaliaRgbAddressMap) || !is_visalia_);
+
+  const uint32_t* const address_map =
+      is_visalia_ ? kVisaliaRgbAddressMap[index] : kOtherRgbAddressMap;
+
+  const uint32_t red_addr = led_color_addr_ + address_map[kRed];
+  const uint32_t green_addr = led_color_addr_ + address_map[kGreen];
+  const uint32_t blue_addr = led_color_addr_ + address_map[kBlue];
+
+  auto red = RedColorReg::Get(red_addr, index).FromValue(0);
+  auto green = GreenColorReg::Get(green_addr, index).FromValue(0);
+  auto blue = BlueColorReg::Get(blue_addr, index).FromValue(0);
 
   if (red.ReadFrom(i2c_) || green.ReadFrom(i2c_) || blue.ReadFrom(i2c_)) {
     zxlogf(ERROR, "Failed to read I2C color registers");
@@ -224,10 +271,10 @@ void Lp50xxLight::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& co
   char name[kNameLength];
   if (names_.size() > 0) {
     // TODO(puneetha): Currently names_ is not set from metadata. This code will not be executed.
-    snprintf(name, sizeof(name), "%s\n", names_[request->index]);
+    snprintf(name, sizeof(name), "%s", names_[request->index]);
   } else {
     // Return "lp50xx-led-X" if no metadata was provided.
-    snprintf(name, sizeof(name), "lp50xx-led-%u\n", request->index);
+    snprintf(name, sizeof(name), "lp50xx-led-%u", request->index);
   }
 
   completer.ReplySuccess({
@@ -479,6 +526,16 @@ zx_status_t Lp50xxLight::InitHelper() {
     return status;
   }
   pid_ = info.pid;
+
+  pdev_board_info_t board_info = {};
+  status = pdev.GetBoardInfo(&board_info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "GetBoardInfo failed: %d", status);
+    return status;
+  }
+  is_visalia_ =
+      (board_info.vid == PDEV_VID_SYNAPTICS && board_info.pid == PDEV_PID_SYNAPTICS_AS370) ||
+      (board_info.vid == PDEV_VID_GOOGLE && board_info.pid == PDEV_PID_VISALIA);
 
   fbl::AllocChecker ac;
   size_t metadata_size;
