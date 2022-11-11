@@ -140,10 +140,4 @@ zx_library("fake_ddk") {
     "//src/ui/input/drivers/hidctl/*",
     "//src/ui/input/drivers/i2c-hid/*",
   ]
-
-  # At this time we are not enforcing restrictions on the below.
-  visibility += [
-    "//third_party/*",
-    "//vendor/*",
-  ]
 }
