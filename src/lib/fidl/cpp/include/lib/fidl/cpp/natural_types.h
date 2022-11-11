@@ -17,6 +17,8 @@
 
 #include <cstdint>
 
+#include "lib/stdcompat/utility.h"
+
 // # Natural domain objects
 //
 // This header contains forward definitions that are part of natural domain
@@ -102,19 +104,19 @@ class UnionMemberView final {
   }
 };
 
-class EncodeResult {
+class NaturalEncodeResult final : public EncodeResult {
  public:
   template <typename F>
-  explicit EncodeResult(const TransportVTable* vtable, internal::WireFormatVersion wire_format,
-                        F encode_callback)
+  explicit NaturalEncodeResult(const TransportVTable* vtable,
+                               internal::WireFormatVersion wire_format, F encode_callback)
       : storage_(vtable, wire_format), message_([&]() {
           encode_callback(storage_);
           return storage_.GetOutgoingMessage(NaturalBodyEncoder::MessageType::kStandalone);
         }()) {}
 
-  ::fidl::OutgoingMessage& message() { return message_; }
+  ::fidl::OutgoingMessage& message() override { return message_; }
 
-  ::fidl::WireFormatMetadata wire_format_metadata() const {
+  ::fidl::WireFormatMetadata wire_format_metadata() const override {
     return storage_.wire_format_metadata();
   }
 
@@ -123,11 +125,12 @@ class EncodeResult {
   ::fidl::OutgoingMessage message_;
 };
 
-template <typename Transport, typename EncodeResult, typename FidlType>
-EncodeResult EncodeWithTransport(FidlType&& value) {
+template <typename Transport, typename FidlType>
+OwnedEncodeResult EncodeWithTransport(FidlType&& value) {
   static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
-  return EncodeResult(
-      &Transport::VTable, fidl::internal::WireFormatVersion::kV2,
+  return OwnedEncodeResult(
+      cpp17::in_place_type_t<NaturalEncodeResult>{}, &Transport::VTable,
+      fidl::internal::WireFormatVersion::kV2,
       [value_ptr = &value](::fidl::internal::NaturalBodyEncoder& encoder) mutable {
         encoder.Alloc(
             ::fidl::internal::NaturalEncodingInlineSize<FidlType, NaturalCodingConstraintEmpty>(
@@ -145,18 +148,9 @@ SplitMetadataAndMessage(cpp20::span<const uint8_t> persisted);
 
 }  // namespace internal
 
-// |OwnedEncodeResult| holds an encoded message along with the required storage.
-// Success/failure information is stored in the |fidl::OutgoingMessage| obtained
-// from |message()|.
-class OwnedEncodeResult : public internal::EncodeResult {
- public:
-  using internal::EncodeResult::EncodeResult;
-  using internal::EncodeResult::message;
-  using internal::EncodeResult::wire_format_metadata;
-};
-
 // Encodes an instance of |FidlType| for use over the Zircon channel transport.
-// Supported types are structs, tables, and unions.
+// Supported types are structs, tables, and unions. |FidlType| should be a
+// natural domain object.
 //
 // Handles in the current instance are moved to the returned
 // |OwnedEncodeResult|, if any.
@@ -183,10 +177,10 @@ class OwnedEncodeResult : public internal::EncodeResult {
 //     // 2. Copy the bytes to contiguous storage.
 //     fidl::OutgoingMessage::CopiedBytes bytes = encoded.message().CopyBytes();
 //
-template <typename FidlType>
+template <typename FidlType, size_t kEnabled = internal::NaturalCodingTraits<
+                                 FidlType, internal::NaturalCodingConstraintEmpty>::inline_size_v2>
 OwnedEncodeResult Encode(FidlType value) {
-  return internal::EncodeWithTransport<fidl::internal::ChannelTransport, OwnedEncodeResult>(
-      std::move(value));
+  return internal::EncodeWithTransport<fidl::internal::ChannelTransport>(std::move(value));
 }
 
 // |Decode| decodes a non-transactional incoming message to a natural domain

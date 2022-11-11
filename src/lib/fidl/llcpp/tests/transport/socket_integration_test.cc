@@ -43,6 +43,7 @@ struct fidl::TypeTraits<TwoWayRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 24;
+  static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
@@ -107,6 +108,7 @@ struct fidl::TypeTraits<TwoWayResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 24;
+  static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =

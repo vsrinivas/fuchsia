@@ -168,10 +168,10 @@ bool OutgoingMessage::BytesMatch(const OutgoingMessage& other) const {
 
 void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_version, void* data,
                                  size_t inline_size, fidl::internal::TopLevelEncodeFn encode_fn) {
-  if (!ok()) {
+  if (unlikely(!ok())) {
     return;
   }
-  if (wire_format_version != fidl::internal::WireFormatVersion::kV2) {
+  if (unlikely(wire_format_version != fidl::internal::WireFormatVersion::kV2)) {
     SetStatus(fidl::Status::EncodeError(ZX_ERR_INVALID_ARGS, "only v2 wire format supported"));
     return;
   }
@@ -180,22 +180,16 @@ void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_v
       inline_size, encode_fn, transport_vtable_->encoding_configuration, data, iovecs(),
       iovec_capacity(), handles(), message_.iovec.handle_metadata, handle_capacity(),
       backing_buffer(), backing_buffer_capacity());
-  if (!result.is_ok()) {
+  if (unlikely(!result.is_ok())) {
     SetStatus(result.error_value());
     return;
   }
   iovec_message().num_iovecs = static_cast<uint32_t>(result.value().iovec_actual);
   iovec_message().num_handles = static_cast<uint32_t>(result.value().handle_actual);
-
-  if (is_transactional()) {
-    ZX_ASSERT(iovec_actual() >= 1 && iovecs()[0].capacity >= sizeof(fidl_message_header_t));
-    static_cast<fidl_message_header_t*>(const_cast<void*>(iovecs()[0].buffer))->at_rest_flags[0] |=
-        FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
-  }
 }
 
 void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOptions options) {
-  if (!ok()) {
+  if (unlikely(!ok())) {
     return;
   }
   ZX_ASSERT(transport_type() == transport.type());
@@ -207,7 +201,7 @@ void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOption
                                               .data_count = iovec_actual(),
                                               .handles_count = handle_actual()});
   ReleaseHandles();
-  if (status != ZX_OK) {
+  if (unlikely(status != ZX_OK)) {
     SetStatus(fidl::Status::TransportError(status));
   }
 }

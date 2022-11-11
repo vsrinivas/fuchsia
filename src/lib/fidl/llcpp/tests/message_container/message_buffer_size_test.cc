@@ -129,7 +129,7 @@ TEST(MessageBufferSize, BufferSizeConstexprFunctions) {
   // in-memory wire format.
   static_assert(
       fidl::SyncClientMethodBufferSizeInChannel<Protocol::SmallRequestWithFlexibleType>() ==
-      sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t) + sizeof(int64_t));
+      sizeof(fidl_message_header_t) + sizeof(fidl_xunion_v2_t) + sizeof(int64_t));
 
   static_assert(
       fidl::SyncClientMethodBufferSizeInChannel<Protocol::SmallResponseWithFlexibleType>() ==

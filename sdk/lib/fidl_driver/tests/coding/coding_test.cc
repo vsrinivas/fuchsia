@@ -54,9 +54,8 @@ TEST(StandaloneResourceTypeCoding, Encode) {
   }};
 
   // Perform encoding.
-  fidl::internal::EncodeResult encoded =
-      fidl::internal::EncodeWithTransport<fidl::internal::DriverTransport,
-                                          fidl::internal::EncodeResult>(std::move(obj));
+  fidl::OwnedEncodeResult encoded =
+      fidl::internal::EncodeWithTransport<fidl::internal::DriverTransport>(std::move(obj));
   ASSERT_TRUE(encoded.message().ok(), "Error encoding: %s",
               encoded.message().error().FormatDescription().c_str());
 

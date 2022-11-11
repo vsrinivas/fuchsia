@@ -4,6 +4,9 @@
 
 // This file contains manual test cases that should be migrated to GIDL
 // and be generated as part of conformance_test.cc in the future.
+// Note that it exercises |fidl::Encode|, which is a wrapper over
+// |OwnedEncodedMessage| et al, and exercises slightly different code
+// paths, because it disables iovec.
 
 #include <fidl/fidl.test.misc/cpp/wire_types.h>
 #include <fidl/manual.conformance.large/cpp/wire.h>
@@ -50,12 +53,12 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     input.before = fidl::StringView::FromExternal(before);
     input.xu = llcpp_misc::wire::SampleXUnion::WithI(integer);
     input.after = fidl::StringView::FromExternal(after);
-    fidl::unstable::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
-        fidl::internal::WireFormatVersion::kV2, &input);
-    ASSERT_TRUE(encoded.ok());
-    auto bytes = encoded.GetOutgoingMessage().CopyBytes();
+    fidl::OwnedEncodeResult encoded = fidl::Encode(input);
+    ASSERT_TRUE(encoded.message().ok());
+    auto bytes = encoded.message().CopyBytes();
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
                                                         expected.size()));
+    EXPECT_EQ(encoded.wire_format_metadata().ToOpaque().metadata, kV2Metadata.ToOpaque().metadata);
   }
   // decode
   {
@@ -74,17 +77,48 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   }
 }
 
+TEST(PrimitiveInXUnion, Success) {
+  // clang-format off
+  const auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // xunion header
+      0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x01, 0x00,  // inline envelope content
+  };
+  // clang-format on
+  int32_t integer = 0xdeadbeef;
+  // encode
+  {
+    auto xu = llcpp_misc::wire::SampleXUnion::WithI(integer);
+    fidl::OwnedEncodeResult encoded = fidl::Encode(xu);
+    ASSERT_TRUE(encoded.message().ok());
+    auto bytes = encoded.message().CopyBytes();
+    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
+                                                        expected.size()));
+    EXPECT_EQ(encoded.wire_format_metadata().ToOpaque().metadata, kV2Metadata.ToOpaque().metadata);
+  }
+  // decode
+  {
+    std::vector<uint8_t> encoded_bytes = expected;
+    fit::result result = fidl::InplaceDecode<llcpp_misc::wire::SampleXUnion>(
+        fidl::EncodedMessage::Create(encoded_bytes), kV2Metadata);
+    ASSERT_TRUE(result.is_ok());
+    const llcpp_misc::wire::SampleXUnion& xu = result.value().value();
+    ASSERT_EQ(xu.Which(), llcpp_misc::wire::SampleXUnion::Tag::kI);
+    const int32_t& i = xu.i();
+    ASSERT_EQ(i, integer);
+  }
+}
+
 TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
   llcpp_misc::wire::InlineXUnionInStruct input = {};
   std::string empty_str = "";
   input.before = fidl::StringView::FromExternal(empty_str);
   input.after = fidl::StringView::FromExternal(empty_str);
-  fidl::unstable::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
-      fidl::internal::WireFormatVersion::kV2, &input);
-  EXPECT_FALSE(encoded.ok());
+  fidl::OwnedEncodeResult encoded = fidl::Encode(input);
+  EXPECT_FALSE(encoded.message().ok());
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
-  EXPECT_EQ(std::string(encoded.lossy_description()), "non-nullable union is absent");
-  EXPECT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(std::string(encoded.message().error().lossy_description()),
+            "non-nullable union is absent");
+  EXPECT_EQ(encoded.message().status(), ZX_ERR_INVALID_ARGS);
 }
 
 TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
@@ -214,10 +248,9 @@ TEST(ComplexTable, Success) {
     input.set_simple(allocator, std::move(simple_table))
         .set_u(allocator, std::move(xu))
         .set_strings(allocator, std::move(strings));
-    fidl::unstable::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(
-        fidl::internal::WireFormatVersion::kV2, &input);
-    ASSERT_TRUE(encoded.ok());
-    auto bytes = encoded.GetOutgoingMessage().CopyBytes();
+    fidl::OwnedEncodeResult encoded = fidl::Encode(input);
+    ASSERT_TRUE(encoded.message().ok());
+    auto bytes = encoded.message().CopyBytes();
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
                                                         expected.size()));
   }
@@ -266,10 +299,9 @@ TEST(InputExceeds64KiB, EncodeUnsupported) {
                   "Need a reasonably sized last piece of data to make the whole message reliably "
                   "go over the 64 KiB limit.");
 
-    fidl::unstable::OwnedEncodedMessage<manual_conformance_large::wire::LargeTable> encoded{
-        fidl::internal::WireFormatVersion::kV2, &table};
-    EXPECT_FALSE(encoded.ok());
-    EXPECT_EQ(encoded.status(), ZX_ERR_BUFFER_TOO_SMALL);
-    EXPECT_STREQ(encoded.lossy_description(), "backing buffer size exceeded");
+    fidl::OwnedEncodeResult encoded = fidl::Encode(table);
+    EXPECT_FALSE(encoded.message().ok());
+    EXPECT_EQ(encoded.message().status(), ZX_ERR_BUFFER_TOO_SMALL);
+    EXPECT_STREQ(encoded.message().lossy_description(), "backing buffer size exceeded");
   }
 }

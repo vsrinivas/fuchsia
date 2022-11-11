@@ -350,10 +350,8 @@ constexpr uint32_t ClampedMessageSize() {
       return ZX_CHANNEL_MAX_MSG_BYTES;
     }
   }
-  // These can be modified to return the ::Alt variant when a migration
-  // is ongoing
-  uint64_t primary = FidlAlign(TypeTraits<FidlType>::kPrimarySizeV1);
-  uint64_t out_of_line = FidlAlign(TypeTraits<FidlType>::kMaxOutOfLineV1);
+  uint64_t primary = FidlAlign(TypeTraits<FidlType>::kPrimarySize);
+  uint64_t out_of_line = FidlAlign(TypeTraits<FidlType>::kMaxOutOfLine);
   uint64_t sum = primary + out_of_line;
   if (sum > ZX_CHANNEL_MAX_MSG_BYTES) {
     return ZX_CHANNEL_MAX_MSG_BYTES;
