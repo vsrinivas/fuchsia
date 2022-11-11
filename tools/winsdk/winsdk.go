@@ -129,6 +129,22 @@ func (l Locks) Less(i, j int) bool {
 //	]
 //
 // }
+
+type VFSOverlay struct {
+	Version         int            `json:"version"`
+	CaseSensitive   bool           `json:"case-sensitive"`
+	RootRelative    string         `json:"root-relative"`
+	OverlayRelative bool           `json:"overlay-relative"`
+	Roots           []ContentEntry `json:"roots"`
+}
+
+type ContentEntry struct {
+	Name             string         `json:"name"`
+	Type             string         `json:"type"`
+	Contents         []ContentEntry `json:"contents,omitempty"`
+	ExternalContents string         `json:"external-contents,omitempty"`
+}
+
 type LockFile struct {
 	Updated time.Time `json:"updated"`
 	Hash    string    `json:"hash"`
@@ -188,6 +204,59 @@ func (c *lockFileCreator) generateLockFile() ([]byte, error) {
 	}
 	c.lockfile.Hash = fmt.Sprintf("%x", h.Sum(nil))
 	return json.MarshalIndent(c.lockfile, "", "  ")
+}
+
+func (c *VFSOverlay) addFile(path string) error {
+	if filepath.IsAbs(path) {
+		return fmt.Errorf("vfs path %q should be relative", path)
+	}
+	pathList := strings.Split(path, string(filepath.Separator))
+	var currentEntry *ContentEntry
+PathLoop:
+	for i, name := range pathList {
+		if i == 0 {
+			for j := range c.Roots {
+				entry := &c.Roots[j]
+				if strings.EqualFold(entry.Name, name) {
+					currentEntry = entry
+					continue PathLoop
+				}
+			}
+		} else {
+			for j := range currentEntry.Contents {
+				entry := &currentEntry.Contents[j]
+				if strings.EqualFold(entry.Name, name) {
+					currentEntry = entry
+					continue PathLoop
+				}
+			}
+		}
+		// name is not in VFSOverlay prefix tree
+		newEntry := ContentEntry{
+			Name: name,
+		}
+		if i == len(pathList)-1 {
+			newEntry.Type = "file"
+			newEntry.ExternalContents = path
+		} else {
+			newEntry.Type = "directory"
+		}
+		if i == 0 {
+			c.Roots = append(c.Roots, newEntry)
+			currentEntry = &c.Roots[len(c.Roots)-1]
+		} else {
+			currentEntry.Contents = append(currentEntry.Contents, newEntry)
+			currentEntry = &currentEntry.Contents[len(currentEntry.Contents)-1]
+		}
+	}
+
+	return nil
+}
+
+func (c *VFSOverlay) generateVFSOverlay(w io.Writer) error {
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(c)
 }
 
 func getVSPath() (string, error) {
@@ -744,7 +813,17 @@ func generageSDKDir(files []packedFile, envDir string) error {
 	if err := os.MkdirAll(outputPath, 0755); err != nil {
 		return err
 	}
+	vfsoverlay := &VFSOverlay{
+		Version:         0,
+		CaseSensitive:   false,
+		RootRelative:    "overlay-dir",
+		OverlayRelative: true,
+		Roots:           make([]ContentEntry, 0),
+	}
 	lockFileData, err := walkSDKFiles(files, envDir, func(entry packedFile) error {
+		if needOverlay(entry.target) {
+			vfsoverlay.addFile(entry.target)
+		}
 		if err := os.MkdirAll(filepath.Dir(filepath.Join(outputPath, entry.target)), 0755); err != nil {
 			return err
 		}
@@ -771,18 +850,44 @@ func generageSDKDir(files []packedFile, envDir string) error {
 	}
 	defer lockFile.Close()
 	lockFile.Write(lockFileData)
+	overlayFile, err := os.Create("llvm-vfsoverlay.yaml")
+	if err != nil {
+		return err
+	}
+	defer overlayFile.Close()
+	if err = vfsoverlay.generateVFSOverlay(overlayFile); err != nil {
+		return err
+	}
 	return nil
 }
 
+func needOverlay(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext == ".h" || ext == ".lib" {
+		return true
+	}
+	return false
+}
+
 func generateSDKArchive(files []packedFile, envDir string) (string, error) {
+	vfsoverlay := &VFSOverlay{
+		Version:         0,
+		CaseSensitive:   false,
+		RootRelative:    "overlay-dir",
+		OverlayRelative: true,
+		Roots:           make([]ContentEntry, 0),
+	}
 	outputFile, err := os.CreateTemp("", "sdkpack.zip")
 	if err != nil {
-		return outputFile.Name(), err
+		return "", err
 	}
 	defer outputFile.Close()
 	zipWriter := zip.NewWriter(outputFile)
 	defer zipWriter.Close()
 	lockFileData, err := walkSDKFiles(files, envDir, func(entry packedFile) error {
+		if needOverlay(entry.target) {
+			vfsoverlay.addFile(entry.target)
+		}
 		compressedFile, err := zipWriter.Create(entry.target)
 		if err != nil {
 			return err
@@ -798,15 +903,22 @@ func generateSDKArchive(files []packedFile, envDir string) (string, error) {
 		return nil
 	})
 	if err != nil {
-		return outputFile.Name(), err
+		return "", err
 	}
 
 	lockFile, err := zipWriter.Create("content.lock")
 	if err != nil {
-		return outputFile.Name(), err
+		return "", err
 	}
 	lockFile.Write(lockFileData)
-	return outputFile.Name(), nil
+	overlayFile, err := zipWriter.Create("llvm-vfsoverlay.yaml")
+	if err != nil {
+		return "", err
+	}
+	if err = vfsoverlay.generateVFSOverlay(overlayFile); err != nil {
+		return "", err
+	}
+	return "", nil
 }
 
 func generateSDK() error {
