@@ -41,46 +41,54 @@ struct WlantapMacImpl : WlantapMac,
         listener_(listener),
         sme_channel_(std::move(sme_channel)) {}
 
-  zx_status_t InitClientDispatcher() {
+  zx_status_t InitWlanSoftmacIfcClient() {
     // Create dispatcher for FIDL client of WlanSoftmacIfc protocol.
     auto dispatcher =
-        fdf::Dispatcher::Create(0, "wlansoftmacifc_client_wlantap", [&](fdf_dispatcher_t*) {
-          if (unbind_txn_)
+        fdf::Dispatcher::Create(0, WLAN_SOFTMAC_IFC_DISPATCHER_NAME, [&](fdf_dispatcher_t*) {
+          if (unbind_txn_) {
             unbind_txn_->Reply();
+            return;
+          }
+          zxlogf(ERROR, "%s shutdown for reason other than MAC device unbind.",
+                 WLAN_SOFTMAC_IFC_DISPATCHER_NAME);
         });
 
     if (dispatcher.is_error()) {
-      zxlogf(ERROR, "%s(): Dispatcher created failed%s\n", __func__,
-             zx_status_get_string(dispatcher.status_value()));
       return dispatcher.status_value();
     }
 
-    client_dispatcher_ = *std::move(dispatcher);
+    wlan_softmac_ifc_dispatcher_ = *std::move(dispatcher);
 
     return ZX_OK;
   }
 
-  zx_status_t InitServerDispatcher() {
+  zx_status_t InitWlanSoftmacServer() {
     // Create dispatcher for FIDL server of WlanSoftmac protocol.
     auto dispatcher =
-        fdf::Dispatcher::Create(0, "wlansoftmac_server_wlantap",
-                                [&](fdf_dispatcher_t*) { client_dispatcher_.ShutdownAsync(); });
+        fdf::Dispatcher::Create(0, WLAN_SOFTMAC_DISPATCHER_NAME, [&](fdf_dispatcher_t*) {
+          if (unbind_txn_) {
+            wlan_softmac_ifc_dispatcher_.ShutdownAsync();
+            return;
+          }
+          zxlogf(ERROR, "%s shutdown for reason other than MAC device unbind.",
+                 WLAN_SOFTMAC_DISPATCHER_NAME);
+        });
     if (dispatcher.is_error()) {
-      zxlogf(ERROR, "%s(): Dispatcher created failed%s\n", __func__,
-             zx_status_get_string(dispatcher.status_value()));
       return dispatcher.status_value();
     }
-    server_dispatcher_ = *std::move(dispatcher);
+    wlan_softmac_dispatcher_ = *std::move(dispatcher);
 
     return ZX_OK;
   }
 
   void DdkInit(ddk::InitTxn txn) {
-    zx_status_t ret = InitServerDispatcher();
-    ZX_ASSERT_MSG(ret == ZX_OK, "Creating dispatcher error: %s\n", zx_status_get_string(ret));
+    zx_status_t ret = InitWlanSoftmacServer();
+    ZX_ASSERT_MSG(ret == ZX_OK, "%s(): %s create failed%s\n", __func__,
+                  WLAN_SOFTMAC_DISPATCHER_NAME, zx_status_get_string(ret));
 
-    ret = InitClientDispatcher();
-    ZX_ASSERT_MSG(ret == ZX_OK, "Creating dispatcher error: %s\n", zx_status_get_string(ret));
+    ret = InitWlanSoftmacIfcClient();
+    ZX_ASSERT_MSG(ret == ZX_OK, "%s(): %s create failed%s\n", __func__,
+                  WLAN_SOFTMAC_IFC_DISPATCHER_NAME, zx_status_get_string(ret));
 
     txn.Reply(ZX_OK);
   }
@@ -93,7 +101,7 @@ struct WlantapMacImpl : WlantapMac,
     //   2. WlanSoftmac dispatcher shutdown handler calls WlanSoftmacIfc dispatcher ShutdownAsync().
     //   3. WlanSoftmacIfc dispatcher shutdown handler calls ddk::UnbindTxn::Reply().
     unbind_txn_ = std::move(txn);
-    server_dispatcher_.ShutdownAsync();
+    wlan_softmac_dispatcher_.ShutdownAsync();
   }
 
   void DdkRelease() { delete this; }
@@ -101,7 +109,7 @@ struct WlantapMacImpl : WlantapMac,
   zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel) {
     fdf::ServerEnd<fuchsia_wlan_softmac::WlanSoftmac> server_end(std::move(channel));
     fdf::BindServer<fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmac>>(
-        server_dispatcher_.get(), std::move(server_end), this);
+        wlan_softmac_dispatcher_.get(), std::move(server_end), this);
     return ZX_OK;
   }
 
@@ -145,8 +153,8 @@ struct WlantapMacImpl : WlantapMac,
         completer.buffer(arena).ReplyError(ZX_ERR_ALREADY_BOUND);
         return;
       }
-      ifc_client_ = fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmacIfc>(
-          std::move(request->ifc), client_dispatcher_.get());
+      wlan_softmac_ifc_client_ = fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmacIfc>(
+          std::move(request->ifc), wlan_softmac_ifc_dispatcher_.get());
     }
     listener_->WlantapMacStart(id_);
     completer.buffer(arena).ReplySuccess(std::move(sme_channel_));
@@ -256,7 +264,7 @@ struct WlantapMacImpl : WlantapMac,
                                                .snr_dbh = rx_info.snr_dbh};
     wlan_softmac::WlanRxPacket rx_packet = {.mac_frame = data, .info = converted_info};
     auto arena = fdf::Arena::Create(0, 0);
-    auto result = ifc_client_.sync().buffer(*arena)->Recv(rx_packet);
+    auto result = wlan_softmac_ifc_client_.sync().buffer(*arena)->Recv(rx_packet);
     if (!result.ok()) {
       zxlogf(ERROR, "Failed to send rx frames up. Status: %d\n", result.status());
     }
@@ -265,7 +273,7 @@ struct WlantapMacImpl : WlantapMac,
   virtual void Status(uint32_t status) override {
     std::lock_guard<std::mutex> guard(lock_);
     auto arena = fdf::Arena::Create(0, 0);
-    auto result = ifc_client_.sync().buffer(*arena)->Status(status);
+    auto result = wlan_softmac_ifc_client_.sync().buffer(*arena)->Status(status);
     if (!result.ok()) {
       zxlogf(ERROR, "Failed to send status up. Status: %d\n", result.status());
     }
@@ -274,7 +282,7 @@ struct WlantapMacImpl : WlantapMac,
   virtual void ReportTxStatus(const wlan_common::WlanTxStatus& ts) override {
     std::lock_guard<std::mutex> guard(lock_);
     auto arena = fdf::Arena::Create(0, 0);
-    auto result = ifc_client_.sync().buffer(*arena)->ReportTxStatus(ts);
+    auto result = wlan_softmac_ifc_client_.sync().buffer(*arena)->ReportTxStatus(ts);
     if (!result.ok()) {
       zxlogf(ERROR, "Failed to report tx status up. Status: %d\n", result.status());
     }
@@ -283,7 +291,7 @@ struct WlantapMacImpl : WlantapMac,
   virtual void ScanComplete(uint64_t scan_id, int32_t status) override {
     std::lock_guard<std::mutex> guard(lock_);
     auto arena = fdf::Arena::Create(0, 0);
-    auto result = ifc_client_.sync().buffer(*arena)->ScanComplete(status, scan_id);
+    auto result = wlan_softmac_ifc_client_.sync().buffer(*arena)->ScanComplete(status, scan_id);
     if (!result.ok()) {
       zxlogf(ERROR, "Failed to send scan complete notification up. Status: %d\n", result.status());
     }
@@ -295,17 +303,19 @@ struct WlantapMacImpl : WlantapMac,
   wlan_common::WlanMacRole role_;
   std::mutex lock_;
   // The FIDL client to communicate with Wlan device.
-  fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmacIfc> ifc_client_;
+  fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmacIfc> wlan_softmac_ifc_client_;
 
   const std::shared_ptr<const wlan_tap::WlantapPhyConfig> phy_config_;
   Listener* listener_;
   zx::channel sme_channel_;
 
   // Dispatcher for FIDL client of WlanSoftmacIfc protocol.
-  fdf::Dispatcher client_dispatcher_;
+  const char* WLAN_SOFTMAC_IFC_DISPATCHER_NAME = "wlan-softmac-ifc-client";
+  fdf::Dispatcher wlan_softmac_ifc_dispatcher_;
 
   // Dispatcher for FIDL server of WlanSoftmac protocol.
-  fdf::Dispatcher server_dispatcher_;
+  const char* WLAN_SOFTMAC_DISPATCHER_NAME = "wlan-softmac-server";
+  fdf::Dispatcher wlan_softmac_dispatcher_;
 
   // Store unbind txn for async reply.
   std::optional<::ddk::UnbindTxn> unbind_txn_;
