@@ -47,21 +47,6 @@ Driver   : None
 [ 5/  5] : Key "fuchsia.acpi.hid" Value "GFSH0005"
 ```
 
-You can also run `dm devprops` through the shell (ex/ `fx shell dm devprops`)
-
-```
-Name [pci-00:07.0]
-Flags   : Bound
-ProtoId : '....' 00000000(0)
-9 Properties
-[ 0/ 4] : Value 0x00001f Id Protocol
-[ 1/ 4] : Value 0x001af4 Id PCI.VID
-[ 2/ 4] : Value 0x001052 Id PCI.DID
-[ 3/ 4] : Value 0x000001 Id 0x03
-1 String Property
-[ 0/ 1] : fuchsia.acpi.hid="GFSH0005"
-```
-
 ### Driver properties in the driver source code
 
 When adding a child device, drivers can provide properties that the bind rules match to. As such, you can find the properties to bind to through the driver source code.
