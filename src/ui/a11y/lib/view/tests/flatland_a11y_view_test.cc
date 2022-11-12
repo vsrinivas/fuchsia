@@ -53,6 +53,7 @@ const ui_testing::Pixel kHighlightColor =
 //      proxy viewport transform (owned by a11y manager)
 //            |
 //       proxy view transform (owned by test fixture)
+template <ui_testing::TestView::ContentType T>
 class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
  public:
   FlatlandAccessibilityViewTest() = default;
@@ -73,8 +74,7 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
     realm_ = std::make_unique<component_testing::Realm>(ui_test_manager_->AddSubrealm());
 
     // Add a test view provider.
-    test_view_ = std::make_unique<ui_testing::FlatlandTestView>(
-        dispatcher(), /* content = */ ui_testing::TestView::ContentType::COORDINATE_GRID);
+    test_view_ = std::make_unique<ui_testing::FlatlandTestView>(dispatcher(), /* content = */ T);
     realm_->AddLocalChild(kViewProvider, test_view_.get());
     realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
                            .source = ChildRef{kViewProvider},
@@ -99,13 +99,14 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
 
   void SetUpScene() {
     flatland_display_ =
-        realm_exposed_services()->Connect<fuchsia::ui::composition::FlatlandDisplay>();
-    auto proxy_flatland = realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>();
+        realm_exposed_services()->template Connect<fuchsia::ui::composition::FlatlandDisplay>();
+    auto proxy_flatland =
+        realm_exposed_services()->template Connect<fuchsia::ui::composition::Flatland>();
 
     a11y_view_ = std::make_unique<a11y::FlatlandAccessibilityView>(
-        realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>(),
-        realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>(),
-        realm_exposed_services()->Connect<fuchsia::ui::observation::scope::Registry>());
+        realm_exposed_services()->template Connect<fuchsia::ui::composition::Flatland>(),
+        realm_exposed_services()->template Connect<fuchsia::ui::composition::Flatland>(),
+        realm_exposed_services()->template Connect<fuchsia::ui::observation::scope::Registry>());
 
     // Set up the display, and add the a11y viewport as the display content.
     // Note that we don't need an extra view between the display and the a11y
@@ -124,7 +125,8 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
     // Create the test view.
     fuchsia::ui::app::CreateView2Args args;
     args.set_view_creation_token(std::move(proxy_view_token));
-    auto view_provider = realm_exposed_services()->Connect<fuchsia::ui::app::ViewProvider>();
+    auto view_provider =
+        realm_exposed_services()->template Connect<fuchsia::ui::app::ViewProvider>();
     view_provider->CreateView2(std::move(args));
 
     // Run until the proxy view has been attached to the scene, which can only
@@ -162,7 +164,10 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
   uint64_t display_width_ = 0.f;
 };
 
-TEST_F(FlatlandAccessibilityViewTest, TestSceneConnected) {
+class CoordinateGridTest
+    : public FlatlandAccessibilityViewTest<ui_testing::TestView::ContentType::COORDINATE_GRID> {};
+
+TEST_F(CoordinateGridTest, TestSceneConnected) {
   auto data = ui_test_manager_->TakeScreenshot();
 
   // Spot-check the pixels at the center of each quadrant and the corners of the display.
@@ -203,7 +208,7 @@ TEST_F(FlatlandAccessibilityViewTest, TestSceneConnected) {
   EXPECT_EQ(histogram[ui_testing::Screenshot::kGreen], expected_green_pixels);
 }
 
-TEST_F(FlatlandAccessibilityViewTest, TestMagnification) {
+TEST_F(CoordinateGridTest, TestMagnification) {
   a11y_view_->SetMagnificationTransform(/* scale = */ 4, /* translation_x = */ -1.25f,
                                         /* translation_y = */ 1.5f, [this]() { QuitLoop(); });
   RunLoop();
@@ -247,7 +252,10 @@ TEST_F(FlatlandAccessibilityViewTest, TestMagnification) {
   EXPECT_EQ(histogram[ui_testing::Screenshot::kGreen], expected_green_pixels);
 }
 
-TEST_F(FlatlandAccessibilityViewTest, TestHighlight) {
+class PlainBackgroundTest
+    : public FlatlandAccessibilityViewTest<ui_testing::TestView::ContentType::DEFAULT> {};
+
+TEST_F(PlainBackgroundTest, TestHighlight) {
   // Draw an a11y highlight around a rect in the middle of the screen.
   const float left_f = static_cast<float>(display_width_) * 1 / 4;
   const float top_f = static_cast<float>(display_height_) * 1 / 4;
@@ -272,100 +280,100 @@ TEST_F(FlatlandAccessibilityViewTest, TestHighlight) {
     const int middle = static_cast<int>(display_height_ / 2);
     // Example: If left=200, the pixels in the columns in the closed range [197, 202] should be
     // drawn.
-    EXPECT_NE(data.GetPixelAt(left - 4, middle), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(left - 4, middle), ui_testing::Screenshot::kGreen);
     EXPECT_EQ(data.GetPixelAt(left - 3, middle), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left - 2, middle), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left - 1, middle), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left + 0, middle), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left + 1, middle), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left + 2, middle), kHighlightColor);
-    EXPECT_NE(data.GetPixelAt(left + 3, middle), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(left + 3, middle), ui_testing::Screenshot::kGreen);
 
     // And if right=600, the pixels in the columns in the closed range [597, 602] should be drawn.
-    EXPECT_NE(data.GetPixelAt(right - 4, middle), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(right - 4, middle), ui_testing::Screenshot::kGreen);
     EXPECT_EQ(data.GetPixelAt(right - 3, middle), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right - 2, middle), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right - 1, middle), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right + 0, middle), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right + 1, middle), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right + 2, middle), kHighlightColor);
-    EXPECT_NE(data.GetPixelAt(right + 3, middle), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(right + 3, middle), ui_testing::Screenshot::kGreen);
   }
 
   // Check a vertical slice.
   {
     const int middle = static_cast<int>(display_width_ / 2);
     // If top=200, the pixels in the rows in the closed range [197, 202] should be drawn.
-    EXPECT_NE(data.GetPixelAt(middle, top - 4), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(middle, top - 4), ui_testing::Screenshot::kGreen);
     EXPECT_EQ(data.GetPixelAt(middle, top - 3), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(middle, top - 2), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(middle, top - 1), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(middle, top + 0), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(middle, top + 1), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(middle, top + 2), kHighlightColor);
-    EXPECT_NE(data.GetPixelAt(middle, top + 3), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(middle, top + 3), ui_testing::Screenshot::kGreen);
 
     // And if bottom=600, the pixels in the rows in the closed range [597, 602] should be drawn.
-    EXPECT_NE(data.GetPixelAt(middle, bottom - 4), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(middle, bottom - 4), ui_testing::Screenshot::kGreen);
     EXPECT_EQ(data.GetPixelAt(middle, bottom - 3), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(middle, bottom - 2), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(middle, bottom - 1), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(middle, bottom + 0), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(middle, bottom + 1), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(middle, bottom + 2), kHighlightColor);
-    EXPECT_NE(data.GetPixelAt(middle, bottom + 3), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(middle, bottom + 3), ui_testing::Screenshot::kGreen);
   }
 
   // Check the upper left corner.
   {
-    EXPECT_NE(data.GetPixelAt(left - 4, top - 4), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(left - 4, top - 4), ui_testing::Screenshot::kGreen);
     EXPECT_EQ(data.GetPixelAt(left - 3, top - 3), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left - 2, top - 2), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left - 1, top - 1), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left + 0, top + 0), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left + 1, top + 1), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left + 2, top + 2), kHighlightColor);
-    EXPECT_NE(data.GetPixelAt(left + 3, top + 3), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(left + 3, top + 3), ui_testing::Screenshot::kGreen);
   }
 
   // Check the bottom right corner.
   {
-    EXPECT_NE(data.GetPixelAt(right - 4, bottom - 4), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(right - 4, bottom - 4), ui_testing::Screenshot::kGreen);
     EXPECT_EQ(data.GetPixelAt(right - 3, bottom - 3), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right - 2, bottom - 2), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right - 1, bottom - 1), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right + 0, bottom + 0), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right + 1, bottom + 1), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right + 2, bottom + 2), kHighlightColor);
-    EXPECT_NE(data.GetPixelAt(right + 3, bottom + 3), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(right + 3, bottom + 3), ui_testing::Screenshot::kGreen);
   }
 
   // Check the upper right corner.
   {
-    EXPECT_NE(data.GetPixelAt(right + 3, top - 4), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(right + 3, top - 4), ui_testing::Screenshot::kGreen);
     EXPECT_EQ(data.GetPixelAt(right + 2, top - 3), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right + 1, top - 2), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right + 0, top - 1), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right - 1, top + 0), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right - 2, top + 1), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(right - 3, top + 2), kHighlightColor);
-    EXPECT_NE(data.GetPixelAt(right - 4, top + 3), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(right - 4, top + 3), ui_testing::Screenshot::kGreen);
   }
 
   // Check the bottom left corner.
   {
-    EXPECT_NE(data.GetPixelAt(left + 3, bottom - 4), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(left + 3, bottom - 4), ui_testing::Screenshot::kGreen);
     EXPECT_EQ(data.GetPixelAt(left + 2, bottom - 3), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left + 1, bottom - 2), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left + 0, bottom - 1), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left - 1, bottom + 0), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left - 2, bottom + 1), kHighlightColor);
     EXPECT_EQ(data.GetPixelAt(left - 3, bottom + 2), kHighlightColor);
-    EXPECT_NE(data.GetPixelAt(left - 4, bottom + 2), kHighlightColor);
+    EXPECT_EQ(data.GetPixelAt(left - 4, bottom + 2), ui_testing::Screenshot::kGreen);
   }
 }
 
-TEST_F(FlatlandAccessibilityViewTest, TestClearHighlight) {
+TEST_F(PlainBackgroundTest, TestClearHighlight) {
   {
     auto data = ui_test_manager_->TakeScreenshot();
     EXPECT_EQ(data.GetPixelAt(data.width() * 3 / 8, data.height() * 3 / 8),
@@ -403,7 +411,7 @@ TEST_F(FlatlandAccessibilityViewTest, TestClearHighlight) {
 
 // Make sure that calling ClearHighlight and DrawHighlight multiple times
 // doesn't cause a Flatland error.
-TEST_F(FlatlandAccessibilityViewTest, MultipleCallsDontCrash) {
+TEST_F(PlainBackgroundTest, MultipleCallsDontCrash) {
   a11y_view_->ClearHighlight([this]() { QuitLoop(); });
   RunLoop();
 

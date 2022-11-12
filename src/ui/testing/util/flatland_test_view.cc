@@ -11,12 +11,16 @@
 
 namespace ui_testing {
 
+using fuchsia::ui::composition::ContentId;
+using fuchsia::ui::composition::TransformId;
+
 void FlatlandTestView::CreateView2(fuchsia::ui::app::CreateView2Args args) {
   flatland_ = mock_handles_->svc().Connect<fuchsia::ui::composition::Flatland>();
   flatland_.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Error from fuchsia::ui::composition::Flatland: "
                    << zx_status_get_string(status);
   });
+  flatland_->SetDebugName("FlatlandTestView");
 
   // Set up parent watcher to retrieve layout info.
   parent_watcher_.set_error_handler([](zx_status_t status) {
@@ -30,8 +34,8 @@ void FlatlandTestView::CreateView2(fuchsia::ui::app::CreateView2Args args) {
   flatland_->CreateView2(std::move(*args.mutable_view_creation_token()), std::move(view_identity),
                          /* view_bound_protocols = */ {}, parent_watcher_.NewRequest());
 
-  flatland_->CreateTransform(fuchsia::ui::composition::TransformId({.value = kRootTransformId}));
-  flatland_->SetRootTransform(fuchsia::ui::composition::TransformId({.value = kRootTransformId}));
+  flatland_->CreateTransform(TransformId({.value = kRootTransformId}));
+  flatland_->SetRootTransform(TransformId({.value = kRootTransformId}));
 
   parent_watcher_->GetLayout([this](fuchsia::ui::composition::LayoutInfo layout_info) {
     layout_info_ = std::move(layout_info);
@@ -53,8 +57,8 @@ uint32_t FlatlandTestView::height() {
 void FlatlandTestView::DrawRectangle(int32_t x, int32_t y, int32_t z, uint32_t width,
                                      uint32_t height, uint8_t red, uint8_t green, uint8_t blue,
                                      uint8_t alpha) {
-  const fuchsia::ui::composition::ContentId kFilledRectId = {next_resource_id_++};
-  const fuchsia::ui::composition::TransformId kTransformId = {next_resource_id_++};
+  const ContentId kFilledRectId = {next_resource_id_++};
+  const TransformId kTransformId = {next_resource_id_++};
 
   float red_f = static_cast<float>(red) / 255.f;
   float green_f = static_cast<float>(green) / 255.f;
