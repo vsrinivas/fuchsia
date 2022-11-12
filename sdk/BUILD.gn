@@ -230,6 +230,7 @@ sdk_molecule("host_tools") {
 
   _host_tools = [
     "//tools/fidl/fidlgen_hlcpp:fidlgen_sdk",
+    "//tools/fidl/fidlgen_cpp:fidlgen_cpp_sdk",
     "//tools/cmc:cmc_sdk",
     "//tools/configc:configc_sdk",
     "//tools/fvdl:fvdl_sdk",
@@ -540,6 +541,9 @@ sdk_molecule("driver_host_tools") {
     "//src/devices/tools/fidlgen_banjo:fidlgen_banjo_bin_sdk",
     "//tools/bindc:bindc_sdk",
     "//tools/fidl/fidlgen_cpp:fidlgen_cpp_sdk",
+
+    # TODO(fxbug.dev/80525): Change to "fidlgen_cpp" once Bazel SDK uses the non-experimental name.
+    "//tools/fidl/fidlgen_cpp:fidlgen_cpp_experimental_driver_only_toolchain_sdk",
   ]
 
   if (host_os == "linux" && sdk_cross_compile_host_tools) {

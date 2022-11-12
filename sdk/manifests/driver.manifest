@@ -75,7 +75,9 @@ sdk://pkg/zx
 sdk://pkg/zxc
 sdk://tools/arm64/bindc
 sdk://tools/arm64/fidlgen_banjo
+sdk://tools/arm64/fidlgen_cpp
 sdk://tools/arm64/fidlgen_cpp_experimental_driver_only_toolchain
 sdk://tools/x64/bindc
 sdk://tools/x64/fidlgen_banjo
+sdk://tools/x64/fidlgen_cpp
 sdk://tools/x64/fidlgen_cpp_experimental_driver_only_toolchain
