@@ -19,6 +19,7 @@
 #include "src/ui/a11y/lib/magnifier/magnifier_2.h"
 #include "src/ui/a11y/lib/view/accessibility_view.h"
 #include "src/ui/a11y/lib/view/flatland_connection.h"
+#include "src/ui/a11y/lib/view/view_coordinate_converter.h"
 
 namespace a11y {
 
@@ -30,7 +31,8 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
                                   public Magnifier2::Delegate {
  public:
   explicit FlatlandAccessibilityView(fuchsia::ui::composition::FlatlandPtr flatland1,
-                                     fuchsia::ui::composition::FlatlandPtr flatland2);
+                                     fuchsia::ui::composition::FlatlandPtr flatland2,
+                                     fuchsia::ui::observation::scope::RegistryPtr registry);
   ~FlatlandAccessibilityView() override = default;
 
   // |AccessibilityViewInterface|
@@ -50,8 +52,8 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
                   fuchsia::ui::views::ViewportCreationToken proxy_viewport_token) override;
 
   // |HighlightDelegate|
-  void DrawHighlight(fuchsia::math::Point top_left, fuchsia::math::Point bottom_right,
-                     fit::function<void()> callback) override;
+  void DrawHighlight(fuchsia::math::PointF top_left, fuchsia::math::PointF bottom_right,
+                     zx_koid_t view_koid, fit::function<void()> callback) override;
 
   // |HighlightDelegate|
   void ClearHighlight(fit::function<void()> callback) override;
@@ -81,6 +83,10 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
   // Used to retrieve a11y view layout info.
   fuchsia::ui::composition::ParentViewportWatcherPtr parent_watcher_;
 
+  // Used to connect to the geometry observer protocol to convert highlight coordinates from local
+  // view space.
+  std::optional<fuchsia::ui::observation::scope::RegistryPtr> registry_;
+
   // True if we've received a CreateView request.
   bool received_create_view_request_ = false;
 
@@ -99,12 +105,16 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
   std::optional<fuchsia::ui::views::ViewportCreationToken> proxy_viewport_token_;
 
   // Holds a copy of the view ref of the a11y view.
-  // If not present, the a11y view has not yet been connected to the scene.
+  // If std::nullopt, we haven't sent the CreateView2 request to create it yet.
   std::optional<fuchsia::ui::views::ViewRef> a11y_view_ref_;
 
   // Layout info for the a11y view. If std::nullopt, then layout info has not yet
   // been received.
   std::optional<fuchsia::ui::composition::LayoutInfo> layout_info_;
+
+  // View coordinate converter, relative to the highlight view.
+  // If std::nullopt, we haven't sent the CreateView2 request to create the highlight view yet.
+  std::unique_ptr<ViewCoordinateConverter> highlight_view_coordinate_converter_;
 
   // If set, gets invoked whenever the view properties for the a11y view change.
   std::vector<ViewPropertiesChangedCallback> view_properties_changed_callbacks_;

@@ -33,6 +33,10 @@ using component_testing::Route;
 
 constexpr auto kViewProvider = "view-provider";
 
+// The color used for a11y highlights.
+const ui_testing::Pixel kHighlightColor =
+    ui_testing::Pixel::from_linear_brga(0x57, 0x00, 0xF5, 0xFF);
+
 // This test fixture sets up a test realm with scenic and a11y manager.
 // The test fixture mocks the "scene owner" portion of the handshake by creating
 // a flatland display, attaching the a11y viewport as its content, and
@@ -100,7 +104,8 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
 
     a11y_view_ = std::make_unique<a11y::FlatlandAccessibilityView>(
         realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>(),
-        realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>());
+        realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>(),
+        realm_exposed_services()->Connect<fuchsia::ui::observation::scope::Registry>());
 
     // Set up the display, and add the a11y viewport as the display content.
     // Note that we don't need an extra view between the display and the a11y
@@ -243,16 +248,13 @@ TEST_F(FlatlandAccessibilityViewTest, TestMagnification) {
 }
 
 TEST_F(FlatlandAccessibilityViewTest, TestHighlight) {
-  // The color used for a11y highlights.
-  const ui_testing::Pixel kHighlightColor =
-      ui_testing::Pixel::from_linear_brga(0x57, 0x00, 0xF5, 0xFF);
-
   // Draw an a11y highlight around a rect in the middle of the screen.
-  const int left = static_cast<int>(display_width_ * 1 / 4);
-  const int top = static_cast<int>(display_height_ * 1 / 4);
-  const int right = static_cast<int>(display_width_ * 3 / 4);
-  const int bottom = static_cast<int>(display_height_ * 3 / 4);
-  a11y_view_->DrawHighlight({left, top}, {right, bottom}, [this]() { QuitLoop(); });
+  const float left_f = static_cast<float>(display_width_) * 1 / 4;
+  const float top_f = static_cast<float>(display_height_) * 1 / 4;
+  const float right_f = static_cast<float>(display_width_) * 3 / 4;
+  const float bottom_f = static_cast<float>(display_height_) * 3 / 4;
+  a11y_view_->DrawHighlight({left_f, top_f}, {right_f, bottom_f},
+                            test_view_->GetViewRefKoid().value(), [this]() { QuitLoop(); });
   RunLoop();
 
   auto data = ui_test_manager_->TakeScreenshot();
@@ -261,6 +263,10 @@ TEST_F(FlatlandAccessibilityViewTest, TestHighlight) {
             ui_testing::Screenshot::kGreen)
       << "center pixel should be green";
 
+  const int left = static_cast<int>(lround(left_f));
+  const int top = static_cast<int>(lround(top_f));
+  const int right = static_cast<int>(lround(right_f));
+  const int bottom = static_cast<int>(lround(bottom_f));
   // Check a horizontal slice.
   {
     const int middle = static_cast<int>(display_height_ / 2);
@@ -368,18 +374,19 @@ TEST_F(FlatlandAccessibilityViewTest, TestClearHighlight) {
   }
 
   // Draw an a11y highlight.
-  const int left = static_cast<int>(display_width_ * 3 / 8);
-  const int top = static_cast<int>(display_height_ * 3 / 8);
-  const int right = static_cast<int>(display_width_ * 5 / 8);
-  const int bottom = static_cast<int>(display_height_ * 5 / 8);
-  a11y_view_->DrawHighlight({left, top}, {right, bottom}, [this]() { QuitLoop(); });
+
+  const float left = static_cast<float>(display_width_) * 3 / 8;
+  const float top = static_cast<float>(display_height_) * 3 / 8;
+  const float right = static_cast<float>(display_width_) * 5 / 8;
+  const float bottom = static_cast<float>(display_height_) * 5 / 8;
+  a11y_view_->DrawHighlight({left, top}, {right, bottom}, test_view_->GetViewRefKoid().value(),
+                            [this]() { QuitLoop(); });
   RunLoop();
 
   {
     auto data = ui_test_manager_->TakeScreenshot();
-    EXPECT_NE(data.GetPixelAt(data.width() * 3 / 8, data.height() * 3 / 8),
-              ui_testing::Screenshot::kGreen)
-        << "pixel at upper left of highlight rect should not be green";
+    EXPECT_EQ(data.GetPixelAt(data.width() * 3 / 8, data.height() * 3 / 8), kHighlightColor)
+        << "pixel at upper left of highlight rect should be highlighted";
   }
 
   // Clear the a11y highlight.
@@ -403,14 +410,16 @@ TEST_F(FlatlandAccessibilityViewTest, MultipleCallsDontCrash) {
   a11y_view_->ClearHighlight([this]() { QuitLoop(); });
   RunLoop();
 
-  const int left = static_cast<int>(display_width_ * 1 / 4);
-  const int top = static_cast<int>(display_height_ * 1 / 4);
-  const int right = static_cast<int>(display_width_ * 3 / 4);
-  const int bottom = static_cast<int>(display_height_ * 3 / 4);
-  a11y_view_->DrawHighlight({left, top}, {right, bottom}, [this]() { QuitLoop(); });
+  const float left = static_cast<float>(display_width_) * 1 / 4;
+  const float top = static_cast<float>(display_height_) * 1 / 4;
+  const float right = static_cast<float>(display_width_) * 3 / 4;
+  const float bottom = static_cast<float>(display_height_) * 3 / 4;
+  a11y_view_->DrawHighlight({left, top}, {right, bottom}, test_view_->GetViewRefKoid().value(),
+                            [this]() { QuitLoop(); });
   RunLoop();
 
-  a11y_view_->DrawHighlight({left, top}, {right, bottom}, [this]() { QuitLoop(); });
+  a11y_view_->DrawHighlight({left, top}, {right, bottom}, test_view_->GetViewRefKoid().value(),
+                            [this]() { QuitLoop(); });
   RunLoop();
 
   a11y_view_->ClearHighlight([this]() { QuitLoop(); });

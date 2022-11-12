@@ -12,12 +12,15 @@
 #include <zircon/status.h>
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 #include "fuchsia/math/cpp/fidl.h"
 #include "fuchsia/ui/composition/cpp/fidl.h"
 #include "fuchsia/ui/views/cpp/fidl.h"
 #include "lib/fidl/cpp/clone.h"
+#include "src/ui/a11y/lib/util/util.h"
+#include "src/ui/a11y/lib/view/view_coordinate_converter.h"
 
 namespace a11y {
 namespace {
@@ -138,7 +141,7 @@ void FinishA11yViewSetup(fuchsia::ui::composition::Flatland* flatland_a11y,
                           TransformId{.value = kHighlightViewportTransformId});
 }
 
-void HighlightViewSetup(
+fuchsia::ui::views::ViewRef HighlightViewSetup(
     fuchsia::ui::composition::Flatland* flatland_highlight,
     const fuchsia::math::SizeU& logical_size,
     fuchsia::ui::views::ViewCreationToken highlight_view_token,
@@ -148,6 +151,9 @@ void HighlightViewSetup(
 
   // Create the highlight view.
   auto view_identity = scenic::NewViewIdentityOnCreation();
+  // Save its ViewRef to return.
+  auto view_ref = fidl::Clone(view_identity.view_ref);
+
   fuchsia::ui::composition::ViewBoundProtocols view_bound_protocols;
   flatland_highlight->CreateView2(std::move(highlight_view_token), std::move(view_identity),
                                   std::move(view_bound_protocols),
@@ -192,6 +198,8 @@ void HighlightViewSetup(
     flatland_highlight->CreateFilledRect(content_id);
     flatland_highlight->SetContent(transform_id, content_id);
   }
+
+  return view_ref;
 }
 
 bool InvokeViewPropertiesChangedCallback(
@@ -231,9 +239,11 @@ void InvokeSceneReadyCallbacks(
 
 FlatlandAccessibilityView::FlatlandAccessibilityView(
     fuchsia::ui::composition::FlatlandPtr flatland1,
-    fuchsia::ui::composition::FlatlandPtr flatland2)
+    fuchsia::ui::composition::FlatlandPtr flatland2,
+    fuchsia::ui::observation::scope::RegistryPtr registry)
     : flatland_a11y_(std::move(flatland1), /* debug name = */ "a11y_view"),
-      flatland_highlight_(std::move(flatland2), /* debug name = */ "highlight_view") {}
+      flatland_highlight_(std::move(flatland2), /* debug name = */ "highlight_view"),
+      registry_(std::move(registry)) {}
 
 void FlatlandAccessibilityView::CreateView(
     fuchsia::ui::views::ViewCreationToken a11y_view_token,
@@ -271,10 +281,15 @@ void FlatlandAccessibilityView::CreateView(
     FinishA11yViewSetup(flatland_a11y_.flatland(), logical_size,
                         std::move(highlight_viewport_token));
     fuchsia::ui::composition::ParentViewportWatcherPtr unused_watcher{};
-    HighlightViewSetup(flatland_highlight_.flatland(), logical_size,
-                       std::move(highlight_view_token), std::move(proxy_viewport_token_.value()),
-                       unused_watcher);
+    auto highlight_view_ref = HighlightViewSetup(
+        flatland_highlight_.flatland(), logical_size, std::move(highlight_view_token),
+        std::move(proxy_viewport_token_.value()), unused_watcher);
     proxy_viewport_token_.reset();
+
+    FX_CHECK(registry_);
+    // Create a view coordinate converter relative to the highlight view.
+    highlight_view_coordinate_converter_ = std::make_unique<ViewCoordinateConverter>(
+        std::move(registry_.value()), GetKoid(highlight_view_ref));
 
     // Make sure the highlight view is ready before presenting the a11y view.
     // Probably not necessary, but it might help avoid a flicker at startup.
@@ -372,15 +387,26 @@ FlatlandAccessibilityView::GetHandler() {
   return view_bindings_.GetHandler(this);
 }
 
-void FlatlandAccessibilityView::DrawHighlight(fuchsia::math::Point top_left,
-                                              fuchsia::math::Point bottom_right,
-                                              fit::function<void()> callback) {
+void FlatlandAccessibilityView::DrawHighlight(fuchsia::math::PointF top_left,
+                                              fuchsia::math::PointF bottom_right,
+                                              zx_koid_t view_koid, fit::function<void()> callback) {
+  auto local_top_left =
+      highlight_view_coordinate_converter_->Convert(view_koid, {top_left.x, top_left.y});
+  auto local_bottom_right =
+      highlight_view_coordinate_converter_->Convert(view_koid, {bottom_right.x, bottom_right.y});
+
+  if (!local_top_left || !local_bottom_right) {
+    FX_LOGS(ERROR) << "ViewCoordinateConverter failed to convert -- cannot draw highlight.";
+    callback();
+    return;
+  }
+
   FX_DCHECK(is_initialized_);
 
-  int32_t left = top_left.x;
-  int32_t top = top_left.y;
-  int32_t right = bottom_right.x;
-  int32_t bottom = bottom_right.y;
+  int32_t left = static_cast<int32_t>(lround(local_top_left->x));
+  int32_t top = static_cast<int32_t>(lround(local_top_left->y));
+  int32_t right = static_cast<int32_t>(lround(local_bottom_right->x));
+  int32_t bottom = static_cast<int32_t>(lround(local_bottom_right->y));
   if (left > right) {
     std::swap(left, right);
   }
