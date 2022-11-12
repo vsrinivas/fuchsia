@@ -32,6 +32,7 @@ using component_testing::Protocol;
 using component_testing::Route;
 
 constexpr auto kViewProvider = "view-provider";
+constexpr auto kNestedViewProvider = "nested-view-provider";
 
 // The color used for a11y highlights.
 const ui_testing::Pixel kHighlightColor =
@@ -82,6 +83,18 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
     realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::composition::Flatland::Name_}},
                            .source = ParentRef(),
                            .targets = {ChildRef{kViewProvider}}});
+
+    // Create another FlatlandTestView that can be nested inside test_view_ if desired
+    // (by calling NestChildView()).
+    nested_view_ = std::make_unique<ui_testing::FlatlandTestView>(
+        dispatcher(), /* content = */ ui_testing::TestView::ContentType::DEFAULT);
+    realm_->AddLocalChild(kNestedViewProvider, nested_view_.get());
+    realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                           .source = ChildRef{kNestedViewProvider},
+                           .targets = {ChildRef{kViewProvider}}});
+    realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::composition::Flatland::Name_}},
+                           .source = ParentRef(),
+                           .targets = {ChildRef{kNestedViewProvider}}});
 
     ui_test_manager_->BuildRealm();
     realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
@@ -156,7 +169,8 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
   std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
   std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
   std::unique_ptr<component_testing::Realm> realm_;
-  std::unique_ptr<ui_testing::TestView> test_view_;
+  std::unique_ptr<ui_testing::FlatlandTestView> test_view_;
+  std::unique_ptr<ui_testing::FlatlandTestView> nested_view_;
   std::unique_ptr<a11y::FlatlandAccessibilityView> a11y_view_;
   fuchsia::ui::composition::FlatlandDisplayPtr flatland_display_;
 
@@ -435,6 +449,38 @@ TEST_F(PlainBackgroundTest, MultipleCallsDontCrash) {
 
   a11y_view_->ClearHighlight([this]() { QuitLoop(); });
   RunLoop();
+}
+
+// Make sure that DrawHighlight() correctly translates coordinates when they are
+// given in the coordinate space of a nested View that doesn't cover the whole screen.
+TEST_F(PlainBackgroundTest, TranslatesCoordinatesFromNestedChildView) {
+  test_view_->NestChildView();
+
+  FX_LOGS(INFO) << "Waiting for nested view to render";
+  RunLoopUntil([this]() {
+    auto test_view_ref_koid = nested_view_->GetViewRefKoid();
+    return test_view_ref_koid.has_value() && ui_test_manager_->ViewIsRendering(*test_view_ref_koid);
+  });
+
+  // Draw a highlight from the upper left corner to the lower right corner of nested_view.
+  const float left = 0.;
+  const float top = 0.;
+  const float right = static_cast<float>(nested_view_->width());
+  const float bottom = static_cast<float>(nested_view_->height());
+  a11y_view_->DrawHighlight({left, top}, {right, bottom}, nested_view_->GetViewRefKoid().value(),
+                            [this]() { QuitLoop(); });
+  RunLoop();
+
+  {
+    // nested_view has side length 1/4 that of test_view_, and it's centered in test_view_,
+    // so its corners are at (3/8, 3/8) * (width, height) and (5/8, 5/8)) * (width, height).
+    // Our highlight's corners should be in the same place!
+    auto data = ui_test_manager_->TakeScreenshot();
+    EXPECT_EQ(data.GetPixelAt(data.width() * 3 / 8, data.height() * 3 / 8), kHighlightColor)
+        << "pixel at upper left of highlight rect should be highlighted";
+    EXPECT_EQ(data.GetPixelAt(data.width() * 5 / 8, data.height() * 5 / 8), kHighlightColor)
+        << "pixel at bottom right of highlight rect should be highlighted";
+  }
 }
 
 }  // namespace

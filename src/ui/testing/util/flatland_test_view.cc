@@ -9,6 +9,8 @@
 #include <lib/ui/scenic/cpp/view_identity.h>
 #include <zircon/status.h>
 
+#include "fuchsia/ui/app/cpp/fidl.h"
+
 namespace ui_testing {
 
 using fuchsia::ui::composition::ContentId;
@@ -45,7 +47,58 @@ void FlatlandTestView::CreateView2(fuchsia::ui::app::CreateView2Args args) {
     layout_info_ = std::move(layout_info);
 
     DrawContent();
+    ResizeChildViewport();
   });
+}
+
+void FlatlandTestView::NestChildView() {
+  FX_CHECK(!child_view_is_nested);
+
+  child_view_is_nested = true;
+
+  auto child_view_provider = mock_handles_->svc().Connect<fuchsia::ui::app::ViewProvider>();
+
+  auto [child_view_token, child_viewport_token] = scenic::ViewCreationTokenPair::New();
+
+  fuchsia::ui::app::CreateView2Args args;
+  args.set_view_creation_token(std::move(child_view_token));
+  child_view_provider->CreateView2(std::move(args));
+
+  fuchsia::ui::composition::ViewportProperties viewport_properties;
+  viewport_properties.set_logical_size({std::max(1u, width() / 4), std::max(1u, height() / 4)});
+  {
+    fuchsia::ui::composition::ChildViewWatcherPtr unused_watcher;
+    flatland_->CreateViewport(ContentId{.value = kChildViewportContentId},
+                              std::move(child_viewport_token), fidl::Clone(viewport_properties),
+                              unused_watcher.NewRequest());
+  }
+
+  flatland_->CreateTransform(TransformId{.value = kChildViewportTransformId});
+  flatland_->SetContent(TransformId{.value = kChildViewportTransformId},
+                        ContentId{.value = kChildViewportContentId});
+  flatland_->AddChild(TransformId{.value = kRootTransformId},
+                      TransformId{.value = kChildViewportTransformId});
+  flatland_->SetTranslation(
+      TransformId{.value = kChildViewportTransformId},
+      {static_cast<int32_t>(width() * 3 / 8), static_cast<int32_t>(height() * 3 / 8)});
+
+  PresentChanges();
+}
+
+void FlatlandTestView::ResizeChildViewport() {
+  if (!child_view_is_nested) {
+    return;
+  }
+
+  fuchsia::ui::composition::ViewportProperties viewport_properties;
+  viewport_properties.set_logical_size({std::max(1u, width() / 4), std::max(1u, height() / 4)});
+  flatland_->SetViewportProperties(ContentId{.value = kChildViewportContentId},
+                                   fidl::Clone(viewport_properties));
+
+  flatland_->SetTranslation(
+      TransformId{.value = kChildViewportTransformId},
+      {static_cast<int32_t>(width() * 3 / 8), static_cast<int32_t>(height() * 3 / 8)});
+  PresentChanges();
 }
 
 uint32_t FlatlandTestView::width() {

@@ -10,6 +10,7 @@
 
 #include <optional>
 
+#include "fuchsia/ui/app/cpp/fidl.h"
 #include "src/ui/testing/util/test_view.h"
 
 namespace ui_testing {
@@ -23,6 +24,10 @@ class FlatlandTestView : public TestView {
   // |fuchsia::ui::app::ViewProvider|
   void CreateView2(fuchsia::ui::app::CreateView2Args args) override;
 
+  // Add a child view!
+  // The viewport will have side length of 1/4 our side length and will be centered in our view.
+  void NestChildView();
+
   uint32_t width() override;
   uint32_t height() override;
 
@@ -30,16 +35,22 @@ class FlatlandTestView : public TestView {
   void DrawRectangle(int32_t x, int32_t y, int32_t z, uint32_t width, uint32_t height, uint8_t red,
                      uint8_t green, uint8_t blue, uint8_t alpha) override;
   void PresentChanges() override;
+  void ResizeChildViewport();
 
   // Scene graph:
   // root transform (id=1)
   // --> rectangle holder transform (id=2)
   //     --> ... (optional) rectangles (id=100, 101, 102, ...)
+  // --> (optional) child viewport transform (id=3) {content: child viewport id=4}
   const uint64_t kRootTransformId = 1;
   const uint64_t kRectangleHolderTransform = 2;
+  const uint64_t kChildViewportTransformId = 3;
+  const uint64_t kChildViewportContentId = 4;
 
   // We'll keep incrementing this to get the next resource id (100, 101, 102, ...)
   uint64_t next_resource_id_ = 100;
+
+  bool child_view_is_nested = false;
 
   // Scenic session resources.
   fuchsia::ui::composition::FlatlandPtr flatland_;
