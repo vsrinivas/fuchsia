@@ -105,7 +105,10 @@ async fn observer_vtcs(observer: ObserverProxy) -> Result<AgisResult, anyhow::Er
                     process_koid: vtc.process_koid,
                 });
             }
-            let agis_result = AgisResult { json: Some(serde_json::to_value(&vtcs)?) };
+            let mut agis_result = AgisResult { json: None };
+            if !vtcs.is_empty() {
+                agis_result = AgisResult { json: Some(serde_json::to_value(&vtcs)?) };
+            }
             return Ok(agis_result);
         }
         Err(e) => {
