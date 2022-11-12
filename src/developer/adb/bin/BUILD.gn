@@ -23,10 +23,18 @@ group("tests") {
   ]
 }
 
-fuchsia_package("adb") {
+group("adb-components") {
   deps = [
     "adb:adb-component",
     "adb-shell:adb-shell-component",
+  ]
+}
+
+fuchsia_package("adb") {
+  deps = [
+    ":adb-components",
+
+    # An adb shell config needs to be part of the adb package.
     "adb-shell:adb-shell-config-default-values",
   ]
 }
