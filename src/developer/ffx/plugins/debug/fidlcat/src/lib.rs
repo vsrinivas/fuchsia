@@ -118,9 +118,12 @@ pub async fn fidlcat(
         };
     });
 
-    // Return code is not used. See fxbug.dev/98220
-    if let Some(_exit_code) = unblock(move || fidlcat.wait()).await?.code() {
-        Ok(())
+    if let Some(exit_code) = unblock(move || fidlcat.wait()).await?.code() {
+        if exit_code == 0 {
+            Ok(())
+        } else {
+            Err(ffx_error!("fidlcat exited with code {}", exit_code).into())
+        }
     } else {
         Err(ffx_error!("fidlcat terminated by signal").into())
     }

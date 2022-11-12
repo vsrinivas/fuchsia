@@ -42,9 +42,12 @@ pub async fn ffx_plugin_impl(
 
     let mut cmd = Command::new(zxdb_path).args(args).spawn()?;
 
-    // Return code is not used. See fxbug.dev/98220
-    if let Some(_exit_code) = unblock(move || cmd.wait()).await?.code() {
-        Ok(())
+    if let Some(exit_code) = unblock(move || cmd.wait()).await?.code() {
+        if exit_code == 0 {
+            Ok(())
+        } else {
+            Err(ffx_error!("zxdb exited with code {}", exit_code).into())
+        }
     } else {
         Err(ffx_error!("zxdb terminated by signal").into())
     }
