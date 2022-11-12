@@ -130,6 +130,13 @@ template("scrutiny_verifiers") {
   assert(defined(invoker.zbi_kernel_cmdline_goldens),
          "zbi_kernel_cmdline_goldens is required for scrutiny_verifiers()")
 
+  # TODO(fxbug.dev/114473): Remove once clients have moved over to supplying
+  # only a product bundle.
+  not_needed(invoker,
+             [
+               "assembly_image_name",
+               "update_package_target",
+             ])
   verifiers = []
 
   verify_structured_config_policy_by_build_type(
