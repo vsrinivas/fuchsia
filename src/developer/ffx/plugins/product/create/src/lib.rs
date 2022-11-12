@@ -53,6 +53,9 @@ pub async fn pb_create_with_tools(cmd: CreateCommand, tools: Box<dyn ToolProvide
 
     // Make sure `out_dir` is created and empty.
     if cmd.out_dir.exists() {
+        if cmd.out_dir == "" || cmd.out_dir == "/" {
+            anyhow::bail!("Avoiding deletion of an unsafe out directory: {}", &cmd.out_dir);
+        }
         std::fs::remove_dir_all(&cmd.out_dir).context("Deleting the out_dir")?;
     }
     std::fs::create_dir_all(&cmd.out_dir).context("Creating the out_dir")?;
