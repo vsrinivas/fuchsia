@@ -143,7 +143,7 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
       if (response.status != ZX_OK) {
         continue;
       }
-      if (response.info->flags & BLOCK_FLAG_REMOVABLE) {
+      if (response.info->flags & fuchsia_hardware_block::wire::Flag::kRemovable) {
         continue;
       }
     }
@@ -270,7 +270,7 @@ zx::result<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::Init
       return zx::error(response.status);
     }
 
-    if ((response.info->flags & static_cast<uint32_t>(block::wire::Flag::kRemovable)) != 0) {
+    if (response.info->flags & block::wire::Flag::kRemovable) {
       continue;
     }
 

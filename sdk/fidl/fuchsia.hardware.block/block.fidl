@@ -39,7 +39,7 @@ type BlockInfo = struct {
     max_transfer_size uint32;
 
     /// Identifiers about the device.
-    flags uint32;
+    flags Flag;
 
     reserved uint32;
 };

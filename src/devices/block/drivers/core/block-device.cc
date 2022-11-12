@@ -177,11 +177,11 @@ void BlockDevice::GetInfo(GetInfoCompleter::Sync& completer) {
   static_assert(sizeof(info) == sizeof(block_info_t));
   size_t block_op_size;
   parent_protocol_.Query(reinterpret_cast<block_info_t*>(&info), &block_op_size);
-  // Set or clear BLOCK_FLAG_BOOTPART appropriately.
+  // Set or clear fuchsia.hardware_block/Flag.BOOTPART appropriately.
   if (has_bootpart_) {
-    info.flags |= BLOCK_FLAG_BOOTPART;
+    info.flags |= fuchsia_hardware_block::wire::Flag::kBootpart;
   } else {
-    info.flags &= ~BLOCK_FLAG_BOOTPART;
+    info.flags &= ~fuchsia_hardware_block::wire::Flag::kBootpart;
   }
 
   completer.Reply(ZX_OK, fidl::ObjectView<decltype(info)>::FromExternal(&info));
@@ -365,8 +365,7 @@ zx_status_t BlockDevice::Bind(void* ctx, zx_device_t* dev) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // check to see if we have a ZBI partition map
-  // and set BLOCK_FLAG_BOOTPART accordingly
+  // Check to see if we have a ZBI partition map.
   uint8_t buffer[METADATA_PARTITION_MAP_MAX];
   size_t actual;
   zx_status_t status =

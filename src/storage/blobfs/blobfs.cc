@@ -118,7 +118,7 @@ zx::result<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     return zx::error(status);
   }
 
-  if (block_info.flags & BLOCK_FLAG_READONLY &&
+  if (block_info.flags & fuchsia_hardware_block::wire::Flag::kReadonly &&
       (options.writability != blobfs::Writability::ReadOnlyDisk)) {
     return zx::error(ZX_ERR_ACCESS_DENIED);
   }
@@ -575,7 +575,7 @@ void Blobfs::WriteInfo(BlobTransaction& transaction, bool write_backup) {
 
 void Blobfs::DeleteExtent(uint64_t start_block, uint64_t num_blocks,
                           BlobTransaction& transaction) const {
-  if (block_info_.flags & static_cast<uint32_t>(fuchsia_hardware_block::wire::Flag::kTrimSupport)) {
+  if (block_info_.flags & fuchsia_hardware_block::wire::Flag::kTrimSupport) {
     TRACE_DURATION("blobfs", "Blobfs::DeleteExtent", "num_blocks", num_blocks, "start_block",
                    start_block);
     storage::BufferedOperation operation = {};

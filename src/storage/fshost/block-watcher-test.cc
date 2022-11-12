@@ -82,7 +82,6 @@ TEST(AddDeviceTestCase, AddSmallDevice) {
    public:
     zx::result<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override {
       fuchsia_hardware_block::wire::BlockInfo info = {};
-      info.flags = 0;
       info.block_size = 512;
       info.block_count = 1;
       return zx::ok(info);
@@ -467,7 +466,7 @@ TEST(AddDeviceTestCase, AddUnknownFormatBootPartitionDevice) {
           }) {}
     zx::result<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override {
       fuchsia_hardware_block::wire::BlockInfo info = {};
-      info.flags = BLOCK_FLAG_BOOTPART;
+      info.flags = fuchsia_hardware_block::wire::Flag::kBootpart;
       info.block_size = 512;
       info.block_count = 1024;
       return zx::ok(info);

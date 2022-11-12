@@ -22,6 +22,4 @@ pub const BOOTPART_DRIVER_PATH: &str = "bootpart.so";
 // pub const BLOCK_VERITY_DRIVER_PATH: &str = "block-verity.so";
 pub const NAND_BROKER_DRIVER_PATH: &str = "nand-broker.so";
 
-// Flags for fidl_fuchsia.hardware.block::BlockInfo
-pub const BLOCK_FLAG_BOOTPART: u32 = 4;
 pub const DEFAULT_F2FS_MIN_BYTES: u64 = 100 * 1024 * 1024;

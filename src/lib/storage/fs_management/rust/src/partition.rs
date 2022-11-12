@@ -165,7 +165,7 @@ mod tests {
         super::{partition_matches, PartitionMatcher},
         crate::format::{constants, DiskFormat},
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_hardware_block::BlockInfo,
+        fidl_fuchsia_hardware_block::{BlockInfo, Flag},
         fidl_fuchsia_hardware_block_partition::{
             Guid, PartitionAndDeviceMarker, PartitionAndDeviceRequest,
         },
@@ -230,7 +230,7 @@ mod tests {
                                     block_count: 1000,
                                     block_size: 512,
                                     max_transfer_size: 1024 * 1024,
-                                    flags: 0,
+                                    flags: Flag::empty(),
                                     reserved: 0,
                                 }),
                             )

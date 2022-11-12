@@ -6,9 +6,9 @@ use {
     crate::{
         device::{
             constants::{
-                BLOBFS_PARTITION_LABEL, BLOBFS_TYPE_GUID, BLOCK_FLAG_BOOTPART,
-                BOOTPART_DRIVER_PATH, DATA_PARTITION_LABEL, DATA_TYPE_GUID, FVM_DRIVER_PATH,
-                GPT_DRIVER_PATH, NAND_BROKER_DRIVER_PATH,
+                BLOBFS_PARTITION_LABEL, BLOBFS_TYPE_GUID, BOOTPART_DRIVER_PATH,
+                DATA_PARTITION_LABEL, DATA_TYPE_GUID, FVM_DRIVER_PATH, GPT_DRIVER_PATH,
+                NAND_BROKER_DRIVER_PATH,
             },
             Device,
         },
@@ -161,7 +161,7 @@ impl Matcher for BootpartMatcher {
     ) -> Result<bool, Error> {
         match device.get_block_info().await? {
             Some(block_info) => {
-                if block_info.flags & BLOCK_FLAG_BOOTPART == 0 {
+                if !block_info.flags.contains(fidl_fuchsia_hardware_block::Flag::BOOTPART) {
                     return Ok(false);
                 }
             }
@@ -402,21 +402,21 @@ mod tests {
         crate::{
             config::default_config,
             device::constants::{
-                BLOBFS_PARTITION_LABEL, BLOBFS_TYPE_GUID, BLOCK_FLAG_BOOTPART,
-                BOOTPART_DRIVER_PATH, DATA_PARTITION_LABEL, DATA_TYPE_GUID, FVM_DRIVER_PATH,
-                GPT_DRIVER_PATH, NAND_BROKER_DRIVER_PATH,
+                BLOBFS_PARTITION_LABEL, BLOBFS_TYPE_GUID, BOOTPART_DRIVER_PATH,
+                DATA_PARTITION_LABEL, DATA_TYPE_GUID, FVM_DRIVER_PATH, GPT_DRIVER_PATH,
+                NAND_BROKER_DRIVER_PATH,
             },
         },
         anyhow::Error,
         async_trait::async_trait,
         fidl::encoding::Decodable,
-        fidl_fuchsia_hardware_block::{BlockInfo, BlockProxy},
+        fidl_fuchsia_hardware_block::{BlockInfo, BlockProxy, Flag},
         std::sync::Mutex,
     };
 
     #[derive(Clone)]
     struct MockDevice {
-        block_flags: u32,
+        block_flags: Flag,
         is_nand: bool,
         content_format: DiskFormat,
         topological_path: String,
@@ -427,7 +427,7 @@ mod tests {
     impl MockDevice {
         fn new() -> Self {
             MockDevice {
-                block_flags: 0,
+                block_flags: Flag::empty(),
                 is_nand: false,
                 content_format: DiskFormat::Unknown,
                 topological_path: "mock_device".to_string(),
@@ -435,7 +435,7 @@ mod tests {
                 partition_type: None,
             }
         }
-        fn set_block_flags(mut self, flags: u32) -> Self {
+        fn set_block_flags(mut self, flags: Flag) -> Self {
             self.block_flags = flags;
             self
         }
@@ -591,7 +591,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_bootpart_matcher() {
-        let mut mock_device = MockDevice::new().set_block_flags(BLOCK_FLAG_BOOTPART);
+        let mut mock_device = MockDevice::new().set_block_flags(Flag::BOOTPART);
 
         // Check no match when disabled in config.
         assert!(!Matchers::new(&fshost_config::Config { bootpart: false, ..default_config() })

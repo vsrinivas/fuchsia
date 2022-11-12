@@ -148,13 +148,13 @@ impl New for BlockDevice {
         };
 
         let mut flags = String::new();
-        if info.flags & fblock::Flag::READONLY.bits() != 0 {
+        if info.flags.contains(fblock::Flag::READONLY) {
             flags.push_str("RO ")
         }
-        if info.flags & fblock::Flag::REMOVABLE.bits() != 0 {
+        if info.flags.contains(fblock::Flag::REMOVABLE) {
             flags.push_str("RE ")
         }
-        if info.flags & fblock::Flag::BOOTPART.bits() != 0 {
+        if info.flags.contains(fblock::Flag::BOOTPART) {
             flags.push_str("BP ")
         }
 

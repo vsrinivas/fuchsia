@@ -649,8 +649,9 @@ class BootpartMatcher : public BlockDeviceManager::Matcher {
     if (info.is_error()) {
       return fs_management::kDiskFormatUnknown;
     }
-    return info->flags & BLOCK_FLAG_BOOTPART ? fs_management::kDiskFormatBootpart
-                                             : fs_management::kDiskFormatUnknown;
+    return info->flags & fuchsia_hardware_block::wire::Flag::kBootpart
+               ? fs_management::kDiskFormatBootpart
+               : fs_management::kDiskFormatUnknown;
   }
 };
 

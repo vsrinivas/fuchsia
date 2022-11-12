@@ -140,7 +140,7 @@ mod tests {
     use {
         super::{constants, detect_disk_format, DiskFormat},
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_hardware_block::{BlockInfo, BlockMarker, BlockRequest},
+        fidl_fuchsia_hardware_block::{BlockInfo, BlockMarker, BlockRequest, Flag},
         fuchsia_zircon as zx,
         futures::{pin_mut, select, FutureExt, TryStreamExt},
     };
@@ -163,7 +163,7 @@ mod tests {
                                     block_count: block_count,
                                     block_size: block_size as u32,
                                     max_transfer_size: 1024 * 1024,
-                                    flags: 0,
+                                    flags: Flag::empty(),
                                     reserved: 0,
                                 }),
                             )

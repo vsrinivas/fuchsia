@@ -47,7 +47,7 @@ class FileBackedBlockDevice : public block_client::BlockDevice {
   std::mutex mutex_;
   const uint64_t block_count_;
   const uint32_t block_size_;
-  const uint32_t block_info_flags_ = 0;
+  const fuchsia_hardware_block::wire::Flag block_info_flags_ = {};
   const uint32_t max_transfer_size_ = fuchsia_hardware_block::wire::kMaxTransferUnbounded;
   std::map<vmoid_t, zx::vmo> vmos_ __TA_GUARDED(mutex_);
 };

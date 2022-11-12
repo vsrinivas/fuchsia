@@ -67,7 +67,7 @@ zx_status_t FormatFilesystem(block_client::BlockDevice* device) {
     return status;
   }
 
-  if (block_info.flags & BLOCK_FLAG_READONLY) {
+  if (block_info.flags & fuchsia_hardware_block::wire::Flag::kReadonly) {
     FX_LOGS(ERROR) << "cannot format read-only device";
     return ZX_ERR_ACCESS_DENIED;
   }

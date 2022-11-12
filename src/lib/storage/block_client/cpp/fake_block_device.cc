@@ -217,7 +217,7 @@ zx_status_t FakeBlockDevice::BlockGetInfo(fuchsia_hardware_block::wire::BlockInf
   fbl::AutoLock lock(&lock_);
   out_info->block_count = block_count_;
   out_info->block_size = block_size_;
-  out_info->flags = static_cast<uint32_t>(block_info_flags_);
+  out_info->flags = block_info_flags_;
   out_info->max_transfer_size = max_transfer_size_;
   return ZX_OK;
 }

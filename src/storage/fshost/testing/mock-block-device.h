@@ -8,6 +8,7 @@
 #include <zircon/hw/gpt.h>
 
 #include <optional>
+#include <utility>
 
 #include <gtest/gtest.h>
 
@@ -50,8 +51,8 @@ class MockBlockDevice : public BlockDeviceInterface {
     };
   }
 
-  explicit MockBlockDevice(const Options& options = Options::Default())
-      : options_(options), partition_name_(options_.partition_name) {}
+  explicit MockBlockDevice(Options options = Options::Default())
+      : options_(std::move(options)), partition_name_(options_.partition_name) {}
 
   // Returns the value SetPartitionMaxSize() was called with. Will be a nullopt if uncalled.
   const std::optional<uint64_t>& max_size() const { return max_size_; }
@@ -75,7 +76,6 @@ class MockBlockDevice : public BlockDeviceInterface {
   void SetFormat(fs_management::DiskFormat format) final { format_ = format; }
   zx::result<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override {
     fuchsia_hardware_block::wire::BlockInfo info = {};
-    info.flags = 0;
     info.block_size = 512;
     info.block_count = 1024;
     return zx::ok(info);
@@ -162,7 +162,7 @@ class MockBlockVerityDevice : public MockBlockDevice {
                    .partition_name = "factory"};
   }
 
-  MockBlockVerityDevice(bool allow_authoring, const Options& options = VerityOptions())
+  explicit MockBlockVerityDevice(bool allow_authoring, const Options& options = VerityOptions())
       : MockBlockDevice(options), allow_authoring_(allow_authoring) {}
   const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const final {
     static fuchsia_hardware_block_partition::wire::Guid guid = GPT_FACTORY_TYPE_GUID;
@@ -277,7 +277,8 @@ class MockZxcryptDevice : public MockBlockDevice {
     };
   }
 
-  MockZxcryptDevice(const Options& options = ZxcryptOptions()) : MockBlockDevice(options) {}
+  explicit MockZxcryptDevice(const Options& options = ZxcryptOptions())
+      : MockBlockDevice(options) {}
 
   const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const override {
     static fuchsia_hardware_block_partition::wire::Guid guid = GUID_DATA_VALUE;
@@ -303,7 +304,8 @@ class MockMinfsDevice : public MockBlockDevice {
     };
   }
 
-  MockMinfsDevice(Options options = MinfsOptions()) : MockBlockDevice(options) {}
+  explicit MockMinfsDevice(Options options = MinfsOptions())
+      : MockBlockDevice(std::move(options)) {}
 
   const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const final {
     static fuchsia_hardware_block_partition::wire::Guid guid = GUID_DATA_VALUE;

@@ -146,13 +146,13 @@ static int cmd_list_blk() {
       info.label[0] = '\0';
     }
     char flags[20] = {0};
-    if (block_info.flags & BLOCK_FLAG_READONLY) {
+    if (block_info.flags & fuchsia_block::wire::Flag::kReadonly) {
       strlcat(flags, "RO ", sizeof(flags));
     }
-    if (block_info.flags & BLOCK_FLAG_REMOVABLE) {
+    if (block_info.flags & fuchsia_block::wire::Flag::kRemovable) {
       strlcat(flags, "RE ", sizeof(flags));
     }
-    if (block_info.flags & BLOCK_FLAG_BOOTPART) {
+    if (block_info.flags & fuchsia_block::wire::Flag::kBootpart) {
       strlcat(flags, "BP ", sizeof(flags));
     }
     printf("%-3s %4s %-16s %-20s %-6s %s\n", de->d_name, info.sizestr, type.c_str(), info.label,
@@ -281,7 +281,7 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
   // TODO(https://fxbug.dev/112484): this relies on multiplexing.
   //
   // TODO(https://fxbug.dev/113512): Remove this.
-  zx::result block = component::Clone(caller.borrow_as<fuchsia_hardware_block::Block>(),
+  zx::result block = component::Clone(caller.borrow_as<fuchsia_block::Block>(),
                                       component::AssumeProtocolComposesNode);
   if (block.is_error()) {
     fprintf(stderr, "Error cloning %s: %s\n", dev, block.status_string());

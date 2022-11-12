@@ -74,8 +74,6 @@ class MockBlockDevice : public fidl::testing::WireTestBase<fuchsia_hardware_bloc
         .block_count = kBlockCount,
         .block_size = kBlockSize,
         .max_transfer_size = kBlockSize,
-        .flags = 0,
-        .reserved = 0,
     };
     completer.Reply(ZX_OK, fidl::ObjectView<decltype(info)>::FromExternal(&info));
   }

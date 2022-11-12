@@ -541,7 +541,7 @@ pub mod test {
         super::*,
         crate::minfs::constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
         assert_matches::assert_matches,
-        fidl_fuchsia_hardware_block::{BlockInfo, MAX_TRANSFER_UNBOUNDED},
+        fidl_fuchsia_hardware_block::{BlockInfo, Flag, MAX_TRANSFER_UNBOUNDED},
         fidl_fuchsia_hardware_block_encrypted::{DeviceManagerRequest, DeviceManagerRequestStream},
         fidl_fuchsia_hardware_block_partition::Guid,
         fidl_test_identity::{
@@ -639,7 +639,7 @@ pub mod test {
                                         block_count: 1,
                                         block_size: BLOCK_SIZE as u32,
                                         max_transfer_size: MAX_TRANSFER_UNBOUNDED,
-                                        flags: 0,
+                                        flags: Flag::empty(),
                                         reserved: 0,
                                     }),
                                 )

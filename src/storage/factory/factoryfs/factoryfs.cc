@@ -114,7 +114,7 @@ zx::result<std::unique_ptr<Factoryfs>> Factoryfs::Create(async_dispatcher_t* dis
   // TODO(manalib).
   // Both generic fsck as well as generic mount open the device in read-write mode.
   // Hence we cannot return an error here. Simply flagging this inconsistency for now.
-  if ((block_info.flags & BLOCK_FLAG_READONLY) == 0) {
+  if (block_info.flags & fuchsia_hardware_block::wire::Flag::kReadonly) {
     FX_LOGS(ERROR) << "Factory partition should only be mounting as read-only.";
     // return ZX_ERR_IO;
   }

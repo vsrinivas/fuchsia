@@ -1086,7 +1086,7 @@ mod tests {
                                     block_count: 1024,
                                     block_size: 512,
                                     max_transfer_size: 1024 * 1024,
-                                    flags: 0,
+                                    flags: block::Flag::empty(),
                                     reserved: 0,
                                 };
                                 responder
