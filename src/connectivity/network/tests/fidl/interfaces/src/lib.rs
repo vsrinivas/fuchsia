@@ -203,9 +203,9 @@ async fn watcher_existing<N: Netstack>(name: &str) {
             .expect("get interface event stream"),
         &mut HashMap::new(),
         |properties_map| {
-            properties_map
+            (properties_map
                 .iter()
-                .all(
+                .filter(
                     |(
                         _,
                         fidl_fuchsia_net_interfaces_ext::Properties {
@@ -219,7 +219,9 @@ async fn watcher_existing<N: Netstack>(name: &str) {
                         },
                     )| *online,
                 )
-                .then_some(())
+                .count()
+                == expectations.len())
+            .then_some(())
         },
     )
     .await
