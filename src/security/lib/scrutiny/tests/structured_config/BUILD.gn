@@ -8,7 +8,6 @@ import("//build/assembly/update_package.gni")
 import("//build/components.gni")
 import("//build/product.gni")
 import("//build/python/python_binary.gni")
-import("//build/sdk/product_bundle.gni")
 import("//build/security/verifier/verify_structured_config.gni")
 import("//build/testing/host_test.gni")
 import("//src/sys/core/build/core.gni")
@@ -65,23 +64,6 @@ if (is_fuchsia) {
     outdir = target_out_dir + "/assembly"
     packages_json = "${outdir}/packages.json"
     images_json = "${outdir}/images.json"
-
-    blobfs = "${outdir}/blob.blk"
-    zbi = "${outdir}/assembly.zbi"
-    zbi_signed = "${outdir}/assembly.zbi.signed"
-    vbmeta = "${outdir}/assembly.vbmeta"
-    fvm = "${outdir}/fvm.blk"
-    fvm_sparse = "${outdir}/fvm.sparse.blk"
-    fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
-    fvm_fastboot = "${outdir}/fvm.fastboot.blk"
-
-    if (target_cpu == "x64") {
-      qemu_kernel = "$root_build_dir/multiboot.bin"
-    } else {
-      qemu_kernel = "$root_build_dir/qemu-boot-shim.bin"
-    }
-
-    product_bundle = target_out_dir + "/product_bundle"
   }
 
   assembled_system("assembly") {
@@ -121,47 +103,11 @@ if (is_fuchsia) {
     epoch = "1"
   }
 
-  product_bundle("product_bundle") {
-    testonly = true
-    deps = [
-      ":assembly",
-      ":partitions_config",
-      "//build/info:latest-commit-date",
-    ]
-
-    # Create lists of the files that are referenced by the assembly manifests.
-    _assembly_contents = [
-      files.blobfs,
-      files.fvm,
-      files.fvm_sparse,
-      files.fvm_blob_sparse,
-      files.qemu_kernel,
-    ]
-    if (fvm_emmc_partition_size != false || fvm_ftl_nand_block_count != false) {
-      _assembly_contents += [ files.fvm_fastboot ]
-    }
-    if (custom_signing_script != "" || use_vboot) {
-      _assembly_contents += [ files.zbi_signed ]
-    } else {
-      _assembly_contents += [ files.zbi ]
-    }
-    if (use_vbmeta) {
-      _assembly_contents += [ files.vbmeta ]
-    }
-
-    update = {
-      version_file = build_info_files.version
-      epoch = "1"
-    }
-
-    partitions = files.partitions_config
-    system_a = files.images_json
-    system_a_contents = _assembly_contents
-  }
-
   extract_assembled_structured_config("extractor") {
     testonly = true
-    product_bundle = ":product_bundle"
+    update_package_target = ":update"
+    image_assembler_target = ":assembly.image_assembler"
+    assembly_image_name = "assembly"
     output = "$target_out_dir/structured_config.json"
     deps = [ ":assembly" ]
   }
@@ -184,19 +130,26 @@ if (is_host) {
   labels = {
     extractor = ":extractor($target_toolchain)"
     image_assembler = ":assembly.image_assembler($target_toolchain)"
-    product_bundle = ":product_bundle($target_toolchain)"
     update_package = ":update($target_toolchain)"
   }
 
   files = {
     ffx = "$root_build_dir/host-tools/ffx"
 
-    product_bundle_target_out_dir =
-        get_label_info(labels.product_bundle, "target_out_dir")
-    product_bundle_target_name = get_label_info(labels.product_bundle, "name")
+    update_package_target_out_dir =
+        get_label_info(labels.update_package, "target_out_dir")
+    update_package_dir = "$update_package_target_out_dir/update"
 
-    product_bundle_dir =
-        "$product_bundle_target_out_dir/$product_bundle_target_name"
+    image_assembler_target_out_dir =
+        get_label_info(labels.image_assembler, "target_out_dir")
+    assembly_image_name = "assembly"
+    image_assembler_dir = "$image_assembler_target_out_dir/$assembly_image_name"
+
+    update_package = "$update_package_dir/update.far"
+    blobfs = [
+      "$image_assembler_dir/blob.blk",
+      "$update_package_dir/gen/update.blob.blk",
+    ]
   }
 
   python_binary("check_extracted_config_bin") {
@@ -241,7 +194,9 @@ if (is_host) {
 
   verify_assembled_structured_config("verifier_pass") {
     testonly = true
-    product_bundle = labels.product_bundle
+    update_package_target = labels.update_package
+    image_assembler_target = labels.image_assembler
+    assembly_image_name = "assembly"
     policy = "passing_policy.json5"
   }
 
@@ -251,15 +206,17 @@ if (is_host) {
 
   host_test_data("failed_policy_test_data") {
     sources = get_target_outputs(":check_failed_verifier_bin")
+    sources += files.blobfs
     sources += [
       "failing_policy.json5",
       files.ffx,
-      files.product_bundle_dir,
+      files.update_package,
     ]
     deps = [
       ":check_failed_verifier_bin",
       "//src/developer/ffx:host",
-      labels.product_bundle,
+      labels.image_assembler,
+      labels.update_package,
     ]
   }
 
@@ -278,13 +235,17 @@ if (is_host) {
       rebase_path("failing_policy.json5", root_build_dir),
       "--depfile",
       rebase_path(depfile, root_build_dir),
-      "--product-bundle",
-      rebase_path(files.product_bundle_dir, root_build_dir),
+      "--update-package",
+      rebase_path(files.update_package, root_build_dir),
       "--failed-url",
       configured_url,
       "--failed-key",
       configured_key,
+      "--blobfs",
     ]
+    foreach(blobfs, files.blobfs) {
+      args += [ rebase_path(blobfs, root_build_dir) ]
+    }
     depfile = [ depfile ]
 
     deps = [

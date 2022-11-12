@@ -5,25 +5,41 @@
 use anyhow::{Context, Error};
 use ffx_core::ffx_plugin;
 use ffx_scrutiny_structured_config_args::ScrutinyStructuredConfigCommand;
-use scrutiny_config::{ConfigBuilder, ModelConfig};
+use scrutiny_config::{Config, LoggingConfig, ModelConfig, PluginConfig, RuntimeConfig};
 use scrutiny_frontend::{command_builder::CommandBuilder, launcher};
 use scrutiny_plugins::verify::ExtractStructuredConfigResponse;
-use scrutiny_utils::path::relativize_path;
+use scrutiny_utils::path::{join_and_canonicalize, relativize_path};
 
 #[ffx_plugin()]
 pub async fn scrutiny_structured_config(cmd: ScrutinyStructuredConfigCommand) -> Result<(), Error> {
-    let ScrutinyStructuredConfigCommand { product_bundle, build_path, depfile, output } = cmd;
+    let ScrutinyStructuredConfigCommand { output, build_path, update, blobfs, depfile } = cmd;
 
-    let model = ModelConfig::from_product_bundle(product_bundle)?;
-    let command = CommandBuilder::new("verify.structured_config.extract").build();
-    let plugins = vec![
-        "CorePlugin".to_string(),
-        "DevmgrConfigPlugin".to_string(),
-        "StaticPkgsPlugin".to_string(),
-        "VerifyPlugin".to_string(),
-    ];
-    let mut config = ConfigBuilder::with_model(model).command(command).plugins(plugins).build();
-    config.runtime.logging.silent_mode = true;
+    let config = Config::run_command_with_runtime(
+        CommandBuilder::new("verify.structured_config.extract").build(),
+        RuntimeConfig {
+            model: ModelConfig {
+                update_package_path: join_and_canonicalize(&build_path, &update),
+                blobfs_paths: blobfs
+                    .iter()
+                    .map(|blobfs| join_and_canonicalize(&build_path, blobfs))
+                    .collect(),
+                build_path: build_path.clone(),
+                ..ModelConfig::minimal()
+            },
+            logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
+            // We need to list only the plugins we need or we end up with leaks from Arc cycles.
+            // TODO(https://fxbug.dev/106727) resolve Arc leak
+            plugin: PluginConfig {
+                plugins: vec![
+                    "CorePlugin".into(),
+                    "DevmgrConfigPlugin".into(),
+                    "StaticPkgsPlugin".into(),
+                    "VerifyPlugin".into(),
+                ],
+            },
+            ..RuntimeConfig::minimal()
+        },
+    );
     let scrutiny_output = launcher::launch_from_config(config).context("running scrutiny")?;
 
     let ExtractStructuredConfigResponse { components, deps } =

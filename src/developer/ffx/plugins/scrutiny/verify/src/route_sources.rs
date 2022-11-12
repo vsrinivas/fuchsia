@@ -5,9 +5,10 @@
 use {
     anyhow::{anyhow, Context, Error, Result},
     ffx_scrutiny_verify_args::route_sources::Command,
-    scrutiny_config::{ConfigBuilder, ModelConfig},
+    scrutiny_config::{Config, LoggingConfig, ModelConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_plugins::verify::{RouteSourceError, VerifyRouteSourcesResults},
+    scrutiny_utils::path::join_and_canonicalize,
     serde_json,
     std::{
         collections::{HashMap, HashSet},
@@ -17,7 +18,9 @@ use {
 };
 
 struct Query {
-    product_bundle: PathBuf,
+    build_path: PathBuf,
+    update_package_path: PathBuf,
+    blobfs_paths: Vec<PathBuf>,
     config_path: String,
     tmp_dir_path: Option<PathBuf>,
 }
@@ -32,25 +35,58 @@ impl Query {
 impl TryFrom<&Command> for Query {
     type Error = Error;
     fn try_from(cmd: &Command) -> Result<Self, Self::Error> {
-        let config_path = cmd.config.to_str().ok_or_else(|| {
+        let config_path_buf = join_and_canonicalize(&cmd.build_path, &cmd.config);
+        let config_path = config_path_buf.to_str().ok_or_else(|| {
             anyhow!(
                 "Route sources configuration file path {:?} cannot be converted to string for passing to scrutiny",
                 cmd.config
             )
         })?;
+        let update_package_path = join_and_canonicalize(&cmd.build_path, &cmd.update);
+        let blobfs_paths = cmd
+            .blobfs
+            .iter()
+            .map(|blobfs| join_and_canonicalize(&cmd.build_path, blobfs))
+            .collect();
         let config_path = config_path.to_string();
-        Ok(Query { product_bundle: cmd.product_bundle.clone(), config_path, tmp_dir_path: None })
+        Ok(Query {
+            build_path: cmd.build_path.clone(),
+            update_package_path,
+            blobfs_paths,
+            config_path,
+            tmp_dir_path: None,
+        })
     }
 }
 
 fn verify_route_sources(query: Query) -> Result<HashSet<PathBuf>> {
-    let command =
-        CommandBuilder::new("verify.route_sources").param("input", query.config_path).build();
-    let plugins = vec!["DevmgrConfigPlugin", "StaticPkgsPlugin", "CorePlugin", "VerifyPlugin"];
-    let model = ModelConfig::from_product_bundle(&query.product_bundle)?;
-    let mut config = ConfigBuilder::with_model(model).command(command).plugins(plugins).build();
-    config.runtime.logging.silent_mode = true;
-    config.runtime.model.tmp_dir_path = query.tmp_dir_path;
+    let model = ModelConfig {
+        update_package_path: query.update_package_path,
+        blobfs_paths: query.blobfs_paths,
+        build_path: query.build_path,
+        tmp_dir_path: query.tmp_dir_path,
+        ..ModelConfig::minimal()
+    };
+
+    let config = Config::run_command_with_runtime(
+        CommandBuilder::new("verify.route_sources").param("input", query.config_path).build(),
+        RuntimeConfig {
+            model,
+            logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
+            plugin: PluginConfig {
+                plugins: vec![
+                    "DevmgrConfigPlugin",
+                    "StaticPkgsPlugin",
+                    "CorePlugin",
+                    "VerifyPlugin",
+                ]
+                .into_iter()
+                .map(String::from)
+                .collect(),
+            },
+            ..RuntimeConfig::minimal()
+        },
+    );
 
     let scrutiny_output =
         launcher::launch_from_config(config).context("Failed to run verify.route_sources")?;

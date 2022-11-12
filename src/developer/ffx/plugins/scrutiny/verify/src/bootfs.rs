@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, bail, Context, Result},
     ffx_scrutiny_verify_args::bootfs::Command,
-    scrutiny_config::{ConfigBuilder, ModelConfig},
+    scrutiny_config::{Config, LoggingConfig, ModelConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_utils::{
         bootfs::BootfsPackageIndex,
@@ -38,17 +38,18 @@ pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<
         .ok_or_else(|| anyhow!("Failed to convert ZBI path to string: {:?}", cmd.zbi))?;
     deps.insert(zbi_path.clone());
 
-    let command = CommandBuilder::new("tool.zbi.list.bootfs").param("input", zbi).build();
-    // An empty model can be used, because we do not need any artifacts other than the zbi in
-    // order to list the bootfs contents.
-    let model = ModelConfig::empty();
-    let plugins = vec!["ToolkitPlugin".to_string()];
-    let mut config = ConfigBuilder::with_model(model).command(command).plugins(plugins).build();
-    config.runtime.logging.silent_mode = true;
-    if let Some(tmp_dir) = tmp_dir {
-        config.runtime.model.tmp_dir_path = Some(tmp_dir.clone());
-    }
-
+    let config = Config::run_command_with_runtime(
+        CommandBuilder::new("tool.zbi.list.bootfs").param("input", zbi).build(),
+        RuntimeConfig {
+            logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
+            plugin: PluginConfig { plugins: vec!["ToolkitPlugin".to_string()] },
+            model: match tmp_dir {
+                Some(tmp_dir) => ModelConfig::minimal().with_temporary_directory(tmp_dir.clone()),
+                None => ModelConfig::minimal(),
+            },
+            ..RuntimeConfig::minimal()
+        },
+    );
     let scrutiny_output =
         launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
 
@@ -91,18 +92,14 @@ pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<
     }
 
     // Extract the bootfs package index.
-    let command =
-        CommandBuilder::new("tool.zbi.extract.bootfs.packages").param("input", zbi).build();
-    let plugins = vec!["ToolkitPlugin".to_string()];
-    // An empty model can be used, because we do not need any artifacts other than the zbi in
-    // order to list the bootfs contents.
-    let model = ModelConfig::empty();
-    let mut config = ConfigBuilder::with_model(model).command(command).plugins(plugins).build();
-    config.runtime.logging.silent_mode = true;
-    if let Some(tmp_dir) = tmp_dir {
-        config.runtime.model.tmp_dir_path = Some(tmp_dir.clone());
-    }
-
+    let config = Config::run_command_with_runtime(
+        CommandBuilder::new("tool.zbi.extract.bootfs.packages").param("input", zbi).build(),
+        RuntimeConfig {
+            logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
+            plugin: PluginConfig { plugins: vec!["ToolkitPlugin".to_string()] },
+            ..RuntimeConfig::minimal()
+        },
+    );
     let scrutiny_output =
         launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
 

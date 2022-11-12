@@ -15,7 +15,7 @@ use {
     maplit::hashset,
     scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_utils::{
-        artifact::{ArtifactReader, FileArtifactReader},
+        artifact::{ArtifactReader, BlobFsArtifactReader},
         key_value::parse_key_value,
         package::PackageIndexContents,
         url::from_package_name_variant_path,
@@ -291,8 +291,28 @@ impl DataCollector for StaticPkgsCollector {
             return Ok(());
         }
         let devmgr_config = devmgr_config_data.devmgr_config.clone().unwrap();
-        let artifact_reader =
-            FileArtifactReader::new(&PathBuf::new(), &model_config.blobs_directory());
+        let artifact_reader = match BlobFsArtifactReader::try_compound(
+            &model_config.build_path(),
+            model_config.tmp_dir_path().as_ref(),
+            &model_config.blobfs_paths(),
+        ) {
+            Ok(artifact_reader) => artifact_reader,
+            Err(err) => {
+                model
+                    .set(StaticPkgsCollection {
+                        static_pkgs: None,
+                        deps,
+                        errors: vec![StaticPkgsError::FailedToLoadBlobfs {
+                            build_path: model_config.build_path(),
+                            blobfs_paths: model_config.blobfs_paths(),
+                            blobfs_error: err.to_string(),
+                        }],
+                    })
+                    .context("Static packages collector failed to store errors in model")?;
+                return Ok(());
+            }
+        };
+
         let data: StaticPkgsCollection =
             match collect_static_pkgs(devmgr_config, Box::new(artifact_reader)) {
                 Ok(static_pkgs_data) => {

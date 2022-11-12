@@ -6,6 +6,7 @@
 #
 # Parameters
 #
+#
 #   product_assembly_config_file (required)
 #     [path] The path to the product assembly configuration tha designates the
 #     build type.

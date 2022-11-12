@@ -12,7 +12,7 @@ use {
         model::model::DataModel,
     },
     scrutiny_utils::{
-        artifact::{ArtifactReader, FileArtifactReader},
+        artifact::{ArtifactReader, BlobFsArtifactReader},
         usage::UsageBuilder,
     },
     serde::{Deserialize, Serialize},
@@ -108,8 +108,13 @@ pub struct PackageExtractController {}
 
 impl DataController for PackageExtractController {
     fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
-        let mut artifact_reader =
-            FileArtifactReader::new(&PathBuf::new(), &model.config().blobs_directory());
+        let mut artifact_reader = BlobFsArtifactReader::try_compound(
+            &model.config().build_path(),
+            model.config().tmp_dir_path().as_ref(),
+            &model.config().blobfs_paths(),
+        )
+        .context("Failed to construct blobfs artifact reader for package extractor")?;
+
         let request: PackageExtractRequest = serde_json::from_value(query)?;
         let packages = &model.get::<Packages>()?.entries;
         for package in packages.iter() {

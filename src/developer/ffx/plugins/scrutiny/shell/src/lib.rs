@@ -6,27 +6,26 @@ use {
     anyhow::Error,
     ffx_core::ffx_plugin,
     ffx_scrutiny_shell_args::ScrutinyShellCommand,
-    scrutiny_config::{ConfigBuilder, LoggingVerbosity, ModelConfig},
+    scrutiny_config::{Config, LaunchConfig, LoggingVerbosity, RuntimeConfig},
     scrutiny_frontend::launcher,
+    std::path::PathBuf,
 };
 
 #[ffx_plugin()]
 pub async fn scrutiny_shell(cmd: ScrutinyShellCommand) -> Result<(), Error> {
-    let model = if let Some(product_bundle) = cmd.product_bundle {
-        ModelConfig::from_product_bundle(product_bundle)?
-    } else {
-        ModelConfig::empty()
+    let batch_mode = cmd.command.is_some() || cmd.script.is_some();
+
+    let mut config = match batch_mode {
+        true => Config {
+            launch: LaunchConfig { command: cmd.command, script_path: cmd.script },
+            runtime: RuntimeConfig::minimal(),
+        },
+        false => Config::default(),
     };
-    let mut config_builder = ConfigBuilder::with_model(model);
 
-    if let Some(command) = cmd.command {
-        config_builder.command(command);
+    if let Some(build_path) = cmd.build {
+        config.runtime.model.build_path = PathBuf::from(build_path);
     }
-    if let Some(script) = cmd.script {
-        config_builder.script(script);
-    }
-
-    let mut config = config_builder.build();
 
     if let Some(model_path) = cmd.model {
         config.runtime.model.uri = model_path;

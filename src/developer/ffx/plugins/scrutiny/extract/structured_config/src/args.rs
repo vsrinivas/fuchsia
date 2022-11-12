@@ -15,12 +15,15 @@ use std::path::PathBuf;
     note = "Extracts structured configuration"
 )]
 pub struct ScrutinyStructuredConfigCommand {
-    /// path to a product bundle.
-    #[argh(option)]
-    pub product_bundle: PathBuf,
-    /// path to the build directory which is used to rebase the paths in the depfile.
+    /// path to the build directory.
     #[argh(option)]
     pub build_path: PathBuf,
+    /// relative path to the update package within the build directory.
+    #[argh(option)]
+    pub update: PathBuf,
+    /// build_path-relative paths to blobfs images.
+    #[argh(option)]
+    pub blobfs: Vec<PathBuf>,
     /// path to a depfile that should be written for build integration
     #[argh(option)]
     pub depfile: PathBuf,

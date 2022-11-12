@@ -32,7 +32,7 @@ pub fn open_update_package<P: AsRef<Path>>(
     let mut update_package_file = File::open(update_package_path).with_context(|| {
         format!("Failed to open update package meta.far at {:?}", update_package_path)
     })?;
-    let update_package_hash = MerkleTree::from_reader(&mut update_package_file)
+    let update_package_merkle = MerkleTree::from_reader(&mut update_package_file)
         .with_context(|| {
             format!(
                 "Failed to compute merkle root of update package meta.far at {:?}",
@@ -41,7 +41,7 @@ pub fn open_update_package<P: AsRef<Path>>(
         })?
         .root()
         .to_string();
-    let far = artifact_reader.open(&Path::new(&update_package_hash)).with_context(|| {
+    let far = artifact_reader.open(&Path::new(&update_package_merkle)).with_context(|| {
         format!(
             "Failed to open update package meta.far at {:?} from artifact archives",
             update_package_path
@@ -50,7 +50,7 @@ pub fn open_update_package<P: AsRef<Path>>(
     Utf8Reader::new(far).with_context(|| {
         format!(
             "Failed to initialize far reader for update package at {:?} with merkle root {}",
-            update_package_path, update_package_hash
+            update_package_path, update_package_merkle
         )
     })
 }

@@ -33,15 +33,11 @@ import("//build/security/verifier/verify_structured_config.gni")
 #
 # Basic parameters
 #
-#   product_bundle (required)
-#     [label] The label of a product_bundle target.
-#
-#   zbi (required)
-#     [label] The path to a ZBI that contains the kernel cmdline and bootfs files.
-#     TODO: Scrutiny should be updated to pull the ZBI from the product bundle.
-#
 #   assembly_image_name (required)
 #     [string] The image name used to assemble the system.
+#
+#   update_package_target (required)
+#     [string] The label of the update package target for the assembled system.
 #
 #   product_assembly_config_file (required)
 #     [string] The product assembly configuration file for the assembled system.
@@ -93,12 +89,10 @@ import("//build/security/verifier/verify_structured_config.gni")
 #   testonly (optional)
 #     Usual GN meaning.
 template("scrutiny_verifiers") {
-  assert(defined(invoker.product_bundle),
-         "product_bundle is required for scrutiny_verifiers()")
-  assert(defined(invoker.zbi), "zbi is required for scrutiny_verifiers()")
-
   assert(defined(invoker.assembly_image_name),
          "assembly_image_name is required for scrutiny_verifiers()")
+  assert(defined(invoker.update_package_target),
+         "update_package_target is required for scrutiny_verifiers()")
 
   assert(defined(invoker.product_assembly_config_file),
          "product_assembly_config_file is required for scrutiny_verifiers()")
@@ -134,8 +128,8 @@ template("scrutiny_verifiers") {
   # only a product bundle.
   not_needed(invoker,
              [
-               "assembly_image_name",
-               "update_package_target",
+               "product_bundle",
+               "zbi",
              ])
   verifiers = []
 
@@ -168,7 +162,10 @@ template("scrutiny_verifiers") {
                                  "testonly",
                                  "visiblity",
                                ])
-        zbi = invoker.zbi
+        assembly_image_name = invoker.assembly_image_name
+        zbi_is_signed = sign_zbi
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
         goldens = invoker.zbi_bootfs_filelist_goldens
         golden_packages = invoker.zbi_bootfs_packages_goldens
       }
@@ -184,16 +181,13 @@ template("scrutiny_verifiers") {
                                  "testonly",
                                  "visiblity",
                                ])
-        zbi = invoker.zbi
+        assembly_image_name = invoker.assembly_image_name
+        zbi_is_signed = sign_zbi
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
         goldens = invoker.zbi_kernel_cmdline_goldens
       }
       verifiers += [ ":${invoker.assembly_image_name}_verify_kernel_cmdline" ]
-    }
-
-    if (invoker.zbi_bootfs_filelist_goldens == [] &&
-        invoker.zbi_bootfs_packages_goldens == [] &&
-        invoker.zbi_kernel_cmdline_goldens == []) {
-      not_needed(invoker, [ "zbi" ])
     }
 
     if (invoker.route_sources_config != "") {
@@ -204,7 +198,10 @@ template("scrutiny_verifiers") {
                                  "testonly",
                                  "visiblity",
                                ])
-        product_bundle = invoker.product_bundle
+        assembly_image_name = invoker.assembly_image_name
+        update_package_target = invoker.update_package_target
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
         config_path = invoker.route_sources_config
       }
       verifiers += [ ":${invoker.assembly_image_name}_verify_route_sources" ]
@@ -218,7 +215,10 @@ template("scrutiny_verifiers") {
                                  "testonly",
                                  "visiblity",
                                ])
-        product_bundle = invoker.product_bundle
+        assembly_image_name = invoker.assembly_image_name
+        update_package_target = invoker.update_package_target
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
         allowlist = invoker.verify_component_resolvers_allowlist
       }
       verifiers +=
@@ -234,7 +234,10 @@ template("scrutiny_verifiers") {
                                  "testonly",
                                  "visiblity",
                                ])
-        product_bundle = invoker.product_bundle
+        assembly_image_name = invoker.assembly_image_name
+        update_package_target = invoker.update_package_target
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
         allowlist = []
         if (invoker.verify_routes_exceptions_allowlist != "") {
           allowlist += [ invoker.verify_routes_exceptions_allowlist ]
@@ -262,7 +265,10 @@ template("scrutiny_verifiers") {
                                  "testonly",
                                  "visiblity",
                                ])
-        product_bundle = invoker.product_bundle
+        assembly_image_name = invoker.assembly_image_name
+        update_package_target = invoker.update_package_target
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
         goldens = invoker.static_pkgs_goldens
       }
       verifiers += [ ":${invoker.assembly_image_name}_verify_static_pkgs" ]
@@ -276,7 +282,10 @@ template("scrutiny_verifiers") {
                                  "testonly",
                                  "visiblity",
                                ])
-        product_bundle = invoker.product_bundle
+        update_package_target = invoker.update_package_target
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
+        assembly_image_name = invoker.assembly_image_name
         policy = invoker.structured_config_policy
       }
       verifiers += [
@@ -291,7 +300,9 @@ template("scrutiny_verifiers") {
                                "testonly",
                                "visiblity",
                              ])
-      product_bundle = invoker.product_bundle
+      update_package_target = invoker.update_package_target
+      image_assembler_target = ":${invoker.assembly_image_name}.image_assembler"
+      assembly_image_name = invoker.assembly_image_name
       output = "$target_out_dir/${invoker.assembly_image_name}.structured_config.json"
     }
     verifiers += [
@@ -300,11 +311,10 @@ template("scrutiny_verifiers") {
   } else {
     not_needed(invoker,
                [
-                 "product_bundle",
-                 "zbi",
                  "route_sources_config",
                  "static_pkgs_goldens",
                  "structured_config_policy",
+                 "update_package_target",
                  "verify_component_resolvers_allowlist",
                  "verify_routes_component_tree_config",
                  "verify_routes_exceptions_allowlist",
@@ -319,13 +329,9 @@ template("scrutiny_verifiers") {
   group(target_name) {
     forward_variables_from(invoker,
                            [
-                             "deps",
                              "testonly",
                              "visibility",
                            ])
-    if (!defined(deps)) {
-      deps = []
-    }
-    deps += verifiers
+    deps = verifiers
   }
 }

@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, bail, Context, Result},
     ffx_scrutiny_verify_args::kernel_cmdline::Command,
-    scrutiny_config::{ConfigBuilder, ModelConfig},
+    scrutiny_config::{Config, LoggingConfig, ModelConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_utils::golden::{CompareResult, GoldenFile},
     serde_json,
@@ -40,15 +40,20 @@ fn verify_kernel_cmdline<P: AsRef<Path>>(query: &Query, golden_path: P) -> Resul
             query.zbi_path
         )
     })?;
-    let command = CommandBuilder::new("tool.zbi.extract.cmdline").param("input", zbi_path).build();
-    let plugins = vec!["ToolkitPlugin".to_string()];
-    // An empty model can be used, because we do not need any artifacts other than the zbi in
-    // order to get the kernel cmdline.
-    let model = ModelConfig::empty();
-    let mut config = ConfigBuilder::with_model(model).command(command).plugins(plugins).build();
-    config.runtime.logging.silent_mode = true;
-    config.runtime.model.tmp_dir_path = query.tmp_dir_path.clone();
-
+    let config = Config::run_command_with_runtime(
+        CommandBuilder::new("tool.zbi.extract.cmdline").param("input", zbi_path).build(),
+        RuntimeConfig {
+            logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
+            plugin: PluginConfig { plugins: vec!["ToolkitPlugin".to_string()] },
+            model: match &query.tmp_dir_path {
+                Some(tmp_dir_path) => {
+                    ModelConfig::minimal().with_temporary_directory(tmp_dir_path.clone())
+                }
+                None => ModelConfig::minimal(),
+            },
+            ..RuntimeConfig::minimal()
+        },
+    );
     let scrutiny_output =
         launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
 

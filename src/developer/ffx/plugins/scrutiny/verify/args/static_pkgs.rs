@@ -16,13 +16,21 @@ use {
     example = "To verify static packages on your current build:
 
         $ ffx scrutiny verify static-pkgs \
-            --product-bundle $(fx get-build-dir)/obj/build/images/fuchsia/product_bundle \
+            --build-path $(fx get-build-dir) \
+            --blobfs-manifest path/to/blob.manifest \
             --golden path/to/golden"
 )]
 pub struct Command {
-    /// path to a product bundle.
+    /// path to root output directory of build.
     #[argh(option)]
-    pub product_bundle: PathBuf,
+    pub build_path: PathBuf,
+    /// path to fuchsia update package.
+    #[argh(option)]
+    pub update: PathBuf,
+    /// path to one or more blobfs archives that contain fuchsia packages and
+    /// their packages.
+    #[argh(option)]
+    pub blobfs: Vec<PathBuf>,
     /// path(s) to golden file(s) used to verify routes.
     #[argh(option)]
     pub golden: Vec<PathBuf>,

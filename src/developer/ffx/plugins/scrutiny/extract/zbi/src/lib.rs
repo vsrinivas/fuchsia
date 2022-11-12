@@ -6,20 +6,24 @@ use {
     anyhow::Error,
     ffx_core::ffx_plugin,
     ffx_scrutiny_zbi_args::ScrutinyZbiCommand,
-    scrutiny_config::{ConfigBuilder, ModelConfig},
+    scrutiny_config::{Config, LaunchConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
 };
 
 #[ffx_plugin()]
 pub async fn scrutiny_zbi(cmd: ScrutinyZbiCommand) -> Result<(), Error> {
-    // An empty model can be used, because we do not need any artifacts other than the zbi in
-    // order to complete the extraction.
-    let model = ModelConfig::empty();
-    let command = CommandBuilder::new("tool.zbi.extract")
-        .param("input", cmd.input)
-        .param("output", cmd.output)
-        .build();
-    let config = ConfigBuilder::with_model(model).command(command).build();
+    let config = Config {
+        launch: LaunchConfig {
+            command: Some(
+                CommandBuilder::new("tool.zbi.extract")
+                    .param("input", cmd.input)
+                    .param("output", cmd.output)
+                    .build(),
+            ),
+            script_path: None,
+        },
+        runtime: RuntimeConfig::minimal(),
+    };
     launcher::launch_from_config(config)?;
 
     Ok(())

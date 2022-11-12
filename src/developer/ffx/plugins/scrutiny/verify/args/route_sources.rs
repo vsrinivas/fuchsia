@@ -16,15 +16,25 @@ use {
     example = r#"To verify route sources according to a configuration file on your current build:
 
     $ ffx scrutiny verify route-sources
-        --product-bundle $(fx get-build-dir)/obj/build/images/fuchsia/product_bundle \
+        --build-path $(fx get-build-dir) \
+        --update obj/build/images/fuchsia/update/update.far \
+        --blobfs obj/build/images/fuchsia/fuchsia/blob.blk \
+        --blobfs obj/build/images/fuchsia/update/gen/update.blob.blk \
         --config path/to/verify_route_sources/product.board.json5"#
 )]
 pub struct Command {
-    /// absolute or working directory-relative path to a product bundle.
+    /// absolute or working directory-relative path to root output directory of build.
     #[argh(option)]
-    pub product_bundle: PathBuf,
-    /// absolute or working directory-relative path to configuration file that specifies components
-    /// and their expected route sources.
+    pub build_path: PathBuf,
+    /// absolute or build path-relative path to fuchsia update package.
+    #[argh(option)]
+    pub update: PathBuf,
+    /// absolute or build path-relative path to one or more blobfs archives that contain fuchsia
+    /// packages and their packages.
+    #[argh(option)]
+    pub blobfs: Vec<PathBuf>,
+    /// absolute or build path-relative path to configuration file that specifies components and
+    /// their expected route sources.
     #[argh(option)]
     pub config: PathBuf,
 }

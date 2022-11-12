@@ -14,12 +14,11 @@ use std::path::PathBuf;
     description = "Lists all the packages in the build",
     example = "To list all the packages in the build:
 
-        $ffx scrutiny list packages \
-            --product-bundle $(fx get-build-dir)/obj/build/images/fuchsia/product_bundle",
+        $ffx scrutiny list packages",
     note = "Lists all the packages in the build in a json format."
 )]
 pub struct ScrutinyPackagesCommand {
-    /// path to a product bundle.
+    /// path to the build directory.
     #[argh(option)]
-    pub product_bundle: PathBuf,
+    pub build_path: PathBuf,
 }

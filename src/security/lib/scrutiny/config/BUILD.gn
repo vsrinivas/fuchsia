@@ -11,11 +11,8 @@ if (is_host) {
     with_unit_tests = true
     edition = "2021"
     deps = [
-      "//build/sdk/meta:rust",
       "//src/lib/fuchsia-url",
       "//src/security/lib/scrutiny/utils",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:camino",
       "//third_party/rust_crates:serde",
     ]
     non_rust_deps = [ "//src/lib/chunked-compression" ]

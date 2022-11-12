@@ -17,7 +17,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 To run commands directly:
 
     $ ffx scrutiny shell components
-    $ ffx scrutiny shell \"search.packages --files fdio --product-bundle <path>\"
+    $ ffx scrutiny shell \"search.packages --files fdio\"
     ",
     note = "Launches an interactive scrutiny shell where scrutiny specific
 commands can be run. This will also launch a server on port 127.0.0.1:8080
@@ -29,8 +29,8 @@ integrate Scrutiny as part of a wider script check out the --script option."
 pub struct ScrutinyShellCommand {
     #[argh(positional)]
     pub command: Option<String>,
-    #[argh(option, description = "path to the product bundle")]
-    pub product_bundle: Option<String>,
+    #[argh(option, description = "set a custom path to the build directory", short = 'b')]
+    pub build: Option<String>,
     #[argh(option, description = "run a file as a scrutiny script", short = 's')]
     pub script: Option<String>,
     #[argh(option, description = "set a custom path to the data model", short = 'm')]

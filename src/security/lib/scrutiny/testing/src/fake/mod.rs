@@ -16,11 +16,12 @@ use {
 pub fn fake_model_config() -> ModelConfig {
     let dir_path = tempdir().unwrap().into_path();
     let update_package_path = dir_path.join("update.far");
-    let blobs_directory = dir_path.join("blobs");
+    let blobfs_paths = vec![dir_path.join("blob.blk"), dir_path.join("update.blob.blk")];
     ModelConfig {
         uri: "{memory}".to_string(),
+        build_path: dir_path.clone(),
         update_package_path,
-        blobs_directory,
+        blobfs_paths,
         config_data_package_url: AbsolutePackageUrl::Unpinned(UnpinnedAbsolutePackageUrl::new(
             TEST_REPO_URL.clone(),
             PackageName::from_str("config-data").unwrap(),
@@ -29,7 +30,6 @@ pub fn fake_model_config() -> ModelConfig {
         devmgr_config_path: "config/devmgr".into(),
         component_tree_config_path: None,
         tmp_dir_path: None,
-        is_empty: false,
     }
 }
 
