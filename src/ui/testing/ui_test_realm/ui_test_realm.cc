@@ -19,6 +19,7 @@
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/observation/scope/cpp/fidl.h>
 #include <fuchsia/ui/observation/test/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/configuration/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
@@ -154,10 +155,14 @@ std::vector<std::string> ScenicServices(const UITestRealm::Config& config) {
     // UITestRealm::Config to control whether we expose internal-only APIs to
     // the client subrealm.
     return {fuchsia::ui::observation::test::Registry::Name_,
-            fuchsia::ui::composition::Allocator::Name_, fuchsia::ui::composition::Flatland::Name_,
-            fuchsia::ui::composition::FlatlandDisplay::Name_, fuchsia::ui::scenic::Scenic::Name_};
+            fuchsia::ui::observation::scope::Registry::Name_,
+            fuchsia::ui::composition::Allocator::Name_,
+            fuchsia::ui::composition::Flatland::Name_,
+            fuchsia::ui::composition::FlatlandDisplay::Name_,
+            fuchsia::ui::scenic::Scenic::Name_};
   } else {
     return {fuchsia::ui::observation::test::Registry::Name_,
+            fuchsia::ui::observation::scope::Registry::Name_,
             fuchsia::ui::focus::FocusChainListenerRegistry::Name_,
             fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::views::ViewRefInstalled::Name_};
   }
@@ -353,7 +358,8 @@ void UITestRealm::ConfigureAccessibility() {
   RouteServices({fuchsia::logger::LogSink::Name_},
                 /* source = */ ParentRef(),
                 /* targets = */ {ChildRef{kA11yManagerName}});
-  RouteServices({fuchsia::ui::composition::Flatland::Name_, fuchsia::ui::scenic::Scenic::Name_},
+  RouteServices({fuchsia::ui::composition::Flatland::Name_, fuchsia::ui::scenic::Scenic::Name_,
+                 fuchsia::ui::observation::scope::Registry::Name_},
                 /* source = */ ChildRef{kScenicName},
                 /* targets = */ {ChildRef{kA11yManagerName}});
   RouteServices({fuchsia::accessibility::semantics::SemanticsManager::Name_,

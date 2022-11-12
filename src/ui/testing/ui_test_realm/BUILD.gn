@@ -31,6 +31,7 @@ source_set("ui_test_realm") {
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
     "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_hlcpp",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_hlcpp",
+    "//sdk/fidl/fuchsia.ui.observation.scope:fuchsia.ui.observation.scope_hlcpp",
     "//sdk/fidl/fuchsia.ui.observation.test:fuchsia.ui.observation.test_hlcpp",
     "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_hlcpp",
     "//sdk/fidl/fuchsia.ui.pointerinjector.configuration:fuchsia.ui.pointerinjector.configuration_hlcpp",
