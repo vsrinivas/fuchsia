@@ -262,17 +262,14 @@ zx_status_t Vim3::UsbInit() {
   }
 
   // Create DWC2 Device
-  UsbConfig* config = nullptr;
-  size_t config_size = 0;
-  usb::UsbPeripheralConfig peripheral_config(parent_);
-  status = peripheral_config.GetUsbConfigFromBootArgs(&config, &config_size);
+  std::unique_ptr<usb::UsbPeripheralConfig> peripheral_config;
+  status = usb::UsbPeripheralConfig::CreateFromBootArgs(parent_, &peripheral_config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to get usb config from boot args - %d", status);
     return status;
   }
 
-  dwc2_dev.metadata().value()[0].data().emplace(std::vector<uint8_t>(
-      reinterpret_cast<uint8_t*>(config), reinterpret_cast<uint8_t*>(config) + config_size));
+  dwc2_dev.metadata().value()[0].data().emplace(peripheral_config->config_data());
 
   result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
       fidl::ToWire(fidl_arena, dwc2_dev),

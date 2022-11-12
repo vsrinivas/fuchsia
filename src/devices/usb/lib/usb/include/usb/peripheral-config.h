@@ -9,6 +9,7 @@
 #include <lib/ddk/device.h>
 
 #include <cstdint>
+#include <vector>
 
 #include <ddk/usb-peripheral-config.h>
 #include <usb/cdc.h>
@@ -63,23 +64,45 @@ constexpr peripheral::wire::FunctionDescriptor kTestFunctionDescriptor = {
 // `driver.usb.peripheral` string to compose different functionality.
 class UsbPeripheralConfig {
  public:
-  explicit UsbPeripheralConfig(zx_device_t* platform_bus) : platform_bus_(platform_bus) {}
+  UsbPeripheralConfig() = default;
+  // Disable copy construction / assignment.
+  // This is because |config_| needs to be freed explicitly.
+  UsbPeripheralConfig(const UsbPeripheralConfig&) = delete;
+  UsbPeripheralConfig& operator=(const UsbPeripheralConfig&) = delete;
 
-  // Parse `driver.usb.peripheral` and setup the config for requested functions, or return CDC
-  // Ethernet function config.
-  zx_status_t GetUsbConfigFromBootArgs(UsbConfig** out, size_t* out_size);
+  ~UsbPeripheralConfig() {
+    if (config_) {
+      free(config_);
+    }
+  }
+  // Create instance by parsing `driver.usb.peripheral` and setup the config for requested
+  // functions, or return CDC Ethernet function config.
+  static zx_status_t CreateFromBootArgs(zx_device_t* platform_bus,
+                                        std::unique_ptr<UsbPeripheralConfig>* out_config);
+
+  const UsbConfig* config() const { return config_; }
+  size_t config_size() const { return config_size_; }
+  std::vector<uint8_t> config_data() const {
+    return std::vector<uint8_t>(reinterpret_cast<uint8_t*>(config_),
+                                reinterpret_cast<uint8_t*>(config_) + config_size_);
+  }
 
  private:
   // Helper class to parse boot args. The expected format for `driver.usb.peripheral` values is
   // either a single function name like `cdc` or concatenation of multiple functions with underscore
   // like `cdc_test`.
-  zx_status_t ParseBootArgs();
+  zx_status_t ParseBootArgs(zx_device_t* platform_bus);
 
   // Helper function for determining the pid and product description.
   zx_status_t SetCompositeProductDescription(uint16_t pid);
 
-  // Platform bus handle to query bootargs.
-  zx_device_t* platform_bus_;
+  // Helper function to allocate |config_| as per alignment requirements.
+  zx_status_t AllocateConfig();
+
+  // USB Config structure.
+  UsbConfig* config_ = nullptr;
+  size_t config_size_ = 0;
+
   uint16_t pid_ = 0;
   std::string product_desc_;
   std::vector<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor> function_configs_;

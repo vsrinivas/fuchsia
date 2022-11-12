@@ -267,6 +267,7 @@ fuchsia_driver("buckeye-driver") {
     "//src/devices/usb/lib/usb",
     "//src/devices/usb/lib/usb:cdc",
     "//src/devices/usb/lib/usb:peripheral",
+    "//src/devices/usb/lib/usb:peripheral-config",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//zircon/system/ulib/fbl",

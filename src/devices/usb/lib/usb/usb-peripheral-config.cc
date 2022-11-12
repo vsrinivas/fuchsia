@@ -7,49 +7,32 @@
 #include <zircon/errors.h>
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
 #include <usb/peripheral-config.h>
 #include <usb/peripheral.h>
 
+#include "lib/ddk/driver.h"
+
 namespace usb {
 
-zx_status_t UsbPeripheralConfig::GetUsbConfigFromBootArgs(UsbConfig **out, size_t *out_size) {
-  zx_status_t status = ParseBootArgs();
-  if (status != ZX_OK || function_configs_.size() == 0) {
+zx_status_t UsbPeripheralConfig::CreateFromBootArgs(
+    zx_device_t *platform_bus, std::unique_ptr<UsbPeripheralConfig> *out_config) {
+  auto peripheral_config = std::make_unique<UsbPeripheralConfig>();
+  zx_status_t status = peripheral_config->ParseBootArgs(platform_bus);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to get Usb peripheral config from bootargs: %d", status);
     return status;
   }
-
-  constexpr size_t alignment = alignof(UsbConfig) > __STDCPP_DEFAULT_NEW_ALIGNMENT__
-                                   ? alignof(UsbConfig)
-                                   : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-  size_t config_size =
-      sizeof(UsbConfig) +
-      function_configs_.size() * sizeof(fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor);
-
-  UsbConfig *config =
-      reinterpret_cast<UsbConfig *>(aligned_alloc(alignment, ZX_ROUNDUP(config_size, alignment)));
-  if (!config) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  config->vid = GOOGLE_USB_VID;
-  config->pid = pid_;
-  std::strncpy(config->manufacturer, kManufacturer, sizeof(kManufacturer));
-  std::strncpy(config->serial, kSerial, sizeof(kSerial));
-  std::strncpy(config->product, product_desc_.c_str(), product_desc_.size());
-  for (uint32_t idx = 0; idx < function_configs_.size(); idx++) {
-    config->functions[idx] = function_configs_[idx];
-  }
-
-  *out = config;
-  *out_size = config_size;
+  *out_config = std::move(peripheral_config);
   return ZX_OK;
 }
 
-zx_status_t UsbPeripheralConfig::ParseBootArgs() {
+zx_status_t UsbPeripheralConfig::ParseBootArgs(zx_device_t *platform_bus) {
   char bootarg[32];
-  zx_status_t status = device_get_variable(platform_bus_, "driver.usb.peripheral", bootarg,
-                                           sizeof(bootarg), nullptr);
+  zx_status_t status =
+      device_get_variable(platform_bus, "driver.usb.peripheral", bootarg, sizeof(bootarg), nullptr);
   if (status == ZX_ERR_NOT_FOUND) {
     // No bootargs set for usb peripheral config. Use cdc function as default.
     std::strcpy(bootarg, "cdc");
@@ -94,7 +77,48 @@ zx_status_t UsbPeripheralConfig::ParseBootArgs() {
       break;
     }
   }
-  return status;
+
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (function_configs_.empty()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (status = AllocateConfig(); status != ZX_OK) {
+    return status;
+  }
+
+  config_->vid = GOOGLE_USB_VID;
+  config_->pid = pid_;
+  std::strncpy(config_->manufacturer, kManufacturer, sizeof(kManufacturer));
+  std::strncpy(config_->serial, kSerial, sizeof(kSerial));
+  std::strncpy(config_->product, product_desc_.c_str(), product_desc_.size());
+  for (uint32_t idx = 0; idx < function_configs_.size(); idx++) {
+    config_->functions[idx] = function_configs_[idx];
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t UsbPeripheralConfig::AllocateConfig() {
+  if (config_) {
+    return ZX_ERR_ALREADY_EXISTS;
+  }
+  constexpr size_t alignment = alignof(UsbConfig) > __STDCPP_DEFAULT_NEW_ALIGNMENT__
+                                   ? alignof(UsbConfig)
+                                   : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+  config_size_ =
+      sizeof(UsbConfig) +
+      function_configs_.size() * sizeof(fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor);
+
+  config_ =
+      reinterpret_cast<UsbConfig *>(aligned_alloc(alignment, ZX_ROUNDUP(config_size_, alignment)));
+  if (!config_) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  return ZX_OK;
 }
 
 zx_status_t UsbPeripheralConfig::SetCompositeProductDescription(uint16_t pid) {
