@@ -70,6 +70,9 @@ class AdbShellImpl : public fidl::WireAsyncEventHandler<fuchsia_dash::Launcher> 
   void OnTerminated(fidl::WireEvent<fuchsia_dash::Launcher::OnTerminated>* event) override;
 
  private:
+  // Resolve component moniker so that it is in the right state to shell into it.
+  zx_status_t ResolveMoniker(std::string moniker);
+
   fit::callback<void(AdbShellImpl*)> on_dead_ = [](auto adb_shell) {};
 
   fidl::UnownedClientEnd<fuchsia_io::Directory> svc_;

@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.dash/cpp/wire_test_base.h>
 #include <fidl/fuchsia.hardware.adb/cpp/wire_test_base.h>
+#include <fidl/fuchsia.sys2/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
@@ -62,6 +63,34 @@ class FakeDashLauncher : public fidl::testing::WireTestBase<fuchsia_dash::Launch
   zx::socket socket_;
 };
 
+class FakeLifecycleController
+    : public fidl::testing::WireTestBase<fuchsia_sys2::LifecycleController> {
+ public:
+  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) override {
+    FX_LOGS(ERROR) << "Not implemented " << name;
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Resolve(::fuchsia_sys2::wire::LifecycleControllerResolveRequest* request,
+               ResolveCompleter::Sync& completer) override {
+    moniker_ = request->moniker.get();
+    completer.ReplySuccess();
+  }
+
+  void BindServer(async_dispatcher_t* dispatcher,
+                  fidl::ServerEnd<fuchsia_sys2::LifecycleController> server_end) {
+    binding_refs_.emplace_back(fidl::BindServer(dispatcher, std::move(server_end), this));
+  }
+
+  std::string moniker() { return moniker_; }
+
+ private:
+  // Lifecycle controller server bindings.
+  std::vector<fidl::ServerBindingRef<fuchsia_sys2::LifecycleController>> binding_refs_;
+  // Moniker string passed in the latest request if any.
+  std::string moniker_;
+};
+
 class AdbShellTest : public zxtest::Test {
  public:
   AdbShellTest()
@@ -75,13 +104,13 @@ class AdbShellTest : public zxtest::Test {
         component::OutgoingDirectory::Create(svc_loop_.dispatcher()));
     auto svc_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ASSERT_TRUE(svc_endpoints.is_ok());
-    SetupIncomingDashService(std::move(svc_endpoints->server));
+    SetupIncomingServices(std::move(svc_endpoints->server));
     adb_ = std::make_unique<adb_shell::AdbShell>(
         std::move(svc_endpoints->client), shell_loop_.dispatcher(), adb_shell_config::Config());
     ASSERT_NO_FAILURES();
   }
 
-  void SetupIncomingDashService(fidl::ServerEnd<fuchsia_io::Directory> svc) {
+  void SetupIncomingServices(fidl::ServerEnd<fuchsia_io::Directory> svc) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ASSERT_EQ(ZX_OK, endpoints.status_value());
     ASSERT_EQ(ZX_OK, incoming_
@@ -90,6 +119,15 @@ class AdbShellTest : public zxtest::Test {
                                  fidl::ServerEnd<fuchsia_dash::Launcher> server_end) {
                                fake_dash_launcher_.BindServer(dispatcher, std::move(server_end));
                              })
+                         .status_value());
+    ASSERT_EQ(ZX_OK, incoming_
+                         ->AddProtocol<fuchsia_sys2::LifecycleController>(
+                             [&, dispatcher = svc_loop_.dispatcher()](
+                                 fidl::ServerEnd<fuchsia_sys2::LifecycleController> server_end) {
+                               fake_lifecycle_controller_.BindServer(dispatcher,
+                                                                     std::move(server_end));
+                             },
+                             "fuchsia.sys2.LifecycleController.root")
                          .status_value());
     ASSERT_EQ(ZX_OK, incoming_->Serve(std::move(endpoints->server)).status_value());
     ASSERT_OK(fidl::WireCall(endpoints->client)
@@ -101,6 +139,7 @@ class AdbShellTest : public zxtest::Test {
  protected:
   std::unique_ptr<AdbShell> adb_;
   FakeDashLauncher fake_dash_launcher_;
+  FakeLifecycleController fake_lifecycle_controller_;
   std::unique_ptr<component::OutgoingDirectory> incoming_;
   async::Loop svc_loop_;
   async::Loop shell_loop_;
@@ -112,6 +151,7 @@ TEST_F(AdbShellTest, LaunchShell) {
   ASSERT_OK(adb_->AddShell({}, std::move(endpoint0)));
   EXPECT_TRUE(fake_dash_launcher_.socket()->is_valid());
   EXPECT_EQ(fake_dash_launcher_.command(), "");
+  EXPECT_EQ(fake_lifecycle_controller_.moniker(), "");
   EXPECT_EQ(1, adb_->ActiveShellInstances());
   EXPECT_OK(fake_dash_launcher_.SendOnTerminateEvent());
   // Wait for the OnTerminate event to take effect.

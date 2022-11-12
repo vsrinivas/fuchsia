@@ -12,6 +12,7 @@ group("common") {
     "//sdk/fidl/fuchsia.dash:fuchsia.dash_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.adb:fuchsia.hardware.adb_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_cpp_wire",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

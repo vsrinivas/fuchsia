@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.dash/cpp/wire.h>
 #include <fidl/fuchsia.hardware.adb/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.sys2/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
@@ -60,9 +61,38 @@ void AdbShell::RemoveShell(AdbShellImpl* impl) {
   }
 }
 
+zx_status_t AdbShellImpl::ResolveMoniker(std::string moniker) {
+  auto client_end = component::ConnectAt<fuchsia_sys2::LifecycleController>(
+      svc_, "fuchsia.sys2.LifecycleController.root");
+  if (client_end.is_error()) {
+    FX_LOGS(ERROR) << "Could not connect to dash launcher " << client_end.status_string();
+    return client_end.status_value();
+  }
+
+  fidl::WireSyncClient<fuchsia_sys2::LifecycleController> lifecycle_controller(
+      std::move(*client_end));
+  auto result = lifecycle_controller->Resolve(fidl::StringView::FromExternal(moniker));
+  if (!result.ok()) {
+    FX_LOGS(ERROR) << "FIDL call to resolve moniker failed" << result.status();
+    return result.status();
+  }
+  if (result->is_error()) {
+    FX_LOGS(ERROR) << "Could not resolve moniker "
+                   << static_cast<uint32_t>(result.value().error_value());
+    return static_cast<zx_status_t>(result->error_value());
+  }
+  return ZX_OK;
+}
+
 zx_status_t AdbShellImpl::Start(zx::socket shell_server, std::string moniker,
                                 std::optional<std::string> args,
                                 fit::callback<void(AdbShellImpl*)> on_dead) {
+  auto resolve_result = ResolveMoniker(moniker);
+  if (resolve_result != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to resolve moniker " << moniker;
+    return resolve_result;
+  }
+
   on_dead_ = std::move(on_dead);
 
   auto client_end = component::ConnectAt<fuchsia_dash::Launcher>(svc_);
@@ -83,7 +113,18 @@ zx_status_t AdbShellImpl::Start(zx::socket shell_server, std::string moniker,
       fidl::StringView::FromExternal(moniker), std::move(shell_server), {}, cmd,
       fuchsia_dash::DashNamespaceLayout::kInstanceNamespaceIsRoot);
 
-  return result.status();
+  if (!result.ok()) {
+    FX_LOGS(ERROR) << "FIDL call to LaunchWithSocket failed" << result.status();
+    return result.status();
+  }
+
+  if (result->is_error()) {
+    FX_LOGS(ERROR) << "LaunchWithSocket failed "
+                   << static_cast<uint32_t>(result.value().error_value());
+    return static_cast<zx_status_t>(result->error_value());
+  }
+
+  return ZX_OK;
 }
 
 void AdbShellImpl::OnTerminated(fidl::WireEvent<fuchsia_dash::Launcher::OnTerminated>* event) {

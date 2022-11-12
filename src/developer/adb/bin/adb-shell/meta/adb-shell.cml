@@ -12,7 +12,10 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.dash.Launcher" ],
+            protocol: [
+                "fuchsia.dash.Launcher",
+                "fuchsia.sys2.LifecycleController.root",
+            ],
         },
     ],
     expose: [

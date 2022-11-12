@@ -8,5 +8,10 @@
             from: "#debug-dash-launcher",
             to: "#adb-services",
         },
+        {
+            protocol: [ "fuchsia.sys2.LifecycleController.root" ],
+            from: "parent",
+            to: "#adb-services",
+        },
     ],
 }
