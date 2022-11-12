@@ -5,7 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
-    "ffx_test:tests",
     "pkg_test/tests",
+    "scrutiny_ffx_integration:tests",
   ]
 }
