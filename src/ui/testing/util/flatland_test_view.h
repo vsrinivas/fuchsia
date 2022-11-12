@@ -31,7 +31,15 @@ class FlatlandTestView : public TestView {
                      uint8_t green, uint8_t blue, uint8_t alpha) override;
   void PresentChanges() override;
 
+  // Scene graph:
+  // root transform (id=1)
+  // --> rectangle holder transform (id=2)
+  //     --> ... (optional) rectangles (id=100, 101, 102, ...)
   const uint64_t kRootTransformId = 1;
+  const uint64_t kRectangleHolderTransform = 2;
+
+  // We'll keep incrementing this to get the next resource id (100, 101, 102, ...)
+  uint64_t next_resource_id_ = 100;
 
   // Scenic session resources.
   fuchsia::ui::composition::FlatlandPtr flatland_;
@@ -41,8 +49,6 @@ class FlatlandTestView : public TestView {
   fuchsia::ui::composition::ParentViewportWatcherPtr parent_watcher_;
 
   std::optional<fuchsia::ui::composition::LayoutInfo> layout_info_;
-
-  uint64_t next_resource_id_ = kRootTransformId + 1;
 };
 
 }  // namespace ui_testing

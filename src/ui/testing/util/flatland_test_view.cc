@@ -37,6 +37,10 @@ void FlatlandTestView::CreateView2(fuchsia::ui::app::CreateView2Args args) {
   flatland_->CreateTransform(TransformId({.value = kRootTransformId}));
   flatland_->SetRootTransform(TransformId({.value = kRootTransformId}));
 
+  flatland_->CreateTransform(TransformId({.value = kRectangleHolderTransform}));
+  flatland_->AddChild(TransformId({.value = kRootTransformId}),
+                      TransformId({.value = kRectangleHolderTransform}));
+
   parent_watcher_->GetLayout([this](fuchsia::ui::composition::LayoutInfo layout_info) {
     layout_info_ = std::move(layout_info);
 
@@ -74,7 +78,8 @@ void FlatlandTestView::DrawRectangle(int32_t x, int32_t y, int32_t z, uint32_t w
   flatland_->SetTranslation(kTransformId, {x, y});
 
   // Attach the transform to the view.
-  flatland_->AddChild(fuchsia::ui::composition::TransformId{kRootTransformId}, kTransformId);
+  flatland_->AddChild(fuchsia::ui::composition::TransformId{kRectangleHolderTransform},
+                      kTransformId);
 }
 
 void FlatlandTestView::PresentChanges() {
