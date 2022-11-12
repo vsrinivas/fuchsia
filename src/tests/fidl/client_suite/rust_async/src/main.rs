@@ -24,7 +24,7 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
             match request {
                 // Test management methods
                 RunnerRequest::IsTestEnabled { test, responder } => match test {
-                    // TODO(fxbug.dev/74241): Rust async bindings just ignore
+                    // TODO(fxbug.dev/114743): Rust async bindings just ignore
                     // two way messages with unknown TXIDs, they don't close the
                     // channel, so these tests are disabled.
                     Test::UnknownStrictServerInitiatedTwoWay

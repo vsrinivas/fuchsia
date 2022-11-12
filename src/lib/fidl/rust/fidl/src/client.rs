@@ -731,6 +731,8 @@ impl ClientInner {
                 // If one is found, store the message so that it can be picked up later.
                 let mut message_interests = self.message_interests.lock();
                 let raw_recvd_interest_id = recvd_interest_id.as_raw_id();
+                // TODO(fxbug.dev/114743): Unknown transaction IDs should cause
+                // an error/close the channel.
                 if let Some(interest) = message_interests.get_mut(raw_recvd_interest_id) {
                     let remove = interest.receive(buf);
                     if remove {
