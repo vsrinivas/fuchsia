@@ -244,16 +244,72 @@ class RunnerServer : public fidl::serversuite::Runner {
 
   void IsTestEnabled(fidl::serversuite::Test test, IsTestEnabledCallback callback) override {
     switch (test) {
+      case fidl::serversuite::Test::IGNORE_DISABLED:
+        // This case will forever be false, as it is intended to validate the "test disabling"
+        // functionality of the runner itself.
+        callback(false);
+        return;
+
       case fidl::serversuite::Test::SERVER_SENDS_TOO_FEW_RIGHTS:
       case fidl::serversuite::Test::RESPONSE_EXCEEDS_BYTE_LIMIT:
       case fidl::serversuite::Test::RESPONSE_EXCEEDS_HANDLE_LIMIT:
         callback(false);
         return;
+
       case fidl::serversuite::Test::V1_TWO_WAY_NO_PAYLOAD:
       case fidl::serversuite::Test::V1_TWO_WAY_STRUCT_PAYLOAD:
         // TODO(fxbug.dev/99738): HLCPP bindings should reject V1 wire format.
         callback(false);
         return;
+
+      case fidl::serversuite::Test::GOOD_DECODE_BOUNDED_KNOWN_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_DECODE_BOUNDED_MAYBE_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_DECODE_BOUNDED_MAYBE_LARGE_MESSAGE:
+      case fidl::serversuite::Test::GOOD_DECODE_SEMI_BOUNDED_UNKNOWABLE_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_DECODE_SEMI_BOUNDED_UNKNOWABLE_LARGE_MESSAGE:
+      case fidl::serversuite::Test::GOOD_DECODE_SEMI_BOUNDED_MAYBE_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_DECODE_SEMI_BOUNDED_MAYBE_LARGE_MESSAGE:
+      case fidl::serversuite::Test::GOOD_DECODE_UNBOUNDED_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_DECODE_UNBOUNDED_LARGE_MESSAGE:
+      case fidl::serversuite::Test::GOOD_DECODE_64_HANDLE_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_DECODE_63_HANDLE_LARGE_MESSAGE:
+      case fidl::serversuite::Test::GOOD_DECODE_UNKNOWN_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_DECODE_UNKNOWN_LARGE_MESSAGE:
+      case fidl::serversuite::Test::BAD_DECODE_BYTE_OVERFLOW_FLAG_SET_ON_SMALL_MESSAGE:
+      case fidl::serversuite::Test::BAD_DECODE_BYTE_OVERFLOW_FLAG_UNSET_ON_LARGE_MESSAGE:
+      case fidl::serversuite::Test::BAD_DECODE_LARGE_MESSAGE_INFO_OMITTED:
+      case fidl::serversuite::Test::BAD_DECODE_LARGE_MESSAGE_INFO_TOO_SMALL:
+      case fidl::serversuite::Test::BAD_DECODE_LARGE_MESSAGE_INFO_TOO_LARGE:
+      case fidl::serversuite::Test::BAD_DECODE_LARGE_MESSAGE_INFO_TOP_HALF_UNZEROED:
+      case fidl::serversuite::Test::BAD_DECODE_LARGE_MESSAGE_INFO_BYTE_COUNT_IS_ZERO:
+      case fidl::serversuite::Test::BAD_DECODE_LARGE_MESSAGE_INFO_BYTE_COUNT_TOO_SMALL:
+      case fidl::serversuite::Test::BAD_DECODE_LARGE_MESSAGE_INFO_BYTE_COUNT_NOT_EQUAL_TO_BOUND:
+      case fidl::serversuite::Test::BAD_DECODE_NO_HANDLES:
+      case fidl::serversuite::Test::BAD_DECODE_TOO_FEW_HANDLES:
+      case fidl::serversuite::Test::BAD_DECODE_64_HANDLE_LARGE_MESSAGE:
+      case fidl::serversuite::Test::BAD_DECODE_LAST_HANDLE_NOT_VMO:
+      case fidl::serversuite::Test::BAD_DECODE_LAST_HANDLE_INSUFFICIENT_RIGHTS:
+      case fidl::serversuite::Test::BAD_DECODE_VMO_TOO_SMALL:
+      case fidl::serversuite::Test::BAD_DECODE_VMO_TOO_LARGE:
+        callback(false);
+        // TODO(fxbug.dev/114261): Test decoding large messages.
+        return;
+
+      case fidl::serversuite::Test::GOOD_ENCODE_BOUNDED_KNOWN_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_ENCODE_BOUNDED_MAYBE_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_ENCODE_BOUNDED_MAYBE_LARGE_MESSAGE:
+      case fidl::serversuite::Test::GOOD_ENCODE_SEMI_BOUNDED_KNOWN_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_ENCODE_SEMI_BOUNDED_MAYBE_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_ENCODE_SEMI_BOUNDED_MAYBE_LARGE_MESSAGE:
+      case fidl::serversuite::Test::GOOD_ENCODE_UNBOUNDED_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_ENCODE_UNBOUNDED_LARGE_MESSAGE:
+      case fidl::serversuite::Test::GOOD_ENCODE_64_HANDLE_SMALL_MESSAGE:
+      case fidl::serversuite::Test::GOOD_ENCODE_63_HANDLE_LARGE_MESSAGE:
+      case fidl::serversuite::Test::BAD_ENCODE_64_HANDLE_LARGE_MESSAGE:
+        callback(false);
+        // TODO(fxbug.dev/114263): Test encoding large messages.
+        return;
+
       default:
         callback(true);
         return;

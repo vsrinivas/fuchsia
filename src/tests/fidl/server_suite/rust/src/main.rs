@@ -237,6 +237,11 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
             match request {
                 RunnerRequest::IsTestEnabled { test, responder } => {
                     let enabled = match test {
+                        Test::IgnoreDisabled => {
+                            // This case will forever be false, as it is intended to validate the
+                            // "test disabling" functionality of the runner itself.
+                            false
+                        }
                         Test::OneWayWithNonZeroTxid
                         | Test::TwoWayNoPayloadWithZeroTxid
                         | Test::ServerSendsTooFewRights
@@ -244,6 +249,49 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                         | Test::ResponseExceedsHandleLimit => false,
                         Test::V1TwoWayNoPayload | Test::V1TwoWayStructPayload => {
                             // TODO(fxbug.dev/99738): Rust bindings should reject V1 wire format.
+                            false
+                        }
+                        Test::GoodDecodeBoundedKnownSmallMessage
+                        | Test::GoodDecodeBoundedMaybeSmallMessage
+                        | Test::GoodDecodeBoundedMaybeLargeMessage
+                        | Test::GoodDecodeSemiBoundedUnknowableSmallMessage
+                        | Test::GoodDecodeSemiBoundedUnknowableLargeMessage
+                        | Test::GoodDecodeSemiBoundedMaybeSmallMessage
+                        | Test::GoodDecodeSemiBoundedMaybeLargeMessage
+                        | Test::GoodDecodeUnboundedSmallMessage
+                        | Test::GoodDecodeUnboundedLargeMessage
+                        | Test::GoodDecode64HandleSmallMessage
+                        | Test::GoodDecode63HandleLargeMessage
+                        | Test::GoodDecodeUnknownSmallMessage
+                        | Test::GoodDecodeUnknownLargeMessage
+                        | Test::BadDecodeByteOverflowFlagSetOnSmallMessage
+                        | Test::BadDecodeByteOverflowFlagUnsetOnLargeMessage
+                        | Test::BadDecodeLargeMessageInfoOmitted
+                        | Test::BadDecodeLargeMessageInfoTooSmall
+                        | Test::BadDecodeLargeMessageInfoTooLarge
+                        | Test::BadDecodeLargeMessageInfoTopHalfUnzeroed
+                        | Test::BadDecodeLargeMessageInfoByteCountIsZero
+                        | Test::BadDecodeLargeMessageInfoByteCountTooSmall
+                        | Test::BadDecodeLargeMessageInfoByteCountNotEqualToBound
+                        | Test::BadDecodeNoHandles
+                        | Test::BadDecodeTooFewHandles
+                        | Test::BadDecode64HandleLargeMessage
+                        | Test::BadDecodeLastHandleNotVmo
+                        | Test::BadDecodeLastHandleInsufficientRights
+                        | Test::BadDecodeVmoTooSmall
+                        | Test::BadDecodeVmoTooLarge
+                        | Test::GoodEncodeBoundedKnownSmallMessage
+                        | Test::GoodEncodeBoundedMaybeSmallMessage
+                        | Test::GoodEncodeBoundedMaybeLargeMessage
+                        | Test::GoodEncodeSemiBoundedKnownSmallMessage
+                        | Test::GoodEncodeSemiBoundedMaybeSmallMessage
+                        | Test::GoodEncodeSemiBoundedMaybeLargeMessage
+                        | Test::GoodEncodeUnboundedSmallMessage
+                        | Test::GoodEncodeUnboundedLargeMessage
+                        | Test::GoodEncode64HandleSmallMessage
+                        | Test::GoodEncode63HandleLargeMessage
+                        | Test::BadEncode64HandleLargeMessage => {
+                            // TODO(fxbug.dev/114259): Implement large messages for Rust.
                             false
                         }
                         _ => true,

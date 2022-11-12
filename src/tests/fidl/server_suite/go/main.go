@@ -125,82 +125,96 @@ var _ serversuite.RunnerWithCtx = (*runnerImpl)(nil)
 func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, error) {
 	isEnabled := func(test serversuite.Test) bool {
 		switch test {
-		case serversuite.TestOneWayWithNonZeroTxid:
-			return false
-		case serversuite.TestTwoWayNoPayloadWithZeroTxid:
-			return false
-		case serversuite.TestSendStrictEvent:
-			return false
-		case serversuite.TestSendFlexibleEvent:
+		// This case will forever be false, as it is intended to validate the "test
+		// disabling" functionality of the runner itself.
+		case serversuite.TestIgnoreDisabled:
 			return false
 
-		case serversuite.TestReceiveStrictOneWay:
-			return false
-		case serversuite.TestReceiveStrictOneWayMismatchedStrictness:
-			return false
-		case serversuite.TestReceiveFlexibleOneWay:
-			return false
-		case serversuite.TestReceiveFlexibleOneWayMismatchedStrictness:
-			return false
-
-		case serversuite.TestStrictTwoWayResponse:
-			return false
-		case serversuite.TestStrictTwoWayResponseMismatchedStrictness:
-			return false
-		case serversuite.TestStrictTwoWayNonEmptyResponse:
-			return false
-		case serversuite.TestStrictTwoWayErrorSyntaxResponse:
-			return false
-		case serversuite.TestStrictTwoWayErrorSyntaxResponseMismatchedStrictness:
-			return false
-		case serversuite.TestStrictTwoWayErrorSyntaxNonEmptyResponse:
-			return false
-		case serversuite.TestFlexibleTwoWayResponse:
-			return false
-		case serversuite.TestFlexibleTwoWayResponseMismatchedStrictness:
-			return false
-		case serversuite.TestFlexibleTwoWayNonEmptyResponse:
-			return false
-		case serversuite.TestFlexibleTwoWayErrorSyntaxResponseSuccessResult:
-			return false
-		case serversuite.TestFlexibleTwoWayErrorSyntaxResponseErrorResult:
-			return false
-		case serversuite.TestFlexibleTwoWayErrorSyntaxNonEmptyResponseSuccessResult:
-			return false
-		case serversuite.TestFlexibleTwoWayErrorSyntaxNonEmptyResponseErrorResult:
-			return false
-
-		case serversuite.TestUnknownStrictOneWayOpenProtocol:
-			return false
-		case serversuite.TestUnknownFlexibleOneWayOpenProtocol:
-			return false
-		case serversuite.TestUnknownFlexibleOneWayHandleOpenProtocol:
-			return false
-		case serversuite.TestUnknownStrictTwoWayOpenProtocol:
-			return false
-		case serversuite.TestUnknownFlexibleTwoWayOpenProtocol:
-			return false
-		case serversuite.TestUnknownFlexibleTwoWayHandleOpenProtocol:
-			return false
-		case serversuite.TestUnknownStrictOneWayAjarProtocol:
-			return false
-		case serversuite.TestUnknownFlexibleOneWayAjarProtocol:
-			return false
-		case serversuite.TestUnknownStrictTwoWayAjarProtocol:
-			return false
-		case serversuite.TestUnknownFlexibleTwoWayAjarProtocol:
-			return false
-		case serversuite.TestUnknownStrictOneWayClosedProtocol:
-			return false
-		case serversuite.TestUnknownFlexibleOneWayClosedProtocol:
-			return false
-		case serversuite.TestUnknownStrictTwoWayClosedProtocol:
-			return false
-		case serversuite.TestUnknownFlexibleTwoWayClosedProtocol:
+		case serversuite.TestOneWayWithNonZeroTxid,
+			serversuite.TestTwoWayNoPayloadWithZeroTxid,
+			serversuite.TestSendStrictEvent,
+			serversuite.TestSendFlexibleEvent,
+			serversuite.TestReceiveStrictOneWay,
+			serversuite.TestReceiveStrictOneWayMismatchedStrictness,
+			serversuite.TestReceiveFlexibleOneWay,
+			serversuite.TestReceiveFlexibleOneWayMismatchedStrictness,
+			serversuite.TestStrictTwoWayResponse,
+			serversuite.TestStrictTwoWayResponseMismatchedStrictness,
+			serversuite.TestStrictTwoWayNonEmptyResponse,
+			serversuite.TestStrictTwoWayErrorSyntaxResponse,
+			serversuite.TestStrictTwoWayErrorSyntaxResponseMismatchedStrictness,
+			serversuite.TestStrictTwoWayErrorSyntaxNonEmptyResponse,
+			serversuite.TestFlexibleTwoWayResponse,
+			serversuite.TestFlexibleTwoWayResponseMismatchedStrictness,
+			serversuite.TestFlexibleTwoWayNonEmptyResponse,
+			serversuite.TestFlexibleTwoWayErrorSyntaxResponseSuccessResult,
+			serversuite.TestFlexibleTwoWayErrorSyntaxResponseErrorResult,
+			serversuite.TestFlexibleTwoWayErrorSyntaxNonEmptyResponseSuccessResult,
+			serversuite.TestFlexibleTwoWayErrorSyntaxNonEmptyResponseErrorResult,
+			serversuite.TestUnknownStrictOneWayOpenProtocol,
+			serversuite.TestUnknownFlexibleOneWayOpenProtocol,
+			serversuite.TestUnknownFlexibleOneWayHandleOpenProtocol,
+			serversuite.TestUnknownStrictTwoWayOpenProtocol,
+			serversuite.TestUnknownFlexibleTwoWayOpenProtocol,
+			serversuite.TestUnknownFlexibleTwoWayHandleOpenProtocol,
+			serversuite.TestUnknownStrictOneWayAjarProtocol,
+			serversuite.TestUnknownFlexibleOneWayAjarProtocol,
+			serversuite.TestUnknownStrictTwoWayAjarProtocol,
+			serversuite.TestUnknownFlexibleTwoWayAjarProtocol,
+			serversuite.TestUnknownStrictOneWayClosedProtocol,
+			serversuite.TestUnknownFlexibleOneWayClosedProtocol,
+			serversuite.TestUnknownStrictTwoWayClosedProtocol,
+			serversuite.TestUnknownFlexibleTwoWayClosedProtocol,
+			serversuite.TestBadDecodeByteOverflowFlagSetOnSmallMessage,
+			serversuite.TestBadDecodeByteOverflowFlagUnsetOnLargeMessage,
+			serversuite.TestBadDecodeLargeMessageInfoOmitted,
+			serversuite.TestBadDecodeLargeMessageInfoTooSmall,
+			serversuite.TestBadDecodeLargeMessageInfoTooLarge,
+			serversuite.TestBadDecodeLargeMessageInfoTopHalfUnzeroed,
+			serversuite.TestBadDecodeLargeMessageInfoByteCountIsZero,
+			serversuite.TestBadDecodeLargeMessageInfoByteCountTooSmall,
+			serversuite.TestBadDecodeLargeMessageInfoByteCountNotEqualToBound,
+			serversuite.TestBadDecodeNoHandles,
+			serversuite.TestBadDecodeTooFewHandles,
+			serversuite.TestBadDecode64HandleLargeMessage,
+			serversuite.TestBadDecodeLastHandleNotVmo,
+			serversuite.TestBadDecodeLastHandleInsufficientRights,
+			serversuite.TestBadDecodeVmoTooSmall,
+			serversuite.TestBadDecodeVmoTooLarge,
+			serversuite.TestBadEncode64HandleLargeMessage,
+			serversuite.TestGoodDecodeBoundedMaybeLargeMessage,
+			serversuite.TestGoodDecodeSemiBoundedUnknowableLargeMessage,
+			serversuite.TestGoodDecodeSemiBoundedMaybeLargeMessage,
+			serversuite.TestGoodDecodeUnboundedLargeMessage,
+			serversuite.TestGoodDecode63HandleLargeMessage,
+			serversuite.TestGoodDecodeUnknownSmallMessage,
+			serversuite.TestGoodDecodeUnknownLargeMessage,
+			serversuite.TestGoodEncodeBoundedMaybeLargeMessage,
+			serversuite.TestGoodEncodeSemiBoundedMaybeLargeMessage,
+			serversuite.TestGoodEncodeUnboundedLargeMessage,
+			serversuite.TestGoodEncode63HandleLargeMessage:
 			return false
 
 		case serversuite.TestV1TwoWayNoPayload, serversuite.TestV1TwoWayStructPayload:
 			// TODO(fxbug.dev/99738): Go bindings should reject V1 wire format.
+			return false
+
+		case serversuite.TestGoodDecodeBoundedKnownSmallMessage,
+			serversuite.TestGoodDecodeBoundedMaybeSmallMessage,
+			serversuite.TestGoodDecodeSemiBoundedUnknowableSmallMessage,
+			serversuite.TestGoodDecodeSemiBoundedMaybeSmallMessage,
+			serversuite.TestGoodDecodeUnboundedSmallMessage,
+			serversuite.TestGoodDecode64HandleSmallMessage,
+			serversuite.TestGoodEncodeBoundedKnownSmallMessage,
+			serversuite.TestGoodEncodeBoundedMaybeSmallMessage,
+			serversuite.TestGoodEncodeSemiBoundedKnownSmallMessage,
+			serversuite.TestGoodEncodeSemiBoundedMaybeSmallMessage,
+			serversuite.TestGoodEncodeUnboundedSmallMessage,
+			serversuite.TestGoodEncode64HandleSmallMessage:
+			// TODO(fxbug.dev/114266): Though the Go bindings don't support large
+			// messages, these messages are all "small", and so should be successfully
+			// handled the these bindings. These cases are especially useful since
+			// they are good limit tests (64 handles, max message size, etc).
 			return false
 
 		default:

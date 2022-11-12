@@ -260,9 +260,61 @@ class RunnerServer : public fidl::WireServer<fidl_serversuite::Runner> {
                      IsTestEnabledCompleter::Sync& completer) override {
     bool is_enabled = [&request]() {
       switch (request->test) {
+        case fidl_serversuite::Test::kIgnoreDisabled:
+          // This case will forever be false, as it is intended to validate the "test disabling"
+          // functionality of the runner itself.
+          return false;
+
         case fidl_serversuite::Test::kOneWayWithNonZeroTxid:
         case fidl_serversuite::Test::kTwoWayNoPayloadWithZeroTxid:
           return false;
+
+        case fidl_serversuite::Test::kGoodDecodeBoundedKnownSmallMessage:
+        case fidl_serversuite::Test::kGoodDecodeBoundedMaybeSmallMessage:
+        case fidl_serversuite::Test::kGoodDecodeBoundedMaybeLargeMessage:
+        case fidl_serversuite::Test::kGoodDecodeSemiBoundedUnknowableSmallMessage:
+        case fidl_serversuite::Test::kGoodDecodeSemiBoundedUnknowableLargeMessage:
+        case fidl_serversuite::Test::kGoodDecodeSemiBoundedMaybeSmallMessage:
+        case fidl_serversuite::Test::kGoodDecodeSemiBoundedMaybeLargeMessage:
+        case fidl_serversuite::Test::kGoodDecodeUnboundedSmallMessage:
+        case fidl_serversuite::Test::kGoodDecodeUnboundedLargeMessage:
+        case fidl_serversuite::Test::kGoodDecode64HandleSmallMessage:
+        case fidl_serversuite::Test::kGoodDecode63HandleLargeMessage:
+        case fidl_serversuite::Test::kGoodDecodeUnknownSmallMessage:
+        case fidl_serversuite::Test::kGoodDecodeUnknownLargeMessage:
+        case fidl_serversuite::Test::kBadDecodeByteOverflowFlagSetOnSmallMessage:
+        case fidl_serversuite::Test::kBadDecodeByteOverflowFlagUnsetOnLargeMessage:
+        case fidl_serversuite::Test::kBadDecodeLargeMessageInfoOmitted:
+        case fidl_serversuite::Test::kBadDecodeLargeMessageInfoTooSmall:
+        case fidl_serversuite::Test::kBadDecodeLargeMessageInfoTooLarge:
+        case fidl_serversuite::Test::kBadDecodeLargeMessageInfoTopHalfUnzeroed:
+        case fidl_serversuite::Test::kBadDecodeLargeMessageInfoByteCountIsZero:
+        case fidl_serversuite::Test::kBadDecodeLargeMessageInfoByteCountTooSmall:
+        case fidl_serversuite::Test::kBadDecodeLargeMessageInfoByteCountNotEqualToBound:
+        case fidl_serversuite::Test::kBadDecodeNoHandles:
+        case fidl_serversuite::Test::kBadDecodeTooFewHandles:
+        case fidl_serversuite::Test::kBadDecode64HandleLargeMessage:
+        case fidl_serversuite::Test::kBadDecodeLastHandleNotVmo:
+        case fidl_serversuite::Test::kBadDecodeLastHandleInsufficientRights:
+        case fidl_serversuite::Test::kBadDecodeVmoTooSmall:
+        case fidl_serversuite::Test::kBadDecodeVmoTooLarge:
+          // TODO(fxbug.dev/114261): Test decoding large messages.
+          return false;
+
+        case fidl_serversuite::Test::kGoodEncodeBoundedKnownSmallMessage:
+        case fidl_serversuite::Test::kGoodEncodeBoundedMaybeSmallMessage:
+        case fidl_serversuite::Test::kGoodEncodeBoundedMaybeLargeMessage:
+        case fidl_serversuite::Test::kGoodEncodeSemiBoundedKnownSmallMessage:
+        case fidl_serversuite::Test::kGoodEncodeSemiBoundedMaybeSmallMessage:
+        case fidl_serversuite::Test::kGoodEncodeSemiBoundedMaybeLargeMessage:
+        case fidl_serversuite::Test::kGoodEncodeUnboundedSmallMessage:
+        case fidl_serversuite::Test::kGoodEncodeUnboundedLargeMessage:
+        case fidl_serversuite::Test::kGoodEncode64HandleSmallMessage:
+        case fidl_serversuite::Test::kGoodEncode63HandleLargeMessage:
+        case fidl_serversuite::Test::kBadEncode64HandleLargeMessage:
+          // TODO(fxbug.dev/114263): Test encoding large messages.
+          return false;
+
         default:
           return true;
       }

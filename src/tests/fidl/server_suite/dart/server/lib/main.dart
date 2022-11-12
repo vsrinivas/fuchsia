@@ -200,6 +200,9 @@ class OpenTargetImpl extends OpenTargetServer {
 class RunnerImpl extends Runner {
   Future<bool> isTestEnabled(Test test) async {
     switch (test) {
+      // This case will forever be false, as it is intended to validate the "test disabling"
+      // functionality of the runner itself.
+      case Test.ignoreDisabled:
       // Dart does not currently have APIs for explicitly retrieving handle
       // rights, so getHandleRights and getSignalableEventRights cannot be
       // implemented.
@@ -228,6 +231,50 @@ class RunnerImpl extends Runner {
       case Test.v1TwoWayNoPayload:
       case Test.v1TwoWayStructPayload:
         // TODO(fxbug.dev/99738): Dart bindings should reject V1 wire format.
+        return false;
+      case Test.goodDecodeBoundedKnownSmallMessage:
+      case Test.goodDecodeBoundedMaybeSmallMessage:
+      case Test.goodDecodeBoundedMaybeLargeMessage:
+      case Test.goodDecodeSemiBoundedUnknowableSmallMessage:
+      case Test.goodDecodeSemiBoundedUnknowableLargeMessage:
+      case Test.goodDecodeSemiBoundedMaybeSmallMessage:
+      case Test.goodDecodeSemiBoundedMaybeLargeMessage:
+      case Test.goodDecodeUnboundedSmallMessage:
+      case Test.goodDecodeUnboundedLargeMessage:
+      case Test.goodDecode64HandleSmallMessage:
+      case Test.goodDecode63HandleLargeMessage:
+      case Test.goodDecodeUnknownSmallMessage:
+      case Test.goodDecodeUnknownLargeMessage:
+      case Test.badDecodeByteOverflowFlagSetOnSmallMessage:
+      case Test.badDecodeByteOverflowFlagUnsetOnLargeMessage:
+      case Test.badDecodeLargeMessageInfoOmitted:
+      case Test.badDecodeLargeMessageInfoTooSmall:
+      case Test.badDecodeLargeMessageInfoTooLarge:
+      case Test.badDecodeLargeMessageInfoTopHalfUnzeroed:
+      case Test.badDecodeLargeMessageInfoByteCountIsZero:
+      case Test.badDecodeLargeMessageInfoByteCountTooSmall:
+      case Test.badDecodeLargeMessageInfoByteCountNotEqualToBound:
+      case Test.badDecodeNoHandles:
+      case Test.badDecodeTooFewHandles:
+      case Test.badDecode64HandleLargeMessage:
+      case Test.badDecodeLastHandleNotVmo:
+      case Test.badDecodeLastHandleInsufficientRights:
+      case Test.badDecodeVmoTooSmall:
+      case Test.badDecodeVmoTooLarge:
+        // TODO(fxbug.dev/114261): Test decoding large messages.
+        return false;
+      case Test.goodEncodeBoundedKnownSmallMessage:
+      case Test.goodEncodeBoundedMaybeSmallMessage:
+      case Test.goodEncodeBoundedMaybeLargeMessage:
+      case Test.goodEncodeSemiBoundedKnownSmallMessage:
+      case Test.goodEncodeSemiBoundedMaybeSmallMessage:
+      case Test.goodEncodeSemiBoundedMaybeLargeMessage:
+      case Test.goodEncodeUnboundedSmallMessage:
+      case Test.goodEncodeUnboundedLargeMessage:
+      case Test.goodEncode64HandleSmallMessage:
+      case Test.goodEncode63HandleLargeMessage:
+      case Test.badEncode64HandleLargeMessage:
+        // TODO(fxbug.dev/114263): Test encoding large messages.
         return false;
       default:
         return true;

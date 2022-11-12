@@ -272,6 +272,7 @@ type Test = flexible enum : uint32 {
     // ////////////////////////////////////////////////////////////////////////
 
     SETUP = 1;
+    IGNORE_DISABLED = 107;
     ONE_WAY_NO_PAYLOAD = 2;
     TWO_WAY_NO_PAYLOAD = 3;
     TWO_WAY_RESULT_WITH_PAYLOAD = 4;
@@ -498,5 +499,5 @@ type Test = flexible enum : uint32 {
     // `EncodeUnboundedMaybeLargeResource(...) -> (...)` method.
     BAD_ENCODE_64_HANDLE_LARGE_MESSAGE = 104;
 
-    // Next available: 107
+    // Next available: 108
 };

@@ -12,6 +12,15 @@ namespace server_suite {
 // Check that the test runner is set up correctly without doing anything else.
 CLOSED_SERVER_TEST(Setup) {}
 
+// Check that the |IgnoreDisabled| test is in fact ignored. All implementations under test should
+// ensure that their |Runner.IsEnabled()| method implementations refuse to run this test.
+CLOSED_SERVER_TEST(IgnoreDisabled) {
+  // This test will always fail when run - the only purpose of putting it here is to ensure that
+  // each implementation's runner respects |!is_enabled()| tests by skipping over this code in all
+  // cases.
+  FAIL();
+}
+
 // Check that a one-way call is received at Target.
 CLOSED_SERVER_TEST(OneWayNoPayload) {
   ASSERT_OK(client_end().write(
