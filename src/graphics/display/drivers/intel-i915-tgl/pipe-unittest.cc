@@ -89,13 +89,13 @@ layer_t CreatePrimaryLayerConfig(uint64_t handle, uint32_t z_index = 1u) {
 }  // namespace
 
 TEST_F(PipeTest, TiedTranscoderId) {
-  PipeSkylake pipe_a(&mmio_buffer_.value(), tgl_registers::Pipe::PIPE_A, {});
+  PipeSkylake pipe_a(&mmio_buffer_.value(), PipeId::PIPE_A, {});
   EXPECT_EQ(TranscoderId::TRANSCODER_A, pipe_a.tied_transcoder_id());
 
-  PipeSkylake pipe_b(&mmio_buffer_.value(), tgl_registers::Pipe::PIPE_B, {});
+  PipeSkylake pipe_b(&mmio_buffer_.value(), PipeId::PIPE_B, {});
   EXPECT_EQ(TranscoderId::TRANSCODER_B, pipe_b.tied_transcoder_id());
 
-  PipeSkylake pipe_c(&mmio_buffer_.value(), tgl_registers::Pipe::PIPE_C, {});
+  PipeSkylake pipe_c(&mmio_buffer_.value(), PipeId::PIPE_C, {});
   EXPECT_EQ(TranscoderId::TRANSCODER_C, pipe_c.tied_transcoder_id());
 
   // TODO(fxbug.dev/109278): Add a test for transcoder D, when we support it.
@@ -104,7 +104,7 @@ TEST_F(PipeTest, TiedTranscoderId) {
 // Verifies that GetVsyncConfigStamp() could return the correct config stamp
 // given different image handles from device registers.
 TEST_F(PipeTest, GetVsyncConfigStamp) {
-  PipeSkylake pipe(&*mmio_buffer_, tgl_registers::Pipe::PIPE_A, {});
+  PipeSkylake pipe(&*mmio_buffer_, PipeId::PIPE_A, {});
 
   uint64_t kImageHandle1 = 0x1111u;
   uint64_t kImageHandle2 = 0x2222u;

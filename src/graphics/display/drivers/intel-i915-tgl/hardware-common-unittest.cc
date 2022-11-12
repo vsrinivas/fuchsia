@@ -24,10 +24,9 @@ TEST(HardwareCommonTest, Skylake) {
   EXPECT_THAT(dplls, testing::Contains(tgl_registers::DPLL_0).Times(1));
   EXPECT_THAT(dplls, testing::Contains(tgl_registers::DPLL_3).Times(1));
 
-  auto pipes = tgl_registers::Pipes<tgl_registers::Platform::kSkylake>();
+  auto pipes = PipeIds<tgl_registers::Platform::kSkylake>();
   EXPECT_EQ(pipes.size(), 3u);
-  EXPECT_THAT(pipes, testing::UnorderedElementsAre(tgl_registers::PIPE_A, tgl_registers::PIPE_B,
-                                                   tgl_registers::PIPE_C));
+  EXPECT_THAT(pipes, testing::UnorderedElementsAre(PipeId::PIPE_A, PipeId::PIPE_B, PipeId::PIPE_C));
 
   auto transcoders = TranscoderIds<tgl_registers::Platform::kSkylake>();
   EXPECT_EQ(transcoders.size(), 4u);
@@ -51,10 +50,9 @@ TEST(HardwareCommonTest, KabyLake) {
   EXPECT_THAT(dplls, testing::Contains(tgl_registers::DPLL_0).Times(1));
   EXPECT_THAT(dplls, testing::Contains(tgl_registers::DPLL_3).Times(1));
 
-  auto pipes = tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>();
+  auto pipes = PipeIds<tgl_registers::Platform::kKabyLake>();
   EXPECT_EQ(pipes.size(), 3u);
-  EXPECT_THAT(pipes, testing::UnorderedElementsAre(tgl_registers::PIPE_A, tgl_registers::PIPE_B,
-                                                   tgl_registers::PIPE_C));
+  EXPECT_THAT(pipes, testing::UnorderedElementsAre(PipeId::PIPE_A, PipeId::PIPE_B, PipeId::PIPE_C));
 
   auto transcoders = TranscoderIds<tgl_registers::Platform::kKabyLake>();
   EXPECT_EQ(transcoders.size(), 4u);
@@ -74,10 +72,9 @@ TEST(HardwareCommonTest, TigerLake) {
   EXPECT_THAT(ddis, testing::Contains(DdiId::DDI_TC_6).Times(1));
 
   // TODO(fxbug.dev/109278): Update the test once Pipe D is supported.
-  auto pipes = tgl_registers::Pipes<tgl_registers::Platform::kTigerLake>();
+  auto pipes = PipeIds<tgl_registers::Platform::kTigerLake>();
   EXPECT_EQ(pipes.size(), 3u);
-  EXPECT_THAT(pipes, testing::UnorderedElementsAre(tgl_registers::PIPE_A, tgl_registers::PIPE_B,
-                                                   tgl_registers::PIPE_C));
+  EXPECT_THAT(pipes, testing::UnorderedElementsAre(PipeId::PIPE_A, PipeId::PIPE_B, PipeId::PIPE_C));
 
   // TODO(fxbug.dev/109278): Update the test once Transcoder D is supported.
   auto transcoders = TranscoderIds<tgl_registers::Platform::kTigerLake>();

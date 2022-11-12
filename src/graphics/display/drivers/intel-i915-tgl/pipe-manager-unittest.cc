@@ -66,11 +66,11 @@ class FakeDisplay : public DisplayDevice {
   // DisplayDevice overrides:
   bool InitDdi() final { return true; }
   bool DdiModeset(const display_mode_t& mode) final { return true; }
-  bool PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
+  bool PipeConfigPreamble(const display_mode_t& mode, PipeId pipe_id,
                           TranscoderId transcoder_id) final {
     return true;
   }
-  bool PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
+  bool PipeConfigEpilogue(const display_mode_t& mode, PipeId pipe_id,
                           TranscoderId transcoder_id) final {
     return true;
   }
@@ -127,8 +127,7 @@ TEST_F(PipeManagerTest, SkylakeReclaimUsedPipe) {
   PipeManager* pm = controller_.pipe_manager();
 
   for (size_t display_id = 1u;
-       display_id <= tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size() * 10;
-       display_id++) {
+       display_id <= PipeIds<tgl_registers::Platform::kKabyLake>().size() * 10; display_id++) {
     std::unique_ptr<DisplayDevice> display = std::make_unique<FakeDisplay>(
         controller(), display_id, DdiId::DDI_B, DisplayDevice::Type::kDp);
     Pipe* pipe = pm->RequestPipe(*display);

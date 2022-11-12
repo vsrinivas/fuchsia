@@ -265,41 +265,41 @@ class TranscoderDdiControl : public hwreg::RegisterBase<TranscoderDdiControl, ui
   // "Display Connections" pages 103, section "Pipe to Transcoder to DDI
   // Mappings" page 107) mention that the EDP transcoder can connect to pipes
   // A-C. So, the field likely works the same way as on Kaby Lake.
-  Pipe input_pipe() const {
+  i915_tgl::PipeId input_pipe_id() const {
     switch (input_pipe_select()) {
       case kInputSelectPipeA:
-        return Pipe::PIPE_A;
+        return i915_tgl::PipeId::PIPE_A;
       case kInputSelectPipeB:
-        return Pipe::PIPE_B;
+        return i915_tgl::PipeId::PIPE_B;
       case kInputSelectPipeC:
-        return Pipe::PIPE_C;
+        return i915_tgl::PipeId::PIPE_C;
 
         // TODO(fxbug.dev/109278): Add pipe D, once we support it.
     };
 
-    return Pipe::PIPE_INVALID;
+    return i915_tgl::PipeId::PIPE_INVALID;
   }
 
   // See `input_pipe()` for details.
-  TranscoderDdiControl& set_input_pipe(Pipe input_pipe) {
-    switch (input_pipe) {
-      case Pipe::PIPE_A:
+  TranscoderDdiControl& set_input_pipe_id(i915_tgl::PipeId input_pipe_id) {
+    switch (input_pipe_id) {
+      case i915_tgl::PipeId::PIPE_A:
         return set_input_pipe_select(kInputSelectPipeA);
-      case Pipe::PIPE_B:
+      case i915_tgl::PipeId::PIPE_B:
         return set_input_pipe_select(kInputSelectPipeB);
-      case Pipe::PIPE_C:
+      case i915_tgl::PipeId::PIPE_C:
         return set_input_pipe_select(kInputSelectPipeC);
 
         // TODO(fxbug.dev/109278): Add pipe D, once we support it.
 
-      case Pipe::PIPE_INVALID:
+      case i915_tgl::PipeId::PIPE_INVALID:
           // The code handling the explicit invalid pipe value is outside the
           // switch() so it also applies to values that aren't Pipe enum members,
           // which are also invalid.
           ;
     };
 
-    ZX_DEBUG_ASSERT_MSG(false, "Invalid pipe: %d", input_pipe);
+    ZX_DEBUG_ASSERT_MSG(false, "Invalid pipe: %d", input_pipe_id);
     return *this;
   }
 

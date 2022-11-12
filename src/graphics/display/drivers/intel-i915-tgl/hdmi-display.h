@@ -55,9 +55,9 @@ class HdmiDisplay : public DisplayDevice {
   bool InitDdi() final;
   bool Query() final;
   bool DdiModeset(const display_mode_t& mode) final;
-  bool PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
+  bool PipeConfigPreamble(const display_mode_t& mode, PipeId pipe_id,
                           TranscoderId transcoder_id) final;
-  bool PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
+  bool PipeConfigEpilogue(const display_mode_t& mode, PipeId pipe_id,
                           TranscoderId transcoder_id) final;
   DdiPllConfig ComputeDdiPllConfig(int32_t pixel_clock_10khz) final;
   // Hdmi doesn't need the clock rate when changing the transcoder

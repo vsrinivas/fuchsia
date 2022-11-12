@@ -108,8 +108,8 @@ class PipeManager {
   // TODO(fxbug.dev/104986): This (and the pipe iterator class) adds some
   // unnecessary complexity to the PipeManager; we can just replace it with a
   // method which returns `std::span<Pipe*>` instead.
-  Pipe* operator[](tgl_registers::Pipe idx) const;
-  Pipe* At(tgl_registers::Pipe idx) const;
+  Pipe* operator[](PipeId idx) const;
+  Pipe* At(PipeId idx) const;
 
   using PipeIterator = PipeIteratorBase<false>;
   using PipeConstIterator = PipeIteratorBase<true>;
@@ -145,8 +145,7 @@ class PipeManagerSkylake : public PipeManager {
   void ResetInactiveTranscoders() override;
 
  private:
-  static constexpr tgl_registers::Pipe kPipeEnums[] = {tgl_registers::PIPE_A, tgl_registers::PIPE_B,
-                                                       tgl_registers::PIPE_C};
+  static constexpr PipeId kPipeEnums[] = {PipeId::PIPE_A, PipeId::PIPE_B, PipeId::PIPE_C};
 
   Pipe* GetAvailablePipe() override;
   Pipe* GetPipeFromHwState(DdiId ddi_id, fdf::MmioBuffer* mmio_space) override;

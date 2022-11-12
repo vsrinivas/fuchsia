@@ -95,17 +95,17 @@ class TestPipeManager : public PipeManager {
 
   static std::vector<std::unique_ptr<Pipe>> DefaultPipes(Controller* controller) {
     std::vector<std::unique_ptr<Pipe>> pipes;
-    pipes.push_back(std::make_unique<PipeSkylake>(controller->mmio_space(), tgl_registers::PIPE_A,
-                                                  PowerWellRef{}));
+    pipes.push_back(
+        std::make_unique<PipeSkylake>(controller->mmio_space(), PipeId::PIPE_A, PowerWellRef{}));
     return pipes;
   }
 
   void ResetInactiveTranscoders() override {}
 
  private:
-  Pipe* GetAvailablePipe() override { return At(tgl_registers::PIPE_A); }
+  Pipe* GetAvailablePipe() override { return At(PipeId::PIPE_A); }
   Pipe* GetPipeFromHwState(DdiId ddi_id, fdf::MmioBuffer* mmio_space) override {
-    return At(tgl_registers::PIPE_A);
+    return At(PipeId::PIPE_A);
   }
 };
 

@@ -84,7 +84,7 @@ class TestPowerWell : public Power {
   void Resume() override {}
 
   PowerWellRef GetCdClockPowerWellRef() override { return PowerWellRef(this, PowerWellId::PG1); }
-  PowerWellRef GetPipePowerWellRef(tgl_registers::Pipe pipe) override {
+  PowerWellRef GetPipePowerWellRef(PipeId pipe_id) override {
     return PowerWellRef(this, PowerWellId::PG1);
   }
   PowerWellRef GetDdiPowerWellRef(DdiId ddi_id) override {
@@ -149,8 +149,8 @@ class PowerSkylake : public Power {
   }
 
   PowerWellRef GetCdClockPowerWellRef() override { return PowerWellRef(this, PowerWellId::PG1); }
-  PowerWellRef GetPipePowerWellRef(tgl_registers::Pipe pipe) override {
-    return PowerWellRef(this, pipe == tgl_registers::PIPE_A ? PowerWellId::PG1 : PowerWellId::PG2);
+  PowerWellRef GetPipePowerWellRef(PipeId pipe_id) override {
+    return PowerWellRef(this, pipe_id == PipeId::PIPE_A ? PowerWellId::PG1 : PowerWellId::PG2);
   }
   PowerWellRef GetDdiPowerWellRef(DdiId ddi_id) override {
     return PowerWellRef(this, ddi_id == DdiId::DDI_A ? PowerWellId::PG1 : PowerWellId::PG2);
@@ -265,19 +265,19 @@ class PowerTigerLake : public Power {
   }
 
   PowerWellRef GetCdClockPowerWellRef() override { return PowerWellRef(this, PowerWellId::PG1); }
-  PowerWellRef GetPipePowerWellRef(tgl_registers::Pipe pipe) override {
+  PowerWellRef GetPipePowerWellRef(PipeId pipe_id) override {
     // Power well assignments from IHD-OS-TGL-Vol 12-12.21
     // "Functions Within Each Well", pages 219-220.
 
     // TODO(fxbug.dev/95863): Add all pipes supported by gen12.
-    switch (pipe) {
-      case tgl_registers::PIPE_A:
+    switch (pipe_id) {
+      case PipeId::PIPE_A:
         return PowerWellRef(this, PowerWellId::PG1);
-      case tgl_registers::PIPE_B:
+      case PipeId::PIPE_B:
         return PowerWellRef(this, PowerWellId::PG2);
-      case tgl_registers::PIPE_C:
+      case PipeId::PIPE_C:
         return PowerWellRef(this, PowerWellId::PG3);
-      case tgl_registers::PIPE_INVALID:
+      case PipeId::PIPE_INVALID:
         ZX_ASSERT(false);
     }
   }

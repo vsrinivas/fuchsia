@@ -25,7 +25,7 @@ namespace i915_tgl {
 
 namespace {
 
-void NopPipeVsyncCb(tgl_registers::Pipe, zx_time_t) {}
+void NopPipeVsyncCb(PipeId, zx_time_t) {}
 void NopHotplugCb(DdiId, bool) {}
 void NopIrqCb(void*, uint32_t, uint64_t) {}
 

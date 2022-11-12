@@ -498,7 +498,7 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
   return true;
 }
 
-bool HdmiDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
+bool HdmiDisplay::PipeConfigPreamble(const display_mode_t& mode, PipeId pipe_id,
                                      TranscoderId transcoder_id) {
   ZX_DEBUG_ASSERT_MSG(transcoder_id != TranscoderId::TRANSCODER_EDP,
                       "The EDP transcoder doesn't do HDMI");
@@ -517,7 +517,7 @@ bool HdmiDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::
   return true;
 }
 
-bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
+bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, PipeId pipe_id,
                                      TranscoderId transcoder_id) {
   ZX_DEBUG_ASSERT(type() == DisplayDevice::Type::kHdmi || type() == DisplayDevice::Type::kDvi);
   ZX_DEBUG_ASSERT_MSG(transcoder_id != TranscoderId::TRANSCODER_EDP,

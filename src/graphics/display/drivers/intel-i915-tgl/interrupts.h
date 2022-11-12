@@ -30,7 +30,7 @@ class Interrupts {
   // All interrupt callbacks are currently run on the same thread (the internal
   // thread dedicated to handling interrupt). However, implementations must be
   // thread-safe, and not rely on any assumptions around the threading model.
-  using PipeVsyncCallback = fit::function<void(tgl_registers::Pipe, zx_time_t)>;
+  using PipeVsyncCallback = fit::function<void(PipeId, zx_time_t)>;
   using HotplugCallback = fit::function<void(DdiId ddi_id, bool long_pulse)>;
 
   Interrupts();
@@ -53,7 +53,7 @@ class Interrupts {
   // Transcoder VSync (vertical sync) interrupts trigger callbacks to the
   // PipeVsyncCallback provided to `Init()`. The callbacks are performed on the
   // internal thread dedicated to interrupt handling.
-  void EnablePipeInterrupts(tgl_registers::Pipe pipe, bool enable);
+  void EnablePipeInterrupts(PipeId pipe_id, bool enable);
 
   // The GPU driver uses this to plug into the interrupt stream.
   //
@@ -70,7 +70,7 @@ class Interrupts {
  private:
   int IrqLoop();
   void EnableHotplugInterrupts();
-  void HandlePipeInterrupt(tgl_registers::Pipe pipe, zx_time_t timestamp);
+  void HandlePipeInterrupt(PipeId pipe_id, zx_time_t timestamp);
 
   PipeVsyncCallback pipe_vsync_callback_;
   HotplugCallback hotplug_callback_;

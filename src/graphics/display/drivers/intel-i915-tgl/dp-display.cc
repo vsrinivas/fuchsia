@@ -1874,7 +1874,7 @@ DdiPllConfig DpDisplay::ComputeDdiPllConfig(int32_t pixel_clock_10khz) {
 
 bool DpDisplay::DdiModeset(const display_mode_t& mode) { return true; }
 
-bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
+bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, PipeId pipe_id,
                                    TranscoderId transcoder_id) {
   tgl_registers::TranscoderRegs transcoder_regs(transcoder_id);
 
@@ -1962,7 +1962,7 @@ bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pi
   return true;
 }
 
-bool DpDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
+bool DpDisplay::PipeConfigEpilogue(const display_mode_t& mode, PipeId pipe_id,
                                    TranscoderId transcoder_id) {
   tgl_registers::TranscoderRegs transcoder_regs(transcoder_id);
   auto main_stream_attribute_misc = transcoder_regs.MainStreamAttributeMisc().FromValue(0);
@@ -2013,7 +2013,7 @@ bool DpDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pi
   // Lake and Skylake) and DSI (on Tiger Lake, not yet supported by our driver).
   // Since the field is ignored (as opposed to reserved), it's OK to still set
   // it everywhere.
-  transcoder_ddi_control.set_input_pipe_select(pipe);
+  transcoder_ddi_control.set_input_pipe_id(pipe_id);
 
   transcoder_ddi_control.set_allocate_display_port_virtual_circuit_payload(false)
       .set_display_port_lane_count(dp_lane_count_)

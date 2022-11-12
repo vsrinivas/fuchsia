@@ -98,12 +98,8 @@ constexpr cpp20::span<const TranscoderId> TranscoderIds() {
   }
 }
 
-}  // namespace i915_tgl
-
-namespace tgl_registers {
-
 // TODO(fxbug.dev/109278): Support Pipe D on Tiger Lake.
-enum Pipe {
+enum PipeId {
   PIPE_A = 0,
   PIPE_B,
   PIPE_C,
@@ -112,13 +108,13 @@ enum Pipe {
 
 namespace internal {
 
-constexpr std::array kPipesKabyLake = {
+constexpr std::array kPipeIdsKabyLake = {
     PIPE_A,
     PIPE_B,
     PIPE_C,
 };
 
-constexpr std::array kPipesTigerLake = {
+constexpr std::array kPipeIdsTigerLake = {
     PIPE_A,
     PIPE_B,
     PIPE_C,
@@ -126,17 +122,21 @@ constexpr std::array kPipesTigerLake = {
 
 }  // namespace internal
 
-template <Platform P>
-constexpr cpp20::span<const Pipe> Pipes() {
+template <tgl_registers::Platform P>
+constexpr cpp20::span<const PipeId> PipeIds() {
   switch (P) {
-    case Platform::kKabyLake:
-    case Platform::kSkylake:
-    case Platform::kTestDevice:
-      return internal::kPipesKabyLake;
-    case Platform::kTigerLake:
-      return internal::kPipesTigerLake;
+    case tgl_registers::Platform::kKabyLake:
+    case tgl_registers::Platform::kSkylake:
+    case tgl_registers::Platform::kTestDevice:
+      return internal::kPipeIdsKabyLake;
+    case tgl_registers::Platform::kTigerLake:
+      return internal::kPipeIdsTigerLake;
   }
 }
+
+}  // namespace i915_tgl
+
+namespace tgl_registers {
 
 enum Dpll {
   DPLL_INVALID = -1,

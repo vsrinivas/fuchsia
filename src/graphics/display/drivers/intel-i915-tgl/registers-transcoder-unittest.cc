@@ -149,7 +149,7 @@ TEST(TranscoderDdiControlTest, PortSyncPrimaryTranscoderKabyLake) {
             transcoder_ddi_control_a.port_sync_primary_transcoder_kaby_lake());
 }
 
-TEST(TranscoderDdiControlTest, InputPipe) {
+TEST(TranscoderDdiControlTest, InputPipeId) {
   // The bit patterns come from the reference manuals.
   //
   // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 pages 1373
@@ -160,31 +160,31 @@ TEST(TranscoderDdiControlTest, InputPipe) {
           .FromValue(0);
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_input_pipe(tgl_registers::Pipe::PIPE_A);
+  transcoder_ddi_control_a.set_input_pipe_id(PipeId::PIPE_A);
   EXPECT_EQ(0b00000000'00000000'0'000'0000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(tgl_registers::Pipe::PIPE_A, transcoder_ddi_control_a.input_pipe());
+  EXPECT_EQ(PipeId::PIPE_A, transcoder_ddi_control_a.input_pipe_id());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_input_pipe(tgl_registers::Pipe::PIPE_B);
+  transcoder_ddi_control_a.set_input_pipe_id(PipeId::PIPE_B);
   EXPECT_EQ(0b00000000'00000000'0'101'0000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(tgl_registers::Pipe::PIPE_B, transcoder_ddi_control_a.input_pipe());
+  EXPECT_EQ(PipeId::PIPE_B, transcoder_ddi_control_a.input_pipe_id());
 
   transcoder_ddi_control_a.set_reg_value(0);
-  transcoder_ddi_control_a.set_input_pipe(tgl_registers::Pipe::PIPE_C);
+  transcoder_ddi_control_a.set_input_pipe_id(PipeId::PIPE_C);
   EXPECT_EQ(0b00000000'00000000'0'110'0000'00000000u, transcoder_ddi_control_a.reg_value());
-  EXPECT_EQ(tgl_registers::Pipe::PIPE_C, transcoder_ddi_control_a.input_pipe());
+  EXPECT_EQ(PipeId::PIPE_C, transcoder_ddi_control_a.input_pipe_id());
 
   // TODO(fxbug.dev/109278): Add a test for Tiger Lake's pipe D, when we support
   // it. The golden value is 0b00000000'00000000'0'111'0000'00000000u
 
   transcoder_ddi_control_a.set_reg_value(0b00000000'00000000'0'001'0000'00000000u);
-  EXPECT_EQ(tgl_registers::Pipe::PIPE_INVALID, transcoder_ddi_control_a.input_pipe());
+  EXPECT_EQ(PipeId::PIPE_INVALID, transcoder_ddi_control_a.input_pipe_id());
 
   transcoder_ddi_control_a.set_reg_value(0b00000000'00000000'0'010'0000'00000000u);
-  EXPECT_EQ(tgl_registers::Pipe::PIPE_INVALID, transcoder_ddi_control_a.input_pipe());
+  EXPECT_EQ(PipeId::PIPE_INVALID, transcoder_ddi_control_a.input_pipe_id());
 
   transcoder_ddi_control_a.set_reg_value(0b00000000'00000000'0'011'0000'00000000u);
-  EXPECT_EQ(tgl_registers::Pipe::PIPE_INVALID, transcoder_ddi_control_a.input_pipe());
+  EXPECT_EQ(PipeId::PIPE_INVALID, transcoder_ddi_control_a.input_pipe_id());
 }
 
 TEST(TranscoderDdiControlTest, DisplayPortLaneCount) {

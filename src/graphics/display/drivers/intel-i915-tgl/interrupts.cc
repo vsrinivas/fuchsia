@@ -263,13 +263,13 @@ int Interrupts::IrqLoop() {
     //                         pipe and transcoder D.
 
     if (display_interrupts.pipe_c_pending()) {
-      HandlePipeInterrupt(tgl_registers::PIPE_C, timestamp);
+      HandlePipeInterrupt(PipeId::PIPE_C, timestamp);
     }
     if (display_interrupts.pipe_b_pending()) {
-      HandlePipeInterrupt(tgl_registers::PIPE_B, timestamp);
+      HandlePipeInterrupt(PipeId::PIPE_B, timestamp);
     }
     if (display_interrupts.pipe_a_pending()) {
-      HandlePipeInterrupt(tgl_registers::PIPE_A, timestamp);
+      HandlePipeInterrupt(PipeId::PIPE_A, timestamp);
     }
 
     {
@@ -299,8 +299,8 @@ int Interrupts::IrqLoop() {
   }
 }
 
-void Interrupts::HandlePipeInterrupt(tgl_registers::Pipe pipe, zx_time_t timestamp) {
-  tgl_registers::PipeRegs regs(pipe);
+void Interrupts::HandlePipeInterrupt(PipeId pipe_id, zx_time_t timestamp) {
+  tgl_registers::PipeRegs regs(pipe_id);
   auto interrupt_identity =
       regs.PipeInterrupt(tgl_registers::PipeRegs::InterruptRegister::kIdentity)
           .ReadFrom(mmio_space_);
@@ -311,15 +311,15 @@ void Interrupts::HandlePipeInterrupt(tgl_registers::Pipe pipe, zx_time_t timesta
   interrupt_identity.WriteTo(mmio_space_);
 
   if (interrupt_identity.underrun()) {
-    zxlogf(WARNING, "Transcoder underrun on pipe %d", pipe);
+    zxlogf(WARNING, "Transcoder underrun on pipe %d", pipe_id);
   }
   if (interrupt_identity.vsync()) {
-    pipe_vsync_callback_(pipe, timestamp);
+    pipe_vsync_callback_(pipe_id, timestamp);
   }
 }
 
-void Interrupts::EnablePipeInterrupts(tgl_registers::Pipe pipe, bool enable) {
-  tgl_registers::PipeRegs regs(pipe);
+void Interrupts::EnablePipeInterrupts(PipeId pipe_id, bool enable) {
+  tgl_registers::PipeRegs regs(pipe_id);
   auto interrupt_mask =
       regs.PipeInterrupt(tgl_registers::PipeRegs::InterruptRegister::kMask).FromValue(0);
   interrupt_mask.set_underrun(!enable).set_vsync(!enable).WriteTo(mmio_space_);

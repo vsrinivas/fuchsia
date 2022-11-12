@@ -75,7 +75,7 @@ class Power {
   static std::unique_ptr<Power> New(fdf::MmioBuffer* mmio_space, uint16_t device_id);
 
   virtual PowerWellRef GetCdClockPowerWellRef() = 0;
-  virtual PowerWellRef GetPipePowerWellRef(tgl_registers::Pipe pipe) = 0;
+  virtual PowerWellRef GetPipePowerWellRef(PipeId pipe_id) = 0;
   virtual PowerWellRef GetDdiPowerWellRef(DdiId ddi_id) = 0;
 
   // TODO(fxbug.dev/99980): Support Thunderbolt. Currently the API assumes all

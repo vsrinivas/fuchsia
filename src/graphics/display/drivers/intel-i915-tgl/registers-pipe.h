@@ -898,7 +898,7 @@ class PipeRegs {
     kEnable = 0x4440c,
   };
 
-  explicit PipeRegs(Pipe pipe) : pipe_(pipe) {}
+  explicit PipeRegs(i915_tgl::PipeId pipe_id) : pipe_id_(pipe_id) {}
 
   hwreg::RegisterAddr<tgl_registers::PipeSourceSize> PipeSourceSize() {
     return GetReg<tgl_registers::PipeSourceSize>();
@@ -935,11 +935,11 @@ class PipeRegs {
   // 0 == cursor, 1-3 are regular planes
   hwreg::RegisterAddr<tgl_registers::PlaneBufferConfig> PlaneBufCfg(int plane) {
     return hwreg::RegisterAddr<tgl_registers::PlaneBufferConfig>(PlaneBufferConfig::kBaseAddr +
-                                                                 0x1000 * pipe_ + 0x100 * plane);
+                                                                 0x1000 * pipe_id_ + 0x100 * plane);
   }
 
   hwreg::RegisterAddr<tgl_registers::PlaneWm> PlaneWatermark(int plane, int wm_num) {
-    return hwreg::RegisterAddr<PlaneWm>(PlaneWm::kBaseAddr + 0x1000 * pipe_ + 0x100 * plane +
+    return hwreg::RegisterAddr<PlaneWm>(PlaneWm::kBaseAddr + 0x1000 * pipe_id_ + 0x100 * plane +
                                         4 * wm_num);
   }
 
@@ -952,22 +952,22 @@ class PipeRegs {
 
   hwreg::RegisterAddr<tgl_registers::PipeScalerCtrl> PipeScalerCtrl(int num) {
     return hwreg::RegisterAddr<tgl_registers::PipeScalerCtrl>(PipeScalerCtrl::kBaseAddr +
-                                                              0x800 * pipe_ + num * 0x100);
+                                                              0x800 * pipe_id_ + num * 0x100);
   }
 
   hwreg::RegisterAddr<tgl_registers::PipeScalerWinPosition> PipeScalerWinPosition(int num) {
     return hwreg::RegisterAddr<tgl_registers::PipeScalerWinPosition>(
-        PipeScalerWinPosition::kBaseAddr + 0x800 * pipe_ + num * 0x100);
+        PipeScalerWinPosition::kBaseAddr + 0x800 * pipe_id_ + num * 0x100);
   }
 
   hwreg::RegisterAddr<tgl_registers::PipeScalerWinSize> PipeScalerWinSize(int num) {
     return hwreg::RegisterAddr<tgl_registers::PipeScalerWinSize>(PipeScalerWinSize::kBaseAddr +
-                                                                 0x800 * pipe_ + num * 0x100);
+                                                                 0x800 * pipe_id_ + num * 0x100);
   }
 
   hwreg::RegisterAddr<tgl_registers::PipeInterrupt> PipeInterrupt(InterruptRegister register_type) {
     return hwreg::RegisterAddr<tgl_registers::PipeInterrupt>(static_cast<uint32_t>(register_type) +
-                                                             0x10 * pipe_);
+                                                             0x10 * pipe_id_);
   }
 
   hwreg::RegisterAddr<tgl_registers::CursorBase> CursorBase() {
@@ -1006,20 +1006,20 @@ class PipeRegs {
  private:
   template <class RegType>
   hwreg::RegisterAddr<RegType> GetReg() {
-    return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_);
+    return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_id_);
   }
 
   template <class RegType>
   hwreg::RegisterAddr<RegType> GetPlaneReg(int32_t plane) {
-    return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_ + 0x100 * plane);
+    return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_id_ + 0x100 * plane);
   }
 
   template <class RegType>
   hwreg::RegisterAddr<RegType> GetCscReg(uint32_t base) {
-    return hwreg::RegisterAddr<RegType>(base + 0x100 * pipe_);
+    return hwreg::RegisterAddr<RegType>(base + 0x100 * pipe_id_);
   }
 
-  Pipe pipe_;
+  i915_tgl::PipeId pipe_id_;
 };
 
 // Struct of registers which arm double buffered registers

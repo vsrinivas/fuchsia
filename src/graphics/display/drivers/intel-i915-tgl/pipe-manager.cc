@@ -57,12 +57,12 @@ bool PipeManager::PipeReallocated() {
   return result;
 }
 
-Pipe* PipeManager::operator[](tgl_registers::Pipe idx) const {
+Pipe* PipeManager::operator[](PipeId idx) const {
   ZX_DEBUG_ASSERT(idx < pipes_.size());
   return idx < pipes_.size() ? pipes_.at(idx).get() : nullptr;
 }
 
-Pipe* PipeManager::At(tgl_registers::Pipe idx) const {
+Pipe* PipeManager::At(PipeId idx) const {
   return idx < pipes_.size() ? pipes_.at(idx).get() : nullptr;
 }
 
@@ -123,12 +123,12 @@ Pipe* PipeManagerSkylake::GetPipeFromHwState(DdiId ddi_id, fdf::MmioBuffer* mmio
     tgl_registers::TranscoderRegs transcoder_regs(TranscoderId::TRANSCODER_EDP);
     auto transcoder_ddi_control = transcoder_regs.DdiControl().ReadFrom(mmio_space);
 
-    const tgl_registers::Pipe pipe = transcoder_ddi_control.input_pipe();
-    if (pipe == tgl_registers::Pipe::PIPE_INVALID) {
+    const PipeId pipe_id = transcoder_ddi_control.input_pipe_id();
+    if (pipe_id == PipeId::PIPE_INVALID) {
       // The transcoder DDI control register is configured incorrectly.
       return nullptr;
     }
-    return At(pipe);
+    return At(pipe_id);
   }
 
   for (Pipe* pipe : *this) {
@@ -149,7 +149,7 @@ Pipe* PipeManagerSkylake::GetPipeFromHwState(DdiId ddi_id, fdf::MmioBuffer* mmio
 std::vector<std::unique_ptr<Pipe>> PipeManagerSkylake::GetPipes(fdf::MmioBuffer* mmio_space,
                                                                 Power* power) {
   std::vector<std::unique_ptr<Pipe>> pipes;
-  for (const auto pipe_enum : tgl_registers::Pipes<tgl_registers::Platform::kSkylake>()) {
+  for (const auto pipe_enum : PipeIds<tgl_registers::Platform::kSkylake>()) {
     pipes.push_back(std::make_unique<PipeSkylake>(mmio_space, pipe_enum,
                                                   power->GetPipePowerWellRef(pipe_enum)));
   }
@@ -198,7 +198,7 @@ void PipeManagerTigerLake::ResetInactiveTranscoders() {
 std::vector<std::unique_ptr<Pipe>> PipeManagerTigerLake::GetPipes(fdf::MmioBuffer* mmio_space,
                                                                   Power* power) {
   std::vector<std::unique_ptr<Pipe>> pipes;
-  for (const auto pipe_enum : tgl_registers::Pipes<tgl_registers::Platform::kTigerLake>()) {
+  for (const auto pipe_enum : PipeIds<tgl_registers::Platform::kTigerLake>()) {
     pipes.push_back(std::make_unique<PipeTigerLake>(mmio_space, pipe_enum,
                                                     power->GetPipePowerWellRef(pipe_enum)));
   }

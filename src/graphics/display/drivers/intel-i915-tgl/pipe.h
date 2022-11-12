@@ -33,7 +33,7 @@ class DisplayDevice;
 
 class Pipe {
  public:
-  Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Platform platform, tgl_registers::Pipe pipe,
+  Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Platform platform, PipeId pipe_id,
        PowerWellRef pipe_power);
   virtual ~Pipe() = default;
 
@@ -64,7 +64,7 @@ class Pipe {
 
   void LoadActiveMode(display_mode_t* mode);
 
-  tgl_registers::Pipe pipe_id() const { return pipe_; }
+  PipeId pipe_id() const { return pipe_id_; }
 
   // Identifies the transcoder that is always tied to the pipe.
   //
@@ -74,7 +74,7 @@ class Pipe {
   //
   // See `connected_transcoder_id()` for identifying the transcoder that the
   // pipe is currently using.
-  TranscoderId tied_transcoder_id() const { return static_cast<TranscoderId>(pipe_); }
+  TranscoderId tied_transcoder_id() const { return static_cast<TranscoderId>(pipe_id_); }
 
   // Identifies the transcoder that is currently receiving the pipe's output.
   //
@@ -119,12 +119,12 @@ class Pipe {
   bool attached_edp_ = false;
 
   tgl_registers::Platform platform_;
-  tgl_registers::Pipe pipe_;
+  PipeId pipe_id_;
 
   PowerWellRef pipe_power_;
 
   // For any scaled planes, this contains the (1-based) index of the active scaler
-  uint32_t scaled_planes_[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+  uint32_t scaled_planes_[PipeIds<tgl_registers::Platform::kKabyLake>().size()]
                          [tgl_registers::kImagePlaneCount] = {};
 
   // On each Vsync, the driver should return the stamp of the *oldest*
@@ -163,8 +163,8 @@ class Pipe {
 
 class PipeSkylake : public Pipe {
  public:
-  PipeSkylake(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power)
-      : Pipe(mmio_space, tgl_registers::Platform::kSkylake, pipe, std::move(pipe_power)) {}
+  PipeSkylake(fdf::MmioBuffer* mmio_space, PipeId pipe_id, PowerWellRef pipe_power)
+      : Pipe(mmio_space, tgl_registers::Platform::kSkylake, pipe_id, std::move(pipe_power)) {}
   ~PipeSkylake() override = default;
 
   TranscoderId connected_transcoder_id() const override {
@@ -174,8 +174,8 @@ class PipeSkylake : public Pipe {
 
 class PipeTigerLake : public Pipe {
  public:
-  PipeTigerLake(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power)
-      : Pipe(mmio_space, tgl_registers::Platform::kTigerLake, pipe, std::move(pipe_power)) {}
+  PipeTigerLake(fdf::MmioBuffer* mmio_space, PipeId pipe_id, PowerWellRef pipe_power)
+      : Pipe(mmio_space, tgl_registers::Platform::kTigerLake, pipe_id, std::move(pipe_power)) {}
   ~PipeTigerLake() override = default;
 
   TranscoderId connected_transcoder_id() const override { return tied_transcoder_id(); }

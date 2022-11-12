@@ -74,11 +74,11 @@ uint32_t encode_pipe_color_component(uint8_t component) {
 
 namespace i915_tgl {
 
-Pipe::Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Platform platform, tgl_registers::Pipe pipe,
+Pipe::Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Platform platform, PipeId pipe_id,
            PowerWellRef pipe_power)
     : mmio_space_(mmio_space),
       platform_(platform),
-      pipe_(pipe),
+      pipe_id_(pipe_id),
       pipe_power_(std::move(pipe_power)) {}
 
 // static
@@ -364,7 +364,7 @@ void Pipe::LoadActiveMode(display_mode_t* mode) {
 
   // If we're reusing hardware state, make sure the pipe source size matches
   // the display mode size, since we never scale pipes.
-  tgl_registers::PipeRegs pipe_regs(pipe_);
+  tgl_registers::PipeRegs pipe_regs(pipe_id_);
   auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
   pipe_size.set_horizontal_source_size_minus_one(mode->h_addressable - 1);
   pipe_size.set_vertical_source_size_minus_one(mode->v_addressable - 1);
@@ -386,7 +386,7 @@ void Pipe::ApplyConfiguration(const display_config_t* config, const config_stamp
   auto current_config_stamp_seqno = *config_stamps_front_seqno_ + config_stamps_.size() - 1;
 
   tgl_registers::pipe_arming_regs_t regs;
-  tgl_registers::PipeRegs pipe_regs(pipe_);
+  tgl_registers::PipeRegs pipe_regs(pipe_id_);
 
   if (config->cc_flags) {
     float zero_offset[3] = {};
@@ -471,7 +471,7 @@ void Pipe::ApplyConfiguration(const display_config_t* config, const config_stamp
     pipe_regs.PlaneSurface(i).FromValue(regs.plane_surf[i]).WriteTo(mmio_space_);
   }
   pipe_regs.PipeScalerWinSize(0).FromValue(regs.ps_win_sz[0]).WriteTo(mmio_space_);
-  if (pipe_ != tgl_registers::PIPE_C) {
+  if (pipe_id_ != PipeId::PIPE_C) {
     pipe_regs.PipeScalerWinSize(1).FromValue(regs.ps_win_sz[1]).WriteTo(mmio_space_);
   }
 }

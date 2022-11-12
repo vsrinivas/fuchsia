@@ -27,7 +27,7 @@ class TestPower : public Power {
   void Resume() override {}
 
   PowerWellRef GetCdClockPowerWellRef() override { return PowerWellRef(); }
-  PowerWellRef GetPipePowerWellRef(tgl_registers::Pipe pipe) override { return PowerWellRef(); }
+  PowerWellRef GetPipePowerWellRef(PipeId pipe_id) override { return PowerWellRef(); }
   PowerWellRef GetDdiPowerWellRef(DdiId ddi_id) override { return PowerWellRef(); }
 
   bool GetDdiIoPowerState(DdiId ddi_id) override { return true; }
