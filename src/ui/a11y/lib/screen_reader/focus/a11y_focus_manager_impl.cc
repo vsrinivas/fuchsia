@@ -11,7 +11,8 @@
 
 #include <optional>
 
-#include "src/ui/a11y/lib/util/util.h"
+#include "fuchsia/math/cpp/fidl.h"
+#include "src/ui/a11y/lib/annotation/highlight_delegate.h"
 
 namespace a11y {
 
@@ -19,10 +20,12 @@ A11yFocusManagerImpl::A11yFocusManagerImpl(AccessibilityFocusChainRequester* foc
                                            AccessibilityFocusChainRegistry* registry,
                                            ViewSource* view_source,
                                            VirtualKeyboardManager* virtual_keyboard_manager,
+                                           std::shared_ptr<HighlightDelegate> highlight_delegate,
                                            inspect::Node inspect_node)
     : focus_chain_requester_(focus_chain_requester),
       view_source_(view_source),
       virtual_keyboard_manager_(virtual_keyboard_manager),
+      highlight_delegate_(std::move(highlight_delegate)),
       weak_ptr_factory_(this),
       inspect_node_(std::move(inspect_node)),
       inspect_property_current_focus_koid_(
@@ -165,12 +168,23 @@ void A11yFocusManagerImpl::UpdateHighlights(zx_koid_t newly_focused_view,
     FX_LOGS(ERROR) << "No node found with id: " << newly_focused_node;
     return;
   }
-
   auto bounding_box = annotated_node->location();
 
   // Request to draw the highlight.
-  view->annotation_view()->DrawHighlight(bounding_box, transform->scale_vector(),
-                                         transform->translation_vector());
+  if (highlight_delegate_) {
+    // Flatland
+    auto local_bounding_box_min = transform->Apply(bounding_box.min);
+    auto local_bounding_box_max = transform->Apply(bounding_box.max);
+
+    highlight_delegate_->DrawHighlight({local_bounding_box_min.x, local_bounding_box_min.y},
+                                       {local_bounding_box_max.x, local_bounding_box_max.y},
+                                       newly_focused_view);
+  } else {
+    // Gfx
+    // TODO(fxbug.dev/114627) Clean this up when Gfx is deleted.
+    view->annotation_view()->DrawHighlight(bounding_box, transform->scale_vector(),
+                                           transform->translation_vector());
+  }
 }
 
 void A11yFocusManagerImpl::ClearA11yFocus() {
@@ -199,14 +213,20 @@ void A11yFocusManagerImpl::ClearHighlights() {
     return;
   }
 
-  auto view = view_source_->GetViewWrapper(currently_focused_view_);
+  if (highlight_delegate_) {
+    // Flatland
+    highlight_delegate_->ClearHighlight();
+  } else {
+    // Gfx
+    auto view = view_source_->GetViewWrapper(currently_focused_view_);
 
-  // If the focused view no longer exists, then there's no work to do.
-  if (!view) {
-    return;
+    // If the focused view no longer exists, then there's no work to do.
+    if (!view) {
+      return;
+    }
+
+    view->annotation_view()->ClearFocusHighlights();
   }
-
-  view->annotation_view()->ClearFocusHighlights();
 }
 
 }  // namespace a11y

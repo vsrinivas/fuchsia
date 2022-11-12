@@ -37,7 +37,8 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
          a11y::BootInfoManager* boot_info_manager,
          a11y::ScreenReaderContextFactory* screen_reader_context_factory,
          inspect::Node inspect_node, bool use_flatland)
-    : context_(context),
+    : use_flatland_(use_flatland),
+      context_(context),
       view_manager_(view_manager),
       tts_manager_(tts_manager),
       color_transform_manager_(color_transform_manager),
@@ -298,6 +299,7 @@ A11yManagerState A11yManagerState::withSettings(
 std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
   auto a11y_focus_manager = std::make_unique<a11y::A11yFocusManagerImpl>(
       focus_chain_manager_.get(), focus_chain_manager_.get(), view_manager_, view_manager_,
+      use_flatland_ ? view_manager_->flatland_a11y_view() : nullptr,
       inspect_node_.CreateChild("focus_manager"));
   std::string locale_id = "en-US";
   if (i18n_profile_ && i18n_profile_->has_locales() && !i18n_profile_->locales().empty()) {

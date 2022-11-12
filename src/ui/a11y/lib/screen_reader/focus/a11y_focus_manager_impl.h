@@ -11,6 +11,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include "src/ui/a11y/lib/annotation/highlight_delegate.h"
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_listener.h"
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_requester.h"
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
@@ -45,9 +46,13 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
   static constexpr char kCurrentlyFocusedNodeIdInspectNodeName[] = "currently_focused_node_id";
 
   // |focus_chain_requester| and |registry| must outlive this object.
+  //
+  // |highlight_delegate| is null if we are using Gfx, non-null if
+  // we are using Flatland.
   explicit A11yFocusManagerImpl(AccessibilityFocusChainRequester* focus_chain_requester,
                                 AccessibilityFocusChainRegistry* registry, ViewSource* view_source,
                                 VirtualKeyboardManager* virtual_keyboard_manager,
+                                std::shared_ptr<HighlightDelegate> highlight_delegate,
                                 inspect::Node inspect_node = inspect::Node());
   ~A11yFocusManagerImpl() override;
 
@@ -141,6 +146,10 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
 
   // Used to retrieve information about visible virtual keyboards.
   VirtualKeyboardManager* const virtual_keyboard_manager_ = nullptr;
+
+  // Used to draw a11y highlights.
+  // Null if on Gfx, non-null if on Flatland.
+  std::shared_ptr<HighlightDelegate> highlight_delegate_;
 
   OnA11yFocusUpdatedCallback on_a11y_focus_updated_callback_;
 

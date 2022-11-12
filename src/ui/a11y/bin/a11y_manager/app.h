@@ -172,6 +172,10 @@ class App {
   // Fetches the user's i18n profile and stores in |i18n_profile_|.
   void PropertyProviderOnChangeHandler();
 
+  // True if we are using Flatland, false if we are using Gfx.
+  // TODO(fxbug.dev/114627) Clean this up when Gfx is deleted.
+  bool use_flatland_;
+
   // Data fields that must be initialized to consider this object as initialized.
   // Current state of the a11y manager
   A11yManagerState state_;
