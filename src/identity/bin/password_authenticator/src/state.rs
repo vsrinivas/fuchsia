@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_identity_authentication as fidl, futures::lock::Mutex, std::cell::RefCell};
+use {
+    fidl_fuchsia_identity_authentication as fidl, fuchsia_zircon::Time, futures::lock::Mutex,
+    std::cell::RefCell,
+};
 
 type ChangeFn = Box<dyn Fn(&State)>;
 
@@ -58,7 +61,7 @@ impl StateMachine {
     pub async fn leave_error(&self) {
         let mut current_state_lock = self.current_state.lock().await;
         if let State::Error { error_type } = &*current_state_lock {
-            if let PasswordError::MustWait = error_type {
+            if let PasswordError::MustWait(_) = error_type {
                 // TODO(fxb/113473): When leaving a must MustWait error and entering the
                 // WaitingForTime state, start an async task to automatically leave the
                 // WaitingForTime state once the time expires. Until we are ready to support
@@ -84,21 +87,42 @@ impl StateMachine {
 /// see sdk/fidl/fuchsia.identity.authentication/mechanisms.fidl for further information.
 pub(crate) enum State {
     /// Client must wait before another attempt.
-    WaitingForTime,
+    WaitingForTime { time: Time },
     /// All preconditions are met.
     WaitingForPassword,
     /// Verification failed with the supplied error.
     Error { error_type: PasswordError },
 }
 
+impl From<State> for fidl::PasswordInteractionWatchStateResponse {
+    fn from(s: State) -> Self {
+        match s {
+            // TODO(fxb/113473): Properly implement WaitingForTime.
+            State::WaitingForTime { time } => {
+                fidl::PasswordInteractionWatchStateResponse::Waiting(vec![
+                    fidl::PasswordCondition::WaitUntil(time.into_nanos()),
+                ])
+            }
+            State::WaitingForPassword => {
+                fidl::PasswordInteractionWatchStateResponse::Waiting(vec![
+                    fidl::PasswordCondition::SetPassword(fidl::Empty),
+                ])
+            }
+            State::Error { error_type: e } => {
+                fidl::PasswordInteractionWatchStateResponse::Error(e.into())
+            }
+        }
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 /// The set of errors that may be encountered during a password interaction.
 pub enum PasswordError {
-    TooShort(/* minumum_length : */ u8),
+    TooShort(/* minumum_length */ u8),
     TooWeak,
     Incorrect,
-    MustWait,
+    MustWait(/* wait until time */ Time),
     NotWaitingForPassword,
 }
 
@@ -110,7 +134,7 @@ impl From<PasswordError> for fidl::PasswordError {
             }
             PasswordError::TooWeak => fidl::PasswordError::TooWeak(fidl::Empty),
             PasswordError::Incorrect => fidl::PasswordError::Incorrect(fidl::Empty),
-            PasswordError::MustWait => fidl::PasswordError::MustWait(fidl::Empty),
+            PasswordError::MustWait(_) => fidl::PasswordError::MustWait(fidl::Empty),
             PasswordError::NotWaitingForPassword => {
                 fidl::PasswordError::NotWaitingForPassword(fidl::Empty)
             }
@@ -131,7 +155,7 @@ impl From<&State> for StateName {
     fn from(state: &State) -> Self {
         match state {
             State::WaitingForPassword => StateName::WaitingForPassword,
-            State::WaitingForTime => StateName::WaitingForTime,
+            State::WaitingForTime { .. } => StateName::WaitingForTime,
             State::Error { .. } => StateName::Error,
         }
     }
@@ -163,9 +187,9 @@ mod test {
             PasswordError::Incorrect,
             PasswordError::TooShort(TEST_MINIMUM_LENGTH),
             PasswordError::TooWeak,
-            PasswordError::MustWait,
+            PasswordError::MustWait(Time::INFINITE),
             // Note: repeat the same error to verify that is allowed
-            PasswordError::MustWait,
+            PasswordError::MustWait(Time::INFINITE),
         ] {
             state_machine.set_error(error).await;
             assert_eq!(state_machine.get().await, State::Error { error_type: error });
@@ -175,7 +199,7 @@ mod test {
     #[fuchsia::test]
     async fn try_set_error_with_change_function() {
         let state_machine = StateMachine::new();
-        let reported_state = Rc::new(RefCell::new(State::WaitingForTime));
+        let reported_state = Rc::new(RefCell::new(State::WaitingForPassword));
         let reported_state_clone = Rc::clone(&reported_state);
         state_machine.register_change_function(Box::new(move |state| {
             *reported_state_clone.borrow_mut() = *state;
@@ -185,9 +209,7 @@ mod test {
             PasswordError::Incorrect,
             PasswordError::TooShort(TEST_MINIMUM_LENGTH),
             PasswordError::TooWeak,
-            PasswordError::MustWait,
-            // Note: repeat the same error to verify that is allowed
-            PasswordError::MustWait,
+            PasswordError::MustWait(Time::INFINITE),
         ] {
             state_machine.set_error(error).await;
             assert_eq!(*reported_state.borrow(), State::Error { error_type: error });
@@ -198,7 +220,7 @@ mod test {
     #[fuchsia::test]
     async fn try_leave_error_valid() {
         let state_machine = StateMachine::new();
-        let reported_state = Rc::new(RefCell::new(State::WaitingForTime));
+        let reported_state = Rc::new(RefCell::new(State::WaitingForTime { time: Time::INFINITE }));
         let reported_state_clone = Rc::clone(&reported_state);
         state_machine.register_change_function(Box::new(move |state| {
             *reported_state_clone.borrow_mut() = *state;
@@ -223,7 +245,7 @@ mod test {
 
         // Attempting to leave a must wait error leads to a panic because we don't support
         // waiting for time yet.
-        state_machine.set_error(PasswordError::MustWait).await;
+        state_machine.set_error(PasswordError::MustWait(Time::INFINITE)).await;
         state_machine.leave_error().await;
     }
 
