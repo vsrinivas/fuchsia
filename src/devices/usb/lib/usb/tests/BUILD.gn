@@ -27,6 +27,7 @@ test("usb-request-test-bin") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/trace-test-utils",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

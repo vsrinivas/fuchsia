@@ -13,6 +13,7 @@ zx_library("trace-test-utils") {
     "trace-test-utils/fixture.h",
     "trace-test-utils/read_records.h",
     "trace-test-utils/squelch.h",
+    "trace-test-utils/fixture_macros.h",
   ]
   testonly = true
   sources = [

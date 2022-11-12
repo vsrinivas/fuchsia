@@ -16,9 +16,8 @@
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <trace-test-utils/fixture.h>
+#include <trace-test-utils/fixture_macros.h>
 #include <trace-test-utils/squelch.h>
-
-#include "fixture_macros.h"
 
 namespace {
 

@@ -6,12 +6,20 @@
 
 #include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <lib/fake-bti/bti.h>
+#include <lib/trace-engine/types.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
+
+#include <array>
+#include <vector>
 
 #include <fbl/algorithm.h>
+#include <trace-test-utils/fixture_macros.h>
 #include <zxtest/zxtest.h>
+
+#include "usb/usb-request.h"
 
 namespace {
 
@@ -875,6 +883,30 @@ TEST(UsbRequestTest, CallbackRequest) {
   Request::Queue(std::move(*req), client);
   ASSERT_EQ(5, invoked);
   ASSERT_TRUE(invoked_other);
+}
+
+TEST(UsbRequestTest, TraceRecord) {
+  std::vector<std::string> categories{"USB Request"};
+  usb_request_t dummy_request{};
+  BEGIN_TRACE_TEST_WITH_CATEGORIES(categories);
+  fixture_initialize_and_start_tracing();
+
+  usb_request_trace_flow(&dummy_request);
+  usb_request_complete_base(&dummy_request, ZX_OK, 0, 0, nullptr);
+  fixture_stop_and_terminate_tracing();
+
+  fbl::Vector<trace::Record> records;
+  EXPECT_TRUE(fixture_read_records(&records));
+  int events = 0;
+  std::array<std::string, 4> names{"USB Trace", "Trace Begin", "USB Trace", "Trace End"};
+  for (auto& rec : records) {
+    if (rec.type() == trace::RecordType::kEvent) {
+      EXPECT_STREQ(rec.GetEvent().category.c_str(), "USB Request");
+      EXPECT_STREQ(rec.GetEvent().name.c_str(), names[events].c_str());
+      ++events;
+    }
+  }
+  EXPECT_EQ(events, 4);
 }
 
 }  // namespace

@@ -14,8 +14,8 @@
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <trace-test-utils/fixture.h>
+#include <trace-test-utils/fixture_macros.h>
 
-#include "fixture_macros.h"
 #include "lib/trace-engine/types.h"
 #include "zxtest/zxtest.h"
 
