@@ -183,7 +183,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//src/ui/input/testing/fake-hidbus-ifc:*",
     "//src/ui/input/testing/mock-hidbus-ifc:*",
     "//third_party/android/platform/external/avb:*",
-    "//tools/fidl/fidlc:*",
     "//zircon/kernel/arch/x86/phys:*",
     "//zircon/kernel/dev/coresight:*",
     "//zircon/kernel/lib/acpi_lite:*",

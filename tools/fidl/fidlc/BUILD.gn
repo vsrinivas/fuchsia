@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/toolchain.gni")
+import("//build/sdk/sdk_host_tool.gni")
 import("//build/testing/golden_files.gni")
-import("//build/zircon/migrated_targets.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 config("fidlc_config") {
@@ -14,18 +13,7 @@ config("fidlc_config") {
   }
 }
 
-group("headers") {
-  public_configs = [ ":headers.config" ]
-}
-
-config("headers.config") {
-  include_dirs = [ "include" ]
-}
-
-zx_library("fidl") {
-  sdk = "source"
-  sdk_headers = []
-
+source_set("fidl") {
   sources = [
     "lib/c_generator.cc",
     "lib/check.cc",
@@ -76,16 +64,12 @@ zx_library("fidl") {
     "lib/virtual_source_file.cc",
   ]
   public_deps = [
-    "//sdk/lib/fit:headers",
+    "//sdk/lib/fit",
     "//third_party/re2",
-    "//zircon/system/ulib/cmdline:headers",
+    "//zircon/system/ulib/cmdline",
     "//zircon/third_party/ulib/safemath",
   ]
-  deps = [
-    ":json_schema",
-    "//sdk/lib/fit",
-    "//zircon/system/ulib/cmdline",
-  ]
+  deps = [ ":json_schema" ]
   deps += [ "//third_party/boringssl" ]
 
   configs += [ ":fidlc_config" ]
@@ -102,10 +86,7 @@ zx_library("fidl") {
 source_set("json_schema") {
   visibility = [ ":*" ]
   sources = [ "$target_gen_dir/json_schema.cc" ]
-  deps = [
-    ":gen-json-schema",
-    ":headers",
-  ]
+  deps = [ ":gen-json-schema" ]
 }
 
 action("gen-json-schema") {
@@ -123,23 +104,35 @@ group("host") {
   }
 }
 
-if (current_os != "fuchsia") {
-  zx_host_tool("fidlc") {
+if (is_host) {
+  executable("fidlc") {
     sources = [ "compiler/main.cc" ]
     deps = [ ":fidl" ]
   }
 
-  zx_host_tool("fidl-format") {
+  executable("fidl-format") {
     sources = [ "formatter/main.cc" ]
     deps = [ ":fidl" ]
   }
 
-  zx_host_tool("fidl-lint") {
+  executable("fidl-lint") {
     sources = [
       "linter/command_line_options.cc",
       "linter/main.cc",
     ]
     deps = [ ":fidl" ]
+  }
+
+  sdk_host_tool("fidlc_sdk") {
+    category = "partner"
+    output_name = "fidlc"
+    deps = [ ":fidlc" ]
+  }
+
+  sdk_host_tool("fidl-format_sdk") {
+    category = "partner"
+    output_name = "fidl-format"
+    deps = [ ":fidl-format" ]
   }
 }
 

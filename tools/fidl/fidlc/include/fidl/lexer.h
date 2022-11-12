@@ -28,7 +28,7 @@ class Lexer : private ReporterMixin {
       : ReporterMixin(reporter), source_file_(source_file) {
     token_subkinds = {
 #define TOKEN_SUBKIND(Name, Spelling) {Spelling, Token::Subkind::k##Name},
-#include "fidl/token_definitions.inc"
+#include "tools/fidl/fidlc/include/fidl/token_definitions.inc"
 #undef TOKEN_SUBKIND
     };
     current_ = data().data();

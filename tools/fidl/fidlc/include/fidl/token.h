@@ -22,7 +22,7 @@ class Token {
  public:
   enum Kind : uint8_t {
 #define TOKEN(Name) k##Name,
-#include "fidl/token_definitions.inc"
+#include "tools/fidl/fidlc/include/fidl/token_definitions.inc"
 #undef TOKEN
   };
 
@@ -33,7 +33,7 @@ class Token {
   enum Subkind : uint8_t {
     kNone = 0,
 #define TOKEN_SUBKIND(Name, Spelling) k##Name,
-#include "fidl/token_definitions.inc"
+#include "tools/fidl/fidlc/include/fidl/token_definitions.inc"
 #undef TOKEN_SUBKIND
   };
 
@@ -64,12 +64,12 @@ class Token {
 #define TOKEN(Name)          \
   case Token::Kind::k##Name: \
     return #Name;
-#include "fidl/token_definitions.inc"
+#include "tools/fidl/fidlc/include/fidl/token_definitions.inc"
 #undef TOKEN
 #define TOKEN_SUBKIND(Name, Spelling)                                                       \
   case Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::k##Name).combined(): \
     return #Spelling;
-#include "fidl/token_definitions.inc"
+#include "tools/fidl/fidlc/include/fidl/token_definitions.inc"
 #undef TOKEN_SUBKIND
       default:
         return "<unknown token>";

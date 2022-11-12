@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/flat_ast.h>
-#include <fidl/json_generator.h>
-#include <fidl/lexer.h>
-#include <fidl/ordinals.h>
-#include <fidl/parser.h>
-#include <fidl/source_file.h>
-#include <fidl/tables_generator.h>
 #include <unistd.h>
 
 #include <perftest/perftest.h>
 
-#include "benchmarks.h"
+#include "src/tests/benchmarks/fidl/fidlc/benchmarks.h"
+#include "tools/fidl/fidlc/include/fidl/json_generator.h"
+#include "tools/fidl/fidlc/include/fidl/lexer.h"
+#include "tools/fidl/fidlc/include/fidl/ordinals.h"
+#include "tools/fidl/fidlc/include/fidl/parser.h"
+#include "tools/fidl/fidlc/include/fidl/source_file.h"
 
 // This measures the time to compile the given input fidl text and generate
 // JSON IR output, which is discarded after it is produced in-memory.

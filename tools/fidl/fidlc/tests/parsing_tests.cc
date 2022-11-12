@@ -6,7 +6,7 @@
 
 #include <zxtest/zxtest.h>
 
-#include "fidl/diagnostics.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
 #include "tools/fidl/fidlc/include/fidl/raw_ast.h"
 #include "tools/fidl/fidlc/tests/error_test.h"
 #include "tools/fidl/fidlc/tests/test_library.h"
