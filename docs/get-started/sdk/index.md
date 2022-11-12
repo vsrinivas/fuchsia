@@ -34,8 +34,7 @@ This guide requires that your host machine meets the following criteria:
 
 - Has at least 15 GB of storage space.
 
-- Supports [KVM]{:.external} (Kernel Virtual Machine) for running a
-  [QEMU]{:.external}-based emulator.
+- Supports virtualization for running a [QEMU]{:.external}-based emulator.
 
 - IPv6 is enabled.
 
@@ -184,6 +183,11 @@ Do the following:
    ```
 
 1. Start a new Fuchsia emulator instance:
+
+   Important: If your Linux machine does not support
+   [KVM hardware virtualization](#check-if-your-linux-machine-support-kvm-virtualization),
+   start the emulator with the following command instead:
+   `tools/ffx emu start workstation_eng.qemu-x64 --engine qemu --startup-timeout 720 --accel none --device qemu-x64-emu-min --headless`
 
    ```posix-terminal
    tools/ffx emu start workstation_eng.qemu-x64 --headless
@@ -1104,6 +1108,93 @@ sudo ufw allow proto tcp from fc00::/7 to any port 8083 comment 'Fuchsia Package
 
 However, for other non-`ufw`-based firewalls, you will need to ensure that port
 8083 is available for the Fuchsia package server.
+
+### Check if your Linux machine support KVM virtualization {:#check-if-your-linux-machine-support-kvm-virtualization}
+
+To check if your Linux machine supports KVM hardware virtualization,
+run the following command:
+
+```posix-terminal
+lscpu
+```
+
+This command prints output similar to the following:
+
+```none {:.devsite-disable-click-to-copy}
+$ lscpu
+Architecture:            x86_64
+  CPU op-mode(s):        32-bit, 64-bit
+  Address sizes:         46 bits physical, 48 bits virtual
+  Byte Order:            Little Endian
+...
+Virtualization features:
+  {{ '<strong>' }}Virtualization:        VT-x{{ '</strong>' }}
+  Hypervisor vendor:     KVM
+  Virtualization type:   full
+...
+```
+
+If you see the following field in the output, your Linux machine
+**supports** KVM hardware virtualization:
+
+```none {:.devsite-disable-click-to-copy}
+  Virtualization:        VT-x
+```
+
+Note: If your Linux machine supports KVM hardware virtualization, see
+[Set up KVM virtualization on a Linux machine](#set-up-kvm-virtualization-on-a-linux-machine)
+to verify that KVM is configured correctly.
+
+However, you may see that the `Virtualization` field is  missing in your output
+(while the `Hypervisor vendor` and `Virtualization type` fields are still shown),
+for example:
+
+```none {:.devsite-disable-click-to-copy}
+$ lscpu
+...
+Virtualization features:
+  Hypervisor vendor:     KVM
+  Virtualization type:   full
+...
+```
+
+If your output does not show the `Virtualization` field, your Linux machine
+**does not support** KVM hardware virtualization.
+
+### Set up KVM virtualization on a Linux machine {:#set-up-kvm-virtualization-on-a-linux-machine}
+
+Note: The instructions in this section require that
+[your Linux machine supports KVM hardware virtualization](#check-if-your-linux-machine-support-kvm-virtualization).
+
+To verify that KVM is configured correctly on your Linux machine,
+run the following `bash` shell script:
+
+```posix-terminal
+if [[ -w /dev/kvm ]] && grep '^flags' /proc/cpuinfo | grep -qE 'vmx|svm'; then echo 'KVM is working'; else echo 'KVM not working'; fi
+```
+
+Verify that this shell script prints the following output:
+
+```none {:.devsite-disable-click-to-copy}
+KVM is working
+```
+
+If the output is `KVM is working`, KVM hardware virtualization is
+enabled on your Linux machine.
+
+However, if the output is `KVM not working`, do the following to
+enable KVM hardware virtualization:
+
+1. Add yourself to the `kvm` group on your Linux machine:
+
+   ```posix-terminal
+   sudo usermod -a -G kvm ${USER}
+   ```
+
+1. Reboot the machine.
+1. Run the `bash` shell script above again.
+
+   Verify that the output now prints `KVM is working`.
 
 <!-- Reference links -->
 
