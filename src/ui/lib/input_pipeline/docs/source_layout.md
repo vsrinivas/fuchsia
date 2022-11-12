@@ -14,7 +14,6 @@ All modules are in the `src` directory (parallel to this `docs` directory), and 
 * The `focus_listener` module receives focus change notifications from Scenic, and
   dispatches relevant updates to FIDL peers (e.g. the shortcut manager) that need
   to know which `fuchsia.ui.views.View` has keyboard focus.
-  Note: This is work-in-progress. See https://fxbug.dev/95901.
 * Various other modules implement input pipeline stages. A stage reads `InputEvent`s,
   possibly decorating them, interpreting them, and/or transforming them to `fuchsia.input.InputEvent`s. In the last case, the stage typically sends the message to a FIDL peer.
   * Stages which implement the `InputHandler` trait are called handlers.
