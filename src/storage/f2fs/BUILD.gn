@@ -99,7 +99,6 @@ static_library("f2fs") {
     ]
 
     public_deps += [
-      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
       "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
       "//src/lib/storage/block_client/cpp",
       "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",

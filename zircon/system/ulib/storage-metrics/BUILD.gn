@@ -11,24 +11,16 @@ zx_library("storage-metrics") {
   sdk_headers = [ "storage-metrics/storage-metrics.h" ]
   sources = [ "storage-metrics.cc" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
-    "//sdk/fidl/fuchsia.storage.metrics:fuchsia.storage.metrics_c",
     "//sdk/fidl/fuchsia.storage.metrics:fuchsia.storage.metrics_cpp_wire",
     "//zircon/system/ulib/fbl",
   ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
-    "//sdk/fidl/fuchsia.storage.metrics:fuchsia.storage.metrics_c",
     "//sdk/fidl/fuchsia.storage.metrics:fuchsia.storage.metrics_cpp_wire",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 group("tests") {

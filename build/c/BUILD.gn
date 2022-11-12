@@ -172,8 +172,6 @@ config("fidl-deprecated-c-bindings") {
     "//zircon/system/ulib/kernel-debug",
     "//zircon/system/ulib/profile",
     "//zircon/system/ulib/runtests-utils",
-    "//zircon/system/ulib/storage-metrics",
-    "//zircon/system/ulib/storage-metrics/test:storage-metrics",
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/zx/test:zx",
     "//zircon/system/utest/fidl-utils",

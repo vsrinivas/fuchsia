@@ -48,25 +48,7 @@ void CallStat::CallStatRaw::CopyFromRawFidl(const CallStatRawFidl* istat) {
   minimum_latency = istat->minimum_latency;
 }
 
-void CallStat::CallStatRaw::CopyFromRawFidl(const fuchsia_storage_metrics_CallStatRaw* istat) {
-  minimum_latency = istat->minimum_latency;
-  maximum_latency = istat->maximum_latency;
-  total_time_spent = istat->total_time_spent;
-  total_calls = istat->total_calls;
-  bytes_transferred = istat->bytes_transferred;
-  minimum_latency = istat->minimum_latency;
-}
-
 void CallStat::CallStatRaw::CopyToRawFidl(CallStatRawFidl* out) const {
-  out->minimum_latency = minimum_latency.load();
-  out->maximum_latency = maximum_latency.load();
-  out->total_time_spent = total_time_spent.load();
-  out->total_calls = total_calls.load();
-  out->bytes_transferred = bytes_transferred.load();
-  out->minimum_latency = minimum_latency.load();
-}
-
-void CallStat::CallStatRaw::CopyToRawFidl(fuchsia_storage_metrics_CallStatRaw* out) const {
   out->minimum_latency = minimum_latency.load();
   out->maximum_latency = maximum_latency.load();
   out->total_time_spent = total_time_spent.load();
@@ -105,17 +87,7 @@ void CallStat::CopyFromFidl(const CallStatFidl* stat) {
   failure_stat_.CopyFromRawFidl(&stat->failure);
 }
 
-void CallStat::CopyFromFidl(const fuchsia_storage_metrics_CallStat* stat) {
-  success_stat_.CopyFromRawFidl(&stat->success);
-  failure_stat_.CopyFromRawFidl(&stat->failure);
-}
-
 void CallStat::CopyToFidl(CallStatFidl* out) const {
-  success_stat_.CopyToRawFidl(&out->success);
-  failure_stat_.CopyToRawFidl(&out->failure);
-}
-
-void CallStat::CopyToFidl(fuchsia_storage_metrics_CallStat* out) const {
   success_stat_.CopyToRawFidl(&out->success);
   failure_stat_.CopyToRawFidl(&out->failure);
 }
@@ -212,23 +184,7 @@ BlockDeviceMetrics::BlockDeviceMetrics(const BlockStatFidl* metrics) {
   SetEnable(true);
 }
 
-BlockDeviceMetrics::BlockDeviceMetrics(const fuchsia_hardware_block_BlockStats* metrics) {
-  read_.CopyFromFidl(&metrics->read);
-  write_.CopyFromFidl(&metrics->write);
-  trim_.CopyFromFidl(&metrics->trim);
-  flush_.CopyFromFidl(&metrics->flush);
-
-  SetEnable(true);
-}
-
 void BlockDeviceMetrics::CopyToFidl(BlockStatFidl* metrics) const {
-  read_.CopyToFidl(&metrics->read);
-  write_.CopyToFidl(&metrics->write);
-  trim_.CopyToFidl(&metrics->trim);
-  flush_.CopyToFidl(&metrics->flush);
-}
-
-void BlockDeviceMetrics::CopyToFidl(fuchsia_hardware_block_BlockStats* metrics) const {
   read_.CopyToFidl(&metrics->read);
   write_.CopyToFidl(&metrics->write);
   trim_.CopyToFidl(&metrics->trim);

@@ -6,9 +6,6 @@
 #define STORAGE_METRICS_BLOCK_METRICS_H_
 
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
-#if defined(FIDL_ALLOW_DEPRECATED_C_BINDINGS)
-#include <fuchsia/hardware/block/c/fidl.h>
-#endif
 #include <lib/zx/time.h>
 #include <stdio.h>
 
@@ -28,9 +25,6 @@ class BlockDeviceMetrics : public storage_metrics::Metrics {
  public:
   BlockDeviceMetrics() = default;
   explicit BlockDeviceMetrics(const BlockStatFidl* metrics);
-#if defined(FIDL_ALLOW_DEPRECATED_C_BINDINGS)
-  explicit BlockDeviceMetrics(const fuchsia_hardware_block_BlockStats* metrics);
-#endif
   BlockDeviceMetrics(const BlockDeviceMetrics&) = delete;
   BlockDeviceMetrics(BlockDeviceMetrics&& rhs) = delete;
   BlockDeviceMetrics& operator=(const BlockDeviceMetrics&) = delete;
@@ -39,11 +33,6 @@ class BlockDeviceMetrics : public storage_metrics::Metrics {
 
   // Copies to fields of fidl structure the corresponding fields of BlockDeviceMetrics
   void CopyToFidl(BlockStatFidl* metrics) const;
-
-#if defined(FIDL_ALLOW_DEPRECATED_C_BINDINGS)
-  // Copies to fields of fidl structure the corresponding fields of BlockDeviceMetrics
-  void CopyToFidl(fuchsia_hardware_block_BlockStats* metrics) const;
-#endif
 
   // Prints the fields of BlockDeviceMetrics to file |stream|.
   void Dump(FILE* stream, std::optional<bool> success = std::nullopt) const;

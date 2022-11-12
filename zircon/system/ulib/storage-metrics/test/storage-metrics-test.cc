@@ -383,7 +383,7 @@ TEST(BlockDeviceMetricsTest, EnabledMetricsCollectOnUpdate) {
 
 TEST(BlockDeviceMetricsTest, UpdateWriteStats) {
   storage_metrics::BlockDeviceMetrics metrics;
-  fuchsia_hardware_block_BlockStats fidl_block_metrics;
+  fuchsia_hardware_block::wire::BlockStats fidl_block_metrics;
 
   metrics.UpdateStats(true, zx::ticks(0), BLOCK_OP_WRITE, 100);
   metrics.UpdateStats(false, zx::ticks(0), BLOCK_OP_WRITE, 10);
@@ -399,7 +399,7 @@ TEST(BlockDeviceMetricsTest, UpdateWriteStats) {
 
 TEST(BlockDeviceMetricsTest, UpdateReadStats) {
   storage_metrics::BlockDeviceMetrics metrics;
-  fuchsia_hardware_block_BlockStats fidl_block_metrics;
+  fuchsia_hardware_block::wire::BlockStats fidl_block_metrics;
 
   metrics.UpdateStats(true, zx::ticks(0), BLOCK_OP_READ, 100);
   metrics.UpdateStats(false, zx::ticks(0), BLOCK_OP_READ, 10);
@@ -415,7 +415,7 @@ TEST(BlockDeviceMetricsTest, UpdateReadStats) {
 
 TEST(BlockDeviceMetricsTest, UpdateFlushStats) {
   storage_metrics::BlockDeviceMetrics metrics;
-  fuchsia_hardware_block_BlockStats fidl_block_metrics;
+  fuchsia_hardware_block::wire::BlockStats fidl_block_metrics;
 
   metrics.UpdateStats(true, zx::ticks(0), BLOCK_OP_FLUSH, 100);
   metrics.UpdateStats(false, zx::ticks(0), BLOCK_OP_FLUSH, 10);
@@ -431,7 +431,7 @@ TEST(BlockDeviceMetricsTest, UpdateFlushStats) {
 
 TEST(BlockDeviceMetricsTest, UpdateTrimStats) {
   storage_metrics::BlockDeviceMetrics metrics;
-  fuchsia_hardware_block_BlockStats fidl_block_metrics;
+  fuchsia_hardware_block::wire::BlockStats fidl_block_metrics;
 
   metrics.UpdateStats(true, zx::ticks(0), BLOCK_OP_TRIM, 100);
   metrics.UpdateStats(false, zx::ticks(0), BLOCK_OP_TRIM, 10);
