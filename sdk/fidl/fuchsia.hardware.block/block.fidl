@@ -76,6 +76,7 @@ protocol Block {
     });
 
     /// Sets up a FIFO-based server on the block device; acquire the handle to it.
+    @transitional
     GetFifo() -> (resource struct {
         status zx.status;
         fifo zx.handle:<FIFO, optional>;
@@ -84,6 +85,7 @@ protocol Block {
     /// Attaches a VMO to the currently running FIFO server.
     ///
     /// Returns an identifer that can be used to refer to the VMO.
+    @transitional
     AttachVmo(resource struct {
         vmo zx.handle:VMO;
     }) -> (struct {
@@ -103,6 +105,7 @@ protocol Block {
     /// the server automatically cleans up all resources anyway. In this case,
     /// however, the client will have no guarantee that the next invocation of
     /// "GetFifo" will return a connection successfully.
+    @transitional
     CloseFifo() -> (struct {
         status zx.status;
     });
