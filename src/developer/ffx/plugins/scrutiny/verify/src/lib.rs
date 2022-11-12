@@ -43,10 +43,8 @@ pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
         SubCommand::KernelCmdline(subcommand) => kernel_cmdline::verify(subcommand, tmp_dir).await,
         SubCommand::RouteSources(subcommand) => route_sources::verify(subcommand, tmp_dir).await,
         SubCommand::Routes(subcommand) => routes::verify(subcommand, tmp_dir).await,
-        SubCommand::StaticPkgs(subcommand) => static_pkgs::verify(subcommand, tmp_dir).await,
-        SubCommand::StructuredConfig(subcommand) => {
-            structured_config::verify(subcommand, tmp_dir).await
-        }
+        SubCommand::StaticPkgs(subcommand) => static_pkgs::verify(subcommand).await,
+        SubCommand::StructuredConfig(subcommand) => structured_config::verify(subcommand).await,
     }?;
 
     if let Some(depfile_path) = cmd.depfile.as_ref() {
@@ -62,19 +60,13 @@ pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
         })?;
         let mut depfile = fs::File::create(depfile_path).context("failed to create depfile")?;
 
-        // Convert any absolute paths into paths relative to `build_path` to satisfy depfile format
+        // Convert any absolute paths into paths relative to `cwd` to satisfy depfile format
         // requirements.
         let default_build_path = PathBuf::from(String::from("."));
-        let build_path = match &cmd.subcommand {
-            SubCommand::Bootfs(_) | SubCommand::KernelCmdline(_) => &default_build_path,
-            SubCommand::ComponentResolvers(subcommand) => &subcommand.build_path,
-            SubCommand::RouteSources(subcommand) => &subcommand.build_path,
-            SubCommand::Routes(subcommand) => &subcommand.build_path,
-            SubCommand::StaticPkgs(subcommand) => &subcommand.build_path,
-            SubCommand::StructuredConfig(subcommand) => &subcommand.build_path,
-        };
-        let relative_dep_paths: Vec<PathBuf> =
-            deps_set.into_iter().map(|dep_path| relativize_path(build_path, dep_path)).collect();
+        let relative_dep_paths: Vec<PathBuf> = deps_set
+            .into_iter()
+            .map(|dep_path| relativize_path(default_build_path.clone(), dep_path))
+            .collect();
 
         let deps = relative_dep_paths
             .iter()

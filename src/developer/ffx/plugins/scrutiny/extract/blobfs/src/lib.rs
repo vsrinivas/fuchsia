@@ -6,24 +6,20 @@ use {
     anyhow::Error,
     ffx_core::ffx_plugin,
     ffx_scrutiny_blobfs_args::ScrutinyBlobfsCommand,
-    scrutiny_config::{Config, LaunchConfig, RuntimeConfig},
+    scrutiny_config::{ConfigBuilder, ModelConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
 };
 
 #[ffx_plugin()]
 pub async fn scrutiny_blobfs(cmd: ScrutinyBlobfsCommand) -> Result<(), Error> {
-    let config = Config {
-        launch: LaunchConfig {
-            command: Some(
-                CommandBuilder::new("tool.blobfs.extract")
-                    .param("input", cmd.input)
-                    .param("output", cmd.output)
-                    .build(),
-            ),
-            script_path: None,
-        },
-        runtime: RuntimeConfig::minimal(),
-    };
+    // An empty model can be used, because we do not need any artifacts other than the blobfs in
+    // order to complete the extraction.
+    let model = ModelConfig::empty();
+    let command = CommandBuilder::new("tool.blobfs.extract")
+        .param("input", cmd.input)
+        .param("output", cmd.output)
+        .build();
+    let config = ConfigBuilder::with_model(model).command(command).build();
     launcher::launch_from_config(config)?;
 
     Ok(())

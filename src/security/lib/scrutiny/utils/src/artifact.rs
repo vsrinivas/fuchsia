@@ -273,7 +273,10 @@ impl ArtifactReader for FileArtifactReader {
         let dep_path_string = dep_from_absolute(&self.build_path, &absolute_path_string)
             .context("Dep path conversion failed during read")?;
         self.deps.insert(dep_path_string);
-        Ok(Box::new(fs::File::open(path).context("<FileArtifactReader as ArtifactReader>::open")?))
+        Ok(Box::new(
+            fs::File::open(absolute_path_string)
+                .context("<FileArtifactReader as ArtifactReader>::open")?,
+        ))
     }
 
     fn read_bytes(&mut self, path: &Path) -> Result<Vec<u8>> {

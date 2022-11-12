@@ -5,14 +5,10 @@
 use {
     anyhow::{anyhow, Context, Result},
     ffx_scrutiny_verify_args::static_pkgs::Command,
-    scrutiny_config::{Config, LoggingConfig, ModelConfig, PluginConfig, RuntimeConfig},
+    scrutiny_config::{ConfigBuilder, ModelConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_plugins::static_pkgs::StaticPkgsCollection,
-    scrutiny_utils::{
-        artifact::{ArtifactReader, FileArtifactReader},
-        golden::{CompareResult, GoldenFile},
-        path::join_and_canonicalize,
-    },
+    scrutiny_utils::golden::{CompareResult, GoldenFile},
     std::{collections::HashSet, path::PathBuf},
 };
 
@@ -26,30 +22,15 @@ If you are making a change in fuchsia.git that causes this, you need to perform 
 ";
 
 struct Query {
-    build_path: PathBuf,
-    update_package_path: PathBuf,
-    blobfs_paths: Vec<PathBuf>,
-    tmp_dir_path: Option<PathBuf>,
+    product_bundle: PathBuf,
 }
 
 fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSet<PathBuf>> {
-    let config = Config::run_command_with_runtime(
-        CommandBuilder::new("static.pkgs").build(),
-        RuntimeConfig {
-            model: ModelConfig {
-                build_path: query.build_path.clone(),
-                update_package_path: query.update_package_path.clone(),
-                blobfs_paths: query.blobfs_paths.clone(),
-                tmp_dir_path: query.tmp_dir_path.clone(),
-                ..ModelConfig::minimal()
-            },
-            logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
-            plugin: PluginConfig {
-                plugins: vec!["DevmgrConfigPlugin".to_string(), "StaticPkgsPlugin".to_string()],
-            },
-            ..RuntimeConfig::minimal()
-        },
-    );
+    let command = CommandBuilder::new("static.pkgs").build();
+    let plugins = vec!["DevmgrConfigPlugin".to_string(), "StaticPkgsPlugin".to_string()];
+    let model = ModelConfig::from_product_bundle(query.product_bundle.clone())?;
+    let mut config = ConfigBuilder::with_model(model).command(command).plugins(plugins).build();
+    config.runtime.logging.silent_mode = true;
 
     let scrutiny_output =
         launcher::launch_from_config(config).context("Failed to run static.pkgs")?;
@@ -72,19 +53,17 @@ fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSe
         .map(|((name, _variant), _hash)| name.as_ref().to_string())
         .collect();
 
-    let mut golden_reader = FileArtifactReader::new(&query.build_path, &query.build_path);
-    let golden_contents = golden_reader
-        .read_bytes(golden_file_path.as_path())
-        .context("Failed to read golden file")?;
+    let golden_contents =
+        std::fs::read(golden_file_path.as_path()).context("Failed to read golden file")?;
     let golden_file = GoldenFile::from_contents(golden_file_path.as_path(), golden_contents)
         .context("Failed to parse golden file")?;
 
     match golden_file.compare(static_package_names) {
-        CompareResult::Matches => Ok(static_pkgs_result
-            .deps
-            .union(&golden_reader.get_deps())
-            .map(PathBuf::clone)
-            .collect()),
+        CompareResult::Matches => {
+            let mut deps = static_pkgs_result.deps;
+            deps.insert(golden_file_path.clone());
+            Ok(deps)
+        }
         CompareResult::Mismatch { errors } => {
             println!("Static package file mismatch");
             println!("");
@@ -99,20 +78,13 @@ fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSe
     }
 }
 
-pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<PathBuf>> {
-    let build_path = cmd.build_path.clone();
-    let update_package_path = join_and_canonicalize(&cmd.build_path, &cmd.update);
-    let blobfs_paths =
-        cmd.blobfs.iter().map(|blobfs| join_and_canonicalize(&cmd.build_path, blobfs)).collect();
-    let tmp_dir_path = tmp_dir.map(PathBuf::clone);
-    let query = Query { build_path, update_package_path, blobfs_paths, tmp_dir_path };
+pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
+    let product_bundle = cmd.product_bundle.clone();
+    let query = Query { product_bundle };
     let mut deps = HashSet::new();
 
     for golden_file_path in cmd.golden.iter() {
-        deps.extend(verify_static_pkgs(
-            &query,
-            join_and_canonicalize(&cmd.build_path, golden_file_path),
-        )?);
+        deps.extend(verify_static_pkgs(&query, golden_file_path.clone())?);
     }
 
     Ok(deps)

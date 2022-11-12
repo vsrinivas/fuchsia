@@ -8,10 +8,9 @@ use {
     allowlist::{AllowlistFilter, UnversionedAllowlist, V0Allowlist, V1Allowlist},
     anyhow::{bail, Context, Result},
     ffx_scrutiny_verify_args::routes::{default_capability_types, Command},
-    scrutiny_config::Config,
+    scrutiny_config::{ConfigBuilder, ModelConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_plugins::verify::CapabilityRouteResults,
-    scrutiny_utils::path::join_and_canonicalize,
     serde_json,
     std::{collections::HashSet, fs, io::Read, path::PathBuf},
 };
@@ -19,9 +18,7 @@ use {
 struct Query {
     capability_types: Vec<String>,
     response_level: String,
-    build_path: PathBuf,
-    update_package_path: PathBuf,
-    blobfs_paths: Vec<PathBuf>,
+    product_bundle: PathBuf,
     allowlist_paths: Vec<PathBuf>,
     component_tree_config_path: Option<PathBuf>,
     tmp_dir_path: Option<PathBuf>,
@@ -46,29 +43,12 @@ impl From<&Command> for Query {
         .into_iter()
         .map(|capability_type| capability_type.into())
         .collect();
-        let update_package_path = join_and_canonicalize(&cmd.build_path, &cmd.update);
-        let blobfs_paths = cmd
-            .blobfs
-            .iter()
-            .map(|blobfs| join_and_canonicalize(&cmd.build_path, blobfs))
-            .collect();
-        let allowlist_paths = cmd
-            .allowlist
-            .iter()
-            .map(|allowlist| join_and_canonicalize(&cmd.build_path, allowlist))
-            .collect();
-        let component_tree_config_path =
-            cmd.component_tree_config.as_ref().map(|component_tree_config| {
-                join_and_canonicalize(&cmd.build_path, &component_tree_config)
-            });
         Query {
             capability_types,
             response_level: cmd.response_level.clone().into(),
-            build_path: cmd.build_path.clone(),
-            update_package_path,
-            blobfs_paths,
-            allowlist_paths,
-            component_tree_config_path,
+            product_bundle: cmd.product_bundle.clone(),
+            allowlist_paths: cmd.allowlist.clone(),
+            component_tree_config_path: cmd.component_tree_config.clone(),
             tmp_dir_path: None,
         }
     }
@@ -97,16 +77,13 @@ fn load_allowlist(allowlist_paths: &Vec<PathBuf>) -> Result<Box<dyn AllowlistFil
 
 pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<PathBuf>> {
     let query: Query = Query::from(cmd).with_temporary_directory(tmp_dir);
-    let mut config = Config::run_command_with_plugins(
-        CommandBuilder::new("verify.capability_routes")
-            .param("capability_types", query.capability_types.join(" "))
-            .param("response_level", query.response_level)
-            .build(),
-        vec!["DevmgrConfigPlugin", "StaticPkgsPlugin", "CorePlugin", "VerifyPlugin"],
-    );
-    config.runtime.model.build_path = query.build_path;
-    config.runtime.model.update_package_path = query.update_package_path;
-    config.runtime.model.blobfs_paths = query.blobfs_paths;
+    let model = ModelConfig::from_product_bundle(&query.product_bundle)?;
+    let command = CommandBuilder::new("verify.capability_routes")
+        .param("capability_types", query.capability_types.join(" "))
+        .param("response_level", query.response_level)
+        .build();
+    let plugins = vec!["DevmgrConfigPlugin", "StaticPkgsPlugin", "CorePlugin", "VerifyPlugin"];
+    let mut config = ConfigBuilder::with_model(model).command(command).plugins(plugins).build();
     config.runtime.model.component_tree_config_path = query.component_tree_config_path;
     config.runtime.model.tmp_dir_path = query.tmp_dir_path;
     config.runtime.logging.silent_mode = true;

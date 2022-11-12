@@ -38,12 +38,10 @@ def main():
         required=True,
         help="Path to ninja depfile to write.")
     parser.add_argument(
-        "--update-package",
+        "--product-bundle",
         type=pathlib.Path,
         required=True,
-        help="Path to the update package manifest.")
-    parser.add_argument(
-        "--blobfs", nargs="+", default=[], help="Paths to blobfs block images.")
+        help="Path to the product bundle.")
     args = parser.parse_args()
 
     # Assume we're in the root build dir right now and that is where we'll find ffx env.
@@ -69,14 +67,9 @@ def main():
         "structured-config",
         "--policy",
         args.policy,
-        "--build-path",
-        root_build_dir,
-        "--update",
-        args.update_package,
+        "--product-bundle",
+        args.product_bundle,
     ]
-
-    for blobfs in args.blobfs:
-        ffx_args += ["--blobfs", blobfs]
 
     test = unittest.TestCase()
 

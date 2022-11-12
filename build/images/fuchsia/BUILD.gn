@@ -523,7 +523,15 @@ if (is_fuchsia) {
 
   scrutiny_verifiers("scrutiny_verifiers") {
     assembly_image_name = "fuchsia"
-    update_package_target = ":update"
+    product_bundle = ":product_bundle"
+
+    # Pass the ZBI for verifying the bootfs and kernel cmdline.
+    if (custom_signing_script != "" || use_vboot) {
+      zbi = files.zbi_signed
+    } else {
+      zbi = files.zbi
+    }
+    deps = [ ":fuchsia_assembly" ]
 
     route_sources_config = fuchsia_route_sources_config
     static_pkgs_goldens = fuchsia_static_pkgs_goldens

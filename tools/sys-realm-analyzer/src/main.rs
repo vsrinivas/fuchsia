@@ -49,6 +49,10 @@ struct Options {
     dir: PathBuf,
 
     #[argh(option)]
+    /// path to a product bundle
+    product_bundle: PathBuf,
+
+    #[argh(option)]
     /// the architectures to compose products from, if specified, '--boards' must also be provided
     arches: Option<String>,
 
@@ -112,10 +116,17 @@ fn main() -> Result<(), u8> {
             println!("Build failed! {}", build_cmd.status.code().unwrap());
         }
 
-        let mut scrutiny_config = scrutiny_config::Config::default();
-        scrutiny_config.runtime.model = scrutiny_config::ModelConfig::at_path(args.dir.clone());
-        scrutiny_config.runtime.plugin.plugins.push("SysRealmPlugin".to_string());
-        scrutiny_config.launch.command = Some("sys.realm".to_string());
+        let command = "sys.realm".to_string();
+        let plugins = vec!["SysRealmPlugin".to_string()];
+        let model = scrutiny_config::ModelConfig::from_product_bundle(args.product_bundle.clone())
+            .map_err(|e| {
+                println!("Error running scrutiny: {}", e);
+                1
+            })?;
+        let scrutiny_config = scrutiny_config::ConfigBuilder::with_model(model)
+            .command(command)
+            .plugins(plugins)
+            .build();
 
         let out_str =
             scrutiny_frontend::launcher::launch_from_config(scrutiny_config).map_err(|e| {

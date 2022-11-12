@@ -9,17 +9,8 @@ import("//src/developer/ffx/build/ffx_action.gni")
 #
 # Parameters
 #
-#   update_package_target (required)
-#     [string] The target that builds the update package, including the update
-#     package blobfs archive file.
-#
-#   image_assembler_target (required)
-#     [string] The target that assembles system images, including the system
-#     blobfs archive file.
-#
-#   assembly_image_name (required)
-#     [string] The image_name designated in the system assembly associated with
-#     image_assembler_target.
+#   product_bundle (required)
+#     [label] The label of a product_bundle target.
 #
 #   output (required)
 #     [path] The JSON file to which to write the extracted values.
@@ -27,37 +18,10 @@ import("//src/developer/ffx/build/ffx_action.gni")
 #   deps, public_deps, data_deps (optional)
 #     Usual GN meaning.
 template("extract_assembled_structured_config") {
-  assert(
-      defined(invoker.update_package_target),
-      "extract_assembled_structured_config() must specify update_package_target")
-  assert(
-      defined(invoker.image_assembler_target),
-      "extract_assembled_structured_config() must specify image_assembler_target")
-  assert(
-      defined(invoker.assembly_image_name),
-      "extract_assembled_structured_config() must specify assembly_image_name")
+  assert(defined(invoker.product_bundle),
+         "extract_assembled_structured_config() must specify product_bundle")
   assert(defined(invoker.output),
          "extract_assembled_structured_config() must specify an output")
-
-  update_package_target_out_dir =
-      get_label_info(invoker.update_package_target, "target_out_dir")
-  update_package_target_name =
-      get_label_info(invoker.update_package_target, "name")
-  update_package_dir =
-      "$update_package_target_out_dir/$update_package_target_name"
-
-  image_assembler_target_out_dir =
-      get_label_info(invoker.image_assembler_target, "target_out_dir")
-  assembly_image_name = invoker.assembly_image_name
-  image_assembler_dir = "$image_assembler_target_out_dir/$assembly_image_name"
-
-  files = {
-    update_package = "$update_package_dir/update.far"
-    blobfs = [
-      "$image_assembler_dir/blob.blk",
-      "$update_package_dir/gen/update.blob.blk",
-    ]
-  }
 
   ffx_action(target_name) {
     forward_variables_from(invoker,
@@ -70,8 +34,12 @@ template("extract_assembled_structured_config") {
                            ])
     depfile = "$target_gen_dir/$target_name.d"
 
-    inputs = [ files.update_package ] + files.blobfs
+    pb_name = get_label_info(invoker.product_bundle, "name")
+    pb_out = get_label_info(invoker.product_bundle, "target_out_dir")
+    pb_dir = "$pb_out/$pb_name"
+    pb_manifest = "$pb_dir/product_bundle.json"
 
+    inputs = [ pb_manifest ]
     outputs = [ invoker.output ]
 
     args = [
@@ -82,25 +50,16 @@ template("extract_assembled_structured_config") {
       rebase_path(depfile, root_build_dir),
       "--build-path",
       rebase_path(root_build_dir, root_build_dir),
-      "--update",
-      rebase_path(files.update_package, root_build_dir),
+      "--product-bundle",
+      rebase_path(pb_dir, root_build_dir),
       "--output",
       rebase_path(invoker.output, root_build_dir),
     ]
-    foreach(blobfs, files.blobfs) {
-      args += [
-        "--blobfs",
-        rebase_path(blobfs, root_build_dir),
-      ]
-    }
 
     if (!defined(invoker.deps)) {
       deps = []
     }
-    deps += [
-      invoker.update_package_target,
-      invoker.image_assembler_target,
-    ]
+    deps += [ invoker.product_bundle ]
   }
 }
 
@@ -109,17 +68,8 @@ template("extract_assembled_structured_config") {
 #
 # Parameters
 #
-#   update_package_target (required)
-#     [string] The target that builds the update package, including the update
-#     package blobfs archive file.
-#
-#   image_assembler_target (required)
-#     [string] The target that assembles system images, including the system
-#     blobfs archive file.
-#
-#   assembly_image_name (required)
-#     [string] The image_name designated in the system assembly associated with
-#     image_assembler_target.
+#   product_bundle (required)
+#     [label] The label of a product_bundle target.
 #
 #   policy (required)
 #     [path] The JSON policy file containing allowed configuration values for the build.
@@ -127,37 +77,10 @@ template("extract_assembled_structured_config") {
 #   deps, public_deps, data_deps (optional)
 #     Usual GN meaning.
 template("verify_assembled_structured_config") {
-  assert(
-      defined(invoker.update_package_target),
-      "verify_assembled_structured_config() must specify update_package_target")
-  assert(
-      defined(invoker.image_assembler_target),
-      "verify_assembled_structured_config() must specify image_assembler_target")
-  assert(
-      defined(invoker.assembly_image_name),
-      "verify_assembled_structured_config() must specify assembly_image_name")
+  assert(defined(invoker.product_bundle),
+         "verify_assembled_structured_config() must specify product_bundle")
   assert(defined(invoker.policy),
          "verify_assembled_structured_config() must specify a policy file")
-
-  update_package_target_out_dir =
-      get_label_info(invoker.update_package_target, "target_out_dir")
-  update_package_target_name =
-      get_label_info(invoker.update_package_target, "name")
-  update_package_dir =
-      "$update_package_target_out_dir/$update_package_target_name"
-
-  image_assembler_target_out_dir =
-      get_label_info(invoker.image_assembler_target, "target_out_dir")
-  assembly_image_name = invoker.assembly_image_name
-  image_assembler_dir = "$image_assembler_target_out_dir/$assembly_image_name"
-
-  files = {
-    update_package = "$update_package_dir/update.far"
-    blobfs = [
-      "$image_assembler_dir/blob.blk",
-      "$update_package_dir/gen/update.blob.blk",
-    ]
-  }
 
   ffx_action(target_name) {
     no_output_dir_leaks = false
@@ -174,13 +97,17 @@ template("verify_assembled_structured_config") {
     depfile = "$target_gen_dir/$target_name.d"
     tmp_dir = "$target_out_dir/$target_name/tmp"
 
+    pb_name = get_label_info(invoker.product_bundle, "name")
+    pb_out = get_label_info(invoker.product_bundle, "target_out_dir")
+    pb_dir = "$pb_out/$pb_name"
+    pb_manifest = "$pb_dir/product_bundle.json"
+
     hermetic_action_ignored_prefixes = [ tmp_dir ]
 
     inputs = [
-               invoker.policy,
-               files.update_package,
-             ] + files.blobfs
-
+      pb_manifest,
+      invoker.policy,
+    ]
     outputs = [ stamp_file ]
 
     args = [
@@ -195,24 +122,13 @@ template("verify_assembled_structured_config") {
       "structured-config",
       "--policy",
       rebase_path(invoker.policy, root_build_dir),
-      "--build-path",
-      rebase_path(root_build_dir, root_build_dir),
-      "--update",
-      rebase_path(files.update_package, root_build_dir),
+      "--product-bundle",
+      rebase_path(pb_dir, root_build_dir),
     ]
-    foreach(blobfs, files.blobfs) {
-      args += [
-        "--blobfs",
-        rebase_path(blobfs, root_build_dir),
-      ]
-    }
 
     if (!defined(invoker.deps)) {
       deps = []
     }
-    deps += [
-      invoker.update_package_target,
-      invoker.image_assembler_target,
-    ]
+    deps += [ invoker.product_bundle ]
   }
 }

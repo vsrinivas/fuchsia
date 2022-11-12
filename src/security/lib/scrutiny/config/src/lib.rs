@@ -3,21 +3,59 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{anyhow, bail, Context, Result},
+    camino::Utf8PathBuf,
     fuchsia_url::AbsolutePackageUrl,
     scrutiny_utils::url::from_package_name,
+    sdk_metadata::ProductBundle,
     serde::{Deserialize, Serialize},
     std::path::{Path, PathBuf},
 };
 
-static DEFAULT_FUCHSIA_IMAGE_DIR: &str = "obj/build/images/fuchsia";
+pub struct ConfigBuilder {
+    model: ModelConfig,
+    command: Option<String>,
+    script_path: Option<String>,
+    plugins: Option<Vec<String>>,
+}
 
-static DEFAULT_FUCHSIA_IMAGE_NAME: &str = "fuchsia";
-static DEFAULT_UPDATE_TARGET_NAME: &str = "update";
+impl ConfigBuilder {
+    pub fn with_model(model: ModelConfig) -> Self {
+        ConfigBuilder { model, command: None, script_path: None, plugins: None }
+    }
 
-static DEFAULT_UPDATE_GEN_DIR: &str = "gen";
+    pub fn command(&mut self, command: String) -> &mut Self {
+        self.command = Some(command);
+        self
+    }
 
-static DEFAULT_UPDATE_BLOB_FILE: &str = "update.blob.blk";
-static DEFAULT_FUCHSIA_BLOB_FILE: &str = "blob.blk";
+    pub fn script(&mut self, script_path: String) -> &mut Self {
+        self.script_path = Some(script_path);
+        self
+    }
+
+    pub fn plugins<S: ToString>(&mut self, plugins: Vec<S>) -> &mut Self {
+        self.plugins = Some(plugins.iter().map(|s| s.to_string()).collect());
+        self
+    }
+
+    pub fn build(&self) -> Config {
+        let &Self { model, command, script_path, plugins } = &self;
+        let plugin = if let Some(plugins) = plugins {
+            PluginConfig { plugins: plugins.clone() }
+        } else {
+            PluginConfig::default()
+        };
+        Config {
+            launch: LaunchConfig { command: command.clone(), script_path: script_path.clone() },
+            runtime: RuntimeConfig {
+                logging: LoggingConfig::default(),
+                model: model.clone(),
+                plugin,
+            },
+        }
+    }
+}
 
 /// The Scrutiny Configuration determines how the framework runtime will be setup
 /// when it launches. This includes determining what features the runtime will
@@ -30,77 +68,6 @@ pub struct Config {
     pub runtime: RuntimeConfig,
 }
 
-impl Config {
-    /// The default runtime configuration includes everything you will see when
-    /// running the scrutiny binary with no options set. This is the expected
-    /// runtime for auditors doing discovery tasks or using the toolset in its
-    /// normal mode of operation.
-    pub fn default() -> Config {
-        Config { launch: LaunchConfig::default(), runtime: RuntimeConfig::default() }
-    }
-
-    /// Often consumers of the Scrutiny framework will want to create a
-    /// default config with a limited subset of plugins. This allows the
-    /// consumer to specify the exact plugin list they want.
-    pub fn default_with_plugins<S: ToString>(plugins: Vec<S>) -> Config {
-        Config {
-            launch: LaunchConfig::default(),
-            runtime: RuntimeConfig::default_with_plugins(plugins),
-        }
-    }
-
-    /// The minimal runtime configuration is intended for most integration use
-    /// cases. This can be used to launch the runtime for static analysis verification or for
-    /// basic core functionality. The toolkit and search plugin and other features are not loaded.
-    pub fn minimal() -> Config {
-        Config { launch: LaunchConfig::minimal(), runtime: RuntimeConfig::minimal() }
-    }
-
-    /// Often consumers of the Scrutiny framework will want to create a
-    /// minimal config with a limited subset of plugins. This allows the
-    /// consumer to specify the exact plugin list they want.
-    pub fn minimal_with_plugins<S: ToString>(plugins: Vec<S>) -> Config {
-        Config {
-            launch: LaunchConfig::minimal(),
-            runtime: RuntimeConfig::minimal_with_plugins(plugins),
-        }
-    }
-
-    /// Configures Scrutiny to run a single command in a minimal runtime
-    /// environment. This is a helper utility configuration to simplify
-    /// common configurations.
-    pub fn run_command(command: String) -> Config {
-        Config {
-            launch: LaunchConfig { command: Some(command), script_path: None },
-            runtime: RuntimeConfig::minimal(),
-        }
-    }
-
-    /// Runs a command with a minimal config but also allows configuration of
-    /// the set of plugins that run.
-    pub fn run_command_with_plugins<S: ToString>(command: String, plugins: Vec<S>) -> Config {
-        Config {
-            launch: LaunchConfig { command: Some(command), script_path: None },
-            runtime: RuntimeConfig::minimal_with_plugins(plugins),
-        }
-    }
-
-    /// Runs a command with a custom runtime configuration.
-    pub fn run_command_with_runtime(command: String, runtime: RuntimeConfig) -> Config {
-        Config { launch: LaunchConfig { command: Some(command), script_path: None }, runtime }
-    }
-
-    /// Configures Scrutiny to run with a single script in a minimal runtime
-    /// environment. This is a helper utility configuration to simplify
-    /// common configurations.
-    pub fn run_script(script_path: String) -> Config {
-        Config {
-            launch: LaunchConfig { command: None, script_path: Some(script_path) },
-            runtime: RuntimeConfig::minimal(),
-        }
-    }
-}
-
 /// Launch configuration describes events that run after the framework has
 /// launched such as scripts, commands etc.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -109,15 +76,6 @@ pub struct LaunchConfig {
     pub command: Option<String>,
     /// Runs a script at the path on launch.
     pub script_path: Option<String>,
-}
-
-impl LaunchConfig {
-    pub fn default() -> LaunchConfig {
-        LaunchConfig { command: None, script_path: None }
-    }
-    pub fn minimal() -> LaunchConfig {
-        LaunchConfig::default()
-    }
 }
 
 /// The Runtime configuration determines which features of the Scrutiny
@@ -133,37 +91,6 @@ pub struct RuntimeConfig {
     pub model: ModelConfig,
     /// Provides the set of plugins that should be loaded by the runtime.
     pub plugin: PluginConfig,
-}
-
-impl RuntimeConfig {
-    pub fn default() -> RuntimeConfig {
-        RuntimeConfig {
-            logging: LoggingConfig::default(),
-            model: ModelConfig::default(),
-            plugin: PluginConfig::default(),
-        }
-    }
-    /// Default configuration with a special plugin list.
-    pub fn default_with_plugins<S: ToString>(plugins: Vec<S>) -> RuntimeConfig {
-        let mut config = Self::default();
-        config.plugin.plugins = plugins.iter().map(|s| s.to_string()).collect();
-        config
-    }
-
-    pub fn minimal() -> RuntimeConfig {
-        RuntimeConfig {
-            logging: LoggingConfig::minimal(),
-            model: ModelConfig::minimal(),
-            plugin: PluginConfig::minimal(),
-        }
-    }
-
-    /// Minimal configuration with a special plugin list.
-    pub fn minimal_with_plugins<S: ToString>(plugins: Vec<S>) -> RuntimeConfig {
-        let mut config = Self::minimal();
-        config.plugin.plugins = plugins.iter().map(|s| s.to_string()).collect();
-        config
-    }
 }
 
 /// Logging is a required feature of the Scrutiny runtime. Every configuration
@@ -185,9 +112,6 @@ impl LoggingConfig {
             verbosity: LoggingVerbosity::Info,
             silent_mode: false,
         }
-    }
-    pub fn minimal() -> LoggingConfig {
-        LoggingConfig::default()
     }
 }
 
@@ -227,13 +151,10 @@ impl From<String> for LoggingVerbosity {
 pub struct ModelConfig {
     /// Path to the model data.
     pub uri: String,
-    /// Path to the Fuchsia build directory.
-    pub build_path: PathBuf,
     /// Path to the Fuchsia update package.
     pub update_package_path: PathBuf,
-    /// Paths to blobfs archives that contain Fuchsia packages and their
-    /// contents.
-    pub blobfs_paths: Vec<PathBuf>,
+    /// Path to a directory of blobs.
+    pub blobs_directory: PathBuf,
     /// The URL of the Fuchsia config-data package.
     pub config_data_package_url: AbsolutePackageUrl,
     /// The path to the device manager configuration inside bootfs inside the
@@ -245,66 +166,76 @@ pub struct ModelConfig {
     /// A path to a directory for temporary files. This path, if defined, should
     /// exist for scrutiny's lifetime.
     pub tmp_dir_path: Option<PathBuf>,
+    /// Whether the model is empty, meaning whether the values are stubbed out or actually assigned
+    /// real values.
+    pub is_empty: bool,
 }
 
 impl ModelConfig {
-    /// By default the ModelConfig will assume the current directory as the build path.
-    pub fn default() -> ModelConfig {
-        let build_path = Path::new("").to_path_buf();
-        Self::at_path(build_path)
-    }
-    /// Configure the model to be access at the supplied path.
-    pub fn at_path(build_path: PathBuf) -> Self {
-        let update_package_path = build_path
-            .join(DEFAULT_FUCHSIA_IMAGE_DIR)
-            .join(DEFAULT_UPDATE_TARGET_NAME)
-            .join(format!("{}.far", DEFAULT_UPDATE_TARGET_NAME));
-        let blobfs_paths = vec![
-            build_path
-                .join(DEFAULT_FUCHSIA_IMAGE_DIR)
-                .join(DEFAULT_FUCHSIA_IMAGE_NAME)
-                .join(DEFAULT_FUCHSIA_BLOB_FILE),
-            build_path
-                .join(DEFAULT_FUCHSIA_IMAGE_DIR)
-                .join(DEFAULT_UPDATE_TARGET_NAME)
-                .join(DEFAULT_UPDATE_GEN_DIR)
-                .join(DEFAULT_UPDATE_BLOB_FILE),
-        ];
+    /// Build an empty model that can be used by scrutiny plugins that do not need
+    /// to read any any of the paths in the model, but need a model to run in
+    /// the executor.
+    pub fn empty() -> Self {
         ModelConfig {
             uri: "{memory}".to_string(),
-            build_path,
-            update_package_path,
-            blobfs_paths,
+            update_package_path: "".into(),
+            blobs_directory: "".into(),
             config_data_package_url: from_package_name("config-data").unwrap(),
             devmgr_config_path: "config/devmgr".into(),
             component_tree_config_path: None,
             tmp_dir_path: None,
+            is_empty: true,
         }
     }
-    /// Add `tmp_dir_path` to an existing `ModelConfig`.
-    pub fn with_temporary_directory(mut self, tmp_dir_path: PathBuf) -> Self {
-        self.tmp_dir_path = Some(tmp_dir_path);
-        self
+
+    /// Build a model based on the contents of a product bundle.
+    pub fn from_product_bundle(product_bundle_path: impl AsRef<Path>) -> Result<Self> {
+        let product_bundle_path = product_bundle_path.as_ref().to_path_buf();
+        let product_bundle_path =
+            Utf8PathBuf::try_from(product_bundle_path).context("Converting Path to Utf8Path")?;
+        let product_bundle = ProductBundle::try_load_from(&product_bundle_path)?;
+        let product_bundle = match product_bundle {
+            ProductBundle::V1(_) => bail!("Only v2 product bundles are supported"),
+            ProductBundle::V2(pb) => pb,
+        };
+
+        let repository = product_bundle
+            .repositories
+            .get(0)
+            .ok_or(anyhow!("The product bundle must have at least one repository"))?;
+        let blobs_directory = repository.blobs_path.clone().into_std_path_buf();
+
+        let update_package_hash = product_bundle
+            .update_package_hash
+            .ok_or(anyhow!("An update package must exist inside the product bundle"))?;
+        let update_package_path = blobs_directory.join(update_package_hash.to_string());
+
+        Ok(ModelConfig {
+            uri: "{memory}".to_string(),
+            update_package_path,
+            blobs_directory,
+            config_data_package_url: from_package_name("config-data").unwrap(),
+            devmgr_config_path: "config/devmgr".into(),
+            component_tree_config_path: None,
+            tmp_dir_path: None,
+            is_empty: false,
+        })
     }
-    pub fn minimal() -> Self {
-        ModelConfig::default()
-    }
+
     /// Model URI used to determine if the model is in memory or on disk.
     pub fn uri(&self) -> String {
         self.uri.clone()
     }
-    /// The root Fuchsia build path.
-    pub fn build_path(&self) -> PathBuf {
-        self.build_path.clone()
-    }
     /// Path to the Fuchsia update package.
     pub fn update_package_path(&self) -> PathBuf {
+        assert!(!self.is_empty, "Cannot return an update_package_path for an empty model");
         self.update_package_path.clone()
     }
-    /// Paths to blobfs archives that contain Fuchsia packages and their
+    /// Paths to blobs directory that contain Fuchsia packages and their
     /// contents.
-    pub fn blobfs_paths(&self) -> Vec<PathBuf> {
-        self.blobfs_paths.clone()
+    pub fn blobs_directory(&self) -> PathBuf {
+        assert!(!self.is_empty, "Cannot return a blobs_directory for an empty model");
+        self.blobs_directory.clone()
     }
     /// The Fuchsia package url of the config data package.
     pub fn config_data_package_url(&self) -> AbsolutePackageUrl {
@@ -317,6 +248,10 @@ impl ModelConfig {
     /// A path to a directory for temporary files.
     pub fn tmp_dir_path(&self) -> Option<PathBuf> {
         self.tmp_dir_path.clone()
+    }
+    /// Whether the model is empty and the values should not be used.
+    pub fn is_empty(&self) -> bool {
+        self.is_empty
     }
 }
 
