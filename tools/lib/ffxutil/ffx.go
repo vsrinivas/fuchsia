@@ -201,17 +201,6 @@ func (f *FFXInstance) Stop() error {
 
 // BootloaderBoot RAM boots the target.
 func (f *FFXInstance) BootloaderBoot(ctx context.Context, serialNum, zbi, vbmeta, slot string) error {
-	if err := f.ConfigSet(ctx, "ffx.fastboot.inline_target", "true"); err != nil {
-		return err
-	}
-	// Setting the `ffx.fastboot.inline_target` field causes ffx to assume the target
-	// it's trying to reach is in fastboot mode. We need to reset it to false after
-	// we're done flashing.
-	defer func() {
-		if err := f.ConfigSet(ctx, "ffx.fastboot.inline_target", "false"); err != nil {
-			logger.Errorf(ctx, "failed to reset ffx.fastboot.inline_target to false")
-		}
-	}()
 	var args []string
 	if zbi != "" {
 		args = append(args, "--zbi", zbi)

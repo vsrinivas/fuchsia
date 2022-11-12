@@ -196,6 +196,12 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		if err := ffx.Run(ctx, "config", "env"); err != nil {
 			return err
 		}
+		// ffxutil disables the mdns discovery if it can find a FUCHSIA_DEVICE_ADDR
+		// to manually add to its targets. We should disable it from the start so
+		// that it is off during target setup as well.
+		if err := ffx.Run(ctx, "config", "set", "discovery.mdns.enabled", "false", "-l", "global"); err != nil {
+			return err
+		}
 	}
 
 	for _, t := range targetSlice {

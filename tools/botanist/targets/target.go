@@ -99,6 +99,9 @@ type Target interface {
 	// SetFFX attaches an ffx instance and env to the target.
 	SetFFX(*FFXInstance, []string)
 
+	// GetFFX returns the ffx instance associated with the target.
+	GetFFX() *FFXInstance
+
 	// UseFFX returns whether to enable using ffx.
 	UseFFX() bool
 
@@ -153,6 +156,11 @@ func newTarget(ctx context.Context, nodename, serialSocket string, sshKeys []str
 func (t *target) SetFFX(ffx *FFXInstance, env []string) {
 	t.ffx = ffx
 	t.ffxEnv = env
+}
+
+// GetFFX returns the FFXInstance associated with the target.
+func (t *target) GetFFX() *FFXInstance {
+	return t.ffx
 }
 
 // UseFFX returns true if there is an FFXInstance associated with this target.
@@ -585,20 +593,36 @@ func StartTargets(ctx context.Context, opts StartOptions, targetSlice []Target) 
 		bootMode = bootserver.ModeNetboot
 	}
 
+	// Check the first target to see if ffx is enabled. All targets share the same ffx daemon,
+	// so we can use the ffx associated with the first target to set config values.
+	if len(targetSlice) > 0 && targetSlice[0].UseFFXExperimental(1) {
+		ffx := targetSlice[0].GetFFX()
+		if err := ffx.ConfigSet(ctx, "ffx.fastboot.inline_target", "true"); err != nil {
+			return err
+		}
+		// Setting the `ffx.fastboot.inline_target` field causes ffx to assume the target
+		// it's trying to reach is in fastboot mode. We need to reset it to false after
+		// we're done flashing.
+		defer func() {
+			if err := ffx.ConfigSet(ctx, "ffx.fastboot.inline_target", "false"); err != nil {
+				logger.Errorf(ctx, "failed to reset ffx.fastboot.inline_target to false")
+			}
+		}()
+	}
 	// TODO(https://fxbug.dev/111922): Remove following comment once we don't run a subcommand.
 	// We wait until targets have started before running the subcommand against the zeroth one.
-	eg, ctx := errgroup.WithContext(ctx)
+	eg, startCtx := errgroup.WithContext(ctx)
 	for _, t := range targetSlice {
 		t := t
 		eg.Go(func() error {
 			// TODO(fxbug.dev/47910): Move outside gofunc once we get rid of downloading or ensure that it only happens once.
-			imgs, closeFunc, err := bootserver.GetImages(ctx, opts.ImageManifest, bootMode)
+			imgs, closeFunc, err := bootserver.GetImages(startCtx, opts.ImageManifest, bootMode)
 			if err != nil {
 				return err
 			}
 			defer closeFunc()
 
-			return t.Start(ctx, imgs, opts.ZirconArgs)
+			return t.Start(startCtx, imgs, opts.ZirconArgs)
 		})
 	}
 	return eg.Wait()

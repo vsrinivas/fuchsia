@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
-	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 const (
@@ -72,16 +71,5 @@ func GetFlashDeps(sdkRoot, productName string) ([]string, error) {
 
 // Flash flashes the target.
 func (f *FFXInstance) Flash(ctx context.Context, serialNum, manifest, sshKey string) error {
-	if err := f.ConfigSet(ctx, "ffx.fastboot.inline_target", "true"); err != nil {
-		return err
-	}
-	// Setting the `ffx.fastboot.inline_target` field causes ffx to assume the target
-	// it's trying to reach is in fastboot mode. We need to reset it to false after
-	// we're done flashing.
-	defer func() {
-		if err := f.ConfigSet(ctx, "ffx.fastboot.inline_target", "false"); err != nil {
-			logger.Errorf(ctx, "failed to reset ffx.fastboot.inline_target to false")
-		}
-	}()
 	return f.Run(ctx, "--target", serialNum, "target", "flash", "--authorized-keys", sshKey, manifest)
 }
