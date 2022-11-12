@@ -34,9 +34,9 @@ use {
 
 lazy_static! {
     /// Error code returned if connecting to Test Manager fails.
-    static ref SETUP_FAILED_CODE: i32 = -fidl::Status::UNAVAILABLE.into_raw();
+    pub static ref SETUP_FAILED_CODE: i32 = -fidl::Status::UNAVAILABLE.into_raw();
     /// Error code returned if tests time out.
-    static ref TIMED_OUT_CODE: i32 = -fidl::Status::TIMED_OUT.into_raw();
+    pub static ref TIMED_OUT_CODE: i32 = -fidl::Status::TIMED_OUT.into_raw();
 }
 
 #[ffx_plugin()]
@@ -49,19 +49,15 @@ pub async fn test(
         remote_control_result.map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
     match cmd.subcommand {
         TestSubCommand::Run(run) => {
-            run_test(testing_lib::RunBuilderConnector::new(remote_control), writer, run).await
+            let run_builder_proxy = testing_lib::connect_to_run_builder(&remote_control)
+                .await
+                .map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
+            run_test(run_builder_proxy, writer, run).await
         }
         TestSubCommand::List(list) => {
-            let (query_proxy, query_server_end) =
-                fidl::endpoints::create_proxy::<ftest_manager::QueryMarker>()?;
-            rcs::connect_with_timeout(
-                std::time::Duration::from_secs(45),
-                "core/test_manager:expose:fuchsia.test.manager.Query",
-                &remote_control,
-                query_server_end.into_channel(),
-            )
-            .await
-            .map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
+            let query_proxy = testing_lib::connect_to_query(&remote_control)
+                .await
+                .map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
             get_tests(query_proxy, writer, list).await
         }
         TestSubCommand::Result(result) => result_command(result, writer).await,
@@ -126,7 +122,7 @@ impl Experiments {
 }
 
 async fn run_test<W: 'static + Write + Send + Sync>(
-    builder_connector: Box<testing_lib::RunBuilderConnector>,
+    proxy: ftest_manager::RunBuilderProxy,
     writer: W,
     cmd: RunCommand,
 ) -> Result<()> {
@@ -195,8 +191,6 @@ async fn run_test<W: 'static + Write + Send + Sync>(
             }
         }
     });
-
-    let proxy = builder_connector.connect().await;
 
     let start_time = std::time::Instant::now();
     let result = match run_test_suite_lib::run_tests_and_get_outcome(

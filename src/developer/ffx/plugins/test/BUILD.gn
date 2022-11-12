@@ -13,7 +13,6 @@ ffx_plugin("ffx_test") {
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
     "//src/developer/ffx/config:lib",
     "//src/developer/ffx/lib/errors:lib",
-    "//src/developer/ffx/lib/rcs:lib",
     "//src/developer/ffx/lib/testing:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/testing/test_list",
