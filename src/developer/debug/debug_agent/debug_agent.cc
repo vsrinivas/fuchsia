@@ -82,7 +82,6 @@ fxl::WeakPtr<DebugAgent> DebugAgent::GetWeakPtr() { return weak_factory_.GetWeak
 void DebugAgent::Connect(debug::StreamBuffer* stream) {
   FX_DCHECK(!stream_) << "A debug agent should not be connected twice!";
   stream_ = stream;
-  debug::LogBackend::Set(this, true);
 
   // Watch the root job.
   root_job_ = system_interface_->GetRootJob();
@@ -132,6 +131,8 @@ void DebugAgent::OnHello(const debug_ipc::HelloRequest& request, debug_ipc::Hell
     // Downgrade only when the requested version is supported by us.
     ipc_version_ = request.version;
   } else {
+    LOGS(Error) << "Unsupported IPC version: " << request.version << ", supported range is "
+                << debug_ipc::kMinimumProtocolVersion << "-" << debug_ipc::kCurrentProtocolVersion;
     ipc_version_ = debug_ipc::kCurrentProtocolVersion;
   }
 
@@ -139,6 +140,9 @@ void DebugAgent::OnHello(const debug_ipc::HelloRequest& request, debug_ipc::Hell
   reply->version = ipc_version_;
   reply->arch = arch::GetCurrentArch();
   reply->page_size = zx_system_get_page_size();
+
+  // Only enable log backend after the handshake is finished.
+  debug::LogBackend::Set(this, true);
 }
 
 void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::StatusReply* reply) {

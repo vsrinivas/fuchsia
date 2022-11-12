@@ -79,6 +79,7 @@ class Session : public SettingStoreObserver {
 
   // The RempteAPI for sending messages to the debug_agent.
   RemoteAPI* remote_api() { return remote_api_.get(); }
+  uint32_t ipc_version() const { return ipc_version_; }
 
   void AddObserver(SessionObserver* observer) { observers_.AddObserver(observer); }
   void RemoveObserver(SessionObserver* observer) { observers_.RemoveObserver(observer); }

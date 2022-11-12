@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_status.h"
 
 #include "lib/fit/defer.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/console/command.h"
@@ -98,8 +99,11 @@ OutputBuffer GetConnectionStatus(const Session* session) {
     result.Append(Syntax::kHeading, "  Opened minidump: ");
     result.Append(session->minidump_path() + "\n");
   } else if (session->IsConnected()) {
-    result.Append(fxl::StringPrintf("  Connected to '%s' on port %d.\n",
-                                    session->connected_host().c_str(), session->connected_port()));
+    result.Append(fxl::StringPrintf("  Connected to \"%s\"", session->connected_host().c_str()));
+    if (session->connected_port())
+      result.Append(fxl::StringPrintf(" on port %u", session->connected_port()));
+    result.Append(fxl::StringPrintf(", IPC version %u (%u).", session->ipc_version(),
+                                    debug_ipc::kCurrentProtocolVersion));
   } else {
     result.Append(
         "  Not connected. You can type these commands (see also \"help "
