@@ -7,68 +7,9 @@ using fuchsia.io;
 using zx;
 using fuchsia.storage.metrics as storage_metrics;
 
-type Flag = strict bits : uint32 {
-    /// All writes to the block device will fail.
-    READONLY = 0x00000001;
-
-    /// The block device may be removed from the device during operation.
-    REMOVABLE = 0x00000002;
-
-    /// The device has a bootdata partition map.
-    BOOTPART = 0x00000004;
-
-    /// The device provides trim support.
-    TRIM_SUPPORT = 0x00000008;
-};
-
 /// The maximum value for a transfer size, identifying that there
 /// effectively exists no maximum for a single operation.
 const MAX_TRANSFER_UNBOUNDED uint32 = 0xFFFFFFFF;
-
-/// Describes metatadata about a block device.
-@for_deprecated_c_bindings
-type BlockInfo = struct {
-    /// The number of blocks in this block device.
-    block_count uint64;
-
-    /// The size of a single block.
-    block_size uint32;
-
-    /// The maximum size, in bytes, of a transfer.
-    /// Set to MAX_TRANSFER_UNBOUNDED if no such maximum exists.
-    max_transfer_size uint32;
-
-    /// Identifiers about the device.
-    flags Flag;
-
-    reserved uint32;
-};
-
-/// Describes statistics about the operations on the block device since boot.
-/// storage_metrics.CallStat.bytes_transferred is number of bytes requested
-/// to be transferred.
-@for_deprecated_c_bindings
-type BlockStats = struct {
-    /// The stats about read from the device.
-    read storage_metrics.CallStat;
-
-    /// The stats about write to the device.
-    write storage_metrics.CallStat;
-
-    /// The stats about trim commands.
-    trim storage_metrics.CallStat;
-
-    /// The stats about flush commands.
-    flush storage_metrics.CallStat;
-};
-
-/// A client-identifier to a VMO.
-/// This value may be utilized by clients to refer to a VMO which is being held
-/// by a block device server.
-@for_deprecated_c_bindings
-type VmoId = struct {
-    id uint16;
-};
 
 /// Value reserved for "invalid" VmoId. Will never be allocated by the server,
 /// and may be utilized as a local value for an unallocated ID.
@@ -76,21 +17,62 @@ const VMOID_INVALID uint16 = 0;
 
 /// Defines access to a device which is accessible in block-granularity chunks
 /// for reading and writing.
-@for_deprecated_c_bindings
 protocol Block {
     /// Get information about the underlying block device.
     GetInfo() -> (struct {
         status zx.status;
-        info box<BlockInfo>;
+        info box<@generated_name("BlockInfo") struct {
+            /// The number of blocks in this block device.
+            block_count uint64;
+
+            /// The size of a single block.
+            block_size uint32;
+
+            /// The maximum size, in bytes, of a transfer.
+            /// Set to MAX_TRANSFER_UNBOUNDED if no such maximum exists.
+            max_transfer_size uint32;
+
+            /// Identifiers about the device.
+            flags @generated_name("Flag") strict bits : uint32 {
+                /// All writes to the block device will fail.
+                READONLY = 0x00000001;
+
+                /// The block device may be removed from the device during operation.
+                REMOVABLE = 0x00000002;
+
+                /// The device has a bootdata partition map.
+                BOOTPART = 0x00000004;
+
+                /// The device provides trim support.
+                TRIM_SUPPORT = 0x00000008;
+            };
+
+            reserved uint32;
+        }>;
     });
 
     /// Returns stats about the block device on the provided buffer and optionally
     /// clears the counters.
+    ///
+    /// storage_metrics.CallStat.bytes_transferred is number of bytes requested
+    /// to be transferred.
     GetStats(struct {
         clear bool;
     }) -> (struct {
         status zx.status;
-        stats box<BlockStats>;
+        stats box<@generated_name("BlockStats") struct {
+            /// The stats about read from the device.
+            read storage_metrics.CallStat;
+
+            /// The stats about write to the device.
+            write storage_metrics.CallStat;
+
+            /// The stats about trim commands.
+            trim storage_metrics.CallStat;
+
+            /// The stats about flush commands.
+            flush storage_metrics.CallStat;
+        }>;
     });
 
     /// Sets up a FIFO-based server on the block device; acquire the handle to it.
@@ -100,11 +82,15 @@ protocol Block {
     });
 
     /// Attaches a VMO to the currently running FIFO server.
+    ///
+    /// Returns an identifer that can be used to refer to the VMO.
     AttachVmo(resource struct {
         vmo zx.handle:VMO;
     }) -> (struct {
         status zx.status;
-        vmoid box<VmoId>;
+        vmoid box<@generated_name("VmoId") struct {
+            id uint16;
+        }>;
     });
 
     /// Shuts down the fifo server, waiting for it to be ready to be started again.
