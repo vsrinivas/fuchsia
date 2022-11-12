@@ -90,6 +90,7 @@ merged_sdk("merged") {
   ]
 }
 
+# Do not add to this group. The modular SDK is deprecated (fxbug.dev/114745).
 group("sdk.modular") {
   testonly = true
 
@@ -402,6 +403,7 @@ sdk("core_testing") {
   deps = [ ":core_testing_idk" ]
 }
 
+# Do not add to this group. The modular SDK is deprecated (fxbug.dev/114745).
 sdk("core.modular") {
   id = sdk_id
 
@@ -427,6 +429,7 @@ group("host_tools.all") {
 }
 
 if (is_host) {
+  # Do not add to this group. The modular SDK is deprecated (fxbug.dev/114745).
   sdk("host_tools.modular") {
     id = sdk_id
     category = "partner"
