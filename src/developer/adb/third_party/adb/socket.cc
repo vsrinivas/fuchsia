@@ -217,7 +217,6 @@ static bool local_socket_flush_outgoing(asocket* s) {
     if (status == ZX_ERR_SHOULD_WAIT || status == ZX_ERR_TIMED_OUT) {
       return true;
     }
-    return false;
   }
 
   /* r = 0 or unhandled error */
