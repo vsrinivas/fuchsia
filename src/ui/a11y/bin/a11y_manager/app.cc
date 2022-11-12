@@ -151,8 +151,8 @@ void App::FinishSetUp() {
   auto view_ref = a11y_view->view_ref();
   FX_DCHECK(view_ref);
   auto view_ref_koid = a11y::GetKoid(*view_ref);
-  auto view_coordinate_converter =
-      std::make_unique<a11y::ViewCoordinateConverter>(context_, view_ref_koid);
+  auto view_coordinate_converter = std::make_unique<a11y::ViewCoordinateConverter>(
+      context_->svc()->Connect<fuchsia::ui::observation::scope::Registry>(), view_ref_koid);
   view_manager_->SetViewCoordinateConverter(std::move(view_coordinate_converter));
 }
 

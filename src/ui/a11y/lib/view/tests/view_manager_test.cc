@@ -29,6 +29,7 @@
 #include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_injector_factory.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
+#include "src/ui/a11y/lib/view/view_coordinate_converter.h"
 #include "src/ui/input/lib/injector/tests/mocks/mock_injector.h"
 
 namespace accessibility_test {
@@ -42,7 +43,7 @@ using fuchsia::accessibility::semantics::SemanticsManager;
 
 class MockViewCoordinateConverter : public a11y::ViewCoordinateConverter {
  public:
-  MockViewCoordinateConverter() = default;
+  MockViewCoordinateConverter() : ViewCoordinateConverter({}, 0) {}
 
   std::optional<fuchsia::math::PointF> Convert(zx_koid_t view_ref_koid,
                                                fuchsia::math::PointF coordinate) const override {

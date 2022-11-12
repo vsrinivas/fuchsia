@@ -10,11 +10,9 @@
 
 namespace a11y {
 
-ViewCoordinateConverter::ViewCoordinateConverter(sys::ComponentContext* component_context,
-                                                 zx_koid_t context_view_ref_koid)
+ViewCoordinateConverter::ViewCoordinateConverter(
+    fuchsia::ui::observation::scope::RegistryPtr registry, zx_koid_t context_view_ref_koid)
     : context_view_ref_koid_(context_view_ref_koid) {
-  FX_DCHECK(component_context);
-  auto registry = component_context->svc()->Connect<fuchsia::ui::observation::scope::Registry>();
   registry.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Error from fuchsia::ui::observation::scope::Registry: "
                    << zx_status_get_string(status);

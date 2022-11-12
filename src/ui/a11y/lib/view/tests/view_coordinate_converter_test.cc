@@ -18,6 +18,13 @@ namespace {
 
 using a11y::ViewCoordinateConverter;
 
+ViewCoordinateConverter MakeConverter(sys::ComponentContext* component_context,
+                                      zx_koid_t context_view_ref_koid) {
+  return ViewCoordinateConverter{
+      component_context->svc()->Connect<fuchsia::ui::observation::scope::Registry>(),
+      context_view_ref_koid};
+}
+
 // Helper method to return a valid response.
 fuchsia::ui::observation::geometry::WatchResponse BuildDefaultResponse() {
   fuchsia::ui::observation::geometry::WatchResponse response;
@@ -111,7 +118,7 @@ class ViewCoordinateConverterTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(ViewCoordinateConverterTest, ResponseHasError) {
-  ViewCoordinateConverter converter(context_provider_.context(), 1u);
+  ViewCoordinateConverter converter = MakeConverter(context_provider_.context(), 1u);
   auto response = BuildDefaultResponse();
   response.set_error(fuchsia::ui::observation::geometry::Error::VIEWS_OVERFLOW);
   mock_registry_.SetWatchResponse(std::move(response));
@@ -130,7 +137,7 @@ TEST_F(ViewCoordinateConverterTest, ResponseHasError) {
 }
 
 TEST_F(ViewCoordinateConverterTest, DiscardResponsesWithNoUpdates) {
-  ViewCoordinateConverter converter(context_provider_.context(), 1u);
+  ViewCoordinateConverter converter = MakeConverter(context_provider_.context(), 1u);
   auto response = BuildDefaultResponse();
   response.clear_updates();
   mock_registry_.SetWatchResponse(std::move(response));
@@ -145,7 +152,7 @@ TEST_F(ViewCoordinateConverterTest, DiscardResponsesWithNoUpdates) {
 }
 
 TEST_F(ViewCoordinateConverterTest, ConvertsAngleZeroClientViewCoordinate) {
-  ViewCoordinateConverter converter(context_provider_.context(), 1u);
+  ViewCoordinateConverter converter = MakeConverter(context_provider_.context(), 1u);
   auto response = BuildDefaultResponse();
   mock_registry_.SetWatchResponse(std::move(response));
 
@@ -162,7 +169,7 @@ TEST_F(ViewCoordinateConverterTest, ConvertsAngleZeroClientViewCoordinate) {
 }
 
 TEST_F(ViewCoordinateConverterTest, ConvertsAngleNinetyClientViewCoordinate) {
-  ViewCoordinateConverter converter(context_provider_.context(), 1u);
+  ViewCoordinateConverter converter = MakeConverter(context_provider_.context(), 1u);
   auto response = BuildDefaultResponse();
   response.mutable_updates()
       ->back()
@@ -185,7 +192,7 @@ TEST_F(ViewCoordinateConverterTest, ConvertsAngleNinetyClientViewCoordinate) {
 }
 
 TEST_F(ViewCoordinateConverterTest, ConvertsAngleOneHundredAndEightyClientViewCoordinate) {
-  ViewCoordinateConverter converter(context_provider_.context(), 1u);
+  ViewCoordinateConverter converter = MakeConverter(context_provider_.context(), 1u);
   auto response = BuildDefaultResponse();
   response.mutable_updates()
       ->back()
@@ -208,7 +215,7 @@ TEST_F(ViewCoordinateConverterTest, ConvertsAngleOneHundredAndEightyClientViewCo
 }
 
 TEST_F(ViewCoordinateConverterTest, ConvertsAngleTwoHundredAndSeventyClientViewCoordinate) {
-  ViewCoordinateConverter converter(context_provider_.context(), 1u);
+  ViewCoordinateConverter converter = MakeConverter(context_provider_.context(), 1u);
   auto response = BuildDefaultResponse();
   response.mutable_updates()
       ->back()
@@ -231,7 +238,7 @@ TEST_F(ViewCoordinateConverterTest, ConvertsAngleTwoHundredAndSeventyClientViewC
 }
 
 TEST_F(ViewCoordinateConverterTest, ConvertsClientViewWithScale) {
-  ViewCoordinateConverter converter(context_provider_.context(), 1u);
+  ViewCoordinateConverter converter = MakeConverter(context_provider_.context(), 1u);
   auto response = BuildDefaultResponse();
 
   // Set a different client view width and height (default = 5)  in  the context view. This results
@@ -256,7 +263,7 @@ TEST_F(ViewCoordinateConverterTest, ConvertsClientViewWithScale) {
 }
 
 TEST_F(ViewCoordinateConverterTest, NotifiesRegisteredClientsAboutChangesInGeometry) {
-  ViewCoordinateConverter converter(context_provider_.context(), 1u);
+  ViewCoordinateConverter converter = MakeConverter(context_provider_.context(), 1u);
   bool callback_called = false;
   converter.RegisterCallback([&callback_called]() { callback_called = true; });
   auto response = BuildDefaultResponse();

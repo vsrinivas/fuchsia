@@ -7,6 +7,7 @@
 
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/observation/geometry/cpp/fidl.h>
+#include <fuchsia/ui/observation/scope/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -22,11 +23,11 @@ class ViewCoordinateConverter {
   // Callback that can be registered to be called whenever there is a change in view geometry.
   using OnGeometryChangeCallback = fit::function<void()>;
 
-  // |component_context| is only used in this constructor and must not be nullptr.
   // |context_view_ref_koid| serves as the context view when registering a new geometry observer.
   // Please check fuchsia.ui.observation.scope.Registry for full details.
-  ViewCoordinateConverter(sys::ComponentContext* component_context,
+  ViewCoordinateConverter(fuchsia::ui::observation::scope::RegistryPtr registry,
                           zx_koid_t context_view_ref_koid);
+
   virtual ~ViewCoordinateConverter() = default;
 
   // Converts a |coordinate| in |view_ref_koid| space into |context_view_ref_koid_| space. Returns
@@ -36,10 +37,6 @@ class ViewCoordinateConverter {
 
   // Registers a callback that is invoked whenever there are changes in view geometry.
   virtual void RegisterCallback(OnGeometryChangeCallback callback);
-
- protected:
-  // For mocks.
-  ViewCoordinateConverter() = default;
 
  private:
   // Space data about a particular view V in W. For this object, W is always
