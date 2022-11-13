@@ -17,9 +17,6 @@ group("end_to_end_deps") {
     # Needed to send fake input.
     "//src/ui/tools:input",
 
-    # Needed to start sl4f from ssh.
-    "//bundles/packages/prod:run",
-
     # SL4F to translate JSON-RPC to calls.
     "//src/testing/sl4f:sl4f",
 

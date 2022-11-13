@@ -26,7 +26,6 @@ group("all") {
     ":debug_agent",
     ":drivers-system",
     ":far",
-    ":run",
     ":sched",
     ":telephony",
     ":terminal",
@@ -160,11 +159,6 @@ group("far") {
     "//src/sys/pkg/bin/far",
     "//src/sys/pkg/bin/far:host",
   ]
-}
-
-group("run") {
-  testonly = true
-  public_deps = [ "//src/sys/tools/run" ]
 }
 
 group("sched") {

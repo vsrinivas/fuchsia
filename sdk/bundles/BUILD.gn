@@ -18,7 +18,6 @@ group("core-tools") {
     "//bundles/packages/prod:cmdutils",
     "//bundles/packages/prod:debug_agent",
     "//bundles/packages/prod:far",
-    "//bundles/packages/prod:run",
     "//bundles/packages/prod:tiles",
     "//bundles/packages/prod:tracing",
     "//bundles/packages/testing:all",
