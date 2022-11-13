@@ -31,6 +31,7 @@
 #include <utime.h>
 #include <zircon/errors.h>
 #include <zircon/fidl.h>
+#include <zircon/status.h>
 #include <zircon/time.h>
 
 #include <array>
@@ -120,12 +121,18 @@ TEST_P(BlobfsIntegrationTest, CorruptBlobNotify) {
   ASSERT_EQ(fs().Unmount().status_value(), ZX_OK);
 
   // Find the blob within the block device and corrupt it.
-  fbl::unique_fd device_fd(open(fs().DevicePath().value().c_str(), O_RDWR));
-  ASSERT_TRUE(device_fd.is_valid());
+  zx::result path = fs().DevicePath();
+  ASSERT_TRUE(path.is_ok()) << path.status_string();
+  zx::result device = component::Connect<fuchsia_hardware_block::Block>(path.value());
+  ASSERT_TRUE(device.is_ok()) << device.status_string();
+
   // Read the superblock to find where the data blocks start.
   Superblock superblock;
-  ssize_t bytes_read = pread(device_fd.get(), &superblock, kBlobfsBlockSize, 0);
-  ASSERT_EQ(bytes_read, static_cast<ssize_t>(kBlobfsBlockSize));
+  {
+    zx_status_t status =
+        block_client::SingleReadBytes(device.value(), &superblock, sizeof(superblock), 0);
+    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  }
   uint64_t data_start_block = DataStartBlock(superblock);
   uint64_t data_block_count = DataBlocks(superblock);
   auto data = std::make_unique<uint8_t[]>(device_block_size);
@@ -134,13 +141,21 @@ TEST_P(BlobfsIntegrationTest, CorruptBlobNotify) {
   for (uint64_t block = 0; block < data_block_count; ++block) {
     off_t device_offset =
         safemath::checked_cast<off_t>((data_start_block + block) * kBlobfsBlockSize);
-    ssize_t bytes_read = pread(device_fd.get(), data.get(), device_block_size, device_offset);
-    ASSERT_EQ(bytes_read, device_block_size);
+
+    {
+      zx_status_t status = block_client::SingleReadBytes(device.value(), data.get(),
+                                                         device_block_size, device_offset);
+      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    }
+
     if (memcmp(info->data.get(), data.get(), device_block_size) == 0) {
       // Corrupt the first byte by flipping all of the bits.
       data[0] = ~data[0];
-      ssize_t bytes_written = pwrite(device_fd.get(), data.get(), device_block_size, device_offset);
-      ASSERT_EQ(bytes_written, device_block_size);
+      {
+        zx_status_t status = block_client::SingleWriteBytes(device.value(), data.get(),
+                                                            device_block_size, device_offset);
+        ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+      }
       was_blob_corrupted = true;
       break;
     }

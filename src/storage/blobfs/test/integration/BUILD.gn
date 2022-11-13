@@ -98,6 +98,7 @@ test("blobfs_integration") {
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/block_client/cpp:fake_device",
     "//src/lib/storage/fs_management",
     "//src/storage/blobfs",
@@ -236,7 +237,9 @@ test("blobfs_superblock") {
   sources = [ "superblock_test.cc" ]
   deps = [
     ":blobfs_integration_fixtures",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/block_client/cpp",
     "//src/storage/blobfs",
     "//zircon/system/ulib/fbl",
   ]
