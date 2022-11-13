@@ -37,7 +37,6 @@ fdio_public_headers = [
   "include/lib/fdio/io.h",
   "include/lib/fdio/limits.h",
   "include/lib/fdio/namespace.h",
-  "include/lib/fdio/private.h",
   "include/lib/fdio/spawn.h",
   "include/lib/fdio/unsafe.h",
   "include/lib/fdio/vfs.h",
@@ -68,10 +67,8 @@ if (is_fuzzer) {
     sdk = "shared"
     sdk_publishable = true
 
-    # This list is relative to the include/ directory and also includes the
-    # internal header.
-    sdk_headers =
-        rebase_path(fdio_public_headers, "include") + [ "lib/fdio/private.h" ]
+    # This list is relative to the include/ directory.
+    sdk_headers = rebase_path(fdio_public_headers, "include")
 
     sources = [
       "bsdsocket.cc",

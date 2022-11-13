@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <lib/fdio/private.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/null.h>

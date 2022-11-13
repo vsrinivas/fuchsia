@@ -10,7 +10,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fdio/private.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/vfs.h>
 #include <lib/stdcompat/string_view.h>
