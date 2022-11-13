@@ -20,11 +20,9 @@
 
 #include <gtest/gtest.h>
 
-#include "fidl/fuchsia.io/cpp/markers.h"
-#include "lib/fidl/cpp/wire/internal/transport_channel.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
-#include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/block-watcher.h"
 #include "src/storage/fshost/config.h"
 #include "src/storage/fshost/extract-metadata.h"
@@ -84,6 +82,9 @@ class BlockDeviceTest : public testing::Test {
   }
 
   fbl::unique_fd GetRamdiskFd() { return fbl::unique_fd(open(ramdisk_->path().c_str(), O_RDWR)); }
+  zx::result<fidl::ClientEnd<fuchsia_hardware_block::Block>> RamdiskDevice() const {
+    return ramdisk_->channel();
+  }
 
   static fbl::unique_fd devfs_root() { return fbl::unique_fd(open("/dev", O_RDWR)); }
 
@@ -262,8 +263,13 @@ TEST_F(BlockDeviceTest, TestMinfsCorruptionEventLogged) {
   uint64_t buffer_size = static_cast<uint64_t>(minfs::kMinfsBlockSize) * 8;
   std::unique_ptr<uint8_t[]> zeroed_buffer(new uint8_t[buffer_size]);
   memset(zeroed_buffer.get(), 0, buffer_size);
-  ASSERT_EQ(write(GetRamdiskFd().get(), zeroed_buffer.get(), buffer_size),
-            static_cast<ssize_t>(buffer_size));
+  zx::result ramdisk_device = RamdiskDevice();
+  ASSERT_TRUE(ramdisk_device.is_ok()) << ramdisk_device.status_string();
+  {
+    zx_status_t status =
+        block_client::SingleWriteBytes(ramdisk_device.value(), zeroed_buffer.get(), buffer_size, 0);
+    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  }
 
   ASSERT_NE(device.CheckFilesystem(), ZX_OK);
 
@@ -327,13 +333,21 @@ TEST_F(BlockDeviceTest, ExtractMinfsOnCorruptionToLog) {
   uint64_t buffer_size = minfs::kMinfsBlockSize * 8LL;
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[buffer_size]);
   memset(buffer.get(), 0, buffer_size);
-  ASSERT_EQ(pread(GetRamdiskFd().get(), buffer.get(), buffer_size, 0),
-            static_cast<ssize_t>(buffer_size));
+  zx::result ramdisk_device = RamdiskDevice();
+  ASSERT_TRUE(ramdisk_device.is_ok()) << ramdisk_device.status_string();
+  {
+    zx_status_t status =
+        block_client::SingleReadBytes(ramdisk_device.value(), buffer.get(), buffer_size, 0);
+    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  }
   // Corrupt checksum of both copies of superblocks.
   buffer.get()[offsetof(minfs::Superblock, checksum)] += 1;
   buffer.get()[(minfs::kMinfsBlockSize * 7LL) + offsetof(minfs::Superblock, checksum)] += 1;
-  ASSERT_EQ(pwrite(GetRamdiskFd().get(), buffer.get(), buffer_size, 0),
-            static_cast<ssize_t>(buffer_size));
+  {
+    zx_status_t status =
+        block_client::SingleWriteBytes(ramdisk_device.value(), buffer.get(), buffer_size, 0);
+    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  }
 
   EXPECT_NE(device.CheckFilesystem(), ZX_OK);
   fd_pair.first.reset();

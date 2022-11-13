@@ -321,6 +321,7 @@ template("fshost_integration_test") {
       "//src/developer/forensics/public/fakes:fuchsia.feedback.testing_cpp_wire",
       "//src/lib/files",
       "//src/lib/fxl/test:gtest_main",
+      "//src/lib/storage/block_client/cpp",
       "//src/lib/storage/fs_management",
       "//src/lib/storage/ramdevice_client/cpp",
       "//src/lib/testing/predicates",

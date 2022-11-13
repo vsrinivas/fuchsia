@@ -15,6 +15,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/storage/fshost/block-device-manager.h"
@@ -120,21 +121,21 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
     // To make it look like there's a filesystem there but it is corrupt, write out the
     // appropriate magic into the otherwise empty block device.
     {
-      fbl::unique_fd data_fd(open(device_path.c_str(), O_RDWR));
-      ASSERT_TRUE(data_fd);
+      zx::result device = component::Connect<fuchsia_hardware_block::Block>(device_path);
+      ASSERT_TRUE(device.is_ok()) << device.status_string();
       char buf[4096];
       if (DataFilesystemFormat() == "minfs") {
-        ::memcpy(buf, fs_management::kMinfsMagic, sizeof(fs_management::kMinfsMagic));
+        memcpy(buf, fs_management::kMinfsMagic, sizeof(fs_management::kMinfsMagic));
       } else if (DataFilesystemFormat() == "fxfs") {
-        ::memcpy(buf, fs_management::kFxfsMagic, sizeof(fs_management::kFxfsMagic));
+        memcpy(buf, fs_management::kFxfsMagic, sizeof(fs_management::kFxfsMagic));
       } else if (DataFilesystemFormat() == "f2fs") {
-        ::memcpy(buf, fs_management::kF2fsMagic, sizeof(fs_management::kF2fsMagic));
+        memcpy(buf, fs_management::kF2fsMagic, sizeof(fs_management::kF2fsMagic));
       } else {
         ASSERT_TRUE(false) << "Unsupported test configuration, data filesystem format: "
                            << DataFilesystemFormat();
       }
-      ASSERT_EQ(pwrite(data_fd.get(), buf, sizeof(buf), 0), static_cast<ssize_t>(sizeof(buf)))
-          << "errno: " << strerror(errno);
+      zx_status_t status = block_client::SingleWriteBytes(device.value(), buf, sizeof(buf), 0);
+      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
     }
   }
 
