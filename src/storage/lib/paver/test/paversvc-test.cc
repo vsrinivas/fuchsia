@@ -34,6 +34,7 @@
 #include <soc/aml-common/aml-guid.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/storage/lib/paver/fvm.h"
 #include "src/storage/lib/paver/gpt.h"
@@ -1736,10 +1737,13 @@ void CheckGuid(const fbl::unique_fd& device, const uint8_t type[GPT_GUID_LEN]) {
 TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   ASSERT_NO_FATAL_FAILURE(InitializeRamNand());
 
+  fdio_cpp::UnownedFdioCaller fvm_caller(fvm_);
+
   constexpr size_t kBufferSize = 8192;
   char buffer[kBufferSize];
   memset(buffer, 'a', kBufferSize);
-  EXPECT_EQ(kBufferSize, pwrite(fvm_.get(), buffer, kBufferSize, 0));
+  ASSERT_OK(block_client::SingleWriteBytes(fvm_caller.borrow_as<fuchsia_hardware_block::Block>(),
+                                           buffer, sizeof(buffer), 0));
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   auto result = data_sink_->WipeVolume();
@@ -1747,7 +1751,8 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   ASSERT_TRUE(result->is_ok());
   ASSERT_TRUE(result->value()->volume);
 
-  EXPECT_EQ(kBufferSize, pread(fvm_.get(), buffer, kBufferSize, 0));
+  ASSERT_OK(block_client::SingleReadBytes(fvm_caller.borrow_as<fuchsia_hardware_block::Block>(),
+                                          buffer, sizeof(buffer), 0));
   EXPECT_BYTES_EQ(fs_management::kFvmMagic, buffer, sizeof(fs_management::kFvmMagic));
 
   fidl::ClientEnd<fuchsia_hardware_block_volume::VolumeManager> volume_client =
@@ -1764,6 +1769,7 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   std::string blob_path = path + "/blobfs-p-1/block";
   fbl::unique_fd blob_device(openat(device_->devfs_root().get(), blob_path.c_str(), O_RDONLY));
   ASSERT_TRUE(blob_device);
+  fdio_cpp::UnownedFdioCaller blob_device_caller(blob_device);
 
   constexpr uint8_t kBlobType[GPT_GUID_LEN] = GUID_BLOB_VALUE;
   ASSERT_NO_FAILURES(CheckGuid(blob_device, kBlobType));
@@ -1771,17 +1777,20 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   uint8_t kEmptyData[kBufferSize];
   memset(kEmptyData, 0xff, kBufferSize);
 
-  EXPECT_EQ(kBufferSize, pread(blob_device.get(), buffer, kBufferSize, 0));
+  ASSERT_OK(block_client::SingleReadBytes(
+      blob_device_caller.borrow_as<fuchsia_hardware_block::Block>(), buffer, sizeof(buffer), 0));
   EXPECT_BYTES_EQ(kEmptyData, buffer, kBufferSize);
 
   std::string data_path = path + "/data-p-2/block";
   fbl::unique_fd data_device(openat(device_->devfs_root().get(), data_path.c_str(), O_RDONLY));
   ASSERT_TRUE(data_device);
+  fdio_cpp::UnownedFdioCaller data_device_caller(data_device);
 
   constexpr uint8_t kDataType[GPT_GUID_LEN] = GUID_DATA_VALUE;
   ASSERT_NO_FAILURES(CheckGuid(data_device, kDataType));
 
-  EXPECT_EQ(kBufferSize, pread(data_device.get(), buffer, kBufferSize, 0));
+  ASSERT_OK(block_client::SingleReadBytes(
+      data_device_caller.borrow_as<fuchsia_hardware_block::Block>(), buffer, sizeof(buffer), 0));
   EXPECT_BYTES_EQ(kEmptyData, buffer, kBufferSize);
 }
 
