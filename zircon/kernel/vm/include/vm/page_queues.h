@@ -284,8 +284,8 @@ class PageQueues {
 
   // This takes an optional output parameter that, if the function returns true, will contain the
   // index of the queue that the page was in.
-  bool DebugPageIsReclaim(const vm_page_t* page, size_t* queue = nullptr) const;
-  bool DebugPageIsReclaimDontNeed(const vm_page_t* page) const;
+  bool DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue = nullptr) const;
+  bool DebugPageIsPagerBackedDontNeed(const vm_page_t* page) const;
   bool DebugPageIsPagerBackedDirty(const vm_page_t* page) const;
   bool DebugPageIsAnonymous(const vm_page_t* page) const;
   bool DebugPageIsAnonymousZeroFork(const vm_page_t* page) const;
@@ -488,6 +488,16 @@ class PageQueues {
   void LruThread();
   void MaybeTriggerLruProcessing();
   bool NeedsLruProcessing() const;
+
+  // Returns true if a page is both in one of the Reclaim queues, and succeeds the passed in
+  // validator, which takes a fbl::RefPtr<VmCowPages>.
+  template <typename F>
+  bool DebugPageIsSpecificReclaim(const vm_page_t* page, F validator, size_t* queue) const;
+
+  // Returns true if a page is both in the specified |queue|, and succeeds the passed in validator,
+  // which takes a fbl::RefPtr<VmCowPages>.
+  template <typename F>
+  bool DebugPageIsSpecificQueue(const vm_page_t* page, PageQueue queue, F validator) const;
 
   // Determines if anonymous pages are placed in the reclaimable queues, or in their own non aging
   // anonymous queues.

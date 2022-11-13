@@ -963,20 +963,51 @@ PageQueues::Counts PageQueues::QueueCounts() const {
   return counts;
 }
 
-bool PageQueues::DebugPageIsReclaim(const vm_page_t* page, size_t* queue) const {
-  PageQueue q = (PageQueue)page->object.get_page_queue_ref().load(ktl::memory_order_relaxed);
-  if (q >= PageQueueReclaimBase && q <= PageQueueReclaimLast) {
+template <typename F>
+bool PageQueues::DebugPageIsSpecificReclaim(const vm_page_t* page, F validator,
+                                            size_t* queue) const {
+  fbl::RefPtr<VmCowPages> cow_pages;
+  {
+    Guard<CriticalMutex> guard{&lock_};
+    PageQueue q = (PageQueue)page->object.get_page_queue_ref().load(ktl::memory_order_relaxed);
+    if (q < PageQueueReclaimBase || q > PageQueueReclaimLast) {
+      return false;
+    }
     if (queue) {
       *queue = queue_age(q, mru_gen_to_queue());
     }
-    return true;
+    VmCowPages* cow = reinterpret_cast<VmCowPages*>(page->object.get_object());
+    DEBUG_ASSERT(cow);
+    cow_pages = fbl::MakeRefPtrUpgradeFromRaw(cow, guard);
   }
-  return false;
+  return cow_pages && validator(cow_pages);
 }
 
-bool PageQueues::DebugPageIsReclaimDontNeed(const vm_page_t* page) const {
-  return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) ==
-         PageQueueReclaimDontNeed;
+template <typename F>
+bool PageQueues::DebugPageIsSpecificQueue(const vm_page_t* page, PageQueue queue,
+                                          F validator) const {
+  fbl::RefPtr<VmCowPages> cow_pages;
+  {
+    Guard<CriticalMutex> guard{&lock_};
+    PageQueue q = (PageQueue)page->object.get_page_queue_ref().load(ktl::memory_order_relaxed);
+    if (q != queue) {
+      return false;
+    }
+    VmCowPages* cow = reinterpret_cast<VmCowPages*>(page->object.get_object());
+    DEBUG_ASSERT(cow);
+    cow_pages = fbl::MakeRefPtrUpgradeFromRaw(cow, guard);
+  }
+  return cow_pages && validator(cow_pages);
+}
+
+bool PageQueues::DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue) const {
+  return DebugPageIsSpecificReclaim(
+      page, [](auto cow) { return cow->can_evict(); }, queue);
+}
+
+bool PageQueues::DebugPageIsPagerBackedDontNeed(const vm_page_t* page) const {
+  return DebugPageIsSpecificQueue(page, PageQueueReclaimDontNeed,
+                                  [](auto cow) { return cow->can_evict(); });
 }
 
 bool PageQueues::DebugPageIsPagerBackedDirty(const vm_page_t* page) const {
@@ -985,10 +1016,11 @@ bool PageQueues::DebugPageIsPagerBackedDirty(const vm_page_t* page) const {
 }
 
 bool PageQueues::DebugPageIsAnonymous(const vm_page_t* page) const {
-  if (kAnonymousIsReclaimable) {
-    return DebugPageIsReclaim(page);
+  if (ReclaimIsOnlyPagerBacked()) {
+    return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) == PageQueueAnonymous;
   }
-  return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) == PageQueueAnonymous;
+  return DebugPageIsSpecificReclaim(
+      page, [](auto cow) { return !cow->can_evict(); }, nullptr);
 }
 
 bool PageQueues::DebugPageIsWired(const vm_page_t* page) const {
@@ -996,8 +1028,12 @@ bool PageQueues::DebugPageIsWired(const vm_page_t* page) const {
 }
 
 bool PageQueues::DebugPageIsAnonymousZeroFork(const vm_page_t* page) const {
-  return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) ==
-         PageQueueAnonymousZeroFork;
+  if (ReclaimIsOnlyPagerBacked()) {
+    return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) ==
+           PageQueueAnonymousZeroFork;
+  }
+  return DebugPageIsSpecificReclaim(
+      page, [](auto cow) { return !cow->can_evict(); }, nullptr);
 }
 
 bool PageQueues::DebugPageIsAnyAnonymous(const vm_page_t* page) const {

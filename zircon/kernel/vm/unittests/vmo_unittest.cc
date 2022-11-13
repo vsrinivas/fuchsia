@@ -1326,25 +1326,25 @@ static bool vmo_move_pages_on_access_test() {
   ASSERT_EQ(ZX_OK, status);
 
   // Our page should now be in a pager backed page queue.
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page));
 
   PageRequest request;
   // If we lookup the page then it should be moved to specifically the first page queue.
   status = vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, status);
   size_t queue;
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Rotate the queues and check the page moves.
   pmm_page_queues()->RotateReclaimQueues();
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(1u, queue);
 
   // Touching the page should move it back to the first queue.
   status = vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, status);
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Touching pages in a child should also move the page to the front of the queues.
@@ -1355,14 +1355,14 @@ static bool vmo_move_pages_on_access_test() {
 
   status = child->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, status);
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
   pmm_page_queues()->RotateReclaimQueues();
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(1u, queue);
   status = child->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, status);
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   END_TEST;
@@ -1381,15 +1381,15 @@ static bool vmo_eviction_hints_test() {
 
   // Newly created page should be in the first pager backed page queue.
   size_t queue;
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Hint that the page is not needed.
   ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
 
   // The page should now have moved to the DontNeed queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaimDontNeed(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
 
   // Hint that the page is always needed.
   ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
@@ -1398,8 +1398,8 @@ static bool vmo_eviction_hints_test() {
   page = vmo->DebugGetPage(0);
 
   // The page should now have moved to the first LRU queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaimDontNeed(page));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Evicting the page should fail.
@@ -1413,27 +1413,27 @@ static bool vmo_eviction_hints_test() {
   page = vmo->DebugGetPage(0);
 
   // The page should now have moved to the DontNeed queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaimDontNeed(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
 
   // We should still not be able to evict the page, the AlwaysNeed hint is sticky.
   ASSERT_FALSE(
       vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // Accessing the page should move it out of the DontNeed queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaimDontNeed(page));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Verify that the page can be rotated as normal.
   pmm_page_queues()->RotateReclaimQueues();
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(1u, queue);
 
   // Touching the page should move it back to the first queue.
   status = vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, status);
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // We should still not be able to evict the page, the AlwaysNeed hint is sticky.
@@ -1526,9 +1526,9 @@ static bool vmo_eviction_hints_clone_test() {
 
   // Newly created pages should be in the first pager backed page queue.
   size_t queue;
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(pages[0], &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0], &queue));
   EXPECT_EQ(0u, queue);
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(pages[1], &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[1], &queue));
   EXPECT_EQ(0u, queue);
 
   // Create a clone.
@@ -1542,8 +1542,8 @@ static bool vmo_eviction_hints_clone_test() {
   ASSERT_OK(clone->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
 
   // The page should now have moved to the DontNeed queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(pages[0]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaimDontNeed(pages[0]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[0]));
 
   // Hint that the page is always needed.
   ASSERT_OK(clone->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
@@ -1552,8 +1552,8 @@ static bool vmo_eviction_hints_clone_test() {
   pages[0] = vmo->DebugGetPage(0);
 
   // The page should now have moved to the first LRU queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaimDontNeed(pages[0]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(pages[0], &queue));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0], &queue));
   EXPECT_EQ(0u, queue);
 
   // Evicting the page should fail.
@@ -1570,8 +1570,8 @@ static bool vmo_eviction_hints_clone_test() {
   ASSERT_OK(clone2->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
 
   // The page should now have moved to the DontNeed queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(pages[0]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaimDontNeed(pages[0]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[0]));
 
   // Hint that the page is always needed.
   ASSERT_OK(clone2->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
@@ -1580,8 +1580,8 @@ static bool vmo_eviction_hints_clone_test() {
   pages[0] = vmo->DebugGetPage(0);
 
   // The page should now have moved to the first LRU queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaimDontNeed(pages[0]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(pages[0], &queue));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0], &queue));
   EXPECT_EQ(0u, queue);
 
   // Evicting the page should fail.
@@ -1593,8 +1593,8 @@ static bool vmo_eviction_hints_clone_test() {
   ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
 
   // The page should now have moved to the DontNeed queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(pages[0]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaimDontNeed(pages[0]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[0]));
 
   // Fork the page in the clone. And make sure hints no longer apply.
   uint64_t data = 0xff;
@@ -1606,15 +1606,15 @@ static bool vmo_eviction_hints_clone_test() {
   ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
 
   // The page should now have moved to the DontNeed queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(pages[0]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaimDontNeed(pages[0]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[0]));
 
   // Hint that the page is always needed via the clone.
   ASSERT_OK(clone->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
 
   // The page should still be in the DontNeed queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(pages[0]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaimDontNeed(pages[0]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[0]));
 
   // Hint that the page is always needed via the second level clone.
   ASSERT_OK(clone2->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
@@ -1622,8 +1622,8 @@ static bool vmo_eviction_hints_clone_test() {
   // This should move the page out of the the DontNeed queue. Since we forked the page in the
   // intermediate clone *after* this clone was created, it will still refer to the original page,
   // which is the same as the page in the root.
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(pages[0]));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaimDontNeed(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[0]));
 
   // Create another clone that sees the forked page.
   // Hinting through this clone should have no effect, since it will see the forked page.
@@ -1636,28 +1636,28 @@ static bool vmo_eviction_hints_clone_test() {
   ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
 
   // The page should now have moved to the DontNeed queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(pages[0]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaimDontNeed(pages[0]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[0]));
 
   // Hint through clone3.
   ASSERT_OK(clone3->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
 
   // The page should still be in the DontNeed queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(pages[0]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaimDontNeed(pages[0]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[0]));
 
   // Hint on the second page using clone3. This page hasn't been forked by the intermediate clone.
   // So clone3 should still be able to see the root page.
   // First verify that the page is still in queue 0.
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(pages[1], &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[1], &queue));
   EXPECT_EQ(0u, queue);
 
   // Hint DontNeed through clone 3.
   ASSERT_OK(clone3->HintRange(PAGE_SIZE, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
 
   // The page should have moved to the DontNeed queue.
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(pages[1]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaimDontNeed(pages[1]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[1]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[1]));
 
   END_TEST;
 }
@@ -3130,22 +3130,22 @@ static bool vmo_dirty_pages_test() {
 
   // Newly created page should be in the first pager backed page queue.
   size_t queue;
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Rotate the queues and check the page moves.
   pmm_page_queues()->RotateReclaimQueues();
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(1u, queue);
 
   // Accessing the page should move it back to the first queue.
   EXPECT_OK(vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Now simulate a write to the page. This should move the page to the dirty queue.
   ASSERT_OK(vmo->DirtyPages(0, PAGE_SIZE));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Should not be able to evict a dirty page.
@@ -3154,7 +3154,7 @@ static bool vmo_dirty_pages_test() {
 
   // Accessing the page again should not move the page out of the dirty queue.
   EXPECT_OK(vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   END_TEST;
@@ -3171,12 +3171,12 @@ static bool vmo_dirty_pages_writeback_test() {
 
   // Newly created page should be in the first pager backed page queue.
   size_t queue;
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Now simulate a write to the page. This should move the page to the dirty queue.
   ASSERT_OK(vmo->DirtyPages(0, PAGE_SIZE));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Should not be able to evict a dirty page.
@@ -3185,7 +3185,7 @@ static bool vmo_dirty_pages_writeback_test() {
 
   // Begin writeback on the page. This should still keep the page in the dirty queue.
   ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE, false));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Should not be able to evict a dirty page.
@@ -3194,7 +3194,7 @@ static bool vmo_dirty_pages_writeback_test() {
 
   // Accessing the page should not move the page out of the dirty queue either.
   ASSERT_OK(vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Should not be able to evict a dirty page.
@@ -3204,24 +3204,24 @@ static bool vmo_dirty_pages_writeback_test() {
   // End writeback on the page. This should finally move the page out of the dirty queue.
   ASSERT_OK(vmo->WritebackEnd(0, PAGE_SIZE));
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // We should be able to rotate the page as usual.
   pmm_page_queues()->RotateReclaimQueues();
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(1u, queue);
 
   // Another write moves the page back to the Dirty queue.
   ASSERT_OK(vmo->DirtyPages(0, PAGE_SIZE));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Clean the page again, and try to evict it.
   ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE, false));
   ASSERT_OK(vmo->WritebackEnd(0, PAGE_SIZE));
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // We should now be able to evict the page.
@@ -3242,18 +3242,18 @@ static bool vmo_dirty_pages_with_hints_test() {
 
   // Newly created page should be in the first pager backed page queue.
   size_t queue;
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Now simulate a write to the page. This should move the page to the dirty queue.
   ASSERT_OK(vmo->DirtyPages(0, PAGE_SIZE));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Hint DontNeed on the page. It should remain in the dirty queue.
   ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaimDontNeed(page));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Should not be able to evict a dirty page.
@@ -3262,22 +3262,22 @@ static bool vmo_dirty_pages_with_hints_test() {
 
   // Hint AlwaysNeed on the page. It should remain in the dirty queue.
   ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaimDontNeed(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Clean the page.
   ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE, false));
   ASSERT_OK(vmo->WritebackEnd(0, PAGE_SIZE));
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Eviction should fail still because we hinted AlwaysNeed previously.
   ASSERT_FALSE(
       vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Eviction should succeed if we ignore the hint.
@@ -3291,19 +3291,19 @@ static bool vmo_dirty_pages_with_hints_test() {
   ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, /*resizable=*/false, &page, &vmo));
 
   // Newly created page should be in the first pager backed page queue.
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Hint DontNeed on the page. This should move the page to the DontNeed queue.
   ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaimDontNeed(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
 
   // Write to the page now. This should move it to the dirty queue.
   ASSERT_OK(vmo->DirtyPages(0, PAGE_SIZE));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaimDontNeed(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Should not be able to evict a dirty page.
@@ -3327,8 +3327,8 @@ static bool vmo_pinning_backlink_test() {
   ASSERT_EQ(ZX_OK, status);
 
   // Pages should be in the pager queue.
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(pages[0]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(pages[1]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[1]));
 
   // Verify backlink information.
   auto cow = vmo->DebugGetCowPages().get();
@@ -3348,8 +3348,8 @@ static bool vmo_pinning_backlink_test() {
   // Pages should be in the wired queue.
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsWired(pages[0]));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsWired(pages[1]));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(pages[0]));
-  EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(pages[1]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[1]));
 
   // Moving to the wired queue should retain backlink information.
   EXPECT_EQ(cow, pages[0]->object.get_object());
@@ -3363,8 +3363,8 @@ static bool vmo_pinning_backlink_test() {
   // Pages should be back in the pager queue.
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsWired(pages[0]));
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsWired(pages[1]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(pages[0]));
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(pages[1]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[1]));
 
   // Verify backlink information again.
   EXPECT_EQ(cow, pages[0]->object.get_object());
@@ -3615,7 +3615,7 @@ static bool vmo_dedup_dirty_test() {
   ASSERT_EQ(ZX_OK, status);
 
   // Our page should now be in a pager backed page queue.
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page));
 
   // The page is clean. We should be able to dedup the page.
   EXPECT_TRUE(vmo->DebugGetCowPages()->DedupZeroPage(page, 0));
