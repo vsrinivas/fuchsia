@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/sys/component/cpp/service_client.h>
@@ -30,14 +31,11 @@
 #include <ramdevice-client/ramdisk.h>
 
 #include "src/lib/storage/block_client/cpp/client.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/security/lib/fcrypto/secret.h"
 #include "src/security/lib/zxcrypt/client.h"
 #include "src/security/lib/zxcrypt/fdio-volume.h"
 #include "src/storage/fvm/format.h"
-
-// TODO(fxbug.dev/34273): Replace these with *_STATUS in zxtest.
-#define EXPECT_ZX(expr, status) EXPECT_EQ(expr, status)
-#define ASSERT_ZX(expr, status) ASSERT_EQ(expr, status)
 
 // Value-parameterized tests: Consumers of this file can define an 'EACH_PARAM' macro as follows:
 //   #define EACH_PARAM(OP, Test)
@@ -128,15 +126,29 @@ class TestDevice final {
   size_t block_count() const { return block_count_; }
 
   // Returns space reserved for metadata
-  size_t reserved_blocks() const {
+  zx::result<size_t> reserved_blocks() const {
+    zx::result channel = component::Clone(parent_block(), component::AssumeProtocolComposesNode);
+    if (channel.is_error()) {
+      return channel.take_error();
+    }
     std::unique_ptr<FdioVolume> volume;
-    FdioVolume::Unlock(parent().duplicate(), key_, 0, &volume);
-    return volume->reserved_blocks();
+    if (zx_status_t status = FdioVolume::Unlock(std::move(channel.value()), key_, 0, &volume);
+        status) {
+      return zx::error(status);
+    }
+    return zx::ok(volume->reserved_blocks());
   }
-  size_t reserved_slices() const {
+  zx::result<size_t> reserved_slices() const {
+    zx::result channel = component::Clone(parent_block(), component::AssumeProtocolComposesNode);
+    if (channel.is_error()) {
+      return channel.take_error();
+    }
     std::unique_ptr<FdioVolume> volume;
-    FdioVolume::Unlock(parent().duplicate(), key_, 0, &volume);
-    return volume->reserved_slices();
+    if (zx_status_t status = FdioVolume::Unlock(std::move(channel.value()), key_, 0, &volume);
+        status) {
+      return zx::error(status);
+    }
+    return zx::ok(volume->reserved_slices());
   }
 
   // Returns a reference to the root key generated for this device.
@@ -144,14 +156,14 @@ class TestDevice final {
 
   // API WRAPPERS
 
-  // These methods mirror the POSIX API, except that the file descriptors and buffers are
-  // provided automatically. |off| and |len| are in bytes.
-  ssize_t lseek(zx_off_t off) { return ::lseek(zxcrypt_.get(), off, SEEK_SET); }
-  ssize_t read(zx_off_t off, size_t len) {
-    return ::read(zxcrypt_.get(), as_read_.get() + off, len);
+  zx_status_t SingleReadBytes(zx_off_t src_offset, size_t len, size_t dst_offset) {
+    return block_client::SingleReadBytes(zxcrypt_block(), as_read_.get() + src_offset, len,
+                                         dst_offset);
   }
-  ssize_t write(zx_off_t off, size_t len) {
-    return ::write(zxcrypt_.get(), to_write_.get() + off, len);
+
+  zx_status_t SingleWriteBytes(zx_off_t src_offset, size_t len, size_t dst_offset) {
+    return block_client::SingleWriteBytes(zxcrypt_block(), to_write_.get() + src_offset, len,
+                                          dst_offset);
   }
 
   // These methods mirror the syscall API, except that the VMO and buffers are provided
@@ -207,10 +219,8 @@ class TestDevice final {
   // Blocks until the ramdisk is awake.
   void WakeUp() __TA_EXCLUDES(lock_);
 
-  // Test helpers that perform a |lseek| and a |read| or |write| together. |off| and |len| are in
-  // bytes.  |ReadFd| additionally checks that the data read matches what was written.
-  void ReadFd(zx_off_t off, size_t len);
-  void WriteFd(zx_off_t off, size_t len);
+  void Read(zx_off_t off, size_t len);
+  void Write(zx_off_t off, size_t len);
 
   // Test helpers that perform a |lseek| and a |vmo_read| or |vmo_write| together.  |off| and
   // |len| are in blocks.  |ReadVmo| additionally checks that the data read matches what was
@@ -221,7 +231,7 @@ class TestDevice final {
   // Test helper that flips a (pseudo)random bit in the key at the given |slot| in the given
   // |block|. The call to |srand| in main.c guarantees the same bit will be chosen for a given
   // test iteration.
-  void Corrupt(uint64_t block, key_slot_t slot);
+  void Corrupt(uint64_t blkno, key_slot_t slot);
 
  private:
   // Allocates a new ramdisk of at least |device_size| bytes arranged into blocks of |block_size|

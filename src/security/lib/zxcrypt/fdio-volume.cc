@@ -25,22 +25,25 @@
 #include <fbl/string_buffer.h>
 #include <fbl/vector.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/security/lib/zxcrypt/volume.h"
 
 #define ZXDEBUG 0
 
 namespace zxcrypt {
 
-FdioVolume::FdioVolume(fbl::unique_fd&& block_dev_fd) : block_dev_fd_(std::move(block_dev_fd)) {}
+FdioVolume::FdioVolume(fidl::ClientEnd<fuchsia_hardware_block::Block> channel)
+    : channel_(std::move(channel)) {}
 
-zx_status_t FdioVolume::Init(fbl::unique_fd block_dev_fd, std::unique_ptr<FdioVolume>* out) {
-  if (!block_dev_fd || !out) {
-    xprintf("bad parameter(s): block_dev_fd=%d, out=%p\n", block_dev_fd.get(), out);
+zx_status_t FdioVolume::Init(fidl::ClientEnd<fuchsia_hardware_block::Block> channel,
+                             std::unique_ptr<FdioVolume>* out) {
+  if (!channel || !out) {
+    xprintf("bad parameter(s): block=%d, out=%p\n", channel.channel().get(), out);
     return ZX_ERR_INVALID_ARGS;
   }
 
   fbl::AllocChecker ac;
-  std::unique_ptr<FdioVolume> volume(new (&ac) FdioVolume(std::move(block_dev_fd)));
+  std::unique_ptr<FdioVolume> volume(new (&ac) FdioVolume(std::move(channel)));
   if (!ac.check()) {
     xprintf("allocation failed: %zu bytes\n", sizeof(FdioVolume));
     return ZX_ERR_NO_MEMORY;
@@ -54,11 +57,11 @@ zx_status_t FdioVolume::Init(fbl::unique_fd block_dev_fd, std::unique_ptr<FdioVo
   return ZX_OK;
 }
 
-zx_status_t FdioVolume::Create(fbl::unique_fd block_dev_fd, const crypto::Secret& key,
-                               std::unique_ptr<FdioVolume>* out) {
+zx_status_t FdioVolume::Create(fidl::ClientEnd<fuchsia_hardware_block::Block> channel,
+                               const crypto::Secret& key, std::unique_ptr<FdioVolume>* out) {
   std::unique_ptr<FdioVolume> volume;
 
-  if (zx_status_t status = FdioVolume::Init(std::move(block_dev_fd), &volume); status != ZX_OK) {
+  if (zx_status_t status = FdioVolume::Init(std::move(channel), &volume); status != ZX_OK) {
     xprintf("Init failed: %s\n", zx_status_get_string(status));
     return status;
   }
@@ -75,10 +78,11 @@ zx_status_t FdioVolume::Create(fbl::unique_fd block_dev_fd, const crypto::Secret
   return ZX_OK;
 }
 
-zx_status_t FdioVolume::Unlock(fbl::unique_fd block_dev_fd, const crypto::Secret& key,
-                               key_slot_t slot, std::unique_ptr<FdioVolume>* out) {
+zx_status_t FdioVolume::Unlock(fidl::ClientEnd<fuchsia_hardware_block::Block> channel,
+                               const crypto::Secret& key, key_slot_t slot,
+                               std::unique_ptr<FdioVolume>* out) {
   std::unique_ptr<FdioVolume> volume;
-  if (zx_status_t status = FdioVolume::Init(std::move(block_dev_fd), &volume); status != ZX_OK) {
+  if (zx_status_t status = FdioVolume::Init(std::move(channel), &volume); status != ZX_OK) {
     xprintf("Init failed: %s\n", zx_status_get_string(status));
     return status;
   }
@@ -135,12 +139,10 @@ zx_status_t FdioVolume::Revoke(key_slot_t slot) {
 zx_status_t FdioVolume::Init() { return Volume::Init(); }
 
 zx_status_t FdioVolume::GetBlockInfo(BlockInfo* out) {
-  fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
-  if (!caller) {
+  if (!channel_) {
     return ZX_ERR_BAD_STATE;
   }
-  const fidl::WireResult result =
-      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  const fidl::WireResult result = fidl::WireCall(channel_)->GetInfo();
   if (!result.ok()) {
     return result.status();
   }
@@ -155,8 +157,7 @@ zx_status_t FdioVolume::GetBlockInfo(BlockInfo* out) {
 }
 
 zx_status_t FdioVolume::GetFvmSliceSize(uint64_t* out) {
-  fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
-  if (!caller) {
+  if (!channel_) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -171,8 +172,9 @@ zx_status_t FdioVolume::GetFvmSliceSize(uint64_t* out) {
   // TODO(https://fxbug.dev/112484): this relies on multiplexing.
   //
   // TODO(https://fxbug.dev/113512): Remove this.
-  zx::result cloned = component::Clone(caller.borrow_as<fuchsia_hardware_block_volume::Volume>(),
-                                       component::AssumeProtocolComposesNode);
+  zx::result cloned = component::Clone(
+      fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume>(channel_.channel().borrow()),
+      component::AssumeProtocolComposesNode);
   if (cloned.is_error()) {
     return cloned.status_value();
   }
@@ -201,13 +203,13 @@ zx_status_t FdioVolume::DoBlockFvmVsliceQuery(uint64_t vslice_start,
                                               uint64_t* slice_count) {
   static_assert(fuchsia_hardware_block_volume::wire::kMaxSliceRequests == Volume::MAX_SLICE_REGIONS,
                 "block volume slice response count must match");
-  fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
-  if (!caller) {
+  if (!channel_) {
     return ZX_ERR_BAD_STATE;
   }
 
   const fidl::WireResult result =
-      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume>(
+                         channel_.channel().borrow()))
           ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(&vslice_start, 1));
   if (!result.ok()) {
     return result.status();
@@ -232,12 +234,12 @@ zx_status_t FdioVolume::DoBlockFvmVsliceQuery(uint64_t vslice_start,
 }
 
 zx_status_t FdioVolume::DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_count) {
-  fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
-  if (!caller) {
+  if (!channel_) {
     return ZX_ERR_BAD_STATE;
   }
   const fidl::WireResult result =
-      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume>(
+                         channel_.channel().borrow()))
           ->Extend(start_slice, slice_count);
   if (!result.ok()) {
     return result.status();
@@ -251,42 +253,11 @@ zx_status_t FdioVolume::DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_co
 }
 
 zx_status_t FdioVolume::Read() {
-  if (lseek(block_dev_fd_.get(), offset_, SEEK_SET) < 0) {
-    xprintf("lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", block_dev_fd_.get(), offset_,
-            strerror(errno));
-    return ZX_ERR_IO;
-  }
-  ssize_t res = res = read(block_dev_fd_.get(), block_.get(), block_.len());
-  if (res < 0) {
-    xprintf("read(%d, %p, %zu) failed: %s\n", block_dev_fd_.get(), block_.get(), block_.len(),
-            strerror(errno));
-    return ZX_ERR_IO;
-  }
-  if (static_cast<size_t>(res) != block_.len()) {
-    xprintf("short read: have %zd, need %zu\n", res, block_.len());
-    return ZX_ERR_IO;
-  }
-
-  return ZX_OK;
+  return block_client::SingleReadBytes(channel_, block_.get(), block_.len(), offset_);
 }
 
 zx_status_t FdioVolume::Write() {
-  if (lseek(block_dev_fd_.get(), offset_, SEEK_SET) < 0) {
-    xprintf("lseek(%d, %" PRIu64 ", SEEK_SET) failed: %s\n", block_dev_fd_.get(), offset_,
-            strerror(errno));
-    return ZX_ERR_IO;
-  }
-  ssize_t res = write(block_dev_fd_.get(), block_.get(), block_.len());
-  if (res < 0) {
-    xprintf("write(%d, %p, %zu) failed: %s\n", block_dev_fd_.get(), block_.get(), block_.len(),
-            strerror(errno));
-    return ZX_ERR_IO;
-  }
-  if (static_cast<size_t>(res) != block_.len()) {
-    xprintf("short write: have %zd, need %zu\n", res, block_.len());
-    return ZX_ERR_IO;
-  }
-  return ZX_OK;
+  return block_client::SingleWriteBytes(channel_, block_.get(), block_.len(), offset_);
 }
 
 zx_status_t FdioVolume::Flush() {

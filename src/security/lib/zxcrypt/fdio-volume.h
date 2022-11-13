@@ -5,13 +5,9 @@
 #ifndef SRC_SECURITY_LIB_ZXCRYPT_FDIO_VOLUME_H_
 #define SRC_SECURITY_LIB_ZXCRYPT_FDIO_VOLUME_H_
 
-#include <lib/fdio/fdio.h>
-#include <lib/zx/channel.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 
 #include <memory>
-
-#include <fbl/string.h>
-#include <fbl/unique_fd.h>
 
 #include "src/security/lib/fcrypto/secret.h"
 #include "src/security/lib/zxcrypt/volume.h"
@@ -24,28 +20,30 @@ namespace zxcrypt {
 // often more convenient for testing.
 class __EXPORT FdioVolume final : public Volume {
  public:
-  explicit FdioVolume(fbl::unique_fd&& block_dev_fd);
+  explicit FdioVolume(fidl::ClientEnd<fuchsia_hardware_block::Block> channel);
 
   // Creates a new zxcrypt volume associated with the given file descriptor,
-  // |block_dev_fd|, and returns it via |out|, if provided.  This will format
+  // |block|, and returns it via |out|, if provided.  This will format
   // the block device as zxcrypt using the given |key|, which will be
   // associated with key slot 0.  This method takes ownership of
-  // |block_dev_fd|.  Note that |key| is not strengthened
+  // |block|.  Note that |key| is not strengthened
   // and MUST have cryptographic key length of at least 128 bits.
-  static zx_status_t Create(fbl::unique_fd block_dev_fd, const crypto::Secret& key,
-                            std::unique_ptr<FdioVolume>* out = nullptr);
+  static zx_status_t Create(fidl::ClientEnd<fuchsia_hardware_block::Block> channel,
+                            const crypto::Secret& key, std::unique_ptr<FdioVolume>* out = nullptr);
 
-  // Opens a zxcrypt volume on the block device described by |block_dev_fd|
+  // Opens a zxcrypt volume on the block device described by |block|
   // using the |key| corresponding to given key |slot|.  This method takes
-  // ownership of |block_dev_fd|.  Note that |key| is not strengthened and MUST
+  // ownership of |block|.  Note that |key| is not strengthened and MUST
   // have cryptographic key length of at least 128 bits.  This is a convenience
   // method that calls |Init()| and then |FdioVolume::Unlock()|.
-  static zx_status_t Unlock(fbl::unique_fd block_dev_fd, const crypto::Secret& key, key_slot_t slot,
+  static zx_status_t Unlock(fidl::ClientEnd<fuchsia_hardware_block::Block> channel,
+                            const crypto::Secret& key, key_slot_t slot,
                             std::unique_ptr<FdioVolume>* out);
 
   // Returns a new volume object corresponding to the block device given by
-  // |block_dev_fd| and populated with the block and FVM information.
-  static zx_status_t Init(fbl::unique_fd block_dev_fd, std::unique_ptr<FdioVolume>* out = nullptr);
+  // |block| and populated with the block and FVM information.
+  static zx_status_t Init(fidl::ClientEnd<fuchsia_hardware_block::Block> channel,
+                          std::unique_ptr<FdioVolume>* out = nullptr);
 
   // Opens a zxcrypt volume on the block device described by |fd| using the |key| corresponding to
   // given key |slot|.
@@ -65,23 +63,23 @@ class __EXPORT FdioVolume final : public Volume {
   // Retrieves the block and FVM information and adjusts it
   zx_status_t Init();
 
-  zx_status_t GetBlockInfo(BlockInfo* out);
-  zx_status_t GetFvmSliceSize(uint64_t* out);
+  zx_status_t GetBlockInfo(BlockInfo* out) override;
+  zx_status_t GetFvmSliceSize(uint64_t* out) override;
   zx_status_t DoBlockFvmVsliceQuery(uint64_t vslice_start, SliceRegion ranges[MAX_SLICE_REGIONS],
-                                    uint64_t* slice_count);
-  zx_status_t DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_count);
+                                    uint64_t* slice_count) override;
+  zx_status_t DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_count) override;
 
   // Reads a block from the current offset on the underlying device.
-  zx_status_t Read();
+  zx_status_t Read() override;
 
   // Writes a block to the current offset on the underlying device.
-  zx_status_t Write();
+  zx_status_t Write() override;
 
   // Flushes all pending writes to the underlying device.
-  zx_status_t Flush();
+  zx_status_t Flush() override;
 
-  // The underlying block device, accessed over FDIO
-  fbl::unique_fd block_dev_fd_;
+  // The underlying block device.
+  fidl::ClientEnd<fuchsia_hardware_block::Block> channel_;
 };
 
 }  // namespace zxcrypt

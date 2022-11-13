@@ -39,6 +39,7 @@
 #include <zxtest/zxtest.h>
 
 #include "lib/stdcompat/string_view.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/security/lib/zxcrypt/client.h"
 #include "src/security/lib/zxcrypt/fdio-volume.h"
@@ -56,11 +57,6 @@ const zx::duration kTimeout = zx::sec(3);
 
 // FVM driver library
 const char* kFvmDriver = "fvm.so";
-
-// Translates |result| into a zx_status_t.
-zx_status_t ToStatus(ssize_t result) {
-  return result < 0 ? static_cast<zx_status_t>(result) : ZX_OK;
-}
 
 }  // namespace
 
@@ -230,16 +226,12 @@ int TestDevice::WakeThread(void* arg) {
   return ZX_OK;
 }
 
-void TestDevice::ReadFd(zx_off_t off, size_t len) {
-  ASSERT_OK(ToStatus(lseek(off)));
-  ASSERT_OK(ToStatus(read(off, len)));
+void TestDevice::Read(zx_off_t off, size_t len) {
+  ASSERT_OK(SingleReadBytes(off, len, off));
   ASSERT_EQ(memcmp(as_read_.get() + off, to_write_.get() + off, len), 0);
 }
 
-void TestDevice::WriteFd(zx_off_t off, size_t len) {
-  ASSERT_OK(ToStatus(lseek(off)));
-  ASSERT_OK(ToStatus(write(off, len)));
-}
+void TestDevice::Write(zx_off_t off, size_t len) { ASSERT_OK(SingleWriteBytes(off, len, off)); }
 
 void TestDevice::ReadVmo(zx_off_t off, size_t len) {
   ASSERT_OK(block_fifo_txn(BLOCKIO_READ, off, len));
@@ -257,19 +249,21 @@ void TestDevice::WriteVmo(zx_off_t off, size_t len) {
 void TestDevice::Corrupt(uint64_t blkno, key_slot_t slot) {
   uint8_t block[block_size_];
 
-  ASSERT_OK(ToStatus(::lseek(parent().get(), blkno * block_size_, SEEK_SET)));
-  ASSERT_OK(ToStatus(::read(parent().get(), block, block_size_)));
+  ASSERT_OK(block_client::SingleReadBytes(parent_block(), block, block_size_, blkno * block_size_));
+
+  zx::result channel = component::Clone(parent_block(), component::AssumeProtocolComposesNode);
+  ASSERT_OK(channel);
 
   std::unique_ptr<FdioVolume> volume;
-  ASSERT_OK(FdioVolume::Unlock(parent().duplicate(), key_, 0, &volume));
+  ASSERT_OK(FdioVolume::Unlock(std::move(channel.value()), key_, 0, &volume));
 
   zx_off_t off;
   ASSERT_OK(volume->GetSlotOffset(slot, &off));
   int flip = 1U << (rand() % 8);
   block[off] ^= static_cast<uint8_t>(flip);
 
-  ASSERT_OK(ToStatus(::lseek(parent().get(), blkno * block_size_, SEEK_SET)));
-  ASSERT_OK(ToStatus(::write(parent().get(), block, block_size_)));
+  ASSERT_OK(
+      block_client::SingleWriteBytes(parent_block(), block, block_size_, blkno * block_size_));
 }
 
 // Private methods
