@@ -28,8 +28,10 @@ source_set("lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_hlcpp",
+    "//sdk/lib/component/cpp/incoming",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/fs_management",
     "//src/security/lib/kms-stateless",
     "//src/security/lib/zxcrypt:zxcrypt-client",
@@ -104,6 +106,7 @@ test("factory_reset_unittests") {
     "//sdk/lib/sys/component/cpp",
     "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client/cpp",
     "//src/security/lib/fcrypto",

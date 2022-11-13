@@ -26,6 +26,7 @@
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/security/lib/fcrypto/secret.h"
@@ -124,19 +125,10 @@ class FactoryResetTest : public Test {
     // Block reads and writes via fds must match the block size.
     ssize_t block_size;
     GetBlockSize(fd, &block_size);
-
-    zx::vmo vmo;
-    {
-      zx_status_t status = zx::vmo::create(block_size, 0, &vmo);
-      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-    }
-
-    {
-      zx_status_t status =
-          vmo.write(fs_management::kZxcryptMagic, 0, sizeof(fs_management::kZxcryptMagic));
-      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-    }
-    ASSERT_NO_FATAL_FAILURE(WriteBlocks(fd, std::move(vmo), block_size, 0));
+    std::unique_ptr block = std::make_unique<uint8_t[]>(block_size);
+    memset(block.get(), 0, block_size);
+    memcpy(block.get(), fs_management::kZxcryptMagic, sizeof(fs_management::kZxcryptMagic));
+    ASSERT_NO_FATAL_FAILURE(WriteBlocks(fd, block.get(), block_size, 0));
   }
 
   void CreateFakeBlobfs() {
@@ -151,19 +143,10 @@ class FactoryResetTest : public Test {
     // Block reads and writes via fds must match the block size.
     ssize_t block_size;
     GetBlockSize(fd, &block_size);
-
-    zx::vmo vmo;
-    {
-      zx_status_t status = zx::vmo::create(block_size, 0, &vmo);
-      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-    }
-
-    {
-      zx_status_t status =
-          vmo.write(fs_management::kBlobfsMagic, 0, sizeof(fs_management::kBlobfsMagic));
-      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-    }
-    ASSERT_NO_FATAL_FAILURE(WriteBlocks(fd, std::move(vmo), block_size, 0));
+    std::unique_ptr block = std::make_unique<uint8_t[]>(block_size);
+    memset(block.get(), 0, block_size);
+    memcpy(block.get(), fs_management::kBlobfsMagic, sizeof(fs_management::kBlobfsMagic));
+    ASSERT_NO_FATAL_FAILURE(WriteBlocks(fd, block.get(), block_size, 0));
   }
 
   void CreateFakeFxfs() {
@@ -174,39 +157,19 @@ class FactoryResetTest : public Test {
 
     ssize_t block_size;
     GetBlockSize(fd, &block_size);
-
-    fdio_cpp::UnownedFdioCaller caller(fd.get());
-
-    zx::vmo vmo;
-    {
-      zx_status_t status = zx::vmo::create(block_size, 0, &vmo);
-      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-    }
+    std::unique_ptr block = std::make_unique<uint8_t[]>(block_size);
+    memset(block.get(), 0, block_size);
 
     // Initialize one megabyte of NULL for the A/B super block extents.
     const size_t num_blocks = (1L << 20) / block_size;
     for (size_t i = 0; i < num_blocks; i++) {
-      zx::vmo dup;
-      {
-        zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-        ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-      }
-      ASSERT_NO_FATAL_FAILURE(WriteBlocks(fd, std::move(dup), block_size, i * block_size));
+      ASSERT_NO_FATAL_FAILURE(WriteBlocks(fd, block.get(), block_size, i * block_size));
     }
 
     // Add magic bytes at the correct offsets.
-    {
-      zx_status_t status =
-          vmo.write(fs_management::kFxfsMagic, 0, sizeof(fs_management::kFxfsMagic));
-      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-    }
+    memcpy(block.get(), fs_management::kFxfsMagic, sizeof(fs_management::kFxfsMagic));
     for (off_t ofs : {0L, 512L << 10}) {
-      zx::vmo dup;
-      {
-        zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-        ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-      }
-      ASSERT_NO_FATAL_FAILURE(WriteBlocks(fd, std::move(dup), block_size, ofs));
+      ASSERT_NO_FATAL_FAILURE(WriteBlocks(fd, block.get(), block_size, ofs));
     }
   }
 
@@ -233,15 +196,12 @@ class FactoryResetTest : public Test {
     *out_size = response.info->block_size;
   }
 
-  static void WriteBlocks(const fbl::unique_fd& fd, zx::vmo vmo, uint64_t length, uint64_t offset) {
+  static void WriteBlocks(const fbl::unique_fd& fd, void* buffer, size_t buffer_size,
+                          size_t offset) {
     fdio_cpp::UnownedFdioCaller caller(fd.get());
-    ASSERT_TRUE(caller);
-    const fidl::WireResult result =
-        fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())
-            ->WriteBlocks(std::move(vmo), length, offset, 0);
-    ASSERT_TRUE(result.ok()) << result.status_string();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK) << zx_status_get_string(response.status);
+    zx_status_t status = block_client::SingleWriteBytes(
+        caller.borrow_as<fuchsia_hardware_block::Block>(), buffer, buffer_size, offset);
+    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
   }
 
   void CreateRamdisk() {
