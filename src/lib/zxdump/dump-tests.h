@@ -164,6 +164,31 @@ class TestProcessForSystemInfo : public TestProcessForPropertiesAndInfo {
   }
 };
 
+class TestProcessForKernelInfo : public TestProcessForPropertiesAndInfo {
+ public:
+  // Start a child for privileged kernel information dump testing.
+  void StartChild();
+
+  // Do the basic dump using the dumper API.
+  template <typename Writer>
+  void Dump(Writer& writer) {
+    auto precollect = [this](auto& dump) { Precollect(dump); };
+    TestProcessForPropertiesAndInfo::Dump(writer, precollect);
+  }
+
+  // Verify a dump file for that child was inserted and looks right.
+  void CheckDump(zxdump::TaskHolder& holder);
+
+  const zx::resource& root_resource() const { return root_resource_; }
+
+ private:
+  static constexpr const char* kChildName = "zxdump-kernel-test-child";
+
+  void Precollect(zxdump::ProcessDump<zx::unowned_process>& dump);
+
+  zx::resource root_resource_;
+};
+
 }  // namespace zxdump::testing
 
 #endif  // SRC_LIB_ZXDUMP_DUMP_TESTS_H_

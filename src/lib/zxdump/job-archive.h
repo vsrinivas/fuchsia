@@ -81,11 +81,11 @@ inline constexpr auto kMinimumArchive = kArchiveMagic.size() + sizeof(ar_hdr);
 // are "note" files that contain Zircon format data about the job.  Other
 // member files are embedded dumps or random attachments.
 
-// The ZX_INFO_* value is encoded in decimal after this constant prefix.
-inline constexpr std::string_view kJobInfoPrefix{"ZirconJobInfo."};
+// The ZX_INFO_* value is encoded in decimal after this and a dot.
+inline constexpr std::string_view kJobInfoName{"ZirconJobInfo"};
 
-// The ZX_PROP_* value is encoded in decimal after this constant prefix.
-inline constexpr std::string_view kJobPropertyPrefix{"ZirconJobProperty."};
+// The ZX_PROP_* value is encoded in decimal after this and a dot.
+inline constexpr std::string_view kJobPropertyName{"ZirconJobProperty"};
 
 }  // namespace zxdump
 

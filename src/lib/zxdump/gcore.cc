@@ -50,6 +50,8 @@ struct Flags {
   bool dump_memory = true;
   bool collect_system = false;
   bool repeat_system = false;
+  bool collect_kernel = false;
+  bool repeat_kernel = false;
   bool collect_threads = true;
   bool collect_job_children = true;
   bool collect_job_processes = true;
@@ -184,6 +186,31 @@ class DumperBase {
   zx_koid_t koid_ = ZX_KOID_INVALID;
 };
 
+// This does the Collect* calls that are common to ProcessDumper and JobDumper.
+constexpr auto CollectCommon = [](const Flags& flags, bool top,
+                                  auto& dumper) -> fit::result<zxdump::Error> {
+  if (flags.collect_system && (top || flags.repeat_system)) {
+    auto result = dumper.CollectSystem();
+    if (result.is_error()) {
+      return result.take_error();
+    }
+  }
+
+  if (flags.collect_kernel && (top || flags.repeat_kernel)) {
+    auto resource = zxdump::GetRootResource();
+    if (resource.is_error()) {
+      return resource.take_error();
+    }
+
+    auto result = dumper.CollectKernel(resource->borrow());
+    if (result.is_error()) {
+      return result.take_error();
+    }
+  }
+
+  return fit::ok();
+};
+
 class ProcessDumper : public DumperBase {
  public:
   ProcessDumper(zx::process process, zx_koid_t pid)
@@ -217,12 +244,9 @@ class ProcessDumper : public DumperBase {
       }
     }
 
-    if (flags.collect_system && (top || flags.repeat_system)) {
-      auto result = dumper_.CollectSystem();
-      if (result.is_error()) {
-        Error(result.error_value());
-        return std::nullopt;
-      }
+    if (auto result = CollectCommon(flags, top, dumper_); result.is_error()) {
+      Error(result.error_value());
+      return std::nullopt;
     }
 
     auto result = dumper_.CollectProcess(std::move(prune), flags.limit);
@@ -295,12 +319,9 @@ class JobDumper : public DumperBase {
   // Collect the job-wide data and reify the lists of children and processes.
   std::optional<size_t> Collect(const Flags& flags, bool top) {
     date_ = flags.Date();
-    if (flags.collect_system && (top || flags.repeat_system)) {
-      auto result = dumper_.CollectSystem();
-      if (result.is_error()) {
-        Error(result.error_value());
-        return std::nullopt;
-      }
+    if (auto result = CollectCommon(flags, top, dumper_); result.is_error()) {
+      Error(result.error_value());
+      return std::nullopt;
     }
     size_t size;
     if (auto result = dumper_.CollectJob(); result.is_error()) {
@@ -593,7 +614,7 @@ bool WriteManyCoreFiles(JobDumper dumper, const Flags& flags) {
   return ok;
 }
 
-constexpr const char kOptString[] = "hlo:zamtcpJjfDUsS";
+constexpr const char kOptString[] = "hlo:zamtcpJjfDUsSkK";
 constexpr const option kLongOpts[] = {
     {"help", no_argument, nullptr, 'h'},                 //
     {"limit", required_argument, nullptr, 'l'},          //
@@ -610,6 +631,8 @@ constexpr const option kLongOpts[] = {
     {"date", no_argument, nullptr, 'U'},                 //
     {"system", no_argument, nullptr, 's'},               //
     {"system-recursive", no_argument, nullptr, 'S'},     //
+    {"kernel", no_argument, nullptr, 'k'},               //
+    {"kernel-recursive", no_argument, nullptr, 'K'},     //
     {"root-job", no_argument, nullptr, 'a'},             //
     {nullptr, no_argument, nullptr, 0},                  //
 };
@@ -640,6 +663,8 @@ int main(int argc, char** argv) {
     --date, -U                         record dates in dumps (default)
     --system, -s                       include system-wide information
     --system-recursive, -S             ... repeated in each child dump
+    --kernel, -k                       include privileged kernel information
+    --kernel-recursive, -K             ... repeated in each child dump
     --root-job, -a                     dump the root job
 
 By default, each PID must be the KOID of a process.
@@ -746,6 +771,14 @@ essential services.  PID arguments are not allowed with --root-job unless
 
       case 's':
         flags.collect_system = true;
+        continue;
+
+      case 'K':
+        flags.repeat_kernel = true;
+        [[fallthrough]];
+
+      case 'k':
+        flags.collect_kernel = true;
         continue;
 
       case 'a':

@@ -12,6 +12,7 @@
 #ifdef __Fuchsia__
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
+#include <lib/zx/resource.h>
 #endif
 
 #include <fbl/unique_fd.h>
@@ -134,10 +135,12 @@ class TestToolProcess {
 
 #ifdef __Fuchsia__
   void set_job(zx::unowned_job job) { job_ = job; }
+
+  void set_resource(zx::unowned_resource resource) { resource_ = std::move(resource); }
 #endif
 
  private:
-  class SandboxRootJobLoop;
+  class SandboxLoop;
 
   std::string FilePathForRunner(const std::string& name) const;
 
@@ -152,7 +155,8 @@ class TestToolProcess {
 #ifdef __Fuchsia__
   zx::process process_;
   zx::unowned_job job_ = zx::job::default_job();
-  std::unique_ptr<SandboxRootJobLoop> sandbox_root_job_loop_;
+  zx::unowned_resource resource_;
+  std::unique_ptr<SandboxLoop> sandbox_loop_;
 #else
   int process_ = -1;
 #endif

@@ -5,6 +5,7 @@
     include: [
         "//src/sys/test_runners/gtest/default.shard.cml",
         "//src/sys/test_runners/tmp_storage.shard.cml",
+        "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
@@ -13,6 +14,7 @@
     use: [
         {
             protocol: [
+                "fuchsia.boot.RootResource",
                 "fuchsia.kernel.RootJob",
                 "fuchsia.process.Launcher",
                 "fuchsia.process.Resolver",

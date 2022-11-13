@@ -83,6 +83,7 @@
                     "/bootstrap/svchost",
                     "/core",
                     "/core/test_manager/system-tests:**",
+                    "/core/test_manager/zxdump-tests:**",
                 ],
             },
             {

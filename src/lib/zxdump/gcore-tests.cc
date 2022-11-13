@@ -27,6 +27,7 @@ constexpr const char* kJobsSwitch = "--jobs";
 constexpr const char* kJobArchiveSwitch = "--job-archive";
 constexpr const char* kZstdSwitch = "--zstd";
 constexpr const char* kSystemSwitch = "--system";
+constexpr const char* kKernelSwitch = "--kernel";
 constexpr const char* kNoDateSwitch = "--no-date";
 
 constexpr std::string_view kArchiveSuffix = ".a";
@@ -348,6 +349,46 @@ TEST(ZxdumpTests, GcoreProcessDumpSystemInfo) {
       prefix,
       pid_string,
   });
+  ASSERT_NO_FATAL_FAILURE(child.Start("gcore", args));
+  ASSERT_NO_FATAL_FAILURE(child.CollectStdout());
+  ASSERT_NO_FATAL_FAILURE(child.CollectStderr());
+  int status;
+  ASSERT_NO_FATAL_FAILURE(child.Finish(status));
+  EXPECT_EQ(status, EXIT_SUCCESS);
+  EXPECT_EQ(child.collected_stdout(), "");
+  EXPECT_EQ(child.collected_stderr(), "");
+
+  fbl::unique_fd fd = dump_file.OpenOutput();
+  ASSERT_TRUE(fd) << dump_file.name() << ": " << strerror(errno);
+
+  zxdump::TaskHolder holder;
+  auto read_result = holder.Insert(std::move(fd));
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
+  ASSERT_NO_FATAL_FAILURE(process.CheckDump(holder));
+}
+
+TEST(ZxdumpTests, GcoreProcessDumpKernelInfo) {
+  zxdump::testing::TestProcessForKernelInfo process;
+  ASSERT_NO_FATAL_FAILURE(process.StartChild());
+
+  zxdump::testing::TestToolProcess child;
+  ASSERT_NO_FATAL_FAILURE(child.Init());
+  const auto& [dump_file, prefix, pid_string] =
+      GetOutputFile(child, "process-dump-kernel", process.koid());
+  std::vector<std::string> args({
+      kKernelSwitch,
+      // Don't include threads.
+      kNoThreadsSwitch,
+      // Don't dump memory since we don't need it and it is large.
+      kExcludeMemorySwitch,
+      kOutputSwitch,
+      prefix,
+      pid_string,
+  });
+  // The gcore process needs to get the RootResource protocol, which
+  // StartChild() already fetched for us.
+  EXPECT_TRUE(process.root_resource());
+  child.set_resource(process.root_resource().borrow());
   ASSERT_NO_FATAL_FAILURE(child.Start("gcore", args));
   ASSERT_NO_FATAL_FAILURE(child.CollectStdout());
   ASSERT_NO_FATAL_FAILURE(child.CollectStderr());

@@ -18,11 +18,13 @@
 #include "piped-command.h"
 
 #ifdef __Fuchsia__
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/wire/server.h>
+#include <lib/zxdump/task.h>
 #include <zircon/syscalls/object.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -105,41 +107,37 @@ std::string TestToolProcess::FilePathForRunner(const TestToolProcess::File& file
 // contains only fuchsia.kernel.RootJob pointing at this fake service that just
 // gives the test program's own job instead of the real root job.
 
-class SandboxRootJobServer final : public fidl::WireServer<fuchsia_kernel::RootJob> {
+template <class Protocol, class Handle>
+class SandboxGetServer final : public fidl::WireServer<Protocol> {
  public:
-  void Init(zx::unowned_job job) { job_ = job; }
+  using typename fidl::WireServer<Protocol>::GetCompleter;
 
-  void Get(GetCompleter::Sync& completer) override {
-    zx::job job;
-    zx_status_t status = job_->duplicate(ZX_RIGHT_SAME_RIGHTS, &job);
+  void Init(zx::unowned<Handle> handle) { handle_ = handle; }
+
+  void Get(typename GetCompleter::Sync& completer) override {
+    Handle handle;
+    zx_status_t status = handle_->duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
     EXPECT_EQ(status, ZX_OK) << zx_status_get_string(status);
-    completer.Reply(std::move(job));
+    completer.Reply(std::move(handle));
   }
 
  private:
-  zx::unowned_job job_;
+  zx::unowned<Handle> handle_;
 };
 
-class TestToolProcess::SandboxRootJobLoop {
+class TestToolProcess::SandboxLoop {
  public:
-  void Init(zx::unowned_job job, fidl::ClientEnd<fuchsia_io::Directory>& out_svc) {
-    server_.Init(job->borrow());
-
+  void Init(zx::unowned_job job, zx::unowned_resource resource,
+            fidl::ClientEnd<fuchsia_io::Directory>& out_svc) {
     loop_.emplace(&kAsyncLoopConfigNoAttachToCurrentThread);
-    zx_status_t status = loop_->StartThread("SandboxRootJob");
+    zx_status_t status = loop_->StartThread("TestToolProcess::SandboxLoop");
     ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
 
     vfs_.emplace(loop_->dispatcher());
     svc_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 
-    status = svc_dir_->AddEntry(
-        fidl::DiscoverableProtocolName<fuchsia_kernel::RootJob>,
-        fbl::MakeRefCounted<fs::Service>(
-            [this](fidl::ServerEnd<fuchsia_kernel::RootJob> request) -> zx_status_t {
-              fidl::BindServer(loop_->dispatcher(), std::move(request), &server_);
-              return ZX_OK;
-            }));
-    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    AddSvcEntry<fuchsia_kernel::RootJob, &SandboxLoop::root_job_server_>(*job);
+    AddSvcEntry<fuchsia_boot::RootResource, &SandboxLoop::root_resource_server_>(*resource);
 
     auto [svc_client, svc_server] = *fidl::CreateEndpoints<fuchsia_io::Directory>();
     status = vfs_->ServeDirectory(svc_dir_, std::move(svc_server));
@@ -147,18 +145,34 @@ class TestToolProcess::SandboxRootJobLoop {
     out_svc = std::move(svc_client);
   }
 
-  ~SandboxRootJobLoop() {
+  ~SandboxLoop() {
     if (loop_) {
       loop_->Shutdown();
     }
   }
 
  private:
+  template <class Protocol, auto Member, class Handle>
+  void AddSvcEntry(const Handle& handle) {
+    if (handle) {
+      (this->*Member).Init(handle.borrow());
+
+      zx_status_t status = svc_dir_->AddEntry(
+          fidl::DiscoverableProtocolName<Protocol>,
+          fbl::MakeRefCounted<fs::Service>(
+              [this](fidl::ServerEnd<Protocol> request) -> zx_status_t {
+                fidl::BindServer(loop_->dispatcher(), std::move(request), &(this->*Member));
+                return ZX_OK;
+              }));
+      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    }
+  }
+
   std::optional<async::Loop> loop_;
   std::optional<fs::SynchronousVfs> vfs_;
   fbl::RefPtr<fs::PseudoDir> svc_dir_;
-  SandboxRootJobServer server_;
-  std::optional<fidl::ServerBindingRef<fuchsia_kernel::RootJob>> binding_;
+  SandboxGetServer<fuchsia_kernel::RootJob, zx::job> root_job_server_;
+  SandboxGetServer<fuchsia_boot::RootResource, zx::resource> root_resource_server_;
 };
 
 // Set the spawn actions to populate the namespace for the tool with only its
@@ -179,8 +193,8 @@ void TestToolProcess::SandboxCommand(PipedCommand& command) {
                      }});
 
   fidl::ClientEnd<fuchsia_io::Directory> svc;
-  sandbox_root_job_loop_ = std::make_unique<TestToolProcess::SandboxRootJobLoop>();
-  ASSERT_NO_FATAL_FAILURE(sandbox_root_job_loop_->Init(job_->borrow(), svc));
+  sandbox_loop_ = std::make_unique<TestToolProcess::SandboxLoop>();
+  ASSERT_NO_FATAL_FAILURE(sandbox_loop_->Init(job_->borrow(), resource_->borrow(), svc));
   actions.push_back({.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
                      .ns = {
                          .prefix = "/svc",

@@ -76,6 +76,7 @@ zx_library("zxdump") {
       "root.cc",
     ]
     deps += [
+      "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
       "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
       "//sdk/lib/fdio",
       "//sdk/lib/stdcompat",
@@ -134,12 +135,14 @@ source_set("test-tool-process") {
   sources = [ "test-tool-process.cc" ]
   deps = [
     ":piped-command",
+    ":zxdump",
     "//third_party/googletest:gtest",
   ]
 
   if (is_fuchsia) {
     public_deps += [ "//zircon/system/ulib/zx" ]
     deps += [
+      "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
       "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
       "//sdk/lib/sys/component/cpp",
       "//src/lib/storage/vfs/cpp",
@@ -240,7 +243,7 @@ executable("zxdump-test-child") {
 
 fuchsia_unittest_package("zxdump-tests") {
   deps = [ ":zxdump-unittests" ]
-  manifest = "meta/zxdump-unittests.cml"
+  manifest = "meta/zxdump-tests.cml"
 }
 
 group("tests") {

@@ -9,6 +9,7 @@
 #include <lib/fit/result.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
+#include <lib/zx/resource.h>
 
 #include <cstdint>
 #include <limits>
@@ -145,6 +146,12 @@ class ProcessDumpBase : protected DumpBase {
   // information is included in the total size returned by CollectProcess.
   fit::result<Error> CollectSystem();
 
+  // Collect privileged system-wide information from the kernel.  This is
+  // always optional, but it must always be called before CollectProcess, if
+  // called at all.  The kernel information is included in the total size
+  // returned by CollectProcess.
+  fit::result<Error> CollectKernel(zx::unowned_resource root_resource);
+
   // This can be called first or after SuspendAndCollectThreads.
   //
   // This collects information about memory and other process-wide state.  The
@@ -277,6 +284,12 @@ class JobDumpBase : protected DumpBase {
   // information is included in the total size returned by CollectJob.
   fit::result<Error> CollectSystem();
 
+  // Collect privileged system-wide information from the kernel.  This is
+  // always optional, but it must always be called before CollectJob, if it's
+  // called at all.  The kernel information is included in the total size
+  // returned by CollectJob.
+  fit::result<Error> CollectKernel(zx::unowned_resource root_resource);
+
   // Collect information about the job itself.  The result contains the size of
   // the job archive to dump just that information.  Note that this collection
   // is completely asynchronous with respect to the job and any process within
@@ -385,6 +398,9 @@ static_assert(std::is_move_assignable_v<JobDump<zx::job>>);
 static_assert(std::is_default_constructible_v<JobDump<zx::unowned_job>>);
 static_assert(std::is_move_constructible_v<JobDump<zx::unowned_job>>);
 static_assert(std::is_move_assignable_v<JobDump<zx::unowned_job>>);
+
+// Get the root resource handle of the running system, e.g. for CollectKernel.
+fit::result<Error, zx::resource> GetRootResource();
 
 }  // namespace zxdump
 

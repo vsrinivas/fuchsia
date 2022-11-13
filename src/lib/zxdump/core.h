@@ -55,6 +55,12 @@ inline constexpr std::string_view kDateNoteName{"ZirconDumpDate"};
 // The contents are JSON, schema based on zx::system methods.
 inline constexpr std::string_view kSystemNoteName{"ZirconSystem.json"};
 
+// The n_type field contains the zx_thread_state_topic_t value and the contents
+// of the note are exactly as returned by get_info.  This is used for the
+// system-wide info types that are fetched via privileged resource handles.
+// In job archives, this prefix is followed by "." and the topic in decimal.
+inline constexpr std::string_view kKernelInfoNoteName{"ZirconKernelInfo"};
+
 }  // namespace zxdump
 
 #endif  // SRC_LIB_ZXDUMP_CORE_H_

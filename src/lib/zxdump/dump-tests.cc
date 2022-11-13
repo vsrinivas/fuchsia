@@ -118,6 +118,28 @@ void TestProcessForSystemInfo::CheckDump(zxdump::TaskHolder& holder) {
   EXPECT_EQ(holder.system_get_version_string(), version);
 }
 
+void TestProcessForKernelInfo::StartChild() {
+  SpawnAction({
+      .action = FDIO_SPAWN_ACTION_SET_NAME,
+      .name = {kChildName},
+  });
+  ASSERT_NO_FATAL_FAILURE(TestProcess::StartChild());
+
+  // Fetch the root resource, since we'll need it to dump.
+  auto root_result = zxdump::GetRootResource();
+  EXPECT_TRUE(root_result.is_ok()) << root_result.error_value();
+  root_resource_ = *std::move(root_result);
+}
+
+void TestProcessForKernelInfo::Precollect(zxdump::ProcessDump<zx::unowned_process>& dump) {
+  auto result = dump.CollectKernel(root_resource_.borrow());
+  EXPECT_TRUE(result.is_ok()) << result.error_value();
+}
+
+void TestProcessForKernelInfo::CheckDump(zxdump::TaskHolder& holder) {
+  // TODO(mcgrathr): needs reader support for kernel info, coming soon
+}
+
 namespace {
 
 TEST(ZxdumpTests, ProcessDumpBasic) {
@@ -301,6 +323,22 @@ TEST(ZxdumpTests, ProcessDumpSystemInfo) {
 }
 
 // TODO(mcgrathr): test job archives with system info, nested repeats
+
+TEST(ZxdumpTests, ProcessDumpKernelInfo) {
+  TestFile file;
+  zxdump::FdWriter writer(file.RewoundFd());
+
+  TestProcessForKernelInfo process;
+  ASSERT_NO_FATAL_FAILURE(process.StartChild());
+  ASSERT_NO_FATAL_FAILURE(process.Dump(writer));
+
+  zxdump::TaskHolder holder;
+  auto read_result = holder.Insert(file.RewoundFd());
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
+  ASSERT_NO_FATAL_FAILURE(process.CheckDump(holder));
+}
+
+// TODO(mcgrathr): test job archives with kernel info, nested repeats
 
 TEST(ZxdumpTests, ProcessDumpNoDate) {
   TestFile file;

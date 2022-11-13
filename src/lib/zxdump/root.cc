@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/component/cpp/service_client.h>
@@ -52,6 +53,11 @@ fit::result<Error, T> GetFromService() {
 fit::result<Error, LiveTask> GetRootJob() {
   return GetFromService<LiveTask, fuchsia_kernel::RootJob,
                         &fidl::WireResponse<fuchsia_kernel::RootJob::Get>::job>();
+}
+
+fit::result<Error, zx::resource> GetRootResource() {
+  return GetFromService<zx::handle, fuchsia_boot::RootResource,
+                        &fidl::WireResponse<fuchsia_boot::RootResource::Get>::resource>();
 }
 
 }  // namespace zxdump

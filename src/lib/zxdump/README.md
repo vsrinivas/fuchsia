@@ -302,6 +302,31 @@ interfaces, e.g. `"version_string"` maps to a JSON string value that
 `zx_system_get_version_string()` returned, and `"num_cpus"` maps to a JSON
 integer value that `zx_system_get_num_cpus()` returned.
 
+## ZirconKernelInfo
+
+The dump-writer may choose to include privileged kernel information in dumps.
+This is information collected on the system at the time the dump is taken that
+contains details about system-wide privileged kernel state.  Like the public
+system-wide information in `ZirconSystem.json` notes, this data is not specific
+to any single process or job on the system.  Unlike that information, this is
+data that actively changes while the system runs.  It can be included in a job
+archive, or in an `ET_CORE` file, or both.  When kernel information is included
+in a job archive, then any child job or process dumps within the archive might
+contain a copy of the same information, or they might omit it since it is
+always the same across the whole job hierarchy (unless collected at different
+times).
+
+In job archives, member files with name `ZirconKernelInfo.%u` contain kernel
+information that `zx_object_get_info` yields on Zircon "resource" objects.
+`%u` is the decimal representation of the `zx_object_info_topic_t` value in
+`zx_object_get_info`.  The file has the size and layout that corresponds to
+that topic.  All available types are usually included in the dump.
+
+In `ET_CORE` files, ELF notes using the name `ZirconKernelInfo` contain the
+same information.  The ELF note's 32-bit type is exactly the
+`zx_object_info_topic_t` value in `zx_object_get_info`.  The note's
+"description" (payload) has the size and layout that corresponds to that topic.
+
 ## Dump timestamps
 
 The dump-writer may choose to include a timestamp indicating when a dump was

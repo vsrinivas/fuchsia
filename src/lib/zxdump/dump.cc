@@ -277,17 +277,18 @@ class NoteBase {
 template <const std::string_view& Name>
 constexpr auto kMakeNote = [](uint32_t type) { return NoteHeader<Name.size()>(Name, 0, type); };
 
-// Each job-specific class uses a job-archive.h kFooPrefix constant in:
+// Each job-specific class uses a job-archive.h kFooName constant in:
 // ```
-//   static constexpr auto MakeHeader = kMakeMember<kFooPrefix>;
+//   static constexpr auto MakeHeader = kMakeMember<kFooName>;
 //   static constexpr auto Pad = PadForArchive;
 // ```
-template <const std::string_view& Prefix, bool NoType = false>
+template <const std::string_view& Name, bool NoType = false>
 constexpr auto kMakeMember = [](uint32_t type) {
-  std::string name{Prefix};
+  std::string name{Name};
   if constexpr (NoType) {
     ZX_DEBUG_ASSERT(type == 0);
   } else {
+    name += '.';
     name += std::to_string(type);
   }
   ArchiveMemberHeader header;
@@ -300,9 +301,12 @@ constexpr auto kMakeMember = [](uint32_t type) {
 // nothing if it's already collected the data.  Each NoteBase subclass below
 // has a Collect(const Handle&)->fit::result<Error> method that should call
 // NoteBase::Emplace when it has acquired data, and then won't be called again.
-constexpr auto CollectNote = [](const auto& handle, auto& note) -> fit::result<Error> {
+// The root_resource handle is only needed for kernel data, and might be
+// invalid if kernel data isn't being collected.
+constexpr auto CollectNote = [](const zx::resource& root_resource, const auto& handle,
+                                auto& note) -> fit::result<Error> {
   if (note.empty()) {
-    return note.Collect(handle);
+    return note.Collect(root_resource, handle);
   }
   return fit::ok();
 };
@@ -335,9 +339,9 @@ fit::result<Error, AlignedStorageVector<Size, Align>> GetInfo(
       return fit::error(Error{"zx_object_get_info", status});
     }
 
-    if (actual == avail) {
+    if (actual <= avail) {
       // This is all the data.
-      data.resize(avail);
+      data.resize(actual);
       data.shrink_to_fit();
       return fit::ok(std::move(data));
     }
@@ -355,17 +359,26 @@ fit::result<Error, AlignedStorageVector<Size, Align>> GetInfo(
 template <typename Class, zx_object_info_topic_t Topic, typename T>
 class InfoNote : public NoteBase<Class, Topic> {
  public:
-  fit::result<Error> Collect(const typename Class::Handle& task) {
-    auto result =
-        GetInfo<alignof(T), sizeof(T)>(*zx::unowned_handle{task.get()}, Topic, std::move(data_));
-    if (result.is_error()) {
-      return result.take_error();
+  template <typename Handle>
+  fit::result<Error> Collect(const zx::resource& root_resource, const Handle& task) {
+    auto choose_handle = [&]() {
+      if constexpr (std::is_same_v<typename Class::Handle, zx::resource>) {
+        return std::cref(root_resource);
+      } else {
+        return std::cref(task);
+      }
+    };
+    if (zx::unowned_handle handle{choose_handle().get().get()}; *handle) {
+      auto result = GetInfo<alignof(T), sizeof(T)>(*handle, Topic, std::move(data_));
+      if (result.is_error()) {
+        return result.take_error();
+      }
+      data_ = std::move(result).value();
+      this->Emplace({
+          reinterpret_cast<const std::byte*>(data_.data()),
+          data_.size() * sizeof(data_[0]),
+      });
     }
-    data_ = std::move(result).value();
-    this->Emplace({
-        reinterpret_cast<const std::byte*>(data_.data()),
-        data_.size() * sizeof(data_[0]),
-    });
     return fit::ok();
   }
 
@@ -382,12 +395,15 @@ class InfoNote : public NoteBase<Class, Topic> {
 template <typename Class, uint32_t Prop, typename T>
 class PropertyNote : public NoteBase<Class, Prop> {
  public:
-  fit::result<Error> Collect(const typename Class::Handle& handle) {
-    zx_status_t status = (handle.*Class::kSyscall)(Prop, &data_, sizeof(T));
-    if (status != ZX_OK) {
-      return fit::error(Error{Class::kCall_, status});
+  fit::result<Error> Collect(const zx::resource& root_resource,
+                             const typename Class::Handle& handle) {
+    if (handle) {
+      zx_status_t status = (handle.*Class::kSyscall)(Prop, &data_, sizeof(T));
+      if (status != ZX_OK) {
+        return fit::error(Error{Class::kCall_, status});
+      }
+      this->Emplace({reinterpret_cast<std::byte*>(&data_), sizeof(data_)});
     }
-    this->Emplace({reinterpret_cast<std::byte*>(&data_), sizeof(data_)});
     return fit::ok();
   }
 
@@ -432,7 +448,8 @@ class JsonNote : public NoteBase<Class, 0> {
   }
 
   // CollectNoteData will call this, but it has nothing to do.
-  static constexpr auto Collect = [](auto& note) -> fit::result<Error> { return fit::ok(); };
+  static constexpr auto Collect =
+      [](const auto& root_resource, const auto& handle) -> fit::result<Error> { return fit::ok(); };
 
  private:
   rapidjson::StringBuffer data_;
@@ -442,14 +459,15 @@ class JsonNote : public NoteBase<Class, 0> {
 
 constexpr auto CollectNoteData =
     // For each note that hasn't already been fetched, try to fetch it now.
-    [](const auto& handle, auto&... note) -> fit::result<Error, size_t> {
+    [](const zx::resource& root_resource, const auto& handle,
+       auto&... note) -> fit::result<Error, size_t> {
   // This value is always replaced (or ignored), but the type is not
   // default-constructible.
   fit::result<Error> result = fit::ok();
 
   size_t total = 0;
-  auto collect = [&handle, &result, &total](auto& note) -> bool {
-    result = CollectNote(handle, note);
+  auto collect = [&root_resource, &handle, &result, &total](auto& note) -> bool {
+    result = CollectNote(root_resource, handle, note);
     if (result.is_ok()) {
       ZX_DEBUG_ASSERT(note.size_bytes() % 2 == 0);
       total += note.size_bytes();
@@ -516,6 +534,26 @@ constexpr auto CollectSystemNote = [](auto& note) -> fit::result<Error> {
   return fit::ok();
 };
 
+template <typename Class, typename... Notes>
+using KernelNotes = std::tuple<  // The whole tuple of all note types:
+    Notes...,                    // First the process or job notes.
+    // Now the kernel note types.
+    InfoNote<Class, ZX_INFO_HANDLE_BASIC, zx_info_handle_basic_t>,
+    InfoNote<Class, ZX_INFO_CPU_STATS, zx_info_cpu_stats_t>,
+    InfoNote<Class, ZX_INFO_KMEM_STATS, zx_info_kmem_stats_t>,
+    InfoNote<Class, ZX_INFO_GUEST_STATS, zx_info_guest_stats_t>>;
+
+constexpr auto CollectKernelNoteData = [](auto&& resource, auto&& task,
+                                          auto& notes) -> fit::result<Error> {
+  auto collect = [&](auto&... note) -> fit::result<Error, size_t> {
+    return CollectNoteData(resource, task, note...);
+  };
+  if (auto result = std::apply(collect, notes); result.is_error()) {
+    return result.take_error();
+  }
+  return fit::ok();
+};
+
 }  // namespace
 
 // The public class is just a container for a std::unique_ptr to this private
@@ -557,6 +595,8 @@ class ProcessDumpBase::Collector {
 
   fit::result<Error> CollectSystem() { return CollectSystemNote(std::get<SystemNote>(notes_)); }
 
+  fit::result<Error> CollectKernel(zx::unowned_resource resource);
+
   // This collects information about memory and other process-wide state.  The
   // return value gives the total size of the ET_CORE file to be written.
   // Collection is cut short without error if the ET_CORE file would already
@@ -564,7 +604,7 @@ class ProcessDumpBase::Collector {
   fit::result<Error, size_t> CollectProcess(SegmentCallback prune, size_t limit) {
     // Collect the process-wide note data.
     auto collect = [this](auto&... note) -> fit::result<Error, size_t> {
-      return CollectNoteData(*process_, note...);
+      return CollectNoteData({}, *process_, note...);
     };
     if (auto result = std::apply(collect, notes_); result.is_error()) {
       return result.take_error();
@@ -763,7 +803,9 @@ class ProcessDumpBase::Collector {
 
   class DateNote : public NoteBase<DateClass, 0> {
    public:
-    fit::result<Error> Collect(const zx::process& process) { return fit::ok(); }
+    fit::result<Error> Collect(const zx::resource& root_resource, const zx::process& process) {
+      return fit::ok();
+    }
 
     void Set(time_t date) {
       date_ = date;
@@ -773,6 +815,15 @@ class ProcessDumpBase::Collector {
    private:
     time_t date_ = 0;
   };
+
+  struct KernelInfoClass {
+    using Handle = zx::resource;
+    static constexpr auto MakeHeader = kMakeNote<kKernelInfoNoteName>;
+    static constexpr auto Pad = PadForElfNote;
+  };
+
+  template <typename... Notes>
+  using WithKernelNotes = KernelNotes<KernelInfoClass, Notes...>;
 
   using ThreadNotes = std::tuple<
       // This lists all the notes that can be extracted from a thread.
@@ -793,7 +844,7 @@ class ProcessDumpBase::Collector {
       ThreadState<ZX_THREAD_STATE_DEBUG_REGS, zx_thread_state_debug_regs_t>,
       ThreadState<ZX_THREAD_STATE_SINGLE_STEP, zx_thread_state_single_step_t>>;
 
-  using ProcessNotes = std::tuple<
+  using ProcessNotes = WithKernelNotes<
       // This lists all the notes for process-wide state.  Ordering of the
       // notes after the first two is not specified and can change.
       ProcessInfo<ZX_INFO_HANDLE_BASIC, zx_info_handle_basic_t>,
@@ -865,7 +916,7 @@ class ProcessDumpBase::Collector {
         // Reset *handle_ so wait() will say no next time.
         // It's only needed for the collection being done right now.
         auto collect = [thread = std::exchange(*handle_, {})](auto&... note) {
-          return CollectNoteData(thread, note...);
+          return CollectNoteData({}, thread, note...);
         };
         return std::apply(collect, notes_);
       }
@@ -949,7 +1000,7 @@ class ProcessDumpBase::Collector {
       // state that's interesting to dump yet.  So if we overlook those threads
       // the dump will just appear to be from before they existed.
 
-      if (auto get = process_threads().Collect(*process_); get.is_error()) {
+      if (auto get = process_threads().Collect({}, *process_); get.is_error()) {
         return get.take_error();
       }
 
@@ -1007,14 +1058,14 @@ class ProcessDumpBase::Collector {
   // Populate phdrs_.  The p_offset fields are filled in later by Layout.
   fit::result<Error> FindMemory(SegmentCallback prune_segment) {
     // Make sure we have the relevant information to scan.
-    if (auto result = CollectNote(*process_, process_maps()); result.is_error()) {
+    if (auto result = CollectNote({}, *process_, process_maps()); result.is_error()) {
       if (result.error_value().status_ == ZX_ERR_NOT_SUPPORTED) {
         // This just means there is no information in the dump.
         return fit::ok();
       }
       return result;
     }
-    if (auto result = CollectNote(*process_, process_vmos()); result.is_error()) {
+    if (auto result = CollectNote({}, *process_, process_vmos()); result.is_error()) {
       if (result.error_value().status_ == ZX_ERR_NOT_SUPPORTED) {
         // This just means there is no information in the dump.
         return fit::ok();
@@ -1319,6 +1370,10 @@ fit::result<Error> ProcessDumpBase::SuspendAndCollectThreads() {
 
 fit::result<Error> ProcessDumpBase::CollectSystem() { return collector_->CollectSystem(); }
 
+fit::result<Error> ProcessDumpBase::CollectKernel(zx::unowned_resource resource) {
+  return collector_->CollectKernel(resource->borrow());
+}
+
 fit::result<Error, size_t> ProcessDumpBase::DumpHeadersImpl(DumpCallback dump, size_t limit) {
   return collector_->DumpHeaders(std::move(dump), limit);
 }
@@ -1365,7 +1420,7 @@ class JobDumpBase::Collector {
   fit::result<Error, size_t> CollectJob() {
     // Collect the job-wide note data.
     auto collect = [this](auto&... note) -> fit::result<Error, size_t> {
-      return CollectNoteData(*job_, note...);
+      return CollectNoteData({}, *job_, note...);
     };
     auto result = std::apply(collect, notes_);
     if (result.is_error()) {
@@ -1441,6 +1496,8 @@ class JobDumpBase::Collector {
 
   fit::result<Error> CollectSystem() { return CollectSystemNote(std::get<SystemNote>(notes_)); }
 
+  fit::result<Error> CollectKernel(zx::unowned_resource resource);
+
   fit::result<Error, size_t> DumpHeaders(DumpCallback dump, time_t mtime) {
     size_t offset = 0;
     auto append = [&](ByteView data) -> bool {
@@ -1501,7 +1558,7 @@ class JobDumpBase::Collector {
  private:
   struct JobInfoClass {
     using Handle = zx::job;
-    static constexpr auto MakeHeader = kMakeMember<kJobInfoPrefix>;
+    static constexpr auto MakeHeader = kMakeMember<kJobInfoName>;
     static constexpr auto Pad = PadForArchive;
   };
 
@@ -1510,7 +1567,7 @@ class JobDumpBase::Collector {
 
   struct JobPropertyClass : public PropertyBaseClass {
     using Handle = zx::job;
-    static constexpr auto MakeHeader = kMakeMember<kJobPropertyPrefix>;
+    static constexpr auto MakeHeader = kMakeMember<kJobPropertyName>;
     static constexpr auto Pad = PadForArchive;
   };
 
@@ -1524,11 +1581,20 @@ class JobDumpBase::Collector {
 
   using SystemNote = JsonNote<SystemClass>;
 
+  struct KernelInfoClass {
+    using Handle = zx::resource;
+    static constexpr auto MakeHeader = kMakeMember<kKernelInfoNoteName>;
+    static constexpr auto Pad = PadForArchive;
+  };
+
+  template <typename... Notes>
+  using WithKernelNotes = KernelNotes<KernelInfoClass, Notes...>;
+
   // These are named for use by CollectChildren and CollectProcesses.
   using Children = JobInfo<ZX_INFO_JOB_CHILDREN, zx_koid_t>;
   using Processes = JobInfo<ZX_INFO_JOB_PROCESSES, zx_koid_t>;
 
-  using JobNotes = std::tuple<
+  using JobNotes = WithKernelNotes<
       // This lists all the notes for job-wide state.
       JobInfo<ZX_INFO_HANDLE_BASIC, zx_info_handle_basic_t>,
       JobProperty<ZX_PROP_NAME, char[ZX_MAX_NAME_LEN]>,
@@ -1545,7 +1611,7 @@ class JobDumpBase::Collector {
 
   fit::result<Error, std::reference_wrapper<const Children>> GetChildren() {
     Children& children = std::get<Children>(notes_);
-    auto result = CollectNote(*job_, children);
+    auto result = CollectNote({}, *job_, children);
     if (result.is_error()) {
       return result.take_error();
     }
@@ -1554,7 +1620,7 @@ class JobDumpBase::Collector {
 
   fit::result<Error, std::reference_wrapper<const Processes>> GetProcesses() {
     Processes& processes = std::get<Processes>(notes_);
-    auto result = CollectNote(*job_, processes);
+    auto result = CollectNote({}, *job_, processes);
     if (result.is_error()) {
       return result.take_error();
     }
@@ -1571,6 +1637,10 @@ JobDumpBase& JobDumpBase::operator=(JobDumpBase&&) noexcept = default;
 JobDumpBase::~JobDumpBase() = default;
 
 fit::result<Error> JobDumpBase::CollectSystem() { return collector_->CollectSystem(); }
+
+fit::result<Error> JobDumpBase::CollectKernel(zx::unowned_resource resource) {
+  return collector_->CollectKernel(resource->borrow());
+}
 
 fit::result<Error, size_t> JobDumpBase::CollectJob() { return collector_->CollectJob(); }
 
@@ -1597,6 +1667,14 @@ fit::result<Error, size_t> JobDumpBase::DumpMemberHeaderImpl(DumpCallback dump, 
 }
 
 size_t JobDumpBase::MemberHeaderSize() { return sizeof(ar_hdr); }
+
+fit::result<Error> ProcessDumpBase::Collector::CollectKernel(zx::unowned_resource resource) {
+  return CollectKernelNoteData(*resource, zx::process{}, notes_);
+}
+
+fit::result<Error> JobDumpBase::Collector::CollectKernel(zx::unowned_resource resource) {
+  return CollectKernelNoteData(*resource, zx::job{}, notes_);
+}
 
 // The Collector borrows the job handle.  A single Collector cannot be used for
 // a different job later.  It can be clear()'d to reset all state other than

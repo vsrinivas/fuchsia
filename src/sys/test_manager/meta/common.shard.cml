@@ -122,6 +122,11 @@
             environment: "#test-env",
             durability: "transient",
         },
+        {
+            name: "zxdump-tests",
+            environment: "#test-env",
+            durability: "transient",
+        },
     ],
     capabilities: [
         {
@@ -415,6 +420,14 @@
                 "#starnix-tests",
                 "#starnix_test_runners",
             ],
+        },
+        {
+            protocol: [
+                "fuchsia.boot.RootResource",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: "#zxdump-tests",
         },
         {
             protocol: "fuchsia.process.Launcher",

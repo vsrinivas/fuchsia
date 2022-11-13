@@ -105,8 +105,8 @@ bool HandleLongName(std::string_view name_table, MemberHeader& member) {
 // was a valid note that wasn't already in the map.
 template <typename Key>
 fit::result<Error, std::optional<Key>> JobNoteName(std::string_view match, std::string_view name) {
-  if (name.substr(0, match.size()) == match) {
-    name.remove_prefix(match.size());
+  if (name.size() > match.size() && name[match.size()] == '.' && cpp20::starts_with(name, match)) {
+    name.remove_prefix(match.size() + 1);
     if (name.empty()) {
       return CorruptedDump();
     }
@@ -1152,7 +1152,7 @@ fit::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange ar
   // Process one normal member.  It might be a note or an embedded dump file.
   auto handle_member = [&]() -> fit::result<Error> {
     // Check for an info note.
-    if (auto info = JobNoteName<zx_object_info_topic_t>(kJobInfoPrefix, member.name);
+    if (auto info = JobNoteName<zx_object_info_topic_t>(kJobInfoName, member.name);
         info.is_error()) {
       return info.take_error();
     } else if (info.value()) {
@@ -1182,8 +1182,7 @@ fit::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange ar
     }
 
     // Not an info note.  Check for a property note.
-    if (auto property = JobNoteName<uint32_t>(kJobPropertyPrefix, member.name);
-        property.is_error()) {
+    if (auto property = JobNoteName<uint32_t>(kJobPropertyName, member.name); property.is_error()) {
       return property.take_error();
     } else if (property.value()) {
       auto result = file.ReadPermanent(contents);
