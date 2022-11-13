@@ -8,6 +8,7 @@
 #include <lib/fit/result.h>
 #include <sys/uio.h>
 
+#include <cstring>
 #include <string_view>
 #include <vector>
 
@@ -31,9 +32,7 @@ namespace zxdump {
 // to merit individual write calls.
 class FdWriter {
  public:
-  // On failure, the error value is a string saying what operation on
-  // on the fd failed and its error is still in errno.
-  using error_type = std::string_view;
+  using error_type = FdError;
 
   FdWriter() = delete;
   FdWriter(FdWriter&&) = default;

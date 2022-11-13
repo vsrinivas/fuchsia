@@ -19,10 +19,7 @@ namespace zxdump {
 // This replaces zxdump::FdWriter and does streaming ZSTD compression.
 class ZstdWriter {
  public:
-  // On failure, the error value is a string saying what operation on
-  // the fd failed and its error is still in errno; errno is reset to zero
-  // if the error was from the compressor rather than the filesystem.
-  using error_type = std::string_view;
+  using error_type = FdError;
 
   ZstdWriter() = default;
 

@@ -13,6 +13,18 @@
 
 namespace zxdump {
 
+using namespace std::literals;
+
+namespace {
+
+auto ErrnoError(std::string_view op, int error = errno) {
+  return fit::error{FdError{.op_ = op, .error_ = error}};
+}
+
+auto ZstdError(size_t result) { return fit::error{FdError{.op_ = ZSTD_getErrorName(result)}}; }
+
+}  // namespace
+
 ZstdWriter::ZstdWriter(fbl::unique_fd fd)
     : ctx_(ZSTD_createCStream()),
       buffer_(new std::byte[ZSTD_CStreamOutSize()]),
@@ -30,24 +42,23 @@ ZstdWriter::~ZstdWriter() {
   ZSTD_freeCStream(ctx);
 }
 
-fit::result<ZstdWriter::error_type> ZstdWriter::Flush() {
+fit::result<FdError> ZstdWriter::Flush() {
   ByteView out{buffer_.get(), buffer_pos_};
   buffer_pos_ = 0;
   while (!out.empty()) {
     ssize_t n = write(fd_.get(), out.data(), out.size());
     if (n < 0) {
-      return fit::error{"write"};
+      return ErrnoError("write"sv);
     }
     if (n == 0) {
-      errno = EAGAIN;
-      return fit::error{"write returned zero"};
+      return ErrnoError("write returned zero"sv, EAGAIN);
     }
     out.remove_prefix(n);
   }
   return fit::ok();
 }
 
-fit::result<ZstdWriter::error_type> ZstdWriter::Write(size_t offset, ByteView data) {
+fit::result<FdError> ZstdWriter::Write(size_t offset, ByteView data) {
   ZX_ASSERT(offset >= offset_);
   ZX_ASSERT(!data.empty());
   ZX_DEBUG_ASSERT(data.data());
@@ -69,8 +80,7 @@ fit::result<ZstdWriter::error_type> ZstdWriter::Write(size_t offset, ByteView da
     size_t result = ZSTD_compressStream2(ctx, &out, &in, ZSTD_e_continue);
     buffer_pos_ = out.pos;
     if (ZSTD_isError(result)) {
-      errno = 0;
-      return fit::error{ZSTD_getErrorName(result)};
+      return ZstdError(result);
     }
     if (in.pos < in.size) {
       // Not all consumed yet, so flush the buffer.
@@ -85,7 +95,7 @@ fit::result<ZstdWriter::error_type> ZstdWriter::Write(size_t offset, ByteView da
   return fit::ok();
 }
 
-fit::result<ZstdWriter::error_type> ZstdWriter::Finish() {
+fit::result<FdError> ZstdWriter::Finish() {
   size_t compress_result;
   do {
     ZSTD_inBuffer in = {};
@@ -94,8 +104,7 @@ fit::result<ZstdWriter::error_type> ZstdWriter::Finish() {
     compress_result = ZSTD_compressStream2(ctx, &out, &in, ZSTD_e_end);
     buffer_pos_ = out.pos;
     if (ZSTD_isError(compress_result)) {
-      errno = 0;
-      return fit::error{ZSTD_getErrorName(compress_result)};
+      return ZstdError(compress_result);
     }
     if (auto result = Flush(); result.is_error()) {
       return result.take_error();

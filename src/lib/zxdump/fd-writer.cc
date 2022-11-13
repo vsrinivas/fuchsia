@@ -14,6 +14,14 @@
 
 namespace zxdump {
 
+using namespace std::literals;
+
+namespace {
+
+auto ErrnoError(std::string_view op) { return fit::error{FdError{.op_ = op, .error_ = errno}}; }
+
+}  // namespace
+
 void FdWriter::Accumulate(size_t offset, ByteView data) {
   if (data.empty()) {
     return;
@@ -43,7 +51,7 @@ fit::result<FdWriter::error_type, size_t> FdWriter::WriteFragments() {
       if (n == 0) {
         errno = EIO;
       }
-      return fit::error{"writev"};
+      return ErrnoError("writev"sv);
     }
     size_t wrote = static_cast<size_t>(n);
     ZX_ASSERT(wrote <= fragments.size_bytes_ - written);
@@ -83,7 +91,7 @@ fit::result<FdWriter::error_type> FdWriter::Write(size_t offset, ByteView data) 
         if (n == 0) {
           errno = EIO;
         }
-        return fit::error{"write"};
+        return ErrnoError("write");
       }
       const size_t wrote = static_cast<size_t>(n);
       ZX_ASSERT(wrote <= data.size());
@@ -102,7 +110,7 @@ fit::result<FdWriter::error_type> FdWriter::Write(size_t offset, ByteView data) 
     if (!is_pipe_ && lseek(fd_.get(), static_cast<off_t>(gap), SEEK_CUR) < 0) {
       is_pipe_ = errno == ESPIPE;
       if (!is_pipe_) {
-        return fit::error{"lseek"};
+        return ErrnoError("lseek");
       }
     }
     if (is_pipe_) {

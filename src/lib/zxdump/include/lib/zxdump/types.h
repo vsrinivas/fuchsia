@@ -56,6 +56,20 @@ struct DumpError : public Error {
   std::optional<std::decay_t<decltype(std::declval<DumpResult<Dump>>().error_value())>> dump_error_;
 };
 
+// This is the dump_error_ type used by fd-based Writer classes.
+struct FdError {
+  std::string_view error_string() const;
+
+  // This describes the failing operation.  When the operation was I/O on a
+  // file descriptor, this is usually the name of the POSIX function called.
+  std::string_view op_;
+
+  // This is a nonzero errno value when the failing operating was something
+  // that set errno, such as a POSIX file descriptor I/O function.  It's zero
+  // when the failure didn't have an associated errno code.
+  int error_ = 0;
+};
+
 // This maps a `get_info` topic to its value type.  Though the single syscall
 // interface always supports variable-sized results, some topics always return
 // a single value and others can return a variable number.  Here a topic that
@@ -249,23 +263,26 @@ struct RemoveSpan<cpp20::span<T>> {
   using type = T;
 };
 
-}  // namespace zxdump
-
 // This prints "op: status" with the status string.
-std::ostream& operator<<(std::ostream& os, const zxdump::Error& error);
+std::ostream& operator<<(std::ostream& os, const Error& error);
 
 // This does either that or `os << "op: " << error.dump_error_`.  If a
 // particular error_value type of a Dump function is too generic for
 // std::ostream::operator<< to be specialized as desired for it, then
 // this can be explicitly specialized for the Dump type.
 template <typename Dump>
-inline std::ostream& operator<<(std::ostream& os, const zxdump::DumpError<Dump>& error) {
+inline std::ostream& operator<<(std::ostream& os, const DumpError<Dump>& error) {
   using namespace std::literals;
   if (error.status_ == ZX_OK) {
     ZX_DEBUG_ASSERT(error.dump_error_.has_value());
     return os << error.op_ << ": "sv << error.dump_error_.value();
   }
-  return os << static_cast<const zxdump::Error&>(error);
+  return os << static_cast<const Error&>(error);
 }
+
+// This prints "op: Error text" (from strerror) or just "op".
+std::ostream& operator<<(std::ostream& os, const FdError& fd_error);
+
+}  // namespace zxdump
 
 #endif  // SRC_LIB_ZXDUMP_INCLUDE_LIB_ZXDUMP_TYPES_H_

@@ -5,12 +5,15 @@
 #include <lib/zxdump/types.h>
 #include <zircon/assert.h>
 
+#include <cstring>
+
 #ifdef __Fuchsia__
 #include <zircon/status.h>
 
 std::string_view zxdump::Error::status_string() const { return zx_status_get_string(status_); }
 #endif
 
+namespace zxdump {
 namespace {
 
 struct PrintStatus {
@@ -33,7 +36,19 @@ std::ostream& operator<<(std::ostream& os, PrintStatus error) {
 
 }  // namespace
 
+std::string_view FdError::error_string() const { return strerror(error_); }
+
 std::ostream& operator<<(std::ostream& os, const zxdump::Error& error) {
   ZX_DEBUG_ASSERT(!error.op_.empty());
   return os << error.op_ << ": " << PrintStatus{error.status_};
 }
+
+std::ostream& operator<<(std::ostream& os, const zxdump::FdError& fd_error) {
+  ZX_DEBUG_ASSERT(!fd_error.op_.empty());
+  if (fd_error.error_ == 0) {
+    return os << fd_error.op_;
+  }
+  return os << fd_error.op_ << ": " << strerror(fd_error.error_);
+}
+
+}  // namespace zxdump

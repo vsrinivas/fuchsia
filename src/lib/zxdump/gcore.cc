@@ -102,17 +102,12 @@ class Writer {
   }
 
   // Write errors from errno use the file name.
-  void Error(std::string_view op) {
-    ZX_DEBUG_ASSERT(!op.empty());
+  void Error(zxdump::FdError error) {
     std::string_view fn = filename_;
     if (fn.empty()) {
       fn = "<stdout>"sv;
     }
-    std::cerr << fn << ": "sv << op;
-    if (errno != 0) {
-      std::cerr << ": "sv << strerror(errno);
-    }
-    std::cerr << std::endl;
+    std::cerr << fn << ": "sv << error << std::endl;
   }
 
   // Called with true if the output file should be preserved at destruction.
@@ -275,8 +270,7 @@ class ProcessDumper : public DumperBase {
     }
 
     if (total > flags.limit) {
-      errno = EFBIG;
-      writer.Error("not written");
+      writer.Error({.op_ = "not written"sv, .error_ = EFBIG});
       return false;
     }
 
