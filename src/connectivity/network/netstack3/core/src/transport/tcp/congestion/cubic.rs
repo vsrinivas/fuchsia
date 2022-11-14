@@ -32,7 +32,7 @@ const CUBIC_C: f32 = 0.4;
 /// The CUBIC algorithm state variables.
 #[derive(Debug, Clone, Copy, PartialEq, derivative::Derivative)]
 #[derivative(Default(bound = ""))]
-pub(super) struct Cubic<I: Instant> {
+pub(super) struct Cubic<I: Instant, const FAST_CONVERGENCE: bool> {
     /// The start of the current congestion avoidance epoch.
     epoch_start: Option<I>,
     /// Coefficient for the cubic term of time into the current congestion
@@ -44,7 +44,7 @@ pub(super) struct Cubic<I: Instant> {
     bytes_acked: u32,
 }
 
-impl<I: Instant> Cubic<I> {
+impl<I: Instant, const FAST_CONVERGENCE: bool> Cubic<I, FAST_CONVERGENCE> {
     /// Returns the window size governed by the cubic growth function, in bytes.
     ///
     /// This function is responsible for the concave/convex regions described
@@ -182,11 +182,31 @@ impl<I: Instant> Cubic<I> {
     ) {
         // End the current congestion avoidance epoch.
         self.epoch_start = None;
+        // Per RFC 8312 (https://www.rfc-editor.org/rfc/rfc8312#section-4.6):
+        //   With fast convergence, when a congestion event occurs, before the
+        //   window reduction of the congestion window, a flow remembers the last
+        //   value of W_max before it updates W_max for the current congestion
+        //   event.  Let us call the last value of W_max to be W_last_max.
+        //   if (W_max < W_last_max){ // should we make room for others
+        //     W_last_max = W_max;             // remember the last W_max
+        //     W_max = W_max*(1.0+beta_cubic)/2.0; // further reduce W_max
+        //   } else {
+        //     W_last_max = W_max              // remember the last W_max
+        //   }
+        // Note: Here the code is slightly different from the RFC because there
+        // is an order to update the variables so that we do not need to store
+        // an extra variable (W_last_max). i.e. instead of assigning cwnd to
+        // W_max first, we compare it to W_last_max, that is the W_max before
+        // updating.
+        if FAST_CONVERGENCE && *cwnd < self.w_max {
+            self.w_max = (*cwnd as f32 * (1.0 + CUBIC_BETA) / 2.0) as u32;
+        } else {
+            self.w_max = *cwnd;
+        }
         // Per RFC 8312 (https://www.rfc-editor.org/rfc/rfc8312#section-4.7):
         //   In case of timeout, CUBIC follows Standard TCP to reduce cwnd
         //   [RFC5681], but sets ssthresh using beta_cubic (same as in
         //   Section 4.5) that is different from Standard TCP [RFC5681].
-        self.w_max = *cwnd;
         *ssthresh = u32::max((*cwnd as f32 * CUBIC_BETA) as u32, 2 * *mss);
         *cwnd = *ssthresh;
         // Reset our running count of the acked bytes.
@@ -219,7 +239,7 @@ mod tests {
         transport::tcp::DEFAULT_MAXIMUM_SEGMENT_SIZE,
     };
 
-    impl<I: Instant> Cubic<I> {
+    impl<I: Instant, const FAST_CONVERGENCE: bool> Cubic<I, FAST_CONVERGENCE> {
         // Helper function in test that takes a u32 instead of a NonZeroU32
         // as we know we never pass 0 in the test and it's a bit clumsy to
         // convert a u32 into a NonZeroU32 every time.
@@ -254,7 +274,9 @@ mod tests {
     fn average_window_size(rtt: Duration, loss_rate_reciprocal: u32) -> u32 {
         const ROUND_TRIPS: u32 = 100_000;
 
-        let mut cubic = Cubic::default();
+        // The theoretical predictions do not consider fast convergence,
+        // disable it.
+        let mut cubic = Cubic::<_, false /* FAST_CONVERGENCE */>::default();
         let mut params = CongestionControlParams::default();
         // The theoretical value is a prediction for the congestion avoidance
         // only, set ssthresh to 1 so that we skip slow start. Slow start can
@@ -290,7 +312,7 @@ mod tests {
     #[test]
     fn cubic_example() {
         let mut clock = FakeInstantCtx::default();
-        let mut cubic = Cubic::default();
+        let mut cubic = Cubic::<_, true /* FAST_CONVERGENCE */>::default();
         let mut params = CongestionControlParams::default();
         const RTT: Duration = Duration::from_millis(100);
 

@@ -91,7 +91,7 @@ pub(super) struct CongestionControl<I: Instant> {
 /// Available congestion control algorithms.
 #[derive(Debug)]
 enum LossBasedAlgorithm<I: Instant> {
-    Cubic(cubic::Cubic<I>),
+    Cubic(cubic::Cubic<I, true /* FAST_CONVERGENCE */>),
 }
 
 impl<I: Instant> LossBasedAlgorithm<I> {
