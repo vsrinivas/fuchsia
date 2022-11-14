@@ -193,6 +193,9 @@ async fn watcher_existing<N: Netstack>(name: &str) {
         }
     }
 
+    // The netstacks report the loopback interface as NIC 1.
+    assert_eq!(expectations.insert(1, Expectation::Loopback(1)), None);
+
     // When an interface goes online in NS2, the consequences (such as address
     // assignment state changing to ASSIGNED) are observed before the interface
     // online itself, which means that it is possible to get here and for a new
@@ -226,9 +229,6 @@ async fn watcher_existing<N: Netstack>(name: &str) {
     )
     .await
     .expect("waiting for all interfaces to be online");
-
-    // The netstacks report the loopback interface as NIC 1.
-    assert_eq!(expectations.insert(1, Expectation::Loopback(1)), None);
 
     let mut interfaces = fidl_fuchsia_net_interfaces_ext::existing(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
