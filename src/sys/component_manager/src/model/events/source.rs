@@ -10,7 +10,7 @@ use {
             events::{
                 error::EventsError,
                 registry::{EventRegistry, EventSubscription},
-                serve::{serve_event_source_sync, serve_event_stream_v2},
+                serve::serve_event_stream_v2,
                 stream::EventStream,
                 stream_provider::EventStreamProvider,
             },
@@ -162,21 +162,6 @@ impl EventSource {
         // Create an event stream for the given events
         registry.subscribe(&self.subscriber, requests).await
     }
-
-    pub async fn take_static_event_stream(
-        &self,
-        target_path: String,
-    ) -> Option<ServerEnd<fsys::EventStreamMarker>> {
-        if let Some(stream_provider) = self.stream_provider.upgrade() {
-            return stream_provider.take_static_event_stream(&self.subscriber, target_path).await;
-        }
-        return None;
-    }
-
-    /// Serves a `EventSource` FIDL protocol.
-    pub async fn serve(self, stream: fsys::EventSourceRequestStream) {
-        serve_event_source_sync(self, stream).await;
-    }
 }
 
 #[async_trait]
@@ -211,29 +196,6 @@ impl CapabilityProvider for EventSourceV2 {
                 {
                     serve_event_stream_v2(event_stream, stream).await;
                 }
-            })
-            .await;
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl CapabilityProvider for EventSource {
-    async fn open(
-        self: Box<Self>,
-        task_scope: TaskScope,
-        _flags: fio::OpenFlags,
-        _open_mode: u32,
-        _relative_path: PathBuf,
-        server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
-        let server_end = channel::take_channel(server_end);
-        let stream = ServerEnd::<fsys::EventSourceMarker>::new(server_end)
-            .into_stream()
-            .expect("could not convert channel into stream");
-        task_scope
-            .add_task(async move {
-                serve_event_source_sync(*self, stream).await;
             })
             .await;
         Ok(())

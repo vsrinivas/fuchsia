@@ -38,7 +38,6 @@ async fn component_manager_namespace() {
         "/svc/fuchsia.boot.ReadOnlyLog",
         "/svc/fuchsia.boot.WriteOnlyLog",
         "/svc/fuchsia.kernel.Stats",
-        "/svc/fuchsia.logger.LogSink",
         "/svc/fuchsia.process.Launcher",
         "/svc/fuchsia.sys2.CrashIntrospect",
         "/svc/fuchsia.sys2.CrashIntrospect",

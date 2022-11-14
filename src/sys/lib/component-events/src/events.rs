@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context, Error},
-    fidl::endpoints::{create_endpoints, ProtocolMarker, ServerEnd},
+    anyhow::{format_err, Error},
+    fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_component::client::{connect_channel_to_protocol, connect_to_protocol_at_path},
+    fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon as zx,
-    futures::StreamExt,
     lazy_static::lazy_static,
     std::{collections::VecDeque, convert::TryFrom},
     thiserror::Error,
@@ -36,93 +35,7 @@ pub fn event_name(event_type: &fsys::EventType) -> String {
     .to_string()
 }
 
-/// A wrapper over the EventSource FIDL proxy.
-/// Provides all of the FIDL methods with a cleaner, simpler interface.
-/// Refer to events.fidl for a detailed description of this protocol.
-pub struct EventSource {
-    proxy: fsys::EventSourceProxy,
-}
-
-pub struct EventSubscription {
-    names: Vec<String>,
-}
-
-impl EventSubscription {
-    pub fn new(names: Vec<impl ToString>) -> Self {
-        Self { names: names.into_iter().map(|name| name.to_string()).collect() }
-    }
-}
-impl From<Vec<String>> for EventSubscription {
-    fn from(event_names: Vec<String>) -> Self {
-        Self { names: event_names }
-    }
-}
-
-impl EventSource {
-    /// Connects to the EventSource service at its default location
-    /// The default location is presumably "/svc/fuchsia.sys2.EventSource"
-    pub fn new() -> Result<Self, Error> {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<fsys::EventSourceMarker>()?;
-        connect_channel_to_protocol::<fsys::EventSourceMarker>(server_end.into_channel())
-            .context("could not connect to EventSource service")?;
-        Ok(EventSource::from_proxy(proxy))
-    }
-
-    /// Wraps a provided EventSource proxy
-    pub fn from_proxy(proxy: fsys::EventSourceProxy) -> Self {
-        Self { proxy }
-    }
-
-    /// Subscribe to the events given by |event_names|.
-    /// Returns a ServerEnd object that can be safely moved to another
-    /// thread before creating an EventStream object.
-    pub async fn subscribe_endpoint(
-        &self,
-        events: Vec<EventSubscription>,
-    ) -> Result<ServerEnd<fsys::EventStreamMarker>, Error> {
-        let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>()?;
-        let mut requests = vec![];
-        for request in events.into_iter() {
-            requests.append(
-                &mut request
-                    .names
-                    .iter()
-                    .map(|name| fsys::EventSubscription {
-                        event_name: Some(name.to_string()),
-                        ..fsys::EventSubscription::EMPTY
-                    })
-                    .collect(),
-            );
-        }
-        let subscription = self.proxy.subscribe(&mut requests.into_iter(), client_end);
-        subscription.await?.map_err(|error| format_err!("Error: {:?}", error))?;
-        Ok(server_end)
-    }
-
-    /// Subscribe to the events given by |event_names|.
-    /// Returns an EventStream object that is *NOT* thread-safe.
-    pub async fn subscribe(&self, events: Vec<EventSubscription>) -> Result<EventStream, Error> {
-        let server_end = self.subscribe_endpoint(events).await?;
-        Ok(EventStream::new(server_end.into_stream()?))
-    }
-
-    pub async fn take_static_event_stream(&self, name: &str) -> Result<EventStream, Error> {
-        let server_end = self
-            .proxy
-            .take_static_event_stream(name)
-            .await?
-            .map_err(|error| format_err!("Error: {:?}", error))?;
-        Ok(EventStream::new(server_end.into_stream()?))
-    }
-
-    pub async fn drop_event_stream(&self, name: &str) {
-        // Take the event stream and immediately drop it.
-        let _ = self.take_static_event_stream(name).await;
-    }
-}
-
 enum InternalStream {
-    Legacy(fsys::EventStreamRequestStream),
     New(fsys::EventStream2Proxy),
 }
 
@@ -138,10 +51,6 @@ pub enum EventStreamError {
 }
 
 impl EventStream {
-    pub fn new(stream: fsys::EventStreamRequestStream) -> Self {
-        Self { stream: InternalStream::Legacy(stream), buffer: VecDeque::new() }
-    }
-
     pub fn new_v2(stream: fsys::EventStream2Proxy) -> Self {
         Self { stream: InternalStream::New(stream), buffer: VecDeque::new() }
     }
@@ -194,11 +103,6 @@ impl EventStream {
                     Err(_) => Err(EventStreamError::StreamClosed),
                 }
             }
-            InternalStream::Legacy(stream) => match stream.next().await {
-                Some(Ok(fsys::EventStreamRequest::OnEvent { event, .. })) => Ok(event),
-                Some(_) => Err(EventStreamError::StreamClosed),
-                None => Err(EventStreamError::StreamClosed),
-            },
         }
     }
 }

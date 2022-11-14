@@ -8,15 +8,13 @@ use {
         events::{
             error::EventsError,
             registry::{EventRegistry, EventSubscription},
-            serve::serve_event_stream,
             stream::EventStream,
         },
         hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
     },
     async_trait::async_trait,
-    cm_rust::{CapabilityName, ComponentDecl, EventMode, UseDecl, UseEventStreamDeprecatedDecl},
-    fidl::endpoints::{create_endpoints, ServerEnd},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    cm_rust::{ComponentDecl, EventMode, UseDecl, UseEventStreamDeprecatedDecl},
+    fuchsia_async as fasync,
     futures::lock::Mutex,
     moniker::{AbsoluteMoniker, ExtendedMoniker},
     std::{
@@ -26,10 +24,6 @@ use {
 };
 
 pub struct EventStreamAttachment {
-    /// The name of this event stream.
-    name: String,
-    /// The server end of a component's event stream.
-    server_end: Option<ServerEnd<fsys::EventStreamMarker>>,
     /// The task serving the event stream and using the client_end
     /// associated with the above server_end
     _task: fasync::Task<()>,
@@ -151,25 +145,6 @@ impl EventStreamProvider {
     /// Returns the server end of the event stream with provided `name` associated with
     /// the component with the provided `target_moniker`. This method returns None if such a stream
     /// does not exist or the channel has already been taken.
-    pub async fn take_static_event_stream(
-        &self,
-        target_moniker: &ExtendedMoniker,
-        stream_name: String,
-    ) -> Option<ServerEnd<fsys::EventStreamMarker>> {
-        let mut state = self.state.lock().await;
-        if let Some(event_streams) = state.streams.get_mut(&target_moniker) {
-            if let Some(attachment) =
-                event_streams.iter_mut().find(|event_stream| event_stream.name == stream_name)
-            {
-                return attachment.server_end.take();
-            }
-        }
-        return None;
-    }
-
-    /// Returns the server end of the event stream with provided `name` associated with
-    /// the component with the provided `target_moniker`. This method returns None if such a stream
-    /// does not exist or the channel has already been taken.
     pub async fn take_v2_static_event_stream(
         &self,
         target_moniker: &ExtendedMoniker,
@@ -184,30 +159,6 @@ impl EventStreamProvider {
             }
         }
         return None;
-    }
-
-    /// Creates a static EventStream listening for the specified `events` for a given |target_moniker|
-    /// component and with the provided `target_path`.
-    pub async fn create_static_event_stream(
-        self: &Arc<Self>,
-        subscriber: &ExtendedMoniker,
-        stream_name: String,
-        subscriptions: Vec<EventSubscription>,
-    ) -> Result<(), ModelError> {
-        let registry = self.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
-        let event_stream = registry.subscribe(&subscriber, subscriptions).await?;
-        let mut state = self.state.lock().await;
-        let event_streams = state.streams.entry(subscriber.clone()).or_insert(vec![]);
-        let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>().unwrap();
-        let task = fasync::Task::spawn(async move {
-            serve_event_stream(event_stream, client_end).await;
-        });
-        event_streams.push(EventStreamAttachment {
-            name: stream_name,
-            server_end: Some(server_end),
-            _task: task,
-        });
-        Ok(())
     }
 
     async fn on_component_destroyed(
@@ -270,39 +221,18 @@ impl EventStreamProvider {
             Ok(routed) => (routed, None),
             Err(error) => (false, Some(error)),
         };
-        let mut has_legacy_stream = false;
         if !routed_v2 {
             for use_decl in &decl.uses {
                 match use_decl {
-                    UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                        name,
-                        subscriptions,
-                        ..
-                    }) => {
-                        self.create_static_event_stream(
-                            &ExtendedMoniker::ComponentInstance(target_moniker.clone()),
-                            name.to_string(),
-                            subscriptions
-                                .iter()
-                                .map(|subscription| {
-                                    EventSubscription::new(
-                                        CapabilityName::from(subscription.event_name.clone()),
-                                        EventMode::Async,
-                                    )
-                                })
-                                .collect(),
-                        )
-                        .await?;
-                        has_legacy_stream = true;
+                    UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl { .. }) => {
+                        return Err(ModelError::unsupported("v1 events are unsupported"));
                     }
                     _ => {}
                 }
             }
         }
         if let Some(error) = err {
-            if !has_legacy_stream {
-                return Err(error);
-            }
+            return Err(error);
         }
         Ok(())
     }

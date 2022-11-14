@@ -19,7 +19,6 @@ group("tests") {
     "diagnostics:tests",
     "dynamic_offers:tests",
     "elf_runner:tests",
-    "events:events_integration_test",
     "events_v2:events_v2_integration_test",
     "fuchsia_boot_resolver:tests($default_toolchain)",
     "hub:hub_integration_test",
