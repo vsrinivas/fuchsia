@@ -72,6 +72,8 @@ test("rndis-function-test") {
   sources = [ "rndis_function_test.cc" ]
   deps = [
     ":rndis-function-lib",
+
+    # TODO(fxb/115046): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/zxtest",
   ]

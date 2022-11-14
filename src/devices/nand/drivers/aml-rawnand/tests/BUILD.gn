@@ -17,6 +17,8 @@ test("aml-rawnand-unittest-bin") {
     "..:common",
     "//sdk/lib/fdio",
     "//src/devices/testing/fake-bti",
+
+    # TODO(fxb/115057): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//zircon/system/ulib/zxtest",

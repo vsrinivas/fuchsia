@@ -23,6 +23,8 @@ executable("aml-g12-pdm-test-bin") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-mmio-reg",
+
+    # TODO(fxb/115085): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddktl",

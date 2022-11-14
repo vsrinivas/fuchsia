@@ -38,6 +38,8 @@ test("pipe_io_unittest") {
   sources = [ "tests/pipe_io_test.cc" ]
   deps = [
     ":pipe_io",
+
+    # TODO(fxb/83368): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/goldfish/fake_pipe",
     "//src/lib/fxl/test:gtest_main",

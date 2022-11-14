@@ -37,6 +37,8 @@ executable("controller_unittest_bin") {
     "//src/camera/drivers/controller:source",
     "//src/camera/drivers/controller/sherlock:config",
     "//src/camera/drivers/test_utils",
+
+    # TODO(fxb/115043): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

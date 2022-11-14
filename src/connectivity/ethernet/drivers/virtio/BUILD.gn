@@ -64,6 +64,8 @@ test("virtio-ethernet-test") {
     ":virtio_ethernet_lib",
     "//src/devices/bus/lib/virtio",
     "//src/devices/testing/fake-bti",
+
+    # TODO(fxb/115047): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

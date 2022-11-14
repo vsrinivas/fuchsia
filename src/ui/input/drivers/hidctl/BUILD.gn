@@ -55,6 +55,8 @@ executable("hidctl-test") {
     ":hidctl_bind",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.hidctl:fuchsia.hardware.hidctl_cpp_wire",
+
+    # TODO(fxb/115093): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",

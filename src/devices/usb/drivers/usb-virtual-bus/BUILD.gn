@@ -178,6 +178,8 @@ test("usb-virtual-bus-unit-test-bin") {
   deps = [
     ":common",
     "//sdk/banjo/fuchsia.hardware.usb.dci:fuchsia.hardware.usb.dci_banjo_cpp",
+
+    # TODO(fxb/115080): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/zxtest",
   ]

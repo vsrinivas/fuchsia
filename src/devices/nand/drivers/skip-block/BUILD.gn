@@ -74,6 +74,8 @@ test("skip-block-test-bin") {
     ":common",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/lib/fdio",
+
+    # TODO(fxb/115061): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/fbl",

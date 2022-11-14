@@ -66,6 +66,8 @@ if (is_fuchsia) {
     deps = [
       "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
       "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_hlcpp",
+
+      # TODO(fxb/115084): Migrate from fake_ddk to mock-ddk.
       "//src/devices/testing/fake_ddk",
       "//src/graphics/lib/magma/src/magma_util/platform/zircon:dependency_injection_device",
       "//third_party/googletest:gtest",

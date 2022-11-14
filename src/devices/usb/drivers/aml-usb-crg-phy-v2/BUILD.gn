@@ -75,6 +75,8 @@ test("aml-usb-crg-phy-test-bin") {
     "//src/devices/lib/mmio",
     "//src/devices/registers/testing/mock-registers",
     "//src/devices/testing/fake-mmio-reg",
+
+    # TODO(fxb/115074): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",

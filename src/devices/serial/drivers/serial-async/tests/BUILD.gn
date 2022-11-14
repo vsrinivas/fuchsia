@@ -16,6 +16,8 @@ test("serial-async-unittest-bin") {
   include_dirs = [ ".." ]
   deps = [
     "..:common",
+
+    # TODO(fxb/115066): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",

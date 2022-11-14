@@ -18,6 +18,8 @@ test("nand-unittest-bin") {
   ]
   deps = [
     "//src/devices/nand/drivers/nand:common",
+
+    # TODO(fxb/115058): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",

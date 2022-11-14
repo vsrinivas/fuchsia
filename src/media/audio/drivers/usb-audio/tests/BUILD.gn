@@ -12,6 +12,8 @@ executable("usb-audio-test-bin") {
   deps = [
     "../:shared",
     "//sdk/lib/inspect/testing/cpp:zxtest",
+
+    # TODO(fxb/115087): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
     "//zircon/system/ulib/zxtest",

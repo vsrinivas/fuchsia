@@ -81,6 +81,8 @@ test("usb-device") {
   deps = [
     ":common",
     "//src/devices/testing/fake-bti",
+
+    # TODO(fxb/115077): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/lib/utf_conversion",
     "//zircon/system/ulib/zxtest",

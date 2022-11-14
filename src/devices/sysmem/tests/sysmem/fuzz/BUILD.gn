@@ -46,6 +46,8 @@ fuzzer("sysmem_fuzzer") {
     "//src/devices/bus/testing/fake-pdev",
     "//src/devices/lib/driver",
     "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
+
+    # TODO(fxb/115068): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -95,6 +97,8 @@ fuzzer("sysmem_fuzzer_multi") {
     "//src/devices/bus/testing/fake-pdev",
     "//src/devices/lib/driver",
     "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
+
+    # TODO(fxb/115068): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",

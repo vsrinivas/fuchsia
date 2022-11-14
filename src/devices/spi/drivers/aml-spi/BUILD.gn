@@ -53,6 +53,8 @@ test("aml-spi-test-bin") {
     "//src/devices/registers/testing/mock-registers",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-mmio-reg",
+
+    # TODO(fxb/115067): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/zxtest",

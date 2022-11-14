@@ -14,6 +14,8 @@ test("sa-unittest-bin") {
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_cpp_wire",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/lib/dev-operation",
+
+    # TODO(fxb/115088): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",

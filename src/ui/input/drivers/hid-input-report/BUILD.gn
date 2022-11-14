@@ -105,6 +105,8 @@ test("hid-input-report-test-bin") {
     ":hid_input_report_bind",
     "//sdk/lib/fidl",
     "//sdk/lib/inspect/testing/cpp:zxtest",
+
+    # TODO(fxb/115092): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/ui/input/lib/hid-input-report",

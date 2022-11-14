@@ -99,6 +99,8 @@ source_set("test-libs") {
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/testing/fake-dma-buffer",
     "//src/devices/testing/fake-mmio-reg",
+
+    # TODO(fxb/115081): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",

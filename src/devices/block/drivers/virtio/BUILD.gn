@@ -125,6 +125,8 @@ test("virtio-block-test-bin") {
     ":block_lib",
     "//src/devices/bus/lib/virtio",
     "//src/devices/testing/fake-bti",
+
+    # TODO(fxb/115053): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -150,6 +152,8 @@ test("virtio-scsi-test-bin") {
     ":scsi_lib",
     "//src/devices/bus/lib/virtio",
     "//src/devices/testing/fake-bti",
+
+    # TODO(fxb/115053): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

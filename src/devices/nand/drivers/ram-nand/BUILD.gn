@@ -98,6 +98,8 @@ test("test") {
     "//sdk/lib/driver_test_realm",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/component/cpp",
+
+    # TODO(fxb/115060): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",

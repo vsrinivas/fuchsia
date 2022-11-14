@@ -62,6 +62,8 @@ test("pci-unit-fake_ddk") {
     "//src/devices/testing/driver-runtime-main:zxtest",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-msi",
+
+    # TODO(fxb/99826): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zxtest",

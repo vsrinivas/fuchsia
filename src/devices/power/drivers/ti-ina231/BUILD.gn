@@ -65,6 +65,8 @@ test("ti-ina231-test-bin") {
   deps = [
     ":common",
     "//src/devices/i2c/testing/fake-i2c",
+
+    # TODO(fxb/115062): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/zxtest",
   ]

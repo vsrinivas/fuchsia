@@ -111,6 +111,8 @@ static_library("fake-display-device-tree") {
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_cpp_wire",
     "//src/devices/bus/testing/fake-pdev",
+
+    # TODO(fxb/114433): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/graphics/display/drivers/display:shared",
     "//src/lib/ddktl",

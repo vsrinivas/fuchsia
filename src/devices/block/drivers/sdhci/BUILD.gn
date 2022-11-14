@@ -67,6 +67,8 @@ test("sdhci-test-bin") {
     "//src/devices/block/lib/sdmmc",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-bti",
+
+    # TODO(fxb/115051): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/vmo_store",

@@ -22,6 +22,8 @@ test("display-core-unittests") {
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_cpp_wire_testing",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
+
+    # TODO(fxb/114433): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/fbl",

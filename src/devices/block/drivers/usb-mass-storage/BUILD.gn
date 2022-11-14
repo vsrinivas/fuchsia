@@ -77,6 +77,8 @@ test("ums-block") {
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//src/devices/testing/fake-bti",
+
+    # TODO(fxb/115052): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/zxtest",
   ]

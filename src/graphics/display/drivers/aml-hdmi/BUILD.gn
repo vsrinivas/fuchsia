@@ -68,6 +68,8 @@ test("aml-hdmi-test-bin") {
   ]
   deps = [
     ":common_srcs",
+
+    # TODO(fxb/115082): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//zircon/system/ulib/zx",

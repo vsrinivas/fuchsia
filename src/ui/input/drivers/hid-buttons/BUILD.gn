@@ -74,6 +74,8 @@ test("hid-buttons-test") {
   deps = [
     ":common",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
+
+    # TODO(fxb/115091): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",

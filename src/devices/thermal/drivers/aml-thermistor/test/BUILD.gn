@@ -22,6 +22,8 @@ executable("aml-thermistor-test-bin") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
     "//src/devices/lib/thermal",
+
+    # TODO(fxb/115072): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",

@@ -95,6 +95,8 @@ test("usb-peripheral-unittest-bin") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-mmio-reg",
+
+    # TODO(fxb/115079): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
     "//src/devices/usb/lib/usb:cdc",
