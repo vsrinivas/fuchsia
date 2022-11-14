@@ -35,6 +35,12 @@ class Bytes {
       data_.insert(data_.end(), b.data_.begin(), b.data_.end());
     }
   }
+  explicit Bytes(const std::vector<Bytes>& bytes) {
+    // Flatten the input.
+    for (Bytes b : bytes) {
+      data_.insert(data_.end(), b.data_.begin(), b.data_.end());
+    }
+  }
   template <typename IterType>
   Bytes(IterType first, IterType last) : data_(first, last) {}
 
@@ -139,7 +145,7 @@ inline Bytes vector_header(uint64_t length) {
   };
 }
 
-inline Bytes out_of_line_envelope(uint16_t num_bytes, uint8_t num_handles) {
+inline Bytes out_of_line_envelope(uint32_t num_bytes, uint8_t num_handles) {
   return {u32(num_bytes), u16(num_handles), u16(0)};
 }
 inline Bytes inline_envelope(const Bytes& value, bool has_handles) {

@@ -186,15 +186,17 @@ open protocol OpenTarget {
 // FIDL's ability to send overly large (>64KiB) messages using a VMO, rather than the traditional
 // channel transport.
 //
-// Every `Encode*(...) -> (...);` method should be implemented to simply echo back the payload it
-// receives (with one exception; see `EncodeUnboundedMaybeLargeResource` below).
+// Every `Encode*(...) -> (...);` method should be implemented to simply respond back with a payload
+// that contains equivalent data and symmetric handles to the one it receives (with one exception;
+// see `EncodeUnboundedMaybeLargeResource` below).
 //
 // There is a bit of redundancy here - each of these methods actually duplicates the work of their
 // corresponding `Decode*(...);` methods, as they must necessarily decode the supplied messges in
 // order to echo them back. The reason this was done this way is that it makes "good" encoding tests
 // much more language server agnostic - each language server no longer needs to know the specifics
-// of how to build the type to be encoded, it just blindly echoes back the decoded type it receives
-// from the request instead. This setup makes language server specific bugs less likely.
+// of how to build the type to be encoded, it just blindly echoes back the decoded values for the
+// type it receives from the request instead. This setup makes language server specific bugs less
+// likely.
 open protocol LargeMessageTarget {
     strict DecodeBoundedKnownToBeSmall(BoundedKnownToBeSmall);
     strict DecodeBoundedMaybeLarge(BoundedMaybeLarge);
@@ -234,8 +236,8 @@ open protocol LargeMessageTarget {
     // under test is the encoding of the response message, so the exact properties of the request
     // message are irrelevant as long as the response is properly sized to be large/small as needed.
     strict EncodeUnboundedMaybeLargeResource(resource struct {
-        data UnboundedMaybeLargeResource;
         populate_unset_handles bool;
+        data UnboundedMaybeLargeResource;
     }) -> (UnboundedMaybeLargeResource);
 };
 

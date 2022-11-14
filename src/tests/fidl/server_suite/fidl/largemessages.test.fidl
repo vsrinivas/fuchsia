@@ -17,8 +17,14 @@ using zx;
 // ---------
 //   65536
 type BoundedKnownToBeSmall = struct {
-    bytes vector<byte>:65504;
+    bytes vector<byte>:SMALL_STRUCT_BYTE_VECTOR_SIZE;
 };
+
+// If we have a one-field struct payload, where that field is a `vector<bytes>`, what is the
+// greatest number of bytes we can have in that `vector` such it remains a small message  (aka, has
+// exactly 64KiB)? This is the size constraint used by `BoundedKnownToBeSmall`. See the comment on
+// that type for how this magic number was selected.
+const SMALL_STRUCT_BYTE_VECTOR_SIZE uint32 = 65504;
 
 // This message should be sent with a size of either 65536 (the largest small message), or 65537
 // bytes (the smallest large message) to validate that the small/large message boundary is at the
@@ -33,8 +39,14 @@ type BoundedKnownToBeSmall = struct {
 // ---------
 //   65544
 type BoundedMaybeLarge = struct {
-    bytes vector<byte>:65505;
+    bytes vector<byte>:LARGE_STRUCT_BYTE_VECTOR_SIZE;
 };
+
+// If we have a one-field struct payload, where that field is a `vector<bytes>`, what is the least
+// number of bytes we can have in that `vector` such it remains a large message  (aka, has at least
+// 64KiB + 1)? This is the size constraint used by `BoundedMaybeLarge`. See the comment on that type
+// for how this magic number was selected.
+const LARGE_STRUCT_BYTE_VECTOR_SIZE uint32 = 65505;
 
 // This type is intentionally constructed such that it appears bounded to the receiver, but, due to
 // its flexibility, is may actually be unbounded. This means decoders are always required to check
@@ -49,9 +61,15 @@ type BoundedMaybeLarge = struct {
 // + 65488   (maximum vector allocation)
 // ---------
 //   65536
-type SemiBoundedBelievedToBeSmall = union {
-    1: bytes vector<byte>:65488;
+type SemiBoundedBelievedToBeSmall = flexible union {
+    1: bytes vector<byte>:SMALL_UNION_BYTE_VECTOR_SIZE;
 };
+
+// If we have a one-variant union payload, where that variant is a `vector<bytes>`, what is the
+// greatest number of bytes we can have in that `vector` such it remains a small message  (aka, has
+// exactly 64KiB)? This is the size constraint used by `SemiBoundedBelievedToBeSmall`. See the
+// comment on that type for how this magic number was selected.
+const SMALL_UNION_BYTE_VECTOR_SIZE uint32 = 65488;
 
 // This type is intentionally constructed to be unbounded. This means decoders are always required
 // to check the `byte_overlfow` flag, no matter what they think they know about the type. To test
@@ -68,9 +86,15 @@ type SemiBoundedBelievedToBeSmall = union {
 // +     7   (padding)
 // ---------
 //   65544
-type SemiBoundedMaybeLarge = union {
-    1: bytes vector<byte>:65489;
+type SemiBoundedMaybeLarge = flexible union {
+    1: bytes vector<byte>:LARGE_UNION_BYTE_VECTOR_SIZE;
 };
+
+// If we have a one-variant union payload, where that variant is a `vector<bytes>`, what is the
+// least number of bytes we can have in that `vector` such it remains a large message  (aka, has at
+// least 64KiB + 1)? This is the size constraint used by `SemiBoundedMaybeLarge`. See the comment on
+// that type for how this magic number was selected.
+const LARGE_UNION_BYTE_VECTOR_SIZE uint32 = 65489;
 
 // This type can always be large, and there is no way for decoders to assume otherwise. To test this
 // type as a small message, fill the vector `bytes` with 65504 bytes. To test it as a large message,
@@ -86,14 +110,29 @@ type UnboundedMaybeLargeValue = struct {
 // large-message-with-64-handles should not.
 //
 //   16         (header)
-//   16         (elements vector envelope)
-// + 63(1032)   (first 63 structs, each 1000 + 32 bytes)
+// + 63(1032)   (for first 63 structs: 16 (vector header) + 984 (vector bytes) + 32 (handle) = 1032)
 // ------------
-//   65048
-// +   ???      (64th struct's total size, set to 488 or 489 to make the message small or large)
+//   65032
+// +   ???      (64th struct's total size, set to 504 or 505 to make the message small or large)
 type UnboundedMaybeLargeResource = resource struct {
     elements array< resource struct {
-        bytes vector<byte>:1000;
+        bytes vector<byte>:FIRST_63_ELEMENTS_BYTE_VECTOR_SIZE;
         handle zx.handle:optional;
-    }, 64>;
+    }, HANDLE_CARRYING_ELEMENTS_COUNT>;
 };
+
+// To properly test large messages at the limit with regards to handles, we need to set up a payload
+// (`UnboundedMaybeLargeResource` above) with 64 handle carrying elements, each with a single
+// optional handle. These optional handles can then be present/absent as necessary to test certain
+// boundary conditions: 0 handles, 63 handles (largest amount possible for large message), 64
+// handles (largest amount possible for small messages), and so on.
+const HANDLE_CARRYING_ELEMENTS_COUNT uint32 = 64;
+
+// To build `UnboundedMaybeLargeResource`, we need 63 elements of
+// `FIRST_63_ELEMENTS_BYTE_VECTOR_SIZE`, plus a 64th of either `SMALL_LAST_ELEMENT_BYTE_VECTOR_SIZE`
+// bytes (making an `UnboundedMaybeLargeResource` that is the largest small message, or 64KiB) or
+// `LARGE_LAST_ELEMENT_BYTE_VECTOR_SIZE` bytes (making an `UnboundedMaybeLargeResource` that is the
+// smallest large message, or 64KiB + 1).
+const FIRST_63_ELEMENTS_BYTE_VECTOR_SIZE uint32 = 984;
+const SMALL_LAST_ELEMENT_BYTE_VECTOR_SIZE uint32 = 504;
+const LARGE_LAST_ELEMENT_BYTE_VECTOR_SIZE uint32 = 505;

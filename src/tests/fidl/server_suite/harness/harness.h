@@ -16,6 +16,8 @@
 
 #define WAIT_UNTIL(condition) ASSERT_TRUE(_wait_until(condition));
 
+#define WAIT_UNTIL_EXT(ext, condition) ASSERT_TRUE((ext)->_wait_until(condition));
+
 // Defines a new server test. Relies on gtest under the hood.
 // Tests must use upper camel case names and be defined in the |Test| enum in
 // serversuite.test.fidl.
@@ -32,6 +34,8 @@
   SERVER_TEST(test_name, fidl_serversuite::AnyTarget::Tag::kAjarTarget)
 #define OPEN_SERVER_TEST(test_name) \
   SERVER_TEST(test_name, fidl_serversuite::AnyTarget::Tag::kOpenTarget)
+#define LARGE_MESSAGE_SERVER_TEST(test_name) \
+  SERVER_TEST(test_name, fidl_serversuite::AnyTarget::Tag::kLargeMessageTarget)
 
 namespace server_suite {
 
@@ -62,7 +66,7 @@ class Reporter : public fidl::Server<fidl_serversuite::Reporter> {
 };
 
 class ServerTest : private ::loop_fixture::RealLoop, public ::testing::Test {
- protected:
+ public:
   static constexpr zx::duration kTimeoutDuration = zx::sec(5);
 
   explicit ServerTest(fidl_serversuite::Test test, fidl_serversuite::AnyTarget::Tag target_type)
@@ -75,7 +79,7 @@ class ServerTest : private ::loop_fixture::RealLoop, public ::testing::Test {
   const Reporter& reporter() { return reporter_; }
   channel_util::Channel& client_end() { return target_; }
 
-  // Use WAIT_UNTIL instead of calling |_wait_until| directly.
+  // Use WAIT_UNTIL or WAIT_UNTIL_EXT instead of calling |_wait_until| directly.
   bool _wait_until(fit::function<bool()> condition) {
     return RunLoopWithTimeoutOrUntil(std::move(condition), kTimeoutDuration);
   }

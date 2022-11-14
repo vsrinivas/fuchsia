@@ -9,8 +9,9 @@ use {
     fidl_fidl_serversuite::{
         AjarTargetMarker, AjarTargetRequest, AnyTarget, ClosedTargetMarker, ClosedTargetRequest,
         ClosedTargetTwoWayResultRequest, ClosedTargetTwoWayTablePayloadResponse,
-        ClosedTargetTwoWayUnionPayloadRequest, ClosedTargetTwoWayUnionPayloadResponse, Empty,
-        EventType, OpenTargetFlexibleTwoWayErrRequest, OpenTargetFlexibleTwoWayFieldsErrRequest,
+        ClosedTargetTwoWayUnionPayloadRequest, ClosedTargetTwoWayUnionPayloadResponse, Elements,
+        Empty, EventType, LargeMessageTargetMarker, LargeMessageTargetRequest,
+        OpenTargetFlexibleTwoWayErrRequest, OpenTargetFlexibleTwoWayFieldsErrRequest,
         OpenTargetMarker, OpenTargetRequest, OpenTargetStrictTwoWayErrRequest,
         OpenTargetStrictTwoWayFieldsErrRequest, ReporterProxy, RunnerRequest, RunnerRequestStream,
         Test, UnknownMethodType,
@@ -18,6 +19,9 @@ use {
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
 };
+
+const EXPECT_STRICT_ONE_WAY: &'static str = "failed to report strict one way request";
+const EXPECT_REPLY_FAILED: &'static str = "failed to send reply";
 
 async fn run_closed_target_server(
     server_end: ServerEnd<ClosedTargetMarker>,
@@ -160,9 +164,7 @@ async fn run_open_target_server(
                     }
                 },
                 OpenTargetRequest::StrictOneWay { .. } => {
-                    reporter_proxy
-                        .received_strict_one_way()
-                        .expect("failed to report strict one way request");
+                    reporter_proxy.received_strict_one_way().expect(EXPECT_STRICT_ONE_WAY);
                 }
                 OpenTargetRequest::FlexibleOneWay { .. } => {
                     reporter_proxy
@@ -170,52 +172,148 @@ async fn run_open_target_server(
                         .expect("failed to report flexible one way request");
                 }
                 OpenTargetRequest::StrictTwoWay { responder } => {
-                    responder.send().expect("failed to send reply");
+                    responder.send().expect(EXPECT_REPLY_FAILED);
                 }
                 OpenTargetRequest::StrictTwoWayFields { reply_with, responder } => {
-                    responder.send(reply_with).expect("failed to send reply");
+                    responder.send(reply_with).expect(EXPECT_REPLY_FAILED);
                 }
                 OpenTargetRequest::StrictTwoWayErr { payload, responder } => match payload {
                     OpenTargetStrictTwoWayErrRequest::ReplySuccess(Empty) => {
-                        responder.send(&mut Ok(())).expect("failed to send reply");
+                        responder.send(&mut Ok(())).expect(EXPECT_REPLY_FAILED);
                     }
                     OpenTargetStrictTwoWayErrRequest::ReplyError(reply_error) => {
-                        responder.send(&mut Err(reply_error)).expect("failed to send reply");
+                        responder.send(&mut Err(reply_error)).expect(EXPECT_REPLY_FAILED);
                     }
                 },
                 OpenTargetRequest::StrictTwoWayFieldsErr { payload, responder } => match payload {
                     OpenTargetStrictTwoWayFieldsErrRequest::ReplySuccess(reply_success) => {
-                        responder.send(&mut Ok(reply_success)).expect("failed to send reply");
+                        responder.send(&mut Ok(reply_success)).expect(EXPECT_REPLY_FAILED);
                     }
                     OpenTargetStrictTwoWayFieldsErrRequest::ReplyError(reply_error) => {
-                        responder.send(&mut Err(reply_error)).expect("failed to send reply");
+                        responder.send(&mut Err(reply_error)).expect(EXPECT_REPLY_FAILED);
                     }
                 },
                 OpenTargetRequest::FlexibleTwoWay { responder } => {
-                    responder.send().expect("failed to send reply");
+                    responder.send().expect(EXPECT_REPLY_FAILED);
                 }
                 OpenTargetRequest::FlexibleTwoWayFields { reply_with, responder } => {
-                    responder.send(reply_with).expect("failed to send reply");
+                    responder.send(reply_with).expect(EXPECT_REPLY_FAILED);
                 }
                 OpenTargetRequest::FlexibleTwoWayErr { payload, responder } => match payload {
                     OpenTargetFlexibleTwoWayErrRequest::ReplySuccess(Empty) => {
-                        responder.send(&mut Ok(())).expect("failed to send reply");
+                        responder.send(&mut Ok(())).expect(EXPECT_REPLY_FAILED);
                     }
                     OpenTargetFlexibleTwoWayErrRequest::ReplyError(reply_error) => {
-                        responder.send(&mut Err(reply_error)).expect("failed to send reply");
+                        responder.send(&mut Err(reply_error)).expect(EXPECT_REPLY_FAILED);
                     }
                 },
                 OpenTargetRequest::FlexibleTwoWayFieldsErr { payload, responder } => {
                     match payload {
                         OpenTargetFlexibleTwoWayFieldsErrRequest::ReplySuccess(reply_success) => {
-                            responder.send(&mut Ok(reply_success)).expect("failed to send reply");
+                            responder.send(&mut Ok(reply_success)).expect(EXPECT_REPLY_FAILED);
                         }
                         OpenTargetFlexibleTwoWayFieldsErrRequest::ReplyError(reply_error) => {
-                            responder.send(&mut Err(reply_error)).expect("failed to send reply");
+                            responder.send(&mut Err(reply_error)).expect(EXPECT_REPLY_FAILED);
                         }
                     }
                 }
                 OpenTargetRequest::_UnknownMethod { ordinal, direction, control_handle: _ } => {
+                    let unknown_method_type = match direction {
+                        UnknownMethodDirection::OneWay => UnknownMethodType::OneWay,
+                        UnknownMethodDirection::TwoWay => UnknownMethodType::TwoWay,
+                    };
+                    reporter_proxy
+                        .received_unknown_method(ordinal, unknown_method_type)
+                        .expect("failed to report unknown method call");
+                }
+            }
+            Ok(())
+        })
+        .await
+}
+
+async fn run_large_message_target_server(
+    server_end: ServerEnd<LargeMessageTargetMarker>,
+    reporter_proxy: &ReporterProxy,
+) -> Result<(), Error> {
+    server_end
+        .into_stream()?
+        .map(|result| result.context("failed request"))
+        .try_for_each(|request| async move {
+            match request {
+                LargeMessageTargetRequest::DecodeBoundedKnownToBeSmall {
+                    bytes: _,
+                    control_handle: _,
+                } => {
+                    reporter_proxy.received_strict_one_way().expect(EXPECT_STRICT_ONE_WAY);
+                }
+                LargeMessageTargetRequest::DecodeBoundedMaybeLarge {
+                    bytes: _,
+                    control_handle: _,
+                } => {
+                    reporter_proxy.received_strict_one_way().expect(EXPECT_STRICT_ONE_WAY);
+                }
+                LargeMessageTargetRequest::DecodeSemiBoundedBelievedToBeSmall {
+                    payload: _,
+                    control_handle: _,
+                } => {
+                    reporter_proxy.received_strict_one_way().expect(EXPECT_STRICT_ONE_WAY);
+                }
+                LargeMessageTargetRequest::DecodeSemiBoundedMaybeLarge {
+                    payload: _,
+                    control_handle: _,
+                } => {
+                    reporter_proxy.received_strict_one_way().expect(EXPECT_STRICT_ONE_WAY);
+                }
+                LargeMessageTargetRequest::DecodeUnboundedMaybeLargeValue {
+                    bytes: _,
+                    control_handle: _,
+                } => {
+                    reporter_proxy.received_strict_one_way().expect(EXPECT_STRICT_ONE_WAY);
+                }
+                LargeMessageTargetRequest::DecodeUnboundedMaybeLargeResource {
+                    elements: _,
+                    control_handle: _,
+                } => {
+                    reporter_proxy.received_strict_one_way().expect(EXPECT_STRICT_ONE_WAY);
+                }
+                LargeMessageTargetRequest::EncodeBoundedKnownToBeSmall { bytes, responder } => {
+                    responder.send(&bytes).expect(EXPECT_REPLY_FAILED);
+                }
+                LargeMessageTargetRequest::EncodeBoundedMaybeLarge { bytes, responder } => {
+                    responder.send(&bytes).expect(EXPECT_REPLY_FAILED);
+                }
+                LargeMessageTargetRequest::EncodeSemiBoundedBelievedToBeSmall {
+                    mut payload,
+                    responder,
+                } => {
+                    responder.send(&mut payload).expect(EXPECT_REPLY_FAILED);
+                }
+                LargeMessageTargetRequest::EncodeSemiBoundedMaybeLarge {
+                    mut payload,
+                    responder,
+                } => {
+                    responder.send(&mut payload).expect(EXPECT_REPLY_FAILED);
+                }
+                LargeMessageTargetRequest::EncodeUnboundedMaybeLargeValue { bytes, responder } => {
+                    responder.send(&bytes).expect(EXPECT_REPLY_FAILED);
+                }
+                LargeMessageTargetRequest::EncodeUnboundedMaybeLargeResource {
+                    populate_unset_handles: _,
+                    mut data,
+                    responder,
+                } => {
+                    let mut elements = TryInto::<[&mut Elements; 64]>::try_into(
+                        data.elements.iter_mut().collect::<Vec<&mut Elements>>(),
+                    )
+                    .unwrap();
+                    responder.send(&mut elements).expect(EXPECT_REPLY_FAILED);
+                }
+                LargeMessageTargetRequest::_UnknownMethod {
+                    ordinal,
+                    direction,
+                    control_handle: _,
+                } => {
                     let unknown_method_type = match direction {
                         UnknownMethodDirection::OneWay => UnknownMethodType::OneWay,
                         UnknownMethodDirection::TwoWay => UnknownMethodType::TwoWay,
@@ -251,18 +349,11 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                             // TODO(fxbug.dev/99738): Rust bindings should reject V1 wire format.
                             false
                         }
-                        Test::GoodDecodeBoundedKnownSmallMessage
-                        | Test::GoodDecodeBoundedMaybeSmallMessage
-                        | Test::GoodDecodeBoundedMaybeLargeMessage
-                        | Test::GoodDecodeSemiBoundedUnknowableSmallMessage
+                        Test::GoodDecodeBoundedMaybeLargeMessage
                         | Test::GoodDecodeSemiBoundedUnknowableLargeMessage
-                        | Test::GoodDecodeSemiBoundedMaybeSmallMessage
                         | Test::GoodDecodeSemiBoundedMaybeLargeMessage
-                        | Test::GoodDecodeUnboundedSmallMessage
                         | Test::GoodDecodeUnboundedLargeMessage
-                        | Test::GoodDecode64HandleSmallMessage
                         | Test::GoodDecode63HandleLargeMessage
-                        | Test::GoodDecodeUnknownSmallMessage
                         | Test::GoodDecodeUnknownLargeMessage
                         | Test::BadDecodeByteOverflowFlagSetOnSmallMessage
                         | Test::BadDecodeByteOverflowFlagUnsetOnLargeMessage
@@ -280,15 +371,9 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                         | Test::BadDecodeLastHandleInsufficientRights
                         | Test::BadDecodeVmoTooSmall
                         | Test::BadDecodeVmoTooLarge
-                        | Test::GoodEncodeBoundedKnownSmallMessage
-                        | Test::GoodEncodeBoundedMaybeSmallMessage
                         | Test::GoodEncodeBoundedMaybeLargeMessage
-                        | Test::GoodEncodeSemiBoundedKnownSmallMessage
-                        | Test::GoodEncodeSemiBoundedMaybeSmallMessage
                         | Test::GoodEncodeSemiBoundedMaybeLargeMessage
-                        | Test::GoodEncodeUnboundedSmallMessage
                         | Test::GoodEncodeUnboundedLargeMessage
-                        | Test::GoodEncode64HandleSmallMessage
                         | Test::GoodEncode63HandleLargeMessage
                         | Test::BadEncode64HandleLargeMessage => {
                             // TODO(fxbug.dev/114259): Implement large messages for Rust.
@@ -322,9 +407,13 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                                 .await
                                 .unwrap_or_else(|e| println!("open target server failed {:?}", e));
                         }
-                        AnyTarget::LargeMessageTarget(_) => {
-                            // TODO(fxbug.dev/114259): Test Rust large message implementation.
-                            panic!("Rust tests for large messages not yet implemented");
+                        AnyTarget::LargeMessageTarget(server_end) => {
+                            responder.send().expect("sending response failed");
+                            run_large_message_target_server(server_end, reporter_proxy)
+                                .await
+                                .unwrap_or_else(|e| {
+                                    println!("large message target server failed {:?}", e)
+                                });
                         }
                     }
                 }
