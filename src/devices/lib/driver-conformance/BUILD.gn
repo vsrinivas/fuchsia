@@ -23,22 +23,25 @@ if (is_host) {
       "//src/devices/bin/driver_tools/common:lib",
       "//src/devices/bin/driver_tools/connector:lib",
       "//src/sys/run_test_suite:lib",
+      "//src/sys/run_test_suite/directory",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:flate2",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:regex",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:signal-hook",
-    ]
-    test_deps = [
-      "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_rust",
+      "//third_party/rust_crates:tar",
       "//third_party/rust_crates:tempfile",
+      "//third_party/rust_crates:url",
     ]
+    test_deps = [ "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_rust" ]
     sources = [
       "src/args.rs",
       "src/lib.rs",
       "src/parser.rs",
+      "src/results.rs",
     ]
   }
 }

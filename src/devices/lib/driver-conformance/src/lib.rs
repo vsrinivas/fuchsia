@@ -4,6 +4,7 @@
 
 pub mod args;
 pub mod parser;
+pub mod results;
 
 use {
     anyhow::Result,
@@ -23,6 +24,7 @@ use {
     },
     std::fs,
     std::io::stdout,
+    std::path::{Path, PathBuf},
 };
 
 impl From<parser::TestInfo> for run_test_suite_lib::TestParams {
@@ -38,10 +40,23 @@ fn process_test_list(tests: Vec<parser::TestInfo>) -> Result<Vec<run_test_suite_
     Ok(tests.into_iter().map(Into::into).collect())
 }
 
+fn get_name(cmd: &TestCommand) -> String {
+    if let Some(name) = &cmd.submission_name {
+        name.to_string()
+    } else if let Some(name) = &cmd.device {
+        name.to_string()
+    } else if let Some(name) = &cmd.driver {
+        name.to_string()
+    } else {
+        "Default Name".to_string()
+    }
+}
+
 /// Calls on the `ffx test` library to run the given set of tests.
 async fn run_tests(
     tests: Vec<parser::TestInfo>,
     run_proxy: ftm::RunBuilderProxy,
+    output_dir: &Path,
 ) -> Result<run_test_suite_lib::Outcome> {
     let writer = Box::new(stdout());
     let (cancel_sender, cancel_receiver) = futures::channel::oneshot::channel::<()>();
@@ -61,6 +76,9 @@ async fn run_tests(
     });
 
     let test_params = process_test_list(tests)?;
+    let reporter_options =
+        Some(run_test_suite_lib::DirectoryReporterOptions { root_path: output_dir.to_path_buf() });
+
     Ok(run_test_suite_lib::run_tests_and_get_outcome(
         run_proxy,
         test_params,
@@ -73,7 +91,7 @@ async fn run_tests(
             log_protocol: None,
         },
         None,
-        run_test_suite_lib::create_reporter(false, None, writer)?,
+        run_test_suite_lib::create_reporter(false, reporter_options, writer)?,
         cancel_receiver.map(|_| ()),
     )
     .await)
@@ -107,7 +125,6 @@ fn parse_metadata(cmd: &TestCommand) -> Result<parser::TestMetadata> {
         },
         None => ffx_bail!("The --metadata-path argument is required for now."),
     };
-    println!("meta str: {}", metadata_str.to_string());
     match serde_json::from_str(&metadata_str) {
         Ok(val) => Ok(val),
         Err(e) => Err(e.into()),
@@ -168,6 +185,29 @@ fn filter_tests(
     Ok(tests)
 }
 
+/// Generate submission package.
+///
+/// For submitting to the Fuchsia Hardware Portal.
+fn generate_submission(
+    cmd: &TestCommand,
+    report_dir: &Path,
+    output_dir: &Path,
+    name: &String,
+    version: &String,
+) -> Result<PathBuf> {
+    let mut manifest = results::SuperjetManifest::new(name.to_string(), version.to_string());
+    manifest.from_results(&report_dir)?;
+    if let Some(binary) = &cmd.driver_binary {
+        manifest.add_driver_binary(binary)?;
+    }
+    if let Some(source) = &cmd.driver_source {
+        manifest.add_driver_source(&source)?;
+    }
+    let output_path = output_dir.join("package.tar.gz");
+    manifest.make_tar(&output_path)?;
+    Ok(output_path)
+}
+
 /// Entry-point for the command `ffx driver conformance`.
 pub async fn conformance(
     cmd: ConformanceCommand,
@@ -189,6 +229,21 @@ pub async fn conformance(
 
             let metadata = parse_metadata(&subcmd)?;
 
+            let temp_dir_obj = tempfile::TempDir::new()?;
+            let temp_output_path = temp_dir_obj.path();
+
+            let mut user_output_dir: Option<PathBuf> = None;
+            if let Some(output_dir) = &subcmd.package_output_dir {
+                user_output_dir = Some(output_dir.0.as_path().to_path_buf());
+            } else if subcmd.generate_submission {
+                user_output_dir = Some(std::env::current_dir()?.as_path().to_path_buf());
+            }
+
+            let mut version: String = "0.0.0".to_string();
+            if let Some(v) = &subcmd.version {
+                version = v.0.to_string();
+            }
+
             // _device_list will be used when we add support for running specific tests on specific
             // devices.
             let (driver_info, _device_list) =
@@ -198,7 +253,7 @@ pub async fn conformance(
             // tests according to `get_tests_for_driver()`.
             let filtered_tests: Option<Vec<parser::TestInfo>>;
             if let Some(custom_list) = &subcmd.tests {
-                filtered_tests = Some(metadata.tests_by_url(&custom_list.list[..]).unwrap());
+                filtered_tests = Some(metadata.tests_by_url(&custom_list.0[..]).unwrap());
             } else {
                 filtered_tests = Some(metadata.tests_by_driver(&driver_info)?);
             }
@@ -211,9 +266,24 @@ pub async fn conformance(
                     }
                     // We are ignoring the return value because we will read the results from
                     // the report generated via `run_test_suite_lib::create_reporter()`.
-                    let _ = run_tests(tests, driver_connector.get_run_builder_proxy().await?).await;
+                    let _ = run_tests(
+                        tests,
+                        driver_connector.get_run_builder_proxy().await?,
+                        temp_output_path,
+                    )
+                    .await;
                 }
                 None => ffx_bail!("We were unable to create a list of tests to run."),
+            }
+            if let Some(output) = user_output_dir {
+                let file_path = generate_submission(
+                    &subcmd,
+                    &temp_output_path,
+                    &output,
+                    &get_name(&subcmd),
+                    &version,
+                )?;
+                println!("Submission package has been generated at: {}", file_path.display());
             }
         }
     }
@@ -222,8 +292,14 @@ pub async fn conformance(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use std::io::Write;
+    use {
+        super::*,
+        flate2::read::GzDecoder,
+        std::collections::HashMap,
+        std::fs::File,
+        std::io::{Read, Write},
+        tar::Archive,
+    };
 
     #[test]
     fn test_process_test_list() {
@@ -343,6 +419,32 @@ mod test {
             ..Default::default()
         })
         .is_err());
+    }
+
+    #[test]
+    fn test_get_name() {
+        let test0 = get_name(&TestCommand {
+            driver: Some("D".to_string()),
+            submission_name: Some("S".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(test0, "S".to_string());
+
+        let test1 = get_name(&TestCommand { driver: Some("D".to_string()), ..Default::default() });
+        assert_eq!(test1, "D".to_string());
+
+        let test2 = get_name(&TestCommand { device: Some("D".to_string()), ..Default::default() });
+        assert_eq!(test2, "D".to_string());
+
+        let test3 = get_name(&TestCommand {
+            device: Some("D".to_string()),
+            submission_name: Some("S".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(test3, "S".to_string());
+
+        let test4 = get_name(&TestCommand { ..Default::default() });
+        assert_eq!(test4, "Default Name".to_string());
     }
 
     #[test]
@@ -472,5 +574,213 @@ mod test {
         let test2_val = test2.unwrap();
         assert_eq!(test2_val.len(), 1);
         assert_eq!(test2_val.first().unwrap().url, "manual".to_string());
+    }
+
+    fn create_dummy_ffx_test_results(output: &Path) -> Result<()> {
+        let suite_1_dir = output.join("123");
+        let suite_1_syslog_path = suite_1_dir.join("syslog.txt");
+        let suite_1_report_path = suite_1_dir.join("report.txt");
+        let case_1_dir = output.join("456");
+        let case_1_stdout_path = case_1_dir.join("stdout.txt");
+        let case_2_dir = output.join("789");
+        let case_2_stdout_path = case_2_dir.join("stdout.txt");
+        let suite_2_dir = output.join("321");
+        let suite_2_syslog_path = suite_2_dir.join("syslog.txt");
+        let suite_2_report_path = suite_2_dir.join("report.txt");
+        let case_3_dir = output.join("654");
+        let case_3_stdout_path = case_3_dir.join("stdout.txt");
+        let case_4_dir = output.join("987");
+        let case_4_stdout_path = case_4_dir.join("stdout.txt");
+        let json_path = output.join("run_summary.json");
+        fs::create_dir(suite_1_dir.as_path())?;
+        let _ = File::create(suite_1_syslog_path.as_path())?.write_all(b"123_syslog")?;
+        let _ = File::create(suite_1_report_path.as_path())?.write_all(b"123_report")?;
+        fs::create_dir(case_1_dir.as_path())?;
+        let _ = File::create(case_1_stdout_path.as_path())?.write_all(b"456_stdout")?;
+        fs::create_dir(case_2_dir.as_path())?;
+        let _ = File::create(case_2_stdout_path.as_path())?.write_all(b"789_stdout")?;
+        fs::create_dir(suite_2_dir.as_path())?;
+        let _ = File::create(suite_2_syslog_path.as_path())?.write_all(b"321_syslog")?;
+        let _ = File::create(suite_2_report_path.as_path())?.write_all(b"321_report")?;
+        fs::create_dir(case_3_dir.as_path())?;
+        let _ = File::create(case_3_stdout_path.as_path())?.write_all(b"654_stdout")?;
+        fs::create_dir(case_4_dir.as_path())?;
+        let _ = File::create(case_4_stdout_path.as_path())?.write_all(b"987_stdout")?;
+        let mut json_file = File::create(json_path.as_path())?;
+        json_file.write_all(
+            r#"{
+            "data": {
+              "artifacts": {},
+              "artifact_dir": "0",
+              "outcome": "FAILED",
+              "start_time": 1667971090761,
+              "suites": [
+                {
+                  "name": "fuchsia-pkg://f.c/t#meta/a.cm",
+                  "artifacts": {
+                    "syslog.txt": {
+                      "artifact_type": "SYSLOG"
+                    },
+                    "report.txt": {
+                      "artifact_type": "REPORT"
+                    }
+                  },
+                  "artifact_dir": "123",
+                  "outcome": "PASSED",
+                  "start_time": 1667971090818,
+                  "duration_milliseconds": 25,
+                  "cases": [
+                    {
+                      "name": "main",
+                      "artifacts": {
+                        "stdout.txt": {
+                          "artifact_type": "STDOUT"
+                        }
+                      },
+                      "artifact_dir": "456",
+                      "outcome": "PASSED",
+                      "start_time": 1667971090818
+                    },
+                    {
+                      "name": "main",
+                      "artifacts": {
+                        "stdout.txt": {
+                          "artifact_type": "STDOUT"
+                        }
+                      },
+                      "artifact_dir": "789",
+                      "outcome": "FAILED",
+                      "start_time": 1667971090819
+                    }
+                  ],
+                  "tags": []
+                },
+                {
+                    "name": "fuchsia-pkg://f.d/t#meta/e.cm",
+                    "artifacts": {
+                      "syslog.txt": {
+                        "artifact_type": "SYSLOG"
+                      },
+                      "report.txt": {
+                        "artifact_type": "REPORT"
+                      }
+                    },
+                    "artifact_dir": "321",
+                    "outcome": "PASSED",
+                    "start_time": 1667971090818,
+                    "duration_milliseconds": 25,
+                    "cases": [
+                      {
+                        "name": "main",
+                        "artifacts": {
+                          "stdout.txt": {
+                            "artifact_type": "STDOUT"
+                          }
+                        },
+                        "artifact_dir": "654",
+                        "outcome": "PASSED",
+                        "start_time": 1667971090818
+                      },
+                      {
+                        "name": "main",
+                        "artifacts": {
+                          "stdout.txt": {
+                            "artifact_type": "STDOUT"
+                          }
+                        },
+                        "artifact_dir": "987",
+                        "outcome": "PASSED",
+                        "start_time": 1667971090819
+                      }
+                    ],
+                    "tags": []
+                  }
+              ]
+            },
+            "schema_id": "https://fuchsia.dev/schema/ffx_test/run_summary-8d1dd964.json"
+          }
+          "#
+            .as_bytes(),
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_generate_submission() {
+        let input_temp_dir = tempfile::TempDir::new().unwrap();
+        let output_temp_dir = tempfile::TempDir::new().unwrap();
+        let driver_binary_dir = tempfile::TempDir::new().unwrap();
+        let input = input_temp_dir.path();
+        let output = output_temp_dir.path();
+        let driver_binary_path = driver_binary_dir.path().join("driver.far");
+
+        create_dummy_ffx_test_results(&input).unwrap();
+        let _ = File::create(&driver_binary_path).unwrap().write_all(b"binary_content").unwrap();
+
+        assert!(generate_submission(
+            &TestCommand {
+                driver_binary: Some(driver_binary_path.into_os_string().into_string().unwrap()),
+                driver_source: Some("https://source.host/123".to_string()),
+                ..Default::default()
+            },
+            &input,
+            &output,
+            &"A Name".to_string(),
+            &"1.2.3".to_string(),
+        )
+        .is_ok());
+
+        let tar_file = File::open(output.join("package.tar.gz").as_path()).unwrap();
+        let mut archive = Archive::new(GzDecoder::new(tar_file));
+        let entries = archive.entries().unwrap();
+        let expected_entries = HashMap::from([
+            (Path::new("artifacts"), "".to_string()),
+            (Path::new("artifacts/driver.far"), "binary_content".to_string()),
+            (Path::new("test_results"), "".to_string()),
+            (Path::new("test_results/123"), "".to_string()),
+            (Path::new("test_results/123/syslog.txt"), "123_syslog".to_string()),
+            (Path::new("test_results/123/report.txt"), "123_report".to_string()),
+            (Path::new("test_results/456"), "".to_string()),
+            (Path::new("test_results/456/stdout.txt"), "456_stdout".to_string()),
+            (Path::new("test_results/789"), "".to_string()),
+            (Path::new("test_results/789/stdout.txt"), "789_stdout".to_string()),
+            (Path::new("test_results/321"), "".to_string()),
+            (Path::new("test_results/321/syslog.txt"), "321_syslog".to_string()),
+            (Path::new("test_results/321/report.txt"), "321_report".to_string()),
+            (Path::new("test_results/654"), "".to_string()),
+            (Path::new("test_results/654/stdout.txt"), "654_stdout".to_string()),
+            (Path::new("test_results/987"), "".to_string()),
+            (Path::new("test_results/987/stdout.txt"), "987_stdout".to_string()),
+            (Path::new("manifest.json"), "".to_string()),
+        ]);
+        let mut count: usize = 0;
+        entries.filter_map(|e| e.ok()).for_each(|mut entry| {
+            let path = entry.path().unwrap().into_owned();
+            count += 1;
+            assert!(
+                expected_entries.contains_key(&path.as_path()),
+                "{} is not one of the expected entries.",
+                &path.display()
+            );
+            if Path::new("manifest.json") == path.as_path() {
+                // Have the manifest.json, unpack it and check the contents.
+                let mut buf = String::new();
+                entry.read_to_string(&mut buf).unwrap();
+                let manifest: results::SuperjetManifest = serde_json::from_str(&buf).unwrap();
+                assert_eq!(manifest.name, "A Name");
+                assert_eq!(manifest.version, "1.2.3");
+                assert_eq!(manifest.pass, false);
+                assert_eq!(manifest.artifacts.len(), 2);
+                assert_eq!(manifest.test_results.len(), 6);
+            } else if expected_entries[&path.as_path()].len() > 0 {
+                // Have a file, check the contents are correct.
+                let mut buf = String::new();
+                entry.read_to_string(&mut buf).unwrap();
+                assert_eq!(buf, expected_entries[&path.as_path()]);
+            }
+        });
+
+        assert_eq!(count, expected_entries.len());
     }
 }
