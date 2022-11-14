@@ -515,7 +515,7 @@ DEFINE_OPTION("ktrace.bufsize", uint32_t, ktrace_bufsize, {32}, R"""(
 This option specifies the number of megabytes allocated for ktrace records.
 )""")
 
-DEFINE_OPTION("ktrace.grpmask", uint32_t, ktrace_grpmask, {0xFFF}, R"""(
+DEFINE_OPTION("ktrace.grpmask", uint32_t, ktrace_grpmask, {0x000}, R"""(
 This option specifies what ktrace records are emitted.
 The value is a bitmask of KTRACE\_GRP\_\* values from zircon/ktrace.h.
 Hex values may be specified as 0xNNN.

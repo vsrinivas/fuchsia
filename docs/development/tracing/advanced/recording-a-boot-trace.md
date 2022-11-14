@@ -1,13 +1,12 @@
 # Recording a boot trace
 
-The Zircon kernel's internal tracing system can be active on boot
-(and in fact is currently the default). This means that one can trace
-at least the kernel side of booting without extra effort. The data
+The Zircon kernel's internal tracing system can be active on boot. This means that one can trace at
+least the kernel side of booting by setting a boot option. Then, once booting has finished, the data
 is already there, one just needs to collect it.
 
 ## Including kernel boot trace data in trace results
 
-As long as the kernel's internal trace buffer is not rewound the data
+As long as the kernel's internal trace buffer is not rewound, the data
 is available to be included in the trace. This is achieved by passing
 category `kernel:retain` to the `ffx trace` or `trace` program.
 Note that the moment a trace is made without passing `kernel:retain`
@@ -16,7 +15,7 @@ then the ktrace buffer is rewound and the data is lost.
 Example:
 
 ```posix-terminal
-ffx trace start --categories "kernel,kernel:retain" --buffer-size 64 --duration 1
+ffx trace start --categories "kernel,kernel:retain" --buffer-size 32 --duration 1
 ```
 
 There are a few important things to note here.
@@ -34,13 +33,6 @@ The second is the buffer size. The kernel's default trace buffer size
 is 32MB whereas the Fuchsia trace default buffer size is 4MB.
 Using a larger Fuchsia trace buffer size means there is enough space
 to hold the contents of the kernel's trace buffer.
-There are some implementation quirks at play here.
-The kernel currently has its own trace format called "ktrace". When
-tracing stops the `ktrace_provider` program reads the kernel trace buffer
-and converts it to Fuchsia's trace format. Depending on circumstances
-the ktrace buffer format is a little more compact. That is why the
-above example provides a 64MB buffer even though the kernel's buffer
-size was 32MB.
 
 The third important thing to note is that in this example we just want
 to grab the current contents of the trace buffer, and aren't interested
@@ -55,8 +47,8 @@ of the buffer in megabytes.
 The choice of data to collect is controlled with the `ktrace.grpmask=0xNNN'
 command line option. The 0xNNN value is a bit mask of *KTRACE\_GRP\_\**
 values from
-//zircon/system/ulib/zircon-internal/include/lib/zircon-internal/ktrace.h.
-The default is 0xfff, which enables all trace categories (or groups in
+//zircon/kernel/lib/boot-options/include/lib/boot-options/options.inc.
+The default is 0x000, which disables all trace categories (or groups in
 ktrace parlance).
 
 For more information on Zircon command line options see

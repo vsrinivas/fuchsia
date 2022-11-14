@@ -658,6 +658,7 @@ zx::result<KTraceState::FxtCompatWriter::Reservation> KTraceState::FxtCompatWrit
 
   void* ptr = ks_.ReserveRaw((fxt_words + 1) * sizeof(uint64_t));
   if (ptr == nullptr) {
+    ks_.DisableGroupMask();
     return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
