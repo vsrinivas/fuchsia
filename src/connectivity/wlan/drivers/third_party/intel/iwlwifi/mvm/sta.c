@@ -36,12 +36,16 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/time.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/tkip.h"
 
 static zx_status_t iwl_mvm_set_fw_key_idx(struct iwl_mvm* mvm);
@@ -180,7 +184,7 @@ zx_status_t iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_
       /* nothing */
       break;
   }
-  
+
 	if (sta->deflink.ht_cap.ht_supported) {
 		add_sta_cmd.station_flags_msk |=
 			cpu_to_le32(STA_FLG_MAX_AGG_SIZE_MSK |
@@ -299,18 +303,19 @@ zx_status_t iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_
   return ret;
 }
 
-#if 0   // NEEDS_PORTING
-static void iwl_mvm_rx_agg_session_expired(struct timer_list* t) {
-  struct iwl_mvm_baid_data* data = from_timer(data, t, session_timer);
+static void iwl_mvm_rx_agg_session_expired(void* ctx) {
+  struct iwl_mvm_baid_data* data = (struct iwl_mvm_baid_data*)ctx;
   struct iwl_mvm_baid_data __rcu** rcu_ptr = data->rcu_ptr;
   struct iwl_mvm_baid_data* ba_data;
+#if 0  // NEEDS_PORTING
   struct ieee80211_sta* sta;
+#endif // NEEDS_PORTING
   struct iwl_mvm_sta* mvm_sta;
-  unsigned long timeout;
+  zx_time_t timeout;
 
-  rcu_read_lock();
+  iwl_rcu_read_lock(data->mvm->dev);
 
-  ba_data = rcu_dereference(*rcu_ptr);
+  ba_data = iwl_rcu_load(*rcu_ptr);
 
   if (WARN_ON(!ba_data)) {
     goto unlock;
@@ -320,14 +325,14 @@ static void iwl_mvm_rx_agg_session_expired(struct timer_list* t) {
     goto unlock;
   }
 
-  timeout = ba_data->last_rx + TU_TO_JIFFIES(ba_data->timeout * 2);
-  if (time_is_after_jiffies(timeout)) {
-    mod_timer(&ba_data->session_timer, timeout);
+  timeout = zx_time_add_duration(ba_data->last_rx, ba_data->timeout);
+  if (zx_clock_get_monotonic() < timeout) {
+    iwl_irq_timer_start_at_time(ba_data->session_timer, timeout);
     goto unlock;
   }
 
   /* Timer expired */
-  sta = rcu_dereference(ba_data->mvm->fw_id_to_mac_id[ba_data->sta_id]);
+  mvm_sta = iwl_rcu_load(ba_data->mvm->fw_id_to_mac_id[ba_data->sta_id]);
 
   /*
    * sta should be valid unless the following happens:
@@ -337,16 +342,21 @@ static void iwl_mvm_rx_agg_session_expired(struct timer_list* t) {
    * A-MDPU and hence the timer continues to run. Then, the
    * timer expires and sta is NULL.
    */
-  if (!sta) {
+  if (!mvm_sta) {
     goto unlock;
   }
 
+
+#if 0  // NEEDS_PORTING
   mvm_sta = iwl_mvm_sta_from_mac80211(sta);
   ieee80211_rx_ba_timer_expired(mvm_sta->vif, sta->addr, ba_data->tid);
+#endif // NEEDS_PORTING
 unlock:
-  rcu_read_unlock();
+  iwl_rcu_read_unlock(data->mvm->dev);
 }
 
+
+#if 0   // NEEDS_PORTING
 /* Disable aggregations for a bitmap of TIDs for a given station */
 static int iwl_mvm_invalidate_sta_queue(struct iwl_mvm* mvm, int queue,
                                         unsigned long disable_agg_tids, bool remove_queue) {
@@ -2501,7 +2511,7 @@ int iwl_mvm_rm_mcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   return ret;
 }
 
-#endif  // NEEDS_PORTING
+#endif // NEEDS_PORTING
 
 static void iwl_mvm_sync_rxq_del_ba(struct iwl_mvm *mvm, u8 baid)
 {
@@ -2585,12 +2595,10 @@ void iwl_mvm_init_reorder_buffer(struct iwl_mvm* mvm, struct iwl_mvm_baid_data* 
   }
 }
 
-#if 0  // NEEDS_PORTING
-
-static int iwl_mvm_fw_baid_op_sta(struct iwl_mvm *mvm,
+static zx_status_t iwl_mvm_fw_baid_op_sta(struct iwl_mvm *mvm,
 				  struct iwl_mvm_sta *mvm_sta,
 				  bool start, int tid, u16 ssn,
-				  u16 buf_size)
+				  u16 buf_size, int* baid_from_fw)
 {
 	struct iwl_mvm_add_sta_cmd cmd = {
 		.mac_id_n_color = cpu_to_le32(mvm_sta->mac_id_n_color),
@@ -2598,7 +2606,10 @@ static int iwl_mvm_fw_baid_op_sta(struct iwl_mvm *mvm,
 		.add_modify = STA_MODE_MODIFY,
 	};
 	u32 status;
-	int ret;
+	zx_status_t ret;
+
+	if (!baid_from_fw)
+		return ZX_ERR_INVALID_ARGS;
 
 	if (start) {
 		cmd.add_immediate_ba_tid = tid;
@@ -2623,18 +2634,22 @@ static int iwl_mvm_fw_baid_op_sta(struct iwl_mvm *mvm,
 			     start ? "start" : "stopp");
 		if (WARN_ON(start && iwl_mvm_has_new_rx_api(mvm) &&
 			    !(status & IWL_ADD_STA_BAID_VALID_MASK)))
-			return -EINVAL;
-		return u32_get_bits(status, IWL_ADD_STA_BAID_MASK);
+			return ZX_ERR_INVALID_ARGS;
+		*baid_from_fw =
+			(status & IWL_ADD_STA_BAID_MASK) >> IWL_ADD_STA_BAID_SHIFT;
+
+		return ZX_OK;
 	case ADD_STA_IMMEDIATE_BA_FAILURE:
 		IWL_WARN(mvm, "RX BA Session refused by fw\n");
-		return -ENOSPC;
+		return ZX_ERR_NO_SPACE;
 	default:
 		IWL_ERR(mvm, "RX BA Session failed %sing, status 0x%x\n",
 			start ? "start" : "stopp", status);
-		return -EIO;
+		return ZX_ERR_IO;
 	}
 }
 
+#if 0 // NEEDS_PORTING
 static int iwl_mvm_fw_baid_op_cmd(struct iwl_mvm *mvm,
 				  struct iwl_mvm_sta *mvm_sta,
 				  bool start, int tid, u16 ssn,
@@ -2681,40 +2696,51 @@ static int iwl_mvm_fw_baid_op_cmd(struct iwl_mvm *mvm,
 
 	return baid;
 }
+#endif // NEEDS_PORTING
 
 static int iwl_mvm_fw_baid_op(struct iwl_mvm *mvm, struct iwl_mvm_sta *mvm_sta,
 			      bool start, int tid, u16 ssn, u16 buf_size,
-			      int baid)
+			      int baid, int* baid_from_fw)
 {
+#if 0  // NEEDS_PORTING
 	if (fw_has_capa(&mvm->fw->ucode_capa,
 			IWL_UCODE_TLV_CAPA_BAID_ML_SUPPORT))
 		return iwl_mvm_fw_baid_op_cmd(mvm, mvm_sta, start,
 					      tid, ssn, buf_size, baid);
+#endif // NEEDS_PORTING
 
 	return iwl_mvm_fw_baid_op_sta(mvm, mvm_sta, start,
-				      tid, ssn, buf_size);
+				      tid, ssn, buf_size, baid_from_fw);
 }
 
-int iwl_mvm_sta_rx_agg(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
+
+zx_status_t iwl_mvm_sta_rx_agg(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
 		       int tid, u16 ssn, bool start, u16 buf_size, u16 timeout)
 {
 	struct iwl_mvm_sta *mvm_sta = iwl_mvm_sta_from_mac80211(sta);
 	struct iwl_mvm_baid_data *baid_data = NULL;
-	int ret, baid;
+	int baid;
+	zx_status_t ret = ZX_OK;
+#if 0 // NEEDS_PORTING
 	u32 max_ba_id_sessions = iwl_mvm_has_new_tx_api(mvm) ? IWL_MAX_BAID :
 							       IWL_MAX_BAID_OLD;
+#endif // NEEDS_PORTING
+	u32 max_ba_id_sessions = IWL_MAX_BAID;
 
-	lockdep_assert_held(&mvm->mutex);
+	iwl_assert_lock_held(&mvm->mutex);
 
 	if (start && mvm->rx_ba_sessions >= max_ba_id_sessions) {
 		IWL_WARN(mvm, "Not enough RX BA SESSIONS\n");
-		return -ENOSPC;
+		return ZX_ERR_NO_SPACE;
 	}
+
+	if (tid >= IWL_MAX_TID_COUNT)
+		return ZX_ERR_INVALID_ARGS;
 
 	if (iwl_mvm_has_new_rx_api(mvm) && start) {
 		u16 reorder_buf_size = buf_size * sizeof(baid_data->entries[0]);
-
 		/* sparse doesn't like the __align() so don't check */
+#if 0  // NEEDS_PORTING
 #ifndef __CHECKER__
 		/*
 		 * The division below will be OK if either the cache line size
@@ -2725,24 +2751,28 @@ int iwl_mvm_sta_rx_agg(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
 		BUILD_BUG_ON(SMP_CACHE_BYTES % sizeof(baid_data->entries[0]) &&
 			     sizeof(baid_data->entries[0]) % SMP_CACHE_BYTES);
 #endif
+#endif // NEEDS_PORTING
 
 		/*
 		 * Upward align the reorder buffer size to fill an entire cache
 		 * line for each queue, to avoid sharing cache lines between
 		 * different queues.
 		 */
+#if 0 // NEEDS_PORTING
 		reorder_buf_size = ALIGN(reorder_buf_size, SMP_CACHE_BYTES);
+#endif
 
 		/*
 		 * Allocate here so if allocation fails we can bail out early
 		 * before starting the BA session in the firmware
 		 */
-		baid_data = kzalloc(sizeof(*baid_data) +
+		baid_data = calloc(1, sizeof(*baid_data) +
 				    mvm->trans->num_rx_queues *
-				    reorder_buf_size,
-				    GFP_KERNEL);
+				    reorder_buf_size);
+
 		if (!baid_data)
-			return -ENOMEM;
+			return ZX_ERR_NO_MEMORY;
+
 
 		/*
 		 * This division is why we need the above BUILD_BUG_ON(),
@@ -2761,11 +2791,10 @@ int iwl_mvm_sta_rx_agg(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
 
 	/* Don't send command to remove (start=0) BAID during restart */
 	if (start || !test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status))
-		baid = iwl_mvm_fw_baid_op(mvm, mvm_sta, start, tid, ssn, buf_size,
-					  baid);
+		ret = iwl_mvm_fw_baid_op(mvm, mvm_sta, start, tid, ssn, buf_size,
+					  baid, &baid);
 
-	if (baid < 0) {
-		ret = baid;
+	if (ret != ZX_OK) {
 		goto out_free;
 	}
 
@@ -2776,19 +2805,20 @@ int iwl_mvm_sta_rx_agg(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
 			return 0;
 
 		baid_data->baid = baid;
-		baid_data->timeout = timeout;
-		baid_data->last_rx = jiffies;
+		baid_data->timeout = zx_duration_mul_int64(TU_TO_ZX_DURATION(timeout), 2);
+		baid_data->last_rx = zx_clock_get_monotonic();
 		baid_data->rcu_ptr = &mvm->baid_map[baid];
-		timer_setup(&baid_data->session_timer,
-			    iwl_mvm_rx_agg_session_expired, 0);
+		iwl_irq_timer_create(mvm->dev,
+				     iwl_mvm_rx_agg_session_expired,
+				     NULL, &baid_data->session_timer);
 		baid_data->mvm = mvm;
 		baid_data->tid = tid;
 		baid_data->sta_id = mvm_sta->sta_id;
 
 		mvm_sta->tid_to_baid[tid] = baid;
-		if (timeout)
-			mod_timer(&baid_data->session_timer,
-				  TU_TO_EXP_TIME(timeout * 2));
+                if (timeout)
+			iwl_irq_timer_start(baid_data->session_timer,
+					    baid_data->timeout);
 
 		iwl_mvm_init_reorder_buffer(mvm, baid_data, ssn, buf_size);
 		/*
@@ -2799,8 +2829,12 @@ int iwl_mvm_sta_rx_agg(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
 		 */
 		IWL_DEBUG_HT(mvm, "Sta %d(%d) is assigned to BAID %d\n",
 			     mvm_sta->sta_id, tid, baid);
-		WARN_ON(rcu_access_pointer(mvm->baid_map[baid]));
-		rcu_assign_pointer(mvm->baid_map[baid], baid_data);
+
+		if (WARN_ON(iwl_rcu_load(mvm->baid_map[baid]))) {
+			IWL_WARN(mvm, "Overwriting Block Ack session with baid %d",
+				 baid);
+		}
+		iwl_rcu_store(mvm->baid_map[baid], baid_data);
 	} else  {
 		baid = mvm_sta->tid_to_baid[tid];
 
@@ -2808,20 +2842,20 @@ int iwl_mvm_sta_rx_agg(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
 			/* check that restart flow didn't zero the counter */
 			mvm->rx_ba_sessions--;
 		if (!iwl_mvm_has_new_rx_api(mvm))
-			return 0;
+			return ZX_OK;
 
 		if (WARN_ON(baid == IWL_RX_REORDER_DATA_INVALID_BAID))
-			return -EINVAL;
+			return ZX_ERR_INVALID_ARGS;
 
-		baid_data = rcu_access_pointer(mvm->baid_map[baid]);
+		baid_data = iwl_rcu_load(mvm->baid_map[baid]);
 		if (WARN_ON(!baid_data))
-			return -EINVAL;
+			return ZX_ERR_INVALID_ARGS;
 
 		/* synchronize all rx queues so we can safely delete */
 		iwl_mvm_free_reorder(mvm, baid_data);
-		del_timer_sync(&baid_data->session_timer);
-		RCU_INIT_POINTER(mvm->baid_map[baid], NULL);
-		kfree_rcu(baid_data, rcu_head);
+		iwl_irq_timer_release_sync(baid_data->session_timer);
+		iwl_rcu_store(mvm->baid_map[baid], NULL);
+		iwl_rcu_free_sync(mvm->dev, baid_data);
 		IWL_DEBUG_HT(mvm, "BAID %d is free\n", baid);
 
 		/*
@@ -2831,15 +2865,19 @@ int iwl_mvm_sta_rx_agg(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
 		 * BAID. It can find the NULL pointer for the BAID,
 		 * but we must not have it find a different session.
 		 */
+#if 0 // NEEDS_PORTING
 		iwl_mvm_sync_rx_queues_internal(mvm, IWL_MVM_RXQ_EMPTY,
 						true, NULL, 0);
+#endif
 	}
-	return 0;
+	return ZX_OK;
 
 out_free:
 	kfree(baid_data);
 	return ret;
 }
+
+#if 0 // NEEDS_PORTING
 
 int iwl_mvm_sta_tx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid, uint8_t queue,
                        bool start) {

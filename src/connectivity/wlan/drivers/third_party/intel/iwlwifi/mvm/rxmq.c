@@ -499,11 +499,6 @@ static void iwl_mvm_release_frames(struct iwl_mvm *mvm,
 
 	// Note that this will only release frames if (nssn - buf_size) < ssn < nssn
 	while (iwl_mvm_is_sn_less(ssn, nssn, reorder_buf->buf_size)) {
-
-		// If this isn't true, probably something went wrong
-		// and num_stored got out of sync with ssn/nssn
-		ZX_ASSERT(reorder_buf->num_stored > 0);
-
 		int index = ssn % reorder_buf->buf_size;
 
 		ssn = ieee80211_sn_inc(ssn);
@@ -520,6 +515,7 @@ static void iwl_mvm_release_frames(struct iwl_mvm *mvm,
 		 * For now, this is just a single frame.
  		 */
 		if (entries[index].e.has_packet) {
+			ZX_ASSERT(reorder_buf->num_stored > 0);
 			wlan_rx_packet_t* packet = &entries[index].e.rx_packet;
 			struct ieee80211_rx_status* status = &entries[index].e.rx_status;
 			iwl_mvm_pass_packet_to_mac80211(mvm, packet, status,
@@ -612,6 +608,8 @@ void iwl_mvm_reorder_timer_expired(void* data)
 		iwl_rcu_read_lock(buf->mvm->dev);
 		mvmsta = iwl_rcu_load(buf->mvm->fw_id_to_mac_id[sta_id]);
 		dummy.drv_priv = mvmsta;
+
+		iwl_stats_inc(IWL_STATS_CNT_REORDER_TIMEOUT);
 
 		/* SN is set to the last expired frame + 1 */
 		IWL_DEBUG_HT(buf->mvm,
@@ -949,7 +947,6 @@ bool iwl_mvm_reorder(struct iwl_mvm* mvm,
 
 	buffer->num_stored++;
 
-
 #if 0 // NEEDS_PORTING
 	if (amsdu) {
 		buffer->last_amsdu = sn;
@@ -977,6 +974,7 @@ bool iwl_mvm_reorder(struct iwl_mvm* mvm,
 	mtx_unlock(&buffer->lock);
 	return true;
 drop:
+	iwl_stats_inc(IWL_STATS_CNT_REORDER_DROP);
 	mtx_unlock(&buffer->lock);
 	return true;
 }
@@ -1836,7 +1834,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
   // TODO(fxbug.dev/86851)
   // Reordering is disabled until the full feature is tested/merged
   // if (!iwl_mvm_reorder(mvm, sta, &rx_packet, &rx_status, queue, desc)) {
-	  iwl_mvm_pass_packet_to_mac80211(mvm, &rx_packet, &rx_status, queue, sta);
+    iwl_mvm_pass_packet_to_mac80211(mvm, &rx_packet, &rx_status, queue, sta);
   // }
 out:
   iwl_rcu_read_unlock(mvm->dev);

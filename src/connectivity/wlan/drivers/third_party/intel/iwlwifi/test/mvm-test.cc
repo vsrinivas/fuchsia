@@ -24,6 +24,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/time.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-time-event.h"
@@ -425,8 +426,176 @@ TEST_F(MvmTest, scanLmacPassiveCmdFilling) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//                          Aggregate Reordering tests
+//                          Aggregation tests
 //
+
+struct AggregationCommandTest : public MvmTest, public MockTrans {
+  AggregationCommandTest() {
+    BIND_TEST(mvm_->trans);
+
+    auto* ucode_capa = const_cast<struct iwl_ucode_capabilities*>(&mvm_->fw->ucode_capa);
+
+    // ensure we have new Rx api for test
+    set_bit(IWL_UCODE_TLV_CAPA_MULTI_QUEUE_RX_SUPPORT, ucode_capa->_capa);
+
+    // setup station
+    mvm_sta_.sta_id = 0;
+    mvm_sta_.mvmvif = mvmvif_;
+
+    // set response packet
+    bindSendCmd(SendAddStaCmdWrapper);
+  }
+
+  ~AggregationCommandTest() {
+    unbindSendCmd();
+    mock_send_add_sta_cmd_.VerifyAndClear();
+  }
+
+  zx_status_t CallRxAggWithExpectation(zx_status_t ret, uint8_t tid, uint16_t ssn,
+                                       uint16_t buf_size, bool start, uint16_t timeout,
+                                       uint8_t resp_status, uint8_t baid, bool baid_valid) {
+    SetAddStaCmdResponse(resp_status, baid, baid_valid);
+    mock_send_add_sta_cmd_.ExpectCall(
+        ret, WIDE_ID(LONG_GROUP, ADD_STA), sizeof(struct iwl_mvm_add_sta_cmd),
+        mvm_sta_.mac_id_n_color, mvm_sta_.sta_id, STA_MODE_MODIFY, start ? tid : 0, start ? ssn : 0,
+        start ? buf_size : 0, start ? STA_MODIFY_ADD_BA_TID : STA_MODIFY_REMOVE_BA_TID,
+        start ? 0 : tid);
+
+    return iwl_mvm_sta_rx_agg(mvm_, &sta_, tid, ssn, start, buf_size, timeout);
+  }
+
+  void SetAddStaCmdResponse(uint8_t status, uint8_t baid, bool baid_valid) {
+    auto* resp_pkt = reinterpret_cast<struct iwl_rx_packet*>(rx_packet_buf_.data());
+
+    auto* resp = reinterpret_cast<struct iwl_cmd_response*>(resp_pkt->data);
+    resp->status = status;
+
+    if (baid_valid) {
+      resp->status |= (IWL_ADD_STA_BAID_VALID_MASK);
+      resp->status |= ((baid << IWL_ADD_STA_BAID_SHIFT) & IWL_ADD_STA_BAID_MASK);
+    }
+    resp_pkt->len_n_flags = sizeof(*resp) + sizeof(resp_pkt->hdr);
+  }
+
+  void CheckBaidForTidIsSetup(uint8_t tid, uint8_t expect_baid, uint16_t ssn, uint16_t buf_size,
+                              uint16_t timeout) {
+    ASSERT_TRUE(mvm_->rx_ba_sessions > 0);
+
+    uint8_t baid = mvm_sta_.tid_to_baid[tid];
+    ASSERT_EQ(expect_baid, baid);
+
+    auto* baid_data = mvm_->baid_map[baid];
+    ASSERT_NOT_NULL(baid_data);
+    ASSERT_EQ(expect_baid, baid_data->baid);
+
+    ASSERT_EQ(mvm_, baid_data->mvm);
+    ASSERT_EQ(tid, baid_data->tid);
+  }
+
+  static zx_status_t SendAddStaCmdWrapper(struct iwl_trans* trans, struct iwl_host_cmd* host_cmd) {
+    auto add_sta_cmd = reinterpret_cast<const struct iwl_mvm_add_sta_cmd*>(host_cmd->data[0]);
+    auto test = GET_TEST(AggregationCommandTest, trans);
+    host_cmd->resp_pkt = reinterpret_cast<struct iwl_rx_packet*>(test->rx_packet_buf_.data());
+    return test->mock_send_add_sta_cmd_.Call(
+        host_cmd->id, host_cmd->len[0], add_sta_cmd->mac_id_n_color, add_sta_cmd->sta_id,
+        add_sta_cmd->add_modify, add_sta_cmd->add_immediate_ba_tid,
+        add_sta_cmd->add_immediate_ba_ssn, add_sta_cmd->rx_ba_window, add_sta_cmd->modify_mask,
+        add_sta_cmd->remove_immediate_ba_tid);
+  }
+
+  struct iwl_mvm_sta mvm_sta_ {};
+  struct ieee80211_sta sta_ {
+    .drv_priv = &mvm_sta_,
+  };
+
+  static constexpr size_t kBufferSize =
+      sizeof(struct iwl_rx_packet) + sizeof(struct iwl_cmd_response);
+
+  // This buffer contains the response iwl_rx_packet and iwl_cmd_response
+  std::array<uint8_t, kBufferSize> rx_packet_buf_;
+
+  mock_function::MockFunction<zx_status_t,  // return value
+                              uint32_t,     // host_cmd->id
+                              uint16_t,     // host_cmd->len[0]
+                              __le32,       // add_sta_cmd->mac_id_n_color
+                              uint8_t,      // add_sta_cmd->sta_id
+                              uint8_t,      // add_sta_cmd->add_modify
+                              uint8_t,      // add_sta_cmd->add_immediate_ba_tid
+                              __le16,       // add_sta_cmd->add_immediate_ba_ssn
+                              __le16,       // add_sta_cmd->rx_ba_window
+                              uint8_t,      // add_sta_cmd->modify_mask
+
+                              // only used to teardown Rx Ba session
+                              uint8_t  // add_sta_cmd->remove_immediate_ba_tid
+                              >
+      mock_send_add_sta_cmd_;
+};
+
+TEST_F(AggregationCommandTest, SetupAndTeardownRxAggregationSucceeds) {
+  uint8_t tid = 5;
+  uint16_t ssn = 123;
+  uint16_t buf_size = 64;
+  uint8_t baid = 3;
+  uint16_t timeout = 0;
+  ASSERT_OK(CallRxAggWithExpectation(ZX_OK, tid, ssn, buf_size, true, timeout, ADD_STA_SUCCESS,
+                                     baid, true));
+  ASSERT_EQ(1, mvm_->rx_ba_sessions);
+  CheckBaidForTidIsSetup(tid, baid, ssn, buf_size, timeout);
+
+  ASSERT_OK(CallRxAggWithExpectation(ZX_OK, tid, ssn, buf_size, false, timeout, ADD_STA_SUCCESS,
+                                     baid, true));
+  ASSERT_EQ(0, mvm_->rx_ba_sessions);
+  ASSERT_NULL(mvm_->baid_map[baid]);
+}
+
+TEST_F(AggregationCommandTest, RejectAfterMaxTid) {
+  uint16_t ssn = 123;
+  uint16_t buf_size = 64;
+  uint16_t timeout = 0;
+
+  for (uint8_t tid = 0; tid < IWL_MAX_TID_COUNT; tid++) {
+    uint8_t baid = tid + 1;
+    ASSERT_OK(CallRxAggWithExpectation(ZX_OK, tid, ssn, buf_size, true, timeout, ADD_STA_SUCCESS,
+                                       baid, true));
+    ASSERT_EQ(baid, mvm_->rx_ba_sessions);
+    CheckBaidForTidIsSetup(tid, baid, ssn, buf_size, timeout);
+  }
+  ASSERT_EQ(IWL_MAX_TID_COUNT, mvm_->rx_ba_sessions);
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            iwl_mvm_sta_rx_agg(mvm_, &sta_, IWL_MAX_TID_COUNT, ssn, true, buf_size, timeout));
+
+  // Need to teardown all the sessions to keep asan happy
+  for (uint8_t tid = 0; tid < IWL_MAX_TID_COUNT; tid++) {
+    uint8_t baid = tid + 1;
+    ASSERT_OK(CallRxAggWithExpectation(ZX_OK, tid, ssn, buf_size, false, timeout, ADD_STA_SUCCESS,
+                                       baid, true));
+    ASSERT_NULL(mvm_->baid_map[baid]);
+  }
+  ASSERT_EQ(0, mvm_->rx_ba_sessions);
+}
+
+TEST_F(AggregationCommandTest, RejectAfterFwCmdFails) {
+  uint8_t tid = 5;
+  uint16_t ssn = 123;
+  uint16_t buf_size = 64;
+  uint8_t baid = 3;
+  uint16_t timeout = 0;
+
+  ASSERT_EQ(ZX_ERR_NO_SPACE, CallRxAggWithExpectation(ZX_OK, tid, ssn, buf_size, true, timeout,
+                                                      ADD_STA_IMMEDIATE_BA_FAILURE, baid, true));
+
+  ASSERT_EQ(ZX_ERR_IO, CallRxAggWithExpectation(ZX_OK, tid, ssn, buf_size, true, timeout,
+                                                ADD_STA_MODIFY_NON_EXISTING_STA, baid, true));
+
+  // If ADD_STA_SUCCESS is returned, but BAID is not valid
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, CallRxAggWithExpectation(ZX_OK, tid, ssn, buf_size, true, timeout,
+                                                          ADD_STA_SUCCESS, baid, false));
+
+  // If actually sending the command fails
+  ASSERT_EQ(ZX_ERR_IO, CallRxAggWithExpectation(ZX_ERR_IO, tid, ssn, buf_size, true, timeout,
+                                                ADD_STA_SUCCESS, baid, true));
+}
 
 using MacAddress = std::array<uint8_t, ETH_ALEN>;
 constexpr MacAddress kDefaultMacAddr{0x02, 0x03, 0x04, 0x05, 0x06, 0x07};

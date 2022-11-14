@@ -74,6 +74,7 @@
 #define IWL_MVM_MISSED_BEACONS_THRESHOLD 8
 /* A TimeUnit is 1024 microsecond */
 #define MSEC_TO_TU(_msec) (_msec * 1000 / 1024)
+#define TU_TO_ZX_DURATION(tu) (ZX_USEC(tu * 1024))
 
 /* For GO, this value represents the number of TUs before CSA "beacon
  * 0" TBTT when the CSA time-event needs to be scheduled to start.  It
@@ -775,9 +776,9 @@ struct iwl_mvm_baid_data {
   uint8_t sta_id;
   uint8_t tid;
   uint8_t baid;
-  uint16_t timeout;
+  zx_duration_t timeout;
   uint16_t entries_per_queue;
-  unsigned long last_rx;
+  zx_time_t last_rx;
   struct iwl_irq_timer* session_timer;
   struct iwl_mvm_baid_data __rcu** rcu_ptr;
   struct iwl_mvm* mvm;

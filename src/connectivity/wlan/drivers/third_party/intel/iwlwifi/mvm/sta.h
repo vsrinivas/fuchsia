@@ -513,8 +513,9 @@ void iwl_mvm_update_tkip_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
 void iwl_mvm_rx_eosp_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 
 /* AMPDU */
-int iwl_mvm_sta_rx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid, uint16_t ssn,
-                       bool start, uint16_t buf_size, uint16_t timeout);
+zx_status_t iwl_mvm_sta_rx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid,
+                               uint16_t ssn, bool start, uint16_t buf_size,
+                               uint16_t timeout);
 int iwl_mvm_sta_tx_agg_start(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                              struct ieee80211_sta* sta, uint16_t tid, uint16_t* ssn);
 int iwl_mvm_sta_tx_agg_oper(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
