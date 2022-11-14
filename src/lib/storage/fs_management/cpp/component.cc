@@ -6,7 +6,7 @@
 
 #include <fidl/fuchsia.component/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 
 namespace fs_management {
 

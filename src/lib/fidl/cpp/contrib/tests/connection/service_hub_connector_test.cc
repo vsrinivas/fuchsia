@@ -5,8 +5,8 @@
 #include "src/lib/fidl/cpp/contrib/connection/service_hub_connector.h"
 
 #include <fidl/test.protocol.connector/cpp/fidl.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fidl/cpp/wire/channel.h>
-#include <lib/sys/component/cpp/service_client.h>
 
 #include <functional>
 #include <optional>

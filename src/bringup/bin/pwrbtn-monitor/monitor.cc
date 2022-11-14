@@ -5,7 +5,7 @@
 #include "src/bringup/bin/pwrbtn-monitor/monitor.h"
 
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <zircon/status.h>
 
 namespace pwrbtn {

@@ -7,12 +7,12 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/process.h>
 #include <stdarg.h>

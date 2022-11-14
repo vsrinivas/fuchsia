@@ -9,8 +9,8 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/netboot/netboot.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <string.h>

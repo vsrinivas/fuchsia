@@ -12,6 +12,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -19,7 +20,6 @@
 #include <lib/fdio/watcher.h>
 #include <lib/fit/defer.h>
 #include <lib/svc/outgoing.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>

@@ -5,7 +5,7 @@
 #include "src/lib/loader_service/loader_service_test_fixture.h"
 
 #include <fidl/fuchsia.kernel/cpp/wire.h>
-#include <lib/component/cpp/incoming/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl/cpp/wire/string_view.h>

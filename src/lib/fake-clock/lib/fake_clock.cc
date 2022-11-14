@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.testing.deadline/cpp/wire.h>
 #include <fidl/fuchsia.testing/cpp/wire.h>
-#include <lib/component/cpp/incoming/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/port.h>
 #include <zircon/syscalls.h>

@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_H_
 #define SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_H_
 
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/fdf/cpp/channel.h>
@@ -14,7 +15,6 @@
 #include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fidl_driver/cpp/transport.h>
 #include <lib/stdcompat/span.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/result.h>
 #include <lib/zx/vmo.h>

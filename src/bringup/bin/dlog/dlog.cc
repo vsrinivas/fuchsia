@@ -4,7 +4,7 @@
 
 #include <errno.h>
 #include <fidl/fuchsia.boot/cpp/wire.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <unistd.h>
 #include <zircon/syscalls/log.h>
 

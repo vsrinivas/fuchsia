@@ -11,13 +11,13 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <fidl/fuchsia.unknown/cpp/markers.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/fit/defer.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/result.h>
 #include <sys/stat.h>
 #include <sys/types.h>

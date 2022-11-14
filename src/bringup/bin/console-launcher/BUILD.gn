@@ -27,8 +27,8 @@ source_set("lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/zircon-internal",
@@ -58,8 +58,8 @@ executable("bin") {
     ":lib",
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",

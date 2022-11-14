@@ -27,8 +27,8 @@ executable("pwrbtn-monitor") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_hlcpp",
     "//sdk/fidl/fuchsia.power.button:fuchsia.power.button_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-default",
@@ -63,7 +63,7 @@ test("pwrbtn-monitor-unittests-bin") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_cpp_wire",
     "//sdk/fidl/fuchsia.power.button:fuchsia.power.button_cpp_wire",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

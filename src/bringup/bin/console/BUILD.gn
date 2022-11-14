@@ -52,6 +52,7 @@ executable("console") {
   sources = [ "main.cc" ]
   deps = [
     ":common",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/component/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",

@@ -6,8 +6,8 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/netboot/netboot.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <stdio.h>
 
 #include "board-info.h"

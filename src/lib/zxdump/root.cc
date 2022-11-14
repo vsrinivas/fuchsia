@@ -4,8 +4,8 @@
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.kernel/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zxdump/task.h>
 
 #include <array>

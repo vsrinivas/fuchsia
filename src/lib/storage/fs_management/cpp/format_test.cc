@@ -5,7 +5,7 @@
 #include "src/lib/storage/fs_management/cpp/format.h"
 
 #include <fcntl.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/zx/vmo.h>
 
 #include <fbl/unique_fd.h>

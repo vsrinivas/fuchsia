@@ -4,8 +4,8 @@
 
 #include "src/bringup/bin/netsvc/debuglog.h"
 
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fit/defer.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/clock.h>
 #include <stdio.h>
 #include <string.h>

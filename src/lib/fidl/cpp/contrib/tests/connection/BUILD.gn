@@ -10,6 +10,7 @@ test("service_hub_connector_tests_bin") {
   output_name = "service_hub_connector_tests_bin"
   sources = [ "service_hub_connector_test.cc" ]
   deps = [
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/sys/component/cpp",
     "//sdk/testing/fidl/protocols_tests:test.protocol.connector_cpp",
     "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
@@ -23,6 +24,7 @@ test("service_reconnector_tests_bin") {
   output_name = "service_reconnector_tests_bin"
   sources = [ "service_reconnector_test.cc" ]
   deps = [
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/sys/component/cpp",
     "//sdk/testing/fidl/protocols_tests:test.protocol.connector_cpp",
     "//src/lib/fidl/cpp/contrib/connection:service_reconnector",

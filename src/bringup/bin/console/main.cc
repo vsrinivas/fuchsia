@@ -4,8 +4,8 @@
 
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <fidl/fuchsia.logger/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 

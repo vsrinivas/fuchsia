@@ -36,7 +36,7 @@ source_set("loader_service_test_fixture") {
 
   public_deps = [
     ":loader_service",
-    "//sdk/lib/component/cpp/incoming",
+    "//sdk/lib/component/incoming/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/storage/memfs:lib",

@@ -17,6 +17,7 @@ executable("sysinfo") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -28,7 +29,7 @@ test("test") {
   sources = [ "sysinfo-test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//zircon/system/ulib/zxtest",
   ]
 }

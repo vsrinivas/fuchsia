@@ -10,6 +10,7 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -19,7 +20,6 @@
 #include <lib/fdio/watcher.h>
 #include <lib/fit/defer.h>
 #include <lib/stdcompat/string_view.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/assert.h>
