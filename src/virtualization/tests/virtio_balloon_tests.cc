@@ -10,6 +10,10 @@
 #include "src/virtualization/tests/lib/guest_test.h"
 
 namespace {
+// 5.5.6.4 Memory Statistics Tags
+constexpr uint16_t VIRTIO_BALLOON_S_MEMFREE = 4;
+constexpr uint16_t VIRTIO_BALLOON_S_MEMTOT = 5;
+constexpr uint16_t VIRTIO_BALLOON_S_AVAIL = 6;
 
 constexpr size_t kVirtioBalloonPageCount = 256;
 
@@ -24,14 +28,8 @@ class BalloonGuestTest : public GuestTest<T> {
     stats.Bind(std::move(*client_end));
   }
 
-  void TestGetMemStats(
-      const char* trace_context,
+  std::unordered_map<uint16_t, uint64_t> GetMemStats(
       const fuchsia::virtualization::BalloonControllerSyncPtr& balloon_controller) {
-    SCOPED_TRACE(trace_context);
-    // 5.5.6.4 Memory Statistics Tags
-    constexpr uint16_t VIRTIO_BALLOON_S_MEMFREE = 4;
-    constexpr uint16_t VIRTIO_BALLOON_S_MEMTOT = 5;
-    constexpr uint16_t VIRTIO_BALLOON_S_AVAIL = 6;
     ::fidl::VectorPtr<::fuchsia::virtualization::MemStat> mem_stats;
     int32_t mem_stats_status = 0;
     zx_status_t status = balloon_controller->GetMemStats(&mem_stats_status, &mem_stats);
@@ -41,6 +39,15 @@ class BalloonGuestTest : public GuestTest<T> {
     for (auto& el : mem_stats.value()) {
       stats[el.tag] = el.val;
     }
+    return stats;
+  }
+
+  void TestGetMemStats(
+      const char* trace_context,
+      const fuchsia::virtualization::BalloonControllerSyncPtr& balloon_controller) {
+    SCOPED_TRACE(trace_context);
+
+    auto stats = GetMemStats(balloon_controller);
     EXPECT_GT(stats[VIRTIO_BALLOON_S_MEMTOT], 0u);
     EXPECT_GT(stats[VIRTIO_BALLOON_S_MEMFREE], 0u);
     EXPECT_GT(stats[VIRTIO_BALLOON_S_AVAIL], 0u);
@@ -157,6 +164,47 @@ TYPED_TEST(BalloonGuestTest, VirtioBalloonFreePageReporting) {
   // Prefer explicit fail instead of getting stuck in the loop above
   // Fail the test with extra logging if host's free memory didn't get above the threshold
   ZX_ASSERT(zx::clock::get_monotonic() < deadline);
+}
+
+TYPED_TEST(BalloonGuestTest, VirtioBalloonInflateOnMemoryPressureWarningDeflateOnNormal) {
+  fuchsia::virtualization::BalloonControllerSyncPtr balloon_controller;
+  ASSERT_TRUE(this->ConnectToBalloon(balloon_controller.NewRequest()));
+
+  uint32_t initial_num_pages;
+  uint32_t requested_num_pages;
+  ASSERT_EQ(balloon_controller->GetBalloonSize(&initial_num_pages, &requested_num_pages), ZX_OK);
+  EXPECT_EQ(initial_num_pages, 0u);
+  EXPECT_EQ(requested_num_pages, 0u);
+
+  FX_LOGS(INFO) << "Memory pressure warning";
+  this->GetEnclosedGuest().GetMemoryPressureProvider()->OnLevelChanged(
+      ::fuchsia::memorypressure::Level::WARNING);
+
+  while (true) {
+    uint32_t cur_num_pages;
+    ASSERT_EQ(balloon_controller->GetBalloonSize(&cur_num_pages, &requested_num_pages), ZX_OK);
+
+    auto mem_stats = this->GetMemStats(balloon_controller);
+
+    if (cur_num_pages > 0u && requested_num_pages > 0u) {
+      break;
+    }
+    zx::nanosleep(zx::deadline_after(zx::msec(100)));
+  };
+
+  FX_LOGS(INFO) << "Back to memory pressure normal";
+  this->GetEnclosedGuest().GetMemoryPressureProvider()->OnLevelChanged(
+      ::fuchsia::memorypressure::Level::NORMAL);
+
+  while (true) {
+    uint32_t cur_num_pages;
+    ASSERT_EQ(balloon_controller->GetBalloonSize(&cur_num_pages, &requested_num_pages), ZX_OK);
+
+    if (cur_num_pages == 0u && requested_num_pages == 0u) {
+      break;
+    }
+    zx::nanosleep(zx::deadline_after(zx::msec(100)));
+  };
 }
 
 }  // namespace

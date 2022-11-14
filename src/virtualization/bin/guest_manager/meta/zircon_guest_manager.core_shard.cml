@@ -86,6 +86,11 @@
             dependency: "weak",
             source_availability: "unknown",
         },
+        {
+            protocol: [ "fuchsia.memorypressure.Provider" ],
+            from: "#memory_monitor",
+            to: "#zircon-guest-manager",
+        },
     ],
     expose: [
         {

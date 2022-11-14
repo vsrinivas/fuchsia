@@ -116,6 +116,19 @@ source_set("fake_netstack") {
   ]
 }
 
+source_set("fake_memory_pressure_provider") {
+  testonly = true
+  visibility = [ "//src/virtualization/*" ]
+  public = [ "fake_memory_pressure_provider.h" ]
+  sources = [ "fake_memory_pressure_provider.cc" ]
+  deps = [
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//third_party/googletest:gtest",
+  ]
+  public_deps =
+      [ "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_hlcpp" ]
+}
+
 executable("unit_tests") {
   testonly = true
   output_name = "guest_unit_tests"
@@ -179,6 +192,7 @@ source_set("lib") {
     "//zircon/system/ulib/zxc",
   ]
   public_deps = [
+    ":fake_memory_pressure_provider",
     ":fake_netstack",
     "//src/ui/testing/ui_test_manager",
     "//src/virtualization/lib/grpc",

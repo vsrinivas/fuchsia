@@ -19,6 +19,7 @@
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/lib/vsh/command_runner.h"
+#include "src/virtualization/tests/lib/fake_memory_pressure_provider.h"
 #include "src/virtualization/tests/lib/fake_netstack.h"
 #include "src/virtualization/tests/lib/guest_console.h"
 #include "src/virtualization/tests/lib/socket_logger.h"
@@ -42,7 +43,8 @@ struct GuestLaunchInfo {
 // GuestTest.
 class EnclosedGuest {
  public:
-  explicit EnclosedGuest(async::Loop& loop) : loop_(loop) {}
+  explicit EnclosedGuest(async::Loop& loop)
+      : loop_(loop), fake_memory_pressure_provider_(loop.dispatcher()) {}
   virtual ~EnclosedGuest() {}
 
   // Start the guest. `Start` is the preferred way to start the guest. If the realm
@@ -116,6 +118,9 @@ class EnclosedGuest {
   uint32_t GetGuestCid() const { return guest_cid_; }
 
   FakeNetstack* GetNetstack() { return &fake_netstack_; }
+  FakeMemoryPressureProvider* GetMemoryPressureProvider() {
+    return &fake_memory_pressure_provider_;
+  }
 
   std::optional<GuestConsole>& GetConsole() { return console_; }
 
@@ -163,6 +168,7 @@ class EnclosedGuest {
 
   async::Loop& loop_;
   FakeNetstack fake_netstack_;
+  FakeMemoryPressureProvider fake_memory_pressure_provider_;
   fuchsia::virtualization::GuestManagerSyncPtr guest_manager_;
   std::optional<SocketLogger> serial_logger_;
   std::optional<GuestConsole> console_;

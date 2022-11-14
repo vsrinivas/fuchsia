@@ -11,6 +11,7 @@
 #include <lib/zx/result.h>
 #include <zircon/types.h>
 
+#include "src/virtualization/bin/guest_manager/memory_pressure_handler.h"
 #include "src/virtualization/lib/guest_config/guest_config.h"
 
 class GuestManager : public fuchsia::virtualization::GuestManager {
@@ -47,10 +48,11 @@ class GuestManager : public fuchsia::virtualization::GuestManager {
  private:
   void HandleCreateResult(::fuchsia::virtualization::GuestLifecycle_Create_Result result,
                           fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-                          LaunchCallback callback);
+                          bool balloon_enabled, LaunchCallback callback);
   void HandleRunResult(::fuchsia::virtualization::GuestLifecycle_Run_Result result);
   void HandleGuestStopped(fit::result<::fuchsia::virtualization::GuestError> err);
 
+  async_dispatcher_t* dispatcher_;
   sys::ComponentContext* context_;
   fidl::BindingSet<fuchsia::virtualization::GuestManager> manager_bindings_;
   std::string config_pkg_dir_path_;
@@ -72,6 +74,8 @@ class GuestManager : public fuchsia::virtualization::GuestManager {
 
   // Current state of the guest.
   fuchsia::virtualization::GuestStatus state_ = fuchsia::virtualization::GuestStatus::NOT_STARTED;
+  // Inflates / deflates the guest balloon in response to the host memory pressure events
+  std::unique_ptr<MemoryPressureHandler> memory_pressure_handler_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_GUEST_MANAGER_H_

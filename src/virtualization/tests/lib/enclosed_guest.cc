@@ -240,9 +240,11 @@ void EnclosedGuest::InstallInRealm(component_testing::Realm& realm,
   using component_testing::Storage;
 
   constexpr auto kFakeNetstackComponentName = "fake_netstack";
+  constexpr auto kFakeMemoryPressureProvider = "fake_memory_pressure_provider";
 
   realm.AddChild(kGuestManagerName, guest_launch_info.url);
   realm.AddLocalChild(kFakeNetstackComponentName, &fake_netstack_);
+  realm.AddLocalChild(kFakeMemoryPressureProvider, &fake_memory_pressure_provider_);
 
   realm
       .AddRoute(Route{.capabilities =
@@ -275,6 +277,12 @@ void EnclosedGuest::InstallInRealm(component_testing::Realm& realm,
                               Protocol{fuchsia::net::virtualization::Control::Name_},
                           },
                       .source = {ChildRef{kFakeNetstackComponentName}},
+                      .targets = {ChildRef{kGuestManagerName}}})
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::memorypressure::Provider::Name_},
+                          },
+                      .source = {ChildRef{kFakeMemoryPressureProvider}},
                       .targets = {ChildRef{kGuestManagerName}}})
       .AddRoute(Route{.capabilities =
                           {

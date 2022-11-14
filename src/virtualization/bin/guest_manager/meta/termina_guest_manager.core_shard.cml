@@ -101,6 +101,11 @@
             dependency: "weak",
             source_availability: "unknown",
         },
+        {
+            protocol: [ "fuchsia.memorypressure.Provider" ],
+            from: "#memory_monitor",
+            to: "#termina-guest-manager",
+        },
     ],
     expose: [
         {
