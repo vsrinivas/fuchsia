@@ -21,26 +21,26 @@ class TestDriver {
             component::OutgoingDirectory::Create(fdf_dispatcher_get_async_dispatcher(dispatcher))) {
   }
 
-  zx::result<> Init(fdf::wire::DriverStartArgs* start_args) {
-    auto error = driver::SymbolValue<zx_status_t*>(*start_args, "error");
+  zx::result<> Init(fdf::wire::DriverStartArgs& start_args) {
+    auto error = driver::SymbolValue<zx_status_t*>(start_args, "error");
     if (error.is_ok()) {
       return zx::error(**error);
     }
 
     // Call the "func" driver symbol.
-    auto func = driver::SymbolValue<void (*)()>(*start_args, "func");
+    auto func = driver::SymbolValue<void (*)()>(start_args, "func");
     if (func.is_ok()) {
       (*func)();
     }
 
     // Set the "dispatcher" driver symbol.
-    auto dispatcher = driver::SymbolValue<fdf_dispatcher_t**>(*start_args, "dispatcher");
+    auto dispatcher = driver::SymbolValue<fdf_dispatcher_t**>(start_args, "dispatcher");
     if (dispatcher.is_ok()) {
       **dispatcher = dispatcher_;
     }
 
     // Connect to the incoming service.
-    auto svc_dir = driver::NsValue(start_args->ns(), "/svc");
+    auto svc_dir = driver::NsValue(start_args.ns(), "/svc");
     if (svc_dir.is_error()) {
       return svc_dir.take_error();
     }
@@ -58,7 +58,7 @@ class TestDriver {
       return status;
     }
 
-    return outgoing_.Serve(std::move(start_args->outgoing_dir()));
+    return outgoing_.Serve(std::move(start_args.outgoing_dir()));
   }
 
  private:
@@ -68,17 +68,16 @@ class TestDriver {
 
 zx_status_t test_driver_start(EncodedDriverStartArgs encoded_start_args,
                               fdf_dispatcher_t* dispatcher, void** driver) {
-  // TODO(fxbug.dev/45252): Use FIDL at rest.
   auto wire_format_metadata =
       fidl::WireFormatMetadata::FromOpaque(encoded_start_args.wire_format_metadata);
-  fidl::unstable::DecodedMessage<fdf::wire::DriverStartArgs> decoded(
-      wire_format_metadata.wire_format_version(), encoded_start_args.msg);
-  if (!decoded.ok()) {
-    return decoded.status();
+  auto decoded = fidl::InplaceDecode<fdf::wire::DriverStartArgs>(
+      fidl::EncodedMessage::FromEncodedCMessage(encoded_start_args.msg), wire_format_metadata);
+  if (!decoded.is_ok()) {
+    return decoded.error_value().status();
   }
 
   auto test_driver = std::make_unique<TestDriver>(dispatcher);
-  auto init = test_driver->Init(decoded.PrimaryObject());
+  auto init = test_driver->Init(*decoded.value());
   if (init.is_error()) {
     return init.error_value();
   }
