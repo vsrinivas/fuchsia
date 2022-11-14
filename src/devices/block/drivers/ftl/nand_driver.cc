@@ -25,6 +25,7 @@ namespace {
 
 uint32_t GetParameter(const char* key) {
   char value[32];
+  // TODO(fxb/115160): Pass device argument to device_get_variable.
   auto status = device_get_variable(nullptr, key, value, sizeof(value), nullptr);
   if (status != ZX_OK) {
     return 0;

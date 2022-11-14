@@ -633,6 +633,7 @@ __EXPORT zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device,
 
 __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,
                                          size_t out_size, size_t* size_actual) {
+  // TODO(fxb/115160): Enforce that device is not null.
   if (device) {
     ZX_DEBUG_ASSERT_MSG(device && device->magic == DEV_MAGIC,
                         "Dev pointer '%p' is not a real device", device);

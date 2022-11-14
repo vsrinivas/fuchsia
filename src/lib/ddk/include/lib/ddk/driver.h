@@ -518,7 +518,7 @@ zx_status_t device_connect_fragment_fidl_protocol2(zx_device_t* device, const ch
 
 // Returns a string containing the variable for the given |name|. If |out| is not large enough,
 // |size_actual| will contain the size of the required buffer. |out| is guaranateed to be null
-// terminated.
+// terminated. |device| should not be null.
 zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out, size_t out_size,
                                 size_t* size_actual);
 

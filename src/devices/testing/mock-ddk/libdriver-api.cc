@@ -244,6 +244,7 @@ __EXPORT __WEAK zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_devic
 
 __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,
                                          size_t out_size, size_t* size_actual) {
+  // TODO(fxb/115160): Enforce that device is not null.
   if (!device) {
     return ZX_ERR_NOT_FOUND;
   }

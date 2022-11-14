@@ -50,9 +50,9 @@ constexpr uint64_t kWatchdogTimeoutMs = 45000;
 constexpr zx::duration kVsyncStallThreshold = zx::sec(10);
 constexpr zx::duration kVsyncMonitorInterval = kVsyncStallThreshold / 2;
 
-bool IsKernelFramebufferEnabled() {
+bool IsKernelFramebufferEnabled(zx_device_t* dev) {
   char value[32];
-  auto status = device_get_variable(nullptr, "driver.display.enable-kernel-framebuffer", value,
+  auto status = device_get_variable(dev, "driver.display.enable-kernel-framebuffer", value,
                                     sizeof(value), nullptr);
   if (status != ZX_OK) {
     return false;
@@ -973,7 +973,7 @@ void Controller::DdkRelease() {
 
 Controller::Controller(zx_device_t* parent)
     : ControllerParent(parent),
-      kernel_framebuffer_enabled_(IsKernelFramebufferEnabled()),
+      kernel_framebuffer_enabled_(IsKernelFramebufferEnabled(parent)),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       watchdog_("display-client-loop", kWatchdogWarningIntervalMs, kWatchdogTimeoutMs,
                 loop_.dispatcher()) {

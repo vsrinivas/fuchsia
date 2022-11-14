@@ -26,6 +26,7 @@ namespace fpbus = fuchsia_hardware_platform_bus;
 
 static bool use_fake_display() {
   char ufd[32];
+  // TODO(fxb/115160): Pass device argument to device_get_variable.
   zx_status_t status =
       device_get_variable(nullptr, "driver.qemu_bus.use_fake_display", ufd, sizeof(ufd), nullptr);
   return (status == ZX_OK && (!strcmp(ufd, "1") || !strcmp(ufd, "true") || !strcmp(ufd, "on")));

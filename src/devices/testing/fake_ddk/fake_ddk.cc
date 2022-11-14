@@ -611,6 +611,7 @@ zx_handle_t get_root_resource() { return ZX_HANDLE_INVALID; }
 
 __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,
                                          size_t out_size, size_t* size_actual) {
+  // TODO(fxb/115160): Enforce that device is not null.
   return ZX_ERR_NOT_FOUND;
 }
 

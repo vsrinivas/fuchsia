@@ -20,6 +20,7 @@ x86::IommuManager* iommu_mgr = nullptr;
 
 bool use_hardware_iommu(void) {
   char value[32];
+  // TODO(fxb/115160): Pass device argument to device_get_variable.
   auto status = device_get_variable(nullptr, "driver.iommu.enable", value, sizeof(value), nullptr);
   if (status != ZX_OK) {
     return false;  // Default to false currently
