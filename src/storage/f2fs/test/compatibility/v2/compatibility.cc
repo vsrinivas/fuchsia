@@ -18,6 +18,48 @@ bool LinuxTestFile::IsValid() {
   return result == "0" || result == "0\n";
 }
 
+ssize_t LinuxTestFile::Write(const void* buf, size_t count) {
+  const uint8_t* buf_c = static_cast<const uint8_t*>(buf);
+
+  std::string hex_string;
+  for (uint64_t i = 0; i < count; ++i) {
+    char substring[10];
+    sprintf(substring, "\\x%02x", buf_c[i]);
+    hex_string.append(substring);
+
+    if (i > 0 && i % 500 == 0) {
+      linux_operator_->ExecuteWithAssert({"echo", "-en",
+                                          std::string("\"").append(hex_string).append("\""), ">>",
+                                          linux_operator_->ConvertPath(filename_)});
+      hex_string.clear();
+    }
+  }
+
+  linux_operator_->ExecuteWithAssert({"echo", "-en",
+                                      std::string("\"").append(hex_string).append("\""), ">>",
+                                      linux_operator_->ConvertPath(filename_)});
+  linux_operator_->ExecuteWithAssert({"ls -al", linux_operator_->ConvertPath(filename_)});
+
+  return count;
+}
+
+ssize_t FuchsiaTestFile::Read(void* buf, size_t count) {
+  if (!vnode_->IsReg()) {
+    return 0;
+  }
+
+  File* file = static_cast<File*>(vnode_.get());
+  size_t ret = 0;
+
+  if (file->Read(buf, count, offset_, &ret) != ZX_OK) {
+    return 0;
+  }
+
+  offset_ += ret;
+
+  return ret;
+}
+
 zx_status_t LinuxOperator::Execute(const std::vector<std::string>& argv, std::string* result) {
   return debian_guest_->Execute(argv, {}, zx::time::infinite(), result, nullptr);
 }
