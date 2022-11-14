@@ -1,0 +1,31 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+group("input-device-constants") {
+  testonly = true
+  deps = [
+    ":lib",
+    ":tests",
+  ]
+}
+
+rustc_library("lib") {
+  name = "input_device_constants"
+  with_unit_tests = true
+  edition = "2021"
+  deps = [ "//third_party/rust_crates:tracing" ]
+  sources = [ "src/lib.rs" ]
+}
+
+fuchsia_unittest_package("lib-tests") {
+  deps = [ ":lib_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":lib-tests" ]
+}

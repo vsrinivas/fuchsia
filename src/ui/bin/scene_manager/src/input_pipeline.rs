@@ -80,19 +80,9 @@ pub async fn handle_input(
     let factory_reset_handler = FactoryResetHandler::new();
     let media_buttons_handler = MediaButtonsHandler::new();
 
-    let supported_input_devices: Vec<input_device::InputDeviceType> = supported_input_devices
-        .iter()
-        .filter_map(|device| match device.as_str() {
-            "button" => Some(input_device::InputDeviceType::ConsumerControls),
-            "keyboard" => Some(input_device::InputDeviceType::Keyboard),
-            "mouse" => Some(input_device::InputDeviceType::Mouse),
-            "touchscreen" => Some(input_device::InputDeviceType::Touch),
-            unsupported => {
-                warn!("Ignoring unsupported device configuration: {}", unsupported);
-                None
-            }
-        })
-        .collect();
+    let supported_input_devices: Vec<input_device::InputDeviceType> =
+        input_device::InputDeviceType::list_from_structured_config_list(&supported_input_devices);
+
     let input_pipeline = InputPipeline::new(
         supported_input_devices.clone(),
         build_input_pipeline_assembly(

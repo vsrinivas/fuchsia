@@ -23,6 +23,8 @@ use {
     std::path::PathBuf,
 };
 
+pub use input_device_constants::InputDeviceType;
+
 /// The buffer size for the stream that InputEvents are sent over.
 pub const INPUT_EVENT_BUFFER_SIZE: usize = 100;
 
@@ -115,15 +117,6 @@ impl From<keyboard_binding::KeyboardDeviceDescriptor> for InputDeviceDescriptor 
     fn from(b: keyboard_binding::KeyboardDeviceDescriptor) -> Self {
         InputDeviceDescriptor::Keyboard(b)
     }
-}
-
-#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
-pub enum InputDeviceType {
-    Keyboard,
-    LightSensor,
-    ConsumerControls,
-    Mouse,
-    Touch,
 }
 
 // Whether the event is consumed by an [`InputHandler`].
