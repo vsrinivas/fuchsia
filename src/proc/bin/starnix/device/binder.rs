@@ -44,6 +44,9 @@ pub struct BinderDriver {
     /// for implementing the binder protocol `IServiceManager`.
     context_manager: RwLock<Option<Arc<BinderObject>>>,
 
+    /// Notification allowing remote binder process to wait for a service manager to be registered.
+    context_manager_notification: RwLockCondVar,
+
     /// Manages the internal state of each process interacting with the binder driver.
     ///
     /// The Driver owns the BinderProcess. There can be at most one connection to the binder driver
@@ -1606,6 +1609,12 @@ impl BinderDriver {
                             }
                         }
                         fbinder::BinderRequest::Ioctl { tid, request, parameter, responder } => {
+                            {
+                                let mut context_manager = driver.context_manager.read();
+                                while context_manager.is_none() {
+                                    driver.context_manager_notification.wait(&mut context_manager);
+                                }
+                            }
                             let tid = *tid_to_pid
                                 .entry(tid)
                                 .or_insert_with(|| kernel.pids.write().allocate_pid());
@@ -1683,6 +1692,7 @@ impl BinderDriver {
 
                 *self.context_manager.write() =
                     Some(Arc::new(BinderObject::new(binder_proc, LocalBinderObject::default())));
+                self.context_manager_notification.notify_all();
                 Ok(SUCCESS)
             }
             uapi::BINDER_WRITE_READ => {
@@ -5376,6 +5386,19 @@ mod tests {
         let task = fasync::Task::spawn(async move {
             let (kernel, _task) = create_kernel_and_task();
             let driver = BinderDriver::new();
+
+            // Set the context manager, as external ioctl will wait for it to be set before
+            // executing.
+            let context_manager_proc = driver.create_process(1);
+            let context_manager = Arc::new(BinderObject::new(
+                &context_manager_proc,
+                LocalBinderObject {
+                    weak_ref_addr: UserAddress::from(0xDEADBEEF),
+                    strong_ref_addr: UserAddress::from(0xDEADDEAD),
+                },
+            ));
+            *driver.context_manager.write() = Some(context_manager);
+
             let process = fuchsia_runtime::process_self()
                 .duplicate(zx::Rights::SAME_RIGHTS)
                 .expect("process");
@@ -5462,5 +5485,28 @@ mod tests {
         ));
         owner.objects.lock().insert(weak_ref_addr, Arc::downgrade(&object));
         object
+    }
+}
+
+/// CondVar wrappers allowing to wait on a notification guarded by a RwLock.
+#[derive(Default)]
+struct RwLockCondVar {
+    c: parking_lot::Condvar,
+    m: parking_lot::Mutex<()>,
+}
+
+impl RwLockCondVar {
+    fn notify_all(&self) {
+        let _guard = self.m.lock();
+        self.c.notify_all();
+    }
+
+    fn wait<T>(&self, g: &mut RwLockReadGuard<'_, T>) {
+        let guard = self.m.lock();
+        RwLockReadGuard::unlocked(g, || {
+            // Move the guard in so it gets unlocked before we re-lock g
+            let mut guard = guard;
+            self.c.wait(&mut guard);
+        });
     }
 }
