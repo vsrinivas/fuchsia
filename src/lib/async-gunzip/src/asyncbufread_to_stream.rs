@@ -8,7 +8,7 @@
 //! functionality like `read_exact`.
 
 use crate::asyncbufread_to_stream::flags::Flags;
-use crate::{DecodeError, Error};
+use crate::{ChunkStats, DecodeError, Error};
 use async_generator;
 use async_generator::Yield;
 use bytes::Bytes;
@@ -19,8 +19,7 @@ use miniz_oxide::inflate::stream as mz_stream;
 use miniz_oxide::inflate::stream::InflateState;
 use miniz_oxide::{DataFormat, MZFlush, MZStatus};
 use pin_project::pin_project;
-use std::pin::Pin;
-use std::{io, result};
+use std::{io, pin::Pin, result, time::Duration, time::Instant};
 
 mod flags;
 
@@ -31,7 +30,7 @@ type Result<T> = result::Result<T, Error<io::Error>>;
 pub(crate) fn decode(
     input: impl AsyncBufRead,
     output_chunk_size: usize,
-) -> impl FusedStream<Item = Result<Bytes>> {
+) -> impl FusedStream<Item = Result<(Bytes, ChunkStats)>> {
     async_generator::generate(|co| Decoder::new(input, output_chunk_size).decode(co))
         .into_try_stream()
 }
@@ -54,17 +53,19 @@ impl<R: AsyncBufRead> Decoder<R> {
         Self { input, output_chunk_size }
     }
 
-    /// Decode the input stream, yielding output chunks to `out`.
-    async fn decode(self, out: Yield<Bytes>) -> Result<()> {
+    async fn decode(self, mut out: Yield<(Bytes, ChunkStats)>) -> Result<()> {
         let this = self;
         pin_mut!(this);
+        let mut stats = ChunkStats::new();
 
-        let flags = this.as_mut().read_required_headers().await?;
-        this.as_mut().discard_optional_headers(flags).await?;
+        let flags = this.as_mut().read_required_headers(&mut stats).await?;
+        this.as_mut().discard_optional_headers(flags, &mut stats).await?;
 
-        this.as_mut().decode_deflate_body(out).await?;
+        this.as_mut().decode_deflate_body(&mut stats, &mut out).await?;
 
-        this.as_mut().read_and_validate_footer().await?;
+        this.as_mut().read_and_validate_footer(&mut stats).await?;
+
+        out.yield_((Bytes::new(), stats)).await;
 
         if this.project().input.fill_buf().await?.is_empty() {
             Ok(())
@@ -77,10 +78,12 @@ impl<R: AsyncBufRead> Decoder<R> {
         }
     }
 
-    async fn read_required_headers(self: Pin<&mut Self>) -> Result<Flags> {
+    async fn read_required_headers(self: Pin<&mut Self>, stats: &mut ChunkStats) -> Result<Flags> {
         let mut this = self.project();
+        let header_start = Instant::now();
 
         let mut header = [0; 10];
+        stats.add_bytes_read(header.len());
         this.input.read_exact(&mut header).await?;
 
         let magic_number = [0x1f, 0x8b];
@@ -105,12 +108,20 @@ impl<R: AsyncBufRead> Decoder<R> {
         let _xflags = header[8]; // May be used to indicate the level of compression performed.
         let _os = header[9]; // The operating system / file system on which the compression took place.
 
+        let header_end = Instant::now();
+        stats.add_decode_time(header_end - header_start);
         Ok(flags)
     }
 
-    async fn discard_optional_headers(mut self: Pin<&mut Self>, flags: Flags) -> Result<()> {
+    async fn discard_optional_headers(
+        mut self: Pin<&mut Self>,
+        flags: Flags,
+        stats: &mut ChunkStats,
+    ) -> Result<()> {
+        let header_start = Instant::now();
+
         if flags.contains(Flags::EXTRA) {
-            let mut buf = vec![0; self.as_mut().read_u16_le().await? as usize];
+            let mut buf = vec![0; self.as_mut().read_u16_le(stats).await? as usize];
             self.as_mut().project().input.read_exact(&mut buf).await?;
         }
 
@@ -127,7 +138,7 @@ impl<R: AsyncBufRead> Decoder<R> {
         }
 
         if flags.contains(Flags::HCRC) {
-            let _header_crc = self.read_u16_le().await?;
+            let _header_crc = self.read_u16_le(stats).await?;
         }
 
         // We ignore this flag, as permitted by the RFC.
@@ -135,15 +146,26 @@ impl<R: AsyncBufRead> Decoder<R> {
         // it's hinted that the contents is probably text.
         let _is_text = flags.contains(Flags::TEXT);
 
+        let header_end = Instant::now();
+        stats.add_decode_time(header_end - header_start);
+
         Ok(())
     }
 
     // TODO(https://fxbug.dev/96236): The gzip spec permits ignoring the CRC,
     // but we may like to implement it as an optional check in a future CL.
     // (Same goes for the optional header CRC.)
-    async fn read_and_validate_footer(mut self: Pin<&mut Self>) -> Result<()> {
-        let _crc = self.as_mut().read_u32_le().await?;
-        let _uncompressed_size_mod_32 = self.read_u32_le().await?;
+    async fn read_and_validate_footer(
+        mut self: Pin<&mut Self>,
+        stats: &mut ChunkStats,
+    ) -> Result<()> {
+        let footer_start = Instant::now();
+
+        let _crc = self.as_mut().read_u32_le(stats).await?;
+        let _uncompressed_size_mod_32 = self.read_u32_le(stats).await?;
+
+        let footer_end = Instant::now();
+        stats.add_decode_time(footer_end - footer_start);
         Ok(())
     }
 
@@ -153,7 +175,11 @@ impl<R: AsyncBufRead> Decoder<R> {
     // until it has consumed enough input to produce a full output buffer. Some API
     // consumers may like to have the output buffer flushed whenever reading from input
     // would block.
-    async fn decode_deflate_body(self: Pin<&mut Self>, mut out: Yield<Bytes>) -> Result<()> {
+    async fn decode_deflate_body(
+        self: Pin<&mut Self>,
+        stats: &mut ChunkStats,
+        out: &mut Yield<(Bytes, ChunkStats)>,
+    ) -> Result<()> {
         let mut this = self.project();
 
         let mut mz_state = InflateState::new_boxed(DataFormat::Raw);
@@ -162,25 +188,34 @@ impl<R: AsyncBufRead> Decoder<R> {
         let mut output_len = 0; // How much of the output buffer is currently filled.
 
         loop {
+            // TODO(https://fxbug.dev/114840): Remove condition to wait for input prior
+            // to inflating
             // Ensure more input is available. Note the deflate body is followed by a gzip
             // footer, so the stream should never dry up at this stage.
+            let read_start = Instant::now();
             let input_buf = this.input.fill_buf().await?;
 
+            let read_end = Instant::now();
+            stats.add_decode_time(read_end - read_start);
             let info = mz_stream::inflate(
                 &mut mz_state,
                 &input_buf,
                 &mut output_buf[output_len..],
                 MZFlush::None,
             );
+            let decompress_end = Instant::now();
+            stats.add_decode_time(decompress_end - read_end);
 
             let status = info.status.map_err(DecodeError::from)?;
+            stats.add_bytes_read(info.bytes_consumed);
             this.input.consume_unpin(info.bytes_consumed);
             output_len += info.bytes_written;
 
             // If we have a full output chunk, yield it.
             if output_len == output_buf.len() {
                 let output_chunk = Bytes::copy_from_slice(&output_buf);
-                out.yield_(output_chunk).await;
+                out.yield_((output_chunk, stats.clone())).await;
+                stats.clear();
                 output_len = 0;
             } else if output_len > output_buf.len() {
                 panic!("logic error: over-full buffer");
@@ -192,7 +227,8 @@ impl<R: AsyncBufRead> Decoder<R> {
                     // Return a partial chunk with the rest of the output data.
                     if output_len != 0 {
                         let output_chunk = Bytes::copy_from_slice(&output_buf[..output_len]);
-                        out.yield_(output_chunk).await;
+                        out.yield_((output_chunk, stats.clone())).await;
+                        stats.clear();
                     }
 
                     return Ok(());
@@ -203,18 +239,20 @@ impl<R: AsyncBufRead> Decoder<R> {
         }
     }
 
-    async fn read_u16_le(self: Pin<&mut Self>) -> io::Result<u16> {
+    async fn read_u16_le(self: Pin<&mut Self>, stats: &mut ChunkStats) -> io::Result<u16> {
         let mut this = self.project();
 
         let mut buf = [0; 2];
+        stats.add_bytes_read(buf.len());
         this.input.read_exact(&mut buf).await?;
         Ok(u16::from_le_bytes(buf))
     }
 
-    async fn read_u32_le(self: Pin<&mut Self>) -> io::Result<u32> {
+    async fn read_u32_le(self: Pin<&mut Self>, stats: &mut ChunkStats) -> io::Result<u32> {
         let mut this = self.project();
 
         let mut buf = [0; 4];
+        stats.add_bytes_read(buf.len());
         this.input.read_exact(&mut buf).await?;
         Ok(u32::from_le_bytes(buf))
     }
@@ -224,6 +262,7 @@ impl<R: AsyncBufRead> Decoder<R> {
 mod tests {
     use super::*;
     use crate::tests::{gzip_compress, random_looking_bytes, split_into_chunks};
+    use assert_matches::assert_matches;
     use futures::channel::mpsc as futures_mpsc;
     use futures::channel::mpsc::TryRecvError;
     use futures::executor;
@@ -276,7 +315,7 @@ mod tests {
                 Err(TryRecvError { .. }) => None,
             };
 
-            let len = out_chunk.as_ref().map(|chunk| chunk.len());
+            let len = out_chunk.as_ref().map(|(chunk, _)| chunk.len());
             output_events.push(len);
 
             if let Some(chunk) = out_chunk {
@@ -287,9 +326,13 @@ mod tests {
         // Close the input stream.
         drop(in_tx);
 
+        // An extra output chunk should be provided for the last ChunkStats.
+        decoder_pool.run_until_stalled();
+        assert_matches!(out_rx.try_next(), Ok(Some((bytes::Bytes { .. }, ChunkStats { .. }))));
+
         // The output stream should close and `out_tx` should be dropped.
         decoder_pool.run_until_stalled();
-        assert!(matches!(out_rx.try_next(), Ok(None)));
+        assert_matches!(out_rx.try_next(), Ok(None));
 
         // Hard-coded consistency check: chunking behavior seems reasonable.
         let expected = [
@@ -310,7 +353,13 @@ mod tests {
         assert_eq!(output_events, expected);
 
         // Are the output bytes correct?
-        let decompressed: Vec<u8> = output_chunks.into_iter().flatten().collect();
+        let decompressed: Vec<u8> = output_chunks
+            .into_iter()
+            .map(|i| match i {
+                (bytes, _) => bytes,
+            })
+            .flatten()
+            .collect();
         assert_eq!(uncompressed, decompressed);
     }
 
@@ -329,8 +378,63 @@ mod tests {
 
         let output_stream = decode(input_stream.into_async_read(), CHUNK_SIZE);
         pin_mut!(output_stream);
-        let result: Result<Vec<Bytes>> = executor::block_on_stream(output_stream).collect();
+
+        let result: Result<Vec<Bytes>> = executor::block_on_stream(output_stream)
+            .map(|i| match i {
+                Ok((bytes, _)) => Ok(bytes),
+                Err(x) => Err(x),
+            })
+            .collect();
 
         assert!(matches!(result, Err(Error::Decode(DecodeError::Footer(..)))));
+    }
+
+    /// Test that decode duration timer is functional and
+    /// contains a time value that is non-zero.
+    #[test]
+    fn test_decode_duration_timer() {
+        const UNCOMPRESSED_LEN: usize = 100;
+        const CHUNK_SIZE: usize = 40;
+
+        let uncompressed = random_looking_bytes(UNCOMPRESSED_LEN);
+        let compressed = gzip_compress(&uncompressed);
+        let chunks = split_into_chunks(&compressed, CHUNK_SIZE);
+        let input_stream = stream::iter(chunks).map(Ok);
+
+        let output_stream = decode(input_stream.into_async_read(), CHUNK_SIZE);
+        pin_mut!(output_stream);
+        let result = executor::block_on_stream(output_stream).filter_map(|i| match i {
+            Ok((_, stats)) => Some(stats),
+            _ => None,
+        });
+
+        let cumulative_decode_time =
+            result.fold(Duration::default(), |accumulator, val| accumulator + val.decode_time());
+
+        assert!(cumulative_decode_time.as_nanos() > 0);
+    }
+
+    /// Test that bytes read counter is functional and
+    /// is equal to the size of the input stream.
+    #[test]
+    fn test_decompression_size_counters() {
+        const UNCOMPRESSED_LEN: usize = 100;
+        const CHUNK_SIZE: usize = 40;
+
+        let uncompressed = random_looking_bytes(UNCOMPRESSED_LEN);
+        let compressed = gzip_compress(&uncompressed);
+        let chunks = split_into_chunks(&compressed, CHUNK_SIZE);
+        let input_stream = stream::iter(chunks).map(Ok);
+
+        let output_stream = decode(input_stream.into_async_read(), CHUNK_SIZE);
+        pin_mut!(output_stream);
+        let result = executor::block_on_stream(output_stream).filter_map(|i| match i {
+            Ok((_, stats)) => Some(stats),
+            _ => None,
+        });
+
+        let bytes_read = result.fold(0usize, |accumulator, val| accumulator + val.bytes_read());
+
+        assert_eq!(bytes_read, compressed.len());
     }
 }

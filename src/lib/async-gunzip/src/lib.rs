@@ -8,7 +8,7 @@ use bytes::Bytes;
 use errors::wrap_error;
 use futures::prelude::*;
 use futures::stream::FusedStream;
-
+use std::time::Duration;
 mod asyncbufread_to_stream;
 mod errors;
 
@@ -44,6 +44,33 @@ where
     B: AsRef<[u8]>,
     E: std::error::Error + Send + Sync + 'static,
 {
+    let output = decode_with_stats(compressed_input);
+
+    output.filter_map(|i| async move {
+        match i {
+            Ok((bytes, _)) => match bytes.len() {
+                // Skip the final empty chunk, which only exists to emit stats for the gzip footer.
+                0 => None,
+                _ => Some(Ok(bytes)),
+            },
+            Err(x) => Some(Err(x)),
+        }
+    })
+}
+
+/// An additional wrapper to decode a stream of gzip-compressed data.
+///
+/// This API returns a tuple of decompressed bytes and a struct containing
+/// statistics related to input size, time spent reading input, and time
+/// spent decompressing it. The final element always contains an empty set
+/// of bytes and stats associated with fetching the gzip trailer.
+pub fn decode_with_stats<B, E>(
+    compressed_input: impl Stream<Item = Result<B, E>>,
+) -> impl FusedStream<Item = Result<(Bytes, ChunkStats), Error<E>>>
+where
+    B: AsRef<[u8]>,
+    E: std::error::Error + Send + Sync + 'static,
+{
     // TODO(kevan): when https://github.com/rust-lang/futures-rs/pull/2599 gets merged,
     // we can remove the Box.
     let compressed_input = Box::pin(compressed_input);
@@ -55,6 +82,42 @@ where
 
     // Unwrap each io::Error that contains an error from the underlying stream.
     output.map_err(Error::unwrap_inner_error)
+}
+
+/// ChunkStats provides information related to the production of the yielded chunk.
+#[derive(Clone, Debug, Default)]
+pub struct ChunkStats {
+    /// Time spent in the gzip decoder to produce this chunk.
+    decode_time: Duration,
+
+    /// Input consumed in the process of yielding a chunk.
+    bytes_read: usize,
+}
+
+impl ChunkStats {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn clear(&mut self) {
+        *self = ChunkStats::new();
+    }
+
+    pub fn decode_time(&self) -> Duration {
+        self.decode_time
+    }
+
+    pub(crate) fn add_decode_time(&mut self, val: Duration) {
+        self.decode_time += val;
+    }
+
+    pub fn bytes_read(&self) -> usize {
+        self.bytes_read
+    }
+
+    pub(crate) fn add_bytes_read(&mut self, val: usize) {
+        self.bytes_read += val;
+    }
 }
 
 #[cfg(test)]
@@ -183,5 +246,18 @@ mod tests {
         let result: Result<Vec<Bytes>, _> = executor::block_on_stream(output_stream).collect();
 
         assert!(matches!(result, Err(Error::Decode(DecodeError::Deflate(..)))));
+    }
+
+    /// Test behavior of the decoder wrapper, the stream does not end with empty bytes.
+    #[test]
+    fn test_decode_last_element() {
+        let input_stream = mock_input_stream(&random_looking_bytes(100), 20);
+
+        let output_stream = decode(input_stream).map(Result::unwrap);
+        pin_mut!(output_stream);
+        let output_chunks = executor::block_on_stream(output_stream);
+        let last_chunk = output_chunks.last().unwrap();
+
+        assert_ne!(last_chunk.len(), 0);
     }
 }
