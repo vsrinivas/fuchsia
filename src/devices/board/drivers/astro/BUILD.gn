@@ -156,18 +156,6 @@ driver_bind_rules("astro-video-bind") {
   ]
 }
 
-driver_bind_rules("ft3x27-touch-bind") {
-  rules = "bind/ft3x27-touch.bind"
-  header_output = "ft3x27-touch-bind.h"
-  bind_output = "ft3x27-touch-bind.bc"
-  tests = "bind-tests/ft3x27-touch-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
-    "//src/devices/bind/fuchsia.gpio",
-    "//src/devices/bind/fuchsia.i2c",
-  ]
-}
-
 driver_bind_rules("gt92xx-touch-bind") {
   rules = "bind/gt92xx-touch.bind"
   header_output = "gt92xx-touch-bind.h"
@@ -380,7 +368,6 @@ fuchsia_driver("astro-driver") {
     ":astro-wifi-bind_header",
     ":astro-xhci-bind_header",
     ":audio-codec-tas27xx-bind_header",
-    ":ft3x27-touch-bind_header",
     ":gt92xx-touch-bind_header",
     ":pd-armcore-bind_header",
     ":pwm-ao-d-bind_header",
@@ -399,7 +386,11 @@ fuchsia_driver("astro-driver") {
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//src/devices/bind/fuchsia:fuchsia_cpp",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d2:fuchsia.amlogic.platform.s905d2_cpp",
     "//src/devices/bind/fuchsia.ams.platform:fuchsia.ams.platform_cpp",
+    "//src/devices/bind/fuchsia.gpio:fuchsia.gpio_cpp",
+    "//src/devices/bind/fuchsia.i2c:fuchsia.i2c_cpp",
     "//src/devices/bus/lib/platform-bus-composites",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/broadcom",
@@ -473,7 +464,6 @@ group("tests") {
     ":astro-wifi-bind_test",
     ":astro-xhci-bind_test",
     ":audio-codec-tas27xx-bind_test",
-    ":ft3x27-touch-bind_test",
     ":gt92xx-touch-bind_test",
     ":pd-armcore-bind_test",
     ":pwm-ao-d-bind_test",
