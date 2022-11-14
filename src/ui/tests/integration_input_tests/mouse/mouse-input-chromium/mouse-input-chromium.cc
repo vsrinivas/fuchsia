@@ -255,7 +255,8 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
       if (event.data == "REGISTER_PORT") {
         console.log("received REGISTER_PORT");
         port = event.ports[0];
-        if (window.innerWidth != 0) {
+        if (window.innerWidth != 0 && window.innerHeight != 0) {
+          console.info('size when REGISTER_PORT: ', window.innerWidth, window.innerHeight);
           port.postMessage('PORT_REGISTERED WINDOW_RESIZED');
         } else {
           port.postMessage('PORT_REGISTERED');
