@@ -9,10 +9,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fit/function.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sysmem-connector/sysmem-connector.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>

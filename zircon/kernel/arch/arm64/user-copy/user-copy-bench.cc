@@ -7,9 +7,9 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <getopt.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/stdcompat/array.h>
 #include <lib/stdcompat/span.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>

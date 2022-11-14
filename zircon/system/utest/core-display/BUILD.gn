@@ -13,6 +13,7 @@ test("core-display") {
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_cpp_wire",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fidl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",

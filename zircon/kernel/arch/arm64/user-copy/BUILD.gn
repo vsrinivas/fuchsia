@@ -62,8 +62,8 @@ if (is_fuchsia) {
       deps = [
                ":user-copy-asm",
                "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
+               "//sdk/lib/component/incoming/cpp",
                "//sdk/lib/stdcompat",
-               "//sdk/lib/sys/component/cpp",
                "//zircon/kernel/lib/arch",
                "//zircon/system/ulib/fbl",
                "//zircon/system/ulib/zx",

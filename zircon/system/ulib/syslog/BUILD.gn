@@ -104,7 +104,7 @@ zx_library("syslog") {
   deps = [
     ":helpers",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
-    "//sdk/lib/component/cpp/incoming",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/syslog:client_includes",
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//sdk/lib/syslog/structured_backend",

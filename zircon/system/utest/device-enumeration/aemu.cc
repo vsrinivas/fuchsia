@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 #include <unistd.h>

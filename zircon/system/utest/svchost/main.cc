@@ -7,9 +7,9 @@
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
 #include <fuchsia/scheduler/c/fidl.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/client.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/profile.h>
