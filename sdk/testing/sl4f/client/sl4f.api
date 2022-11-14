@@ -4079,78 +4079,6 @@
     },
     "performance.dart": {
       "ClassDeclarationImpl": {
-        "MetricsAllowlist": {
-          "ConstructorDeclarationImpl": {
-            "MetricsAllowlist": {
-              "SimpleFormalParameterImpl": {
-                "file": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "file",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "File"
-                }
-              },
-              "name": "MetricsAllowlist",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
-          "MethodDeclarationImpl": {
-            "check": {
-              "SimpleFormalParameterImpl": {
-                "actualMetrics": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "actualMetrics",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Set<String>"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "check",
-              "returnType": "void",
-              "type": "MethodDeclarationImpl"
-            }
-          },
-          "VariableDeclarationImpl": {
-            "expectedMetrics": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "expectedMetrics",
-              "type": "VariableDeclarationImpl",
-              "varType": "Set<String>"
-            },
-            "filename": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "filename",
-              "type": "VariableDeclarationImpl",
-              "varType": "String"
-            }
-          },
-          "name": "MetricsAllowlist",
-          "type": "ClassDeclarationImpl"
-        },
         "Performance": {
           "ConstructorDeclarationImpl": {
             "Performance": {
@@ -4903,6 +4831,204 @@
         }
       },
       "name": "performance.dart",
+      "type": "file"
+    },
+    "performance_publish.dart": {
+      "ClassDeclarationImpl": {
+        "MetricsAllowlist": {
+          "ConstructorDeclarationImpl": {
+            "MetricsAllowlist": {
+              "SimpleFormalParameterImpl": {
+                "file": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "file",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "File"
+                }
+              },
+              "name": "MetricsAllowlist",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "check": {
+              "SimpleFormalParameterImpl": {
+                "actualMetrics": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "actualMetrics",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Set<String>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "check",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "expectedMetrics": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "expectedMetrics",
+              "type": "VariableDeclarationImpl",
+              "varType": "Set<String>"
+            },
+            "filename": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "filename",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            }
+          },
+          "name": "MetricsAllowlist",
+          "type": "ClassDeclarationImpl"
+        },
+        "PerformancePublish": {
+          "ConstructorDeclarationImpl": {
+            "PerformancePublish": {
+              "name": "PerformancePublish",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "convertResults": {
+              "SimpleFormalParameterImpl": {
+                "converterPath": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "converterPath",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "environment": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "environment",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Map<String, String>"
+                },
+                "expectedMetricNamesFile": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "expectedMetricNamesFile",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "result": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "result",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "File"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "convertResults",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "runProcess": {
+              "SimpleFormalParameterImpl": {
+                "args": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "args",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<String>"
+                },
+                "executablePath": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "executablePath",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "runProcess",
+              "returnType": "Future<bool>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "PerformancePublish",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "performance_publish.dart",
       "type": "file"
     },
     "power.dart": {
@@ -5790,6 +5916,10 @@
         },
         "src/performance.dart": {
           "name": "src/performance.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/performance_publish.dart": {
+          "name": "src/performance_publish.dart",
           "type": "ExportDirectiveImpl"
         },
         "src/power.dart": {

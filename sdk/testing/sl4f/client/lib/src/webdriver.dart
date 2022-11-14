@@ -10,7 +10,8 @@ import 'dart:io' as io;
 
 import 'package:logging/logging.dart';
 import 'package:retry/retry.dart';
-import 'package:sl4f/sl4f.dart';
+import 'sl4f_client.dart';
+import 'proxy.dart';
 // Capabilities and exceptions are shared between async and sync.
 import 'package:webdriver/async_core.dart'
     show Capabilities, NoSuchWindowException, WebDriverException;
