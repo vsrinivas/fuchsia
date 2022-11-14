@@ -11,6 +11,13 @@ std::string ConvertModeString(mode_t mode) {
   return ss.str();
 }
 
+bool LinuxTestFile::IsValid() {
+  std::string result;
+  linux_operator_->ExecuteWithAssert(
+      {"[ -e ", linux_operator_->ConvertPath(filename_), " ]; echo $?"}, &result);
+  return result == "0" || result == "0\n";
+}
+
 zx_status_t LinuxOperator::Execute(const std::vector<std::string>& argv, std::string* result) {
   return debian_guest_->Execute(argv, {}, zx::time::infinite(), result, nullptr);
 }
@@ -29,20 +36,33 @@ std::string LinuxOperator::ConvertPath(std::string_view path) {
 }
 
 void LinuxOperator::Mkfs(std::string_view opt) {
-  ASSERT_EQ(Execute({"mkfs.f2fs", test_device_, "-f", opt.data()}), ZX_OK);
+  ExecuteWithAssert({"mkfs.f2fs", test_device_, "-f", opt.data()});
 }
 
-void LinuxOperator::Fsck() { ASSERT_EQ(Execute({"fsck.f2fs", test_device_, "--dry-run"}), ZX_OK); }
+void LinuxOperator::Fsck() { ExecuteWithAssert({"fsck.f2fs", test_device_, "--dry-run"}); }
 
 void LinuxOperator::Mount(std::string_view opt) {
-  ASSERT_EQ(Execute({"mkdir", "-p", mount_path_}), ZX_OK);
-  ASSERT_EQ(Execute({"mount", test_device_, mount_path_, opt.data()}), ZX_OK);
+  ExecuteWithAssert({"mkdir", "-p", mount_path_});
+  ExecuteWithAssert({"mount", test_device_, mount_path_, opt.data()});
 }
 
-void LinuxOperator::Umount() { ASSERT_EQ(Execute({"umount", mount_path_}), ZX_OK); }
+void LinuxOperator::Umount() { ExecuteWithAssert({"umount", mount_path_}); }
 
 void LinuxOperator::Mkdir(std::string_view path, mode_t mode) {
-  ASSERT_EQ(Execute({"mkdir", "-m", ConvertModeString(mode), ConvertPath(path)}), ZX_OK);
+  ExecuteWithAssert({"mkdir", "-m", ConvertModeString(mode), ConvertPath(path)});
+}
+
+std::unique_ptr<TestFile> LinuxOperator::Open(std::string_view path, int flags, mode_t mode) {
+  if (flags & O_CREAT) {
+    if (flags & O_DIRECTORY) {
+      Mkdir(path, mode);
+    } else {
+      ExecuteWithAssert({"touch", ConvertPath(path)});
+      ExecuteWithAssert({"chmod", ConvertModeString(mode), ConvertPath(path)});
+    }
+  }
+
+  return std::unique_ptr<TestFile>(new LinuxTestFile(path, this));
 }
 
 void FuchsiaOperator::Mkfs(MkfsOptions opt) {
@@ -87,6 +107,11 @@ void FuchsiaOperator::Umount() {
   bc_ = std::move(*bc_or);
 
   (*vfs_or).reset();
+}
+
+void FuchsiaOperator::Mkdir(std::string_view path, mode_t mode) {
+  auto new_dir = Open(path, O_CREAT | O_EXCL, S_IFDIR | mode);
+  ASSERT_TRUE(new_dir->IsValid());
 }
 
 std::unique_ptr<TestFile> FuchsiaOperator::Open(std::string_view path, int flags, mode_t mode) {

@@ -30,12 +30,13 @@ constexpr size_t kTestBlockDeviceSize = kTestBlockSize * kTestBlockCount;
 const std::string linux_path_prefix = "//";
 
 class F2fsDebianGuest;
+class LinuxOperator;
 
 class TestFile {
  public:
   virtual ~TestFile() = default;
 
-  virtual bool IsValid() const = 0;
+  virtual bool IsValid() = 0;
 
   virtual ssize_t Read(void* buf, size_t count) = 0;
   virtual ssize_t Write(const void* buf, size_t count) = 0;
@@ -47,9 +48,10 @@ class TestFile {
 
 class LinuxTestFile : public TestFile {
  public:
-  explicit LinuxTestFile() {}
+  explicit LinuxTestFile(std::string_view filename, LinuxOperator* linux_operator)
+      : filename_(filename), linux_operator_(linux_operator) {}
 
-  bool IsValid() const final { return false; }
+  bool IsValid() final;
 
   ssize_t Read(void* buf, size_t count) final { return -1; }
   ssize_t Write(const void* buf, size_t count) final { return -1; }
@@ -57,6 +59,10 @@ class LinuxTestFile : public TestFile {
   int Fstat(struct stat* file_stat) final { return -1; }
   int Ftruncate(off_t len) final { return -1; }
   int Fallocate(int mode, off_t offset, off_t len) final { return -1; }
+
+ private:
+  std::string filename_;
+  LinuxOperator* linux_operator_;
 };
 
 class FuchsiaTestFile : public TestFile {
@@ -68,7 +74,7 @@ class FuchsiaTestFile : public TestFile {
     }
   }
 
-  bool IsValid() const final { return (vnode_ != nullptr); }
+  bool IsValid() final { return (vnode_ != nullptr); }
 
   ssize_t Read(void* buf, size_t count) final { return -1; }
   ssize_t Write(const void* buf, size_t count) final { return -1; }
@@ -119,9 +125,7 @@ class LinuxOperator : public CompatibilityTestOperator {
 
   void Mkdir(std::string_view path, mode_t mode) final;
   int Rmdir(std::string_view path) final { return -1; }
-  std::unique_ptr<TestFile> Open(std::string_view path, int flags, mode_t mode) final {
-    return std::unique_ptr<TestFile>(new LinuxTestFile());
-  }
+  std::unique_ptr<TestFile> Open(std::string_view path, int flags, mode_t mode) final;
   void Rename(std::string_view oldpath, std::string_view newpath) final {}
 
   zx_status_t Execute(const std::vector<std::string>& argv, std::string* result = nullptr);
@@ -159,7 +163,7 @@ class FuchsiaOperator : public CompatibilityTestOperator {
   void Mount(MountOptions opt);
   void Umount() final;
 
-  void Mkdir(std::string_view path, mode_t mode) final {}
+  void Mkdir(std::string_view path, mode_t mode) final;
   int Rmdir(std::string_view path) final { return -1; }
   std::unique_ptr<TestFile> Open(std::string_view path, int flags, mode_t mode) final;
   void Rename(std::string_view oldpath, std::string_view newpath) final {}
