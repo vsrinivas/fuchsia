@@ -4,7 +4,9 @@
 
 #![allow(dead_code)]
 use {
+    crate::scrypt::ScryptError,
     anyhow::{anyhow, Error},
+    async_trait::async_trait,
     async_utils::hanging_get::server::{HangingGet, Publisher},
     fidl::endpoints::ControlHandle,
     fidl_fuchsia_identity_authentication::{
@@ -20,8 +22,16 @@ use {
 /// A trait for types that can determine whether a supplied password is either
 /// valid or potentially valid. A validator either supports enrollment or
 /// authentication.
+#[async_trait]
 pub trait Validator<T: Sized> {
-    fn validate(&self) -> Result<T, PasswordError>;
+    async fn validate(&self, password: &str) -> Result<T, ValidationError>;
+}
+
+pub enum ValidationError {
+    // An error occured inside the password authentication itself.
+    InternalScryptError(ScryptError),
+    // A problem occurred with the supplied password.
+    PasswordError(PasswordError),
 }
 
 type NotifyFn = Box<
@@ -92,18 +102,23 @@ where
         async move {
             while let Some(request) = self.stream.borrow_mut().next().await {
                 match request {
-                    Ok(PasswordInteractionRequest::SetPassword { password: _, control_handle }) => {
+                    Ok(PasswordInteractionRequest::SetPassword { password, control_handle }) => {
                         //  TODO(fxb/108842): Check that the state is waiting::set_password before calling validate.
-                        match self.validator.validate() {
+                        match self.validator.validate(&password).await {
                             Ok(res) => {
                                 control_handle.shutdown_with_epitaph(zx::Status::OK);
                                 return Ok(res);
                             }
-                            Err(e) => {
+                            Err(ValidationError::PasswordError(e)) => {
                                 let state_publisher = self.hanging_get.borrow().new_publisher();
                                 state_publisher
                                     .set(PasswordInteractionWatchStateResponse::Error(e));
                                 *self.publisher.borrow_mut() = Some(state_publisher);
+                            }
+                            Err(ValidationError::InternalScryptError(e)) => {
+                                warn!("Responded with internal error: {:?}", e);
+                                control_handle.shutdown_with_epitaph(zx::Status::INTERNAL);
+                                return Err(anyhow!("Internal error while attempting to validate"));
                             }
                         }
                     }
@@ -145,19 +160,33 @@ mod tests {
             PasswordInteractionMarker, PasswordInteractionProxy,
         },
         fuchsia_async::Task,
+        scrypt::errors::InvalidParams,
     };
 
     struct TestValidateSuccess {}
+
+    #[async_trait]
     impl Validator<()> for TestValidateSuccess {
-        fn validate(&self) -> Result<(), PasswordError> {
+        async fn validate(&self, _password: &str) -> Result<(), ValidationError> {
             Ok(())
         }
     }
 
-    struct TestValidateError {}
-    impl Validator<()> for TestValidateError {
-        fn validate(&self) -> Result<(), PasswordError> {
-            Err(PasswordError::TooShort(6))
+    struct TestValidatePasswordError {}
+
+    #[async_trait]
+    impl Validator<()> for TestValidatePasswordError {
+        async fn validate(&self, _password: &str) -> Result<(), ValidationError> {
+            Err(ValidationError::PasswordError(PasswordError::TooShort(6)))
+        }
+    }
+
+    struct TestValidateInternalScryptError {}
+
+    #[async_trait]
+    impl Validator<()> for TestValidateInternalScryptError {
+        async fn validate(&self, _password: &str) -> Result<(), ValidationError> {
+            Err(ValidationError::InternalScryptError(ScryptError::InvalidParams(InvalidParams)))
         }
     }
 
@@ -174,7 +203,7 @@ mod tests {
                 .await
                 .is_err()
             {
-                panic!("Failed to handle password interaction request stream");
+                warn!("Failed to handle password interaction request stream");
             }
         })
         .detach();
@@ -208,7 +237,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn interaction_handler_listener_reports_error() {
-        let validate = TestValidateError {};
+        let validate = TestValidatePasswordError {};
         let password_proxy = make_proxy(validate);
 
         // The initial state should be Waiting.
@@ -223,7 +252,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn interaction_handler_listener_reports_error_before_first_call_to_watch_state() {
-        let validate = TestValidateError {};
+        let validate = TestValidatePasswordError {};
         let password_proxy = make_proxy(validate);
 
         // Send a SetPassword event and verify that state is Error.
@@ -234,5 +263,19 @@ mod tests {
         // Check that the state has been reset to Waiting on following call to WatchState.
         let state = password_proxy.watch_state().await.expect("Failed to get interaction state");
         assert_eq!(state, PasswordInteractionWatchStateResponse::Waiting(vec![]));
+    }
+
+    #[fuchsia::test]
+    async fn interaction_handler_closes_on_internal_error() {
+        let validate = TestValidateInternalScryptError {};
+        let password_proxy = make_proxy(validate);
+
+        // Send a SetPassword event and verify that an InternalError closes the channel.
+        let _ = password_proxy.set_password("password").unwrap();
+
+        assert_matches!(
+            password_proxy.take_event_stream().next().await.unwrap(),
+            Err(fidl::Error::ClientChannelClosed { status: fidl::Status::INTERNAL, .. })
+        );
     }
 }
