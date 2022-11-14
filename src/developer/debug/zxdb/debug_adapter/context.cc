@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_attach.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_breakpoint.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_continue.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_evaluate.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_launch.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_next.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_pause.h"
@@ -27,12 +28,12 @@
 
 namespace zxdb {
 
-DebugAdapterContext::DebugAdapterContext(Session* session, debug::StreamBuffer* stream)
-    : session_(session), dap_(dap::Session::create()) {
+DebugAdapterContext::DebugAdapterContext(Console* console, debug::StreamBuffer* stream)
+    : console_(console), dap_(dap::Session::create()) {
   reader_ = std::make_shared<DebugAdapterReader>(stream);
   writer_ = std::make_shared<DebugAdapterWriter>(stream);
 
-  session_->AddObserver(this);
+  session()->AddObserver(this);
 
   dap_->registerHandler(
       [this](const dap::InitializeRequest& req,
@@ -47,10 +48,10 @@ DebugAdapterContext::DebugAdapterContext(Session* session, debug::StreamBuffer* 
         send_initialize_response_ = send_resp;
         // If the session is connected or there's no pending connection, send the response
         // immediately. Otherwise, defer the response until the connection resolves.
-        if (session_->IsConnected()) {
+        if (session()->IsConnected()) {
           DidResolveConnection(Err());
-        } else if (!session_->HasPendingConnection()) {
-          Err err = session_->last_connection_error();
+        } else if (!session()->HasPendingConnection()) {
+          Err err = session()->last_connection_error();
           if (!err.has_error()) {
             err = Err("Debugger not connected to device");
           }
@@ -78,7 +79,7 @@ DebugAdapterContext::~DebugAdapterContext() {
     session()->process_observers().RemoveObserver(this);
   }
   DeleteAllBreakpoints();
-  session_->RemoveObserver(this);
+  session()->RemoveObserver(this);
 }
 
 void DebugAdapterContext::DidResolveConnection(const Err& err) {
@@ -179,6 +180,13 @@ void DebugAdapterContext::Init() {
              std::function<void(dap::ResponseOrError<dap::VariablesResponse>)> callback) {
         DEBUG_LOG(DebugAdapter) << "VariablesRequest received";
         OnRequestVariables(this, req, callback);
+      });
+
+  dap_->registerHandler(
+      [this](const dap::EvaluateRequest& req,
+             std::function<void(dap::ResponseOrError<dap::EvaluateResponse>)> callback) {
+        DEBUG_LOG(DebugAdapter) << "EvaluateRequest received";
+        OnRequestEvaluate(this, req, callback);
       });
 
   dap_->registerHandler([this](const dap::DisconnectRequest& req) {

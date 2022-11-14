@@ -8,8 +8,9 @@
 #include <thread>
 
 #include "src/developer/debug/shared/buffered_fd.h"
-#include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/debug_adapter/context.h"
+#include "src/lib/fxl/observer_list.h"
 
 namespace zxdb {
 
@@ -27,7 +28,8 @@ class DebugAdapterServerObserver {
 // incoming connections.
 class DebugAdapterServer {
  public:
-  DebugAdapterServer(Session* session, uint16_t port);
+  // |console| must outlive us.
+  DebugAdapterServer(Console* console, uint16_t port);
 
   ~DebugAdapterServer();
 
@@ -40,7 +42,7 @@ class DebugAdapterServer {
   void RemoveObserver(DebugAdapterServerObserver* observer) { observers_.RemoveObserver(observer); }
 
  private:
-  Session* session_;
+  Console* console_;
   uint16_t port_;
 
   fbl::unique_fd server_socket_;

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_variables.h"
+
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>

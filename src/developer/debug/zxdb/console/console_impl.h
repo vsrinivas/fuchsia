@@ -22,7 +22,7 @@ class Session;
 // The console has some virtual functions for ease of mocking the interface for tests.
 class ConsoleImpl : public Console {
  public:
-  // The line input factory is used to provide a factory for line input implementations that
+  // The |line_input_factory| is used to provide a factory for line input implementations that
   // don't interact with the actual stdout for testing purposes. If null, stdout will be used.
   explicit ConsoleImpl(Session* session, line_input::ModalLineInput::Factory line_input_factory =
                                              line_input::ModalLineInput::Factory());
@@ -40,11 +40,6 @@ class ConsoleImpl : public Console {
                       line_input::ModalLineInput::ModalCompletionCallback cb) override;
   void ProcessInputLine(const std::string& line, fxl::RefPtr<CommandContext> cmd_context = nullptr,
                         bool add_to_history = true) override;
-  fxl::RefPtr<ConsoleSuspendToken> SuspendInput() override;
-
- protected:
-  // Console protected implementation.
-  void EnableInput() override;
 
  private:
   FRIEND_TEST(ConsoleImplTest, ControlC);
@@ -56,7 +51,14 @@ class ConsoleImpl : public Console {
   void LoadHistoryFile();
 
   // Returns true if input handling is enabled. False means input is blocked.
-  bool InputEnabled() const;
+  bool InputEnabled() const { return stdio_watch_.watching(); }
+
+  // Start watching stdio for input. Do nothing if the input is already enabled.
+  void EnableInput();
+
+  // Stop watching stdio for input. The UI will be blocked until EnableInput() is called.
+  // Do nothing if the input is already disabled.
+  void DisableInput();
 
   debug::MessageLoop::WatchHandle stdio_watch_;
 

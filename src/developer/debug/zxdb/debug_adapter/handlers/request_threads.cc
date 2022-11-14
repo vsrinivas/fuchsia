@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_threads.h"
 
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 
 namespace zxdb {

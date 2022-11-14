@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/console/command_context.h"
 
 #include "src/developer/debug/zxdb/common/ref_ptr_to.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/console.h"
 
 namespace zxdb {
@@ -82,6 +83,12 @@ void OfflineCommandContext::Output(const OutputBuffer& output) { output_.Append(
 void OfflineCommandContext::ReportError(const Err& err) {
   set_has_error();
   errors_.push_back(err);
+
+  OutputBuffer out;
+  out.Append(err);
+  if (!StringEndsWith(err.msg(), "\n"))
+    out.Append("\n");
+  Output(out);
 }
 
 // NestedCommandContext ----------------------------------------------------------------------------

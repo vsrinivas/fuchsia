@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/console/mock_console.h"
 
 namespace {
 
@@ -50,7 +51,9 @@ namespace zxdb {
 
 class DebugAdapterServerTest : public TestWithLoop, public DebugAdapterServerObserver {
  public:
-  DebugAdapterServerTest() : server_(&session_, kServerPort) { server_.AddObserver(this); }
+  DebugAdapterServerTest() : console_(&session_), server_(&console_, kServerPort) {
+    server_.AddObserver(this);
+  }
 
   DebugAdapterServer& server() { return server_; }
 
@@ -60,6 +63,7 @@ class DebugAdapterServerTest : public TestWithLoop, public DebugAdapterServerObs
 
  private:
   Session session_;
+  MockConsole console_;
   DebugAdapterServer server_;
 };
 

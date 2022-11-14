@@ -5,14 +5,11 @@
 #include "src/developer/debug/zxdb/console/console_impl.h"
 
 #include <fcntl.h>
-#include <stdlib.h>
-#include <unistd.h>
-#ifndef __Fuchsia__
-#include <signal.h>
-#include <termios.h>
-#endif
-
 #include <lib/syslog/cpp/macros.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include <filesystem>
 
@@ -25,7 +22,6 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_parser.h"
-#include "src/developer/debug/zxdb/console/console_suspend_token.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -213,18 +209,26 @@ void ConsoleImpl::ProcessInputLine(const std::string& line, fxl::RefPtr<CommandC
   // the effect of blocking the UI for the duration of the command.
   auto ui_timeout =
       context().session()->system().settings().GetInt(ClientSettings::System::kUiTimeoutMs);
-  if (ui_timeout > 0) {
-    auto suspend_token = Console::get()->SuspendInput();
-    cmd_context->SetConsoleCompletionObserver(fit::defer_callback([suspend_token]() {
-      // Console::get()->Output("COMPLETE\n");
-      suspend_token->Enable();
-    }));
+  if (ui_timeout > 0 && InputEnabled()) {
+    DisableInput();
+
+    fit::callback<void()> resume_input = [weak_this = GetImplWeakPtr()]() {
+      if (weak_this)
+        weak_this->EnableInput();
+    };
+    cmd_context->SetConsoleCompletionObserver(fit::defer(resume_input.share()));
 
     // Some commands will take a long time to execute, re-enable the input if this happens.
     debug::MessageLoop::Current()->PostTimer(
-        FROM_HERE, ui_timeout, [suspend_token, verb = cmd.verb()]() {
-          if (suspend_token->enabled())
+        FROM_HERE, ui_timeout,
+        [resume_input = std::move(resume_input), verb = cmd.verb(),
+         weak_this = GetImplWeakPtr()]() mutable {
+          if (!resume_input)
             return;  // Command already complete and input explicit re-enabled.
+          if (!weak_this)
+            return;  // Console is gone.
+          if (weak_this->InputEnabled())
+            return;  // Input is enabled in another way, e.g., ModalGetOption().
 
           // Otherwise the command is still running after the timeout. Print a message and re-enable
           // input so the user can get on with things.
@@ -237,7 +241,7 @@ void ConsoleImpl::ProcessInputLine(const std::string& line, fxl::RefPtr<CommandC
                 OutputBuffer(Syntax::kComment, "\"" + GetVerbRecord(verb)->aliases[0] +
                                                    "\" command running in the background...\n"));
           }
-          suspend_token->Enable();
+          resume_input();
         });
   }
 
@@ -249,18 +253,19 @@ void ConsoleImpl::ProcessInputLine(const std::string& line, fxl::RefPtr<CommandC
   }
 }
 
-fxl::RefPtr<ConsoleSuspendToken> ConsoleImpl::SuspendInput() {
-  if (stdio_watch_.watching()) {
-    line_input_.Hide();
-    // Stop watching for stdin which will stop feeding input to the LineInput. Today, the LineInput
-    // class doesn't suspend processing while hidden. If we didn't disable this watching, you would
-    // still get commands executed even though you can't see your typing.
-    //
-    // Buffering here needs to be revisited because ideally we would make Control-C work to suspend
-    // the synchronous mode, while also buffering the user typing while hidden.
-    stdio_watch_.StopWatching();
+void ConsoleImpl::DisableInput() {
+  if (!InputEnabled()) {
+    return;
   }
-  return fxl::AdoptRef(new ConsoleSuspendToken);
+
+  line_input_.Hide();
+  // Stop watching for stdin which will stop feeding input to the LineInput. Today, the LineInput
+  // class doesn't suspend processing while hidden. If we didn't disable this watching, you would
+  // still get commands executed even though you can't see your typing.
+  //
+  // Buffering here needs to be revisited because ideally we would make Control-C work to suspend
+  // the synchronous mode, while also buffering the user typing while hidden.
+  stdio_watch_.StopWatching();
 }
 
 void ConsoleImpl::EnableInput() {
@@ -322,7 +327,5 @@ void ConsoleImpl::EnableInput() {
                                                         STDIN_FILENO, std::move(watch_fn));
   line_input_.Show();
 }
-
-bool ConsoleImpl::InputEnabled() const { return stdio_watch_.watching(); }
 
 }  // namespace zxdb

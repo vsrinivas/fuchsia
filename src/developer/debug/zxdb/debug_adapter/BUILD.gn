@@ -14,6 +14,8 @@ static_library("debug_adapter") {
     "handlers/request_breakpoint.h",
     "handlers/request_continue.cc",
     "handlers/request_continue.h",
+    "handlers/request_evaluate.cc",
+    "handlers/request_evaluate.h",
     "handlers/request_launch.cc",
     "handlers/request_launch.h",
     "handlers/request_next.cc",
@@ -39,6 +41,7 @@ static_library("debug_adapter") {
   deps = []
   public_deps = [
     "//src/developer/debug/zxdb/client",
+    "//src/developer/debug/zxdb/console",
     "//third_party/github.com/google/cppdap",
   ]
 

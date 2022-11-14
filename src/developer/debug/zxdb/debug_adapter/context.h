@@ -14,10 +14,10 @@
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
-#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/session_observer.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -56,10 +56,11 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver, SessionObser
  public:
   using DestroyConnectionCallback = std::function<void()>;
 
-  explicit DebugAdapterContext(Session* session, debug::StreamBuffer* stream);
+  explicit DebugAdapterContext(Console* console, debug::StreamBuffer* stream);
   virtual ~DebugAdapterContext();
 
-  Session* session() { return session_; }
+  Console* console() { return console_; }
+  Session* session() { return console_->context().session(); }
   dap::Session& dap() { return *dap_; }
   bool supports_run_in_terminal() { return supports_run_in_terminal_; }
 
@@ -114,7 +115,7 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver, SessionObser
   void DeleteAllBreakpoints();
 
  private:
-  Session* const session_;
+  Console* const console_;
   const std::unique_ptr<dap::Session> dap_;
   std::shared_ptr<DebugAdapterReader> reader_;
   std::shared_ptr<DebugAdapterWriter> writer_;

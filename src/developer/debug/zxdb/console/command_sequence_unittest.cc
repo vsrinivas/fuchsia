@@ -75,8 +75,8 @@ TEST_F(CommandSequence, Error) {
 
   EXPECT_TRUE(called);
 
-  // There should be no real output (the valid "break" command should never have run).
-  EXPECT_TRUE(output.empty()) << output;
+  // The output should contain the error and the new line.
+  ASSERT_EQ("The string \"floofbunny\" is not a valid verb.\n", output);
 
   ASSERT_EQ("The string \"floofbunny\" is not a valid verb.", error.msg());
 }

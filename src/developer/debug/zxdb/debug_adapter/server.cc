@@ -15,8 +15,8 @@
 
 namespace zxdb {
 
-DebugAdapterServer::DebugAdapterServer(Session* session, uint16_t port)
-    : session_(session), port_(port) {
+DebugAdapterServer::DebugAdapterServer(Console* console, uint16_t port)
+    : console_(console), port_(port) {
   int fd[2] = {};
   pipe(fd);
   exit_pipe_[0] = fbl::unique_fd(fd[0]);
@@ -129,7 +129,7 @@ void DebugAdapterServer::ConnectionResolvedMainThread(fbl::unique_fd client) {
     return;
   }
 
-  context_ = std::make_unique<DebugAdapterContext>(session_, &buffer_->stream());
+  context_ = std::make_unique<DebugAdapterContext>(console_, &buffer_->stream());
   buffer_->set_data_available_callback(
       [context = context_.get()]() { context->OnStreamReadable(); });
   context_->set_destroy_connection_callback([this]() { OnDisconnect(); });

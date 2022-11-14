@@ -9,7 +9,6 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_parser.h"
-#include "src/developer/debug/zxdb/console/console_suspend_token.h"
 
 namespace zxdb {
 
@@ -95,12 +94,5 @@ void MockConsole::ProcessInputLine(const std::string& line, fxl::RefPtr<CommandC
     context_.SetSourceAffinityForThread(cmd.thread(), GetVerbRecord(cmd.verb())->source_affinity);
   }
 }
-
-fxl::RefPtr<ConsoleSuspendToken> MockConsole::SuspendInput() {
-  // Mock consoles don't suspend input.
-  return fxl::AdoptRef(new ConsoleSuspendToken);
-}
-
-void MockConsole::EnableInput() {}
 
 }  // namespace zxdb

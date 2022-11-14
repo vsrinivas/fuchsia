@@ -11,6 +11,7 @@
 #include "lib/syslog/cpp/macros.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/source_file_provider_impl.h"
+#include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/debug_adapter/context.h"
 #include "src/developer/debug/zxdb/symbols/function.h"

@@ -4,7 +4,11 @@
 
 #include "src/developer/debug/zxdb/debug_adapter/context_test.h"
 
+#include <memory>
+
 #include <gmock/gmock.h>
+
+#include "src/developer/debug/zxdb/console/mock_console.h"
 
 namespace zxdb {
 
@@ -18,7 +22,8 @@ class MockWriter : public debug::StreamBuffer::Writer {
 
 void DebugAdapterContextTest::SetUp() {
   RemoteAPITest::SetUp();
-  context_ = std::make_unique<DebugAdapterContext>(&session(), pipe_.end1());
+  console_ = std::make_unique<MockConsole>(&session());
+  context_ = std::make_unique<DebugAdapterContext>(console_.get(), pipe_.end1());
   client_ = dap::Session::create();
 
   client_->connect(std::make_shared<DebugAdapterReader>(pipe_.end2()),
@@ -28,8 +33,9 @@ void DebugAdapterContextTest::SetUp() {
 }
 
 void DebugAdapterContextTest::TearDown() {
-  context_.reset();
   client_.reset();
+  context_.reset();
+  console_.reset();
   RemoteAPITest::TearDown();
 }
 

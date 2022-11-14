@@ -9,6 +9,8 @@
 
 #include "src/developer/debug/shared/test_stream_buffer.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
+#include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/console/mock_console.h"
 #include "src/developer/debug/zxdb/debug_adapter/context.h"
 
 namespace zxdb {
@@ -97,6 +99,7 @@ class DebugAdapterContextTest : public RemoteAPITest {
 
  private:
   std::unique_ptr<DebugAdapterContext> context_;
+  std::unique_ptr<MockConsole> console_;
   std::unique_ptr<dap::Session> client_;
   TestPipe pipe_;
 };

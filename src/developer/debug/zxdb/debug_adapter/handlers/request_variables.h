@@ -4,6 +4,7 @@
 
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_DEBUG_ADAPTER_HANDLERS_REQUEST_VARIABLES_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_DEBUG_ADAPTER_HANDLERS_REQUEST_VARIABLES_H_
+
 #include "src/developer/debug/zxdb/debug_adapter/context.h"
 
 namespace zxdb {

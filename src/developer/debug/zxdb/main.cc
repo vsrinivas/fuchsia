@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/console_main.h"
-
 #include <lib/cmdline/args_parser.h>
 #include <lib/fit/defer.h>
 
 #include <cstdlib>
+#include <memory>
 
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
@@ -19,6 +18,7 @@
 #include "src/developer/debug/zxdb/console/command_line_options.h"
 #include "src/developer/debug/zxdb/console/command_sequence.h"
 #include "src/developer/debug/zxdb/console/console_impl.h"
+#include "src/developer/debug/zxdb/console/console_noninteractive.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/debug_adapter/server.h"
@@ -73,33 +73,24 @@ void InitConsole(zxdb::Console& console) {
 void SetupCommandLineOptions(const CommandLineOptions& options, Session* session) {
   auto& system_settings = session->system().settings();
 
-  if (options.symbol_cache) {
+  if (options.debug_mode)
+    system_settings.SetBool(ClientSettings::System::kDebugMode, true);
+  if (options.no_auto_attach_limbo)
+    system_settings.SetBool(ClientSettings::System::kAutoAttachLimbo, false);
+  if (options.symbol_cache)
     system_settings.SetString(ClientSettings::System::kSymbolCache, *options.symbol_cache);
-  }
-
-  if (!options.symbol_index_files.empty()) {
+  if (!options.symbol_index_files.empty())
     system_settings.SetList(ClientSettings::System::kSymbolIndexFiles, options.symbol_index_files);
-  }
-
-  if (!options.symbol_servers.empty()) {
+  if (!options.symbol_servers.empty())
     system_settings.SetList(ClientSettings::System::kSymbolServers, options.symbol_servers);
-  }
-
-  if (!options.symbol_paths.empty()) {
+  if (!options.symbol_paths.empty())
     system_settings.SetList(ClientSettings::System::kSymbolPaths, options.symbol_paths);
-  }
-
-  if (!options.build_id_dirs.empty()) {
+  if (!options.build_id_dirs.empty())
     system_settings.SetList(ClientSettings::System::kBuildIdDirs, options.build_id_dirs);
-  }
-
-  if (!options.ids_txts.empty()) {
+  if (!options.ids_txts.empty())
     system_settings.SetList(ClientSettings::System::kIdsTxts, options.ids_txts);
-  }
-
-  if (!options.build_dirs.empty()) {
+  if (!options.build_dirs.empty())
     system_settings.SetList(ClientSettings::Target::kBuildDirs, options.build_dirs);
-  }
 }
 
 }  // namespace
@@ -150,38 +141,29 @@ int ConsoleMain(int argc, const char* argv[]) {
     Analytics::IfEnabledSendInvokeEvent(&session);
 
     debug::SetLogCategories({debug::LogCategory::kAll});
-    if (options.debug_mode) {
-      session.system().settings().SetBool(ClientSettings::System::kDebugMode, true);
-    }
+    SetupCommandLineOptions(options, &session);
 
-    if (options.no_auto_attach_limbo) {
-      session.system().settings().SetBool(ClientSettings::System::kAutoAttachLimbo, false);
-    }
-
+    std::unique_ptr<Console> console;
     std::unique_ptr<DebugAdapterServer> debug_adapter;
+
     if (options.enable_debug_adapter) {
       int port = options.debug_adapter_port;
-      debug_adapter = std::make_unique<DebugAdapterServer>(&session, port);
+      console = std::make_unique<ConsoleNoninteractive>(&session);
+      debug_adapter = std::make_unique<DebugAdapterServer>(console->get(), port);
       err = debug_adapter->Init();
       if (err.has_error()) {
-        fprintf(stderr, "Failed to initialize debug adapter: %s\n", err.msg().c_str());
+        LOGS(Error) << "Failed to initialize debug adapter: " << err.msg();
         loop.Cleanup();
         return EXIT_FAILURE;
       }
-    }
-
-    ConsoleImpl console(&session);
-    SetupCommandLineOptions(options, &session);
-
-    if (!actions.empty()) {
-      // Run the actions and then initialize the console to enter interactive mode.
-      auto action_cmd_context = fxl::MakeRefCounted<ConsoleCommandContext>(
-          &console, [&console](const Err&) { InitConsole(console); });
-      RunCommandSequence(&console, std::move(actions), std::move(action_cmd_context));
     } else {
-      // Interactive mode is the default mode.
-      InitConsole(console);
+      console = std::make_unique<ConsoleImpl>(&session);
     }
+
+    // Run the actions and then initialize the console to enter interactive mode.
+    RunCommandSequence(console.get(), std::move(actions),
+                       fxl::MakeRefCounted<ConsoleCommandContext>(
+                           console.get(), [&](const Err&) { InitConsole(*console); }));
 
     loop.Run();
   }
@@ -192,3 +174,5 @@ int ConsoleMain(int argc, const char* argv[]) {
 }
 
 }  // namespace zxdb
+
+int main(int argc, char* argv[]) { return zxdb::ConsoleMain(argc, const_cast<const char**>(argv)); }

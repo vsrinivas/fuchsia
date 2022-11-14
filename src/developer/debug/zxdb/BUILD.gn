@@ -17,7 +17,7 @@ import("//build/test.gni")
 # ZXDB currently only compiles for the host.
 if (is_host) {
   executable("zxdb") {
-    sources = [ "main_host.cc" ]
+    sources = [ "main.cc" ]
     deps = [
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/console",

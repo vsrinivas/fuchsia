@@ -33,7 +33,7 @@ TEST(CommandContext, AsyncOutputAndErrors) {
         nullptr, [&called](OutputBuffer output, std::vector<Err> errors) {
           called = true;
 
-          EXPECT_EQ("Some output\nAsync output\n", output.AsString());
+          EXPECT_EQ("Some error\nSome output\nAsync output\n", output.AsString());
 
           EXPECT_EQ(1u, errors.size());
           EXPECT_EQ("Some error", errors[0].msg());
