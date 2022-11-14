@@ -71,12 +71,13 @@ Device::Device(zx_device_t* device, fdf::ClientEnd<fuchsia_wlan_softmac::WlanSof
   state_ = fbl::AdoptRef(new DeviceState);
 
   // Create a dispatcher to wait on the runtime channel.
-  auto dispatcher = fdf::Dispatcher::Create(0, "wlansoftmacifc_server", [&](fdf_dispatcher_t*) {
-    if (unbind_txn_ != std::nullopt)
-      unbind_txn_->Reply();
-    else
-      device_unbind_reply(ethdev_);
-  });
+  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+                                            "wlansoftmacifc_server", [&](fdf_dispatcher_t*) {
+                                              if (unbind_txn_ != std::nullopt)
+                                                unbind_txn_->Reply();
+                                              else
+                                                device_unbind_reply(ethdev_);
+                                            });
 
   if (dispatcher.is_error()) {
     ZX_ASSERT_MSG(false, "Creating server dispatcher error: %s",
@@ -86,8 +87,9 @@ Device::Device(zx_device_t* device, fdf::ClientEnd<fuchsia_wlan_softmac::WlanSof
   server_dispatcher_ = *std::move(dispatcher);
 
   // Create a dispatcher for Wlansoftmac device as a FIDL client.
-  dispatcher = fdf::Dispatcher::Create(
-      0, "wlansoftmac_client", [&](fdf_dispatcher_t*) { server_dispatcher_.ShutdownAsync(); });
+  dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "wlansoftmac_client",
+                              [&](fdf_dispatcher_t*) { server_dispatcher_.ShutdownAsync(); });
 
   if (dispatcher.is_error()) {
     ZX_ASSERT_MSG(false, "Creating client dispatcher error: %s",

@@ -405,10 +405,11 @@ void WlanSoftmacDevice::UpdateWmmParams(UpdateWmmParamsRequestView request, fdf:
 
 zx_status_t WlanSoftmacDevice::InitClientDispatcher() {
   // Create dispatcher for FIDL client of WlanSoftmacIfc protocol.
-  auto dispatcher = fdf::Dispatcher::Create(0, "wlansoftmacifc_client", [&](fdf_dispatcher_t*) {
-    if (unbind_txn_)
-      unbind_txn_->Reply();
-  });
+  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+                                            "wlansoftmacifc_client", [&](fdf_dispatcher_t*) {
+                                              if (unbind_txn_)
+                                                unbind_txn_->Reply();
+                                            });
 
   if (dispatcher.is_error()) {
     IWL_ERR(this, "%s(): Dispatcher created failed%s\n", __func__,
@@ -423,8 +424,9 @@ zx_status_t WlanSoftmacDevice::InitClientDispatcher() {
 
 zx_status_t WlanSoftmacDevice::InitServerDispatcher() {
   // Create dispatcher for FIDL server of WlanSoftmac protocol.
-  auto dispatcher = fdf::Dispatcher::Create(
-      0, "wlansoftmac_server", [&](fdf_dispatcher_t*) { client_dispatcher_.ShutdownAsync(); });
+  auto dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "wlansoftmac_server",
+                              [&](fdf_dispatcher_t*) { client_dispatcher_.ShutdownAsync(); });
   if (dispatcher.is_error()) {
     IWL_ERR(this, "%s(): Dispatcher created failed%s\n", __func__,
             zx_status_get_string(dispatcher.status_value()));
@@ -495,17 +497,18 @@ void WlanSoftmacDevice::ScanComplete(const zx_status_t status, const uint64_t sc
   auto arena = fdf::Arena::Create(0, 0);
   if (arena.is_error()) {
     IWL_ERR(this,
-        "Failed to create Arena in WlanSoftmacDevice::ScanComplete(). "
-        "scan_id=%zu, status=%s\n", scan_id, zx_status_get_string(status));
+            "Failed to create Arena in WlanSoftmacDevice::ScanComplete(). "
+            "scan_id=%zu, status=%s\n",
+            scan_id, zx_status_get_string(status));
     return;
   }
 
   auto result = client_.sync().buffer(*std::move(arena))->ScanComplete(status, scan_id);
   if (!result.ok()) {
     IWL_ERR(this,
-        "Failed to send scan complete notification up in WlanSoftmacDevice::ScanComplete(). "
-        "result.status: %d, scan_id=%zu, status=%s\n",
-        result.status(), scan_id, zx_status_get_string(status));
+            "Failed to send scan complete notification up in WlanSoftmacDevice::ScanComplete(). "
+            "result.status: %d, scan_id=%zu, status=%s\n",
+            result.status(), scan_id, zx_status_get_string(status));
   }
 }
 
