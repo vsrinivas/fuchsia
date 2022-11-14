@@ -165,7 +165,7 @@ std::unique_ptr<Bytes> BytesFromExtraData(T& from) {
 // and must be freed.
 void ExtraDataFromBytes(const Bytes& bytes, const AvCodecContextPtr& context) {
   size_t byte_count = bytes.size();
-  uint8_t* copy = reinterpret_cast<uint8_t*>(malloc(byte_count));
+  uint8_t* copy = reinterpret_cast<uint8_t*>(malloc(byte_count + AV_INPUT_BUFFER_PADDING_SIZE));
   std::memcpy(copy, bytes.data(), byte_count);
   context->extradata = copy;
   context->extradata_size = byte_count;
