@@ -197,7 +197,7 @@ func doTestOTAs(
 	var lastError error
 	for attempt := uint(1); attempt <= c.downgradeOTAAttempts; attempt++ {
 		logger.Infof(ctx, "checking device version (attempt %d of %d)", attempt, c.downgradeOTAAttempts)
-		upToDate, lastError := check.IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
+		upToDate, lastError = check.IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
 		if lastError == nil {
 			logger.Infof(ctx, "Got device version, upToDate: %t", upToDate)
 			break
