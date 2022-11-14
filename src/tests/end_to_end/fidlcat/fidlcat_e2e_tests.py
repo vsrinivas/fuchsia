@@ -160,7 +160,9 @@ class FidlcatE2eTests(unittest.TestCase):
             '    value: string = "hello world"\n'
             '  }', fidlcat.stdout)
 
-    def test_stay_alive(self):
+    # TODO(fxbug.dev/113425): This test flakes on core.x64-debug, where fidlcat fails to exit after
+    # receiving the SIGTERM signal.
+    def disabled_test_stay_alive(self):
         fidlcat = Fidlcat(
             '--remote-name=echo_client', '--stay-alive', merge_stderr=True)
         fidlcat.read_until('Connected!')
