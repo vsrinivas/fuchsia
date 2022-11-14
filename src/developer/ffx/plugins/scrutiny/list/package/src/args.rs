@@ -15,13 +15,15 @@ use std::path::PathBuf;
     description = "Lists all the files in a package",
     example = "To list all the files in a package:
 
-        $ ffx scrutiny list package fuchsia-pkg://fuchsia.com/foo",
+        $ ffx scrutiny list package \
+            --product-bundle $(fx get-build-dir)/obj/build/images/fuchsia/product_bundle \
+            --url fuchsia-pkg://fuchsia.com/foo",
     note = "Lists all the package contents in json format."
 )]
 pub struct ScrutinyPackageCommand {
-    /// path to the build directory.
+    /// path to a product bundle.
     #[argh(option)]
-    pub build_path: PathBuf,
+    pub product_bundle: PathBuf,
     /// fuchsia url to the package.
     #[argh(option)]
     pub url: AbsolutePackageUrl,

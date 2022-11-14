@@ -10,12 +10,12 @@ use {
         model::model::DataModel,
     },
     scrutiny_utils::{
-        artifact::{ArtifactReader, BlobFsArtifactReader},
+        artifact::{ArtifactReader, FileArtifactReader},
         usage::UsageBuilder,
     },
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
-    std::{path::Path, sync::Arc},
+    std::{path::Path, path::PathBuf, sync::Arc},
 };
 
 #[derive(Deserialize, Serialize)]
@@ -36,13 +36,8 @@ pub struct BlobController {}
 impl DataController for BlobController {
     fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
         let model_config = model.config();
-        let mut artifact_reader = BlobFsArtifactReader::try_compound(
-            &model_config.build_path(),
-            model_config.tmp_dir_path().as_ref(),
-            &model_config.blobfs_paths(),
-        )
-        .context("Failed to construct blobfs artifact reader for blob controller")?;
-
+        let mut artifact_reader =
+            FileArtifactReader::new(&PathBuf::new(), &model_config.blobs_directory());
         let req: BlobRequest = serde_json::from_value(query)?;
         let merkle_string = format!("{}", req.merkle);
         let data = artifact_reader

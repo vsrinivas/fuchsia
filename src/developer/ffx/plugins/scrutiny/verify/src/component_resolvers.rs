@@ -5,9 +5,8 @@
 use {
     anyhow::{anyhow, Context, Result},
     ffx_scrutiny_verify_args::component_resolvers::Command,
-    scrutiny_config::Config,
+    scrutiny_config::{ConfigBuilder, ModelConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
-    scrutiny_utils::path::join_and_canonicalize,
     serde::{Deserialize, Serialize},
     std::{collections::HashSet, fs, path::PathBuf},
 };
@@ -59,9 +58,7 @@ trait QueryComponentResolvers {
 /// current working directory.
 #[derive(Debug)]
 struct ScrutinyQueryComponentResolvers {
-    build_path: PathBuf,
-    update_package_path: PathBuf,
-    blobfs_paths: Vec<PathBuf>,
+    product_bundle: PathBuf,
     tmp_dir_path: Option<PathBuf>,
 }
 
@@ -73,18 +70,14 @@ impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
         protocol: String,
     ) -> Result<ComponentResolversResponse> {
         let request = ComponentResolversRequest { scheme, moniker, protocol };
-
-        let mut config = Config::run_command_with_plugins(
-            CommandBuilder::new("verify.component_resolvers")
-                .param("scheme", &request.scheme)
-                .param("moniker", request.moniker.to_string())
-                .param("protocol", &request.protocol)
-                .build(),
-            vec!["DevmgrConfigPlugin", "StaticPkgsPlugin", "CorePlugin", "VerifyPlugin"],
-        );
-        config.runtime.model.build_path = self.build_path.clone();
-        config.runtime.model.update_package_path = self.update_package_path.clone();
-        config.runtime.model.blobfs_paths = self.blobfs_paths.clone();
+        let command = CommandBuilder::new("verify.component_resolvers")
+            .param("scheme", &request.scheme)
+            .param("moniker", request.moniker.to_string())
+            .param("protocol", &request.protocol)
+            .build();
+        let plugins = vec!["DevmgrConfigPlugin", "StaticPkgsPlugin", "CorePlugin", "VerifyPlugin"];
+        let model = ModelConfig::from_product_bundle(self.product_bundle.clone())?;
+        let mut config = ConfigBuilder::with_model(model).command(command).plugins(plugins).build();
         config.runtime.model.tmp_dir_path = self.tmp_dir_path.clone();
         config.runtime.logging.silent_mode = true;
 
@@ -143,14 +136,9 @@ fn verify_component_resolvers(
 }
 
 pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<PathBuf>> {
-    let allowlist_path = join_and_canonicalize(&cmd.build_path, &cmd.allowlist);
-    let update_package_path = join_and_canonicalize(&cmd.build_path, &cmd.update);
-    let blobfs_paths =
-        cmd.blobfs.iter().map(|blobfs| join_and_canonicalize(&cmd.build_path, blobfs)).collect();
+    let allowlist_path = &cmd.allowlist;
     let scrutiny = ScrutinyQueryComponentResolvers {
-        build_path: cmd.build_path.clone(),
-        update_package_path,
-        blobfs_paths,
+        product_bundle: cmd.product_bundle.clone(),
         tmp_dir_path: tmp_dir.map(PathBuf::clone),
     };
 

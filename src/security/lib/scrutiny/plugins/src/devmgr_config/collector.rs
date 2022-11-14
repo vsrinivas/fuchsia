@@ -9,17 +9,12 @@ use {
     anyhow::{Context, Result},
     scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_utils::{
-        artifact::{ArtifactReader, BlobFsArtifactReader},
+        artifact::{ArtifactReader, FileArtifactReader},
         bootfs::BootfsReader,
         package::{open_update_package, read_content_blob},
         zbi::{ZbiReader, ZbiType},
     },
-    std::{
-        collections::{HashMap, HashSet},
-        path::Path,
-        str::from_utf8,
-        sync::Arc,
-    },
+    std::{collections::HashMap, path::Path, path::PathBuf, str::from_utf8, sync::Arc},
 };
 
 // Load the devmgr configuration file by following update package -> zbi -> bootfs -> devmgr config
@@ -136,36 +131,13 @@ pub struct DevmgrConfigCollector;
 impl DataCollector for DevmgrConfigCollector {
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
         let model_config = model.config();
-        let build_path = model_config.build_path();
         let update_package_path = model_config.update_package_path();
-        let blobfs_paths = model_config.blobfs_paths();
+        let blobs_directory = model_config.blobs_directory();
         let devmgr_config_path = model_config.devmgr_config_path();
 
         // Initialize artifact reader; early exit on initialization failure.
-        let mut artifact_reader: Box<dyn ArtifactReader> = match BlobFsArtifactReader::try_compound(
-            &build_path,
-            model_config.tmp_dir_path().as_ref(),
-            &blobfs_paths,
-        )
-        .map_err(|err| DevmgrConfigError::FailedToOpenBlobfs {
-            build_path: build_path.clone(),
-            blobfs_paths: blobfs_paths.clone(),
-            blobfs_error: format!("{:?}", err),
-        }) {
-            Ok(compound_artifact_reader) => Box::new(compound_artifact_reader),
-            Err(err) => {
-                model.set(DevmgrConfigCollection {
-                        devmgr_config: None,
-                        deps: HashSet::new(),
-                        errors: vec![err],
-                    })
-                    .with_context(|| { format!(
-                        "Failed to initialize artifact reader for devmgr config collector with build path {:?}, blobfs paths {:?}",
-                        build_path, blobfs_paths,
-                    )})?;
-                return Ok(());
-            }
-        };
+        let mut artifact_reader: Box<dyn ArtifactReader> =
+            Box::new(FileArtifactReader::new(&PathBuf::new(), &blobs_directory));
 
         // Execute query using deps-tracking artifact reader.
         let result =

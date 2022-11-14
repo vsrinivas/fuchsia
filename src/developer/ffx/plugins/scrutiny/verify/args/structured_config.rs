@@ -16,15 +16,7 @@ pub struct Command {
     #[argh(option)]
     pub policy: PathBuf,
 
-    /// path to the build directory
+    /// path to a product bundle.
     #[argh(option)]
-    pub build_path: PathBuf,
-
-    /// build-directory-relative path to the update package manifest
-    #[argh(option)]
-    pub update: PathBuf,
-
-    /// build-directory-relative paths to blobfs block images
-    #[argh(option)]
-    pub blobfs: Vec<PathBuf>,
+    pub product_bundle: PathBuf,
 }

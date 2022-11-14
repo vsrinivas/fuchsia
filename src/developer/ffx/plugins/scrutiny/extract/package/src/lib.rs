@@ -6,24 +6,18 @@ use {
     anyhow::Error,
     ffx_core::ffx_plugin,
     ffx_scrutiny_package_args::ScrutinyPackageCommand,
-    scrutiny_config::{Config, LaunchConfig, RuntimeConfig},
+    scrutiny_config::{ConfigBuilder, ModelConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
 };
 
 #[ffx_plugin()]
 pub async fn scrutiny_package(cmd: ScrutinyPackageCommand) -> Result<(), Error> {
-    let config = Config {
-        launch: LaunchConfig {
-            command: Some(
-                CommandBuilder::new("package.extract")
-                    .param("url", cmd.url)
-                    .param("output", cmd.output)
-                    .build(),
-            ),
-            script_path: None,
-        },
-        runtime: RuntimeConfig::minimal(),
-    };
+    let model = ModelConfig::from_product_bundle(cmd.product_bundle)?;
+    let command = CommandBuilder::new("package.extract")
+        .param("url", cmd.url)
+        .param("output", cmd.output)
+        .build();
+    let config = ConfigBuilder::with_model(model).command(command).build();
     launcher::launch_from_config(config)?;
 
     Ok(())

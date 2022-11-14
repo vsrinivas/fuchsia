@@ -77,10 +77,7 @@ pub fn default_capability_types() -> Vec<CapabilityType> {
     example = r#"To verify routes on your current build:
 
     $ ffx scrutiny verify routes \
-        --build-path $(fx get-build-dir) \
-        --update obj/build/images/fuchsia/update/update.far \
-        --blobfs obj/build/images/fuchsia/fuchsia/blob.blk \
-        --blobfs obj/build/images/fuchsia/update/gen/update.blob.blk \
+        --product-bundle $(fx get-build-dir)/obj/build/images/fuchsia/product_bundle \
         --allowlist ../../src/security/policy/build/verify_routes_exceptions_allowlist.json5"#
 )]
 pub struct Command {
@@ -90,22 +87,14 @@ pub struct Command {
     /// response level to report from routes scrutiny plugin.
     #[argh(option, default = "ResponseLevel::Error")]
     pub response_level: ResponseLevel,
-    /// absolute or working directory-relative path to root output directory of build.
+    /// absolute or working directory-relative path to a product bundle.
     #[argh(option)]
-    pub build_path: PathBuf,
-    /// absolute or build path-relative path to fuchsia update package.
-    #[argh(option)]
-    pub update: PathBuf,
-    /// absolute or build path-relative path to one or more blobfs archives that contain
-    /// fuchsia packages and their packages, typically repeated for a system blobfs archive and a
-    /// blobfs archive of blobs in the update package.
-    #[argh(option)]
-    pub blobfs: Vec<PathBuf>,
-    /// absolute or build path-relative path(s) to allowlist(s) used to verify routes.
+    pub product_bundle: PathBuf,
+    /// absolute or working directory-relative path(s) to allowlist(s) used to verify routes.
     #[argh(option)]
     pub allowlist: Vec<PathBuf>,
-    /// absolute or build path-relative path to component tree configuration file that affects how
-    /// component tree data is gathered.
+    /// absolute or working path-relative path to component tree configuration file that affects
+    /// how component tree data is gathered.
     #[argh(option)]
     pub component_tree_config: Option<PathBuf>,
 }
