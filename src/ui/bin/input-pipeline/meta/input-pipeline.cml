@@ -1,69 +1,22 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// Before adding new declarations to this file, please confirm that they are unique to
+// the component input-pipeline.cml. If they're shared with scene_manager.cml, they should
+// be placed into //src/ui/lib/input_pipeline/meta/client.shard.cml or similar.
 {
-    include: [
-        "//sdk/lib/inspect/client.shard.cml",
-        "//src/ui/lib/input_pipeline/meta/client.shard.cml",
-        "inspect/client.shard.cml",
-        "syslog/client.shard.cml",
-    ],
+    include: [ "//src/ui/lib/input_pipeline/meta/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/input-pipeline",
     },
-    capabilities: [
-        {
-            protocol: [
-                "fuchsia.input.injection.InputDeviceRegistry",
-                "fuchsia.input.interaction.Notifier",
-                "fuchsia.input.interaction.observation.Aggregator",
-                "fuchsia.recovery.policy.Device",
-                "fuchsia.recovery.ui.FactoryResetCountdown",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-            ],
-        },
-    ],
     use: [
         {
             protocol: [
                 "fuchsia.media.sounds.Player",
-                "fuchsia.recovery.FactoryReset",
-                "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.pointerinjector.configuration.Setup",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.scenic.Scenic",
             ],
-        },
-        {
-            protocol: "fuchsia.input.interaction.observation.Aggregator",
-            from: "self",
-        },
-        {
-            directory: "config-data",
-            from: "parent",
-            rights: [ "r*" ],
-            path: "/config/data",
-        },
-        {
-            directory: "dev-input-report",
-            from: "parent",
-            rights: [ "r*" ],
-            path: "/dev/class/input-report",
-        },
-    ],
-    expose: [
-        {
-            protocol: [
-                "fuchsia.input.injection.InputDeviceRegistry",
-                "fuchsia.input.interaction.Notifier",
-                "fuchsia.input.interaction.observation.Aggregator",
-                "fuchsia.recovery.policy.Device",
-                "fuchsia.recovery.ui.FactoryResetCountdown",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-            ],
-            from: "self",
         },
     ],
     config: {
