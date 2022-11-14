@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ 'syslog/client.shard.cml' ],
+    program: {
+        runner: 'driver',
+        binary: 'driver/da7219-dfv2.so',
+        bind: 'meta/bind/da7219.bindbc',
+    },
+    capabilities: [
+        { service: 'fuchsia.hardware.audio.CodecService' },
+    ],
+    use: [
+        { protocol: 'fuchsia.device.fs.Exporter' },
+        { service: 'fuchsia.hardware.acpi.Service' },
+        { service: 'fuchsia.hardware.i2c.Service' },
+        { service: 'fuchsia.driver.compat.Service' },
+    ],
+    expose: [
+        {
+            service: 'fuchsia.hardware.audio.CodecService',
+            from: 'self',
+        },
+    ],
+}

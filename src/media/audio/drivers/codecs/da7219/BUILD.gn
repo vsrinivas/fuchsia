@@ -90,3 +90,57 @@ test("da7219-unit-tests") {
 fuchsia_unittest_package("da7219-tests") {
   deps = [ ":da7219-unit-tests" ]
 }
+
+group("da7219-dfv2") {
+  testonly = true
+  deps = [ ":pkg-dfv2" ]
+}
+
+config("logging-dfv2") {
+  defines = [ "LOGGING_PATH=\"da7219-logging-dfv2.h\"" ]
+}
+
+source_set("common-dfv2") {
+  sources = [
+    "da7219-dfv2.cc",
+    "da7219-dfv2.h",
+    "da7219-logging-dfv2.h",
+    "da7219-regs.h",
+    "da7219-server.cc",
+    "da7219-server.h",
+  ]
+  public_configs = [ ":logging-dfv2" ]
+  deps = [
+    ":bind",
+    "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp_wire",
+    "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp",
+    "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_cpp_wire",
+    "//sdk/lib/driver/compat/cpp",
+    "//sdk/lib/driver/component/cpp",
+    "//sdk/lib/sys/service/cpp",
+    "//src/devices/lib/driver:driver_runtime",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/hwreg-i2c",
+  ]
+}
+
+fuchsia_driver("driver-dfv2") {
+  output_name = "da7219-dfv2"
+  sources = []
+  deps = [ ":common-dfv2" ]
+}
+
+fuchsia_driver_component("component-dfv2") {
+  component_name = "da7219-dfv2"
+  deps = [ ":driver-dfv2" ]
+  info = "da7219-info.json"
+  manifest = "meta/da7219.cml"
+}
+
+fuchsia_driver_package("pkg-dfv2") {
+  package_name = "da7219-dfv2"
+  driver_components = [ ":component-dfv2" ]
+}

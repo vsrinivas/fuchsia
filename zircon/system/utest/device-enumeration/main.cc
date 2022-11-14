@@ -824,6 +824,11 @@ TEST_F(DeviceEnumerationTest, AtlasTest) {
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 
   if (IsDfv2Enabled()) {
+    static const char* kDfv2DevicePaths[] = {
+        "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-I2C4/acpi-DLG7/pt/da7219-output",
+    };
+
+    ASSERT_NO_FATAL_FAILURE(TestRunner(kDfv2DevicePaths, std::size(kDfv2DevicePaths)));
     return;
   }
 

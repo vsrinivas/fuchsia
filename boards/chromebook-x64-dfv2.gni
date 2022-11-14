@@ -4,8 +4,11 @@
 
 import("chromebook-x64.gni")
 
-board_bootfs_labels += [ "//bundles/drivers:bootstrap-dfv2" ]
-board_bootfs_labels += [ "//bundles/drivers:disable.drivers_for_dfv2" ]
+board_bootfs_labels += [
+  "//bundles/drivers:bootstrap-dfv2",
+  "//bundles/drivers:disable.drivers_for_dfv2",
+  "//src/media/audio/drivers/codecs/da7219:component-dfv2",
+]
 
 board_provided_drivers += [
   {
