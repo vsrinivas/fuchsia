@@ -91,6 +91,7 @@ class TestBundle {
     Set<String> targets = {};
     for (var e in testBundles) {
       switch (e.testDefinition.testType) {
+        case TestType.component:
         case TestType.suite:
           String? target = 'updates';
           if (testsConfig.fxEnv.isFeatureEnabled('incremental')) {
@@ -159,7 +160,8 @@ class TestBundle {
   }) {
     List<String> _extraFlags = [];
     // for component tests pass test arguments separated by option delimiter(--).
-    if (testDefinition.testType == TestType.suite) {
+    if (testDefinition.testType == TestType.component ||
+        testDefinition.testType == TestType.suite) {
       if (testsConfig.testArguments.passThroughArgs.isNotEmpty) {
         _extraFlags
           ..add('--')
@@ -223,6 +225,9 @@ class TestBundle {
     // from fx test.
     if (testDefinition.maxLogSeverity != null && shouldRestrictLogs) {
       switch (testType) {
+        case TestType.component:
+          flags.add('--max-log-severity=${testDefinition.maxLogSeverity}');
+          break;
         case TestType.suite:
           flags.add('--max-severity-logs');
           flags.add(testDefinition.maxLogSeverity!);

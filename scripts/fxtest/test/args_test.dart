@@ -156,6 +156,13 @@ void main() {
     List<TestDefinition> testDefinitions = [
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
+        name: 'device test v1',
+        os: 'fuchsia',
+        packageUrl:
+            PackageUrl.fromString('fuchsia-pkg://fuchsia.com/fancy#test.cmx'),
+      ),
+      TestDefinition(
+        buildDir: FakeFxEnv.shared.outputDir,
         name: 'device test v2',
         os: 'fuchsia',
         packageUrl:
@@ -209,7 +216,7 @@ void main() {
         testRunnerBuilder: (TestsConfig testsConfig) =>
             FakeTestRunner.passing(),
       );
-      var bundle = cmd.testBundleBuilder(testDefinitions[0]);
+      var bundle = cmd.testBundleBuilder(testDefinitions[1]);
       var stream = StreamQueue(bundle.run());
 
       TestEvent event = await stream.next;
@@ -222,6 +229,31 @@ void main() {
       // that the args were in fact passed through by evaluating that
       expect(resultEvent.message,
           "ffx test run '--disable-output-directory' fuchsia-pkg://fuchsia.com/fancy#meta/test.cm -- --xyz");
+    });
+
+    test('when there are pass-thru commands for component tests', () async {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['example-test', '--', '--xyz'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        testRunnerBuilder: (TestsConfig testsConfig) =>
+            FakeTestRunner.passing(),
+      );
+      var bundle = cmd.testBundleBuilder(testDefinitions[0]);
+      var stream = StreamQueue(bundle.run());
+
+      TestEvent event = await stream.next;
+      expect(event, isA<TestStarted>());
+      event = await stream.next;
+      expect(event, isA<TestResult>());
+      TestResult resultEvent = event as TestResult;
+
+      // [FakeTestRunner] passes args through to its stdout, so we can check
+      // that the args were in fact passed through by evaluating that
+      expect(resultEvent.message,
+          'shell run-test-component fuchsia-pkg://fuchsia.com/fancy#meta/test.cmx -- --xyz');
     });
 
     test('when there are no pass-thru commands', () async {
@@ -346,13 +378,15 @@ void main() {
       expect(testsConfig.flags.shouldRebuild, true);
     });
 
-    test('--realm is deprecated', () {
+    test('with --realm', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--realm=foo'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      expect(testsConfig.flags.realm, 'foo');
+      expect(testsConfig.flags.shouldRestrictLogs, true);
       expect(
-          () => TestsConfig.fromRawArgs(
-                rawArgs: ['--realm=foo'],
-                fxEnv: FakeFxEnv.shared,
-              ),
-          throwsA(isA<InvalidOption>()));
+          testsConfig.runnerTokens[TestType.component], ['--realm-label=foo']);
     });
 
     test('with no --restrict-logs', () {
@@ -362,8 +396,7 @@ void main() {
       );
       // Still true because that is the default
       expect(testsConfig.flags.shouldRestrictLogs, true);
-      expect(testsConfig.runnerTokens[TestType.suite],
-          ['--disable-output-directory']);
+      expect(testsConfig.runnerTokens[TestType.component], []);
     });
 
     test('with --no-restrict-logs', () {
@@ -372,8 +405,7 @@ void main() {
         fxEnv: FakeFxEnv.shared,
       );
       expect(testsConfig.flags.shouldRestrictLogs, false);
-      expect(testsConfig.runnerTokens[TestType.suite],
-          ['--disable-output-directory']);
+      expect(testsConfig.runnerTokens[TestType.component], []);
     });
 
     test('with --restrict-logs', () {
@@ -382,8 +414,22 @@ void main() {
         fxEnv: FakeFxEnv.shared,
       );
       expect(testsConfig.flags.shouldRestrictLogs, true);
-      expect(testsConfig.runnerTokens[TestType.suite],
-          ['--disable-output-directory']);
+      expect(testsConfig.runnerTokens[TestType.component], []);
+    });
+
+    test('with --restrict-logs and --realm', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: [
+          '--restrict-logs',
+          '--realm=bar',
+        ],
+        fxEnv: FakeFxEnv.shared,
+      );
+      expect(testsConfig.flags.realm, 'bar');
+      expect(testsConfig.flags.shouldRestrictLogs, true);
+      expect(testsConfig.runnerTokens[TestType.component], [
+        '--realm-label=bar',
+      ]);
     });
 
     test('with --min-severity-logs', () {
@@ -392,9 +438,8 @@ void main() {
         fxEnv: FakeFxEnv.shared,
       );
       expect(testsConfig.flags.minSeverityLogs, 'WARN');
-      expect(testsConfig.runnerTokens[TestType.suite],
-          contains('--min-severity-logs'));
-      expect(testsConfig.runnerTokens[TestType.suite], contains('WARN'));
+      expect(testsConfig.runnerTokens[TestType.component],
+          contains('--min-severity-logs=WARN'));
     });
 
     test('with --test-filter', () {
@@ -447,6 +492,8 @@ void main() {
       // generated just once
       expect(testsConfig.runnerTokens[TestType.suite],
           isNot(contains('--timeout')));
+      expect(testsConfig.runnerTokens[TestType.component],
+          isNot(contains('--timeout=5')));
     });
 
     test('with --count', () {
@@ -520,6 +567,8 @@ void main() {
 
       expect(testsConfig.runnerTokens[TestType.suite],
           contains('--show-full-moniker-in-logs'));
+      expect(testsConfig.runnerTokens[TestType.component],
+          isNot(contains('--show-full-moniker-in-logs')));
     });
 
     test('with --ffx-output-directory', () {
