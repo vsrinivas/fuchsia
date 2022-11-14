@@ -44,6 +44,7 @@
 constexpr char kRamctlDevPath[] = "/dev";
 constexpr char kRamctlPath[] = "sys/platform/00:00:2d/ramctl";
 constexpr char kBlockExtension[] = "block";
+constexpr zx::duration kDeviceWaitTime = zx::sec(10);
 
 static zx_status_t driver_watcher_cb(int dirfd, int event, const char* fn, void* cookie) {
   char* wanted = static_cast<char*>(cookie);
@@ -181,8 +182,8 @@ struct ramdisk_client {
     const char* sep = strrchr(relative_path_.c_str(), '/');
     char ramdisk_path[PATH_MAX];
     strlcpy(ramdisk_path, relative_path_.c_str(), sep - relative_path_.c_str() + 1);
-    if (zx_status_t status =
-            wait_for_device_impl(dev_root_fd_.get(), ramdisk_path, zx::deadline_after(zx::sec(3)));
+    if (zx_status_t status = wait_for_device_impl(dev_root_fd_.get(), ramdisk_path,
+                                                  zx::deadline_after(kDeviceWaitTime));
         status != ZX_OK) {
       return status;
     }
@@ -196,8 +197,8 @@ struct ramdisk_client {
 
     // Wait for the "block" path to rebind.
     strlcpy(ramdisk_path, relative_path_.c_str(), sizeof(ramdisk_path));
-    if (zx_status_t status =
-            wait_for_device_impl(dev_root_fd_.get(), ramdisk_path, zx::deadline_after(zx::sec(3)));
+    if (zx_status_t status = wait_for_device_impl(dev_root_fd_.get(), ramdisk_path,
+                                                  zx::deadline_after(kDeviceWaitTime));
         status != ZX_OK) {
       return status;
     }
@@ -317,7 +318,7 @@ static zx_status_t ramdisk_create_with_guid_internal(
 
   std::unique_ptr<ramdisk_client> client;
   if (zx_status_t status =
-          ramdisk_client::Create(dev_root_fd, response.name.get(), zx::sec(3), &client);
+          ramdisk_client::Create(dev_root_fd, response.name.get(), kDeviceWaitTime, &client);
       status != ZX_OK) {
     return status;
   }
@@ -407,7 +408,7 @@ zx_status_t ramdisk_create_at_from_vmo_with_params(int dev_root_fd, zx_handle_t 
 
   std::unique_ptr<ramdisk_client> client;
   if (zx_status_t status =
-          ramdisk_client::Create(dev_root_fd, response.name.get(), zx::sec(3), &client);
+          ramdisk_client::Create(dev_root_fd, response.name.get(), kDeviceWaitTime, &client);
       status != ZX_OK) {
     return status;
   }
