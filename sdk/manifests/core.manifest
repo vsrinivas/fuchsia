@@ -208,6 +208,7 @@ sdk://tools/arm64/fidlc
 sdk://tools/arm64/fidlcat
 sdk://tools/arm64/fidlgen
 sdk://tools/arm64/fidlgen_cpp
+sdk://tools/arm64/fidlgen_rust
 sdk://tools/arm64/fpublish
 sdk://tools/arm64/fserve
 sdk://tools/arm64/fssh
@@ -233,6 +234,7 @@ sdk://tools/x64/fidlc
 sdk://tools/x64/fidlcat
 sdk://tools/x64/fidlgen
 sdk://tools/x64/fidlgen_cpp
+sdk://tools/x64/fidlgen_rust
 sdk://tools/x64/fpublish
 sdk://tools/x64/fserve
 sdk://tools/x64/fssh

@@ -230,6 +230,7 @@ sdk_molecule("host_tools") {
   visibility = [ ":*" ]
 
   _host_tools = [
+    "//tools/fidl/fidlgen_rust:fidlgen_rust_sdk",
     "//tools/fidl/fidlgen_hlcpp:fidlgen_sdk",
     "//tools/fidl/fidlgen_cpp:fidlgen_cpp_sdk",
     "//tools/cmc:cmc_sdk",
