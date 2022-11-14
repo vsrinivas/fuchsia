@@ -283,31 +283,31 @@ class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmP
   }
 
   // for every page or marker in the node call the passed in function.
-  template <typename F>
+  template <typename PTR_TYPE, typename F>
   zx_status_t ForEveryPage(F func, uint64_t skew) {
-    return ForEveryPageInRange(this, func, offset(), end_offset(), skew);
+    return ForEveryPageInRange<PTR_TYPE>(this, func, offset(), end_offset(), skew);
   }
 
   // for every page or marker in the node call the passed in function.
-  template <typename F>
+  template <typename PTR_TYPE, typename F>
   zx_status_t ForEveryPage(F func, uint64_t skew) const {
-    return ForEveryPageInRange(this, func, offset(), end_offset(), skew);
+    return ForEveryPageInRange<PTR_TYPE>(this, func, offset(), end_offset(), skew);
   }
 
   // for every page or marker in the node in the range call the passed in function. The range is
   // assumed to be within the nodes object range.
-  template <typename F>
+  template <typename PTR_TYPE, typename F>
   zx_status_t ForEveryPageInRange(F func, uint64_t start_offset, uint64_t end_offset,
                                   uint64_t skew) {
-    return ForEveryPageInRange(this, func, start_offset, end_offset, skew);
+    return ForEveryPageInRange<PTR_TYPE>(this, func, start_offset, end_offset, skew);
   }
 
   // for every page or marker in the node in the range call the passed in function. The range is
   // assumed to be within the nodes object range.
-  template <typename F>
+  template <typename PTR_TYPE, typename F>
   zx_status_t ForEveryPageInRange(F func, uint64_t start_offset, uint64_t end_offset,
                                   uint64_t skew) const {
-    return ForEveryPageInRange(this, func, start_offset, end_offset, skew);
+    return ForEveryPageInRange<PTR_TYPE>(this, func, start_offset, end_offset, skew);
   }
 
   const VmPageOrMarker& Lookup(size_t index) const {
@@ -343,7 +343,7 @@ class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmP
   }
 
  private:
-  template <typename S, typename F>
+  template <typename PTR_TYPE, typename S, typename F>
   static zx_status_t ForEveryPageInRange(S self, F func, uint64_t start_offset, uint64_t end_offset,
                                          uint64_t skew) {
     // Assert that the requested range is sensible and falls within our nodes actual offset range.
@@ -354,7 +354,8 @@ class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmP
     const size_t end = (end_offset - self->obj_offset_) / PAGE_SIZE;
     for (size_t i = start; i < end; i++) {
       if (!self->pages_[i].IsEmpty()) {
-        zx_status_t status = func(&self->pages_[i], self->obj_offset_ + i * PAGE_SIZE - skew);
+        zx_status_t status =
+            func(PTR_TYPE{&self->pages_[i]}, self->obj_offset_ + i * PAGE_SIZE - skew);
         if (unlikely(status != ZX_ERR_NEXT)) {
           return status;
         }
@@ -434,14 +435,30 @@ class VmPageList final {
   // walk the page tree, calling the passed in function on every tree node.
   template <typename F>
   zx_status_t ForEveryPage(F per_page_func) const {
-    return ForEveryPage(this, per_page_func);
+    return ForEveryPage<const VmPageOrMarker*>(this, per_page_func);
+  }
+
+  // similar to ForEveryPage, but the per_page_func gets called with a VmPageOrMarkerRef instead of
+  // a const VmPageOrMarker*, allowing for limited mutation.
+  template <typename F>
+  zx_status_t ForEveryPageMutable(F per_page_func) {
+    return ForEveryPage<VmPageOrMarkerRef>(this, per_page_func);
   }
 
   // walk the page tree, calling the passed in function on every tree node.
   template <typename F>
   zx_status_t ForEveryPageInRange(F per_page_func, uint64_t start_offset,
                                   uint64_t end_offset) const {
-    return ForEveryPageInRange(this, per_page_func, start_offset, end_offset);
+    return ForEveryPageInRange<const VmPageOrMarker*>(this, per_page_func, start_offset,
+                                                      end_offset);
+  }
+
+  // similar to ForEveryPageInRange, but the per_page_func gets called with a VmPageOrMarkerRef
+  // instead of a const VmPageOrMarker*, allowing for limited mutation.
+  template <typename F>
+  zx_status_t ForEveryPageInRangeMutable(F per_page_func, uint64_t start_offset,
+                                         uint64_t end_offset) {
+    return ForEveryPageInRange<VmPageOrMarkerRef>(this, per_page_func, start_offset, end_offset);
   }
 
   // walk the page tree, calling |per_page_func| on every page/marker and |per_gap_func| on every
@@ -449,7 +466,8 @@ class VmPageList final {
   template <typename PAGE_FUNC, typename GAP_FUNC>
   zx_status_t ForEveryPageAndGapInRange(PAGE_FUNC per_page_func, GAP_FUNC per_gap_func,
                                         uint64_t start_offset, uint64_t end_offset) const {
-    return ForEveryPageAndGapInRange(this, per_page_func, per_gap_func, start_offset, end_offset);
+    return ForEveryPageAndGapInRange<const VmPageOrMarker*>(this, per_page_func, per_gap_func,
+                                                            start_offset, end_offset);
   }
 
   // walk the page tree, calling |per_page_func| on every page/marker that fulfills (returns true)
@@ -461,8 +479,8 @@ class VmPageList final {
                                                   CONTIGUOUS_RUN_FUNC contiguous_run_func,
                                                   uint64_t start_offset,
                                                   uint64_t end_offset) const {
-    return ForEveryPageAndContiguousRunInRange(this, compare_func, per_page_func,
-                                               contiguous_run_func, start_offset, end_offset);
+    return ForEveryPageAndContiguousRunInRange<const VmPageOrMarker*>(
+        this, compare_func, per_page_func, contiguous_run_func, start_offset, end_offset);
   }
 
   // Returns true if any pages or markers are in the given range.
@@ -526,7 +544,7 @@ class VmPageList final {
     };
 
     // walk the tree in order, freeing all the pages on every node
-    ForEveryPage(this, per_page_func);
+    ForEveryPage<VmPageOrMarker*>(this, per_page_func);
 
     // empty the tree
     list_.clear();
@@ -539,7 +557,8 @@ class VmPageList final {
   // longer needed.
   template <typename T>
   void RemovePages(T per_page_fn, uint64_t start_offset, uint64_t end_offset) {
-    ForEveryPageInRange<NodeCheck::CleanupEmpty>(this, per_page_fn, start_offset, end_offset);
+    ForEveryPageInRange<VmPageOrMarker*, NodeCheck::CleanupEmpty>(this, per_page_fn, start_offset,
+                                                                  end_offset);
   }
 
   // Similar to RemovePages but also takes a |per_gap_fn| callback to allow for iterating over any
@@ -549,8 +568,8 @@ class VmPageList final {
   template <typename P, typename G>
   zx_status_t RemovePagesAndIterateGaps(P per_page_fn, G per_gap_fn, uint64_t start_offset,
                                         uint64_t end_offset) {
-    return ForEveryPageAndGapInRange<NodeCheck::CleanupEmpty>(this, per_page_fn, per_gap_fn,
-                                                              start_offset, end_offset);
+    return ForEveryPageAndGapInRange<VmPageOrMarker*, NodeCheck::CleanupEmpty>(
+        this, per_page_fn, per_gap_fn, start_offset, end_offset);
   }
 
   // Returns true if there are no pages, references or markers in the page list.
@@ -597,10 +616,10 @@ class VmPageList final {
       ROUNDDOWN(UINT64_MAX, 2 * VmPageListNode::kPageFanOut * PAGE_SIZE);
 
  private:
-  template <typename S, typename F>
+  template <typename PTR_TYPE, typename S, typename F>
   static zx_status_t ForEveryPage(S self, F per_page_func) {
     for (auto& pl : self->list_) {
-      zx_status_t status = pl.ForEveryPage(per_page_func, self->list_skew_);
+      zx_status_t status = pl.template ForEveryPage<PTR_TYPE, F>(per_page_func, self->list_skew_);
       if (unlikely(status != ZX_ERR_NEXT)) {
         if (status == ZX_ERR_STOP) {
           break;
@@ -618,7 +637,7 @@ class VmPageList final {
     Skip = false,
     CleanupEmpty = true,
   };
-  template <NodeCheck NODE_CHECK = NodeCheck::Skip, typename S, typename F>
+  template <typename PTR_TYPE, NodeCheck NODE_CHECK = NodeCheck::Skip, typename S, typename F>
   static zx_status_t ForEveryPageInRange(S self, F per_page_func, uint64_t start_offset,
                                          uint64_t end_offset) {
     start_offset += self->list_skew_;
@@ -633,7 +652,7 @@ class VmPageList final {
 
     // Handle scenario where start_offset begins not aligned to a node.
     if (cur->offset() < start_offset) {
-      zx_status_t status = cur->ForEveryPageInRange(
+      zx_status_t status = cur->template ForEveryPageInRange<PTR_TYPE, F>(
           per_page_func, start_offset, ktl::min(end_offset, cur->end_offset()), self->list_skew_);
       auto prev = cur++;
       if constexpr (NODE_CHECK == NodeCheck::CleanupEmpty) {
@@ -651,7 +670,7 @@ class VmPageList final {
     // Iterate through all full nodes contained in the range.
     while (cur && cur->end_offset() < end_offset) {
       DEBUG_ASSERT(start_offset <= cur->offset());
-      zx_status_t status = cur->ForEveryPage(per_page_func, self->list_skew_);
+      zx_status_t status = cur->template ForEveryPage<PTR_TYPE, F>(per_page_func, self->list_skew_);
       auto prev = cur++;
       if constexpr (NODE_CHECK == NodeCheck::CleanupEmpty) {
         if (prev->IsEmpty()) {
@@ -668,8 +687,8 @@ class VmPageList final {
     // Handle scenario where the end_offset is not aligned to the end of a node.
     if (cur && cur->offset() < end_offset) {
       DEBUG_ASSERT(cur->end_offset() >= end_offset);
-      zx_status_t status =
-          cur->ForEveryPageInRange(per_page_func, cur->offset(), end_offset, self->list_skew_);
+      zx_status_t status = cur->template ForEveryPageInRange<PTR_TYPE, F>(
+          per_page_func, cur->offset(), end_offset, self->list_skew_);
       if constexpr (NODE_CHECK == NodeCheck::CleanupEmpty) {
         if (cur->IsEmpty()) {
           self->list_.erase(cur);
@@ -685,8 +704,8 @@ class VmPageList final {
     return ZX_OK;
   }
 
-  template <NodeCheck NODE_CHECK = NodeCheck::Skip, typename S, typename PAGE_FUNC,
-            typename GAP_FUNC>
+  template <typename PTR_TYPE, NodeCheck NODE_CHECK = NodeCheck::Skip, typename S,
+            typename PAGE_FUNC, typename GAP_FUNC>
   static zx_status_t ForEveryPageAndGapInRange(S self, PAGE_FUNC per_page_func,
                                                GAP_FUNC per_gap_func, uint64_t start_offset,
                                                uint64_t end_offset) {
@@ -708,8 +727,8 @@ class VmPageList final {
       return status;
     };
 
-    zx_status_t status =
-        ForEveryPageInRange<NODE_CHECK>(self, per_page_wrapper_fn, start_offset, end_offset);
+    zx_status_t status = ForEveryPageInRange<PTR_TYPE, NODE_CHECK>(self, per_page_wrapper_fn,
+                                                                   start_offset, end_offset);
     if (status != ZX_OK) {
       return status;
     }
@@ -724,7 +743,8 @@ class VmPageList final {
     return ZX_OK;
   }
 
-  template <typename S, typename COMPARE_FUNC, typename PAGE_FUNC, typename CONTIGUOUS_RUN_FUNC>
+  template <typename PTR_TYPE, typename S, typename COMPARE_FUNC, typename PAGE_FUNC,
+            typename CONTIGUOUS_RUN_FUNC>
   static zx_status_t ForEveryPageAndContiguousRunInRange(S self, COMPARE_FUNC compare_func,
                                                          PAGE_FUNC per_page_func,
                                                          CONTIGUOUS_RUN_FUNC contiguous_run_func,
@@ -734,7 +754,7 @@ class VmPageList final {
     uint64_t contiguous_run_start = start_offset;
     uint64_t contiguous_run_len = 0;
 
-    zx_status_t status = ForEveryPageAndGapInRange(
+    zx_status_t status = ForEveryPageAndGapInRange<PTR_TYPE>(
         self,
         [&](const VmPageOrMarker* p, uint64_t off) {
           zx_status_t st = ZX_ERR_NEXT;
