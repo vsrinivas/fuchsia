@@ -94,10 +94,10 @@ test("test") {
     "//sdk/banjo/fuchsia.hardware.nand:fuchsia.hardware.nand_banjo_cpp",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
 
     # TODO(fxb/115060): Migrate from fake_ddk to mock-ddk.
     "//src/devices/testing/fake_ddk",

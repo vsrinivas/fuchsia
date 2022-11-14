@@ -9,12 +9,12 @@
 #include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <fidl/fuchsia.process/cpp/wire.h>
 #include <lib/async/cpp/task.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/driver/component/cpp/start_args.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/server.h>
 #include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fit/defer.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/errors.h>
 #include <zircon/rights.h>
 #include <zircon/status.h>

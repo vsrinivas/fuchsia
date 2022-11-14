@@ -4,7 +4,7 @@
 
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 
 #include <algorithm>
 

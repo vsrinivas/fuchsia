@@ -13,7 +13,7 @@ executable("cpuctl") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl_cpp_wire",
-    "//sdk/lib/component/cpp/incoming",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fit",
     "//zircon/system/ulib/zx",
   ]
@@ -29,7 +29,7 @@ test("cpuctl-test-bin") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl_cpp_wire",
-    "//sdk/lib/component/cpp/incoming",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/zxtest",

@@ -4,8 +4,8 @@
 
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
-#include <lib/sys/component/cpp/service_client.h>
 
 #include <gtest/gtest.h>
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>

@@ -28,6 +28,7 @@ source_set("driver_runner") {
   ]
 
   deps = [
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/driver/component/cpp:cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/bringup/lib/mexec",

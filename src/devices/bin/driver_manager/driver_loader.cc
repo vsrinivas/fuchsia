@@ -6,10 +6,10 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/driver/component/cpp/node_add_args.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <sched.h>
 #include <unistd.h>
 #include <zircon/threads.h>

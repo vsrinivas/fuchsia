@@ -8,10 +8,10 @@
 #include <fidl/fuchsia.hardware.serial/cpp/wire.h>
 #include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
 #include <fidl/fuchsia.hardware.usb.virtual.bus/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/watcher.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
 #include <sys/stat.h>
 #include <unistd.h>

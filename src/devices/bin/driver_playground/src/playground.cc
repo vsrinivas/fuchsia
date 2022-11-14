@@ -5,9 +5,9 @@
 #include "src/devices/bin/driver_playground/src/playground.h"
 
 #include <fidl/fuchsia.process/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/spawn-actions.h>
 #include <lib/fdio/spawn.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/result.h>
 #include <zircon/processargs.h>
 

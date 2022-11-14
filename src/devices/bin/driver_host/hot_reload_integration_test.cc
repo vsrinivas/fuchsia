@@ -7,12 +7,12 @@
 #include <fidl/fuchsia.device.test/cpp/wire.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fuchsia/driver/development/cpp/fidl.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 

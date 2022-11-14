@@ -8,12 +8,12 @@
 #include <fuchsia/io/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdf/testing.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
-#include <lib/sys/component/cpp/service_client.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

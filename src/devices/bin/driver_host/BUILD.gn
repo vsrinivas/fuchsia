@@ -97,6 +97,7 @@ source_set("common") {
     "//zircon/system/ulib/async-default",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fidl",
     "//sdk/lib/sys/component/cpp",
     "//src/lib/ddk:ddk-deprecated-binding-headers",
@@ -238,6 +239,7 @@ test("driver_host_test") {
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp_wire",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_cpp_wire",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_hlcpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",

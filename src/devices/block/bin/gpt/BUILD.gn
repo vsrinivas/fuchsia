@@ -6,7 +6,7 @@ executable("gpt") {
   sources = [ "gpt.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
-    "//sdk/lib/component/cpp/incoming",
+    "//sdk/lib/component/incoming/cpp",
     "//src/storage/gpt",
     "//zircon/system/ulib/zx",
   ]

@@ -6,7 +6,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <lib/component/cpp/incoming/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
 #include <stdio.h>
@@ -91,7 +91,6 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
 
   return 0;
 }
-
 
 int ListGpios(void) {
   DIR* gpio_dir = opendir(kGpioDevClassDir);

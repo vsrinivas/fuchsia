@@ -5,7 +5,7 @@
 #include "performance-domain.h"
 
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <lib/component/cpp/incoming/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 
 #include <iostream>
 

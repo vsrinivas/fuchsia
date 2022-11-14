@@ -8,12 +8,12 @@
 #include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
 #include <fidl/fuchsia.hardware.usb.virtual.bus/cpp/wire.h>
 #include <fidl/fuchsia.hardware.usb.virtualbustest/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/fifo.h>

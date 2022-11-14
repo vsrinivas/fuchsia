@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.sysmem/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/ddk/hw/arch_ops.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -18,7 +19,6 @@
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fit/defer.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>

@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
-#include <lib/component/cpp/incoming/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>

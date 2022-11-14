@@ -5,7 +5,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/component/cpp/incoming/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <stdlib.h>

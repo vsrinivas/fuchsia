@@ -5,8 +5,8 @@
 #include "parent.h"
 
 #include <fcntl.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <string.h>
 #include <zircon/assert.h>
 

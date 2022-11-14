@@ -6,10 +6,10 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.verified/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <sys/stat.h>
 #include <sys/types.h>

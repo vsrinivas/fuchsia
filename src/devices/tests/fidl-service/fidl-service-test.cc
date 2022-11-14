@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <fuchsia/driver/test/cpp/fidl.h>
 #include <lib/driver_test_realm/realm_builder/cpp/lib.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 
 #include <fbl/unique_fd.h>

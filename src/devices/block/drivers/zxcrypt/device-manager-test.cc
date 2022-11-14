@@ -4,12 +4,12 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/inspect/cpp/reader.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/errors.h>
 
 #include <condition_variable>

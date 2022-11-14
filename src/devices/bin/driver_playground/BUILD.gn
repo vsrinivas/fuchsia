@@ -26,9 +26,9 @@ source_set("lib") {
   deps = [
     "//bundles/drivers:utils",
     "//sdk/fidl/fuchsia.process:fuchsia.process_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fdio:fdio-spawn-actions",
-    "//sdk/lib/sys/component/cpp",
   ]
 }
 

@@ -13,6 +13,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/task.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
@@ -23,7 +24,6 @@
 #include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zbitl/error-string.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/item.h>

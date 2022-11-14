@@ -7,8 +7,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>

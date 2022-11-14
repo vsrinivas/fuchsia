@@ -15,8 +15,8 @@ source_set("mock-ddk") {
   ]
 
   deps = [
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
     "//src/lib/ddk",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/syslog",

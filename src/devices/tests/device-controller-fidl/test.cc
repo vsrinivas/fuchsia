@@ -6,12 +6,12 @@
 #include <fidl/fuchsia.hardware.sample/cpp/wire.h>
 #include <fuchsia/driver/test/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/driver_test_realm/realm_builder/cpp/lib.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 

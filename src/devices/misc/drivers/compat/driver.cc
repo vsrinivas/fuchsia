@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.scheduler/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/ddk/binding_priv.h>
 #include <lib/driver/compat/cpp/connect.h>
 #include <lib/driver/component/cpp/promise.h>
@@ -16,7 +17,6 @@
 #include <lib/fpromise/promise.h>
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/sync/cpp/completion.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/dlfcn.h>
 
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
