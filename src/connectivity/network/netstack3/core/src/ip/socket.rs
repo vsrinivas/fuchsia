@@ -300,6 +300,7 @@ impl<I: IpExt, D, O> IpSock<I, D, O> {
 // raw IP sockets once we support those.
 
 /// The route for a socket.
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub(super) struct IpSockRoute<I: Ip, D> {
     /// The local IP to use for the socket.
     pub(super) local_ip: SpecifiedAddr<I::Addr>,

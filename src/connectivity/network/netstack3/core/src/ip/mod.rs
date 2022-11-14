@@ -2659,14 +2659,17 @@ mod tests {
         testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
     };
     use rand::Rng;
+    use test_case::test_case;
 
     use super::*;
     use crate::{
         context::testutil::{handle_timer_helper_with_sc_ref, FakeInstant, FakeTimerCtxExt as _},
         device::{receive_frame, testutil::receive_frame_or_panic, FrameDestination},
-        ip::{device::set_routing_enabled, testutil::is_in_ip_multicast},
+        ip::{
+            device::set_routing_enabled, testutil::is_in_ip_multicast, types::AddableEntryEither,
+        },
         testutil::{
-            assert_empty, get_counter_val, handle_timer, new_rng, FakeCtx,
+            assert_empty, get_counter_val, handle_timer, new_rng, set_logger_for_test, FakeCtx,
             FakeEventDispatcherBuilder, FakeNonSyncCtx, TestIpExt, FAKE_CONFIG_V4, FAKE_CONFIG_V6,
         },
         Ctx, DeviceId, StackState,
@@ -4278,5 +4281,203 @@ mod tests {
             ),
             ReceivePacketAction::SendNoRouteToDest
         );
+    }
+
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    enum Device {
+        First,
+        Second,
+        Loopback,
+    }
+
+    impl Device {
+        fn index(self) -> usize {
+            match self {
+                Self::First => 0,
+                Self::Second => 1,
+                Self::Loopback => 2,
+            }
+        }
+
+        fn from_index(index: usize) -> Self {
+            match index {
+                0 => Self::First,
+                1 => Self::Second,
+                2 => Self::Loopback,
+                x => panic!("index out of bounds: {x}"),
+            }
+        }
+
+        fn ip_address<A: IpAddress>(self) -> SpecifiedAddr<A>
+        where
+            A::Version: TestIpExt,
+        {
+            match self {
+                Self::First | Self::Second => <A::Version as TestIpExt>::get_other_ip_address(
+                    (self.index() + 1).try_into().unwrap(),
+                ),
+                Self::Loopback => <A::Version as Ip>::LOOPBACK_ADDRESS,
+            }
+        }
+
+        fn mac(self) -> UnicastAddr<Mac> {
+            UnicastAddr::new(Mac::new([0, 1, 2, 3, 4, self.index().try_into().unwrap()])).unwrap()
+        }
+    }
+
+    fn remote_ip<I: TestIpExt>() -> SpecifiedAddr<I::Addr> {
+        I::get_other_ip_address(27)
+    }
+
+    #[ip_test]
+    #[test_case(None,
+                None,
+                Device::First.ip_address(),
+                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
+                    next_hop: Device::First.ip_address(), device: Device::Loopback,
+                }}); "local delivery")]
+    #[test_case(Some(Device::First.ip_address()),
+                None,
+                Device::First.ip_address(),
+                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
+                    next_hop: Device::First.ip_address(), device: Device::Loopback
+                }}); "local delivery specified local addr")]
+    #[test_case(Some(Device::First.ip_address()),
+                Some(Device::First),
+                Device::First.ip_address(),
+                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
+                    next_hop: Device::First.ip_address(), device: Device::Loopback
+                }}); "local delivery specified device and addr")]
+    #[test_case(None,
+                Some(Device::Loopback),
+                Device::First.ip_address(),
+                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
+                    next_hop: Device::First.ip_address(), device: Device::Loopback
+                }}); "local delivery specified loopback device no addr")]
+    #[test_case(None,
+                Some(Device::Loopback),
+                Device::Loopback.ip_address(),
+                Ok(IpSockRoute { local_ip: Device::Loopback.ip_address(), destination: Destination {
+                    next_hop: Device::Loopback.ip_address(), device: Device::Loopback
+                }}); "local delivery to loopback addr via specified loopback device no addr")]
+    #[test_case(None,
+                Some(Device::Second),
+                Device::First.ip_address(),
+                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
+                    next_hop: Device::First.ip_address(), device: Device::Loopback
+                }}); "local delivery specified mismatched device no addr")]
+    #[test_case(Some(Device::First.ip_address()),
+                Some(Device::Loopback),
+                Device::First.ip_address(),
+                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
+                    next_hop: Device::First.ip_address(), device: Device::Loopback
+                }}); "local delivery specified loopback device")]
+    #[test_case(Some(Device::First.ip_address()),
+                Some(Device::Second),
+                Device::First.ip_address(),
+                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
+                    next_hop: Device::First.ip_address(), device: Device::Loopback
+                }}); "local delivery specified mismatched device")]
+    #[test_case(None,
+                None,
+                remote_ip::<I>(),
+                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
+                    next_hop: remote_ip::<I>(), device: Device::First
+                }}); "remote delivery")]
+    #[test_case(Some(Device::First.ip_address()),
+                None,
+                remote_ip::<I>(),
+                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
+                    next_hop: remote_ip::<I>(), device: Device::First
+                }}); "remote delivery specified addr")]
+    #[test_case(Some(Device::Second.ip_address()), None, remote_ip::<I>(),
+                Err(IpSockRouteError::Unroutable(IpSockUnroutableError::LocalAddrNotAssigned));
+                "remote delivery specified addr no route")]
+    #[test_case(None,
+                Some(Device::First),
+                remote_ip::<I>(),
+                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
+                    next_hop: remote_ip::<I>(), device: Device::First
+                }}); "remote delivery specified device")]
+    #[test_case(None, Some(Device::Second), remote_ip::<I>(),
+                Err(IpSockRouteError::Unroutable(IpSockUnroutableError::NoRouteToRemoteAddr));
+                "remote delivery specified device no route")]
+    #[test_case(Some(Device::Second.ip_address()),
+                None,
+                Device::First.ip_address(),
+                // TODO(https://fxbug.dev/94965): Allow local IPs from any
+                // interface for locally-destined packets.
+                Err(IpSockRouteError::Unroutable(IpSockUnroutableError::LocalAddrNotAssigned));
+                "local delivery cross device")]
+    fn lookup_route<I: Ip + TestIpExt + IpDeviceIpExt + IpLayerIpExt>(
+        local_ip: Option<SpecifiedAddr<I::Addr>>,
+        egress_device: Option<Device>,
+        dest_ip: SpecifiedAddr<I::Addr>,
+        expected_result: Result<IpSockRoute<I, Device>, IpSockRouteError>,
+    ) where
+        for<'a> &'a SyncCtx<FakeNonSyncCtx>:
+            IpSocketContext<I, FakeNonSyncCtx, DeviceId = DeviceId<FakeInstant>>,
+    {
+        set_logger_for_test();
+
+        let mut builder = FakeEventDispatcherBuilder::default();
+        for device in [Device::First, Device::Second] {
+            let ip: SpecifiedAddr<I::Addr> = device.ip_address();
+            let subnet =
+                AddrSubnet::from_witness(ip, <I::Addr as IpAddress>::BYTES * 8).unwrap().subnet();
+            let index = builder.add_device_with_ip(device.mac(), ip.get(), subnet);
+            assert_eq!(index, device.index());
+        }
+        let (Ctx { sync_ctx, mut non_sync_ctx }, mut device_ids) = builder.build();
+        let mut sync_ctx = &sync_ctx;
+        let loopback_id = crate::device::add_loopback_device(
+            sync_ctx,
+            &mut non_sync_ctx,
+            I::MINIMUM_LINK_MTU.into(),
+        )
+        .unwrap();
+        crate::device::testutil::enable_device(sync_ctx, &mut non_sync_ctx, &loopback_id);
+        crate::add_ip_addr_subnet(
+            sync_ctx,
+            &mut non_sync_ctx,
+            &loopback_id,
+            AddrSubnet::from_witness(I::LOOPBACK_ADDRESS, I::LOOPBACK_SUBNET.prefix())
+                .unwrap()
+                .into(),
+        )
+        .unwrap();
+        assert_eq!(device_ids.len(), Device::Loopback.index());
+        device_ids.push(loopback_id);
+
+        // Add a route to the remote address only for Device::First.
+        crate::add_route(
+            sync_ctx,
+            &mut non_sync_ctx,
+            AddableEntryEither::without_gateway(
+                AddrSubnet::from_witness(remote_ip::<I>(), <I::Addr as IpAddress>::BYTES * 8)
+                    .unwrap()
+                    .subnet()
+                    .into(),
+                device_ids[Device::First.index()].clone(),
+            ),
+        )
+        .unwrap();
+
+        let egress_device = egress_device.map(|d| &device_ids[d.index()]);
+
+        let result = IpSocketContext::<I, _>::lookup_route(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            egress_device,
+            local_ip,
+            dest_ip,
+        )
+        // Convert device IDs in any route so it's easier to compare.
+        .map(|IpSockRoute { local_ip, destination: Destination { next_hop, device } }| {
+            let device = Device::from_index(device_ids.iter().position(|d| d == &device).unwrap());
+            IpSockRoute { local_ip, destination: Destination { next_hop, device } }
+        });
+
+        assert_eq!(result, expected_result);
     }
 }
