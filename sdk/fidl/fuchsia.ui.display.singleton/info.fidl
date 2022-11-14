@@ -8,7 +8,7 @@ using fuchsia.math;
 /// Describes the physical display, and how to map between physical and logical pixels.
 type Metrics = table {
     /// Same meaning as `horizontal_resolution` and `vertical_resolution`
-    /// in `fuchsia.hardware.display.Mode`.
+    /// in `fuchsia.hardware.display.Mode`. Given in physical pixels.
     1: extent_in_px fuchsia.math.SizeU;
     /// Same meaning as `horizontal_size_mm` and `vertical_size_mm`
     /// in `fuchsia.hardware.display.Info`.
