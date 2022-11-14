@@ -515,25 +515,9 @@ mod types {
     ///
     /// Also since DESCID_NO_NEXT(u16::MAX) is used to signal the end of a free
     /// list, there should be no [`DescId`] holding that value.
-    #[derive(PartialEq, Eq, zerocopy::FromBytes)]
+    #[derive(PartialEq, Eq, zerocopy::FromBytes, zerocopy::AsBytes)]
     #[repr(transparent)]
     pub(in crate::session) struct DescId<K: AllocKind>(u16, std::marker::PhantomData<K>);
-
-    // TODO(https://fxbug.dev/84475): Replace this with a derive once type
-    // parameters are supported.
-    //
-    // SAFETY: Safe because `DescId` is transparently a u16. Body contains a
-    // statement guaranteeing this is valid.
-    unsafe impl<K: AllocKind> zerocopy::AsBytes for DescId<K> {
-        fn only_derive_is_allowed_to_implement_this_trait()
-        where
-            Self: Sized,
-        {
-            struct ImplsAsBytes<F: zerocopy::AsBytes>(F);
-            let Self(x, _) = Self(0, std::marker::PhantomData);
-            let _ = ImplsAsBytes(x);
-        }
-    }
 
     impl<K: AllocKind> Debug for DescId<K> {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
