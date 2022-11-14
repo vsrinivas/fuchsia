@@ -134,6 +134,7 @@ int ConsoleMain(int argc, const char* argv[]) {
 
   // This scope forces all the objects to be destroyed before the Cleanup() call which will mark the
   // message loop as not-current.
+  int ret_code = 0;
   {
     Session session;
 
@@ -160,17 +161,25 @@ int ConsoleMain(int argc, const char* argv[]) {
       console = std::make_unique<ConsoleImpl>(&session);
     }
 
-    // Run the actions and then initialize the console to enter interactive mode.
-    RunCommandSequence(console.get(), std::move(actions),
-                       fxl::MakeRefCounted<ConsoleCommandContext>(
-                           console.get(), [&](const Err&) { InitConsole(*console); }));
+    // Run the actions and then initialize the console to enter interactive mode. Errors in
+    // running actions should be fatal and quit the debugger.
+    RunCommandSequence(
+        console.get(), std::move(actions),
+        fxl::MakeRefCounted<ConsoleCommandContext>(console.get(), [&](const Err& err) {
+          if (err.has_error()) {
+            ret_code = 1;
+            loop.QuitNow();
+          } else {
+            InitConsole(*console);
+          }
+        }));
 
     loop.Run();
   }
 
   loop.Cleanup();
 
-  return 0;
+  return ret_code;
 }
 
 }  // namespace zxdb
