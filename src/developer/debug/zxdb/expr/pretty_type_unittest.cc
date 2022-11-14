@@ -26,6 +26,51 @@ class PrettyTypeTest : public TestWithLoop {};
 
 }  // namespace
 
+TEST_F(PrettyTypeTest, PrettyGenericContainer) {
+  auto structure =
+      MakeCollectionType(DwarfTag::kStructureType, "TestStruct", {{"value", MakeInt32Type()}});
+  ExprValue value(static_cast<int32_t>(4), structure);
+
+  // Test appending literal string keys as well as value keys.
+  PrettyGenericContainer pretty(R"(
+    $zxdb::AppendKeyValueRow("[size]", value);
+    for (int i = 0; i < value; i = i + 1) {
+      $zxdb::AppendKeyValueRow(i, 1000 + i);
+    }
+    $zxdb::AppendNameValueRow("[max was]", $zxdb::GetMaxArraySize());
+    $zxdb::AppendNameRow("...");
+  )");
+
+  FormatNode node("result", value);
+  node.set_type("TestStruct");
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+  FormatOptions options;
+
+  bool complete = false;
+  pretty.Format(&node, options, eval_context,
+                fit::defer_callback([&complete]() { complete = true; }));
+  EXPECT_TRUE(complete);  // Expect synchronous completion.
+  node.set_state(FormatNode::kDescribed);
+
+  EXPECT_EQ(7u, node.children().size());
+
+  // Describe each child but not the root (that will overwrite what we just did above with the
+  // custom pretty-printer).
+  for (auto& child : node.children()) {
+    SyncFillAndDescribeFormatNode(eval_context, child.get(), options);
+  }
+  EXPECT_EQ(
+      "result = TestStruct, \n"
+      "  \"[size]\" = int32_t, 4\n"
+      "  0 = int64_t, 1000\n"
+      "  1 = int64_t, 1001\n"
+      "  2 = int64_t, 1002\n"
+      "  3 = int64_t, 1003\n"
+      "  [max was] = uint32_t, 256\n"
+      "  ... = , \n",
+      GetDebugTreeForFormatNode(&node));
+}
+
 TEST_F(PrettyTypeTest, RecursiveVariant) {
   // This declares the following structure to encode a variant of two values:
   //

@@ -112,6 +112,29 @@ class PrettyArray : public PrettyType {
   const std::string size_expr_;  // Expression to compute array size.
 };
 
+// A generic container who's contents is populated by the expression. This allows non-contiguous
+// containers (as opposed to PrettyArray) like std::map. The "expand_expr" is actually a program
+// snippet that will run. It should call $zxdb::AppendKeyValueRow(key, value); to append children to
+// the FormatNode of this value (normally inside a loop). The loop should be sure not to go more
+// than $zxdb::GetMaxArraySize() items to avoid taking too long to execute. See pretty_type.cc for
+// more.
+//
+// This does not support array access because comparing arbitrary key values is not generally
+// practical in the expression language.
+class PrettyGenericContainer : public PrettyType {
+ public:
+  explicit PrettyGenericContainer(
+      const std::string& expand_expr,
+      std::initializer_list<std::pair<std::string, std::string>> getters = {})
+      : PrettyType(getters), expand_expr_(expand_expr) {}
+
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
+
+ private:
+  const std::string expand_expr_;
+};
+
 // For pretty-printing character strings that live on the heap.
 //
 // This gets a little more complicated for strings that live in an array inline in some type

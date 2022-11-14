@@ -134,6 +134,7 @@ bool HasOnlySupportedSpecialIdentifierTypes(const Identifier& ident) {
         // "$main" is supported only when it's the only component ("foo::$main" is invalid).
         return ident.components().size() == 1;
       case SpecialIdentifier::kRegister:
+      case SpecialIdentifier::kZxdb:
         return false;  // Can't look up registers in the symbols.
       case SpecialIdentifier::kLast:
         FX_NOTREACHED();  // Not supposed to be a valid value.

@@ -39,6 +39,9 @@ enum class FindNameSupported {
   // Query the module symbols for this name. Used for names not in the index like ELF symbols.
   kModuleSymbolsOnly,
 
+  // This symbol is an internal one, don't query the symbols, but FindName is still supported.
+  kInternal,
+
   // This name can't use FindName. For example, registers can't be looked up.
   kNo,
 };
@@ -59,6 +62,8 @@ FindNameSupported GetSupported(const ParsedIdentifier& identifier) {
         return FindNameSupported::kModuleSymbolsOnly;
       case SpecialIdentifier::kRegister:
         return FindNameSupported::kNo;  // Can't look up registers in the symbols.
+      case SpecialIdentifier::kZxdb:
+        return FindNameSupported::kInternal;
     }
   }
   return FindNameSupported::kFully;
@@ -78,6 +83,20 @@ bool NameMatches(const FindNameOptions& options, const std::string& name,
   if (options.how == FindNameOptions::kPrefix)
     return StringStartsWith(name, looking_for);
   return name == looking_for;
+}
+
+// Implements FindName for internal symbols.
+void FindInternalName(const FindNameContext& context, const FindNameOptions& options,
+                      const ParsedIdentifier& looking_for, std::vector<FoundName>* results) {
+  // Currently this just looks up the special "$zxdb" namespace and returns it as such. This
+  // allows expressions like $zxdb::Foo to be parsed properly. This does not actually match the
+  // things inside that namespace (which may vary by context) but currently the parser is happy
+  // with <namespace>::<anything> and will call that a name.
+  if (looking_for.components().size() == 1u) {
+    if (looking_for.components()[0].special() == SpecialIdentifier::kZxdb) {
+      results->emplace_back(FoundName::kNamespace, looking_for);
+    }
+  }
 }
 
 // Iterates over the variables in the given vector, calling the visit callback for each as long as
@@ -479,6 +498,8 @@ void FindName(const FindNameContext& context, const FindNameOptions& options,
   FindNameSupported supported = GetSupported(looking_for);
   if (supported == FindNameSupported::kNo)
     return;  // Nothing to do for these symbols.
+  if (supported == FindNameSupported::kInternal)
+    return FindInternalName(context, options, looking_for, results);
 
   // This only works for fully-supported identifier types. Some work only with the module-specific
   // symbol query we do below.

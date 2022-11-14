@@ -68,6 +68,13 @@ TEST(ParseSpecialIdentifier, Name) {
   EXPECT_EQ(SpecialIdentifier::kAnon, si);
   EXPECT_EQ("", contents);
 
+  cur = 0;
+  err = ParseSpecialIdentifier("$zxdb", &cur, &si, &contents, &error_location);
+  EXPECT_TRUE(err.ok()) << err.msg();
+  EXPECT_EQ(5u, cur);
+  EXPECT_EQ(SpecialIdentifier::kZxdb, si);
+  EXPECT_EQ("", contents);
+
   // Name with empty contents.
   cur = 0;
   err = ParseSpecialIdentifier("$reg()", &cur, &si, &contents, &error_location);

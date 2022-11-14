@@ -28,6 +28,7 @@ const SpecialIdentifierRecord kRecords[] = {
   { SpecialIdentifier::kElf,      "$elf",  true },
   { SpecialIdentifier::kPlt,      "$plt",  true },
   { SpecialIdentifier::kRegister, "$reg",  true },
+  { SpecialIdentifier::kZxdb,     "$zxdb", false },
 };
 // clang-format on
 

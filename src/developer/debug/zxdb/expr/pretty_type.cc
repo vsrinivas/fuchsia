@@ -20,6 +20,121 @@ namespace zxdb {
 
 namespace {
 
+// How to handle quotes for the name in PopulateName().
+enum class NameQuotes { kStrip, kKeep };
+
+// Populates the "key" or "name" of the given FormatNode with the given ExprValue. Since names are
+// strings, we need a stringified version of the ExprValue.
+//
+// This is relatively simplistic. It just formats the value and takes the toplevel description of
+// that node. If the key is some complicated struct, you probably can't handle that being formatted
+// as the key in a list of array values anyway.
+//
+// It would be nice to give the pretty-printer more control over what the key is. Implementing
+// something like StringPrintf might be nice, here showing a Golang-like "%v" for what our default
+// description for any value would be:
+//   StringPrintf("[%v]", key);
+// We could also implement to_string() and use + to concatenate string literals:
+//   "[" + $zxdb::to_string(key) + "]"
+void PopulateName(const fxl::RefPtr<EvalContext>& eval_context, fxl::WeakPtr<FormatNode> weak_node,
+                  const ExprValue& name, NameQuotes quotes, const FormatOptions& options,
+                  EvalCallback cb) {
+  // Create a format node to format the key.
+  auto name_node = std::make_unique<FormatNode>(std::string(), name);
+
+  // Asynchronously expand the key's FormatNode to get the string for it.
+  FormatNode* name_node_ptr = name_node.get();
+  FillFormatNodeDescription(
+      name_node_ptr, options, eval_context,
+      fit::defer_callback(
+          [weak_node, quotes, name_node = std::move(name_node), cb = std::move(cb)]() mutable {
+            if (weak_node) {
+              const std::string& desc = name_node->description();
+              if (quotes == NameQuotes::kStrip && desc.size() >= 2u && desc[0] == '"' &&
+                  desc.back() == '"') {
+                // Strip the quotes.
+                weak_node->set_name(desc.substr(1, desc.size() - 2));
+              } else {
+                weak_node->set_name(desc);
+              }
+            }
+            cb(ExprValue());  // Done, AppendKeyValueRow returns no value.
+          }));
+}
+
+// Constructs an identifier in the $zxdb namespace with the given name.
+ParsedIdentifier ZxdbNamespaced(const std::string& name) {
+  ParsedIdentifier result((ParsedIdentifierComponent(SpecialIdentifier::kZxdb)));
+  result.AppendComponent(ParsedIdentifierComponent(name));
+  return result;
+}
+
+// Pretty-printing built-in functions --------------------------------------------------------------
+
+// Implementation of the built-in pretty-printer function $zxdb::AppendKeyValueRow() and
+// AppendNameValueRow().
+//
+//     void $zxdb::AppendKeyValueRow(auto key, auto value);
+//     void $zxdb::AppendNameValueRow(auto key, auto value);
+//
+// Appends the given key/value to the list of children of the current FormatNode being formatted.
+// This is used when the key comes from the program being debugged.
+void AppendNameOrKeyValueRow(const fxl::RefPtr<EvalContext>& eval_context,
+                             const std::vector<ExprValue>& params, FormatNode* node,
+                             NameQuotes quotes, const FormatOptions& options, EvalCallback cb) {
+  if (params.size() != 2u)
+    return cb(Err("$zxdb::Append*ValueRow() expects two arguments."));
+
+  // First fill in the child with no name.
+  node->children().push_back(std::make_unique<FormatNode>(std::string(), std::move(params[1])));
+
+  // Asynchronously fill in the name (it may need evaluating).
+  PopulateName(eval_context, node->children().back()->GetWeakPtr(), params[0], quotes, options,
+               std::move(cb));
+}
+
+// Implementation of the built-in pretty-printer function AppendKeyRow().
+//
+//     void $zxdb::AppendNameRow(auto name);
+//
+// Appends the given name to the list of children of the current FormatNode being formatted. Unlike
+// AppendNameValueRow(), this will have no value (which would be appear in the output differently
+// than, for example, nullptr or empty string). This can be useful to append things like "..." to
+// the end of truncated arrays.
+void AppendNameRow(const fxl::RefPtr<EvalContext>& eval_context,
+                   const std::vector<ExprValue>& params, FormatNode* node,
+                   const FormatOptions& options, EvalCallback cb) {
+  if (params.size() != 1u)
+    return cb(Err("$zxdb::AppendNameRow() expects one argument."));
+
+  // First fill in the child with no name.
+  node->children().push_back(std::make_unique<FormatNode>(std::string()));
+
+  // Asynchronously fill in the name (it may need evaluating).
+  PopulateName(eval_context, node->children().back()->GetWeakPtr(), params[0], NameQuotes::kStrip,
+               options, std::move(cb));
+}
+
+// Implementation of the built-in pretty-printer function GetMaxArraySize().
+//
+//     int $zxdb::GetMaxArraySize();
+//
+// This function returns the maximum number of children that a pretty-printer for a container type
+// should generate. Otherwise, things can easily get too long and slow. Using this value instead of
+// hard-coding a limit allows the user to override the value consistently if they want more items.
+//
+// If a pretty-printer for a container stops populating items early because it hit the max array
+// size, it should call:
+//   $zxdb::AppendNameRow("...");
+// to make clear that the output was truncated.
+void GetMaxArraySize(const fxl::RefPtr<EvalContext>& eval_context,
+                     const std::vector<ExprValue>& params, const FormatOptions& options,
+                     EvalCallback cb) {
+  if (!params.empty())
+    return cb(Err("$zxdb::GetMaxArraySize() expects no arguments."));
+  return cb(ExprValue(options.max_array_size));
+}
+
 // An EvalContext that shadows another one and injects all members of a given value into the
 // current namespace. This allows pretty-printers to reference variables on the object being printed
 // as if the code was in the context of that object.
@@ -48,7 +163,7 @@ class PrettyEvalContext : public EvalContext {
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override {
     return impl_->GetVariableValue(std::move(variable), std::move(cb));
   }
-  BuiltinFuncCallback* GetBuiltinFunction(const ParsedIdentifier& name) const override;
+  const BuiltinFuncCallback* GetBuiltinFunction(const ParsedIdentifier& name) const override;
   const ProcessSymbols* GetProcessSymbols() const override { return impl_->GetProcessSymbols(); }
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override { return impl_->GetDataProvider(); }
   Location GetLocationForAddress(uint64_t address) const override {
@@ -70,12 +185,37 @@ class PrettyEvalContext : public EvalContext {
   FRIEND_REF_COUNTED_THREAD_SAFE(PrettyEvalContext);
   FRIEND_MAKE_REF_COUNTED(PrettyEvalContext);
 
-  PrettyEvalContext(fxl::RefPtr<EvalContext> impl, ExprValue value)
-      : impl_(std::move(impl)), value_(std::move(value)) {}
+  // Use the node variant to enable use-cases where the implementation of the formatter may
+  // add children to the final ExprNode. The value to be formatted is in node->value().
+  PrettyEvalContext(fxl::RefPtr<EvalContext> impl, FormatNode* node,
+                    const FormatOptions& options = FormatOptions())
+      : impl_(std::move(impl)),
+        weak_node_(node->GetWeakPtr()),
+        value_(node->value()),
+        format_options_(options) {
+    AddBuiltinFuncs();
+  }
+
+  // This variant does not support any mutation of the output node. This is used for more narrowly
+  // defined cases and only take the thing to be formatted.
+  PrettyEvalContext(fxl::RefPtr<EvalContext> impl, ExprValue value,
+                    const FormatOptions& options = FormatOptions())
+      : impl_(std::move(impl)), value_(std::move(value)), format_options_(options) {
+    AddBuiltinFuncs();
+  }
+
   ~PrettyEvalContext() override = default;
 
+  // Populates the builtin_funcs_ map.
+  void AddBuiltinFuncs();
+
   fxl::RefPtr<EvalContext> impl_;
+
+  fxl::WeakPtr<FormatNode> weak_node_;
   ExprValue value_;
+  FormatOptions format_options_;
+
+  std::map<ParsedIdentifier, BuiltinFuncCallback> builtin_funcs_;
 };
 
 void PrettyEvalContext::FindName(const FindNameOptions& options,
@@ -110,9 +250,51 @@ void PrettyEvalContext::GetNamedValue(const ParsedIdentifier& name, EvalCallback
                 });
 }
 
-EvalContext::BuiltinFuncCallback* PrettyEvalContext::GetBuiltinFunction(
+const EvalContext::BuiltinFuncCallback* PrettyEvalContext::GetBuiltinFunction(
     const ParsedIdentifier& name) const {
+  if (auto found = builtin_funcs_.find(name); found != builtin_funcs_.end())
+    return &found->second;
   return nullptr;
+}
+
+void PrettyEvalContext::AddBuiltinFuncs() {
+  builtin_funcs_[ZxdbNamespaced("AppendKeyValueRow")] =
+      [weak_node = weak_node_, format_options = format_options_](
+          const fxl::RefPtr<EvalContext>& eval_context, const std::vector<ExprValue>& params,
+          EvalCallback cb) {
+        if (weak_node) {
+          AppendNameOrKeyValueRow(eval_context, params, weak_node.get(), NameQuotes::kKeep,
+                                  format_options, std::move(cb));
+        } else {
+          cb(Err("Value gone"));
+        }
+      };
+  builtin_funcs_[ZxdbNamespaced("AppendNameValueRow")] =
+      [weak_node = weak_node_, format_options = format_options_](
+          const fxl::RefPtr<EvalContext>& eval_context, const std::vector<ExprValue>& params,
+          EvalCallback cb) {
+        if (weak_node) {
+          AppendNameOrKeyValueRow(eval_context, params, weak_node.get(), NameQuotes::kStrip,
+                                  format_options, std::move(cb));
+        } else {
+          cb(Err("Value gone"));
+        }
+      };
+  builtin_funcs_[ZxdbNamespaced("AppendNameRow")] =
+      [weak_node = weak_node_, format_options = format_options_](
+          const fxl::RefPtr<EvalContext>& eval_context, const std::vector<ExprValue>& params,
+          EvalCallback cb) {
+        if (weak_node) {
+          AppendNameRow(eval_context, params, weak_node.get(), format_options, std::move(cb));
+        } else {
+          cb(Err("Value gone"));
+        }
+      };
+  builtin_funcs_[ZxdbNamespaced("GetMaxArraySize")] =
+      [format_options = format_options_](const fxl::RefPtr<EvalContext>& eval_context,
+                                         const std::vector<ExprValue>& params, EvalCallback cb) {
+        GetMaxArraySize(eval_context, params, format_options, std::move(cb));
+      };
 }
 
 // When doing multi-evaluation, we'll have a vector of values, any of which could have generated an
@@ -158,7 +340,7 @@ void PrettyType::EvalExpressionOn(const fxl::RefPtr<EvalContext>& context, const
 void PrettyArray::Format(FormatNode* node, const FormatOptions& options,
                          const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   // Evaluate the expressions with this context to make the members in the current scope.
-  auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, node->value());
+  auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, node, options);
 
   EvalExpressions({ptr_expr_, size_expr_}, pretty_context, true,
                   [cb = std::move(cb), weak_node = node->GetWeakPtr(), options,
@@ -190,10 +372,31 @@ PrettyArray::EvalArrayFunction PrettyArray::GetArrayAccess() const {
   };
 }
 
+void PrettyGenericContainer::Format(FormatNode* node, const FormatOptions& options,
+                                    const fxl::RefPtr<EvalContext>& context,
+                                    fit::deferred_callback cb) {
+  auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, node, options);
+
+  // Format this as a collection which will just be a list of key/value pairs. This pretty-printer
+  // will be used for things like maps and sets which will have different requirements.
+  node->set_description_kind(FormatNode::kCollection);
+
+  EvalExpression(
+      expand_expr_, pretty_context, true,
+      [weak_node = node->GetWeakPtr(), cb = std::move(cb)](ErrOrValue result) mutable {
+        // The callback will get issued automatically whwen it goes out of scope.
+        if (result.has_error()) {
+          if (weak_node) {
+            weak_node->SetDescribedError(Err("Error pretty-printing: " + result.err().msg()));
+          }
+        }
+      });
+}
+
 void PrettyHeapString::Format(FormatNode* node, const FormatOptions& options,
                               const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   // Evaluate the expressions with this context to make the members in the current scope.
-  auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, node->value());
+  auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, node->value(), options);
 
   EvalExpressions({ptr_expr_, size_expr_}, pretty_context, true,
                   [cb = std::move(cb), weak_node = node->GetWeakPtr(), options,
@@ -237,7 +440,7 @@ PrettyHeapString::EvalArrayFunction PrettyHeapString::GetArrayAccess() const {
 
 void PrettyPointer::Format(FormatNode* node, const FormatOptions& options,
                            const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
-  auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, node->value());
+  auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, node->value(), options);
 
   EvalExpression(
       expr_, pretty_context, true,

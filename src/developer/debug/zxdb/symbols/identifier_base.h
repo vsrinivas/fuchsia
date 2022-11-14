@@ -31,6 +31,7 @@ enum class SpecialIdentifier {
   kElf,   // Symbol defined in the ELF format (simpler than the full DWARF symbols).
   kPlt,   // PLT identifier (a subset of ELF symbols).
   kRegister,
+  kZxdb,  // Namespace used for special debugger symbols.
 
   kLast,  // Not a type, marker for array size.
 };
