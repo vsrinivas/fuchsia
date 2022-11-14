@@ -208,7 +208,7 @@ executable("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_cpp_wire",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/vfs/cpp",
     "//third_party/libpcap",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

@@ -5,9 +5,9 @@
 #include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/vfs/cpp/composed_service_dir.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>

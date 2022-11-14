@@ -4,7 +4,7 @@
 
 #include <fidl/examples.${series_flat_case}.${variant_flat_case}/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
