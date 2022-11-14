@@ -34,7 +34,10 @@
 #include "src/connectivity/ethernet/drivers/gvnic/pagelist.h"
 #include "src/connectivity/network/drivers/network-device/device/public/locks.h"
 
-#define GVNIC_VERSION "v1.awesome"
+// Versions are alphabetically increasing.  Previous versions were:
+//  1.awesome -- The initial version with minimal tuning.
+//  1.best    -- Uses IRQs instead of polling for received packets.
+#define GVNIC_VERSION "v1.best"
 
 namespace gvnic {
 
@@ -85,6 +88,7 @@ class Gvnic : public DeviceType,
 
  private:
   __WARN_UNUSED_RESULT zx_status_t SetUpPci();
+  __WARN_UNUSED_RESULT zx_status_t SetUpInterrupts();
   __WARN_UNUSED_RESULT zx_status_t MapBars();
   __WARN_UNUSED_RESULT zx_status_t ResetCard(bool use_new_reset_sequence);
   __WARN_UNUSED_RESULT zx_status_t WriteVersion(const char* ver, uint32_t len);
@@ -132,9 +136,9 @@ class Gvnic : public DeviceType,
   zx::bti bti_;
 
   std::unique_ptr<dma_buffer::ContiguousBuffer> admin_queue_;
-  uint32_t admin_queue_index_;          // Index of the next usable entry
-  uint32_t admin_queue_num_allocated_;  // Allocated, but not submitted
-  uint32_t admin_queue_num_pending_;    // Submitted, but not finished
+  uint32_t admin_queue_index_ = 0;          // Index of the next usable entry
+  uint32_t admin_queue_num_allocated_ = 0;  // Allocated, but not submitted
+  uint32_t admin_queue_num_pending_ = 0;    // Submitted, but not finished
 
   std::unique_ptr<dma_buffer::ContiguousBuffer> scratch_page_;
   std::unique_ptr<dma_buffer::ContiguousBuffer> counter_page_;
@@ -143,11 +147,16 @@ class Gvnic : public DeviceType,
   // to report which indices were allocated so that this driver can avoid allocating an index that
   // was already allocated. This buffer is how that information will be reported.
   std::unique_ptr<dma_buffer::ContiguousBuffer> irq_doorbell_idx_page_;
-  uint32_t irq_doorbell_idx_stride_;  // Measuered in entries, not bytes.
-  uint32_t num_irq_doorbell_idxs_;
+  // The stride sets the distance between consecutive doorbell entries. This can be used to space
+  // them out (for example, to keep each doorbell in its own cacheline).
+  static constexpr uint32_t kIrqDoorbellIdxStride = 16;  // Measuered in entries, not bytes.
+  static constexpr uint32_t kNumIrqDoorbellIdxs = 3;     // Management,  RX and TX.
+  uint32_t rx_irq_index_;
+  uint32_t tx_irq_index_;
+  zx::interrupt tx_interrupt_;
+  zx::interrupt rx_interrupt_;
 
-  uint32_t next_doorbell_idx_;  // Index of the next potentially-allocatable doorbell.
-  uint32_t max_doorbells_;      // The max doorbells expected to ever allocate (IRQ, RX, and TX)
+  uint32_t next_doorbell_idx_ = 0;  // Index of the next potentially-allocatable doorbell.
 
   GvnicDeviceDescriptor dev_descr_;
   std::unique_ptr<GvnicDeviceOption[]> dev_opts_;
@@ -157,7 +166,7 @@ class Gvnic : public DeviceType,
   std::unique_ptr<PageList> rx_page_list_;
 
   std::unique_ptr<dma_buffer::ContiguousBuffer> queue_resources_;
-  uint32_t next_queue_resources_index_;
+  uint32_t next_queue_resources_index_ = 0;
   GvnicQueueResources* tx_queue_resources_;
   GvnicQueueResources* rx_queue_resources_;
 

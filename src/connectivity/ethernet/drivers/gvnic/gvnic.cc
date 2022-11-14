@@ -121,6 +121,11 @@ zx_status_t Gvnic::Bind() {
     zxlogf(ERROR, "Couldn't create rx queue: %s", zx_status_get_string(status));
     return status;
   }
+  status = SetUpInterrupts();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Couldn't set up interrupts: %s", zx_status_get_string(status));
+    return status;
+  }
   status = StartRXThread();
   if (status != ZX_OK) {
     zxlogf(ERROR, "Couldn't start rx thread: %s", zx_status_get_string(status));
@@ -154,12 +159,31 @@ zx_status_t Gvnic::SetUpPci() {
     zxlogf(ERROR, "Couldn't set pci bus mastering: %s", zx_status_get_string(status));
     return status;
   }
-  status = pci_.SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kMsiX, 1);
+  buffer_factory_ = dma_buffer::CreateBufferFactory();
+  return ZX_OK;
+}
+
+zx_status_t Gvnic::SetUpInterrupts() {
+  zx_status_t status;
+
+  fuchsia_hardware_pci::InterruptMode mode;
+  status = pci_.ConfigureInterruptMode(kNumIrqDoorbellIdxs, &mode);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Couldn't set pci interrupt mode to msix: %s", zx_status_get_string(status));
+    zxlogf(ERROR, "Couldn't configure interrupt mode: %s", zx_status_get_string(status));
     return status;
   }
-  buffer_factory_ = dma_buffer::CreateBufferFactory();
+
+  status = pci_.MapInterrupt(tx_irq_index_, &tx_interrupt_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Couldn't map tx interrupt: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  status = pci_.MapInterrupt(rx_irq_index_, &rx_interrupt_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Couldn't map rx interrupt: %s", zx_status_get_string(status));
+    return status;
+  }
   return ZX_OK;
 }
 
@@ -249,8 +273,6 @@ zx_status_t Gvnic::CreateAdminQueue() {
   }
   SET_LOCAL_REG_AND_WRITE_TO_MMIO(admin_queue_base_address, admin_queue_->phys());
   SET_LOCAL_REG_AND_WRITE_TO_MMIO(admin_queue_length, GVNIC_ADMINQ_SIZE);
-  admin_queue_index_ = 0;
-  admin_queue_num_allocated_ = 0;
   ZX_ASSERT_MSG(!scratch_page_, "Scratch page alredy allocated.");
   status = buffer_factory_->CreateContiguous(bti_, zx_system_get_page_size(), 0, &scratch_page_);
   if (status != ZX_OK) {
@@ -340,14 +362,6 @@ zx_status_t Gvnic::ConfigureDeviceResources() {
   }
   const uint32_t num_counters = 2;
 
-  num_irq_doorbell_idxs_ = 1;
-  next_doorbell_idx_ = 0;
-  max_doorbells_ = num_irq_doorbell_idxs_ + num_counters;
-
-  // The stride sets the distance between consecutive doorbell entries. This can be used to space
-  // them out (for example, to keep each doorbell in its own cacheline).
-  irq_doorbell_idx_stride_ = 16;  // Irrelevant, since there is only one... no "between" at all.
-
   ent->device_resources.counter_array = counter_page_->phys();
   ent->device_resources.irq_db_addr_base = irq_doorbell_idx_page_->phys();
 
@@ -358,8 +372,8 @@ zx_status_t Gvnic::ConfigureDeviceResources() {
   // RX queue(s), the doorbell is incremented for each "empty" packet buffer provided, and the
   // counter indicates when they have been filled.
   ent->device_resources.num_counters = num_counters;  // 1024 allocated, but using 2: 1 TX and 1 RX
-  ent->device_resources.num_irq_dbs = num_irq_doorbell_idxs_;
-  ent->device_resources.irq_db_stride = sizeof(uint32_t) * irq_doorbell_idx_stride_;
+  ent->device_resources.num_irq_dbs = kNumIrqDoorbellIdxs;
+  ent->device_resources.irq_db_stride = sizeof(uint32_t) * kIrqDoorbellIdxStride;
 
   // From the docs:
   //
@@ -424,9 +438,8 @@ zx_status_t Gvnic::CreateTXQueue() {
   ent->create_tx_queue.queue_resources_addr = GetQueueResourcesPhysAddr(qr_idx);
   ent->create_tx_queue.tx_ring_addr = tx_ring_->phys();
   ent->create_tx_queue.queue_page_list_id = tx_page_list_->id();
-  // TODO(https://fxbug.dev/107758): To prevent the TX interrupt from waking the RX thread, create a
-  // second interrupt, pass its id here, and then mask it.
-  ent->create_tx_queue.ntfy_id = 0;            // RX and TX queue both share the same interrupt.
+  tx_irq_index_ = GetNextFreeDoorbellIndex();
+  ent->create_tx_queue.ntfy_id = tx_irq_index_;
   ent->create_tx_queue.tx_comp_ring_addr = 0;  // Not relevant when in GQI format.
   ent->create_tx_queue.tx_ring_size = tx_ring_len_;
   SubmitPendingAdminQEntries(true);
@@ -474,9 +487,8 @@ zx_status_t Gvnic::CreateRXQueue() {
 
   ent->create_rx_queue.queue_id = 0;  // Only making one RX Queue.
   ent->create_rx_queue.slice = 0;     // Obsolete. Not used.
-  // TODO(https://fxbug.dev/107758): To prevent the TX interrupt from waking the RX thread, create a
-  // second interrupt, pass its id here, and then mask it.
-  ent->create_rx_queue.ntfy_id = 0;  // RX and TX queue both share the same interrupt.
+  rx_irq_index_ = GetNextFreeDoorbellIndex();
+  ent->create_rx_queue.ntfy_id = rx_irq_index_;
   ent->create_rx_queue.queue_resources_addr = GetQueueResourcesPhysAddr(qr_idx);
   ent->create_rx_queue.rx_desc_ring_addr = rx_desc_ring_->phys();
   ent->create_rx_queue.rx_data_ring_addr = rx_data_ring_->phys();
@@ -512,7 +524,6 @@ void Gvnic::SubmitPendingAdminQEntries(bool wait) {
                 admin_queue_num_allocated_);
   SET_LOCAL_REG_AND_WRITE_TO_MMIO(admin_queue_doorbell, admin_queue_index_);
   admin_queue_num_pending_ += admin_queue_num_allocated_;
-  admin_queue_num_allocated_ = 0;
   if (wait) {
     WaitForAdminQueueCompletion();
   }
@@ -534,16 +545,16 @@ uint32_t Gvnic::GetNextFreeDoorbellIndex() {
   auto volatile const irq_doorbell_idxs =
       reinterpret_cast<BigEndian<uint32_t>*>(irq_doorbell_idx_page_->virt());
 
-  for (; next_doorbell_idx_ < max_doorbells_; next_doorbell_idx_++) {
+  for (;; next_doorbell_idx_++) {
     // Cannot just return next_doorbell_idx_ here, because it might already be
     // allocated to an IRQ. Scan through the irq doorbells, and skip to the
     // next one if we collide.
     uint32_t i;
-    for (i = 0; i < num_irq_doorbell_idxs_ &&
-                irq_doorbell_idxs[i * irq_doorbell_idx_stride_] != next_doorbell_idx_;
+    for (i = 0; i < kNumIrqDoorbellIdxs &&
+                irq_doorbell_idxs[i * kIrqDoorbellIdxStride] != next_doorbell_idx_;
          i++)
       ;
-    if (i < num_irq_doorbell_idxs_)
+    if (i < kNumIrqDoorbellIdxs)
       continue;  // Can't use this index, it is in use by IRQ i. Try the next one.
     // No collision found. Fine to return it (and increment for the next call).
     return next_doorbell_idx_++;
@@ -555,12 +566,10 @@ uint32_t Gvnic::GetNextFreeDoorbellIndex() {
 uint32_t Gvnic::GetNextQueueResourcesIndex() {
   zx_status_t status;
   if (!queue_resources_) {
-    next_queue_resources_index_ = 0;
     status =
         buffer_factory_->CreateContiguous(bti_, zx_system_get_page_size(), 0, &queue_resources_);
-    if (status != ZX_OK) {
-      ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
-    }
+    ZX_ASSERT_MSG(status == ZX_OK, "Couldn't create queue resources: %s",
+                  zx_status_get_string(status));
   }
   const auto num_queue_resources = queue_resources_->size() / sizeof(GvnicQueueResources);
   ZX_ASSERT_MSG(next_queue_resources_index_ < num_queue_resources,
@@ -601,16 +610,17 @@ zx_status_t Gvnic::StartRXThread() {
   return ZX_OK;
 }
 
+#define DOORBELL_IDX_TO_OFFSET(i) (sizeof(uint32_t) * i)
+
 void Gvnic::WriteDoorbell(uint32_t index, uint32_t value) {
   const BigEndian<uint32_t> doorbell_val = value;
-  doorbell_mmio_->WriteBuffer(sizeof(uint32_t) * index, &doorbell_val, sizeof(uint32_t));
+  doorbell_mmio_->Write<uint32_t>(doorbell_val.GetBE(), DOORBELL_IDX_TO_OFFSET(index));
 }
 
 uint32_t Gvnic::ReadCounter(uint32_t index) {
   ZX_ASSERT_MSG(scratch_page_, "Scratch page not allocated.");
   const auto volatile counter_base = reinterpret_cast<BigEndian<uint32_t>*>(counter_page_->virt());
-  const uint32_t value = counter_base[index];
-  return value;
+  return counter_base[index];
 }
 
 // TODO(https://fxbug.dev/107757): Find a clever way to get zerocopy rx to work, and then delete
@@ -642,9 +652,15 @@ int Gvnic::RXThread() {
   std::vector<rx_buffer_t> completed_rx(rx_ring_len_);
   std::vector<rx_buffer_part_t> completed_rx_parts(rx_ring_len_);
 
-  // Right now, the driver is not using interrupts at all, and instead is just costantly polling.
-  // TODO(https://fxbug.dev/107758): Use interrupts when I learn this power. (from a jedi or sith).
-  for (;; sched_yield()) {
+  auto volatile const irq_doorbell_idxs =
+      reinterpret_cast<BigEndian<uint32_t>*>(irq_doorbell_idx_page_->virt());
+  const uint32_t irq_db_index = irq_doorbell_idxs[rx_irq_index_ * kIrqDoorbellIdxStride];
+  for (;;) {
+    zx_status_t status = rx_interrupt_.wait(nullptr);
+    ZX_ASSERT_MSG(status == ZX_OK, "Couldn't wait for rx interrupt: %s",
+                  zx_status_get_string(status));
+    WriteDoorbell(irq_db_index, 0);  // Ack the interrupt by clearing the doorbell back to zero.
+
     const uint32_t counter = ReadCounter(counter_idx);
     uint32_t packets_processed = 0;
     uint32_t packets_written = 0;
