@@ -43,12 +43,12 @@ func TestPeriodicallyRequestsPersistence(t *testing.T) {
 
 	impl := fakePersistServer{}
 	stub := persist.DataPersistenceWithCtxStub{Impl: &impl}
-	serve_ctx, serve_cancel := context.WithCancel(context.Background())
-	defer serve_cancel()
-	go component.Serve(serve_ctx, &stub, req.Channel, component.ServeOptions{
+	serveCtx, serveCancel := context.WithCancel(context.Background())
+	defer serveCancel()
+	go component.Serve(serveCtx, &stub, req.Channel, component.ServeOptions{
 		Concurrent: true,
 		OnError: func(err error) {
-			t.Fatalf("got unexpected error %v", err)
+			t.Fatalf("got unexpected error %s", err)
 			_ = syslog.WarnTf(neighbor.ViewName, "%s", err)
 		},
 	})
@@ -76,28 +76,32 @@ func TestExitsAfterRequestChannelFailure(t *testing.T) {
 
 	impl := fakePersistServer{}
 	stub := persist.DataPersistenceWithCtxStub{Impl: &impl}
-	serve_ctx, serve_cancel := context.WithCancel(context.Background())
+	serveCtx, serveCancel := context.WithCancel(context.Background())
 
-	go component.Serve(serve_ctx, &stub, req.Channel, component.ServeOptions{
-		Concurrent: true,
-		OnError: func(err error) {
-			t.Fatalf("got unexpected error %v", err)
-			_ = syslog.WarnTf(neighbor.ViewName, "%s", err)
-		},
-	})
+	serveDone := make(chan struct{})
+	go func() {
+		component.Serve(serveCtx, &stub, req.Channel, component.ServeOptions{
+			Concurrent: true,
+			OnError: func(err error) {
+				t.Errorf("got unexpected error %s", err)
+				_ = syslog.WarnTf(neighbor.ViewName, "%s", err)
+			},
+		})
+		close(serveDone)
+	}()
 
 	runPersistClient(client, ctx, clock)
 	expectRequests(t, impl.requests, 1)
 
-	serve_cancel()
+	// Cancel the server and wait for it to shut down.
+	serveCancel()
+	<-serveDone
 
 	clock.Advance(persistPeriod)
 	expectRequests(t, impl.requests, 1)
 
 	clock.Advance(persistPeriod)
 	expectRequests(t, impl.requests, 1)
-
-	cancel()
 }
 
 func expectRequests(t *testing.T, requests []string, want int) {
