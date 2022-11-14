@@ -8,9 +8,9 @@
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl/cpp/wire/channel.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/statfs.h>
 #include <unistd.h>

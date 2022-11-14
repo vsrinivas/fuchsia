@@ -92,7 +92,7 @@ test("f2fs_component_runner_test") {
   output_name = "f2fs_component_runner_test"
   sources = [ "unit/component_runner_test.cc" ]
   deps = test_deps + [
-           "//sdk/lib/sys/component/cpp",
+           "//sdk/lib/component/incoming/cpp",
            "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",
            "//zircon/system/ulib/id_allocator",
            "//zircon/system/ulib/zx",

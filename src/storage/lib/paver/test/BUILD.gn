@@ -41,7 +41,7 @@ test("test") {
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire",
     "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50_cpp_wire",
     "//sdk/fidl/fuchsia.vboot:fuchsia.vboot_cpp_wire",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//src/devices/lib/amlogic",
     "//src/firmware/lib/abr",
     "//src/lib/storage/block_client/cpp",

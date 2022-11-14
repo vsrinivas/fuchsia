@@ -4,8 +4,8 @@
 
 #include "src/storage/testing/ram_disk.h"
 
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
 #include <lib/zx/time.h>

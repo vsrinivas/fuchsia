@@ -6,8 +6,8 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/fd.h>
-#include <lib/sys/component/cpp/service_client.h>
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>

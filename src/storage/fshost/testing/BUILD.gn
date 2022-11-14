@@ -26,8 +26,8 @@ source_set("integration_test_fixture") {
     "//src/storage/fshost:headers",
   ]
   deps = [
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/inspect/service/cpp:cpp",
-    "//sdk/lib/sys/component/cpp",
   ]
 }
 

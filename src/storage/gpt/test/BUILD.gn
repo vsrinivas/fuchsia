@@ -18,9 +18,9 @@ test("gpt-unit-test") {
   deps = [
     ":driver-test-realm",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
     "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/ramdevice_client/cpp",
     "//src/storage/gpt",

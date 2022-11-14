@@ -4,10 +4,10 @@
 #ifndef SRC_STORAGE_LIB_PAVER_GPT_H_
 #define SRC_STORAGE_LIB_PAVER_GPT_H_
 
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/function.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 
 #include <string_view>

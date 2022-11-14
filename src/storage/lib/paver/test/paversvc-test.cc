@@ -13,6 +13,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/cksum.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -20,7 +21,6 @@
 #include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/paver/provider.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sysconfig/sync-client.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>

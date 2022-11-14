@@ -11,9 +11,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/vfs.h>
 #include <lib/inspect/service/cpp/reader.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <sys/statfs.h>
 
 namespace fshost::testing {

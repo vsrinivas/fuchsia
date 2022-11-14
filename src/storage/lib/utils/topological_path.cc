@@ -5,7 +5,7 @@
 #include "src/storage/lib/utils/topological_path.h"
 
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 
 namespace storage {
 

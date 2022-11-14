@@ -11,12 +11,12 @@
 #include <lib/abr/util.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/stdcompat/span.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>

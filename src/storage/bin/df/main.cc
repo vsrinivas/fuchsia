@@ -7,8 +7,8 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <stdalign.h>
 #include <stdarg.h>
 #include <stdbool.h>

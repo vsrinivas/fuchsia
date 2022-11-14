@@ -10,11 +10,11 @@
 #include <fidl/fuchsia.hardware.block/cpp/markers.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/default.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/time.h>

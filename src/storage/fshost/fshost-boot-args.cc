@@ -4,8 +4,8 @@
 
 #include "src/storage/fshost/fshost-boot-args.h"
 
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 

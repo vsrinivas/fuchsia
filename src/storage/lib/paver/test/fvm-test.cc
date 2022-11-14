@@ -4,9 +4,9 @@
 
 #include "src/storage/lib/paver/fvm.h"
 
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fd.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/result.h>
 
 #include <zxtest/zxtest.h>

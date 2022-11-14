@@ -7,9 +7,9 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.fxfs/cpp/wire.h>
 #include <fidl/fuchsia.fxfs/cpp/wire_types.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/fit/defer.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/result.h>
 

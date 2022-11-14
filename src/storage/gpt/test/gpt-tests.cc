@@ -6,8 +6,8 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/cksum.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/assert.h>
 
 #include <algorithm>

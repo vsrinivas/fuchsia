@@ -4,10 +4,10 @@
 
 #include "src/storage/lib/paver/partition-client.h"
 
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/errors.h>
 #include <zircon/limits.h>
 #include <zircon/status.h>

@@ -5,8 +5,8 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.feedback.testing/cpp/wire.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/vfs.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 

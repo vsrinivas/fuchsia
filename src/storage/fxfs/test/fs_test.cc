@@ -4,8 +4,8 @@
 
 #include <fcntl.h>
 #include <fuchsia/io/cpp/fidl.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/result.h>
 #include <zircon/errors.h>
 

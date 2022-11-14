@@ -8,8 +8,8 @@
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
-#include <lib/sys/component/cpp/service_client.h>
 
 #include <gtest/gtest.h>
 

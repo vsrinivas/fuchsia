@@ -12,7 +12,6 @@
 #include <lib/cksum.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/hw/gpt.h>
 
 #include <iostream>

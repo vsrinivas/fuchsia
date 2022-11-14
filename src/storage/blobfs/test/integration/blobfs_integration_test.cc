@@ -14,6 +14,7 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/default.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -23,7 +24,6 @@
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sync/completion.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>
 #include <sys/stat.h>

@@ -6,12 +6,12 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/stdcompat/span.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>

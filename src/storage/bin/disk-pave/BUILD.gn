@@ -28,8 +28,8 @@ executable("install-disk-image") {
   deps = [
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
     "//src/storage/lib/paver",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-default",

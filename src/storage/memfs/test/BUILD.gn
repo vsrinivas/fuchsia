@@ -94,8 +94,8 @@ test("memfs-legacy-test") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
     "//src/storage/memfs:lib",
