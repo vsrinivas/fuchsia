@@ -4,7 +4,7 @@
 
 // [START example]
 #include <fidl/fuchsia.examples/cpp/fidl.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <string>

@@ -52,7 +52,7 @@ ALLOWED_CTS_DEPS = [
   # Needed by //sdk/ctf/tests/examples/fidl/fuchsia.example/cc:tests.
   "//examples/fidl/fuchsia.examples:fuchsia.examples",
   "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp",
-  "//sdk/lib/sys/component/cpp:cpp",
+  "//sdk/lib/component/incoming/cpp:cpp",
   "//sdk/lib/syslog/cpp:cpp-macros",
 ]
 

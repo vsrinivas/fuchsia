@@ -7,12 +7,12 @@
 
 #include <fidl/fuchsia.component.runner/cpp/fidl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/driver/component/cpp/handlers.h>
 #include <lib/fdf/cpp/protocol.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl_driver/cpp/transport.h>
-#include <lib/sys/component/cpp/service_client.h>
 
 namespace driver {
 

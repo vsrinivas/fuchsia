@@ -41,6 +41,7 @@ sdk_source_set("cpp") {
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/driver/record",
     "//sdk/lib/driver/runtime:driver_runtime_cpp",
     "//sdk/lib/fdio",

@@ -16,7 +16,7 @@ ctf_executable("test_main") {
   sources = [ "main.cc" ]
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp",
-    "//sdk/lib/sys/component/cpp:cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//zircon/system/ulib/zxtest",
   ]

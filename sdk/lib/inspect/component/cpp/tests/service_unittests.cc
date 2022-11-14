@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.inspect/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/diagnostics/cpp/fidl.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fpromise/promise.h>
 #include <lib/inspect/component/cpp/service.h>
 #include <lib/inspect/component/cpp/testing.h>
@@ -14,7 +15,6 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 

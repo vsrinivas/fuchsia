@@ -336,11 +336,11 @@ https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/fidl/cpp/wire/includ
 [fdio-service-connect]:
 https://cs.opensource.google/search?q=fdio_service_connect&ss=fuchsia%2Ffuchsia&start=11
 [service-connect]:
-https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/sys/component/cpp/service_client.h;l=104
+https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/component/incoming/cpp/service_client.h;l=104
 [service-connect-at]:
-https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/sys/component/cpp/service_client.h;l=120
+https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/component/incoming/cpp/service_client.h;l=120
 [open-service-root]:
-https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/sys/component/cpp/service_client.h;l=24
+https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/component/incoming/cpp/service_client.h;l=24
 [lib-component]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/sys/component/cpp/
 [rfc-0023]: /docs/contribute/governance/rfcs/0023_compositional_model_protocols.md#is_a_relationship_considered_harmful
 [target-allowlist]:
