@@ -142,19 +142,19 @@ impl RamdiskClientBuilder {
     }
 
     /// Use the given directory as "/dev" instead of opening "/dev" from the environment.
-    pub fn dev_root(&mut self, dev_root: fs::File) -> &mut Self {
+    pub fn dev_root(mut self, dev_root: fs::File) -> Self {
         self.dev_root = Some(DevRoot::Provided(dev_root));
         self
     }
 
     /// Initialize the ramdisk with the given GUID, which can be queried from the ramdisk instance.
-    pub fn guid(&mut self, guid: [u8; GUID_LEN]) -> &mut Self {
+    pub fn guid(mut self, guid: [u8; GUID_LEN]) -> Self {
         self.guid = Some(guid);
         self
     }
 
     /// Create the ramdisk.
-    pub fn build(&mut self) -> Result<RamdiskClient, zx::Status> {
+    pub fn build(self) -> Result<RamdiskClient, zx::Status> {
         let Self { block_size, block_count, dev_root, guid } = self;
         let type_guid: *const u8 =
             if let Some(guid) = guid.as_ref() { guid.as_ptr() } else { std::ptr::null() };
@@ -168,8 +168,8 @@ impl RamdiskClientBuilder {
             unsafe {
                 ramdevice_sys::ramdisk_create_at_with_guid(
                     dev_root_fd,
-                    *block_size,
-                    *block_count,
+                    block_size,
+                    block_count,
                     type_guid,
                     GUID_LEN.try_into().unwrap(),
                     &mut ramdisk,
@@ -178,8 +178,8 @@ impl RamdiskClientBuilder {
         } else {
             unsafe {
                 ramdevice_sys::ramdisk_create_with_guid(
-                    *block_size,
-                    *block_count,
+                    block_size,
+                    block_count,
                     type_guid,
                     GUID_LEN.try_into().unwrap(),
                     &mut ramdisk,

@@ -29,7 +29,7 @@ const RAMDISK_BLOCK_SIZE: u64 = 1024;
 const RAMDISK_BLOCK_COUNT: u64 = 16 * 1024;
 
 async fn make_ramdisk() -> (RamdiskClient, RemoteBlockClient) {
-    let mut client = RamdiskClient::builder(RAMDISK_BLOCK_SIZE, RAMDISK_BLOCK_COUNT);
+    let client = RamdiskClient::builder(RAMDISK_BLOCK_SIZE, RAMDISK_BLOCK_COUNT);
     ramdevice_client::wait_for_device(
         "/dev/sys/platform/00:00:2d/ramctl",
         std::time::Duration::from_secs(30),

@@ -164,7 +164,7 @@ mod tests {
         // 16MB
         let ramdisk_size: u64 = 16 * 1024 * 1024;
 
-        let mut builder = RamdiskClientBuilder::new(512, ramdisk_size / 512);
+        let builder = RamdiskClientBuilder::new(512, ramdisk_size / 512);
         ramdevice_client::wait_for_device(
             "/dev/sys/platform/00:00:2d/ramctl",
             std::time::Duration::from_secs(10),

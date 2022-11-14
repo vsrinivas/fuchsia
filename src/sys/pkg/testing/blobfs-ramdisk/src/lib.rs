@@ -265,7 +265,7 @@ impl RamdiskBuilder {
 
     /// Starts a new ramdisk.
     pub fn start(self) -> Result<Ramdisk, Error> {
-        let mut client = RamdiskClient::builder(RAMDISK_BLOCK_SIZE, self.block_count);
+        let client = RamdiskClient::builder(RAMDISK_BLOCK_SIZE, self.block_count);
         ramdevice_client::wait_for_device(
             "/dev/sys/platform/00:00:2d/ramctl",
             std::time::Duration::from_secs(30),
