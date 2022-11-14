@@ -990,6 +990,8 @@ out_err:
   return NULL;
 }
 
+#define RXQ_RESTOCK_BATCH_SIZE (128U)
+
 /*
  * iwl_pcie_rx_handle - Main entry function for receiving responses from fw
  */
@@ -997,6 +999,7 @@ static void iwl_pcie_rx_handle(struct iwl_trans* trans, int queue) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   struct iwl_rxq* rxq = &trans_pcie->rxq[queue];
   uint32_t r, i;
+  size_t num_handled = 0;
 
   zx_time_t start_time = zx_clock_get_monotonic();
 
@@ -1027,6 +1030,15 @@ static void iwl_pcie_rx_handle(struct iwl_trans* trans, int queue) {
     iwl_pcie_rx_handle_rb(trans, rxq, rxb, i);
 
     i = (i + 1) & (rxq->queue_size - 1);
+
+    // The firmware may crash if the rxq doesn't have any free buffers for too long.
+    // To avoid this, we periodically restock the rxq in the ISR loop.
+    if (++num_handled >= RXQ_RESTOCK_BATCH_SIZE) {
+      mtx_unlock(&rxq->lock);
+      iwl_pcie_rxq_restock(trans, rxq);
+      mtx_lock(&rxq->lock);
+      num_handled = 0;
+    }
   }
 
   /* Backtrack one entry */
