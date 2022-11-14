@@ -77,7 +77,7 @@ class FuchsiaTestFile : public TestFile {
   bool IsValid() final { return (vnode_ != nullptr); }
 
   ssize_t Read(void* buf, size_t count) final;
-  ssize_t Write(const void* buf, size_t count) final { return -1; }
+  ssize_t Write(const void* buf, size_t count) final;
   int Fchmod(mode_t mode) final { return -1; }
   int Fstat(struct stat* file_stat) final { return -1; }
   int Ftruncate(off_t len) final { return -1; }

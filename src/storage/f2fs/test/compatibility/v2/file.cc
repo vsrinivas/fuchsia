@@ -65,5 +65,51 @@ TEST_F(FileCompatibilityTest, WriteVerifyLinuxToFuchsia) {
   }
 }
 
+TEST_F(FileCompatibilityTest, WriteVerifyFuchsiaToLinux) {
+  // TODO: larger filesize for slow test
+  constexpr uint32_t kVerifyPatternSize = 256 * 1024;  // 256 KB
+  constexpr uint32_t num_blocks = kVerifyPatternSize / kBlockSize;
+  const std::string filename = "alpha";
+
+  // File write on Fuchsia
+  {
+    GetEnclosedGuest().GetFuchsiaOperator().Mkfs();
+    GetEnclosedGuest().GetFuchsiaOperator().Mount();
+
+    auto umount = fit::defer([&] { GetEnclosedGuest().GetFuchsiaOperator().Umount(); });
+
+    auto test_file = GetEnclosedGuest().GetFuchsiaOperator().Open(filename, O_CREAT | O_RDWR, 0644);
+    ASSERT_TRUE(test_file->IsValid());
+
+    // Write pattern
+    char buffer[kBlockSize];
+    for (uint32_t i = 0; i < num_blocks; ++i) {
+      std::memset(buffer, 0, kBlockSize);
+      strcpy(buffer, std::to_string(i).c_str());
+      ASSERT_EQ(test_file->Write(buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
+    }
+  }
+
+  // Verify on Linux
+  {
+    GetEnclosedGuest().GetLinuxOperator().Fsck();
+    GetEnclosedGuest().GetLinuxOperator().Mount();
+
+    auto umount = fit::defer([&] { GetEnclosedGuest().GetLinuxOperator().Umount(); });
+
+    auto converted_filename =
+        GetEnclosedGuest().GetLinuxOperator().ConvertPath(linux_path_prefix + filename);
+
+    for (uint32_t i = 0; i < num_blocks; ++i) {
+      std::string result;
+      GetEnclosedGuest().GetLinuxOperator().ExecuteWithAssert(
+          {"od -An -j", std::to_string(i * kBlockSize), "-N",
+           std::to_string(std::to_string(i).length()), "-c", converted_filename, "| tr -d ' \\n'"},
+          &result);
+      ASSERT_EQ(result, std::to_string(i));
+    }
+  }
+}
+
 }  // namespace
 }  // namespace f2fs

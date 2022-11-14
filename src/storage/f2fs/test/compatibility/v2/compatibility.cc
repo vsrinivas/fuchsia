@@ -60,6 +60,23 @@ ssize_t FuchsiaTestFile::Read(void* buf, size_t count) {
   return ret;
 }
 
+ssize_t FuchsiaTestFile::Write(const void* buf, size_t count) {
+  if (!vnode_->IsReg()) {
+    return 0;
+  }
+
+  File* file = static_cast<File*>(vnode_.get());
+  size_t ret = 0;
+
+  if (file->Write(buf, count, offset_, &ret) != ZX_OK) {
+    return 0;
+  }
+
+  offset_ += ret;
+
+  return ret;
+}
+
 zx_status_t LinuxOperator::Execute(const std::vector<std::string>& argv, std::string* result) {
   return debian_guest_->Execute(argv, {}, zx::time::infinite(), result, nullptr);
 }
