@@ -86,12 +86,28 @@ async fn apply_command_line_options(
                     let path: String = ffx_config::get(KVM_PATH)
                         .await
                         .context("getting KVM path from ffx config")?;
-                    if let Ok(kvm) = std::fs::File::open(path) {
-                        if let Ok(metadata) = kvm.metadata() {
-                            if !metadata.permissions().readonly() {
-                                emu_config.host.acceleration = AccelerationMode::Hyper
+                    match std::fs::OpenOptions::new().write(true).open(&path) {
+                        Err(e) => match e.kind() {
+                            std::io::ErrorKind::PermissionDenied => {
+                                tracing::debug!(
+                                    "No write permission on {}. Running without acceleration.",
+                                    path
+                                );
+                                println!(
+                                    "Running without acceleration; emulator will be extremely \
+                                    slow and may not establish a connection with ffx in the \
+                                    allotted time.\n\n\
+                                    Caused by: No write permission on {}.\n\n\
+                                    To adjust permissions and enable acceleration via KVM:\n\n    \
+                                    sudo usermod -a -G kvm $USER\n\n\
+                                    You may need to reboot your machine for the permission change \
+                                    to take effect.\n",
+                                    path
+                                );
                             }
-                        }
+                            _ => println!("Unknown error setting up acceleration: {:?}", e),
+                        },
+                        Ok(_) => emu_config.host.acceleration = AccelerationMode::Hyper,
                     }
                 }
             }
