@@ -462,10 +462,9 @@ mod tests {
             },
         },
         cm_rust::{
-            self, Availability, CapabilityName, CapabilityPath, ComponentDecl, DependencyType,
-            DirectoryDecl, EventSubscription, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
-            ExposeSource, ExposeTarget, ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
-            UseEventStreamDeprecatedDecl, UseSource, ValuesData,
+            self, Availability, CapabilityPath, ComponentDecl, DependencyType, DirectoryDecl,
+            ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget,
+            ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventStreamDecl, UseSource, ValuesData,
         },
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints::ServerEnd,
@@ -798,19 +797,13 @@ mod tests {
                 name: "root",
                 decl: ComponentDeclBuilder::new()
                     .add_lazy_child("a")
-                    .use_(UseDecl::Event(UseEventDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Framework,
-                        source_name: "started".into(),
-                        target_name: "started".into(),
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Parent,
+                        source_name: "started_v2".into(),
+                        target_path: CapabilityPath::try_from("/svc/fuchsia.component.EventStream")
+                            .unwrap(),
                         filter: None,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                        name: CapabilityName::try_from("EventStream").unwrap(),
-                        subscriptions: vec![EventSubscription {
-                            event_name: "started".to_string(),
-                        }],
+                        scope: None,
                         availability: Availability::Required,
                     }))
                     .build(),

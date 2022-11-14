@@ -20,8 +20,8 @@ use {
     ::routing::config::RuntimeConfig,
     anyhow::{Context, Error},
     cm_rust::{
-        CapabilityDecl, CapabilityName, ChildDecl, ComponentDecl, EventMode, NativeIntoFidl,
-        RunnerDecl, ValuesData,
+        CapabilityDecl, CapabilityName, ChildDecl, ComponentDecl, EventMode, EventStreamDecl,
+        NativeIntoFidl, RunnerDecl, ValuesData,
     },
     cm_types::Url,
     diagnostics_message::MonikerWithUrl,
@@ -383,6 +383,9 @@ impl TestEnvironmentBuilder {
             name: TEST_RUNNER_NAME.into(),
             source_path: None,
         }));
+        self.runtime_config
+            .builtin_capabilities
+            .push(CapabilityDecl::EventStream(EventStreamDecl { name: "started_v2".into() }));
         self.runtime_config.component_id_index_path = self.component_id_index_path;
         self.runtime_config.enable_introspection = true;
 
