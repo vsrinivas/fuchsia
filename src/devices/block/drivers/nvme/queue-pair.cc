@@ -131,10 +131,11 @@ zx::result<> QueuePair::Submit(cpp20::span<uint8_t> submission_data,
   size_t index = submission_.NextIndex();
   TransactionData& txn_data = txns_[index];
   if (txn_data.active) {
-    // This should not happen.
-    zxlogf(ERROR, "Trying to submit a new transaction but transaction %zd is already active",
-           index);
-    return zx::error(ZX_ERR_BAD_STATE);
+    // TODO(fxbug.dev/102133): Consider decoupling the submission queue from the tracking of
+    // outstanding transactions.
+    // We tie a transaction's state to its submission queue slot, even if the submission entry has
+    // already been consumed by the controller.
+    return zx::error(ZX_ERR_SHOULD_WAIT);
   }
   txn_data.ClearExceptPrp();
   // We only peek here so that if the transaction setup fails somewhere we can easily roll-back
