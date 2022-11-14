@@ -155,11 +155,8 @@ template("bazel_build_action") {
       args += [ "--" ] + invoker.extra_bazel_args
     }
 
-    deps = _bazel_inputs + [
-             "//build/bazel:generate_main_workspace($default_toolchain)",
-             "//sdk:core($default_toolchain)",
-             "//sdk:platform($default_toolchain)",
-           ]
+    deps = _bazel_inputs +
+           [ "//build/bazel:generate_main_workspace($default_toolchain)" ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
