@@ -40,6 +40,7 @@
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.drm.Widevine",
                 "fuchsia.media.ProfileProvider",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.mediacodec.CodecFactory",
