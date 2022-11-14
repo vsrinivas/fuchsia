@@ -16,17 +16,83 @@
 
 #include <fbl/unique_fd.h>
 
-static void usage(char* prog) {
-  printf("Usage:\n");
-  printf(" (DATA and ADDRESS are a list of space separated bytes BYTE_0 BYTE_1...BYTE_N)\n");
-  printf(" %s w[rite]    DEVICE DATA...                                          Write bytes\n",
-         prog);
-  printf(" %s r[ead]     DEVICE ADDRESS                                          Reads one byte\n",
-         prog);
-  printf(" %s t[ransact] DEVICE [w|r] [DATA...|LENGTH] [w|r] [DATA...|LENGTH]... Transaction\n",
-         prog);
-  printf(" %s p[ing]                                                             Ping devices\n",
-         prog);
+constexpr char kUsageSummary[] = R"""(
+Usage:
+  i2cutil read <device> <address> [<address>...]
+  i2cutil write <device> <address> [<address>...] <data> [<data>...]
+  i2cutil transact <device> (r <bytes>|w <address> [<address>...] [<data>...])...
+  i2cutil ping
+  i2cutil help
+)""";
+
+constexpr char kUsageDetails[] = R"""(
+Commands:
+  read | r              Read one byte from an I2C device. Use `i2cutil transact`
+                        to read multiple bytes. <device> can be the full path of
+                        a devfs node (example: `/dev/class/i2c/031`) or only the
+                        devfs node's index (example: `31`). Use `i2cutil ping` to
+                        get devfs node paths and indexes. <address> is the internal
+                        register of <device> to read from. Use multiple <address>
+                        values to access a multi-byte (little-endian) register address.
+                        For example `i2cutil read 4 0x20 0x3D` to read the register at
+                        `0x203D`.
+  write | w             Write one or more bytes (<data>) to an I2C device. See the
+                        `i2cutil read` description for explanations of <device>
+                        and <address>.
+  transact | t          Perform a transaction with multiple segments. Each segment
+                        can be a write (`w`) or a read (`r`).
+  ping | p              Ping all I2C devices under devfs path `/dev/class/i2c` by
+                        reading from each device's 0x00 address.
+  help | h              Print this help text.
+
+Examples:
+  Read one byte from the register at `0x20` of the I2C device represented by
+  devfs node index `4`:
+  $ i2cutil read 4 0x20
+
+  Read three bytes from the same I2C device and register as the last example:
+  $ i2cutil transact 4 w 0x20 r 3
+
+  Read one byte from the register at the multi-byte address `0x203D` of the
+  same I2C device as the last example:
+  $ i2cutil read 4 0x20 0x3D
+
+  Same as the last example but represent the I2C device with a devfs node path:
+  $ i2cutil read /dev/class/i2c/004 0x20 0x3D
+
+  Write byte `0x12` to the register at `0x2C` of the I2C device represented by
+  devfs node index `3`:
+  $ i2cutil write 3 0x2C 0x12
+
+  Write byte `0x121B` to the same device and register as the last example:
+  devfs node index `3`:
+  $ i2cutil write 3 0x2C 0x12 0x1B
+
+  Write byte `0x1B to register `0x2C12` of a different device (note that
+  this is the exact same command as the last example; the meaning of the
+  arguments depends on the I2C device):
+  $ i2cutil write 3 0x2C 0x12 0x1B
+
+  Ping all I2C devices:
+  $ i2cutil ping
+  /dev/class/i2c/821: OK
+  /dev/class/i2c/822: OK
+  /dev/class/i2c/823: OK
+  /dev/class/i2c/824: OK
+  Error ZX_ERR_TIMED_OUT
+  /dev/class/i2c/825: ERROR
+
+Notes:
+  Source code for `i2cutil`: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/devices/i2c/bin/i2cutil.cc
+)""";
+
+static void usage(bool show_details) {
+  printf(kUsageSummary);
+  if (!show_details) {
+    printf("\nUse `i2cutil help` to see full help text\n");
+  } else {
+    printf(kUsageDetails);
+  }
 }
 
 template <typename T>
@@ -109,7 +175,7 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device> c
 
   // Must have at least one segment and start with a w or r.
   if (n_segments == 0 || (argv[3][0] != 'r' && argv[3][0] != 'w')) {
-    usage(argv[0]);
+    usage(false);
     return -1;
   }
   if (n_segments > fuchsia_hardware_i2c::wire::kMaxCountTransactions) {
@@ -145,7 +211,7 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device> c
         auto write_len = segment_start[segment_cnt + 1] - segment_start[segment_cnt] - 1;
         auto status = convert_args(&argv[3 + element_cnt], write_len, write_buffer_pos);
         if (status != ZX_OK) {
-          usage(argv[0]);
+          usage(false);
           return status;
         }
         write_data[write_cnt] =
@@ -161,7 +227,7 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device> c
       } else {
         auto status = convert_args(&argv[3 + element_cnt], 1, &read_lengths[read_cnt]);
         if (status != ZX_OK) {
-          usage(argv[0]);
+          usage(false);
           return status;
         }
         transactions[segment_cnt] =
@@ -176,7 +242,7 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device> c
     }
   }
   if (write_cnt != n_writes || read_cnt + write_cnt != segment_cnt) {
-    usage(argv[0]);
+    usage(false);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -214,7 +280,7 @@ static zx_status_t transact(fidl::WireSyncClient<fuchsia_hardware_i2c::Device> c
 
 static int device_cmd(int argc, char** argv, bool print_out) {
   if (argc < 3) {
-    usage(argv[0]);
+    usage(false);
     return -1;
   }
 
@@ -230,14 +296,14 @@ static int device_cmd(int argc, char** argv, bool print_out) {
   fbl::unique_fd fd(open(path, O_RDWR));
   if (!fd) {
     printf("%s: %s\n", argv[2], strerror(errno));
-    usage(argv[0]);
+    usage(false);
     return -1;
   }
 
   zx_handle_t svc;
   if ((fdio_get_service_handle(fd.release(), &svc) != ZX_OK)) {
     printf("%s: get service handle failed\n", argv[2]);
-    usage(argv[0]);
+    usage(false);
     return -1;
   }
 
@@ -249,7 +315,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
   switch (argv[1][0]) {
     case 'w': {
       if (argc < 4) {
-        usage(argv[0]);
+        usage(false);
         return -1;
       }
 
@@ -257,7 +323,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
       auto write_buffer = std::make_unique<uint8_t[]>(n_write_bytes);
       status = convert_args(&argv[3], n_write_bytes, write_buffer.get());
       if (status != ZX_OK) {
-        usage(argv[0]);
+        usage(false);
         return status;
       }
 
@@ -275,7 +341,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
 
     case 'r': {
       if (argc < 4) {
-        usage(argv[0]);
+        usage(false);
         return -1;
       }
 
@@ -283,7 +349,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
       auto write_buffer = std::make_unique<uint8_t[]>(n_write_bytes);
       status = convert_args(&argv[3], n_write_bytes, write_buffer.get());
       if (status != ZX_OK) {
-        usage(argv[0]);
+        usage(false);
         return status;
       }
 
@@ -302,7 +368,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
 
     case 't': {
       if (argc < 5) {
-        usage(argv[0]);
+        usage(false);
         return -1;
       }
 
@@ -312,7 +378,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
 
     default:
       printf("%c: unrecognized command\n", argv[2][0]);
-      usage(argv[0]);
+      usage(false);
       return -1;
   }
   if (status != ZX_OK) {
@@ -344,7 +410,7 @@ static int ping_cmd() {
 
 int main(int argc, char** argv) {
   if (argc < 2) {
-    usage(argv[0]);
+    usage(false);
     return -1;
   }
   switch (argv[1][0]) {
@@ -356,9 +422,11 @@ int main(int argc, char** argv) {
     case 'p':
       return ping_cmd();
       break;
-
+    case 'h':
+      usage(true);
+      break;
     default:
-      usage(argv[0]);
+      usage(false);
       return -1;
   }
 
