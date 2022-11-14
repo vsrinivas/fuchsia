@@ -105,7 +105,8 @@ int main(int argc, const char** argv) {
   out << "\n";
 
   // Now translate to a span.
-  out << "const cpp20::span<const PrebuiltSincFilterCoefficientTable> "
+  out << "__attribute__((__visibility__(\"default\")))\n"
+         "const cpp20::span<const PrebuiltSincFilterCoefficientTable> "
          "kPrebuiltSincFilterCoefficientTables(kPrebuiltTables, static_cast<size_t>("
       << tables.size() << "));\n";
   out << "\n";

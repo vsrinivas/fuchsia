@@ -9,6 +9,7 @@
 namespace media_audio {
 
 // This file is linked by builds that have no prebuilt coefficient tables.
+__attribute__((__visibility__("default")))
 const cpp20::span<const PrebuiltSincFilterCoefficientTable> kPrebuiltSincFilterCoefficientTables;
 
 }  // namespace media_audio

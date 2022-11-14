@@ -72,7 +72,7 @@ source_set("processing") {
 # `prebuilt_coefficient_tables` or `empty_coefficient_tables` below. The decision of which tables to
 # include is usually left to the top-most build rule (i.e., the executable), since that rule often
 # has the most insight into system constraints, such as code size.
-source_set("prebuilt_coefficient_tables") {
+shared_library("prebuilt_coefficient_tables") {
   sources = [ "$target_gen_dir/coefficient_table_data_prebuilt.cc" ]
   deps = [
     ":build_coefficient_table_data_prebuilt_cc",
@@ -80,7 +80,7 @@ source_set("prebuilt_coefficient_tables") {
   ]
 }
 
-source_set("empty_coefficient_tables") {
+shared_library("empty_coefficient_tables") {
   sources = [ "coefficient_table_data_empty.cc" ]
   deps = [ ":coefficient_table" ]
 }
