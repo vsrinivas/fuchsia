@@ -69,6 +69,7 @@ type GuestDescriptor = table {
     /// The configs for each net device the guest was started with. If empty, there is no
     /// virtual net device (and the guest will have no networking).
    11: networks vector<NetSpec>:MAX_NET_DEVICES;
+   12: mem bool;
 };
 
 type GuestInfo = table {

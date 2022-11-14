@@ -299,3 +299,20 @@ protocol VirtioWayland {
         importer server_end:VirtioWaylandImporter;
     });
 };
+
+@discoverable
+protocol VirtioMem {
+    compose VirtioDevice;
+
+    /// Start the mem device.
+    Start(resource struct {
+        start_info StartInfo;
+        plugged_block_size uint64;
+        plugged_region_size uint64;
+    }) -> ();
+
+    /// Called when a device's configuration is changed.
+    -> OnConfigChanged(struct {
+        plugged_size int64;
+    });
+};

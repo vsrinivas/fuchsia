@@ -17,6 +17,7 @@ fidl("fuchsia.virtualization") {
     "guest_config.fidl",
     "guest_manager.fidl",
     "linux_manager.fidl",
+    "mem_controller.fidl",
     "vsock.fidl",
   ]
 
