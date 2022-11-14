@@ -232,8 +232,8 @@ executable("termina_guest_manager_unittests") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_hlcpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/virtualization/testing",
     "//src/lib/files",

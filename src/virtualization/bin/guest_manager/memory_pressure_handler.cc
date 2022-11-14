@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.memorypressure/cpp/markers.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>

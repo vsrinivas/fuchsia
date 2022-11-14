@@ -32,7 +32,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_cpp",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_cpp",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/virtualization/lib/guest_config",

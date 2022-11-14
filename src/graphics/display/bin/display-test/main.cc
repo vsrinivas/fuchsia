@@ -7,8 +7,8 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <stdlib.h>

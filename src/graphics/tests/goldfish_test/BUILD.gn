@@ -13,9 +13,9 @@ executable("goldfish_test_bin") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
-    "//sdk/lib/sys/component/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/zircon-internal",

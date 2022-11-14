@@ -35,7 +35,7 @@ source_set("magma_image") {
   deps = [
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_cpp_wire",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//src/lib/fsl",
     "//src/lib/vulkan",
     "//third_party/mesa/include:drm-uapi",

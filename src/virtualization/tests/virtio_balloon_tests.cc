@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.kernel/cpp/fidl.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 
 #include "lib/zx/time.h"
 #include "src/lib/fxl/strings/string_printf.h"
