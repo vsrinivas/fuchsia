@@ -97,7 +97,7 @@ Do the following:
    ```
 
    This command may take a few minutes to download all the tools and
-   dependencies, such as Bazel build rules, [Clang]{:.external} and
+   dependencies, such as [Clang]{:.external} and
    [Fuchsia IDK][fuchsia-idk] (which includes the `ffx` tool).
 
    When finished successfully, it prints output similar to the following in the
