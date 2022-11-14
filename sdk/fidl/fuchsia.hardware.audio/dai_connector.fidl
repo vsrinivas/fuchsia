@@ -11,3 +11,7 @@ protocol DaiConnector {
         dai_protocol server_end:Dai;
     });
 };
+
+service DaiConnectorService {
+    dai_connector client_end:DaiConnector;
+};

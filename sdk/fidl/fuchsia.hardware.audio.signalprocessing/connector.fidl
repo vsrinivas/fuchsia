@@ -19,3 +19,7 @@ protocol Connector {
         protocol server_end:SignalProcessing;
     });
 };
+
+service ConnectorService {
+    connector client_end:Connector;
+};

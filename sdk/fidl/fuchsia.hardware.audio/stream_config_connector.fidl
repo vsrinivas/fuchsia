@@ -12,3 +12,7 @@ protocol StreamConfigConnector {
         protocol server_end:StreamConfig;
     });
 };
+
+service StreamConfigConnectorService {
+    stream_config_connector client_end:StreamConfigConnector;
+};

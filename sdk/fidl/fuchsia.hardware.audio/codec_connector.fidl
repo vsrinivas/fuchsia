@@ -13,3 +13,7 @@ protocol CodecConnector {
         codec_protocol server_end:Codec;
     });
 };
+
+service CodecConnectorService {
+    codec_connector client_end:CodecConnector;
+};
