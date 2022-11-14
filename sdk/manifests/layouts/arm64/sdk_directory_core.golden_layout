@@ -298,6 +298,8 @@ fidl/fuchsia.auth.oldtokens/credentials_producer.fidl
 fidl/fuchsia.auth.oldtokens/meta.json
 fidl/fuchsia.bluetooth.a2dp/audio_mode.fidl
 fidl/fuchsia.bluetooth.a2dp/meta.json
+fidl/fuchsia.bluetooth.fastpair/meta.json
+fidl/fuchsia.bluetooth.fastpair/provider.fidl
 fidl/fuchsia.bluetooth.gatt/client.fidl
 fidl/fuchsia.bluetooth.gatt/constants.fidl
 fidl/fuchsia.bluetooth.gatt/meta.json

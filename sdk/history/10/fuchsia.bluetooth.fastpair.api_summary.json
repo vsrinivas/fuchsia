@@ -1,0 +1,47 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.fastpair/Provider.Enable",
+        "ordinal": "1449064306731009453",
+        "type": "(client_end:fuchsia.bluetooth.fastpair/ProviderWatcher watcher) -> (fuchsia.bluetooth.fastpair/Provider_Enable_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.fastpair/Provider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.fastpair/ProviderWatcher.OnPairingComplete",
+        "ordinal": "8831993957812155777",
+        "type": "(fuchsia.bluetooth/PeerId id) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.fastpair/ProviderWatcher"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.fastpair/Provider_Enable_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.fastpair/Provider_Enable_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.fastpair/Provider_Enable_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.fastpair/Provider_Enable_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.bluetooth.fastpair/Provider_Enable_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.bluetooth.fastpair"
+    }
+]

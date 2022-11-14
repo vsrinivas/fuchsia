@@ -13,6 +13,7 @@ sdk_fidl_targets = [
   "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects",
   "//sdk/fidl/fuchsia.auth.oldtokens:fuchsia.auth.oldtokens",
   "//sdk/fidl/fuchsia.bluetooth.a2dp:fuchsia.bluetooth.a2dp",
+  "//sdk/fidl/fuchsia.bluetooth.fastpair:fuchsia.bluetooth.fastpair",
   "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt",
   "//sdk/fidl/fuchsia.bluetooth.gatt2:fuchsia.bluetooth.gatt2",
   "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp",

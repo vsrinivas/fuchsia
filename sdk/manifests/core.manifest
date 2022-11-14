@@ -16,6 +16,7 @@ sdk://fidl/fuchsia.audio.effects
 sdk://fidl/fuchsia.auth.oldtokens
 sdk://fidl/fuchsia.bluetooth
 sdk://fidl/fuchsia.bluetooth.a2dp
+sdk://fidl/fuchsia.bluetooth.fastpair
 sdk://fidl/fuchsia.bluetooth.gatt
 sdk://fidl/fuchsia.bluetooth.gatt2
 sdk://fidl/fuchsia.bluetooth.hfp
