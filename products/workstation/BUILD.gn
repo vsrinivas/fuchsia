@@ -4,6 +4,7 @@
 
 import("//build/assembly/product_assembly_configuration.gni")
 import("//build/bazel/bazel_inputs.gni")
+import("//build/dist/resource.gni")
 
 assert(
     is_fuchsia,
@@ -47,4 +48,13 @@ product_assembly_configuration("workstation_paused") {
 
     session_url = ""
   }
+}
+
+group("bootfs") {
+  deps = [ ":workstation-config" ]
+}
+
+resource("workstation-config") {
+  sources = [ "config/workstation.profiles" ]
+  outputs = "config/profiles/workstation.profiles"
 }

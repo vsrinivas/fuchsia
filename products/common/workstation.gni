@@ -132,6 +132,9 @@ product_bootfs_labels += [
 product_bootfs_labels += [ "//bundles/drivers:usb-peripheral-stack" ]
 product_bootfs_labels -= [ "//bundles/drivers:usb-peripheral-stack" ]
 
+# Workstation scheduler profiles.
+product_bootfs_labels += [ "//products/workstation:bootfs" ]
+
 legacy_base_package_labels += [ "//src/media/codec/bundles:codec_factory" ]
 
 # Shards for media.

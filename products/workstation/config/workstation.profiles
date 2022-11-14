@@ -1,0 +1,16 @@
+// Profiles common to workstation and derivatives.
+{
+  "scope": "product",
+  "profiles": {
+    // Fuchsia platform profiles.
+    "fuchsia.graphics.magma.connection": { "capacity": "10ms", "deadline": "16666us", "period": "16666us" },
+
+    // Chromium platform thread profiles.
+    "chromium.base.threading.default": { "priority": 16 },
+    "chromium.base.threading.background": { "priority": 8 },
+    "chromium.base.threading.resource-efficient": { "priority": 25 },
+    "chromium.base.threading.realtime-audio": { "capacity": "3ms", "deadline": "10ms", "period": "10ms" },
+    "chromium.base.threading.display": { "capacity": "8ms", "deadline": "16666us", "period": "16666us" },
+    "chromium.base.threading.compositing": { "capacity": "8ms", "deadline": "16666us", "period": "16666us" },
+  },
+}
