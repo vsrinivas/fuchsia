@@ -22,7 +22,7 @@ executable("bin") {
   deps = [
     ":config",
     "//examples/fidl/new/canvas/add_line_metered/fidl:examples.canvas.addlinemetered_cpp_wire",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",

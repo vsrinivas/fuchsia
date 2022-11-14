@@ -5,8 +5,8 @@
 #include <fidl/fuchsia.examples/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fidl/cpp/wire/client.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/assert.h>
 
 #include <future>

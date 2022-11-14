@@ -22,7 +22,7 @@ executable("bin") {
   deps = [
     ":config",
     "//examples/fidl/new/key_value_store/baseline/fidl:examples.keyvaluestore.baseline_cpp_wire",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop",

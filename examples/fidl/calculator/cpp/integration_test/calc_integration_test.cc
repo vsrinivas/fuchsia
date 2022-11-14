@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.examples.calculator/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 

@@ -22,7 +22,7 @@ executable("bin") {
   deps = [
     ":config",
     "//examples/fidl/new/canvas/baseline/fidl:examples.canvas.baseline_cpp_wire",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

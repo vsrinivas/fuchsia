@@ -22,7 +22,7 @@ executable("bin") {
   deps = [
     ":config",
     "//examples/fidl/new/key_value_store/baseline/fidl:examples.keyvaluestore.baseline_cpp",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files:files",
     "//src/lib/fxl",

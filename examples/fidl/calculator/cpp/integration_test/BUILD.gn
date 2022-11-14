@@ -9,8 +9,8 @@ executable("bin") {
   sources = [ "calc_integration_test.cc" ]
   deps = [
     "//examples/fidl/calculator/fidl:calculator_cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
