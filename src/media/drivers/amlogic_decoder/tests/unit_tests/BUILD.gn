@@ -11,9 +11,7 @@ executable("amlogic-decoder-unittest-bin") {
     "../..:sources",
     "../..:test_support",
     "//src/devices/testing/fake-bti",
-
-    # TODO(fxb/115089): Migrate from fake_ddk to mock-ddk.
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
