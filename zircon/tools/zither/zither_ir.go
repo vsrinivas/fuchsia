@@ -928,7 +928,7 @@ func (syscall Syscall) IsTestCategory1() bool { return syscall.Category == Sysca
 func (syscall Syscall) IsTestCategory2() bool { return syscall.Category == SyscallCategoryTest2 }
 
 func newSyscallFamily(protocol fidlgen.Protocol) (*SyscallFamily, error) {
-	if _, ok := protocol.Transports()["Syscall"]; !ok {
+	if protocol.OverTransport() != "Syscall" {
 		return nil, nil
 	}
 	family := &SyscallFamily{decl: newDecl(protocol)}

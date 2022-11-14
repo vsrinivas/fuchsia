@@ -1266,16 +1266,9 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		FuzzingName: fuzzingName,
 		TestBase:    testBaseNames,
 	})
-	var transport *Transport
-	if len(p.Transports()) != 1 {
-		panic("expected exactly one transport")
-	}
-	for t := range p.Transports() {
-		var ok bool
-		transport, ok = transports[t]
-		if !ok {
-			panic(fmt.Sprintf("transport %s not found", t))
-		}
+	transport, ok := transports[p.OverTransport()]
+	if !ok {
+		panic(fmt.Sprintf("transport %s not found", p.OverTransport()))
 	}
 	r.Transport = transport
 	for i := 0; i < len(methods); i++ {

@@ -830,6 +830,19 @@ func (el Attributes) Transports() map[string]struct{} {
 	return transports
 }
 
+func (el Attributes) OverTransport() string {
+	// No transport attribute => just Channel
+	attr, ok := el.LookupAttribute("transport")
+	if !ok {
+		return "Channel"
+	}
+	raw, ok := attr.LookupArgStandalone()
+	if !ok || raw.ValueString() == "" {
+		return "Channel"
+	}
+	return raw.ValueString()
+}
+
 // BindingsDenylistIncludes returns true if the comma-separated
 // bindings_denylist attribute includes targetLanguage (meaning the bindings for
 // targetLanguage should not emit this declaration).

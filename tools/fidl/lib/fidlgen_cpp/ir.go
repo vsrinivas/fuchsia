@@ -262,8 +262,7 @@ func (r *Root) ProtocolsForTransport() func(string) []*Protocol {
 		var ps []*Protocol
 		for _, k := range r.Protocols() {
 			p := k.(*Protocol)
-			_, ok := p.Transports()[t]
-			if ok {
+			if p.OverTransport() == t {
 				ps = append(ps, p)
 			}
 		}

@@ -1205,8 +1205,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 
 	var proxyType string
-	transports := val.Attributes.Transports()
-	if _, ok := transports["Channel"]; ok {
+	if val.Attributes.OverTransport() == "Channel" {
 		proxyType = "ChannelProxy"
 	}
 	r := Protocol{
