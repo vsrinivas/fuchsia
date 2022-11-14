@@ -40,6 +40,7 @@ _developer_packages = [
   "//src/experiences/bin/settings/license:license_settings",
   "//src/experiences/bin/settings/shell:shell_settings",
   "//src/experiences/session_shells/ermine",
+  "//src/experiences/session_shells/gazelle",
   "//src/media/playback/bundles:services",
   "//src/session",
   "//src/ui/bin/terminal",
