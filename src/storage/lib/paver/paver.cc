@@ -892,6 +892,18 @@ void BootManager::SetConfigurationHealthy(SetConfigurationHealthyRequestView req
   completer.Reply(ZX_OK);
 }
 
+void BootManager::SetOneShotRecovery(SetOneShotRecoveryCompleter::Sync& completer) {
+  LOG("Setting one shot recovery\n");
+  auto status = abr_client_->SetOneShotRecovery();
+  if (status.is_error()) {
+    ERROR("Failed to set one shot recovery: %s\n", status.status_string());
+    completer.ReplyError(status.error_value());
+    return;
+  }
+  LOG("Set one shot recovery succeed\n");
+  completer.ReplySuccess();
+}
+
 void Paver::FindSysconfig(FindSysconfigRequestView request,
                           FindSysconfigCompleter::Sync& completer) {
   FindSysconfig(std::move(request->sysconfig));

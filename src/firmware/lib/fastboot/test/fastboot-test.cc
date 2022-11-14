@@ -8,7 +8,9 @@
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.fshost/cpp/wire_test_base.h>
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
+#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire_test_base.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
+#include <fidl/fuchsia.paver/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
@@ -800,55 +802,75 @@ TEST_F(FastbootFlashTest, OemWipePartitionTables) {
             std::vector<paver_test::Command>{paver_test::Command::kWipePartitionTables});
 }
 
-class FastbootRebootTest : public zxtest::Test,
-                           public fidl::WireServer<fuchsia_hardware_power_statecontrol::Admin> {
+class FastbootRebootTest
+    : public zxtest::Test,
+      public fidl::testing::WireTestBase<fuchsia_paver::Paver>,
+      public fidl::testing::WireTestBase<fuchsia_paver::BootManager>,
+      public fidl::testing::WireTestBase<fuchsia_hardware_power_statecontrol::Admin> {
  public:
-  FastbootRebootTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), vfs_(loop_.dispatcher()) {
-    // Set up a svc root directory with a power state control service entry.
-    auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-    root_dir->AddEntry(
-        fidl::DiscoverableProtocolName<fuchsia_hardware_power_statecontrol::Admin>,
-        fbl::MakeRefCounted<fs::Service>(
-            [this](fidl::ServerEnd<fuchsia_hardware_power_statecontrol::Admin> request) {
-              return fidl::BindSingleInFlightOnly<
-                  fidl::WireServer<fuchsia_hardware_power_statecontrol::Admin>>(
-                  loop_.dispatcher(), std::move(request), this);
-            }));
-    zx::result server_end = fidl::CreateEndpoints(&svc_local_);
-    ASSERT_OK(server_end.status_value());
-    vfs_.ServeDirectory(root_dir, std::move(server_end.value()));
+  FastbootRebootTest()
+      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        outgoing_(component::OutgoingDirectory::Create(loop_.dispatcher())) {
+    ASSERT_OK(outgoing_.AddProtocol<fuchsia_hardware_power_statecontrol::Admin>(this));
+    ASSERT_OK(outgoing_.AddProtocol<fuchsia_paver::Paver>(this));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_TRUE(endpoints.is_ok());
+    ASSERT_EQ(ZX_OK, outgoing_.Serve(std::move(endpoints->server)).status_value());
+    auto svc_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_TRUE(svc_endpoints.is_ok());
+    ASSERT_OK(fidl::WireCall(endpoints->client)
+                  ->Open(fuchsia_io::wire::OpenFlags::kRightWritable |
+                             fuchsia_io::wire::OpenFlags::kRightReadable,
+                         0, "svc",
+                         fidl::ServerEnd<fuchsia_io::Node>(svc_endpoints->server.TakeChannel())));
+    svc_local_ = std::move(svc_endpoints->client);
     loop_.StartThread("fastboot-reboot-test-loop");
   }
 
   ~FastbootRebootTest() { loop_.Shutdown(); }
 
   fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() { return svc_local_; }
-  bool reboot_triggered() { return reboot_triggered_; }
-  bool reboot_recovery_triggered() { return reboot_recovery_triggered_; }
+  bool reboot_triggered() {
+    fbl::AutoLock al(&lock_);
+    return reboot_triggered_;
+  }
+
+  bool set_one_shot_recovery() {
+    fbl::AutoLock al(&lock_);
+    return set_one_shot_recovery_;
+  }
 
  private:
   void Reboot(RebootRequestView request, RebootCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
     reboot_triggered_ = true;
     completer.ReplySuccess();
   }
 
-  void RebootToRecovery(RebootToRecoveryCompleter::Sync& completer) override {
-    reboot_recovery_triggered_ = true;
+  void FindBootManager(FindBootManagerRequestView request,
+                       FindBootManagerCompleter::Sync& _completer) override {
+    fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_paver::BootManager>>(
+        loop_.dispatcher(), std::move(request->boot_manager), this);
+  }
+
+  void SetOneShotRecovery(SetOneShotRecoveryCompleter::Sync& completer) override {
+    fbl::AutoLock al(&lock_);
+    set_one_shot_recovery_ = true;
     completer.ReplySuccess();
   }
 
-  void PowerFullyOn(PowerFullyOnCompleter::Sync& completer) override {}
-  void RebootToBootloader(RebootToBootloaderCompleter::Sync& completer) override {}
-  void Poweroff(PoweroffCompleter::Sync& completer) override {}
-  void Mexec(MexecRequestView request, MexecCompleter::Sync& completer) override {}
-  void SuspendToRam(SuspendToRamCompleter::Sync& completer) override {}
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    FAIL("Unexpected call to BuildInfo: %s", name.c_str());
+  }
 
   async::Loop loop_;
-  fs::SynchronousVfs vfs_;
+  component::OutgoingDirectory outgoing_;
   fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
 
   bool reboot_triggered_ = false;
-  bool reboot_recovery_triggered_ = false;
+  bool set_one_shot_recovery_ = false;
+
+  mutable fbl::Mutex lock_;
 };
 
 TEST_F(FastbootRebootTest, Reboot) {
@@ -889,7 +911,8 @@ TEST_F(FastbootRebootTest, RebootBootloader) {
   // One info message plus one OKAY message
   ASSERT_EQ(transport.GetOutPackets().size(), 2ULL);
   ASSERT_EQ(transport.GetOutPackets().back(), "OKAY");
-  ASSERT_TRUE(reboot_recovery_triggered());
+  ASSERT_TRUE(reboot_triggered());
+  ASSERT_TRUE(set_one_shot_recovery());
 }
 
 TEST_F(FastbootFlashTest, UnknownOemCommand) {

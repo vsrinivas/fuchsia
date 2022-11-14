@@ -111,6 +111,8 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
   void SetConfigurationHealthy(SetConfigurationHealthyRequestView request,
                                SetConfigurationHealthyCompleter::Sync& completer) override;
 
+  void SetOneShotRecovery(SetOneShotRecoveryCompleter::Sync& completer) override;
+
   void Flush(
       fidl::WireServer<fuchsia_paver::DynamicDataSink>::FlushCompleter::Sync& completer) override;
 

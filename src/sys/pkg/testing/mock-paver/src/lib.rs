@@ -50,6 +50,7 @@ pub enum PaverEvent {
     SetConfigurationHealthy { configuration: paver::Configuration },
     SetConfigurationActive { configuration: paver::Configuration },
     SetConfigurationUnbootable { configuration: paver::Configuration },
+    SetOneShotRecovery,
     BootManagerFlush,
     DataSinkFlush,
 }
@@ -114,6 +115,7 @@ impl PaverEvent {
             paver::BootManagerRequest::SetConfigurationUnbootable { configuration, .. } => {
                 PaverEvent::SetConfigurationUnbootable { configuration: configuration.to_owned() }
             }
+            paver::BootManagerRequest::SetOneShotRecovery { .. } => PaverEvent::SetOneShotRecovery,
             paver::BootManagerRequest::Flush { .. } => PaverEvent::BootManagerFlush,
         }
     }
@@ -193,6 +195,9 @@ pub mod hooks {
                     }
                     paver::BootManagerRequest::SetConfigurationUnbootable { responder, .. } => {
                         responder.send(status.into_raw())
+                    }
+                    paver::BootManagerRequest::SetOneShotRecovery { responder, .. } => {
+                        responder.send(&mut Ok(()))
                     }
                     paver::BootManagerRequest::Flush { responder } => {
                         responder.send(status.into_raw())
@@ -662,6 +667,9 @@ impl MockPaverService {
                 }
                 paver::BootManagerRequest::SetConfigurationUnbootable { responder, .. } => {
                     responder.send(Status::OK.into_raw())
+                }
+                paver::BootManagerRequest::SetOneShotRecovery { responder, .. } => {
+                    responder.send(&mut Ok(()))
                 }
                 paver::BootManagerRequest::Flush { responder } => {
                     responder.send(Status::OK.into_raw())

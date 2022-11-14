@@ -56,6 +56,8 @@ class BlockDevice {
   uint64_t block_count() const { return block_count_; }
   uint32_t block_size() const { return block_size_; }
 
+  void Read(const zx::vmo& vmo, size_t blk_cnt, size_t blk_offset);
+
  private:
   BlockDevice(ramdisk_client_t* client, uint64_t block_count, uint32_t block_size)
       : client_(client), block_count_(block_count), block_size_(block_size) {}

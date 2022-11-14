@@ -135,6 +135,10 @@ void FakePaver::SetConfigurationHealthy(SetConfigurationHealthyRequestView reque
   completer.Reply(ZX_OK);
 }
 
+void FakePaver::SetOneShotRecovery(SetOneShotRecoveryCompleter::Sync& completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
 void FakePaver::Flush(
     fidl::WireServer<fuchsia_paver::DynamicDataSink>::FlushCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);

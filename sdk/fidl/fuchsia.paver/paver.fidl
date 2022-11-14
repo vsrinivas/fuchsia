@@ -372,6 +372,11 @@ protocol BootManager {
         status zx.status;
     });
 
+    /// Force device to boot to recovery in the next reboot/power cycle. This will only be
+    /// triggered once and will be reset after the reboot. State of A/B configuration slot will not
+    /// be affected.
+    SetOneShotRecovery() -> () error zx.status;
+
     /// Flush all previously buffered writes to persistent storage.
     Flush() -> (struct {
         status zx.status;

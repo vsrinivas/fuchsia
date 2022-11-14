@@ -2116,6 +2116,8 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
 
 class PaverServiceLuisTest : public PaverServiceGptDeviceTest {
  public:
+  static constexpr size_t kDurableBootStart = 0x10400;
+  static constexpr size_t kDurableBootSize = 0x10000;
   static constexpr size_t kFvmBlockStart = 0x20400;
   static constexpr size_t kFvmBlockSize = 0x10000;
 
@@ -2125,7 +2127,7 @@ class PaverServiceLuisTest : public PaverServiceGptDeviceTest {
     constexpr uint8_t kDummyType[GPT_GUID_LEN] = {0xaf, 0x3d, 0xc6, 0x0f, 0x83, 0x84, 0x72, 0x47,
                                                   0x8e, 0x79, 0x3d, 0x69, 0xd8, 0x47, 0x7d, 0xe4};
     const std::vector<PartitionDescription> kLuisStartingPartitions = {
-        {GPT_DURABLE_BOOT_NAME, kDummyType, 0x10400, 0x10000},
+        {GPT_DURABLE_BOOT_NAME, kDummyType, kDurableBootStart, kDurableBootSize},
         {GPT_FVM_NAME, kDummyType, kFvmBlockStart, kFvmBlockSize},
     };
     ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(kLuisStartingPartitions));
@@ -2228,6 +2230,37 @@ TEST_F(PaverServiceLuisTest, WriteOpaqueVolume) {
 
   // Verify the written data against the payload
   ASSERT_BYTES_EQ(block_read_vmo_mapper.start(), payload.data(), kPayloadSize);
+}
+
+TEST_F(PaverServiceLuisTest, OneShotRecovery) {
+  // TODO(b/255567130): There's an discussion whether use one-shot-recovery to implement
+  // RebootToRecovery in power-manager. If the approach is taken, paver e2e test will cover this.
+  ASSERT_NO_FATAL_FAILURE(InitializeLuisGPTPartitions());
+
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::BootManager>();
+  ASSERT_OK(endpoints.status_value());
+  auto& [local, remote] = endpoints.value();
+
+  // Required by FindBootManager().
+  fake_svc_.fake_boot_args().SetArgResponse("_a");
+
+  auto result = client_->FindBootManager(std::move(remote));
+  ASSERT_OK(result.status());
+  auto boot_manager = fidl::WireSyncClient(std::move(local));
+
+  auto set_one_shot_recovery_result = boot_manager->SetOneShotRecovery();
+  ASSERT_OK(set_one_shot_recovery_result.status());
+
+  // Read the abr data directly from block and verify.
+  zx::vmo block_read_vmo;
+  fzl::VmoMapper block_read_vmo_mapper;
+  ASSERT_OK(block_read_vmo_mapper.CreateAndMap(kDurableBootSize * kBlockSize, ZX_VM_PERM_READ,
+                                               nullptr, &block_read_vmo));
+  gpt_dev_->Read(block_read_vmo, kDurableBootSize, kDurableBootStart);
+
+  AbrData disk_abr_data;
+  memcpy(&disk_abr_data, block_read_vmo_mapper.start(), sizeof(disk_abr_data));
+  ASSERT_EQ(disk_abr_data.one_shot_recovery_boot, 1);
 }
 
 class PaverServicePinecrestTest : public PaverServiceGptDeviceTest {

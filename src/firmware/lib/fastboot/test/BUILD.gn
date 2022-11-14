@@ -33,6 +33,8 @@ test("fastboot-test") {
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire_testing",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_cpp_wire_testing",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire_testing",
     "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",

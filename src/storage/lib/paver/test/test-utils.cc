@@ -65,6 +65,18 @@ void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
   device->reset(new BlockDevice(client, block_count, block_size));
 }
 
+void BlockDevice::Read(const zx::vmo& vmo, size_t blk_cnt, size_t blk_offset) {
+  ASSERT_LE(blk_offset + blk_cnt, block_count());
+  fidl::UnownedClientEnd interface = block_interface();
+  // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+  zx::result block_service_channel =
+      component::Clone(interface, component::AssumeProtocolComposesNode);
+  ASSERT_OK(block_service_channel.status_value());
+  std::unique_ptr<paver::BlockPartitionClient> block_client =
+      std::make_unique<paver::BlockPartitionClient>(std::move(block_service_channel.value()));
+  ASSERT_OK(block_client->Read(vmo, blk_cnt, blk_offset, 0));
+}
+
 void SkipBlockDevice::Create(fuchsia_hardware_nand::wire::RamNandInfo nand_info,
                              std::unique_ptr<SkipBlockDevice>* device) {
   fzl::VmoMapper mapper;

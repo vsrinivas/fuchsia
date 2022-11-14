@@ -518,6 +518,25 @@ zx::result<> Fastboot::RebootBootloader(const std::string& command, Transport* t
     return ret;
   }
 
+  auto boot_manager_res = FindBootManager();
+  if (boot_manager_res.is_error()) {
+    return SendResponse(ResponseType::kFail, "Failed to find boot manager", transport,
+                        zx::error(boot_manager_res.status_value()));
+  }
+
+  // User A/B/R one shot recovery instead of platform-sepcific reboot-recovery mechanism. Because
+  // the latter is not always supported, especially in the stage of early bringup. But we don't want
+  // device-flashing to be hindered by it.
+  //
+  // As of the time the code is written, there's a discussion on whether power-manager can support
+  // one-shot-recovery as well. If the approach is taken, we can switch to RebootToRecovery instead.
+
+  auto one_shot_recovery_result = boot_manager_res.value()->SetOneShotRecovery();
+  if (one_shot_recovery_result->is_error()) {
+    return SendResponse(ResponseType::kFail, "Failed to set one shot recovery: ", transport,
+                        zx::error(one_shot_recovery_result->error_value()));
+  }
+
   auto connect_result = ConnectToPowerStateControl();
   if (connect_result.is_error()) {
     return SendResponse(ResponseType::kFail,
@@ -534,7 +553,8 @@ zx::result<> Fastboot::RebootBootloader(const std::string& command, Transport* t
   // Wait for 1s to make sure the response is sent over to the transport
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  auto resp = connect_result.value()->RebootToRecovery();
+  auto resp = connect_result.value()->Reboot(
+      fuchsia_hardware_power_statecontrol::RebootReason::kUserRequest);
   if (!resp.ok()) {
     return zx::error(resp.status());
   }

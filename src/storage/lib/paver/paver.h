@@ -253,6 +253,8 @@ class BootManager : public fidl::WireServer<fuchsia_paver::BootManager> {
   void SetConfigurationHealthy(SetConfigurationHealthyRequestView request,
                                SetConfigurationHealthyCompleter::Sync& completer) override;
 
+  void SetOneShotRecovery(SetOneShotRecoveryCompleter::Sync& completer) override;
+
   void Flush(FlushCompleter::Sync& completer) override {
     completer.Reply(abr_client_->Flush().status_value());
   }

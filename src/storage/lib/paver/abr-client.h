@@ -75,6 +75,10 @@ class Client {
     return zx::ok(info);
   }
 
+  zx::result<> SetOneShotRecovery() {
+    return AbrResultToZxStatus(AbrSetOneShotRecovery(&abr_ops_, true));
+  }
+
   static zx::result<> AbrResultToZxStatus(AbrResult status);
 
   virtual zx::result<> Flush() const = 0;
