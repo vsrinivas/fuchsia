@@ -94,6 +94,14 @@ pub(crate) enum State {
     Error { error_type: PasswordError },
 }
 
+impl State {
+    /// Convenience function that returns true iff the state is an error.
+    #[allow(dead_code)]
+    pub fn is_error(&self) -> bool {
+        matches!(self, State::Error { .. })
+    }
+}
+
 impl From<State> for fidl::PasswordInteractionWatchStateResponse {
     fn from(s: State) -> Self {
         match s {
@@ -139,33 +147,6 @@ impl From<PasswordError> for fidl::PasswordError {
                 fidl::PasswordError::NotWaitingForPassword(fidl::Empty)
             }
         }
-    }
-}
-
-// Mirror of State for error-logging purposes--contains the name of the state,
-// but not the internal contents.
-#[derive(Debug)]
-pub enum StateName {
-    WaitingForTime,
-    WaitingForPassword,
-    Error,
-}
-
-impl From<&State> for StateName {
-    fn from(state: &State) -> Self {
-        match state {
-            State::WaitingForPassword => StateName::WaitingForPassword,
-            State::WaitingForTime { .. } => StateName::WaitingForTime,
-            State::Error { .. } => StateName::Error,
-        }
-    }
-}
-
-impl State {
-    /// Convenience function that returns true iff the state is an error.
-    #[allow(dead_code)]
-    pub fn is_error(&self) -> bool {
-        matches!(self, State::Error { .. })
     }
 }
 
