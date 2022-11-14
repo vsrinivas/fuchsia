@@ -93,14 +93,16 @@ zx_status_t PlatformSuspend(uint8_t target_s_state, uint8_t sleep_type_a, uint8_
   }
 
   // Setup our resume path
-  // As Fuchsia only supports 64-bit architectures we expect to be able to use the 64-bit physical
-  // address of the FACS
+  uint64_t facs_addr;
   if (acpi_fadt->x_firmware_ctrl == 0) {
-    return ZX_ERR_INTERNAL;
+    ASSERT(acpi_fadt->firmware_ctrl != 0);
+    facs_addr = static_cast<uint64_t>(acpi_fadt->firmware_ctrl);
+  } else {
+    facs_addr = acpi_fadt->x_firmware_ctrl;
   }
 
   // Get the address of the page that the FACS table is on.
-  const uint64_t page_address = ROUNDDOWN(acpi_fadt->x_firmware_ctrl, PAGE_SIZE);
+  const uint64_t page_address = ROUNDDOWN(facs_addr, PAGE_SIZE);
   // Round up the page size in case the FACS table is offset across pages.
   const uint64_t facs_page_size = ROUNDUP(PAGE_SIZE + sizeof(acpi_lite::AcpiFacs), PAGE_SIZE);
 
@@ -123,10 +125,11 @@ zx_status_t PlatformSuspend(uint8_t target_s_state, uint8_t sleep_type_a, uint8_
   });
 
   // Add the offset of the table address to the pointer and cast to the table type.
-  uint8_t* facs_addr = facs_page_addr + acpi_fadt->x_firmware_ctrl - page_address;
-  struct acpi_lite::AcpiFacs* acpi_facs = reinterpret_cast<struct acpi_lite::AcpiFacs*>(facs_addr);
+  uint8_t* facs_ptr = facs_page_addr + facs_addr - page_address;
+  struct acpi_lite::AcpiFacs* acpi_facs = reinterpret_cast<struct acpi_lite::AcpiFacs*>(facs_ptr);
 
   if (acpi_facs->sig.value != kFacsSig || acpi_facs->length != sizeof(*acpi_facs)) {
+    TRACEF("Suspend failed: Could not get FACS\n");
     return ZX_ERR_INTERNAL;
   }
 
