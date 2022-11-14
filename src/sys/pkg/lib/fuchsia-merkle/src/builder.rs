@@ -81,7 +81,7 @@ impl MerkleTreeBuilder {
 
     /// Save a data block hash, propagating full blocks of hashes to higher layers. Also clear a
     /// stored data block.
-    fn push_data_hash(&mut self, hash: Hash) {
+    pub fn push_data_hash(&mut self, hash: Hash) {
         self.block.clear();
         self.levels[0].push(hash);
         if self.levels[0].len() % HASHES_PER_BLOCK == 0 {

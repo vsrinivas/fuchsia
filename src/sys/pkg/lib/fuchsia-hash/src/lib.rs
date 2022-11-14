@@ -7,6 +7,7 @@
 use hex::{FromHex, FromHexError, ToHex};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
+use std::ops::Deref;
 use std::str;
 use thiserror::Error;
 
@@ -75,6 +76,14 @@ impl Serialize for Hash {
 impl fmt::Debug for Hash {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Hash").field(&self.to_string()).finish()
+    }
+}
+
+impl Deref for Hash {
+    type Target = [u8; HASH_SIZE];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 

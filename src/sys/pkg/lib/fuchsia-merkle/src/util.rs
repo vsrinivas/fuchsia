@@ -32,7 +32,7 @@ fn make_identity(length: usize, level: usize, offset: usize) -> BlockIdentity {
 /// # Panics
 ///
 /// Panics if `block.len()` exceeds [`BLOCK_SIZE`] or if `offset` is not aligned to [`BLOCK_SIZE`]
-pub(crate) fn hash_block(block: &[u8], offset: usize) -> Hash {
+pub fn hash_block(block: &[u8], offset: usize) -> Hash {
     assert!(block.len() <= BLOCK_SIZE);
     assert!(offset % BLOCK_SIZE == 0);
 

@@ -44,7 +44,7 @@ impl MerkleTree {
     /// - The length of the last level is 1.
     /// - The length of every hash level is the length of the prior hash level divided by
     ///   `HASHES_PER_BLOCK`, rounded up to the nearest integer.
-    pub(crate) fn from_levels(levels: Vec<Vec<Hash>>) -> MerkleTree {
+    pub fn from_levels(levels: Vec<Vec<Hash>>) -> MerkleTree {
         MerkleTree { levels }
     }
 
@@ -76,6 +76,12 @@ impl MerkleTree {
             builder.write(&buf[0..size]);
         }
         Ok(builder.finish())
+    }
+}
+
+impl AsRef<[Vec<Hash>]> for MerkleTree {
+    fn as_ref(&self) -> &[Vec<Hash>] {
+        &self.levels[..]
     }
 }
 
