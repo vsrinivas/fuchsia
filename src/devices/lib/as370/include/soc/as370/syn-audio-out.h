@@ -31,10 +31,12 @@ class SynAudioOutDevice {
   uint32_t GetRingPosition();
 
   // Starts clocking data with data fetched from the beginning of the buffer.
+  // Returns its best estimation of the actual time the buffer pointer started moving.
   uint64_t Start();
 
   // Stops clocking data out (physical bus signals remain active).
-  void Stop();
+  // Returns its best estimation of the actual time the buffer pointer stopped moving.
+  uint64_t Stop();
 
   // Stops clocking data and quiets output signals.
   void Shutdown();

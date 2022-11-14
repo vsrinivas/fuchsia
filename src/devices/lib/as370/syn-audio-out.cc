@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/clock.h>
+
 #include <limits>
 #include <utility>
 
@@ -75,16 +77,21 @@ uint64_t SynAudioOutDevice::Start() {
       .WriteTo(&i2s_);
 
   enabled_ = true;
+  uint64_t before = zx::clock::get_monotonic().get();
   dma_.Start(DmaId::kDmaIdMa0);
+  uint64_t after = zx::clock::get_monotonic().get();
 
   AIO_PRI_TSD0_PRI_CTRL::Get().FromValue(0).set_ENABLE(true).set_MUTE(false).WriteTo(&i2s_);
-  return 0;
+  return before + (after - before) / 2;
 }
 
-void SynAudioOutDevice::Stop() {
+uint64_t SynAudioOutDevice::Stop() {
   AIO_PRI_TSD0_PRI_CTRL::Get().ReadFrom(&i2s_).set_MUTE(true).WriteTo(&i2s_);
   enabled_ = false;
+  uint64_t before = zx::clock::get_monotonic().get();
   dma_.Stop(DmaId::kDmaIdMa0);
+  uint64_t after = zx::clock::get_monotonic().get();
+  return before + (after - before) / 2;
 }
 
 void SynAudioOutDevice::Shutdown() {

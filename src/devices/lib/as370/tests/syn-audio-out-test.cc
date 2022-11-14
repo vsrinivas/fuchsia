@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/shareddma/cpp/banjo-mock.h>
+#include <lib/zx/clock.h>
 
 #include <fbl/array.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
@@ -79,7 +80,11 @@ TEST_F(SynAudioOutTest, Start) {
   // AIO_PRI_TSD0_PRI_CTRL enable and unmute.
   i2s()[0x000c].ExpectWrite(0x0000'0001);
 
-  EXPECT_EQ(device().Start(), 0);
+  uint64_t before = zx::clock::get_monotonic().get();
+  uint64_t timestamp = device().Start();
+  uint64_t after = zx::clock::get_monotonic().get();
+  EXPECT_GE(timestamp, before);
+  EXPECT_LE(timestamp, after);
 }
 
 TEST_F(SynAudioOutTest, Stop) {
@@ -88,7 +93,11 @@ TEST_F(SynAudioOutTest, Stop) {
 
   dma().ExpectStop(DmaId::kDmaIdMa0);
 
-  device().Stop();
+  uint64_t before = zx::clock::get_monotonic().get();
+  uint64_t timestamp = device().Stop();
+  uint64_t after = zx::clock::get_monotonic().get();
+  EXPECT_GE(timestamp, before);
+  EXPECT_LE(timestamp, after);
 }
 
 TEST_F(SynAudioOutTest, Shutdown) {

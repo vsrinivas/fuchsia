@@ -3,15 +3,19 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/shareddma/cpp/banjo-mock.h>
+#include <lib/zx/clock.h>
 
 #include <fbl/array.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/as370/as370-dma.h>
+#include <soc/as370/as370-hw.h>
 #include <soc/as370/syn-audio-in.h>
 #include <zxtest/zxtest.h>
 
 bool operator==(const shared_dma_protocol_t& a, const shared_dma_protocol_t& b) { return true; }
 bool operator==(const dma_notify_callback_t& a, const dma_notify_callback_t& b) { return true; }
+
+namespace {
 
 class CicFilterTest : public CicFilter {
  public:
@@ -26,21 +30,6 @@ class CicFilterTest : public CicFilter {
 
 class SynAudioInDeviceTest : public SynAudioInDevice {
  public:
-  static std::unique_ptr<SynAudioInDeviceTest> Create(ddk::MockSharedDma* dma) {
-    static fbl::Array<ddk_mock::MockMmioReg> unused_mocks =
-        fbl::Array(new ddk_mock::MockMmioReg[1], 1);
-    static ddk_mock::MockMmioRegRegion unused_region(unused_mocks.data(), sizeof(uint32_t), 1);
-    ddk::MmioBuffer b2(unused_region.GetMmioBuffer());
-    ddk::MmioBuffer b3(unused_region.GetMmioBuffer());
-
-    fbl::AllocChecker ac;
-    auto dev = std::unique_ptr<SynAudioInDeviceTest>(
-        new (&ac) SynAudioInDeviceTest(std::move(b2), std::move(b3), dma->GetProto()));
-    if (!ac.check()) {
-      return nullptr;
-    }
-    return dev;
-  }
   SynAudioInDeviceTest(ddk::MmioBuffer mmio_avio, ddk::MmioBuffer mmio_i2s,
                        ddk::SharedDmaProtocolClient dma)
       : SynAudioInDevice(std::move(mmio_avio), std::move(mmio_i2s), std::move(dma)) {
@@ -53,11 +42,48 @@ class SynAudioInDeviceTest : public SynAudioInDevice {
   bool HasAtLeastTwoDmas() { return kNumberOfDmas >= 2; }
 };
 
+class SynAudioInTest : public zxtest::Test {
+ public:
+  // in 32 bits chunks.
+  static constexpr size_t kGlobalRegCount = as370::kAudioGlobalSize / sizeof(uint32_t);
+  static constexpr size_t kI2sRegCount = as370::kAudioI2sSize / sizeof(uint32_t);
+
+  void SetUp() override {
+    global_mocks_ = fbl::Array(new ddk_mock::MockMmioReg[kGlobalRegCount], kGlobalRegCount);
+    i2s_mocks_ = fbl::Array(new ddk_mock::MockMmioReg[kI2sRegCount], kI2sRegCount);
+    global_region_.emplace(global_mocks_.data(), sizeof(uint32_t), kGlobalRegCount);
+    i2s_region_.emplace(i2s_mocks_.data(), sizeof(uint32_t), kI2sRegCount);
+  }
+
+  void TearDown() override {}
+
+  std::unique_ptr<SynAudioInDeviceTest> Create(ddk::MockSharedDma* dma) {
+    ddk::MmioBuffer global_buffer(global_region_->GetMmioBuffer());
+    ddk::MmioBuffer i2s_buffer(i2s_region_->GetMmioBuffer());
+
+    fbl::AllocChecker ac;
+    auto dev = std::unique_ptr<SynAudioInDeviceTest>(new (&ac) SynAudioInDeviceTest(
+        std::move(global_buffer), std::move(i2s_buffer), dma->GetProto()));
+    if (!ac.check()) {
+      return nullptr;
+    }
+    return dev;
+  }
+
+ private:
+  fbl::Array<ddk_mock::MockMmioReg> global_mocks_;
+  fbl::Array<ddk_mock::MockMmioReg> i2s_mocks_;
+  std::optional<ddk_mock::MockMmioRegRegion> global_region_;
+  std::optional<ddk_mock::MockMmioRegRegion> i2s_region_;
+};
+
+}  // namespace
+
 namespace audio {
 
-TEST(SynapticsAudioInTest, ProcessDmaSimple) {
+TEST_F(SynAudioInTest, ProcessDmaSimple) {
   ddk::MockSharedDma dma;
-  auto dev = SynAudioInDeviceTest::Create(&dma);
+  auto dev = Create(&dma);
 
   dma.ExpectGetTransferSize(4, DmaId::kDmaIdPdmW0);
 
@@ -70,9 +96,9 @@ TEST(SynapticsAudioInTest, ProcessDmaSimple) {
   dma.VerifyAndClear();
 }
 
-TEST(SynapticsAudioInTest, ProcessDmaWarp) {
+TEST_F(SynAudioInTest, ProcessDmaWarp) {
   ddk::MockSharedDma dma;
-  auto dev = SynAudioInDeviceTest::Create(&dma);
+  auto dev = Create(&dma);
 
   dma.ExpectGetTransferSize(4, DmaId::kDmaIdPdmW0);
 
@@ -89,9 +115,9 @@ TEST(SynapticsAudioInTest, ProcessDmaWarp) {
   dma.VerifyAndClear();
 }
 
-TEST(SynapticsAudioInTest, ProcessDmaIrregular) {
+TEST_F(SynAudioInTest, ProcessDmaIrregular) {
   ddk::MockSharedDma dma;
-  auto dev = SynAudioInDeviceTest::Create(&dma);
+  auto dev = Create(&dma);
 
   dma.ExpectGetTransferSize(4, DmaId::kDmaIdPdmW0);
 
@@ -104,9 +130,9 @@ TEST(SynapticsAudioInTest, ProcessDmaIrregular) {
   dma.VerifyAndClear();
 }
 
-TEST(SynapticsAudioInTest, ProcessDmaOverflow) {
+TEST_F(SynAudioInTest, ProcessDmaOverflow) {
   ddk::MockSharedDma dma;
-  auto dev = SynAudioInDeviceTest::Create(&dma);
+  auto dev = Create(&dma);
 
   dma.ExpectGetTransferSize(4, DmaId::kDmaIdPdmW0);
 
@@ -118,9 +144,9 @@ TEST(SynapticsAudioInTest, ProcessDmaOverflow) {
   dma.VerifyAndClear();
 }
 
-TEST(SynapticsAudioInTest, ProcessDmaPdm0AndPdm1) {
+TEST_F(SynAudioInTest, ProcessDmaPdm0AndPdm1) {
   ddk::MockSharedDma dma;
-  auto dev = SynAudioInDeviceTest::Create(&dma);
+  auto dev = Create(&dma);
 
   if (!dev->HasAtLeastTwoDmas()) {
     return;
@@ -160,15 +186,41 @@ TEST(SynapticsAudioInTest, ProcessDmaPdm0AndPdm1) {
   dma.VerifyAndClear();
 }
 
-TEST(SynapticsAudioInTest, FifoDepth) {
+TEST_F(SynAudioInTest, FifoDepth) {
   ddk::MockSharedDma dma;
-  auto dev = SynAudioInDeviceTest::Create(&dma);
+  auto dev = Create(&dma);
   // 16384 PDM DMA transfer size as used for PDM, generates 1024 samples at 48KHz 16 bits.
   dma.ExpectGetTransferSize(16384, DmaId::kDmaIdPdmW0);
 
   // 12288 = 3 channels x 1024 samples per DMA x 2 bytes per sample x 2 for ping-pong.
   ASSERT_EQ(dev->FifoDepth(), 12288);
   dma.VerifyAndClear();
+}
+
+TEST_F(SynAudioInTest, StartTime) {
+  ddk::MockSharedDma dma;
+  dma.ExpectStart(DmaId::kDmaIdPdmW0);
+  dma.ExpectStart(DmaId::kDmaIdPdmW1);
+  auto dev = Create(&dma);
+
+  uint64_t before = zx::clock::get_monotonic().get();
+  uint64_t timestamp = dev->Start();
+  uint64_t after = zx::clock::get_monotonic().get();
+  EXPECT_GE(timestamp, before);
+  EXPECT_LE(timestamp, after);
+}
+
+TEST_F(SynAudioInTest, StopTime) {
+  ddk::MockSharedDma dma;
+  dma.ExpectStop(DmaId::kDmaIdPdmW0);
+  dma.ExpectStop(DmaId::kDmaIdPdmW1);
+  auto dev = Create(&dma);
+
+  uint64_t before = zx::clock::get_monotonic().get();
+  uint64_t timestamp = dev->Stop();
+  uint64_t after = zx::clock::get_monotonic().get();
+  EXPECT_GE(timestamp, before);
+  EXPECT_LE(timestamp, after);
 }
 
 }  // namespace audio

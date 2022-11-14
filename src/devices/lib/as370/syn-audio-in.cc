@@ -282,9 +282,11 @@ uint64_t SynAudioInDevice::Start() {
 
   // Playback.
   enabled_ = true;
+  uint64_t before = zx::clock::get_monotonic().get();
   for (uint32_t i = 0; i < kNumberOfDmas; ++i) {
     dma_.Start(i == 0 ? DmaId::kDmaIdPdmW0 : DmaId::kDmaIdPdmW1);
   }
+  uint64_t after = zx::clock::get_monotonic().get();
 
   // Unmute.
   AIO_PDM_PDM0_CTRL::Get().FromValue(0).set_MUTE(0).set_ENABLE(1).WriteTo(&i2s_);
@@ -292,15 +294,18 @@ uint64_t SynAudioInDevice::Start() {
 
   // Enable.
   AIO_IOSEL_PDM::Get().FromValue(0).set_GENABLE(1).WriteTo(&i2s_);
-  return 0;
+  return before + (after - before) / 2;
 }
 
-void SynAudioInDevice::Stop() {
+uint64_t SynAudioInDevice::Stop() {
   AIO_IOSEL_PDM::Get().FromValue(0).set_GENABLE(0).WriteTo(&i2s_);
   enabled_ = false;
+  uint64_t before = zx::clock::get_monotonic().get();
   for (uint32_t i = 0; i < kNumberOfDmas; ++i) {
     dma_.Stop(i == 0 ? DmaId::kDmaIdPdmW0 : DmaId::kDmaIdPdmW1);
   }
+  uint64_t after = zx::clock::get_monotonic().get();
+  return before + (after - before) / 2;
 }
 
 void SynAudioInDevice::Shutdown() { Stop(); }
