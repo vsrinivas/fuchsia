@@ -16,6 +16,7 @@ namespace mdns {
 namespace test {
 
 const inet::IpPort kPort = inet::IpPort::From_uint16_t(2525);
+const inet::IpPort kZeroPort = inet::IpPort::From_uint16_t(0);
 constexpr char kServiceName[] = "_test._tcp.";
 constexpr char kOtherServiceName[] = "_other._tcp.";
 constexpr char kInstanceName[] = "testinstance";
@@ -29,6 +30,9 @@ const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
                                               inet::IpAddress(192, 168, 1, 201)};
 const std::vector<inet::SocketAddress> kSocketAddresses{
     inet::SocketAddress(192, 168, 1, 200, kPort), inet::SocketAddress(192, 168, 1, 201, kPort)};
+const std::vector<inet::SocketAddress> kSocketAddressesZeroPort{
+    inet::SocketAddress(192, 168, 1, 200, kZeroPort),
+    inet::SocketAddress(192, 168, 1, 201, kZeroPort)};
 const std::vector<HostAddress> kHostAddresses{
     HostAddress(inet::IpAddress(192, 168, 1, 200), 1, zx::sec(450)),
     HostAddress(inet::IpAddress(192, 168, 1, 201), 1, zx::sec(450))};
@@ -67,22 +71,26 @@ class InstanceResponderTest : public AgentTest, public Mdns::Publisher {
   // Expects a sequence of announcements made after startup.
   void ExpectAnnouncements(Media media = Media::kBoth, IpVersions ip_versions = IpVersions::kBoth,
                            const std::string& host_full_name = kLocalHostFullName,
-                           const std::vector<inet::IpAddress>& addresses = {});
+                           const std::vector<inet::IpAddress>& addresses = {},
+                           inet::IpPort port = kPort);
 
   // Expects a single announcement (a 'GetPublication' call and subsequent publication).
   void ExpectAnnouncement(Media media = Media::kBoth, IpVersions ip_versions = IpVersions::kBoth,
                           const std::string& host_full_name = kLocalHostFullName,
-                          const std::vector<inet::IpAddress>& addresses = {});
+                          const std::vector<inet::IpAddress>& addresses = {},
+                          inet::IpPort port = kPort);
 
   // Expects a single multicast publication.
   void ExpectPublication(Media media = Media::kBoth, IpVersions ip_versions = IpVersions::kBoth,
                          const std::string& host_full_name = kLocalHostFullName,
-                         const std::vector<inet::IpAddress>& addresses = {});
+                         const std::vector<inet::IpAddress>& addresses = {},
+                         inet::IpPort port = kPort);
 
   // Expects a single publication to the given reply address and subtype.
   void ExpectPublication(ReplyAddress reply_address, const std::string& subtype = "",
                          const std::string& host_full_name = kLocalHostFullName,
-                         const std::vector<inet::IpAddress>& addresses = {});
+                         const std::vector<inet::IpAddress>& addresses = {},
+                         inet::IpPort port = kPort);
 
   ReplyAddress MulticastReply(Media media, IpVersions ip_versions);
 
@@ -132,23 +140,25 @@ void InstanceResponderTest::ExpectNoOther() {
 
 void InstanceResponderTest::ExpectAnnouncements(Media media, IpVersions ip_versions,
                                                 const std::string& host_full_name,
-                                                const std::vector<inet::IpAddress>& addresses) {
-  ExpectAnnouncement(media, ip_versions, host_full_name, addresses);
+                                                const std::vector<inet::IpAddress>& addresses,
+                                                inet::IpPort port) {
+  ExpectAnnouncement(media, ip_versions, host_full_name, addresses, port);
   ExpectPostTaskForTimeAndInvoke(zx::sec(1), zx::sec(1));
-  ExpectAnnouncement(media, ip_versions, host_full_name, addresses);
+  ExpectAnnouncement(media, ip_versions, host_full_name, addresses, port);
   ExpectPostTaskForTimeAndInvoke(zx::sec(2), zx::sec(2));
-  ExpectAnnouncement(media, ip_versions, host_full_name, addresses);
+  ExpectAnnouncement(media, ip_versions, host_full_name, addresses, port);
   ExpectPostTaskForTimeAndInvoke(zx::sec(4), zx::sec(4));
-  ExpectAnnouncement(media, ip_versions, host_full_name, addresses);
+  ExpectAnnouncement(media, ip_versions, host_full_name, addresses, port);
   ExpectNoOther();
 }
 
 void InstanceResponderTest::ExpectAnnouncement(Media media, IpVersions ip_versions,
                                                const std::string& host_full_name,
-                                               const std::vector<inet::IpAddress>& addresses) {
+                                               const std::vector<inet::IpAddress>& addresses,
+                                               inet::IpPort port) {
   ExpectGetPublicationCall(PublicationCause::kAnnouncement, "",
-                           {})(Mdns::Publication::Create(kPort));
-  ExpectPublication(media, ip_versions, host_full_name, addresses);
+                           {})(Mdns::Publication::Create(port));
+  ExpectPublication(media, ip_versions, host_full_name, addresses, port);
 }
 
 ReplyAddress InstanceResponderTest::MulticastReply(Media media, IpVersions ip_versions) {
@@ -157,14 +167,16 @@ ReplyAddress InstanceResponderTest::MulticastReply(Media media, IpVersions ip_ve
 
 void InstanceResponderTest::ExpectPublication(Media media, IpVersions ip_versions,
                                               const std::string& host_full_name,
-                                              const std::vector<inet::IpAddress>& addresses) {
-  ExpectPublication(MulticastReply(media, ip_versions), "", host_full_name, addresses);
+                                              const std::vector<inet::IpAddress>& addresses,
+                                              inet::IpPort port) {
+  ExpectPublication(MulticastReply(media, ip_versions), "", host_full_name, addresses, port);
 }
 
 void InstanceResponderTest::ExpectPublication(ReplyAddress reply_address,
                                               const std::string& subtype,
                                               const std::string& host_full_name,
-                                              const std::vector<inet::IpAddress>& addresses) {
+                                              const std::vector<inet::IpAddress>& addresses,
+                                              inet::IpPort port) {
   auto message = ExpectOutboundMessage(reply_address);
 
   auto resource = ExpectResource(message.get(), MdnsResourceSection::kAnswer, service_full_name(),
@@ -182,7 +194,7 @@ void InstanceResponderTest::ExpectPublication(ReplyAddress reply_address,
                             DnsType::kSrv);
   EXPECT_EQ(0, resource->srv_.priority_);
   EXPECT_EQ(0, resource->srv_.weight_);
-  EXPECT_EQ(kPort, resource->srv_.port_);
+  EXPECT_EQ(port, resource->srv_.port_);
   EXPECT_EQ(host_full_name, resource->srv_.target_.dotted_string_);
 
   resource = ExpectResource(message.get(), MdnsResourceSection::kAdditional, instance_full_name(),
@@ -658,6 +670,36 @@ TEST_F(InstanceResponderTest, LocalServiceInstanceNotificationsProxy) {
 
   ExpectAddLocalServiceInstanceCall(
       ServiceInstance(kServiceName, kInstanceName, kHostName, kSocketAddresses), true);
+}
+
+// Tests that local service instance notifications are properly generated when the port is zero.
+TEST_F(InstanceResponderTest, LocalServiceInstanceNotificationsZeroPort) {
+  InstanceResponder under_test(this, "", {}, kServiceName, kInstanceName, Media::kBoth,
+                               IpVersions::kBoth, this);
+  SetAgent(under_test);
+  SetLocalHostAddresses(kHostAddresses);
+
+  // Normal startup. We use a long host name, because there was a bug that only happened when the
+  // host full name was greater than sizeof(std::string), which is 24 bytes.
+  under_test.Start(kLocalHostFullNameLong);
+  ExpectAnnouncements(Media::kBoth, IpVersions::kBoth, kLocalHostFullNameLong, {}, kZeroPort);
+
+  ReplyAddress sender_address(
+      inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kBoth);
+
+  under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
+                             ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
+                             sender_address);
+  ExpectGetPublicationCall(PublicationCause::kQueryMulticastResponse, "",
+                           {sender_address.socket_address()})(Mdns::Publication::Create(kZeroPort));
+  ExpectPublication(Media::kBoth, IpVersions::kBoth, kLocalHostFullNameLong, {}, kZeroPort);
+  ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
+  ExpectNoOther();
+
+  ExpectAddLocalServiceInstanceCall(
+      ServiceInstance(kServiceName, kInstanceName, kLocalHostNameLong, kSocketAddressesZeroPort),
+      false);
 }
 
 // Tests the the responder works with an alternate host name.

@@ -365,7 +365,10 @@ void InstanceRequestor::OnAddLocalServiceInstance(const Mdns::ServiceInstance& i
     return;
   }
 
-  FX_DCHECK(!instance.addresses_.empty());
+  if (instance.addresses_.empty()) {
+    FX_LOGS(ERROR) << "OnAddLocalServiceInstance called with empty address list.";
+    return;
+  }
 
   auto instance_full_name =
       MdnsNames::InstanceFullName(instance.instance_name_, instance.service_name_);
