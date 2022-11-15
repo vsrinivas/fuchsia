@@ -35,7 +35,7 @@ __END_CDECLS
 #define ZX_ASSERT(x)                                                      \
   do {                                                                    \
     if (unlikely(!(x))) {                                                 \
-      ZX_PANIC("ASSERT FAILED at (%s:%d): %s\n", __FILE__, __LINE__, #x); \
+      ZX_PANIC("ASSERT FAILED at (%s:%d): %s", __FILE__, __LINE__, #x); \
     }                                                                     \
   } while (0)
 
