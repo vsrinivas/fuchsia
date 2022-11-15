@@ -3,45 +3,47 @@
 // found in the LICENSE file.
 
 //! Implements a DHCPv6 client.
-use {
-    anyhow::{Context as _, Result},
-    async_utils::futures::{FutureExt as _, ReplaceValue},
-    dhcpv6_core,
-    dns_server_watcher::DEFAULT_DNS_PORT,
-    fidl::endpoints::ServerEnd,
-    fidl_fuchsia_net as fnet,
-    fidl_fuchsia_net_dhcpv6::{
-        AddressConfig, ClientConfig, ClientMarker, ClientRequest, ClientRequestStream,
-        ClientWatchAddressResponder, ClientWatchServersResponder, InformationConfig,
-        NewClientParams, RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS,
-        RELAY_AGENT_AND_SERVER_PORT,
+use std::{
+    collections::{
+        hash_map::{DefaultHasher, Entry},
+        HashMap, HashSet,
     },
-    fidl_fuchsia_net_ext as fnetext, fidl_fuchsia_net_name as fnetname, fuchsia_async as fasync,
-    fuchsia_zircon as zx,
-    futures::{
-        future::{AbortHandle, Abortable, Aborted},
-        select, stream,
-        stream::futures_unordered::FuturesUnordered,
-        Future, FutureExt as _, StreamExt as _, TryStreamExt as _,
-    },
-    net_types::{ip::Ipv6Addr, MulticastAddress as _},
-    packet::ParsablePacket,
-    packet_formats_dhcp::v6,
-    rand::{rngs::StdRng, SeedableRng},
-    std::{
-        collections::{
-            hash_map::{DefaultHasher, Entry},
-            HashMap, HashSet,
-        },
-        convert::TryFrom,
-        hash::{Hash, Hasher},
-        net::{IpAddr, SocketAddr},
-        num::{NonZeroU8, TryFromIntError},
-        str::FromStr as _,
-        time::{Duration, Instant},
-    },
-    tracing::warn,
+    convert::TryFrom,
+    hash::{Hash, Hasher},
+    net::{IpAddr, SocketAddr},
+    num::{NonZeroU8, TryFromIntError},
+    str::FromStr as _,
+    time::{Duration, Instant},
 };
+
+use fidl::endpoints::ServerEnd;
+use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_dhcpv6::{
+    AddressConfig, ClientConfig, ClientMarker, ClientRequest, ClientRequestStream,
+    ClientWatchAddressResponder, ClientWatchServersResponder, InformationConfig, NewClientParams,
+    RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS, RELAY_AGENT_AND_SERVER_PORT,
+};
+use fidl_fuchsia_net_ext as fnet_ext;
+use fidl_fuchsia_net_name as fnet_name;
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
+use futures::{
+    future::{AbortHandle, Abortable, Aborted},
+    select, stream,
+    stream::futures_unordered::FuturesUnordered,
+    Future, FutureExt as _, StreamExt as _, TryStreamExt as _,
+};
+
+use anyhow::{Context as _, Result};
+use async_utils::futures::{FutureExt as _, ReplaceValue};
+use dns_server_watcher::DEFAULT_DNS_PORT;
+use net_types::{ip::Ipv6Addr, MulticastAddress as _};
+use packet::ParsablePacket;
+use packet_formats_dhcp::v6;
+use rand::{rngs::StdRng, SeedableRng};
+use tracing::warn;
+
+use dhcpv6_core;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ClientError {
@@ -303,19 +305,19 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                 let zone_index =
                     if is_unicast_link_local_strict(&address) { self.interface_id } else { 0 };
 
-                fnetname::DnsServer_ {
+                fnet_name::DnsServer_ {
                     address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
                         address,
                         zone_index,
                         port: DEFAULT_DNS_PORT,
                     })),
-                    source: Some(fnetname::DnsServerSource::Dhcpv6(
-                        fnetname::Dhcpv6DnsServerSource {
+                    source: Some(fnet_name::DnsServerSource::Dhcpv6(
+                        fnet_name::Dhcpv6DnsServerSource {
                             source_interface: Some(self.interface_id),
-                            ..fnetname::Dhcpv6DnsServerSource::EMPTY
+                            ..fnet_name::Dhcpv6DnsServerSource::EMPTY
                         },
                     )),
-                    ..fnetname::DnsServer_::EMPTY
+                    ..fnet_name::DnsServer_::EMPTY
                 }
             }))
             // The channel will be closed on error, so return an error to stop the client.
@@ -517,7 +519,7 @@ pub(crate) async fn serve_client(
                 .context("closing request channel with epitaph");
         }
 
-        let fnetext::SocketAddress(addr) = fnet::SocketAddress::Ipv6(address).into();
+        let fnet_ext::SocketAddress(addr) = fnet::SocketAddress::Ipv6(address).into();
         let servers_addr = IpAddr::from_str(RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS)
             .with_context(|| {
                 format!(
@@ -551,21 +553,22 @@ pub(crate) async fn serve_client(
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        assert_matches::assert_matches,
-        fidl::endpoints::{
-            create_proxy, create_proxy_and_stream, create_request_stream, ClientEnd,
-        },
-        fidl_fuchsia_net_dhcpv6::{ClientMarker, DEFAULT_CLIENT_PORT},
-        fuchsia_async as fasync,
-        futures::{channel::mpsc, join},
-        net_declare::{
-            fidl_ip_v6, fidl_socket_addr, fidl_socket_addr_v6, net_ip_v6, std_socket_addr,
-        },
-        packet::serialize::InnerPacketBuilder,
-        std::{collections::HashSet, task::Poll},
+    use std::{collections::HashSet, task::Poll};
+
+    use fidl::endpoints::{
+        create_proxy, create_proxy_and_stream, create_request_stream, ClientEnd,
     };
+    use fidl_fuchsia_net_dhcpv6::{ClientMarker, DEFAULT_CLIENT_PORT};
+    use fuchsia_async as fasync;
+    use futures::{channel::mpsc, join};
+
+    use assert_matches::assert_matches;
+    use net_declare::{
+        fidl_ip_v6, fidl_socket_addr, fidl_socket_addr_v6, net_ip_v6, std_socket_addr,
+    };
+    use packet::serialize::InnerPacketBuilder;
+
+    use super::*;
 
     /// Creates a test socket bound to an ephemeral port on localhost.
     fn create_test_socket() -> (fasync::net::UdpSocket, SocketAddr) {
@@ -880,18 +883,18 @@ mod tests {
         address: fnet::Ipv6Address,
         source_interface: u64,
         zone_index: u64,
-    ) -> fnetname::DnsServer_ {
-        fnetname::DnsServer_ {
+    ) -> fnet_name::DnsServer_ {
+        fnet_name::DnsServer_ {
             address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
                 address,
                 zone_index,
                 port: DEFAULT_DNS_PORT,
             })),
-            source: Some(fnetname::DnsServerSource::Dhcpv6(fnetname::Dhcpv6DnsServerSource {
+            source: Some(fnet_name::DnsServerSource::Dhcpv6(fnet_name::Dhcpv6DnsServerSource {
                 source_interface: Some(source_interface),
-                ..fnetname::Dhcpv6DnsServerSource::EMPTY
+                ..fnet_name::Dhcpv6DnsServerSource::EMPTY
             })),
-            ..fnetname::DnsServer_::EMPTY
+            ..fnet_name::DnsServer_::EMPTY
         }
     }
 
@@ -1094,7 +1097,7 @@ mod tests {
                 ))
                 .expect("failed to send test reply");
             build_test_fut!(test_fut);
-            let want_servers = Vec::<fnetname::DnsServer_>::new();
+            let want_servers = Vec::<fnet_name::DnsServer_>::new();
             assert_matches!(
                 exec.run_until_stalled(&mut test_fut),
                 Poll::Ready(Ok(servers)) if servers == want_servers
@@ -1361,15 +1364,15 @@ mod tests {
                 .dns_responder
                 .take()
                 .expect("test client did not get a channel responder")
-                .send(&mut std::iter::once(fnetname::DnsServer_ {
+                .send(&mut std::iter::once(fnet_name::DnsServer_ {
                     address: Some(fidl_socket_addr!("[fe01::2:3]:42")),
-                    source: Some(fnetname::DnsServerSource::Dhcpv6(
-                        fnetname::Dhcpv6DnsServerSource {
+                    source: Some(fnet_name::DnsServerSource::Dhcpv6(
+                        fnet_name::Dhcpv6DnsServerSource {
                             source_interface: Some(42),
-                            ..fnetname::Dhcpv6DnsServerSource::EMPTY
+                            ..fnet_name::Dhcpv6DnsServerSource::EMPTY
                         },
                     )),
-                    ..fnetname::DnsServer_::EMPTY
+                    ..fnet_name::DnsServer_::EMPTY
                 }))
                 .expect("failed to send response on test channel");
         };
@@ -1377,13 +1380,15 @@ mod tests {
         let servers = watcher_res.expect("failed to watch servers");
         assert_eq!(
             servers,
-            vec![fnetname::DnsServer_ {
+            vec![fnet_name::DnsServer_ {
                 address: Some(fidl_socket_addr!("[fe01::2:3]:42")),
-                source: Some(fnetname::DnsServerSource::Dhcpv6(fnetname::Dhcpv6DnsServerSource {
-                    source_interface: Some(42),
-                    ..fnetname::Dhcpv6DnsServerSource::EMPTY
-                },)),
-                ..fnetname::DnsServer_::EMPTY
+                source: Some(fnet_name::DnsServerSource::Dhcpv6(
+                    fnet_name::Dhcpv6DnsServerSource {
+                        source_interface: Some(42),
+                        ..fnet_name::Dhcpv6DnsServerSource::EMPTY
+                    },
+                )),
+                ..fnet_name::DnsServer_::EMPTY
             }]
         );
 

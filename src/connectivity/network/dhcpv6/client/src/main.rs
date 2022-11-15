@@ -5,13 +5,12 @@
 mod client;
 mod provider;
 
-use {
-    anyhow::{Error, Result},
-    fidl_fuchsia_net_dhcpv6::ClientProviderRequestStream,
-    fuchsia_component::server::{ServiceFs, ServiceFsDir},
-    futures::{future, StreamExt as _, TryStreamExt as _},
-    tracing::info,
-};
+use fidl_fuchsia_net_dhcpv6::ClientProviderRequestStream;
+use fuchsia_component::server::{ServiceFs, ServiceFsDir};
+use futures::{future, StreamExt as _, TryStreamExt as _};
+
+use anyhow::{Error, Result};
+use tracing::info;
 
 enum IncomingService {
     ClientProvider(ClientProviderRequestStream),

@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::Result,
-    fidl::endpoints::ServerEnd,
-    fidl_fuchsia_net_dhcpv6::{
-        ClientMarker, ClientProviderRequest, ClientProviderRequestStream, NewClientParams,
-    },
-    futures::{Future, StreamExt as _},
-    tracing::{error, warn},
+use fidl::endpoints::ServerEnd;
+use fidl_fuchsia_net_dhcpv6::{
+    ClientMarker, ClientProviderRequest, ClientProviderRequestStream, NewClientParams,
 };
+use futures::{Future, StreamExt as _};
+
+use anyhow::Result;
+use tracing::{error, warn};
 
 /// Handles client provider requests from the input stream.
 pub(crate) async fn run_client_provider<Fut, F>(
@@ -41,16 +40,16 @@ pub(crate) async fn run_client_provider<Fut, F>(
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        anyhow::{anyhow, Error},
-        assert_matches::assert_matches,
-        fidl::endpoints::create_endpoints,
-        fidl_fuchsia_net_dhcpv6::{ClientConfig, ClientProviderMarker},
-        fuchsia_async as fasync,
-        futures::join,
-        net_declare::fidl_socket_addr_v6,
-    };
+    use fidl::endpoints::create_endpoints;
+    use fidl_fuchsia_net_dhcpv6::{ClientConfig, ClientProviderMarker};
+    use fuchsia_async as fasync;
+    use futures::join;
+
+    use anyhow::{anyhow, Error};
+    use assert_matches::assert_matches;
+    use net_declare::fidl_socket_addr_v6;
+
+    use super::*;
 
     async fn serve_client(
         _param: NewClientParams,
