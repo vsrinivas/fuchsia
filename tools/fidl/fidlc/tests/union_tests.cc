@@ -284,25 +284,14 @@ type Foo = flexible union {
 }
 
 TEST(UnionTests, BadEmptyStrictUnion) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = strict union {};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0086-a.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrStrictUnionMustHaveNonReservedMember);
 }
 
 TEST(UnionTests, BadOnlyReservedStrictUnion) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = strict union {
-  2: reserved;
-  1: reserved;
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0086-b.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrStrictUnionMustHaveNonReservedMember);
 }
 

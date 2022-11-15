@@ -191,7 +191,7 @@ constexpr ErrorDef<84> ErrPayloadStructHasDefaultMembers(
     "default values are not allowed on members of request/response structs");
 constexpr ErrorDef<85, std::string_view, SourceSpan> ErrDuplicateServiceMemberName(
     "multiple service members named '{}'; previous was at {}");
-constexpr UndocumentedErrorDef<86> ErrStrictUnionMustHaveNonReservedMember(
+constexpr ErrorDef<86> ErrStrictUnionMustHaveNonReservedMember(
     "strict unions must have at least one non-reserved member");
 constexpr ErrorDef<87, std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateServiceMemberNameCanonical(
