@@ -198,7 +198,7 @@ If you need additional help debugging at this step, please reach out to fuchsia-
 If the tests pass, send your changes for review. After submission the tests willji
 automatically be included in the next CTF release when the next milestone branch
 is cut.
-q
+
 ## Testing experimental FIDL APIs
 
 You can follow this guide to write a CTF test for a FIDL API that is not in the partner
