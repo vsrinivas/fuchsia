@@ -9,12 +9,12 @@
 #include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;

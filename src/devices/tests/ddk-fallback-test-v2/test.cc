@@ -7,9 +7,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/component/incoming/cpp/service_client.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 
 #include <gtest/gtest.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 TEST(DdkFirmwaretest, DriverWasLoaded) {
   fbl::unique_fd dev(open("/dev", O_RDONLY));

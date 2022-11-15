@@ -10,6 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/driver_test_realm/realm_builder/cpp/lib.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -20,7 +21,6 @@
 #include <zircon/syscalls.h>
 
 #include <hid/boot.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
 namespace {

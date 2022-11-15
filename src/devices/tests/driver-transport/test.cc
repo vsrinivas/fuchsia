@@ -11,7 +11,7 @@
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 
-#include "sdk/lib/device-watcher/cpp/device-watcher.h"
+#include "lib/device-watcher/cpp/device-watcher.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 using fuchsia_driver_transport_test::TestDevice;

@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fidl/fuchsia.hardware.ramdisk/cpp/wire.h>
 #include <lib/component/incoming/cpp/service_client.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/watcher.h>
@@ -46,7 +47,6 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 #include "src/lib/storage/block_client/cpp/client.h"
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"

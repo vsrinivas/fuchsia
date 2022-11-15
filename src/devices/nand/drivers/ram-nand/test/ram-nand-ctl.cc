@@ -6,6 +6,7 @@
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <lib/component/incoming/cpp/service_client.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 #include <stdio.h>
@@ -16,7 +17,6 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramnand.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
 namespace {

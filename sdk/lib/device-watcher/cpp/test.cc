@@ -6,6 +6,7 @@
 #include <fidl/fuchsia.device/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <zircon/time.h>
@@ -13,7 +14,6 @@
 #include <memory>
 
 #include <fbl/ref_ptr.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
 #include "lib/async-loop/loop.h"

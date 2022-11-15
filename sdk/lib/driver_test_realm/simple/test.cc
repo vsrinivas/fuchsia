@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 
 #include <gtest/gtest.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 TEST(SimpleDriverTestRealmTest, DriversExist) {
   fbl::unique_fd dev(open("/dev", O_RDONLY));

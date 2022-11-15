@@ -7,11 +7,11 @@
 #include <fuchsia/driver/development/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/driver.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <gtest/gtest.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
 

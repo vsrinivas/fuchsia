@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/fdio/directory.h>
 
 #include <gtest/gtest.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 TEST(AutobindTest, DriversExist) {
   fbl::unique_fd out;

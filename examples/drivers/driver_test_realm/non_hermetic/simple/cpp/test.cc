@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/device-watcher/cpp/device-watcher.h>
+
 #include <gtest/gtest.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 // [START example]
 TEST(SimpleDriverTestRealmTest, DriversExist) {

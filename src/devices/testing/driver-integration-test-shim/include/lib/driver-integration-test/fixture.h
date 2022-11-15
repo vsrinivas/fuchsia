@@ -11,6 +11,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 
 #include <vector>
 
@@ -18,7 +19,6 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 #include "sdk/lib/driver_test_realm/realm_builder/cpp/lib.h"
 

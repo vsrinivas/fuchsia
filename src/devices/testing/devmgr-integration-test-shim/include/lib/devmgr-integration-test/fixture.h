@@ -10,10 +10,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 
 #include <fbl/unique_fd.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 namespace devmgr_launcher {
 

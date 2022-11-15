@@ -3,17 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/cpp/sdk_shared_library.gni")
+import("//build/cpp/sdk_source_set.gni")
 import("//build/test.gni")
 
-sdk_shared_library("cpp") {
-  # TODO(https://fxbug.dev/89042): C++ does not have a stable API and this library
-  # should be an sdk_source_set once LLCPP is in the SDK.
+sdk_source_set("cpp") {
   category = "experimental"
   sdk_name = "device-watcher"
-  output_name = "device-watcher"
-
-  libcxx_linkage = "static"
+  include_base = "//sdk"
   sources = [
     "device-watcher.cc",
     "device-watcher.h",

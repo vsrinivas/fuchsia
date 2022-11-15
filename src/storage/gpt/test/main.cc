@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <limits.h>
 #include <time.h>
 #include <zircon/assert.h>
 
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
 bool gUseRamDisk = true;

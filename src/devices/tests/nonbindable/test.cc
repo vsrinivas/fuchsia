@@ -5,10 +5,10 @@
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/component/incoming/cpp/service_client.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/fdio/directory.h>
 
 #include <gtest/gtest.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 TEST(NonbindableTest, DriversExist) {
   {

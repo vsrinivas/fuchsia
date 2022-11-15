@@ -4,11 +4,11 @@
 
 #include <fcntl.h>
 #include <fuchsia/driver/test/cpp/fidl.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/driver_test_realm/realm_builder/cpp/lib.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 
 #include <fbl/unique_fd.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 #include "lib/fdio/fd.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"

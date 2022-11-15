@@ -9,14 +9,13 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fuchsia/driver/test/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/driver_test_realm/realm_builder/cpp/lib.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/global.h>
-
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 #include "lib/sys/component/cpp/testing/realm_builder.h"
 
@@ -129,8 +128,8 @@ zx_status_t IsolatedDevmgr::Create(Args* args, IsolatedDevmgr* out) {
   }
 
   fbl::unique_fd platform_fd;
-  status = device_watcher::RecursiveWaitForFile(
-      devmgr.devfs_root_, "sys/platform/pt/test-board", &platform_fd);
+  status = device_watcher::RecursiveWaitForFile(devmgr.devfs_root_, "sys/platform/pt/test-board",
+                                                &platform_fd);
   if (status != ZX_OK) {
     return status;
   }

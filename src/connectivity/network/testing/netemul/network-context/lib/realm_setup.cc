@@ -6,9 +6,8 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/sys/component/cpp/service_client.h>
-
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 namespace netemul {
 

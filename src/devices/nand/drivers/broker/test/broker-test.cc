@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.nand/cpp/wire.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fidl/cpp/wire/channel.h>
@@ -20,7 +21,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
 #include "parent.h"

@@ -4,10 +4,9 @@
 
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <lib/component/incoming/cpp/service_client.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
-
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 int main() {
   syslog::SetTags({"platform_driver_test_realm"});

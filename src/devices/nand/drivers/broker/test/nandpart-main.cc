@@ -4,11 +4,11 @@
 
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <lib/component/incoming/cpp/service_client.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/fdio/namespace.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/status.h>
 
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
 #include "parent.h"

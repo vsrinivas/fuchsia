@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -25,7 +26,6 @@
 #include <fbl/unique_fd.h>
 #include <gpt/c/gpt.h>
 #include <gpt/guid.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/base/log-sink.h>
 #include <zxtest/zxtest.h>
 
