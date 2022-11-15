@@ -9,5 +9,5 @@ declare_args() {
   #
   # TODO(fxbug.dev/104963): Remove the opt-out once the Tiger Lake display
   # driver is stable enough.
-  enable_tiger_lake_display_driver = false
+  enable_tiger_lake_display_driver = true
 }
