@@ -33,7 +33,7 @@ template("host_test") {
   assert(defined(invoker.binary_path), "Requires a binary_path")
   assert(
       is_host,
-      "host_test should only be used on host, to fix this, wrap you target with `if (is_host) { ... }`")
+      "host_test should only be used on host, to fix this, wrap your target with `if (is_host) { ... }`")
 
   _test_path = invoker.binary_path
 
