@@ -237,7 +237,7 @@ test("blobfs_superblock") {
   sources = [ "superblock_test.cc" ]
   deps = [
     ":blobfs_integration_fixtures",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp",
     "//src/storage/blobfs",

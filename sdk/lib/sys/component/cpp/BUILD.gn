@@ -13,7 +13,6 @@ sdk_source_set("cpp") {
     "handlers.h",
     "outgoing_directory.cc",
     "outgoing_directory.h",
-    "service_client.h",
     "structured_config.h",
   ]
 

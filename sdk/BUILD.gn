@@ -609,6 +609,7 @@ sdk("driver") {
     ":bind",
     ":driver_fidl",
     ":driver_host_tools",
+    "//sdk/lib/component/incoming/cpp:cpp_sdk",
     "//sdk/lib/driver/compat/cpp:cpp_sdk",
     "//sdk/lib/driver/component:driver_component",
     "//sdk/lib/driver/component/cpp:cpp_sdk",
