@@ -33,6 +33,8 @@
 #include <unistd.h>
 #include <utime.h>
 #include <zircon/device/block.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <algorithm>
@@ -61,7 +63,6 @@
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_check.h"
 #include "src/storage/minfs/format.h"
-#include "zircon/errors.h"
 
 #define FVM_DRIVER_LIB "fvm.so"
 #define STRLEN(s) (sizeof(s) / sizeof((s)[0]))
@@ -306,13 +307,14 @@ class VmoBuf;
 class VmoClient : public fbl::RefCounted<VmoClient> {
  public:
   explicit VmoClient(int fd);
-  ~VmoClient();
+  ~VmoClient() = default;
 
   void CheckWrite(VmoBuf& vbuf, size_t buf_off, size_t dev_off, size_t len);
   void CheckRead(VmoBuf& vbuf, size_t buf_off, size_t dev_off, size_t len);
   void Transaction(block_fifo_request_t* requests, size_t count) {
     ASSERT_OK(client_->Transaction(requests, count));
   }
+  zx::result<storage::Vmoid> RegisterVmo(const zx::vmo& vmo) { return client_->RegisterVmo(vmo); }
 
   int fd() const { return fd_; }
   groupid_t group() { return 0; }
@@ -329,23 +331,18 @@ class VmoBuf {
     buf_ = std::make_unique<uint8_t[]>(size);
 
     ASSERT_EQ(zx::vmo::create(size, 0, &vmo_), ZX_OK);
-    zx::vmo xfer_vmo;
-    ASSERT_EQ(vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-
-    fdio_cpp::UnownedFdioCaller disk_connection(client_->fd());
-    auto res = fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())
-                   ->AttachVmo(std::move(xfer_vmo));
-    ASSERT_EQ(res.status(), ZX_OK);
-    ASSERT_EQ(res.value().status, ZX_OK);
-    vmoid_ = res.value().vmoid->id;
+    zx::result vmoid = client_->RegisterVmo(vmo_);
+    ASSERT_OK(vmoid);
+    vmoid_ = std::move(vmoid.value());
   }
 
   ~VmoBuf() {
     if (vmo_.is_valid()) {
-      block_fifo_request_t request;
-      request.group = client_->group();
-      request.vmoid = vmoid_;
-      request.opcode = BLOCKIO_CLOSE_VMO;
+      block_fifo_request_t request = {
+          .opcode = BLOCKIO_CLOSE_VMO,
+          .group = client_->group(),
+          .vmoid = vmoid_.TakeId(),
+      };
       client_->Transaction(&request, 1);
     }
   }
@@ -356,30 +353,38 @@ class VmoBuf {
   fbl::RefPtr<VmoClient> client_;
   zx::vmo vmo_;
   std::unique_ptr<uint8_t[]> buf_;
-  vmoid_t vmoid_;
+  storage::Vmoid vmoid_;
 };
 
 VmoClient::VmoClient(int fd) : fd_(fd) {
   fdio_cpp::UnownedFdioCaller disk_connection(fd);
 
-  auto fifo_or =
-      fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->GetFifo();
-  ASSERT_EQ(fifo_or.status(), ZX_OK);
-  ASSERT_EQ(fifo_or.value().status, ZX_OK);
+  {
+    const fidl::WireResult result =
+        fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    ASSERT_NE(response.info, nullptr);
+    block_size_ = response.info->block_size;
+  }
 
-  auto info_res =
-      fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
-  ASSERT_EQ(info_res.status(), ZX_OK);
-  ASSERT_EQ(info_res.value().status, ZX_OK);
-  block_size_ = info_res.value().info->block_size;
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();
+  ASSERT_OK(endpoints);
+  auto& [session, server] = endpoints.value();
 
-  client_ = std::make_unique<block_client::Client>(std::move(fifo_or.value().fifo));
-}
+  const fidl::WireResult result =
+      fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())
+          ->OpenSession(std::move(server));
+  ASSERT_OK(result.status());
 
-VmoClient::~VmoClient() {
-  fdio_cpp::UnownedFdioCaller disk_connection(fd());
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->CloseFifo();
+  const fidl::WireResult fifo_result = fidl::WireCall(session)->GetFifo();
+  ASSERT_OK(fifo_result.status());
+  const fit::result fifo_response = fifo_result.value();
+  ASSERT_TRUE(fifo_response.is_ok(), "%s", zx_status_get_string(fifo_response.error_value()));
+
+  client_ = std::make_unique<block_client::Client>(std::move(session),
+                                                   std::move(fifo_response.value()->fifo));
 }
 
 void VmoClient::CheckWrite(VmoBuf& vbuf, size_t buf_off, size_t dev_off, size_t len) {
@@ -389,18 +394,19 @@ void VmoClient::CheckWrite(VmoBuf& vbuf, size_t buf_off, size_t dev_off, size_t 
 
   // Write to the registered VMO
   ASSERT_EQ(vbuf.vmo_.write(&vbuf.buf_[buf_off], buf_off, len), ZX_OK);
-
-  // Write to the block device
-  block_fifo_request_t request;
-  request.group = group();
-  request.vmoid = vbuf.vmoid_;
-  request.opcode = BLOCKIO_WRITE;
   ASSERT_EQ(len % block_size_, 0);
   ASSERT_EQ(buf_off % block_size_, 0);
   ASSERT_EQ(dev_off % block_size_, 0);
-  request.length = static_cast<uint32_t>(len / block_size_);
-  request.vmo_offset = buf_off / block_size_;
-  request.dev_offset = dev_off / block_size_;
+
+  // Write to the block device
+  block_fifo_request_t request = {
+      .opcode = BLOCKIO_WRITE,
+      .group = group(),
+      .vmoid = vbuf.vmoid_.get(),
+      .length = static_cast<uint32_t>(len / block_size_),
+      .vmo_offset = buf_off / block_size_,
+      .dev_offset = dev_off / block_size_,
+  };
   Transaction(&request, 1);
 }
 
@@ -411,17 +417,19 @@ void VmoClient::CheckRead(VmoBuf& vbuf, size_t buf_off, size_t dev_off, size_t l
   ASSERT_TRUE(ac.check());
   memset(out.get(), 0, len);
 
-  // Read from the block device
-  block_fifo_request_t request;
-  request.group = group();
-  request.vmoid = vbuf.vmoid_;
-  request.opcode = BLOCKIO_READ;
   ASSERT_EQ(len % block_size_, 0);
   ASSERT_EQ(buf_off % block_size_, 0);
   ASSERT_EQ(dev_off % block_size_, 0);
-  request.length = static_cast<uint32_t>(len / block_size_);
-  request.vmo_offset = buf_off / block_size_;
-  request.dev_offset = dev_off / block_size_;
+
+  // Read from the block device
+  block_fifo_request_t request = {
+      .opcode = BLOCKIO_READ,
+      .group = group(),
+      .vmoid = vbuf.vmoid_.get(),
+      .length = static_cast<uint32_t>(len / block_size_),
+      .vmo_offset = buf_off / block_size_,
+      .dev_offset = dev_off / block_size_,
+  };
   Transaction(&request, 1);
 
   // Read from the registered VMO

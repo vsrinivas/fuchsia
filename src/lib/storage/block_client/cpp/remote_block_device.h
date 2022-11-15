@@ -32,7 +32,6 @@ class RemoteBlockDevice final : public BlockDevice {
   RemoteBlockDevice(RemoteBlockDevice&&) = delete;
   RemoteBlockDevice& operator=(const RemoteBlockDevice&) = delete;
   RemoteBlockDevice(const RemoteBlockDevice&) = delete;
-  ~RemoteBlockDevice() override;
 
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
   zx::result<std::string> GetDevicePath() const final;
@@ -48,7 +47,8 @@ class RemoteBlockDevice final : public BlockDevice {
   zx_status_t VolumeShrink(uint64_t offset, uint64_t length) final;
 
  private:
-  RemoteBlockDevice(fidl::ClientEnd<fuchsia_hardware_block::Block> device, zx::fifo fifo);
+  RemoteBlockDevice(fidl::ClientEnd<fuchsia_hardware_block::Block> device,
+                    fidl::ClientEnd<fuchsia_hardware_block::Session> session, zx::fifo fifo);
 
   const fidl::ClientEnd<fuchsia_hardware_block::Block> device_;
   block_client::Client fifo_client_;

@@ -19,23 +19,21 @@ class Vmoid {
   explicit Vmoid(vmoid_t vmoid) : vmoid_(vmoid) {}
 
   // Movable but not copyable.
-  Vmoid(Vmoid& other) = delete;
-  Vmoid& operator =(Vmoid& other) = delete;
+  Vmoid(const Vmoid& other) = delete;
+  Vmoid& operator=(const Vmoid& other) = delete;
 
-  Vmoid(Vmoid&& other) {
+  Vmoid(Vmoid&& other) noexcept {
     vmoid_ = other.vmoid_;
     other.vmoid_ = BLOCK_VMOID_INVALID;
   }
-  Vmoid& operator =(Vmoid&& other) {
+  Vmoid& operator=(Vmoid&& other) noexcept {
     ZX_DEBUG_ASSERT(vmoid_ == BLOCK_VMOID_INVALID);
     vmoid_ = other.vmoid_;
     other.vmoid_ = 0;
     return *this;
   }
 
-  ~Vmoid() {
-    ZX_DEBUG_ASSERT_MSG(vmoid_ == BLOCK_VMOID_INVALID, "%u", vmoid_);
-  }
+  ~Vmoid() { ZX_DEBUG_ASSERT_MSG(vmoid_ == BLOCK_VMOID_INVALID, "%u", vmoid_); }
 
   vmoid_t get() const { return vmoid_; }
   bool IsAttached() const { return vmoid_ != BLOCK_VMOID_INVALID; }

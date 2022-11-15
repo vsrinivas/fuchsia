@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_MANAGER_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_CORE_MANAGER_H_
 
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
@@ -18,30 +19,31 @@
 
 // Manager controls the state of a background thread (or threads) servicing Fifo
 // requests.
-class Manager {
+class Manager : public fidl::WireServer<fuchsia_hardware_block::Session> {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Manager);
 
   Manager();
-  ~Manager();
+  ~Manager() override;
 
   // Launches the Fifo server in a background thread.
   //
   // Returns an error if the block server cannot be created.
   // Returns an error if the Fifo server is already running.
-  zx_status_t StartServer(zx_device_t* device, ddk::BlockProtocolClient* protocol,
-                          zx::fifo* out_fifo);
+  zx_status_t StartServer(zx_device_t* device, ddk::BlockProtocolClient* protocol);
 
   // Ensures the FIFO server has terminated.
   //
   // When this function returns, it is guaranteed that the next call to |StartServer()|
   // won't see an already running Fifo server.
-  zx_status_t CloseFifoServer();
+  void CloseFifoServer();
 
-  // Attaches a VMO to the currently executing server, if one is running.
-  //
-  // Returns an error if a server is not currently running.
-  zx_status_t AttachVmo(zx::vmo vmo, vmoid_t* out_vmoid);
+  zx::result<zx::fifo> GetFifo();
+  zx::result<vmoid_t> AttachVmo(zx::vmo vmo);
+
+  void GetFifo(GetFifoCompleter::Sync& completer) override;
+  void AttachVmo(AttachVmoRequestView request, AttachVmoCompleter::Sync& completer) override;
+  void Close(CloseCompleter::Sync& completer) override;
 
  private:
   enum class ThreadState : uint32_t {

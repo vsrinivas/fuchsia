@@ -333,18 +333,35 @@ impl BlockServer {
             VolumeAndNodeRequest::GetStats { clear: _, responder } => {
                 responder.send(zx::sys::ZX_OK, None)?;
             }
-            VolumeAndNodeRequest::GetFifo { responder } => {
-                responder.send(zx::sys::ZX_OK, self.maybe_server_fifo.lock().unwrap().take())?;
-            }
-            VolumeAndNodeRequest::AttachVmo { vmo, responder } => match self.get_vmo_id(vmo) {
-                Some(vmo_id) => {
-                    responder.send(zx::sys::ZX_OK, Some(&mut block::VmoId { id: vmo_id }))?
-                }
-                None => responder.send(zx::sys::ZX_ERR_NO_RESOURCES, None)?,
-            },
-            // TODO(fxbug.dev/89873): close fifo
-            VolumeAndNodeRequest::CloseFifo { responder } => {
-                responder.send(zx::sys::ZX_OK)?;
+            VolumeAndNodeRequest::OpenSession { session, control_handle: _ } => {
+                let stream = session.into_stream()?;
+                let () = stream
+                    .try_for_each(|request| async {
+                        let () = match request {
+                            block::SessionRequest::GetFifo { responder } => {
+                                match self.maybe_server_fifo.lock().unwrap().take() {
+                                    Some(fifo) => responder.send(&mut Ok(fifo))?,
+                                    None => responder
+                                        .send(&mut Err(zx::Status::NO_RESOURCES.into_raw()))?,
+                                }
+                            }
+                            block::SessionRequest::AttachVmo { vmo, responder } => {
+                                match self.get_vmo_id(vmo) {
+                                    Some(vmo_id) => {
+                                        responder.send(&mut Ok(block::VmoId { id: vmo_id }))?
+                                    }
+                                    None => responder
+                                        .send(&mut Err(zx::Status::NO_RESOURCES.into_raw()))?,
+                                }
+                            }
+                            // TODO(fxbug.dev/89873): close fifo
+                            block::SessionRequest::Close { responder } => {
+                                responder.send(&mut Ok(()))?
+                            }
+                        };
+                        Ok(())
+                    })
+                    .await?;
             }
             // TODO(fxbug.dev/89873)
             VolumeAndNodeRequest::RebindDevice { responder } => {
@@ -555,7 +572,7 @@ impl BlockServer {
         server
             .into_stream()?
             .map_err(|e| e.into())
-            .try_for_each(|request| self.handle_request(request))
+            .try_for_each_concurrent(None, |request| self.handle_request(request))
             .await?;
         Ok(())
     }

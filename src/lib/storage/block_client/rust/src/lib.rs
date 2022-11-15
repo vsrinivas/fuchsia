@@ -529,7 +529,7 @@ impl Drop for Common {
 
 /// RemoteBlockClient is a BlockClient that communicates with a real block device over FIDL.
 pub struct RemoteBlockClient {
-    remote: block::BlockProxy,
+    session: block::SessionProxy,
     common: Common,
 }
 
@@ -538,22 +538,24 @@ impl RemoteBlockClient {
     pub async fn new(remote: block::BlockProxy) -> Result<Self, Error> {
         let (status, maybe_info) = remote.get_info().await?;
         let info = maybe_info.ok_or(zx::Status::from_raw(status))?;
-        let (status, maybe_fifo) = remote.get_fifo().await?;
-        let fifo = fasync::Fifo::from_fifo(maybe_fifo.ok_or(zx::Status::from_raw(status))?)?;
+        let (session, server) = fidl::endpoints::create_proxy()?;
+        let () = remote.open_session(server)?;
+        let fifo = session.get_fifo().await?.map_err(zx::Status::from_raw)?;
+        let fifo = fasync::Fifo::from_fifo(fifo)?;
         let temp_vmo = zx::Vmo::create(TEMP_VMO_SIZE as u64)?;
-        let (status, maybe_vmo_id) =
-            remote.attach_vmo(temp_vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?).await?;
-        let vmo_id = VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id);
-        Ok(RemoteBlockClient { remote, common: Common::new(fifo, &info, temp_vmo, vmo_id) })
+        let dup = temp_vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
+        let vmo_id = session.attach_vmo(dup).await?.map_err(zx::Status::from_raw)?;
+        let vmo_id = VmoId::new(vmo_id.id);
+        Ok(RemoteBlockClient { session, common: Common::new(fifo, &info, temp_vmo, vmo_id) })
     }
 }
 
 #[async_trait]
 impl BlockClient for RemoteBlockClient {
     async fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error> {
-        let (status, maybe_vmo_id) =
-            self.remote.attach_vmo(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?).await?;
-        Ok(VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id))
+        let dup = vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
+        let vmo_id = self.session.attach_vmo(dup).await?.map_err(zx::Status::from_raw)?;
+        Ok(VmoId::new(vmo_id.id))
     }
 
     async fn detach_vmo(&self, vmo_id: VmoId) -> Result<(), Error> {
@@ -584,7 +586,7 @@ impl BlockClient for RemoteBlockClient {
         // It's OK to leak the VMO id because the server will dump all VMOs when the fifo is torn
         // down.
         self.common.temp_vmo_id.take().into_id();
-        zx::Status::ok(self.remote.close_fifo().await?)?;
+        let () = self.session.close().await?.map_err(zx::Status::from_raw)?;
         Ok(())
     }
 
@@ -602,7 +604,7 @@ impl BlockClient for RemoteBlockClient {
 }
 
 pub struct RemoteBlockClientSync {
-    remote: block::BlockSynchronousProxy,
+    session: block::SessionSynchronousProxy,
     common: Common,
 }
 
@@ -614,12 +616,14 @@ impl RemoteBlockClientSync {
         let remote = block::BlockSynchronousProxy::new(client_end.into_channel());
         let (status, maybe_info) = remote.get_info(zx::Time::INFINITE)?;
         let info = maybe_info.ok_or(zx::Status::from_raw(status))?;
-        let (status, maybe_fifo) = remote.get_fifo(zx::Time::INFINITE)?;
-        let fifo = maybe_fifo.ok_or(zx::Status::from_raw(status))?;
+        let (client, server) = fidl::endpoints::create_endpoints()?;
+        let () = remote.open_session(server)?;
+        let session = block::SessionSynchronousProxy::new(client.into_channel());
+        let fifo = session.get_fifo(zx::Time::INFINITE)?.map_err(zx::Status::from_raw)?;
         let temp_vmo = zx::Vmo::create(TEMP_VMO_SIZE as u64)?;
-        let (status, maybe_vmo_id) = remote
-            .attach_vmo(temp_vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, zx::Time::INFINITE)?;
-        let vmo_id = VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id);
+        let dup = temp_vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
+        let vmo_id = session.attach_vmo(dup, zx::Time::INFINITE)?.map_err(zx::Status::from_raw)?;
+        let vmo_id = VmoId::new(vmo_id.id);
 
         // The fifo needs to be instantiated from the thread that has the executor as that's where
         // the fifo registers for notifications to be delivered.
@@ -630,7 +634,7 @@ impl RemoteBlockClientSync {
                 Ok(fifo) => {
                     let common = Common::new(fifo, &info, temp_vmo, vmo_id);
                     let fifo_state = common.fifo_state.clone();
-                    let _ = sender.send(Ok(RemoteBlockClientSync { remote, common }));
+                    let _ = sender.send(Ok(RemoteBlockClientSync { session, common }));
                     executor.run_singlethreaded(FifoPoller { fifo_state });
                 }
                 Err(e) => {
@@ -642,10 +646,10 @@ impl RemoteBlockClientSync {
     }
 
     pub fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error> {
-        let (status, maybe_vmo_id) = self
-            .remote
-            .attach_vmo(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, zx::Time::INFINITE)?;
-        Ok(VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id))
+        let dup = vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
+        let vmo_id =
+            self.session.attach_vmo(dup, zx::Time::INFINITE)?.map_err(zx::Status::from_raw)?;
+        Ok(VmoId::new(vmo_id.id))
     }
 
     pub fn detach_vmo(&self, vmo_id: VmoId) -> Result<(), Error> {
@@ -672,7 +676,7 @@ impl RemoteBlockClientSync {
         // It's OK to leak the VMO id because the server will dump all VMOs when the fifo is torn
         // down.
         self.common.temp_vmo_id.take().into_id();
-        zx::Status::ok(self.remote.close_fifo(zx::Time::INFINITE)?)?;
+        let () = self.session.close(zx::Time::INFINITE)?.map_err(zx::Status::from_raw)?;
         Ok(())
     }
 
@@ -746,7 +750,7 @@ mod tests {
             BlockClient, BlockFifoRequest, BlockFifoResponse, BufferSlice, MutableBufferSlice,
             RemoteBlockClient, RemoteBlockClientSync,
         },
-        fidl_fuchsia_hardware_block::{self as block, BlockRequest},
+        fidl_fuchsia_hardware_block::{self as block, BlockRequest, SessionRequest},
         fuchsia_async::{self as fasync, FifoReadable, FifoWritable},
         fuchsia_zircon as zx,
         futures::{
@@ -760,7 +764,7 @@ mod tests {
     const RAMDISK_BLOCK_SIZE: u64 = 1024;
     const RAMDISK_BLOCK_COUNT: u64 = 1024;
 
-    pub async fn make_ramdisk() -> (RamdiskClient, RemoteBlockClient) {
+    pub async fn make_ramdisk() -> (RamdiskClient, block::BlockProxy, RemoteBlockClient) {
         ramdevice_client::wait_for_device(
             "/dev/sys/platform/00:00:2d/ramctl",
             std::time::Duration::from_secs(10),
@@ -772,15 +776,16 @@ mod tests {
         let proxy = client_end.into_proxy().expect("into_proxy failed");
         let remote_block_device = RemoteBlockClient::new(proxy).await.expect("new failed");
         assert_eq!(remote_block_device.block_size(), 1024);
-        (ramdisk, remote_block_device)
+        let client_end = ramdisk.open().expect("ramdisk.open failed");
+        let proxy = client_end.into_proxy().expect("into_proxy failed");
+        (ramdisk, proxy, remote_block_device)
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_against_ram_disk() {
-        let (_ramdisk, remote_block_device) = make_ramdisk().await;
+        let (_ramdisk, block_proxy, remote_block_device) = make_ramdisk().await;
 
-        let stats_before =
-            remote_block_device.remote.get_stats(false).await.expect("get_stats failed");
+        let stats_before = block_proxy.get_stats(false).await.expect("get_stats failed");
         assert_eq!(stats_before.0, zx::Status::OK.into_raw());
         let stats_before = stats_before.1.expect("Processing get_stats result failed");
 
@@ -801,8 +806,7 @@ mod tests {
         remote_block_device.detach_vmo(vmo_id).await.expect("detach_vmo failed");
 
         // check that the stats are what we expect them to be
-        let stats_after =
-            remote_block_device.remote.get_stats(false).await.expect("get_stats failed");
+        let stats_after = block_proxy.get_stats(false).await.expect("get_stats failed");
         assert_eq!(stats_after.0, zx::Status::OK.into_raw());
         let stats_after = stats_after.1.expect("Processing get_stats result failed");
         // write stats
@@ -826,10 +830,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_against_ram_disk_with_flush() {
-        let (_ramdisk, remote_block_device) = make_ramdisk().await;
+        let (_ramdisk, block_proxy, remote_block_device) = make_ramdisk().await;
 
-        let stats_before =
-            remote_block_device.remote.get_stats(false).await.expect("get_stats failed");
+        let stats_before = block_proxy.get_stats(false).await.expect("get_stats failed");
         assert_eq!(stats_before.0, zx::Status::OK.into_raw());
         let stats_before = stats_before.1.expect("Processing get_stats result failed");
 
@@ -851,8 +854,7 @@ mod tests {
         remote_block_device.detach_vmo(vmo_id).await.expect("detach_vmo failed");
 
         // check that the stats are what we expect them to be
-        let stats_after =
-            remote_block_device.remote.get_stats(false).await.expect("get_stats failed");
+        let stats_after = block_proxy.get_stats(false).await.expect("get_stats failed");
         assert_eq!(stats_after.0, zx::Status::OK.into_raw());
         let stats_after = stats_after.1.expect("Processing get_stats result failed");
         // write stats
@@ -882,7 +884,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_alignment() {
-        let (_ramdisk, remote_block_device) = make_ramdisk().await;
+        let (_ramdisk, _block_proxy, remote_block_device) = make_ramdisk().await;
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
         let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
         remote_block_device
@@ -894,7 +896,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_parallel_io() {
-        let (_ramdisk, remote_block_device) = make_ramdisk().await;
+        let (_ramdisk, _block_proxy, remote_block_device) = make_ramdisk().await;
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
         let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
         let mut reads = Vec::new();
@@ -911,7 +913,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_closed_device() {
-        let (ramdisk, remote_block_device) = make_ramdisk().await;
+        let (ramdisk, _block_proxy, remote_block_device) = make_ramdisk().await;
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
         let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
         let mut reads = Vec::new();
@@ -946,7 +948,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_cancelled_reads() {
-        let (_ramdisk, remote_block_device) = make_ramdisk().await;
+        let (_ramdisk, _block_proxy, remote_block_device) = make_ramdisk().await;
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
         let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
         {
@@ -967,7 +969,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_parallel_large_read_and_write_with_memory_succeds() {
-        let (_ramdisk, remote_block_device) = make_ramdisk().await;
+        let (_ramdisk, _block_proxy, remote_block_device) = make_ramdisk().await;
         let remote_block_device_ref = &remote_block_device;
         let test_one = |offset, len, fill| async move {
             let buf = vec![fill; len];
@@ -1006,7 +1008,7 @@ mod tests {
     // set_fifo_hander respectively
     struct FakeBlockServer<'a> {
         server_channel: Option<fidl::endpoints::ServerEnd<block::BlockMarker>>,
-        channel_handler: Box<dyn Fn(&BlockRequest) -> bool + 'a>,
+        channel_handler: Box<dyn Fn(&SessionRequest) -> bool + 'a>,
         fifo_handler: Box<dyn Fn(BlockFifoRequest) -> BlockFifoResponse + 'a>,
     }
 
@@ -1024,7 +1026,7 @@ mod tests {
         // FakeBlockServer will send over the fifo.
         fn new(
             server_channel: fidl::endpoints::ServerEnd<block::BlockMarker>,
-            channel_handler: impl Fn(&BlockRequest) -> bool + 'a,
+            channel_handler: impl Fn(&SessionRequest) -> bool + 'a,
             fifo_handler: impl Fn(BlockFifoRequest) -> BlockFifoResponse + 'a,
         ) -> FakeBlockServer<'a> {
             FakeBlockServer {
@@ -1068,13 +1070,8 @@ mod tests {
                 server
                     .into_stream()
                     .expect("into_stream failed")
-                    .for_each(|request| async {
+                    .for_each_concurrent(None, |request| async {
                         let request = request.expect("unexpected fidl error");
-
-                        // Give a chance for the test to register and potentially handle the event
-                        if self.channel_handler.as_ref()(&request) {
-                            return;
-                        }
 
                         match request {
                             BlockRequest::GetInfo { responder } => {
@@ -1089,20 +1086,38 @@ mod tests {
                                     .send(zx::sys::ZX_OK, Some(&mut block_info))
                                     .expect("send failed");
                             }
-                            BlockRequest::GetFifo { responder } => {
-                                responder
-                                    .send(zx::sys::ZX_OK, maybe_server_fifo.lock().unwrap().take())
-                                    .expect("send failed");
-                            }
-                            BlockRequest::AttachVmo { vmo: _, responder } => {
-                                let mut vmo_id = block::VmoId { id: 1 };
-                                responder
-                                    .send(zx::sys::ZX_OK, Some(&mut vmo_id))
-                                    .expect("send failed");
-                            }
-                            BlockRequest::CloseFifo { responder } => {
-                                fifo_future_abort.abort();
-                                responder.send(zx::sys::ZX_OK).expect("send failed");
+                            BlockRequest::OpenSession { session, control_handle: _ } => {
+                                let stream = session.into_stream().expect("into_stream failed");
+                                stream
+                                    .for_each(|request| async {
+                                        let request = request.expect("unexpected fidl error");
+                                        // Give a chance for the test to register and potentially
+                                        // handle the event
+                                        if self.channel_handler.as_ref()(&request) {
+                                            return;
+                                        }
+                                        match request {
+                                            SessionRequest::GetFifo { responder } => {
+                                                match maybe_server_fifo.lock().unwrap().take() {
+                                                    Some(fifo) => responder.send(&mut Ok(fifo)),
+                                                    None => responder.send(&mut Err(
+                                                        zx::Status::NO_RESOURCES.into_raw(),
+                                                    )),
+                                                }
+                                                .expect("send failed")
+                                            }
+                                            SessionRequest::AttachVmo { vmo: _, responder } => {
+                                                responder
+                                                    .send(&mut Ok(block::VmoId { id: 1 }))
+                                                    .expect("send failed")
+                                            }
+                                            SessionRequest::Close { responder } => {
+                                                fifo_future_abort.abort();
+                                                responder.send(&mut Ok(())).expect("send failed")
+                                            }
+                                        }
+                                    })
+                                    .await
                             }
                             _ => panic!("Unexpected message"),
                         }
@@ -1116,7 +1131,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_block_fifo_close_is_called() {
+    async fn test_block_close_is_called() {
         let close_called = std::sync::Mutex::new(false);
         let (client_end, server) =
             fidl::endpoints::create_endpoints::<block::BlockMarker>().expect("create_proxy failed");
@@ -1124,11 +1139,11 @@ mod tests {
         std::thread::spawn(move || {
             let _remote_block_device =
                 RemoteBlockClientSync::new(client_end).expect("RemoteBlockClientSync::new failed");
-            // The drop here should cause CloseFifo to be sent.
+            // The drop here should cause Close to be sent.
         });
 
-        let channel_handler = |request: &BlockRequest| -> bool {
-            if let BlockRequest::CloseFifo { .. } = request {
+        let channel_handler = |request: &SessionRequest| -> bool {
+            if let SessionRequest::Close { .. } = request {
                 *close_called.lock().unwrap() = true;
             }
             false

@@ -61,14 +61,14 @@ void DestroyFlashTestPartitions(StatusLine* status);
 // Exposed for testing only.
 
 struct BlockDevice {
-  fuchsia::hardware::block::BlockSyncPtr device;  // Connection to the block device.
-  zx::fifo fifo;                                  // FIFO used to read/write to the block device.
-  fuchsia::hardware::block::BlockInfo info;       // Details about the block device.
-  zx::vmo vmo;                                    // Shared VMO with the block device.
-  zx_vaddr_t vmo_addr;                            // Where |vmo| is mapped into our address space.
-  size_t vmo_size;                                // Size of |vmo| in bytes.
-  fuchsia::hardware::block::VmoId vmoid;          // Identifier the used to refer to the VMO
-                                                  // when communicating with the block device.
+  fuchsia::hardware::block::SessionSyncPtr device;  // Connection to the block device.
+  zx::fifo fifo;                                    // FIFO used to read/write to the block device.
+  fuchsia::hardware::block::BlockInfo info;         // Details about the block device.
+  zx::vmo vmo;                                      // Shared VMO with the block device.
+  zx_vaddr_t vmo_addr;                              // Where |vmo| is mapped into our address space.
+  size_t vmo_size;                                  // Size of |vmo| in bytes.
+  fuchsia::hardware::block::VmoId vmoid;            // Identifier the used to refer to the VMO
+                                                    // when communicating with the block device.
 };
 
 zx_status_t SetupBlockFifo(const std::string& path, BlockDevice* device);

@@ -125,46 +125,46 @@ static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, s
     info = *response.info;
   }
 
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();
+  if (endpoints.is_error()) {
+    fprintf(stderr, "error: cannot create endpoints for '%s': %s\n", dev,
+            endpoints.status_string());
+    return ZX_TIME_INFINITE;
+  }
+  auto& [session, server] = endpoints.value();
+  if (fidl::WireResult result = fidl::WireCall(channel)->OpenSession(std::move(server));
+      !result.ok()) {
+    fprintf(stderr, "error: cannot open session for '%s': %s\n", dev,
+            result.FormatDescription().c_str());
+    return ZX_TIME_INFINITE;
+  }
+
   zx::fifo fifo;
   {
-    fidl::WireResult result = fidl::WireCall(channel)->GetFifo();
+    fidl::WireResult result = fidl::WireCall(session)->GetFifo();
     if (!result.ok()) {
       fprintf(stderr, "error: cannot get fifo for '%s':%s\n", dev,
               result.FormatDescription().c_str());
       return ZX_TIME_INFINITE;
     }
-    auto& response = result.value();
-    if (zx_status_t status = response.status; status != ZX_OK) {
-      fprintf(stderr, "error: cannot get fifo for '%s':%s\n", dev, zx_status_get_string(status));
+    const fit::result response = result.value();
+    if (response.is_error()) {
+      fprintf(stderr, "error: cannot get fifo for '%s':%s\n", dev,
+              zx_status_get_string(response.error_value()));
       return ZX_TIME_INFINITE;
     }
-    fifo = std::move(response.fifo);
+    fifo = std::move(response.value()->fifo);
   }
 
-  fuchsia_hardware_block::wire::VmoId vmoid;
-  {
-    zx::vmo dup;
-    if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
-      fprintf(stderr, "error: cannot duplicate handle: %s\n", zx_status_get_string(status));
-      return ZX_TIME_INFINITE;
-    }
+  block_client::Client client(std::move(session), std::move(fifo));
 
-    const fidl::WireResult result = fidl::WireCall(channel)->AttachVmo(std::move(dup));
-    if (!result.ok()) {
-      fprintf(stderr, "error: cannot attach vmo for '%s':%s\n", dev,
-              result.FormatDescription().c_str());
-      return ZX_TIME_INFINITE;
-    }
-    const fidl::WireResponse response = result.value();
-    if (zx_status_t status = response.status; status != ZX_OK) {
-      fprintf(stderr, "error: cannot attach vmo for '%s':%s\n", dev, zx_status_get_string(status));
-      return ZX_TIME_INFINITE;
-    }
-    vmoid = *response.vmoid;
+  zx::result vmoid = client.RegisterVmo(vmo);
+  if (vmoid.is_error()) {
+    fprintf(stderr, "error: cannot register vmo for '%s':%s\n", dev, vmoid.status_string());
+    return ZX_TIME_INFINITE;
   }
 
   groupid_t group = 0;
-  block_client::Client client(std::move(fifo));
 
   zx_time_t t0 = zx_clock_get_monotonic();
   size_t n = total;
@@ -174,7 +174,7 @@ static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, s
         .opcode = static_cast<uint32_t>(is_read ? BLOCKIO_READ : BLOCKIO_WRITE),
         .reqid = 0,
         .group = group,
-        .vmoid = vmoid.id,
+        .vmoid = vmoid.value().TakeId(),
         .length = static_cast<uint32_t>(xfer / info.block_size),
         .vmo_offset = 0,
         .dev_offset = (total - n) / info.block_size,

@@ -32,16 +32,15 @@
 class Server {
  public:
   // Creates a new Server.
-  static zx_status_t Create(ddk::BlockProtocolClient* bp,
-                            fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
-                            std::unique_ptr<Server>* out);
+  static zx_status_t Create(ddk::BlockProtocolClient* bp, std::unique_ptr<Server>* out);
 
   // This will block until all outstanding messages have been processed.
   ~Server();
 
   // Starts the Server using the current thread
   zx_status_t Serve() TA_EXCL(server_lock_);
-  zx_status_t AttachVmo(zx::vmo vmo, vmoid_t* out) TA_EXCL(server_lock_) TA_EXCL(server_lock_);
+  zx::result<zx::fifo> GetFifo();
+  zx::result<vmoid_t> AttachVmo(zx::vmo vmo) TA_EXCL(server_lock_) TA_EXCL(server_lock_);
 
   // Updates the total number of pending requests.
   void TxnEnd();
@@ -73,12 +72,13 @@ class Server {
 
   zx_status_t Read(block_fifo_request_t* requests, size_t* count);
 
-  zx_status_t FindVmoIdLocked(vmoid_t* out) TA_REQ(server_lock_);
+  zx::result<vmoid_t> FindVmoIdLocked() TA_REQ(server_lock_);
 
   // Sends the request embedded in the message down to the lower layers.
   void Enqueue(std::unique_ptr<Message> message) TA_EXCL(server_lock_);
 
   fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
+  fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo_peer_;
   block_info_t info_;
   ddk::BlockProtocolClient* bp_;
   size_t block_op_size_;
