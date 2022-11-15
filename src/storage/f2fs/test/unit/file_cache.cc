@@ -220,7 +220,6 @@ TEST_F(FileCacheTest, WritebackOperation) {
   // Now, 2nd Page meets op.if_page.
   ASSERT_EQ(vn->Writeback(op), 1UL);
   ASSERT_EQ(vn->GetDirtyPageCount(), 0);
-  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 1);
   ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 0);
   // Set sync. writeback.
   op.bSync = true;
