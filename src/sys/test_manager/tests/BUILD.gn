@@ -54,6 +54,31 @@ rustc_test("test_manager_stress_test_bin") {
   sources = [ "src/stress_tests.rs" ]
 }
 
+rustc_test("test_manager_legacy_test_bin") {
+  edition = "2021"
+  name = "test_manager_legacy_test"
+  source_root = "src/legacy_tests.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/test_manager:test_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:pretty_assertions",
+  ]
+
+  sources = [ "src/legacy_tests.rs" ]
+
+  inputs = [
+    "//src/sys/test_runners/gtest/test_data/sample_tests_golden_events.rsf",
+  ]
+}
+
 fuchsia_unittest_package("test_manager_test") {
   manifest = "meta/test_manager_test.cml"
   deps = [
@@ -80,9 +105,27 @@ fuchsia_unittest_package("test_manager_stress_test") {
   ]
 }
 
+fuchsia_unittest_package("test_manager_legacy_test") {
+  manifest = "meta/test_manager_legacy_test.cml"
+  deps = [
+    ":test_manager_legacy_test_bin",
+    "test_data",
+    "//src/sys/test_manager:test_manager_for_test_cmp",
+  ]
+
+  # There's expected error logs that happen during the test such as not resolving an instance when
+  # testing that we fail to execute a test with an unknown URL.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
 group("tests") {
   testonly = true
   deps = [
+    ":test_manager_legacy_test",
     ":test_manager_stress_test",
     ":test_manager_test",
     "chromium_tests:tests",

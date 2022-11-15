@@ -16,7 +16,7 @@ use futures::stream::TryStreamExt;
 #[fuchsia::test]
 async fn launch_and_test_v1_component() {
     let launcher_proxy = connect_to_protocol::<fsys::LauncherMarker>().expect("failed to connect");
-    let url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/echo_server.cmx";
+    let url = "fuchsia-pkg://fuchsia.com/test_manager_legacy_test#meta/echo_server.cmx";
     let (directory, directory_request) =
         create_proxy::<fio::DirectoryMarker>().expect("create dir proxy");
 
@@ -56,7 +56,7 @@ async fn launch_and_test_v1_component() {
 #[fuchsia::test]
 async fn launch_v1_logging_component() {
     let launcher_proxy = connect_to_protocol::<fsys::LauncherMarker>().expect("failed to connect");
-    let url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/logging_component.cmx";
+    let url = "fuchsia-pkg://fuchsia.com/test_manager_legacy_test#meta/logging_component.cmx";
 
     let mut launch_info = fsys::LaunchInfo {
         url: url.to_string(),
@@ -90,7 +90,7 @@ async fn launch_v1_logging_component() {
 #[fuchsia::test]
 async fn test_debug_data_for_v1_component() {
     let launcher_proxy = connect_to_protocol::<fsys::LauncherMarker>().expect("failed to connect");
-    let url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/debug_data_test_v1.cmx";
+    let url = "fuchsia-pkg://fuchsia.com/test_manager_legacy_test#meta/debug_data_test_v1.cmx";
 
     let mut launch_info = fsys::LaunchInfo {
         url: url.to_string(),
