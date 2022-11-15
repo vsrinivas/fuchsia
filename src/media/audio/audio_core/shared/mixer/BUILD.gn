@@ -17,14 +17,9 @@ source_set("mixer") {
     "intersect.h",
     "mixer.cc",
     "mixer.h",
-    "no_op.cc",
-    "no_op.h",
+    "no_op_sampler.h",
     "output_producer.cc",
     "output_producer.h",
-    "point_sampler.cc",
-    "point_sampler.h",
-    "sinc_sampler.cc",
-    "sinc_sampler.h",
   ]
 
   public_deps = [
@@ -81,7 +76,6 @@ executable("mixer_unittest_bin") {
   sources = [
     "gain_unittest.cc",
     "intersect_unittest.cc",
-    "no_op_unittest.cc",
     "output_producer_unittest.cc",
     "point_sampler_unittest.cc",
     "sinc_sampler_unittest.cc",

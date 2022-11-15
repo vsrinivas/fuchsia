@@ -30,9 +30,8 @@ namespace media::audio {
 // appropriately processed result, and summing this output into a common destination buffer.
 class Mixer {
  public:
-  virtual ~Mixer() = default;
+  Mixer(std::shared_ptr<media_audio::Sampler> sampler, Gain::Limits gain_limits);
 
-  //
   // Resampler enum
   //
   // This enum lists Fuchsia's available resamplers. Callers of Mixer::Select optionally use this
@@ -44,7 +43,9 @@ class Mixer {
     WindowedSinc,
   };
 
-  //
+  // Returns a no-op mixer.
+  static std::unique_ptr<Mixer> NoOp();
+
   // Select
   //
   // Select an appropriate mixer instance, based on an optionally-specified resampler type, or else
@@ -62,7 +63,6 @@ class Mixer {
                                        Resampler resampler_type = Resampler::Default,
                                        Gain::Limits gain_limits = Gain::Limits{});
 
-  //
   // Mix
   //
   // Perform a mixing operation from source buffer into destination buffer.
@@ -109,11 +109,10 @@ class Mixer {
   //  * step_size_modulo        must be either zero or less than denominator
   //  * source_position_modulo  must be either zero or less than denominator
   //
-  virtual void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
-                   const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
-                   bool accumulate) = 0;
+  void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
+           const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
+           bool accumulate);
 
-  //
   // Filter widths
   //
   // The positive and negative widths of the filter for this mixer, expressed in fixed-point
@@ -142,13 +141,13 @@ class Mixer {
   inline Fixed pos_filter_width() const { return pos_filter_width_; }
   inline Fixed neg_filter_width() const { return neg_filter_width_; }
 
-  media_audio::Sampler::State& state() { return sampler().state(); }
-  const media_audio::Sampler::State& state() const { return sampler().state(); }
+  media_audio::Sampler::State& state() { return sampler_->state(); }
+  const media_audio::Sampler::State& state() const { return sampler_->state(); }
 
   // Eagerly precompute any needed data. If not called, that data should be lazily computed on the
   // first call to Mix().
   // TODO(fxbug.dev/45074): This is for tests only and can be removed once filter creation is eager.
-  virtual void EagerlyPrepare() {}
+  void EagerlyPrepare() { sampler_->EagerlyPrepare(); }
 
   // This object maintains gain values in the mix path, including source gain and a snapshot of
   // destination gain (the definitive value for destination gain is owned elsewhere). Gain accepts
@@ -177,7 +176,7 @@ class Mixer {
   // but NOT any additional micro-SRC being applied.
   TimelineFunction dest_frames_to_frac_source_frames;
 
-  static constexpr int64_t kScaleArrLen = 960;
+  static inline constexpr int64_t kScaleArrLen = 960;
   std::unique_ptr<Gain::AScale[]> scale_arr = std::make_unique<Gain::AScale[]>(kScaleArrLen);
 
  protected:
@@ -194,18 +193,6 @@ class Mixer {
     static inline media_audio::ChannelMapper<SourceSampleType, SourceChanCount, DestChanCount>
         mapper_;
   };
-
-  Mixer(Fixed pos_filter_width, Fixed neg_filter_width,
-        std::shared_ptr<media_audio::Sampler> sampler, Gain::Limits gain_limits);
-
-  media_audio::Sampler& sampler() {
-    FX_DCHECK(sampler_);
-    return *sampler_;
-  }
-  const media_audio::Sampler& sampler() const {
-    FX_DCHECK(sampler_);
-    return *sampler_;
-  }
 
  private:
   const Fixed pos_filter_width_;

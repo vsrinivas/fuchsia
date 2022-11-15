@@ -4,25 +4,60 @@
 
 #include "src/media/audio/audio_core/shared/mixer/mixer.h"
 
+#include <fidl/fuchsia.audio/cpp/common_types.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/trace/event.h>
 
-#include "src/media/audio/audio_core/shared/mixer/no_op.h"
-#include "src/media/audio/audio_core/shared/mixer/point_sampler.h"
-#include "src/media/audio/audio_core/shared/mixer/sinc_sampler.h"
+#include <memory>
+
+#include "src/media/audio/audio_core/shared/mixer/no_op_sampler.h"
+#include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/lib/processing/sampler.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media::audio {
 
-constexpr int64_t Mixer::kScaleArrLen;
+namespace {
 
-Mixer::Mixer(Fixed pos_filter_width, Fixed neg_filter_width,
-             std::shared_ptr<media_audio::Sampler> sampler, Gain::Limits gain_limits)
+using ::media_audio::Sampler;
+
+fuchsia_audio::SampleType ToNewSampleType(fuchsia::media::AudioSampleFormat sample_format) {
+  switch (sample_format) {
+    case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
+      return fuchsia_audio::SampleType::kUint8;
+    case fuchsia::media::AudioSampleFormat::SIGNED_16:
+      return fuchsia_audio::SampleType::kInt16;
+    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+      return fuchsia_audio::SampleType::kInt32;
+    case fuchsia::media::AudioSampleFormat::FLOAT:
+    default:
+      return fuchsia_audio::SampleType::kFloat32;
+  }
+}
+
+media_audio::Format ToNewFormat(const fuchsia::media::AudioStreamType& format) {
+  return media_audio::Format::CreateOrDie({
+      .sample_type = ToNewSampleType(format.sample_format),
+      .channels = format.channels,
+      .frames_per_second = format.frames_per_second,
+  });
+}
+
+}  // namespace
+
+Mixer::Mixer(std::shared_ptr<Sampler> sampler, Gain::Limits gain_limits)
     : gain(gain_limits),
-      pos_filter_width_(pos_filter_width),
-      neg_filter_width_(neg_filter_width),
-      sampler_(std::move(sampler)) {}
+      pos_filter_width_(sampler->pos_filter_length() - media_audio::Fixed::FromRaw(1)),
+      neg_filter_width_(sampler->neg_filter_length() - media_audio::Fixed::FromRaw(1)),
+      sampler_(std::move(sampler)) {
+  FX_CHECK(sampler_);
+}
 
-//
+std::unique_ptr<Mixer> Mixer::NoOp() {
+  return std::make_unique<Mixer>(std::make_shared<NoOpSampler>(), Gain::Limits{});
+}
+
 // Select an appropriate instance of a mixer based on the user-specified
 // resampler type, else by the properties of source/destination formats.
 //
@@ -76,25 +111,39 @@ std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& sour
     return nullptr;
   }
 
-  // If user specified a particular Resampler, directly select it.
-  switch (resampler) {
-    case Resampler::SampleAndHold:
-      return mixer::PointSampler::Select(source_format, dest_format, gain_limits);
-    case Resampler::WindowedSinc:
-      return mixer::SincSampler::Select(source_format, dest_format, gain_limits);
+  const auto sampler_type = (resampler == Resampler::WindowedSinc) ? Sampler::Type::kSincSampler
+                                                                   : Sampler::Type::kDefault;
+  return std::make_unique<Mixer>(
+      Sampler::Create(ToNewFormat(source_format), ToNewFormat(dest_format), sampler_type),
+      gain_limits);
+}
 
-      // Otherwise (if Default), continue onward.
-    case Resampler::Default:
-      break;
-  }
+void Mixer::Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
+                const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
+                bool accumulate) {
+  TRACE_DURATION("audio", "Mixer::Mix");
 
-  // Use SampleAndHold if no rate conversion (unity 1:1). Otherwise, use WindowedSinc (with
-  // integrated low-pass filter).
-  TimelineRate source_to_dest(dest_format.frames_per_second, source_format.frames_per_second);
-  if (source_to_dest.subject_delta() == 1 && source_to_dest.reference_delta() == 1) {
-    return mixer::PointSampler::Select(source_format, dest_format, gain_limits);
+  Sampler::Source source{source_void_ptr, source_offset_ptr, source_frames};
+  Sampler::Dest dest{dest_ptr, dest_offset_ptr, dest_frames};
+  if (gain.IsSilent()) {
+    // If the gain is silent, the mixer simply skips over the appropriate range in the destination
+    // buffer, leaving whatever data is already there. We do not take further effort to clear the
+    // buffer if `accumulate` is false. In fact, we IGNORE `accumulate` if silent. The caller is
+    // responsible for clearing the destination buffer before Mix is initially called.
+    sampler_->Process(source, dest, Sampler::Gain{.type = media_audio::GainType::kSilent}, true);
+  } else if (gain.IsUnity()) {
+    sampler_->Process(source, dest, Sampler::Gain{.type = media_audio::GainType::kUnity},
+                      accumulate);
+  } else if (gain.IsRamping()) {
+    sampler_->Process(
+        source, dest,
+        Sampler::Gain{.type = media_audio::GainType::kRamping, .scale_ramp = scale_arr.get()},
+        accumulate);
   } else {
-    return mixer::SincSampler::Select(source_format, dest_format, gain_limits);
+    sampler_->Process(
+        source, dest,
+        Sampler::Gain{.type = media_audio::GainType::kNonUnity, .scale = gain.GetGainScale()},
+        accumulate);
   }
 }
 

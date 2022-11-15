@@ -12,7 +12,6 @@
 #include <limits>
 
 #include "src/media/audio/audio_core/shared/mixer/mixer.h"
-#include "src/media/audio/audio_core/shared/mixer/no_op.h"
 #include "src/media/audio/audio_core/shared/pin_executable_memory.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
 #include "src/media/audio/audio_core/v1/base_renderer.h"
@@ -165,7 +164,7 @@ AudioOutput::InitializeSourceLink(const AudioObject& source,
 
   // If there's no source, use a Mixer that only trims, and no execution domain.
   if (!source_stream) {
-    return fpromise::ok(std::make_pair(std::make_shared<audio::mixer::NoOp>(), nullptr));
+    return fpromise::ok(std::make_pair(Mixer::NoOp(), nullptr));
   }
 
   auto usage = source.usage();

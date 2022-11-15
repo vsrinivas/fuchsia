@@ -20,7 +20,7 @@
 
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/shared/mixer/sinc_sampler.h"
+#include "src/media/audio/audio_core/shared/mixer/mixer.h"
 #include "src/media/audio/audio_core/testing/integration/hermetic_audio_test.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
@@ -81,7 +81,8 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
   // For a signal change occurring at frame T, how far BEFORE that frame will the effects of that
   // change be reflected in the output. We use no effects; this comes from SincSampler only.
   int64_t PreRampFrames() {
-    auto mixer = mixer::SincSampler::Select(format_.stream_type(), format_.stream_type());
+    auto mixer =
+        Mixer::Select(format_.stream_type(), format_.stream_type(), Mixer::Resampler::WindowedSinc);
     // Initial ramping requires that we play 10ms of silence before doing bit-for-bit comparisons.
     return std::max(static_cast<int32_t>(mixer->pos_filter_width().Ceiling()), kFrameRate / 100);
   }
@@ -89,7 +90,8 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
   // For a signal change occurring at frame T, how far AFTER that frame will the output reflect some
   // effect of the previous signal. We use no effects; this comes from SincSampler only.
   int64_t PostRampFrames() {
-    auto mixer = mixer::SincSampler::Select(format_.stream_type(), format_.stream_type());
+    auto mixer =
+        Mixer::Select(format_.stream_type(), format_.stream_type(), Mixer::Resampler::WindowedSinc);
     return mixer->neg_filter_width().Ceiling();
   }
 

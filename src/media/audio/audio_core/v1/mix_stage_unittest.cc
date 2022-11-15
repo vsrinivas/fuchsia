@@ -187,12 +187,6 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
   ValidateIsSincSampler(fixed_device_mix_stage->AddInput(adjustable_client_same_rate, std::nullopt,
                                                          Mixer::Resampler::WindowedSinc));
 
-  // SampleAndHold can still be explicitly specified, even in different-rate situations
-  ValidateIsPointSampler(adjustable_device_mix_stage->AddInput(
-      adjustable_client_diff_rate, std::nullopt, Mixer::Resampler::SampleAndHold));
-  ValidateIsPointSampler(fixed_device_mix_stage->AddInput(adjustable_client_diff_rate, std::nullopt,
-                                                          Mixer::Resampler::SampleAndHold));
-
   // SampleAndHold can still be explicitly specified, even in microSRC situations
   ValidateIsPointSampler(adjustable_device_mix_stage->AddInput(custom_same_rate, std::nullopt,
                                                                Mixer::Resampler::SampleAndHold));

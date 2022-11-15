@@ -11,7 +11,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/shared/mixer/no_op.h"
+#include "src/media/audio/audio_core/shared/mixer/mixer.h"
 #include "src/media/audio/audio_core/shared/pipeline_config.h"
 #include "src/media/audio/audio_core/shared/stream_usage.h"
 #include "src/media/audio/audio_core/shared/volume_curve.h"
@@ -59,7 +59,7 @@ class AudioObject {
   // Returns ZX_OK if initialization succeeded, or an appropriate error code otherwise.
   virtual fpromise::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
   InitializeSourceLink(const AudioObject& source, std::shared_ptr<ReadableStream> stream) {
-    return fpromise::ok(std::make_pair(std::make_shared<audio::mixer::NoOp>(), nullptr));
+    return fpromise::ok(std::make_pair(Mixer::NoOp(), nullptr));
   }
   virtual fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) {

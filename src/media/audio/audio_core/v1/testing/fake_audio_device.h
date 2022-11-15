@@ -7,7 +7,6 @@
 
 #include "src/media/audio/audio_core/shared/device_config.h"
 #include "src/media/audio/audio_core/shared/mixer/mixer.h"
-#include "src/media/audio/audio_core/shared/mixer/no_op.h"
 #include "src/media/audio/audio_core/v1/audio_device.h"
 #include "src/media/audio/audio_core/v1/audio_driver.h"
 #include "src/media/audio/audio_core/v1/device_registry.h"
@@ -98,7 +97,7 @@ class FakeAudioOutput : public FakeAudioDevice {
 
  private:
   std::shared_ptr<ReadableStream> stream_;
-  std::shared_ptr<mixer::NoOp> mixer_ = std::make_shared<mixer::NoOp>();
+  std::shared_ptr<Mixer> mixer_ = Mixer::NoOp();
 };
 
 }  // namespace media::audio::testing

@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "src/media/audio/audio_core/shared/mixer/no_op.h"
+#include "src/media/audio/audio_core/shared/mixer/mixer.h"
 #include "src/media/audio/audio_core/shared/volume_curve.h"
 #include "src/media/audio/audio_core/v1/packet_queue.h"
 #include "src/media/audio/audio_core/v1/testing/fake_audio_core_clock_factory.h"
@@ -339,7 +339,7 @@ TEST_F(LinkMatrixTest, LinkHandleHasMixer) {
   auto source = std::make_shared<MockObject>(AudioObject::Type::AudioRenderer);
   auto dest = std::make_shared<MockObject>(AudioObject::Type::Output);
 
-  auto mixer = std::make_unique<audio::mixer::NoOp>();
+  auto mixer = Mixer::NoOp();
   auto expected_mixer_addr = mixer.get();
   dest->set_mixer(std::move(mixer));
 

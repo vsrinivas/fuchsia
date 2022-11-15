@@ -19,7 +19,6 @@
 
 #include "src/media/audio/audio_core/shared/mixer/gain.h"
 #include "src/media/audio/audio_core/shared/mixer/mixer.h"
-#include "src/media/audio/audio_core/shared/mixer/no_op.h"
 #include "src/media/audio/audio_core/shared/reporter.h"
 #include "src/media/audio/audio_core/v1/base_renderer.h"
 #include "src/media/audio/audio_core/v1/logging_flags.h"
@@ -103,7 +102,7 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
                                            resampler_hint, gain_limits_)
                                  .release());
   if (!mixer) {
-    mixer = std::make_unique<audio::mixer::NoOp>();
+    mixer = Mixer::NoOp();
   }
 
   if (initial_dest_gain_db) {

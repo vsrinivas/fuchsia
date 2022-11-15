@@ -1,12 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/media/audio/audio_core/shared/mixer/point_sampler.h"
-
 #include <fbl/algorithm.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/media/audio/audio_core/shared/mixer/mixer.h"
 #include "src/media/audio/lib/format2/channel_mapper.h"
 #include "src/media/audio/lib/format2/sample_converter.h"
 #include "src/media/audio/lib/processing/gain.h"
