@@ -6,6 +6,7 @@ use anyhow::Context as _;
 use fuchsia_component::client;
 use fuchsia_fs::file::read_in_namespace_to_string;
 use futures::{StreamExt as _, TryStreamExt as _};
+use itertools::Itertools as _;
 
 #[derive(Debug)]
 struct Expectation<'a>(&'a ser::Expectation);
@@ -44,6 +45,7 @@ impl From<fidl_fuchsia_test::Status> for Outcome {
     }
 }
 
+#[derive(Debug)]
 enum ExpectationError {
     Mismatch { got: Outcome, want: Outcome },
     NoExpectationFound,
@@ -54,6 +56,7 @@ struct CaseStart {
     std_handles: fidl_fuchsia_test::StdHandles,
 }
 
+#[derive(Debug, Clone)]
 struct CaseEnd {
     result: fidl_fuchsia_test::Result_,
 }
@@ -72,13 +75,12 @@ impl ExpectationsComparer {
             .find_map(|expectation| Expectation(expectation).expected_outcome(invocation))
     }
 
-    fn handle_result(
+    fn check_against_expectation(
         &self,
         invocation: &fidl_fuchsia_test::Invocation,
-        result: fidl_fuchsia_test::Result_,
+        status: fidl_fuchsia_test::Status,
     ) -> Result<fidl_fuchsia_test::Status, ExpectationError> {
-        let fidl_fuchsia_test::Result_ { status, .. } = result;
-        let got_outcome = Outcome::from(status.expect("fidl_fuchsia_test::Result_ had no status"));
+        let got_outcome = Outcome::from(status);
         let want_outcome = self.expected_outcome(invocation);
         match (got_outcome, want_outcome) {
             // TODO(https://fxbug.dev/113117): Determine how to handle tests skipped at runtime.
@@ -100,46 +102,70 @@ impl ExpectationsComparer {
         run_listener_proxy: &fidl_fuchsia_test::RunListenerProxy,
         CaseStart { invocation, std_handles }: CaseStart,
         end_stream: impl futures::TryStream<Ok = CaseEnd, Error = anyhow::Error>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<Option<(fidl_fuchsia_test::Invocation, ExpectationError)>, anyhow::Error> {
         let (case_listener_proxy, case_listener) =
             fidl::endpoints::create_proxy().context("error creating CaseListenerProxy")?;
         run_listener_proxy
             .on_test_case_started(invocation.clone(), std_handles, case_listener)
             .context("error calling run_listener_proxy.on_test_case_started(...)")?;
 
-        let invocation = &invocation;
         let name = invocation.name.as_ref().expect("fuchsia.test/Invocation had no name");
         let case_listener_proxy = &case_listener_proxy;
-        end_stream
-            .try_for_each(|CaseEnd { result }| async move {
-                let status = match self.handle_result(invocation, result) {
-                    Ok(status) => status,
-                    Err(err) => {
-                        match err {
-                            ExpectationError::Mismatch { got, want } => tracing::error!(
+        let result = match &end_stream
+            .try_collect::<Vec<_>>()
+            .await
+            .context("error getting case results")?[..]
+        {
+            [] => return Err(anyhow::anyhow!("Received no result for case {}", name)),
+            [CaseEnd { result }] => result.clone(),
+            results => {
+                return Err(anyhow::anyhow!(
+                    "Received multiple results for case {}: {:?}",
+                    name,
+                    results
+                ))
+            }
+        };
+        let fidl_fuchsia_test::Result_ { status, .. } = result;
+        let original_status = status.expect("fuchsia.test/Result had no status");
+        let (status, expectation_error) =
+            match self.check_against_expectation(&invocation, original_status) {
+                Ok(status) => (status, None),
+                Err(err) => {
+                    match &err {
+                        ExpectationError::Mismatch { got, want } => {
+                            tracing::error!(
                                 // TODO(https://fxbug.dev/113119): Decide what error message to use
                                 // here.
                                 "Failing test case {}: got {:?}, expected {:?}",
                                 name,
                                 got,
                                 want,
-                            ),
-                            ExpectationError::NoExpectationFound => {
-                                return Err(anyhow::anyhow!("No expectation matches {}", name))
-                            }
-                        };
-                        fidl_fuchsia_test::Status::Failed
-                    }
-                };
+                            );
+                        }
+                        ExpectationError::NoExpectationFound => {
+                            tracing::error!("No expectation matches {}", name);
+                        }
+                    };
+                    (fidl_fuchsia_test::Status::Failed, Some(err))
+                }
+            };
 
-                case_listener_proxy
-                    .finished(fidl_fuchsia_test::Result_ {
-                        status: Some(status),
-                        ..fidl_fuchsia_test::Result_::EMPTY
-                    })
-                    .map_err(anyhow::Error::from)
+        if matches!(
+            (original_status, status),
+            (fidl_fuchsia_test::Status::Failed, fidl_fuchsia_test::Status::Passed)
+        ) {
+            tracing::info!("{name} failure is expected, so it will be reported to the test runner as having passed.")
+        }
+
+        case_listener_proxy
+            .finished(fidl_fuchsia_test::Result_ {
+                status: Some(status),
+                ..fidl_fuchsia_test::Result_::EMPTY
             })
-            .await
+            .context("case listener proxy fidl error")?;
+
+        Ok(expectation_error.map(|err| (invocation, err)))
     }
 
     async fn handle_suite_run_request(
@@ -148,7 +174,7 @@ impl ExpectationsComparer {
         tests: Vec<fidl_fuchsia_test::Invocation>,
         options: fidl_fuchsia_test::RunOptions,
         listener: fidl::endpoints::ClientEnd<fidl_fuchsia_test::RunListenerMarker>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<Vec<(fidl_fuchsia_test::Invocation, ExpectationError)>, anyhow::Error> {
         let tests_and_expects = tests.into_iter().map(|invocation| {
             let outcome = self.expected_outcome(&invocation);
             (invocation, outcome)
@@ -227,13 +253,27 @@ impl ExpectationsComparer {
                 })
         };
 
-        case_stream
-            .try_for_each_concurrent(None, |(start, end_stream)| {
-                self.handle_case(&listener_proxy, start, end_stream)
-            })
-            .await
-            .context("error handling test case stream")?;
-        listener_proxy.on_finished().context("error calling listener_proxy.on_finished()")
+        let failures = futures::lock::Mutex::new(Vec::new());
+
+        {
+            let listener_proxy = &listener_proxy;
+            let failures = &failures;
+            case_stream
+                .try_for_each_concurrent(None, |(start, end_stream)| async move {
+                    if let Some(result) =
+                        self.handle_case(listener_proxy, start, end_stream).await?
+                    {
+                        failures.lock().await.push(result);
+                    }
+                    Ok(())
+                })
+                .await
+                .context("error handling test case stream")?;
+        }
+
+        listener_proxy.on_finished().context("error calling listener_proxy.on_finished()")?;
+
+        Ok(failures.into_inner())
     }
 
     async fn handle_suite_request_stream(
@@ -243,27 +283,63 @@ impl ExpectationsComparer {
         let suite_proxy = &client::connect_to_protocol::<fidl_fuchsia_test::SuiteMarker>()
             .context("error connecting to original test component's fuchsia.test/Suite")?;
 
-        suite_request_stream
+        // `fx test`, via `ffx test`, connects to the `fuchsia.test/Suite` protocol only once, but
+        // it makes multiple invocations to `fuchsia.test/Suite#Run`. Therefore, in order to print
+        // all of the mismatched expectations at the end of the `fx test` invocation, we need to
+        // collect them across the entire `fuchsia.test/Suite` request stream and emit them once the
+        // `fuchsia.test/Suite` handle has been closed.
+        let failures = suite_request_stream
             .map_err(anyhow::Error::new)
-            .try_for_each_concurrent(None, |request| async move {
+            .and_then(|request| async move {
                 match request {
                     fidl_fuchsia_test::SuiteRequest::GetTests { iterator, control_handle: _ } => {
                         suite_proxy.get_tests(iterator).context("error enumerating test cases")?;
+                        Ok(Vec::new())
                     }
                     fidl_fuchsia_test::SuiteRequest::Run {
                         tests,
                         options,
                         listener,
                         control_handle: _,
-                    } => {
-                        self.handle_suite_run_request(suite_proxy, tests, options, listener)
-                            .await
-                            .context("error handling Suite run request")?;
-                    }
+                    } => self
+                        .handle_suite_run_request(suite_proxy, tests, options, listener)
+                        .await
+                        .context("error handling Suite run request"),
                 }
-                Ok(())
             })
+            .try_collect::<Vec<_>>()
             .await
+            .context("error handling suite request stream")?
+            .into_iter()
+            .flatten();
+
+        let (mismatch, missing): (Vec<_>, Vec<_>) =
+            failures.partition_map(|(invocation, error)| match error {
+                ExpectationError::Mismatch { got, want } => {
+                    itertools::Either::Left((invocation, got, want))
+                }
+                ExpectationError::NoExpectationFound => itertools::Either::Right(invocation),
+            });
+
+        if !missing.is_empty() {
+            tracing::error!("Observed {} test results with no matching expectation", missing.len());
+            for invocation in missing {
+                let name = invocation.name.unwrap();
+                tracing::error!("{name} -- no expectation found");
+            }
+        }
+
+        if !mismatch.is_empty() {
+            tracing::error!(
+                "Observed {} test results that did not match expectations",
+                mismatch.len()
+            );
+            for (invocation, got, want) in mismatch {
+                let name = invocation.name.unwrap();
+                tracing::error!("{name} -- got {got:?}, expected {want:?}");
+            }
+        }
+        Ok(())
     }
 }
 
