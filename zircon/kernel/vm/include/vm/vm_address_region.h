@@ -63,6 +63,11 @@
 #define VMAR_CAN_RWX_FLAGS \
   (VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE | VMAR_FLAG_CAN_MAP_EXECUTE)
 
+enum class VmAddressRegionOpChildren : bool {
+  Yes,
+  No,
+};
+
 // forward declarations
 class VmAddressRegion;
 class VmMapping;
@@ -534,14 +539,15 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   };
 
   // Apply |op| to VMO mappings in the specified range of pages.
-  zx_status_t RangeOp(RangeOpType op, vaddr_t base, size_t len, user_inout_ptr<void> buffer,
+  zx_status_t RangeOp(RangeOpType op, vaddr_t base, size_t len,
+                      VmAddressRegionOpChildren op_children, user_inout_ptr<void> buffer,
                       size_t buffer_size);
 
   // Unmap a subset of the region of memory in the containing address space,
   // returning it to this region to allocate.  If a subregion is entirely in
-  // the range, that subregion is destroyed.  If a subregion is partially in
+  // the range, and op_children is Yes, that subregion is destroyed. If a subregion is partially in
   // the range, Unmap() will fail.
-  zx_status_t Unmap(vaddr_t base, size_t size);
+  zx_status_t Unmap(vaddr_t base, size_t size, VmAddressRegionOpChildren op_children);
 
   // Same as Unmap, but allows for subregions that are partially in the range.
   // Additionally, sub-VMARs that are completely within the range will not be
@@ -549,9 +555,10 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   zx_status_t UnmapAllowPartial(vaddr_t base, size_t size);
 
   // Change protections on a subset of the region of memory in the containing
-  // address space.  If the requested range overlaps with a subregion,
-  // Protect() will fail.
-  zx_status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags);
+  // address space. If the requested range overlaps with a subregion and op_children is No,
+  // Protect() will fail, otherwise the mapping permissions in the sub-region may only be reduced.
+  zx_status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags,
+                      VmAddressRegionOpChildren op_children);
 
   // Reserve a memory region within this VMAR. This region is already mapped in the page table with
   // |arch_mmu_flags|. VMAR should create a VmMapping for this region even though no physical pages

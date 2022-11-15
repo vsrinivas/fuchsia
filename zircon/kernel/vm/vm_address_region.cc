@@ -562,6 +562,7 @@ void VmAddressRegion::Activate() {
 }
 
 zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t len,
+                                     VmAddressRegionOpChildren op_children,
                                      user_inout_ptr<void> buffer, size_t buffer_size) {
   canary_.Assert();
   if (buffer || buffer_size) {
@@ -638,8 +639,11 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t len,
     // The commit and decommit ops check the maximal permissions of the mapping and can be thought
     // of as acting as if they perform a protect to add write permissions. Since protect to add
     // permissions through a parent VMAR is not valid we similarly forbid this notional protect by
-    // not allowing these operations if acting through a sub-vmar.
-    if ((op == RangeOpType::Commit || op == RangeOpType::Decommit) && mapping->parent_ != this) {
+    // not allowing these operations if acting through a sub-vmar, regardless of whether op_children
+    // is otherwise allowed..
+    if ((op == RangeOpType::Commit || op == RangeOpType::Decommit ||
+         op_children == VmAddressRegionOpChildren::No) &&
+        mapping->parent_ != this) {
       return ZX_ERR_INVALID_ARGS;
     }
     guard.CallUnlocked([&result, &vmo, &mapping, op, mapping_offset, vmo_offset, size] {
@@ -702,7 +706,8 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t len,
   return ZX_OK;
 }
 
-zx_status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
+zx_status_t VmAddressRegion::Unmap(vaddr_t base, size_t size,
+                                   VmAddressRegionOpChildren op_children) {
   canary_.Assert();
 
   size = ROUNDUP(size, PAGE_SIZE);
@@ -715,8 +720,9 @@ zx_status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
     return ZX_ERR_BAD_STATE;
   }
 
-  return UnmapInternalLocked(base, size, true /* can_destroy_regions */,
-                             false /* allow_partial_vmar */);
+  return UnmapInternalLocked(
+      base, size, op_children == VmAddressRegionOpChildren::Yes /* can_destroy_regions */,
+      false /* allow_partial_vmar */);
 }
 
 zx_status_t VmAddressRegion::UnmapAllowPartial(vaddr_t base, size_t size) {
@@ -869,7 +875,8 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
   return ZX_OK;
 }
 
-zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
+zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags,
+                                     VmAddressRegionOpChildren op_children) {
   canary_.Assert();
 
   size = ROUNDUP(size, PAGE_SIZE);
@@ -886,88 +893,89 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (subregions_.IsEmpty()) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
   // The last byte of the range.
   vaddr_t end_addr_byte = 0;
   bool overflowed = add_overflow(base, size - 1, &end_addr_byte);
   ASSERT(!overflowed);
 
-  // Find the first region with a base greater than *base*.  If a region
-  // exists for *base*, it will be immediately before it.  If *base* isn't in
-  // that entry, bail since it's unmapped.
-  auto begin = --subregions_.UpperBound(base);
-  if (!begin.IsValid() || begin->size() <= base - begin->base()) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  // Check if we're overlapping a subregion, or a part of the range is not
-  // mapped, or the new permissions are invalid for some mapping in the range.
-  for (auto itr = begin;;) {
-    VmMapping* mapping = itr->as_vm_mapping_ptr();
-    if (!mapping) {
-      return ZX_ERR_INVALID_ARGS;
+  // Check part of the range is not mapped, or the new permissions are invalid for some mapping in
+  // the range.
+  {
+    VmAddressRegionEnumerator<VmAddressRegionEnumeratorType::PausableMapping> enumerator(
+        *this, base, end_addr_byte);
+    AssertHeld(enumerator.lock_ref());
+    vaddr_t expected = base;
+    while (auto entry = enumerator.next()) {
+      VmMapping* mapping = entry->region_or_mapping;
+      if (mapping->base() > expected) {
+        return ZX_ERR_NOT_FOUND;
+      }
+      vaddr_t end;
+      overflowed = add_overflow(mapping->base(), mapping->size(), &end);
+      ASSERT(!overflowed);
+      if (!mapping->is_valid_mapping_flags(new_arch_mmu_flags)) {
+        return ZX_ERR_ACCESS_DENIED;
+      }
+      if (mapping == aspace_->vdso_code_mapping_.get()) {
+        return ZX_ERR_ACCESS_DENIED;
+      }
+      AssertHeld(mapping->lock_ref());
+      if (mapping->parent_ != this) {
+        if (op_children == VmAddressRegionOpChildren::No) {
+          return ZX_ERR_INVALID_ARGS;
+        }
+        // As this is a sub-region we cannot increase its mapping flags, even if they might
+        // otherwise be permissible. A mapping might have multiple different protect regions so need
+        // to check all of them within the protection range.
+        // Already know that expected is within the mapping, calculate a length that is within the
+        // range of mapping.
+        const size_t len = ktl::min(end_addr_byte, end - 1) - expected + 1;
+        zx_status_t status = mapping->EnumerateProtectionRangesLocked(
+            expected, len, [&new_arch_mmu_flags](vaddr_t, size_t, uint flags) {
+              if ((flags & new_arch_mmu_flags) != new_arch_mmu_flags) {
+                return ZX_ERR_ACCESS_DENIED;
+              }
+              return ZX_ERR_NEXT;
+            });
+        if (status != ZX_OK) {
+          return status;
+        }
+      }
+      expected = end;
     }
-
-    if (!itr->is_valid_mapping_flags(new_arch_mmu_flags)) {
-      return ZX_ERR_ACCESS_DENIED;
-    }
-    if (mapping == aspace_->vdso_code_mapping_.get()) {
-      return ZX_ERR_ACCESS_DENIED;
-    }
-
-    // The last byte of the last mapped region.
-    vaddr_t last_mapped_byte = 0;
-    overflowed = add_overflow(itr->base(), itr->size() - 1, &last_mapped_byte);
-    ASSERT(!overflowed);
-    if (last_mapped_byte >= end_addr_byte) {
-      // This mapping either reaches exactly to, or beyond, the end of the range we are protecting,
-      // so we are finished validating.
-      break;
-    }
-    // As we still have some range to process we can require there to be another adjacent mapping,
-    // so increment itr and check for it.
-
-    ++itr;
-    if (!itr.IsValid()) {
+    if (expected < end_addr_byte) {
       return ZX_ERR_NOT_FOUND;
     }
-
-    // As we are at least the second mapping in the address space, and mappings cannot be
-    // zero sized, we should not have a base of 0.
-    DEBUG_ASSERT(itr->base() > 0);
-    if (itr->base() - 1 != last_mapped_byte) {
-      return ZX_ERR_NOT_FOUND;
-    }
   }
 
-  for (auto itr = begin; itr.IsValid() && itr->base() < end_addr_byte;) {
-    VmMapping* mapping = itr->as_vm_mapping_ptr();
+  VmAddressRegionEnumerator<VmAddressRegionEnumeratorType::PausableMapping> enumerator(
+      *this, base, end_addr_byte);
+  AssertHeld(enumerator.lock_ref());
+  while (auto entry = enumerator.next()) {
+    VmMapping* mapping = entry->region_or_mapping;
     DEBUG_ASSERT(mapping);
 
     // The last byte of the current region.
     vaddr_t curr_end_byte = 0;
-    overflowed = add_overflow(itr->base(), itr->size() - 1, &curr_end_byte);
+    overflowed = add_overflow(mapping->base(), mapping->size() - 1, &curr_end_byte);
     ASSERT(!overflowed);
-    const vaddr_t protect_base = ktl::max(itr->base(), base);
+    const vaddr_t protect_base = ktl::max(mapping->base(), base);
     const vaddr_t protect_end_byte = ktl::min(curr_end_byte, end_addr_byte);
     size_t protect_size;
     overflowed = add_overflow(protect_end_byte - protect_base, 1, &protect_size);
     ASSERT(!overflowed);
     AssertHeld(mapping->lock_ref());
 
-    // |itr| needs to be incremented here since the mapping might be deleted by ProtectLocked. After
-    // |itr| is incremented we can use |mapping| instead, although after ProtectLocked is called it
-    // also becomes invalid.
-    itr++;
+    // ProtectLocked might delete the mapping, and so we must pause the enumerator to safely perform
+    // mutations.
+    enumerator.pause();
     zx_status_t status = mapping->ProtectLocked(protect_base, protect_size, new_arch_mmu_flags);
     if (status != ZX_OK) {
       // TODO(teisenbe): Try to work out a way to guarantee success, or
       // provide a full unwind?
       return status;
     }
+    enumerator.resume();
   }
 
   return ZX_OK;

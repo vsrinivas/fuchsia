@@ -36,6 +36,7 @@ default rights for each object type, which can be reduced via
 | **ZX_RIGHT_MANAGE_THREAD**  | **NOT YET IMPLEMENTED** Allows suspending/resuming threads, etc. |
 | **ZX_RIGHT_APPLY_PROFILE**  | Allows a scheduling profile to be applied to a thread via [`zx_object_set_profile()`] |
 | **ZX_RIGHT_MANAGE_SOCKET**  | Allows changing socket disposition via [`zx_socket_set_disposition()`] |
+| **ZX_RIGHT_OP_CHILDREN**    | Allows for operations on a parent object to also modify children |
 
 ## ZX_RIGHTS_BASIC
 

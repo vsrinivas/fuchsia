@@ -81,7 +81,8 @@ zx_status_t sys_vmar_destroy(zx_handle_t handle) {
 
   // lookup the dispatcher from handle
   fbl::RefPtr<VmAddressRegionDispatcher> vmar;
-  zx_status_t status = up->handle_table().GetDispatcher(*up, handle, &vmar);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_OP_CHILDREN, &vmar);
   if (status != ZX_OK) {
     return status;
   }
@@ -207,12 +208,13 @@ zx_status_t sys_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, uint64_t len) {
 
   // lookup the dispatcher from handle
   fbl::RefPtr<VmAddressRegionDispatcher> vmar;
-  zx_status_t status = up->handle_table().GetDispatcher(*up, handle, &vmar);
+  zx_rights_t vmar_rights;
+  zx_status_t status = up->handle_table().GetDispatcherAndRights(*up, handle, &vmar, &vmar_rights);
   if (status != ZX_OK) {
     return status;
   }
 
-  return vmar->Unmap(addr, len);
+  return vmar->Unmap(addr, len, VmAddressRegionDispatcher::op_children_from_rights(vmar_rights));
 }
 
 // zx_status_t zx_vmar_protect
@@ -239,7 +241,8 @@ zx_status_t sys_vmar_protect(zx_handle_t handle, zx_vm_option_t options, zx_vadd
 
   // lookup the dispatcher from handle
   fbl::RefPtr<VmAddressRegionDispatcher> vmar;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(*up, handle, vmar_rights, &vmar);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(*up, handle, vmar_rights, &vmar, &vmar_rights);
   if (status != ZX_OK) {
     return status;
   }
@@ -248,7 +251,8 @@ zx_status_t sys_vmar_protect(zx_handle_t handle, zx_vm_option_t options, zx_vadd
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return vmar->Protect(addr, len, options);
+  return vmar->Protect(addr, len, options,
+                       VmAddressRegionDispatcher::op_children_from_rights(vmar_rights));
 }
 
 // zx_status_t zx_vmar_op_range
@@ -256,13 +260,12 @@ zx_status_t sys_vmar_op_range(zx_handle_t handle, uint32_t op, zx_vaddr_t addr, 
                               user_inout_ptr<void> _buffer, size_t buffer_size) {
   auto* up = ProcessDispatcher::GetCurrent();
 
-  // TODO(fxbug.dev/39956): Pass |handle| rights to RangeOp(), so it can enforce e.g. that
-  // certain operations only be available through writable handles.
   fbl::RefPtr<VmAddressRegionDispatcher> vmar;
-  zx_status_t status = up->handle_table().GetDispatcher(*up, handle, &vmar);
+  zx_rights_t vmar_rights;
+  zx_status_t status = up->handle_table().GetDispatcherAndRights(*up, handle, &vmar, &vmar_rights);
   if (status != ZX_OK) {
     return status;
   }
 
-  return vmar->RangeOp(op, addr, len, _buffer, buffer_size);
+  return vmar->RangeOp(op, addr, len, vmar_rights, _buffer, buffer_size);
 }

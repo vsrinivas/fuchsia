@@ -84,9 +84,17 @@ requested change, or the VMAR itself did not allow the requested change.
 **ZX_ERR_BAD_STATE**  *handle* is not a live VMAR, or the range specified by *address* and *size*
 spans unmapped regions.
 
-**ZX_ERR_INVALID_ARGS**  *buffer* is non-null, or *buffer_size* is non-zero, *op* is not a valid
-operation, *size* is zero, or *address* was not page-aligned, or *op* was one of
-**ZX_VMAR_OP_COMMIT** or **ZX_VMAR_OP_DECOMMIT** and the requested range had subregions.
+**ZX_ERR_INVALID_ARGS**  Returned for any of the following reasons:
+
+ - *buffer* is non-null.
+ - *buffer_size* is non-zero.
+ - *size* is zero.
+ - *address* was not page-aligned.
+ - *op* is not a valid operation.
+ - *op* was one of **ZX_VMAR_OP_COMMIT** or **ZX_VMAR_OP_DECOMMIT** and the requested range
+   had subregions.
+ - the requested range overlapped a sub-region and *handle* did not have
+   **ZX_RIGHT_OP_CHILDREN**.
 
 **ZX_ERR_NOT_SUPPORTED**  *op* was not **ZX_VMO_OP_DECOMMIT**, or one or more mapped VMOs do not
 support the requested *op*.

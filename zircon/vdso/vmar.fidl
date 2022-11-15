@@ -182,6 +182,8 @@ protocol Vmar {
     ///
     /// ## Errors
     ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* does not have **ZX_RIGHT_OP_CHILDREN**.
+    ///
     /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
     ///
     /// **ZX_ERR_WRONG_TYPE**  *handle* is not a VMAR handle.
@@ -413,7 +415,8 @@ protocol Vmar {
     /// **ZX_ERR_WRONG_TYPE**  *handle* is not a VMAR handle.
     ///
     /// **ZX_ERR_INVALID_ARGS**  *addr* is not page-aligned, *len* is 0 or not page-aligned,
-    /// or the requested range partially overlaps a sub-region.
+    /// or the requested range partially overlaps a sub-region, or the requested range overlapped
+    /// a sub-region and *handle* did not have **ZX_RIGHT_OP_CHILDREN**.
     ///
     /// **ZX_ERR_BAD_STATE**  *handle* refers to a destroyed handle.
     ///
@@ -475,6 +478,9 @@ protocol Vmar {
     ///   not support mapping execute-only pages. If the system can map execute-only
     ///   this flag is ignored.
     ///
+    /// For any mappings in sub-regions in the requested range, their access permissions must either
+    /// be reduced, or left unchanged, by the requested change.
+    ///
     /// *len* must be page-aligned.
     ///
     /// ## Rights
@@ -498,14 +504,15 @@ protocol Vmar {
     /// **ZX_ERR_INVALID_ARGS**  *prot_flags* is an unsupported combination of flags
     /// (e.g., **ZX_VM_PERM_WRITE** but not **ZX_VM_PERM_READ**), *addr* is
     /// not page-aligned, *len* is 0, or some subrange of the requested range is
-    /// occupied by a subregion.
+    /// occupied by a subregion and *handle* did not have **ZX_RIGHT_OP_CHILDREN**.
     ///
     /// **ZX_ERR_NOT_FOUND**  Some subrange of the requested range is not mapped.
     ///
     /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the proper rights for the
     /// requested change, the original VMO handle used to create the mapping did not
     /// have the rights for the requested change, or the VMAR itself does not allow
-    /// the requested change.
+    /// the requested change, or there is a mapping in a sub-region that would have
+    /// its mapping permissions increased.
     ///
     /// ## Notes
     ///
@@ -610,9 +617,17 @@ protocol Vmar {
     /// **ZX_ERR_BAD_STATE**  *handle* is not a live VMAR, or the range specified by *address* and *size*
     /// spans unmapped regions.
     ///
-    /// **ZX_ERR_INVALID_ARGS**  *buffer* is non-null, or *buffer_size* is non-zero, *op* is not a valid
-    /// operation, *size* is zero, or *address* was not page-aligned, or *op* was one of
-    /// **ZX_VMAR_OP_COMMIT** or **ZX_VMAR_OP_DECOMMIT** and the requested range had subregions.
+    /// **ZX_ERR_INVALID_ARGS**  Returned for any of the following reasons:
+    ///
+    ///  - *buffer* is non-null.
+    ///  - *buffer_size* is non-zero.
+    ///  - *size* is zero.
+    ///  - *address* was not page-aligned.
+    ///  - *op* is not a valid operation.
+    ///  - *op* was one of **ZX_VMAR_OP_COMMIT** or **ZX_VMAR_OP_DECOMMIT** and the requested range
+    ///    had subregions.
+    ///  - the requested range overlapped a sub-region and *handle* did not have
+    ///    **ZX_RIGHT_OP_CHILDREN**.
     ///
     /// **ZX_ERR_NOT_SUPPORTED**  *op* was not **ZX_VMO_OP_DECOMMIT**, or one or more mapped VMOs do not
     /// support the requested *op*.

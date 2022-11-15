@@ -38,6 +38,9 @@ be a bitwise-or of one or more of the following:
   not support mapping execute-only pages. If the system can map execute-only
   this flag is ignored.
 
+For any mappings in sub-regions in the requested range, their access permissions must either
+be reduced, or left unchanged, by the requested change.
+
 *len* must be page-aligned.
 
 ## Rights
@@ -61,14 +64,15 @@ If *options* & **ZX_VM_PERM_EXECUTE**, *handle* must be of type **ZX_OBJ_TYPE_VM
 **ZX_ERR_INVALID_ARGS**  *prot_flags* is an unsupported combination of flags
 (e.g., **ZX_VM_PERM_WRITE** but not **ZX_VM_PERM_READ**), *addr* is
 not page-aligned, *len* is 0, or some subrange of the requested range is
-occupied by a subregion.
+occupied by a subregion and *handle* did not have **ZX_RIGHT_OP_CHILDREN**.
 
 **ZX_ERR_NOT_FOUND**  Some subrange of the requested range is not mapped.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have the proper rights for the
 requested change, the original VMO handle used to create the mapping did not
 have the rights for the requested change, or the VMAR itself does not allow
-the requested change.
+the requested change, or there is a mapping in a sub-region that would have
+its mapping permissions increased.
 
 ## Notes
 

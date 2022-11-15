@@ -199,7 +199,8 @@ zx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, fbl::RefPtr<VmObj
   return ZX_OK;
 }
 
-zx_status_t VmAddressRegionDispatcher::Protect(vaddr_t base, size_t len, uint32_t flags) {
+zx_status_t VmAddressRegionDispatcher::Protect(vaddr_t base, size_t len, uint32_t flags,
+                                               VmAddressRegionOpChildren op_children) {
   canary_.Assert();
 
   if (!IS_PAGE_ALIGNED(base)) {
@@ -220,35 +221,45 @@ zx_status_t VmAddressRegionDispatcher::Protect(vaddr_t base, size_t len, uint32_
   if (vmar_flags || (alignment != 0))
     return ZX_ERR_INVALID_ARGS;
 
-  return vmar_->Protect(base, len, arch_mmu_flags);
+  return vmar_->Protect(base, len, arch_mmu_flags, op_children);
 }
 
 zx_status_t VmAddressRegionDispatcher::RangeOp(uint32_t op, vaddr_t base, size_t len,
-                                               user_inout_ptr<void> buffer, size_t buffer_size) {
+                                               zx_rights_t rights, user_inout_ptr<void> buffer,
+                                               size_t buffer_size) {
   canary_.Assert();
 
+  const VmAddressRegionOpChildren op_children = op_children_from_rights(rights);
+
+  // TODO(fxbug.dev/39956): Restrict these operations based on the passed in |rights|.
   if (op == ZX_VMAR_OP_COMMIT) {
-    return vmar_->RangeOp(VmAddressRegion::RangeOpType::Commit, base, len, buffer, buffer_size);
+    return vmar_->RangeOp(VmAddressRegion::RangeOpType::Commit, base, len, op_children, buffer,
+                          buffer_size);
   } else if (op == ZX_VMAR_OP_DECOMMIT) {
-    return vmar_->RangeOp(VmAddressRegion::RangeOpType::Decommit, base, len, buffer, buffer_size);
+    return vmar_->RangeOp(VmAddressRegion::RangeOpType::Decommit, base, len, op_children, buffer,
+                          buffer_size);
   } else if (op == ZX_VMAR_OP_MAP_RANGE) {
-    return vmar_->RangeOp(VmAddressRegion::RangeOpType::MapRange, base, len, buffer, buffer_size);
+    return vmar_->RangeOp(VmAddressRegion::RangeOpType::MapRange, base, len, op_children, buffer,
+                          buffer_size);
   } else if (op == ZX_VMAR_OP_DONT_NEED) {
-    return vmar_->RangeOp(VmAddressRegion::RangeOpType::DontNeed, base, len, buffer, buffer_size);
+    return vmar_->RangeOp(VmAddressRegion::RangeOpType::DontNeed, base, len, op_children, buffer,
+                          buffer_size);
   } else if (op == ZX_VMAR_OP_ALWAYS_NEED) {
-    return vmar_->RangeOp(VmAddressRegion::RangeOpType::AlwaysNeed, base, len, buffer, buffer_size);
+    return vmar_->RangeOp(VmAddressRegion::RangeOpType::AlwaysNeed, base, len, op_children, buffer,
+                          buffer_size);
   }
   return ZX_ERR_INVALID_ARGS;
 }
 
-zx_status_t VmAddressRegionDispatcher::Unmap(vaddr_t base, size_t len) {
+zx_status_t VmAddressRegionDispatcher::Unmap(vaddr_t base, size_t len,
+                                             VmAddressRegionOpChildren op_children) {
   canary_.Assert();
 
   if (!IS_PAGE_ALIGNED(base)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return vmar_->Unmap(base, len);
+  return vmar_->Unmap(base, len, op_children);
 }
 
 bool VmAddressRegionDispatcher::is_valid_mapping_protection(uint32_t flags) {

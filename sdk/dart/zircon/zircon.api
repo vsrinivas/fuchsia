@@ -1980,6 +1980,14 @@
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },
+            "RIGHT_OP_CHILDREN": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "RIGHT_OP_CHILDREN",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            },
             "RIGHT_READ": {
               "isConst": true,
               "isFinal": false,

@@ -39,7 +39,8 @@ TODO(fxbug.dev/32253)
 **ZX_ERR_WRONG_TYPE**  *handle* is not a VMAR handle.
 
 **ZX_ERR_INVALID_ARGS**  *addr* is not page-aligned, *len* is 0 or not page-aligned,
-or the requested range partially overlaps a sub-region.
+or the requested range partially overlaps a sub-region, or the requested range overlapped
+a sub-region and *handle* did not have **ZX_RIGHT_OP_CHILDREN**.
 
 **ZX_ERR_BAD_STATE**  *handle* refers to a destroyed handle.
 

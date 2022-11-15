@@ -33,6 +33,8 @@ TODO(fxbug.dev/32253)
 
 ## Errors
 
+**ZX_ERR_ACCESS_DENIED** *handle* does not have **ZX_RIGHT_OP_CHILDREN**.
+
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a VMAR handle.

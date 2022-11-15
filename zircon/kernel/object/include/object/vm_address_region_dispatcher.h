@@ -36,18 +36,24 @@ class VmAddressRegionDispatcher final
   zx_status_t Map(size_t vmar_offset, fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, size_t len,
                   uint32_t flags, fbl::RefPtr<VmMapping>* out);
 
-  zx_status_t Protect(vaddr_t base, size_t len, uint32_t flags);
+  zx_status_t Protect(vaddr_t base, size_t len, uint32_t flags,
+                      VmAddressRegionOpChildren op_children);
 
-  zx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size,
+  zx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size, zx_rights_t rights,
                       user_inout_ptr<void> buffer, size_t buffer_size);
 
-  zx_status_t Unmap(vaddr_t base, size_t len);
+  zx_status_t Unmap(vaddr_t base, size_t len, VmAddressRegionOpChildren op_children);
 
   const fbl::RefPtr<VmAddressRegion>& vmar() const { return vmar_; }
 
   // Check if the given flags define an allowed combination of RWX
   // protections.
   static bool is_valid_mapping_protection(uint32_t flags);
+
+  static VmAddressRegionOpChildren op_children_from_rights(zx_rights_t rights) {
+    return (rights & ZX_RIGHT_OP_CHILDREN) == 0 ? VmAddressRegionOpChildren::No
+                                                : VmAddressRegionOpChildren::Yes;
+  }
 
  private:
   explicit VmAddressRegionDispatcher(fbl::RefPtr<VmAddressRegion> vmar, uint base_arch_mmu_flags);

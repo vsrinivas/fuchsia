@@ -1448,7 +1448,7 @@ class EnumeratorTestHelper {
     ASSERT(page_offset_end > page_offset_begin);
     const vaddr_t vaddr = test_vmar_->base() + page_offset_begin * PAGE_SIZE;
     const size_t size = (page_offset_end - page_offset_begin) * PAGE_SIZE;
-    return test_vmar_->Unmap(vaddr, size);
+    return test_vmar_->Unmap(vaddr, size, VmAddressRegionOpChildren::Yes);
   }
 
   Lock<CriticalMutex>* lock() const TA_RET_CAP(test_vmar_->lock()) { return test_vmar_->lock(); }

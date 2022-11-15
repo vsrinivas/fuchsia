@@ -76,6 +76,12 @@ TEST(Vmar, DestroyTest) {
   ASSERT_EQ(zx_vmar_allocate(vmar, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0,
                              1024 * zx_system_get_page_size(), &sub_vmar, &sub_region_addr),
             ZX_OK);
+  zx_handle_t dup_sub_vmar;
+  ASSERT_OK(
+      zx_handle_duplicate(sub_vmar, ZX_DEFAULT_VMAR_RIGHTS & ~ZX_RIGHT_OP_CHILDREN, &dup_sub_vmar));
+  EXPECT_EQ(ZX_ERR_ACCESS_DENIED, zx_vmar_destroy(dup_sub_vmar));
+  EXPECT_OK(zx_handle_close(dup_sub_vmar));
+
   EXPECT_EQ(zx_vmar_destroy(sub_vmar), ZX_OK);
 
   zx_handle_t region;
@@ -1128,6 +1134,55 @@ TEST(Vmar, ProtectTest) {
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
 }
 
+// Protect should only reduce the active permissions in a sub-region, never increase them.
+TEST(Vmar, ProtectSubregionTest) {
+  zx::vmar vmar;
+
+  uintptr_t addr;
+  ASSERT_OK(zx::vmar::root_self()->allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0,
+                                            zx_system_get_page_size(), &vmar, &addr));
+
+  zx::vmar child_vmar;
+  uintptr_t child_addr;
+  ASSERT_OK(vmar.allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0, zx_system_get_page_size(),
+                          &child_vmar, &child_addr));
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+
+  // Map the VMO in with its full read/write permissions.
+  zx_vaddr_t map_addr;
+  EXPECT_OK(child_vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, zx_system_get_page_size(),
+                           &map_addr));
+
+  // All the addresses should be the same.
+  EXPECT_EQ(addr, child_addr);
+  EXPECT_EQ(addr, map_addr);
+
+  // Use the parent vmar to protect away the write permission.
+  EXPECT_OK(vmar.protect(ZX_VM_PERM_READ, addr, zx_system_get_page_size()));
+
+  // Cannot put the write permission back using the parent.
+  EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
+            vmar.protect(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, addr, zx_system_get_page_size()));
+
+  // The child vmar can protect the write permission back though.
+  EXPECT_OK(child_vmar.protect(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, child_addr,
+                               zx_system_get_page_size()));
+
+  // Removing the OP_CHILDREN right should not allow even removing of permissions with protect.
+  zx_info_handle_basic_t handle_info;
+  EXPECT_OK(
+      vmar.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), nullptr, nullptr));
+  zx::vmar dup_vmar;
+  EXPECT_OK(vmar.duplicate(handle_info.rights & ~ZX_RIGHT_OP_CHILDREN, &dup_vmar));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            dup_vmar.protect(ZX_VM_PERM_READ, addr, zx_system_get_page_size()));
+
+  // Cleanup.
+  vmar.destroy();
+}
+
 // Validate that a region can't be created with higher RWX privileges than its
 // parent.
 TEST(Vmar, NestedRegionPermsTest) {
@@ -1504,6 +1559,45 @@ TEST(Vmar, UnmapBaseNotMappedTest) {
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
 }
 
+// Verify that we can restrict sub-region destruction with ZX_RIGHT_OP_CHILDREN
+TEST(Vmar, UnmapOpChildren) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+
+  zx::vmar vmar;
+  uintptr_t vmar_addr;
+  ASSERT_OK(zx::vmar::root_self()->allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0,
+                                            zx_system_get_page_size(), &vmar, &vmar_addr));
+
+  // Make a sub vmar.
+  zx::vmar child_vmar;
+  uintptr_t child_vmar_addr;
+  ASSERT_OK(vmar.allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0, zx_system_get_page_size(),
+                          &child_vmar, &child_vmar_addr));
+
+  // Map the VMO into the child.
+  zx_vaddr_t map_addr;
+  EXPECT_OK(child_vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, zx_system_get_page_size(),
+                           &map_addr));
+
+  // All the addresses should've ended up the same.
+  EXPECT_EQ(vmar_addr, child_vmar_addr);
+  EXPECT_EQ(vmar_addr, map_addr);
+
+  // Duplicate the vmar handle and remove the op_children permission.
+  zx::vmar dup_vmar;
+  ASSERT_OK(vmar.duplicate(ZX_DEFAULT_VMAR_RIGHTS & ~ZX_RIGHT_OP_CHILDREN, &dup_vmar));
+
+  // Unmap using the duplicate should fail.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, dup_vmar.unmap(vmar_addr, zx_system_get_page_size()));
+
+  // Unmap on the original should succeed.
+  EXPECT_OK(vmar.unmap(vmar_addr, zx_system_get_page_size()));
+
+  // Cleanup
+  vmar.destroy();
+}
+
 // Verify that we can overwrite subranges and multiple ranges simultaneously
 TEST(Vmar, MapSpecificOverwriteTest) {
   zx_handle_t process;
@@ -1726,7 +1820,7 @@ TEST(Vmar, ProtectMultipleTest) {
             ZX_OK);
   EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ, mapping_addr[0] + zx_system_get_page_size(),
                             3 * mapping_size - 2 * zx_system_get_page_size()),
-            ZX_ERR_INVALID_ARGS);
+            ZX_ERR_NOT_FOUND);
   // TODO(teisenbe): Test to validate no perms changed, need to export more debug
   // info
   EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'0000'1111, 12));
@@ -1751,7 +1845,7 @@ TEST(Vmar, ProtectMultipleTest) {
             ZX_OK);
   EXPECT_EQ(zx_vmar_protect(vmar, ZX_VM_PERM_READ, mapping_addr[0] + zx_system_get_page_size(),
                             3 * mapping_size - 2 * zx_system_get_page_size()),
-            ZX_ERR_INVALID_ARGS);
+            ZX_OK);
   // TODO(teisenbe): Test to validate no perms changed, need to export more debug
   // info
   EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'1111'1111, 12));
@@ -1984,6 +2078,61 @@ TEST(Vmar, RangeOpMapRange) {
   EXPECT_EQ(zx_vmar_unmap(vmar, map_base, vmo_size), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
+}
+
+// Validate that the ZX_RIGHT_OP_CHILDREN is needed to operate on subregions with op_range.
+TEST(Vmar, RangeOpSubRegions) {
+  zx::vmar vmar;
+
+  uintptr_t addr;
+  ASSERT_OK(zx::vmar::root_self()->allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0,
+                                            zx_system_get_page_size(), &vmar, &addr));
+
+  zx::vmar child_vmar;
+  uintptr_t child_addr;
+  ASSERT_OK(vmar.allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0, zx_system_get_page_size(),
+                          &child_vmar, &child_addr));
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+
+  zx_vaddr_t map_addr;
+  EXPECT_OK(child_vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, zx_system_get_page_size(),
+                           &map_addr));
+
+  // All the addresses should be the same.
+  EXPECT_EQ(addr, child_addr);
+  EXPECT_EQ(addr, map_addr);
+
+  // Remove the OP_CHILDREN right.
+  zx_info_handle_basic_t handle_info;
+  EXPECT_OK(
+      vmar.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), nullptr, nullptr));
+  zx::vmar dup_vmar;
+  EXPECT_OK(vmar.duplicate(handle_info.rights & ~ZX_RIGHT_OP_CHILDREN, &dup_vmar));
+
+  // Validate most operations work on the regular parent vmar, but do not work with OP_CHILDREN
+  // removed.
+  EXPECT_OK(vmar.op_range(ZX_VMAR_OP_MAP_RANGE, addr, zx_system_get_page_size(), nullptr, 0));
+  EXPECT_OK(vmar.op_range(ZX_VMAR_OP_DONT_NEED, addr, zx_system_get_page_size(), nullptr, 0));
+  EXPECT_OK(vmar.op_range(ZX_VMAR_OP_ALWAYS_NEED, addr, zx_system_get_page_size(), nullptr, 0));
+
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            dup_vmar.op_range(ZX_VMAR_OP_MAP_RANGE, addr, zx_system_get_page_size(), nullptr, 0));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            dup_vmar.op_range(ZX_VMAR_OP_DONT_NEED, addr, zx_system_get_page_size(), nullptr, 0));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            dup_vmar.op_range(ZX_VMAR_OP_ALWAYS_NEED, addr, zx_system_get_page_size(), nullptr, 0));
+
+  // The commit and decommit ops will not work with or without OP_CHILDREN.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            dup_vmar.op_range(ZX_VMAR_OP_COMMIT, addr, zx_system_get_page_size(), nullptr, 0));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            vmar.op_range(ZX_VMAR_OP_COMMIT, addr, zx_system_get_page_size(), nullptr, 0));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            dup_vmar.op_range(ZX_VMAR_OP_DECOMMIT, addr, zx_system_get_page_size(), nullptr, 0));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            vmar.op_range(ZX_VMAR_OP_DECOMMIT, addr, zx_system_get_page_size(), nullptr, 0));
 }
 
 // Attempt to unmap a large mostly uncommitted VMO

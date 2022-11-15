@@ -408,7 +408,8 @@ static bool guest_physical_aspace_protect() {
   status = create_mapping(gpa->RootVmar(), vmo, 0);
   EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
 
-  status = gpa->RootVmar()->Protect(0, PAGE_SIZE, ARCH_MMU_FLAG_PERM_WRITE);
+  status = gpa->RootVmar()->Protect(0, PAGE_SIZE, ARCH_MMU_FLAG_PERM_WRITE,
+                                    VmAddressRegionOpChildren::Yes);
   EXPECT_EQ(ZX_OK, status, "Failed to enable write access\n");
 
   END_TEST;
