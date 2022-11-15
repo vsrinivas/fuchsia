@@ -9,8 +9,8 @@ test("restricted-mode") {
   output_name = "restricted-mode-test"
   sources = [ "restricted-mode-test.cc" ]
   deps = [
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",

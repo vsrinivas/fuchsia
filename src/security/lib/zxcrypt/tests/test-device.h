@@ -11,7 +11,6 @@
 #include <lib/component/incoming/cpp/service_client.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <stddef.h>

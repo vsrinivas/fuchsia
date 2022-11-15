@@ -31,7 +31,7 @@ source_set("utils") {
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_cpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry_cc",
     "//third_party/glm",

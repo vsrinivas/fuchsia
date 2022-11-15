@@ -17,9 +17,9 @@ shared_library("tee-client-api") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_cpp_wire",
     "//sdk/fidl/fuchsia.tee:fuchsia.tee_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
-    "//sdk/lib/sys/component/cpp",
     "//zircon/system/ulib/zx",
   ]
 
@@ -34,9 +34,9 @@ static_library("tee-client-api-static") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_cpp_wire",
     "//sdk/fidl/fuchsia.tee:fuchsia.tee_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
-    "//sdk/lib/sys/component/cpp",
     "//zircon/system/ulib/zx",
   ]
 

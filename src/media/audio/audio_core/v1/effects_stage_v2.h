@@ -6,8 +6,8 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_EFFECTS_STAGE_V2_H_
 
 #include <fidl/fuchsia.audio.effects/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fpromise/result.h>
-#include <lib/sys/component/cpp/service_client.h>
 
 #include <memory>
 

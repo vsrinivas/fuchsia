@@ -15,8 +15,8 @@
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fidl/cpp/wire/channel.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <netinet/ip6.h>
 

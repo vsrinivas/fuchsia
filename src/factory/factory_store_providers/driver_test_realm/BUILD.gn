@@ -21,8 +21,8 @@ executable("bin") {
   sources = [ "ram_disk_setup.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/device-watcher/cpp",
-    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files:files",
     "//src/lib/fsl",

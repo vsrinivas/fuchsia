@@ -61,6 +61,7 @@ executable("bin") {
 
 source_set("base_deps") {
   public_deps = [
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",

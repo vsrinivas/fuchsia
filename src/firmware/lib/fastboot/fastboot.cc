@@ -9,10 +9,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fastboot/fastboot.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/status.h>
 
 #include <optional>

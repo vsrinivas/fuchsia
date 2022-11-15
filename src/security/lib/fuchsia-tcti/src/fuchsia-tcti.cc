@@ -5,8 +5,8 @@
 #include "src/security/lib/fuchsia-tcti/include/fuchsia-tcti.h"
 
 #include <fidl/fuchsia.tpm/cpp/wire.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <vector>

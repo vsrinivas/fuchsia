@@ -9,7 +9,7 @@ executable("bin") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.memory:fuchsia.memory_cpp_wire",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//src/developer/memory/metrics",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.sys2/cpp/wire.h>
 #include <lib/async/cpp/task.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <zircon/types.h>

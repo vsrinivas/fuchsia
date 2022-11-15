@@ -13,8 +13,8 @@ static_library("fuchsia-tcti") {
   sources = [ "src/fuchsia-tcti.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.tpm:fuchsia.tpm_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//zircon/system/ulib/fbl",
   ]

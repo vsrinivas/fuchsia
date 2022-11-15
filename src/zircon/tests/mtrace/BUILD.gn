@@ -9,8 +9,8 @@ test("mtrace") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

@@ -4,8 +4,8 @@
 
 #include "src/media/audio/lib/effects_loader/effects_loader_v2.h"
 
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fit/defer.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 

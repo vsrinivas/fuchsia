@@ -12,7 +12,7 @@ executable("perfetto_bridge_integration_test_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.tracing.controller:fuchsia.tracing.controller_cpp",
-    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/syslog/cpp:cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/performance/lib/test_utils",
@@ -38,6 +38,7 @@ executable("perfetto_producer_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.tracing.perfetto:fuchsia.tracing.perfetto_cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp:cpp",
     "//third_party/perfetto:libperfetto_client_experimental",

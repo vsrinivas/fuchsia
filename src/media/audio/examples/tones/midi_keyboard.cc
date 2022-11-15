@@ -6,8 +6,8 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fit/defer.h>
-#include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 

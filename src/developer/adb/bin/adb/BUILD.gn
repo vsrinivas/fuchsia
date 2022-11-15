@@ -15,6 +15,7 @@ group("common") {
     "//sdk/fidl/fuchsia.component:fuchsia.component_cpp",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
     "//sdk/fidl/fuchsia.hardware.adb:fuchsia.hardware.adb_cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",

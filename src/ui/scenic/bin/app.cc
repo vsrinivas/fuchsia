@@ -6,7 +6,7 @@
 
 #include <fuchsia/stash/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <optional>
