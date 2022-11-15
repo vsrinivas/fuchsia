@@ -33,8 +33,6 @@ int StringRef::Register(StringRef* string_ref) {
   // Emit a name record the first time this string ref is encountered at
   // runtime. This is ignored if tracing is not active and is replayed at the
   // beginning of subsequent tracing sessions.
-  ktrace_name_etc(TAG_PROBE_NAME, string_ref->id, 0, string_ref->string, true);
-  // Also emit an FXT string record.
   // TEMPORARY(fxbug.dev/98176): Since ktrace_provider also creates its own
   // string references, use the upper half of the index space.
   const uint16_t fxt_id = static_cast<uint16_t>(string_ref->id) | 0x4000;
