@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <dirent.h>
-#include <fcntl.h>
 #include <fuchsia/gpu/magma/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl_test_base.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
@@ -15,32 +13,24 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <filesystem>
+
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 
 namespace {
 
 std::optional<std::string> FindGpuDevice(const std::string dir_name) {
-  DIR* dir = opendir(dir_name.c_str());
-  if (!dir)
-    return {};
-
   std::optional<std::string> device;
 
-  while (true) {
-    struct dirent* dir_entry = readdir(dir);
-    if (!dir_entry)
-      break;
-
-    std::string entry(dir_entry->d_name);
-
-    if (entry.length() == 3 && std::all_of(entry.begin(), entry.end(), ::isdigit)) {
-      device = dir_name + "/" + entry;
+  // Directory_iterator skips dot and dot-dot so we don't have to.
+  for (auto const& entry : std::filesystem::directory_iterator(dir_name)) {
+    if (entry.is_regular_file()) {
+      device = entry.path();
       break;
     }
   }
 
-  closedir(dir);
   return device;
 }
 }  // namespace
