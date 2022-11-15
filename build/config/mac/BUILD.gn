@@ -14,10 +14,7 @@ config("compiler") {
     # static libc++ anyway.
     "-faligned-allocation",
   ]
-  cflags_objcc = [
-    "-std=c++14",
-    "-stdlib=libc++",
-  ]
+  cflags_objcc = [ "-stdlib=libc++" ]
   defines = [
     # libc++ headers mark some symbols as unavailable on macOS by default
     # because the system libc++ doesn't support them.  But we use our own
