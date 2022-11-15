@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use assert_matches::assert_matches;
 use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net as fnet;
@@ -38,15 +38,20 @@ use net_types::{
 };
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _, TestInterface};
 use netstack_testing_common::{
+    constants::ipv6 as ipv6_consts,
     ping,
     realms::{
         Netstack, Netstack2, Netstack2WithFastUdp, Netstack3, NetstackVersion, TestSandboxExt as _,
     },
-    Result,
+    send_ra_with_router_lifetime, Result,
 };
 use netstack_testing_macros::variants_test;
 use packet::Serializer as _;
-use packet_formats::{self, ipv4::Ipv4Header as _};
+use packet_formats::{
+    self,
+    icmp::ndp::options::{NdpOptionBuilder, PrefixInformation},
+    ipv4::Ipv4Header as _,
+};
 use test_case::test_case;
 
 async fn run_udp_socket_test(
@@ -192,10 +197,49 @@ struct UdpSendMsgPreflight {
     expected_result: UdpSendMsgPreflightExpectation,
 }
 
+async fn setup_fastudp_network<'a>(
+    name: &'a str,
+    sandbox: &'a netemul::TestSandbox,
+    socket_domain: fposix_socket::Domain,
+) -> (
+    netemul::TestNetwork<'a>,
+    netemul::TestRealm<'a>,
+    netemul::TestInterface<'a>,
+    fposix_socket::DatagramSocketProxy,
+) {
+    let net = sandbox.create_network("net").await.expect("create network");
+    let netstack = sandbox
+        .create_netstack_realm::<Netstack2WithFastUdp, _>(name)
+        .expect("create netstack realm");
+    let iface = netstack
+        .join_network::<netemul::NetworkDevice, _>(&net, "ep")
+        .await
+        .expect("failed to join network");
+
+    let socket = {
+        let socket_provider = netstack
+            .connect_to_protocol::<fposix_socket::ProviderMarker>()
+            .expect("connect to socket provider");
+        let datagram_socket = socket_provider
+            .datagram_socket(socket_domain, fposix_socket::DatagramSocketProtocol::Udp)
+            .await
+            .expect("call datagram_socket")
+            .expect("create datagram socket");
+        match datagram_socket {
+            fposix_socket::ProviderDatagramSocketResponse::DatagramSocket(socket) => {
+                socket.into_proxy().expect("failed to create proxy")
+            }
+            socket => panic!("unexpected datagram socket variant: {:?}", socket),
+        }
+    };
+
+    (net, netstack, iface, socket)
+}
+
 fn validate_send_msg_preflight_response(
     response: &fposix_socket::DatagramSocketSendMsgPreflightResponse,
     expectation: UdpSendMsgPreflightSuccessExpectation,
-) {
+) -> Result {
     let fposix_socket::DatagramSocketSendMsgPreflightResponse {
         to, validity, maximum_size, ..
     } = response;
@@ -226,10 +270,14 @@ fn validate_send_msg_preflight_response(
             .collect::<Vec<_>>();
         zx::object_wait_many(&mut wait_items, zx::Time::INFINITE_PAST) == Err(zx::Status::TIMED_OUT)
     };
-    assert_eq!(
-        expect_all_eventpairs_valid, all_eventpairs_valid,
-        "mismatched expectation on eventpair validity"
-    );
+    if expect_all_eventpairs_valid != all_eventpairs_valid {
+        return Err(anyhow!(
+            "mismatched expectation on eventpair validity: expected {}, got {}",
+            expect_all_eventpairs_valid,
+            all_eventpairs_valid
+        ));
+    }
+    Ok(())
 }
 
 /// Executes a preflight for each of the passed preflight configs, validating
@@ -253,7 +301,8 @@ async fn execute_and_validate_preflights(
             match expected {
                 UdpSendMsgPreflightExpectation::Success(success_expectation) => {
                     let response = actual.expect("send_msg_preflight failed");
-                    let () = validate_send_msg_preflight_response(&response, success_expectation);
+                    validate_send_msg_preflight_response(&response, success_expectation)
+                        .expect("validate preflight response");
                     Some(response)
                 }
                 UdpSendMsgPreflightExpectation::Failure(expected_errno) => {
@@ -281,29 +330,6 @@ async fn test_udp_send_msg_preflight_fidl(
     test_name: &str,
     invalidation_reason: UdpCacheInvalidationReason,
 ) {
-    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let net = sandbox.create_network("net").await.expect("failed to create network");
-    let netstack = sandbox
-        .create_netstack_realm::<Netstack2WithFastUdp, _>(format!("{}_netstack", test_name))
-        .expect("failed to create netstack realm");
-
-    let socket_provider = netstack
-        .connect_to_protocol::<fposix_socket::ProviderMarker>()
-        .expect("failed to connect to socket provider");
-
-    let datagram_socket = socket_provider
-        .datagram_socket(fposix_socket::Domain::Ipv4, fposix_socket::DatagramSocketProtocol::Udp)
-        .await
-        .expect("datagram_socket fidl error")
-        .expect("failed to create datagram socket");
-
-    let datagram_socket = match datagram_socket {
-        fposix_socket::ProviderDatagramSocketResponse::DatagramSocket(socket) => socket,
-        socket => panic!("unexpected datagram socket variant: {:?}", socket),
-    };
-
-    let proxy = datagram_socket.into_proxy().expect("failed to create proxy");
-
     const PORT: u16 = 80;
     const INSTALLED_ADDR: fnet::Ipv4SocketAddress =
         fnet::Ipv4SocketAddress { address: fidl_ip_v4!("10.0.0.0"), port: PORT };
@@ -323,10 +349,9 @@ async fn test_udp_send_msg_preflight_fidl(
             port: PORT,
         });
 
-    let iface = netstack
-        .join_network::<netemul::NetworkDevice, _>(&net, "ep")
-        .await
-        .expect("failed to join network");
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let (_net, _netstack, iface, socket) =
+        setup_fastudp_network(test_name, &sandbox, fposix_socket::Domain::Ipv4).await;
 
     let mut installed_subnet =
         fnet::Subnet { addr: fnet::IpAddress::Ipv4(INSTALLED_ADDR.address), prefix_len: 8 };
@@ -347,14 +372,14 @@ async fn test_udp_send_msg_preflight_fidl(
                 ),
             },
         ],
-        &proxy,
+        &socket,
     )
     .await;
     assert_eq!(successful_preflights, []);
 
     let successful_preflights = {
         let mut connected_addr = REACHABLE_ADDR1;
-        let () = proxy
+        let () = socket
             .connect(&mut connected_addr)
             .await
             .expect("connect fidl error")
@@ -385,13 +410,13 @@ async fn test_udp_send_msg_preflight_fidl(
             ),
         });
 
-        execute_and_validate_preflights(preflights, &proxy).await
+        execute_and_validate_preflights(preflights, &socket).await
     };
 
     match invalidation_reason {
         UdpCacheInvalidationReason::ConnectCalled => {
             let mut connected_addr = REACHABLE_ADDR2;
-            let () = proxy
+            let () = socket
                 .connect(&mut connected_addr)
                 .await
                 .expect("connect fidl error")
@@ -407,14 +432,14 @@ async fn test_udp_send_msg_preflight_fidl(
             assert_eq!(disabled, true);
         }
         UdpCacheInvalidationReason::IPv6OnlyCalled => {
-            let () = proxy
+            let () = socket
                 .set_ipv6_only(true)
                 .await
                 .expect("set_ipv6_only fidl error")
                 .expect("failed to set ipv6 only");
         }
         UdpCacheInvalidationReason::BroadcastCalled => {
-            let () = proxy
+            let () = socket
                 .set_broadcast(true)
                 .await
                 .expect("set_so_broadcast fidl error")
@@ -454,14 +479,165 @@ async fn test_udp_send_msg_preflight_fidl(
     }
 
     for successful_preflight in successful_preflights {
-        let () = validate_send_msg_preflight_response(
+        validate_send_msg_preflight_response(
             &successful_preflight,
             UdpSendMsgPreflightSuccessExpectation {
                 expected_to_addr: ToAddrExpectation::Unspecified,
                 expect_all_eventpairs_valid: false,
             },
-        );
+        )
+        .expect("validate preflight response");
     }
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_udp_send_msg_preflight_autogen_addr_invalidation() {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let (net, netstack, iface, socket) =
+        setup_fastudp_network("autogen_addr_invalidated", &sandbox, fposix_socket::Domain::Ipv6)
+            .await;
+
+    let interfaces_state = netstack
+        .connect_to_protocol::<fnet_interfaces::StateMarker>()
+        .expect("connect to protocol");
+
+    // Send a Router Advertisement with the autoconf flag set to trigger
+    // SLAAC, but specify a very short valid lifetime so the address
+    // will expire quickly.
+    let fake_ep = net.create_fake_endpoint().expect("create fake endpoint");
+    const VALID_LIFETIME_SECONDS: u32 = 2;
+    let options = [NdpOptionBuilder::PrefixInformation(PrefixInformation::new(
+        ipv6_consts::PREFIX.prefix(),  /* prefix_length */
+        false,                         /* on_link_flag */
+        true,                          /* autonomous_address_configuration_flag */
+        VALID_LIFETIME_SECONDS,        /* valid_lifetime */
+        0,                             /* preferred_lifetime */
+        ipv6_consts::PREFIX.network(), /* prefix */
+    ))];
+    send_ra_with_router_lifetime(&fake_ep, 0, &options).await.expect("send router advertisement");
+
+    // Wait for an address to be auto generated.
+    let autogen_address = fnet_interfaces_ext::wait_interface_with_id(
+        fnet_interfaces_ext::event_stream_from_state(&interfaces_state)
+            .expect("create event stream"),
+        &mut fnet_interfaces_ext::InterfaceState::Unknown(iface.id()),
+        |fnet_interfaces_ext::Properties { addresses, .. }| {
+            addresses.into_iter().find_map(
+                |fnet_interfaces_ext::Address {
+                     addr: fnet::Subnet { addr, prefix_len: _ },
+                     valid_until: _,
+                 }| match addr {
+                    fnet::IpAddress::Ipv4(_) => None,
+                    fnet::IpAddress::Ipv6(addr @ fnet::Ipv6Address { addr: bytes }) => {
+                        ipv6_consts::PREFIX
+                            .contains(&net_types::ip::Ipv6Addr::from_bytes(*bytes))
+                            .then_some(*addr)
+                    }
+                },
+            )
+        },
+    )
+    .await
+    .expect("wait for address assignment");
+
+    // Connect a socket to the auto-generated address and do a preflight check.
+    let preflight = {
+        let mut connected_addr = fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+            address: autogen_address,
+            port: 9999, // arbitrary remote port
+            zone_index: 0,
+        });
+        socket
+            .connect(&mut connected_addr)
+            .await
+            .expect("call connect")
+            .expect("connect to autogenerated address");
+
+        let response = socket
+            .send_msg_preflight(fposix_socket::DatagramSocketSendMsgPreflightRequest {
+                to: None,
+                ..fposix_socket::DatagramSocketSendMsgPreflightRequest::EMPTY
+            })
+            .await
+            .expect("call send_msg_preflight")
+            .expect("send_msg_preflight success");
+        validate_send_msg_preflight_response(
+            &response,
+            UdpSendMsgPreflightSuccessExpectation {
+                expected_to_addr: ToAddrExpectation::Specified(Some(connected_addr)),
+                expect_all_eventpairs_valid: true,
+            },
+        )
+        .expect("validate preflight response");
+        response
+    };
+
+    // Wait for the address to be invalidated and removed.
+    fnet_interfaces_ext::wait_interface_with_id(
+        fnet_interfaces_ext::event_stream_from_state(&interfaces_state)
+            .expect("create event stream"),
+        &mut fnet_interfaces_ext::InterfaceState::Unknown(iface.id()),
+        |fnet_interfaces_ext::Properties { addresses, .. }| {
+            (!addresses.into_iter().any(
+                |fnet_interfaces_ext::Address {
+                     addr: fnet::Subnet { addr, prefix_len: _ },
+                     valid_until: _,
+                 }| match addr {
+                    fnet::IpAddress::Ipv4(_) => false,
+                    fnet::IpAddress::Ipv6(addr) => addr == &autogen_address,
+                },
+            ))
+            .then_some(())
+        },
+    )
+    .await
+    .expect("wait for address removal");
+
+    // NB: cache invalidation that results from internal state changes (such as
+    // auto-generated address invalidation) is not guaranteed to occur synchronously
+    // with the associated events emitted by the Netstack (such as notification of
+    // address removal on the interface watcher). This means that the cache might
+    // not have been invalidated immediately after observing the relevant emitted
+    // event.
+    //
+    // We avoid flakes due to this behavior by retrying multiple times with an
+    // arbitrary delay.
+    async fn retry(retries: usize, delay: zx::Duration, op: impl Fn() -> Result) -> Result {
+        for _ in 0..retries {
+            if let Ok(()) = op() {
+                return Ok(());
+            }
+            fasync::Timer::new(delay).await;
+        }
+        op()
+    }
+
+    const OBSERVE_CACHE_INVALIDATION_RETRIES: usize = 3;
+    const OBSERVATION_RETRY_DELAY: zx::Duration = zx::Duration::from_millis(500);
+    let result = retry(OBSERVE_CACHE_INVALIDATION_RETRIES, OBSERVATION_RETRY_DELAY, || {
+        validate_send_msg_preflight_response(
+            &preflight,
+            UdpSendMsgPreflightSuccessExpectation {
+                expected_to_addr: ToAddrExpectation::Unspecified,
+                expect_all_eventpairs_valid: false,
+            },
+        )
+    })
+    .await;
+    assert_matches!(
+        result,
+        Ok(()),
+        "failed to observe expected cache invalidation after auto-generated address was invalidated"
+    );
+
+    let result = socket
+        .send_msg_preflight(fposix_socket::DatagramSocketSendMsgPreflightRequest {
+            to: None,
+            ..fposix_socket::DatagramSocketSendMsgPreflightRequest::EMPTY
+        })
+        .await
+        .expect("call send_msg_preflight");
+    assert_eq!(result, Err(fposix::Errno::Ehostunreach));
 }
 
 #[derive(Clone, Copy, PartialEq)]

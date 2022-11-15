@@ -534,6 +534,7 @@ func (n *ndpDispatcher) handleEvent(event ndpEvent) {
 	case *ndpInvalidatedAutoGenAddrEvent:
 		nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
 		_ = syslog.InfoTf(ndpSyslogTagName, "invalidated an auto-generated address (%s) on nicID (%d)", addrWithPrefix, nicID)
+		n.ns.resetDestinationCache()
 
 	case *ndpRecursiveDNSServerEvent:
 		nicID, addrs, lifetime := event.nicID, event.addrs, event.lifetime
