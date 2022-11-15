@@ -192,14 +192,8 @@ type MyStruct = struct {
 }
 
 TEST(StructsTests, BadDefaultValueNullableString) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type MyStruct = struct {
-    @allow_deprecated_struct_defaults
-    field string:optional = "";
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0091.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidStructMemberType);
 }
 

@@ -204,7 +204,7 @@ constexpr ErrorDef<90, std::string_view, std::string_view, SourceSpan, std::stri
     ErrDuplicateStructMemberNameCanonical(
         "struct field '{}' conflicts with field '{}' from {}; both are represented "
         "by the canonical form '{}'");
-constexpr UndocumentedErrorDef<91, std::string_view, const flat::Type *> ErrInvalidStructMemberType(
+constexpr ErrorDef<91, std::string_view, const flat::Type *> ErrInvalidStructMemberType(
     "struct field {} has an invalid default type {}");
 constexpr ErrorDef<92> ErrTooManyTableOrdinals(
     "table contains too many ordinals; tables are limited to 64 ordinals");
