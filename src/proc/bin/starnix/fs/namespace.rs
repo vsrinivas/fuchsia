@@ -98,19 +98,25 @@ pub struct MountState {
     // A's root, instead of the root mount.
     submounts: HashMap<ArcKey<DirEntry>, MountHandle>,
 
-    /// The membership of this node in its peer group. Do not access directly. Instead use
+    /// The membership of this mount in its peer group. Do not access directly. Instead use
     /// peer_group(), take_from_peer_group(), and set_peer_group().
     // TODO(tbodt): Refactor the links into, some kind of extra struct or something? This is hard
     // because setting this field requires the Arc<Mount>.
     peer_group_: Option<(Arc<PeerGroup>, PtrKey<Mount>)>,
+    /// The membership of this mount in a PeerGroup's downstream. Do not access directly. Instead
+    /// use upstream(), take_from_upstream(), and set_upstream().
+    upstream_: Option<(Weak<PeerGroup>, PtrKey<Mount>)>,
 }
 
 /// A group of mounts. Setting MS_SHARED on a mount puts it in its own peer group. Any bind mounts
 /// of a mount in the group are also added to the group. A mount created in any mount in a peer
 /// group will be automatically propagated (recreated) in every other mount in the group.
 #[derive(Default)]
-struct PeerGroup {
-    mounts: RwLock<HashSet<WeakKey<Mount>>>,
+struct PeerGroup(RwLock<PeerGroupState>);
+#[derive(Default)]
+struct PeerGroupState {
+    mounts: HashSet<WeakKey<Mount>>,
+    downstream: HashSet<WeakKey<Mount>>,
 }
 
 pub enum WhatToMount {
@@ -183,8 +189,10 @@ impl Mount {
         //
         // Update: Also necessary to make a copy to prevent excess replication, see the comment on
         // the following Mount::new call.
-        let peers =
-            self.state.read().peer_group().as_ref().map(|g| g.copy_peers()).unwrap_or_default();
+        let peers = {
+            let state = self.state.read();
+            state.peer_group().map(|g| g.copy_propagation_targets()).unwrap_or_default()
+        };
 
         // Create the mount after copying the peer groups, because in the case of creating a bind
         // mount inside itself, the new mount would get added to our peer group during the
@@ -210,7 +218,7 @@ impl Mount {
     /// Create a new mount with the same filesystem, flags, and peer group. Used to implement bind
     /// mounts.
     fn clone_mount(
-        &self,
+        self: &MountHandle,
         new_root: &DirEntryHandle,
         new_origin: Option<&MountHandle>,
         flags: MountFlags,
@@ -248,7 +256,7 @@ impl Mount {
 
     /// Do a clone of the full mount hierarchy below this mount. Used for creating mount
     /// namespaces and creating copies to use for propagation.
-    fn clone_mount_recursive(&self) -> MountHandle {
+    fn clone_mount_recursive(self: &MountHandle) -> MountHandle {
         self.clone_mount(&self.root, self.origin_mount.as_ref(), MountFlags::REC)
     }
 
@@ -257,6 +265,7 @@ impl Mount {
         match flag {
             MountFlags::SHARED => state.make_shared(),
             MountFlags::PRIVATE => state.make_private(),
+            MountFlags::DOWNSTREAM => state.make_downstream(),
             _ => {
                 tracing::warn!("mount propagation {:?}", flag);
                 return;
@@ -284,7 +293,26 @@ impl MountState {
     fn take_from_peer_group(&mut self) -> Option<Arc<PeerGroup>> {
         let (old_group, old_mount) = self.peer_group_.take()?;
         old_group.remove(old_mount);
+        if let Some(upstream) = self.take_from_upstream() {
+            let next_mount =
+                old_group.0.read().mounts.iter().next().map(|w| w.0.upgrade().unwrap());
+            if let Some(next_mount) = next_mount {
+                // TODO(fxbug.dev/114002): Fix the lock ordering here. We've locked next_mount
+                // while self is locked, and since the propagation tree and mount tree are
+                // separate, this could violate the mount -> submount order previously established.
+                next_mount.write().set_upstream(upstream);
+            }
+        }
         Some(old_group)
+    }
+
+    fn take_from_upstream(&mut self) -> Option<Arc<PeerGroup>> {
+        let (old_upstream, old_mount) = self.upstream_.take()?;
+        // TODO(tbodt): Reason about whether the upgrade() could possibly return None, and what we
+        // should actually do in that case.
+        let old_upstream = old_upstream.upgrade()?;
+        old_upstream.remove_downstream(old_mount);
+        Some(old_upstream)
     }
 }
 
@@ -318,11 +346,16 @@ impl MountState<Base = Mount> {
     }
 
     /// Set this mount's peer group.
-    fn set_peer_group(&mut self, group: Arc<PeerGroup>) -> Option<Arc<PeerGroup>> {
-        let old_group = self.take_from_peer_group();
+    fn set_peer_group(&mut self, group: Arc<PeerGroup>) {
+        self.take_from_peer_group();
         group.add(self.base);
         self.peer_group_ = Some((group, Arc::as_ptr(self.base).into()));
-        old_group
+    }
+
+    fn set_upstream(&mut self, group: Arc<PeerGroup>) {
+        self.take_from_upstream();
+        group.add_downstream(self.base);
+        self.upstream_ = Some((Arc::downgrade(&group), Arc::as_ptr(self.base).into()));
     }
 
     /// Is the mount in a peer group? Corresponds to MS_SHARED.
@@ -338,9 +371,18 @@ impl MountState<Base = Mount> {
         self.set_peer_group(PeerGroup::new());
     }
 
-    /// Take the mount out of its peer group. Implements MS_PRIVATE.
+    /// Take the mount out of its peer group, also remove upstream if any. Implements MS_PRIVATE.
     pub fn make_private(&mut self) {
         self.take_from_peer_group();
+        self.take_from_upstream();
+    }
+
+    /// Take the mount out of its peer group and make it downstream instead. Implements
+    /// MountFlags::DOWNSTREAM (MS_SLAVE).
+    pub fn make_downstream(&mut self) {
+        if let Some(peer_group) = self.take_from_peer_group() {
+            self.set_upstream(peer_group);
+        }
     }
 }
 
@@ -350,25 +392,51 @@ impl PeerGroup {
     }
 
     fn add(&self, mount: &Arc<Mount>) {
-        self.mounts.write().insert(WeakKey::from(mount));
+        self.0.write().mounts.insert(WeakKey::from(mount));
     }
 
     fn remove(&self, mount: PtrKey<Mount>) {
-        self.mounts.write().remove(&mount);
+        self.0.write().mounts.remove(&mount);
     }
 
-    fn copy_peers(&self) -> Vec<MountHandle> {
-        self.mounts.read().iter().filter_map(|m| m.0.upgrade()).collect()
+    fn add_downstream(&self, mount: &Arc<Mount>) {
+        self.0.write().downstream.insert(WeakKey::from(mount));
+    }
+
+    fn remove_downstream(&self, mount: PtrKey<Mount>) {
+        self.0.write().downstream.remove(&mount);
+    }
+
+    fn copy_propagation_targets(&self) -> Vec<MountHandle> {
+        let mut buf = vec![];
+        self.collect_propagation_targets(&mut buf);
+        buf
+    }
+
+    fn collect_propagation_targets(&self, buf: &mut Vec<MountHandle>) {
+        let downstream_mounts: Vec<_> = {
+            let state = self.0.read();
+            buf.extend(state.mounts.iter().filter_map(|m| m.0.upgrade()));
+            state.downstream.iter().filter_map(|m| m.0.upgrade()).collect()
+        };
+        for mount in downstream_mounts {
+            let peer_group = mount.read().peer_group().map(Arc::clone);
+            match peer_group {
+                Some(group) => group.collect_propagation_targets(buf),
+                None => buf.push(mount),
+            }
+        }
     }
 }
 
 impl Drop for Mount {
     fn drop(&mut self) {
-        let mut state = self.state.write();
+        let state = self.state.get_mut();
         if let Some((_mount, node)) = &state.mountpoint {
             node.unregister_mount()
         }
         state.take_from_peer_group();
+        state.take_from_upstream();
     }
 }
 
@@ -798,6 +866,7 @@ impl NamespaceNode {
 
     /// If this is the root of a filesystem, unmount. Otherwise return EINVAL.
     pub fn unmount(&self) -> Result<(), Errno> {
+        // TODO(fxbug.dev/115333): Propagate unmounts the same way we propagate mounts
         let mountpoint = self.enter_mount().mountpoint().ok_or_else(|| errno!(EINVAL))?;
         let mount = mountpoint.mount.as_ref().expect("a mountpoint must be part of a mount");
         let mut mount_state = mount.state.write();

@@ -176,7 +176,7 @@ TEST_F(MountTest, QuizBRecursion) {
 }
 
 // Quiz question C from https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
-TEST_F(MountTest, DISABLED_QuizCPropagation) {
+TEST_F(MountTest, QuizCPropagation) {
   ASSERT_SUCCESS(Mount(nullptr, "1", MS_SHARED));
   ASSERT_SUCCESS(MakeDir("1/1/2"));
   ASSERT_SUCCESS(MakeDir("1/1/2/3"));
@@ -225,4 +225,5 @@ TEST_F(MountTest, LotsOfShadowing) {
 
 // TODO(tbodt): write more tests:
 // - A and B are shared, make B downstream, make A private, should now both be private
+
 }  // namespace
