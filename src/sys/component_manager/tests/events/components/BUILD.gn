@@ -1,0 +1,225 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("trigger_server_bin") {
+  name = "static_event_stream_trigger_server"
+  edition = "2021"
+  source_root = "static_event_stream/trigger_server.rs"
+  testonly = true
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/component_manager/tests/fidl:components_rust",
+    "//src/sys/lib/component-events",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "static_event_stream/trigger_server.rs" ]
+}
+
+rustc_binary("trigger_client_bin") {
+  name = "static_event_stream_trigger_client"
+  edition = "2021"
+  source_root = "static_event_stream/trigger_client.rs"
+  testonly = true
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:components_rust",
+  ]
+
+  sources = [ "static_event_stream/trigger_client.rs" ]
+}
+
+rustc_binary("echo_reporter_bin") {
+  name = "scoped_echo_reporter"
+  edition = "2021"
+  source_root = "scoped/echo_reporter.rs"
+  testonly = true
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/sys/lib/component-events",
+  ]
+
+  sources = [ "scoped/echo_reporter.rs" ]
+}
+
+rustc_binary("nested_reporter_bin") {
+  name = "nested_reporter"
+  edition = "2021"
+  source_root = "nested/reporter.rs"
+  testonly = true
+  deps = [
+    "//src/lib/fuchsia",
+    "//src/sys/lib/component-events",
+  ]
+
+  sources = [ "nested/reporter.rs" ]
+}
+
+rustc_binary("resolved_error_reporter_bin") {
+  name = "resolved_error_reporter"
+  edition = "2021"
+  source_root = "resolved_error/reporter.rs"
+  testonly = true
+  deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/sys/lib/component-events",
+  ]
+
+  sources = [ "resolved_error/reporter.rs" ]
+}
+
+rustc_binary("async_reporter_bin") {
+  name = "async_reporter"
+  edition = "2021"
+  source_root = "async/reporter.rs"
+  testonly = true
+  deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
+    "//src/sys/lib/component-events",
+  ]
+
+  sources = [ "async/reporter.rs" ]
+}
+
+rustc_binary("echo_client_for_events_bin") {
+  name = "scoped_echo_client"
+  edition = "2021"
+  source_root = "scoped/echo_client.rs"
+  testonly = true
+  deps = [
+    "//examples/components/routing/fidl:echo_rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "scoped/echo_client.rs" ]
+}
+
+rustc_binary("echo_server_for_events_bin") {
+  name = "scoped_echo_server"
+  edition = "2021"
+  source_root = "scoped/echo_server.rs"
+  testonly = true
+  deps = [
+    "//examples/components/routing/fidl:echo_rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "scoped/echo_server.rs" ]
+}
+
+rustc_binary("stub_component_bin") {
+  name = "stub_component"
+  edition = "2021"
+  source_root = "stub/component.rs"
+  testonly = true
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "stub/component.rs" ]
+}
+
+rustc_binary("realm_offered_nested") {
+  name = "realm_offered_nested"
+  edition = "2021"
+  source_root = "realm_offered/nested.rs"
+  testonly = true
+  deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:components_rust",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "realm_offered/nested.rs" ]
+}
+
+rustc_binary("realm_offered_bin") {
+  name = "realm_offered_reporter"
+  edition = "2021"
+  source_root = "realm_offered/reporter.rs"
+  testonly = true
+  deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:components_rust",
+    "//src/sys/lib/component-events",
+  ]
+
+  sources = [ "realm_offered/reporter.rs" ]
+}
+
+rustc_binary("directory_ready_root_bin") {
+  name = "directory_ready_root"
+  edition = "2021"
+  source_root = "directory_ready/root.rs"
+  testonly = true
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-fs",
+    "//src/sys/component_manager/tests/fidl:components_rust",
+    "//src/sys/lib/component-events",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:maplit",
+  ]
+
+  sources = [ "directory_ready/root.rs" ]
+}
+
+rustc_binary("directory_ready_child_bin") {
+  name = "directory_ready_child"
+  edition = "2021"
+  source_root = "directory_ready/child.rs"
+  testonly = true
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:components_rust",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "directory_ready/child.rs" ]
+}
+
+rustc_binary("synthesis_reporter_bin") {
+  name = "synthesis_reporter"
+  edition = "2021"
+  source_root = "synthesis/reporter.rs"
+  testonly = true
+  deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
+    "//src/sys/lib/component-events",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "synthesis/reporter.rs" ]
+}

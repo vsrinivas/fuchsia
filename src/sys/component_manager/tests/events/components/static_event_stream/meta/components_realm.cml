@@ -1,0 +1,42 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // Two children: a server and client. "trigger_clietn" has "eager" startup so it
+    // will be started along with the realm.
+    children: [
+        {
+            name: "trigger_server",
+            url: "#meta/static_event_stream_trigger_server.cm",
+            startup: "eager",
+        },
+        {
+            name: "trigger_client",
+            url: "#meta/static_event_stream_trigger_client.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+            from: "parent",
+            to: "#trigger_server",
+        },
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "#trigger_server",
+            to: "#trigger_client",
+        },
+        {
+            protocol: "fidl.test.components.Trigger",
+            from: "#trigger_server",
+            to: "#trigger_client",
+        },
+        {
+            event: [ "capability_requested" ],
+            from: "framework",
+            to: "#trigger_server",
+            filter: { name: "fidl.test.components.Trigger" },
+        },
+    ],
+}

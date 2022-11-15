@@ -1,0 +1,75 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/static_event_stream_trigger_server",
+    },
+    children: [
+        {
+            name: "stub",
+            url: "#meta/stub_component.cm",
+            startup: "eager",
+        },
+        {
+            name: "echo_server",
+            url: "#meta/echo_server.cm",
+            startup: "lazy",
+        },
+    ],
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+        },
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "framework",
+        },
+        {
+            event: [
+                "capability_routed",
+                "resolved",
+                "started",
+            ],
+            from: "framework",
+        },
+        {
+            event: [ "capability_requested" ],
+            from: "parent",
+            filter: { name: "fidl.test.components.Trigger" },
+        },
+        {
+            event_stream_deprecated: "EventStream",
+            subscriptions: [
+                { event: "capability_requested" },
+            ],
+        },
+        {
+            event_stream_deprecated: "second_stream",
+            subscriptions: [
+                { event: "capability_requested" },
+            ],
+        },
+        {
+            event_stream_deprecated: "resolved_stream",
+            subscriptions: [
+                { event: "resolved" },
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fidl.test.components.Trigger",
+            from: "self",
+        },
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+        },
+    ],
+}

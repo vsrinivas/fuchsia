@@ -14,6 +14,7 @@ rustc_library("component-events") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
@@ -24,10 +25,7 @@ rustc_library("component-events") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
-  ]
+  test_deps = [ "//src/lib/fuchsia" ]
 
   sources = [
     "src/descriptor.rs",

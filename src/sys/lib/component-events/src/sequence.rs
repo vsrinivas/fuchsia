@@ -5,10 +5,12 @@
 use {
     crate::{
         descriptor::EventDescriptor,
-        events::{event_name, EventStream},
+        events::{event_name, EventSource, EventStream, EventSubscription},
         matcher::EventMatcher,
     },
     anyhow::{format_err, Error},
+    fuchsia_async as fasync,
+    futures::{channel::oneshot, future::BoxFuture},
     std::convert::TryFrom,
 };
 
@@ -84,6 +86,28 @@ impl EventSequence {
             }
         }
         Ok(event_stream)
+    }
+
+    /// Verifies that the events in this sequence are received from the provided EventSource.
+    ///
+    /// This is a convenience function that subscribes to the EventSource
+    /// and verifies events from it using `expect`.
+    pub async fn subscribe_and_expect<'a>(
+        self,
+        event_source: &mut EventSource,
+    ) -> Result<BoxFuture<'a, Result<(), Error>>, Error> {
+        let event_names = self.event_names()?;
+        let event_stream =
+            event_source.subscribe(vec![EventSubscription::new(event_names)]).await?;
+        let expected_events = self.clone();
+        let (tx, rx) = oneshot::channel();
+        fasync::Task::spawn(async move {
+            let res = expected_events.expect(event_stream).await;
+            tx.send(res).expect("Unable to send result");
+        })
+        .detach();
+
+        Ok(Box::pin(async move { rx.await? }))
     }
 
     pub fn is_empty(&self) -> bool {
@@ -212,40 +236,14 @@ mod tests {
     use crate::events::{Event, Started};
     use anyhow::Context;
     use fidl_fuchsia_sys2 as fsys;
-    use futures::StreamExt;
 
-    async fn run_server(events: Vec<fsys::Event>, mut server: fsys::EventStream2RequestStream) {
-        let (tx, mut rx) = futures::channel::mpsc::unbounded();
-        for event in events {
-            tx.unbounded_send(event).unwrap();
-        }
-        // The tests expect the event_stream to terminate once all events have been consumed.
-        // This behavior does not match that of component_manager but is needed for negative
-        // proof tests (such as the event_stream does NOT contain a given event).
-        drop(tx);
-        while let Some(Ok(request)) = server.next().await {
-            match request {
-                fsys::EventStream2Request::GetNext { responder } => {
-                    if let Some(event) = rx.next().await {
-                        responder.send(&mut vec![event].into_iter()).unwrap();
-                    } else {
-                        return;
-                    }
-                }
-                fsys::EventStream2Request::WaitForReady { responder } => responder.send().unwrap(),
-            }
-        }
-    }
-
-    async fn make_event_stream(
-        events: Vec<fsys::Event>,
-    ) -> Result<(EventStream, fuchsia_async::Task<()>), Error> {
-        let (proxy, server) = fidl::endpoints::create_proxy::<fsys::EventStream2Marker>()
+    fn make_event_stream(events: Vec<fsys::Event>) -> Result<EventStream, Error> {
+        let (proxy, server) = fidl::endpoints::create_proxy::<fsys::EventStreamMarker>()
             .context("failed to make EventStream proxy")?;
-        Ok((
-            EventStream::new_v2(proxy),
-            fuchsia_async::Task::spawn(run_server(events, server.into_stream()?)),
-        ))
+        for event in events {
+            proxy.on_event(event).context("failed to call OnEvent")?;
+        }
+        Ok(EventStream::new(server.into_stream()?))
     }
 
     // Returns a successful Started event for the given moniker.
@@ -270,8 +268,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn event_sequence_empty() {
-        let (event_stream, _server) =
-            make_event_stream(vec![]).await.expect("failed to make event stream");
+        let event_stream = make_event_stream(vec![]).expect("failed to make event stream");
         EventSequence::new()
             .expect(event_stream)
             .await
@@ -281,9 +278,8 @@ mod tests {
     #[fuchsia::test]
     async fn event_sequence_then() {
         let moniker = "./foo:0";
-        let (event_stream, _server) = make_event_stream(vec![make_event(moniker)])
-            .await
-            .expect("failed to make event stream");
+        let event_stream =
+            make_event_stream(vec![make_event(moniker)]).expect("failed to make event stream");
         EventSequence::new()
             .then(make_matcher(moniker))
             .expect(event_stream)
@@ -297,8 +293,7 @@ mod tests {
         let events = monikers.iter().copied().map(make_event).collect();
         let matchers = monikers.iter().copied().map(make_matcher).collect();
 
-        let (event_stream, _server) =
-            make_event_stream(events).await.expect("failed to make event stream");
+        let event_stream = make_event_stream(events).expect("failed to make event stream");
         EventSequence::new()
             .all_of(matchers, Ordering::Ordered)
             .expect(event_stream)
@@ -313,8 +308,7 @@ mod tests {
         let events = monikers.iter().rev().copied().map(make_event).collect();
         let matchers = monikers.iter().copied().map(make_matcher).collect();
 
-        let (event_stream, _server) =
-            make_event_stream(events).await.expect("failed to make event stream");
+        let event_stream = make_event_stream(events).expect("failed to make event stream");
         assert!(EventSequence::new()
             .all_of(matchers, Ordering::Ordered)
             .expect(event_stream)
@@ -329,8 +323,7 @@ mod tests {
         let events = monikers.iter().skip(1).copied().map(make_event).collect();
         let matchers = monikers.iter().copied().map(make_matcher).collect();
 
-        let (event_stream, _server) =
-            make_event_stream(events).await.expect("failed to make event stream");
+        let event_stream = make_event_stream(events).expect("failed to make event stream");
         assert!(EventSequence::new()
             .all_of(matchers, Ordering::Ordered)
             .expect(event_stream)
@@ -345,8 +338,7 @@ mod tests {
         // The first matcher is missing, so the first event is unmatched.
         let matchers = monikers.iter().skip(1).copied().map(make_matcher).collect();
 
-        let (event_stream, _server) =
-            make_event_stream(events).await.expect("failed to make event stream");
+        let event_stream = make_event_stream(events).expect("failed to make event stream");
         assert!(EventSequence::new()
             .all_of(matchers, Ordering::Ordered)
             .expect(event_stream)
@@ -361,8 +353,7 @@ mod tests {
         let events = monikers.iter().rev().copied().map(make_event).collect();
         let matchers = monikers.iter().copied().map(make_matcher).collect();
 
-        let (event_stream, _server) =
-            make_event_stream(events).await.expect("failed to make event stream");
+        let event_stream = make_event_stream(events).expect("failed to make event stream");
         EventSequence::new()
             .all_of(matchers, Ordering::Unordered)
             .expect(event_stream)
@@ -377,8 +368,7 @@ mod tests {
         // The first matcher is missing, so the first event is ignored.
         let matchers = monikers.iter().skip(1).copied().map(make_matcher).collect();
 
-        let (event_stream, _server) =
-            make_event_stream(events).await.expect("failed to make event stream");
+        let event_stream = make_event_stream(events).expect("failed to make event stream");
         EventSequence::new()
             .has_subset(matchers, Ordering::Ordered)
             .expect(event_stream)
@@ -395,8 +385,7 @@ mod tests {
         let matchers = monikers.iter().skip(1).copied().map(make_matcher).collect();
 
         // Matching should fail because the matcher for "./bar:0" can't find the event.
-        let (event_stream, _server) =
-            make_event_stream(events).await.expect("failed to make event stream");
+        let event_stream = make_event_stream(events).expect("failed to make event stream");
         assert!(EventSequence::new()
             .has_subset(matchers, Ordering::Ordered)
             .expect(event_stream)
@@ -412,8 +401,7 @@ mod tests {
         // The first matcher is missing, so the first event is ignored.
         let matchers = monikers.iter().skip(1).copied().map(make_matcher).collect();
 
-        let (event_stream, _server) =
-            make_event_stream(events).await.expect("failed to make event stream");
+        let event_stream = make_event_stream(events).expect("failed to make event stream");
         EventSequence::new()
             .has_subset(matchers, Ordering::Unordered)
             .expect(event_stream)

@@ -106,14 +106,19 @@ impl EventSourceFactory {
         target_moniker: AbsoluteMoniker,
         capability: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        match capability_decl {
-            InternalCapability::EventStream(name) => {
-                let event_source = self.create_v2(target_moniker, name.clone()).await?;
-                return Ok(Some(Box::new(event_source)));
+        if capability_decl.matches_protocol(&EVENT_SOURCE_SERVICE_NAME) {
+            let event_source = self.create(target_moniker).await?;
+            Ok(Some(Box::new(event_source) as Box<dyn CapabilityProvider>))
+        } else {
+            match capability_decl {
+                InternalCapability::EventStream(name) => {
+                    let event_source = self.create_v2(target_moniker, name.clone()).await?;
+                    return Ok(Some(Box::new(event_source)));
+                }
+                _ => {}
             }
-            _ => {}
+            Ok(capability)
         }
-        Ok(capability)
     }
 }
 

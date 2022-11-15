@@ -19,6 +19,7 @@ use crate::{
 };
 use archivist_config::Config;
 use fidl_fuchsia_io as fio;
+use fidl_fuchsia_sys2::EventSourceMarker;
 use fidl_fuchsia_sys_internal as fsys_internal;
 use fuchsia_async as fasync;
 use fuchsia_component::{
@@ -168,7 +169,7 @@ impl Archivist {
 
     pub async fn install_event_source(&mut self) {
         debug!("fuchsia.sys.EventStream connection");
-        match EventSource::new().await {
+        match EventSource::new(connect_to_protocol::<EventSourceMarker>().unwrap()).await {
             Err(err) => error!(?err, "Failed to create event source"),
             Ok(mut event_source) => {
                 self.event_router.add_producer(ProducerConfig {

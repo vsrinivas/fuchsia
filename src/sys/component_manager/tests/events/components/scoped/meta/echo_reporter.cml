@@ -1,0 +1,41 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/scoped_echo_reporter",
+    },
+    children: [
+        {
+            name: "echo_server",
+            url: "#meta/echo_server.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+        },
+        {
+            event: [
+                "started",
+                "stopped",
+            ],
+            from: "framework",
+        },
+        {
+            event_stream_deprecated: "ScopedEventStream",
+            subscriptions: [
+                { event: "started" },
+                { event: "stopped" },
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+        },
+    ],
+}

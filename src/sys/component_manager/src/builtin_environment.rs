@@ -992,7 +992,24 @@ impl BuiltinEnvironment {
         // If component manager is in debug mode, create an event source scoped at the
         // root and offer it via ServiceFs to the outside world.
         if self.debug {
+            let event_source = self.event_source_factory.create_for_above_root().await?;
             let event_source_v2 = self.event_source_factory.create_v2_for_above_root().await?;
+            let scope = self.model.top_instance().task_scope().clone();
+            service_fs.dir("svc").add_fidl_service(move |stream| {
+                let event_source = event_source.clone();
+                let scope = scope.clone();
+                // Spawn a short-lived task that adds the EventSource serve to
+                // component manager's task scope.
+                fasync::Task::spawn(async move {
+                    scope
+                        .add_task(async move {
+                            event_source.serve(stream).await;
+                        })
+                        .await;
+                })
+                .detach();
+            });
+
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let mut event_source_v2 = event_source_v2.clone();
                 // Spawn a short-lived task that adds the EventSource serve to

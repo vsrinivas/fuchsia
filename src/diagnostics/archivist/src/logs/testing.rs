@@ -311,13 +311,15 @@ impl EventStreamLogReader {
     }
 
     async fn handle_event_stream(
-        stream: fsys::EventStream2Proxy,
+        mut stream: fsys::EventStreamRequestStream,
         sender: mpsc::UnboundedSender<Task<()>>,
         log_manager: Arc<LogsRepository>,
     ) {
-        while let Ok(res) = stream.get_next().await {
-            for event in res {
-                Self::handle_event(event, sender.clone(), log_manager.clone()).await
+        while let Ok(Some(request)) = stream.try_next().await {
+            match request {
+                fsys::EventStreamRequest::OnEvent { event, .. } => {
+                    Self::handle_event(event, sender.clone(), log_manager.clone()).await
+                }
             }
         }
     }
@@ -340,39 +342,23 @@ impl EventStreamLogReader {
 #[async_trait]
 impl LogReader for EventStreamLogReader {
     async fn handle_request(&self, log_sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy {
-        let (event_stream_proxy, mut event_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fsys::EventStream2Marker>().unwrap();
+        let (event_stream_proxy, event_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fsys::EventStreamMarker>().unwrap();
         let (log_sink_proxy, log_sink_server_end) =
             fidl::endpoints::create_proxy::<LogSinkMarker>().unwrap();
-
-        let (tx, mut rx) = mpsc::unbounded();
-        tx.unbounded_send(create_log_sink_requested_event(
-            self.target_moniker.clone(),
-            self.target_url.clone(),
-            log_sink_server_end.into_channel(),
-        ))
-        .unwrap();
+        event_stream_proxy
+            .on_event(create_log_sink_requested_event(
+                self.target_moniker.clone(),
+                self.target_url.clone(),
+                log_sink_server_end.into_channel(),
+            ))
+            .unwrap();
         let task = Task::spawn(Self::handle_event_stream(
-            event_stream_proxy,
+            event_stream,
             log_sender.clone(),
             self.log_manager.clone(),
         ));
-        let tx_clone = tx.clone();
-        let event_stream_server = Task::spawn(async move {
-            let _tx_clone = tx_clone;
-            while let Some(Ok(request)) = event_stream.next().await {
-                match request {
-                    fsys::EventStream2Request::GetNext { responder } => {
-                        responder.send(&mut vec![rx.next().await.unwrap()].into_iter()).unwrap();
-                    }
-                    fsys::EventStream2Request::WaitForReady { responder } => {
-                        responder.send().unwrap()
-                    }
-                }
-            }
-        });
         log_sender.unbounded_send(task).unwrap();
-        log_sender.unbounded_send(event_stream_server).unwrap();
 
         log_sink_proxy
     }

@@ -4,26 +4,32 @@
 
 use {
     crate::model::{
-        events::{event::Event, registry::ComponentEventRoute, stream::EventStream},
+        events::{
+            event::Event,
+            registry::{ComponentEventRoute, EventSubscription},
+            source::EventSource,
+            stream::EventStream,
+        },
         hooks::{
             EventError, EventErrorPayload, EventPayload, EventResult, EventType, HasEventType,
         },
     },
+    cm_rust::{CapabilityName, EventMode},
     cm_util::io::clone_dir,
-    fidl::endpoints::{Proxy, ServerEnd},
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fsys::EventStream2RequestStream,
     fuchsia_zircon::{
         self as zx, sys::ZX_CHANNEL_MAX_MSG_BYTES, sys::ZX_CHANNEL_MAX_MSG_HANDLES, HandleBased,
     },
-    futures::{lock::Mutex, StreamExt},
+    futures::{lock::Mutex, StreamExt, TryStreamExt},
     measure_tape_for_events::Measurable,
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, ExtendedMoniker,
         RelativeMoniker, RelativeMonikerBase,
     },
     std::sync::Arc,
-    tracing::{error, warn},
+    tracing::{error, info, warn},
 };
 
 // Number of bytes the header of a vector occupies in a fidl message.
@@ -33,6 +39,86 @@ const FIDL_VECTOR_HEADER_BYTES: usize = 16;
 // Number of bytes the header of a fidl message occupies.
 // TODO(https://fxbug.dev/98653): This should be a constant in a FIDL library.
 const FIDL_HEADER_BYTES: usize = 16;
+
+pub async fn serve_event_source_sync(
+    event_source: EventSource,
+    stream: fsys::EventSourceRequestStream,
+) {
+    let result = stream
+        .try_for_each_concurrent(None, move |request| {
+            let mut event_source = event_source.clone();
+            async move {
+                match request {
+                    fsys::EventSourceRequest::Subscribe { events, stream, responder } => {
+                        // Subscribe to events.
+                        let requests = events
+                            .into_iter()
+                            .filter(|request| request.event_name.is_some())
+                            .map(|request| EventSubscription {
+                                event_name: request
+                                    .event_name
+                                    .map(|name| CapabilityName::from(name))
+                                    .unwrap(),
+                                mode: EventMode::Async,
+                            })
+                            .collect();
+
+                        match event_source.subscribe(requests).await {
+                            Ok(event_stream) => {
+                                // Unblock the component
+                                responder.send(&mut Ok(()))?;
+
+                                // Serve the event_stream over FIDL asynchronously
+                                serve_event_stream(event_stream, stream).await;
+                            }
+                            Err(error) => {
+                                info!(?error, "Couldn't subscribe to events");
+                                responder.send(&mut Err(fcomponent::Error::ResourceUnavailable))?;
+                            }
+                        };
+                    }
+                    fsys::EventSourceRequest::TakeStaticEventStream { path, responder, .. } => {
+                        let mut result = event_source
+                            .take_static_event_stream(path)
+                            .await
+                            .ok_or(fcomponent::Error::ResourceUnavailable);
+                        responder.send(&mut result)?;
+                    }
+                }
+                Ok(())
+            }
+        })
+        .await;
+    if let Err(error) = result {
+        error!(%error, "Couldn't serve EventSource");
+    }
+}
+
+/// Serves EventStream FIDL requests received over the provided stream.
+pub async fn serve_event_stream(
+    mut event_stream: EventStream,
+    client_end: ClientEnd<fsys::EventStreamMarker>,
+) {
+    let listener = client_end.into_proxy().expect("cannot create proxy from client_end");
+
+    while let Some((event, _)) = event_stream.next().await {
+        // Create the basic Event FIDL object.
+        let event_fidl_object = match create_event_fidl_object(event).await {
+            Err(error) => {
+                warn!(?error, "Failed to create event object");
+                continue;
+            }
+            Ok(res) => res,
+        };
+        if let Err(error) = listener.on_event(event_fidl_object) {
+            // It's not an error for the client to drop the listener.
+            if !error.is_closed() {
+                warn!(?error, "Unexpected error while serving EventStream");
+            }
+            return;
+        }
+    }
+}
 
 /// Computes the scope length, which is the number of segments
 /// up until the first scope. This is used to re-map the moniker

@@ -1,0 +1,61 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/directory_ready_child",
+    },
+    capabilities: [
+        {
+            directory: "normal",
+            rights: [ "r*" ],
+            path: "/normal",
+        },
+        {
+            directory: "aliased",
+            rights: [ "r*" ],
+            path: "/aliased",
+        },
+        {
+            directory: "not_filtered",
+            rights: [ "r*" ],
+            path: "/not_filtered",
+        },
+
+        // Insufficient rights (connection should fail)
+        {
+            directory: "insufficient_rights",
+            rights: [ "x*" ],
+            path: "/insufficient_rights",
+        },
+    ],
+    expose: [
+        {
+            directory: "normal",
+            from: "self",
+            to: "framework",
+        },
+        {
+            directory: "aliased",
+            from: "self",
+            as: "nested",
+            to: "framework",
+        },
+        {
+            directory: "not_filtered",
+            from: "self",
+            to: "framework",
+        },
+        {
+            directory: "insufficient_rights",
+            from: "self",
+            to: "framework",
+        },
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
+}
