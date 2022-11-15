@@ -54,11 +54,6 @@
             to: "#codec_factory",
             source_availability: "unknown",
         },
-        {
-            protocol: [ "fuchsia.mediacodec.CodecFactory" ],
-            from: "#codec_factory",
-            to: "#session-manager",
-        },
 
         // needed for certain non-hermetic tests.
         {

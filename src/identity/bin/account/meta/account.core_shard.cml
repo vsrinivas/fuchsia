@@ -30,11 +30,6 @@
             to: "#account",
         },
         {
-            protocol: [ "fuchsia.identity.account.AccountManager" ],
-            from: "#account",
-            to: "#session-manager",
-        },
-        {
             protocol: [ "fuchsia.tracing.provider.Registry" ],
             from: "#trace_manager",
             to: "#account",

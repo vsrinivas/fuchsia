@@ -71,11 +71,6 @@
             to: "#appmgr",
             rights: [ "rx*" ],
         },
-        {
-            protocol: "fuchsia.sys.Launcher",
-            from: "self",
-            to: "#session-manager",
-        },
     ],
     expose: [
         {

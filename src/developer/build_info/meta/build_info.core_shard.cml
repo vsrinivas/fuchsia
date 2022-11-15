@@ -33,7 +33,6 @@
             to: [
                 "#cobalt",
                 "#remote-control",
-                "#session-manager",
             ],
         },
     ],

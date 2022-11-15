@@ -57,17 +57,5 @@
             to: "#factory_store_providers",
             source_availability: "unknown",
         },
-        {
-            protocol: [
-                "fuchsia.factory.AlphaFactoryStoreProvider",
-                "fuchsia.factory.CastCredentialsFactoryStoreProvider",
-                "fuchsia.factory.MiscFactoryStoreProvider",
-                "fuchsia.factory.PlayReadyFactoryStoreProvider",
-                "fuchsia.factory.WeaveFactoryStoreProvider",
-                "fuchsia.factory.WidevineFactoryStoreProvider",
-            ],
-            from: "#factory_store_providers",
-            to: [ "#session-manager" ],
-        },
     ],
 }

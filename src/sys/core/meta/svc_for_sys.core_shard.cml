@@ -228,13 +228,5 @@
             ],
             from: "#regulatory_region",
         },
-        {
-            protocol: [
-                "fuchsia.element.GraphicalPresenter",
-                "fuchsia.session.Launcher",
-            ],
-            from: "#session-manager",
-            dependency: "weak_for_migration",
-        },
     ],
 }

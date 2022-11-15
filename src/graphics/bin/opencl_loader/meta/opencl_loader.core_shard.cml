@@ -23,11 +23,6 @@
             to: [ "#opencl_loader" ],
         },
         {
-            protocol: [ "fuchsia.opencl.loader.Loader" ],
-            from: "#opencl_loader",
-            to: "#session-manager",
-        },
-        {
             directory: "dev-class",
             from: "parent",
             as: "dev-gpu",

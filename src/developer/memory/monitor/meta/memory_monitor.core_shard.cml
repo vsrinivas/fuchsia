@@ -69,14 +69,6 @@
             from: "self",
             to: "#memory_monitor",
         },
-        {
-            protocol: [
-                "fuchsia.memory.Monitor",
-                "fuchsia.memorypressure.Provider",
-            ],
-            from: "#memory_monitor",
-            to: "#session-manager",
-        },
     ],
     expose: [
         {

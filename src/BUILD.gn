@@ -39,7 +39,6 @@ group("src_no_e2e") {
     "proc",
     "recovery:recovery_no_e2e",
     "security",
-    "session",
     "settings",
     "storage",
     "sys",

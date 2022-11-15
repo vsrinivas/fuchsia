@@ -1,0 +1,352 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard contains all capability routes for session manager that are
+// expected to be valid on every product.
+{
+    use: [
+        {
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.session.Launcher",
+            ],
+            from: "#session-manager",
+            dependency: "weak_for_migration",
+        },
+    ],
+    offer: [
+        // The routes listed below originate from other core components.
+        // Routes are sorted by source component name.
+        {
+            protocol: [
+                "fuchsia.ui.activity.control.Control",
+                "fuchsia.ui.activity.Provider",
+            ],
+            from: "#activity",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.media.ActivityReporter",
+                "fuchsia.media.Audio",
+                "fuchsia.media.audio.EffectsController",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.media.UsageGainReporter",
+                "fuchsia.media.UsageReporter",
+            ],
+            from: "#audio_core",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Central",
+                "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.Pairing",
+            ],
+            from: "#bluetooth-core",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.ui.brightness.Control",
+            from: "#brightness_manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.buildinfo.Provider",
+            from: "#build-info",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.SystemDataUpdater",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+            ],
+            from: "#cobalt",
+            to: "#session-manager",
+        },
+        {
+            protocol: [ "fuchsia.mediacodec.CodecFactory" ],
+            from: "#codec_factory",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.recovery.FactoryReset",
+            from: "#factory_reset",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.feedback.CrashReportingProductRegister",
+                "fuchsia.feedback.DataProvider",
+                "fuchsia.feedback.LastRebootInfoProvider",
+            ],
+            from: "#feedback",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.fonts.Provider",
+            from: "#font_provider",
+            to: "#session-manager",
+        },
+        {
+            resolver: "full-resolver",
+            from: "#full-resolver",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+            ],
+            from: "#hwinfo",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.ServiceSubscriber2",
+                "fuchsia.net.mdns.Subscriber",
+            ],
+            from: "#mdns",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.memory.Monitor",
+                "fuchsia.memorypressure.Provider",
+            ],
+            from: "#memory_monitor",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.net.http.Loader",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.net.routes.State",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#network",
+            to: "#session-manager",
+        },
+        {
+            protocol: [ "fuchsia.process.explorer.Query" ],
+            from: "#process_explorer",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+            ],
+            from: "#regulatory_region",
+            to: "#session-manager",
+        },
+        {
+            protocol: [ "fuchsia.media.sounds.Player" ],
+            from: "#soundplayer",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.ssh.AuthorizedKeys",
+            from: "#ssh-key-manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.sysmem.Allocator",
+            from: "#sysmem_connector",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.update.channel.Provider",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+            ],
+            from: "#system-update-checker",
+            to: "#session-manager",
+        },
+        {
+            directory: "tzdata-icu-44-le",
+            from: "#tzdata-provider",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.accessibility.gesture.ListenerRegistry",
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.accessibility.tts.EngineRegistry",
+                "fuchsia.accessibility.tts.TtsManager",
+                "fuchsia.accessibility.virtualkeyboard.Registry",
+                "fuchsia.input.virtualkeyboard.ControllerCreator",
+                "fuchsia.input.virtualkeyboard.Manager",
+                "fuchsia.recovery.policy.Device",
+                "fuchsia.recovery.ui.FactoryResetCountdown",
+                "fuchsia.ui.brightness.ColorAdjustmentHandler",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.internal.ScreenCapture",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.composition.Screenshot",
+                "fuchsia.ui.display.singleton.Info",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.keyboard.focus.Controller",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+                "fuchsia.ui.policy.DisplayBacklight",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.views.ViewRefInstalled",
+            ],
+            from: "#ui",
+            to: "#session-manager",
+        },
+        {
+            protocol: [ "fuchsia.vulkan.loader.Loader" ],
+            from: "#vulkan_loader",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.wlan.policy.AccessPointProvider",
+                "fuchsia.wlan.policy.ClientProvider",
+                "fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
+                "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
+            ],
+            from: "#wlancfg",
+            to: "#session-manager",
+        },
+
+        // The routes listed below originate from `parent` or from `self`.
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input-report",
+            to: "#session-manager",
+            subdir: "class/input-report",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#session-manager",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#session-manager",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-backlight",
+            to: "#session-manager",
+            subdir: "class/backlight",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-light",
+            to: "#session-manager",
+            subdir: "class/light",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-radar",
+            to: "#session-manager",
+            subdir: "class/radar",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-power-sensor",
+            to: "#session-manager",
+            subdir: "class/power-sensor",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-temperature",
+            to: "#session-manager",
+            subdir: "class/temperature",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-thermal",
+            to: "#session-manager",
+            subdir: "class/thermal",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-gpu",
+            to: "#session-manager",
+            subdir: "class/gpu",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-block",
+            to: "#session-manager",
+            subdir: "class/block",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-skip-block",
+            to: "#session-manager",
+            subdir: "class/skip-block",
+        },
+        {
+            protocol: [
+                "fuchsia.device.NameProvider",
+                "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "fuchsia.diagnostics.LoWPANArchiveAccessor",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.paver.Paver",
+                "fuchsia.power.button.Monitor",
+                "fuchsia.power.profile.Watcher",
+                "fuchsia.power.systemmode.ClientConfigurator",
+                "fuchsia.process.Launcher",
+                "fuchsia.thermal.ClientStateConnector",
+            ],
+            from: "parent",
+            to: "#session-manager",
+        },
+        {
+            storage: [
+                "cache",
+                "data",
+                "tmp",
+            ],
+            from: "self",
+            to: "#session-manager",
+        },
+        {
+            // Routed from v1 components.
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
+            ],
+            from: "self",
+            to: "#session-manager",
+            dependency: "weak_for_migration",
+        },
+    ],
+}

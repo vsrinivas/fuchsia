@@ -66,6 +66,7 @@
                 "fuchsia.hwinfo.Device",
                 "fuchsia.hwinfo.Product",
                 "fuchsia.kernel.VmexResource",
+                "fuchsia.lightsensor.Sensor",
                 "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
                 "fuchsia.lowpan.bootstrap.Thread",

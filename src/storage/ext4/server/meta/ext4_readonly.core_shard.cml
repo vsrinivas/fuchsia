@@ -16,11 +16,6 @@
     ],
     offer: [
         {
-            protocol: "fuchsia.storage.ext4.Server",
-            from: "#fuchsia_storage_ext4_server",
-            to: [ "#session-manager" ],
-        },
-        {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: "#fuchsia_storage_ext4_server",

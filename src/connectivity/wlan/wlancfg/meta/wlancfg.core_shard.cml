@@ -76,16 +76,6 @@
             to: "#wlancfg",
         },
         {
-            protocol: [
-                "fuchsia.wlan.policy.AccessPointProvider",
-                "fuchsia.wlan.policy.ClientProvider",
-                "fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
-                "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
-            ],
-            from: "#wlancfg",
-            to: "#session-manager",
-        },
-        {
             protocol: "fuchsia.location.sensor.WlanBaseStationWatcher",
             from: "#emergency",
             to: "#wlancfg",

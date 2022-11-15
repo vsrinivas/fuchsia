@@ -13,11 +13,4 @@
             from: "#bluetooth-core",
         },
     ],
-    offer: [
-        {
-            protocol: [ "fuchsia.bluetooth.sys.Bootstrap" ],
-            from: "#bluetooth-core",
-            to: "#session-manager",
-        },
-    ],
 }

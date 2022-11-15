@@ -1,0 +1,184 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard contains capability routes for session manager that may be not be
+// valid on every product. These routes have `source_availability` set to `unknown`.
+// The component providing this capability may not exist as a child of core because
+// its core shard may not be included in this product build.
+{
+    offer: [
+        // The routes listed below originate from other core components.
+        // Routes are sorted by source component name.
+        {
+            protocol: [ "fuchsia.identity.account.AccountManager" ],
+            from: "#account",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.power.battery.BatteryManager",
+            from: "#battery_manager",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.bluetooth.a2dp.AudioMode",
+            from: "#bt-a2dp",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
+            from: "#bt-hfp-audio-gateway",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.location.position.EmergencyProvider",
+            from: "#emergency",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [
+                "fuchsia.factory.AlphaFactoryStoreProvider",
+                "fuchsia.factory.CastCredentialsFactoryStoreProvider",
+                "fuchsia.factory.MiscFactoryStoreProvider",
+                "fuchsia.factory.PlayReadyFactoryStoreProvider",
+                "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.factory.WidevineFactoryStoreProvider",
+            ],
+            from: "#factory_store_providers",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.storage.ext4.Server",
+            from: "#fuchsia_storage_ext4_server",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.intl.PropertyProvider",
+            from: "#intl",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [
+                "fuchsia.lowpan.device.CountersConnector",
+                "fuchsia.lowpan.device.DeviceConnector",
+                "fuchsia.lowpan.device.DeviceExtraConnector",
+                "fuchsia.lowpan.device.EnergyScanConnector",
+                "fuchsia.lowpan.DeviceWatcher",
+                "fuchsia.lowpan.thread.DatasetConnector",
+                "fuchsia.lowpan.thread.MeshcopConnector",
+            ],
+            from: "#lowpanservice",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.lowpan.bootstrap.Thread",
+            from: "#lowpan-ot-driver",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [
+                "fuchsia.media.sessions2.ActiveSession",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.sessions2.Publisher",
+            ],
+            from: "#mediasession",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.opencl.loader.Loader",
+            from: "#opencl_loader",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [ "fuchsia.media.drm.PlayReady" ],
+            from: "#playready-cdm",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.hardware.radar.RadarBurstReaderProvider",
+            from: "#radar-proxy",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [
+                "fuchsia.settings.Accessibility",
+                "fuchsia.settings.Audio",
+                "fuchsia.settings.Display",
+                "fuchsia.settings.DoNotDisturb",
+                "fuchsia.settings.FactoryReset",
+                "fuchsia.settings.Input",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
+                "fuchsia.settings.Light",
+                "fuchsia.settings.NightMode",
+                "fuchsia.settings.policy.VolumePolicyController",
+                "fuchsia.settings.Privacy",
+                "fuchsia.settings.Setup",
+            ],
+            from: "#setui_service",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.update.config.OptOut",
+                "fuchsia.update.config.OptOutAdmin",
+            ],
+            from: "#system-update-configurator",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [
+                "fuchsia.tracing.perfetto.ProducerConnector",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#trace_manager",
+            to: "#session-manager",
+
+            // Trace manager may be excluded from builds where tracing is not
+            // expected to be used for observability, such as the non-eng
+            // builds of any product.
+            source_availability: "unknown",
+        },
+        {
+            protocol: [
+                "fuchsia.weave.FactoryDataManager",
+                "fuchsia.weave.Provisioner",
+                "fuchsia.weave.Signer",
+            ],
+            from: "#weave_auth",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [
+                "fuchsia.weave.Bootstrap",
+                "fuchsia.weave.Stack",
+                "fuchsia.weave.StackProvider",
+            ],
+            from: "#weavestack",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [ "fuchsia.media.drm.Widevine" ],
+            from: "#widevine_cdm",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+    ],
+}

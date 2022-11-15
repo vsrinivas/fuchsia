@@ -1,0 +1,88 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxbug.dev/105828): The routes in this shard are only required
+// by the `terminal` component. Other (current and future) children of
+// `#session-manager` should not `use` these protocols without first
+// getting a security policy review.
+{
+    offer: [
+        {
+            protocol: [
+                "fuchsia.pkg.PackageResolverAdmin",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+            ],
+            from: "#pkg-resolver",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.process.Resolver",
+            from: "#process_resolver",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.hardware.pty.Device",
+                "fuchsia.logger.Log",
+                "fuchsia.space.Manager",
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
+            ],
+            from: "parent",
+            to: "#session-manager",
+        },
+        {
+            directory: "boot",
+            from: "parent",
+            as: "boot-bin",
+            to: "#session-manager",
+            subdir: "bin",
+        },
+        {
+            directory: "pkgfs",
+            from: "parent",
+            as: "pkgfs-packages",
+            to: "#session-manager",
+            subdir: "packages",
+        },
+        {
+            directory: "bin",
+            from: "parent",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.bluetooth.sys.HostWatcher",
+            from: "#bluetooth-core",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.virtualization.LinuxManager",
+            from: "#termina-guest-manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.virtualization.DebianGuestManager",
+            from: "#debian-guest-manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.virtualization.TerminaGuestManager",
+            from: "#termina-guest-manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.virtualization.ZirconGuestManager",
+            from: "#zircon-guest-manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.starnix.developer.Manager",
+            from: "#starnix-manager",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+    ],
+}

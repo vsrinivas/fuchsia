@@ -254,7 +254,6 @@
                 "#cobalt",
                 "#mdns",
                 "#pkg-resolver",
-                "#session-manager",
                 "#timekeeper",
             ],
         },
@@ -400,7 +399,6 @@
                 "#regulatory_region",
                 "#remote-control",
                 "#sampler",
-                "#session-manager",
                 "#sl4f_bridge_server",
                 "#ssh-key-manager",
                 "#starnix_manager",
@@ -440,17 +438,13 @@
         {
             protocol: [ "fuchsia.kernel.VmexResource" ],
             from: "parent",
-            to: [
-                "#session-manager",
-                "#starnix_manager",
-            ],
+            to: "#starnix_manager",
         },
         {
             protocol: [ "fuchsia.sysmem.Allocator" ],
             from: "#sysmem_connector",
             to: [
                 "#agis",
-                "#session-manager",
                 "#starnix_manager",
             ],
         },
@@ -533,11 +527,6 @@
             source_availability: "unknown",
         },
         {
-            protocol: "fuchsia.fonts.Provider",
-            from: "#font_provider",
-            to: [ "#session-manager" ],
-        },
-        {
             protocol: "fuchsia.kernel.Stats",
             from: "parent",
             to: [
@@ -553,10 +542,7 @@
         {
             protocol: "fuchsia.process.Launcher",
             from: "parent",
-            to: [
-                "#debug-dash-launcher",
-                "#session-manager",
-            ],
+            to: "#debug-dash-launcher",
         },
         {
             protocol: "fuchsia.sys2.RealmQuery.root",
@@ -587,10 +573,7 @@
             directory: "dev",
             from: "parent",
             as: "dev-input-report",
-            to: [
-                "#brightness_manager",
-                "#session-manager",
-            ],
+            to: "#brightness_manager",
             subdir: "class/input-report",
         },
         {
@@ -641,7 +624,6 @@
                 "#cobalt",
                 "#network",
                 "#pkg-resolver",
-                "#session-manager",
                 "#timekeeper",
             ],
         },
@@ -710,30 +692,6 @@
             to: "#remote-control",
         },
         {
-            storage: [
-                "cache",
-                "data",
-                "tmp",
-            ],
-            from: "self",
-            to: "#session-manager",
-        },
-        {
-            directory: "config-data",
-            from: "parent",
-            to: "#session-manager",
-        },
-        {
-            protocol: "fuchsia.hardware.power.statecontrol.Admin",
-            from: "parent",
-            to: "#session-manager",
-        },
-        {
-            resolver: "full-resolver",
-            from: "#full-resolver",
-            to: "#session-manager",
-        },
-        {
             storage: "data",
             from: "self",
             to: [
@@ -757,7 +715,6 @@
             from: "#vulkan_loader",
             to: [
                 "#agis",
-                "#session-manager",
                 "#starnix_manager",
             ],
         },
@@ -840,7 +797,6 @@
                 "#log-stats",
                 "#pkg-resolver",
                 "#sampler",
-                "#session-manager",
                 "#sysmem_connector",
                 "#timekeeper",
             ],
@@ -899,7 +855,6 @@
                 "#cobalt_system_metrics",
                 "#font_provider",
                 "#metrics-logger",
-                "#session-manager",
                 "#starnix_manager",
                 "#sysmem_connector",
             ],
@@ -925,16 +880,6 @@
             // Trace manager may be excluded from builds where tracing is not
             // expected to be used for observability, such as in the bringup
             // product and non-eng builds of any product.
-            source_availability: "unknown",
-        },
-        {
-            protocol: [ "fuchsia.tracing.perfetto.ProducerConnector" ],
-            from: "#trace_manager",
-            to: [ "#session-manager" ],
-
-            // PerfettoBridge may be excluded from builds where tracing is not
-            // expected to be used for observability, such as the non-eng
-            // builds of any product.
             source_availability: "unknown",
         },
     ],
