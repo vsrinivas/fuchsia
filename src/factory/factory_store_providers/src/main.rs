@@ -22,19 +22,16 @@ use {
         WidevineFactoryStoreProviderMarker, WidevineFactoryStoreProviderRequest,
         WidevineFactoryStoreProviderRequestStream,
     },
-    fidl_fuchsia_io as fio,
+    fidl_fuchsia_hardware_block as fhardware_block, fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_storage_ext4::{MountVmoResult, Server_Marker},
-    fuchsia_async::{self as fasync},
+    fuchsia_async as fasync,
     fuchsia_bootfs::BootfsParser,
     fuchsia_component::server::ServiceFs,
     fuchsia_fs, fuchsia_syslog as syslog, fuchsia_zircon as zx,
-    futures::{lock::Mutex, prelude::*, TryStreamExt},
-    std::{
-        io::{self, Read, Seek},
-        path::PathBuf,
-        sync::Arc,
-    },
+    futures::{lock::Mutex, StreamExt as _, TryFutureExt as _, TryStreamExt as _},
+    remote_block_device::BlockClient as _,
+    std::{io, path::PathBuf, sync::Arc},
     vfs::{
         directory::{self, entry::DirectoryEntry},
         execution_scope::ExecutionScope,
@@ -255,15 +252,27 @@ async fn open_factory_source(factory_config: FactoryConfig) -> Result<fio::Direc
             syslog::fx_log_info!("Reading from EXT4-formatted source: {}", partition_path);
             let block_path = find_block_device_filepath(&partition_path).await?;
             syslog::fx_log_info!("found the block path {}", block_path);
-            let mut reader = io::BufReader::new(std::fs::File::open(block_path)?);
-            let size = reader.seek(io::SeekFrom::End(0))?;
-            reader.seek(io::SeekFrom::Start(0))?;
-
-            let mut reader_buf = vec![0u8; size as usize];
-            reader.read_exact(&mut reader_buf)?;
-
+            let proxy = fuchsia_component::client::connect_to_protocol_at_path::<
+                fhardware_block::BlockMarker,
+            >(&block_path)?;
+            let block_client = remote_block_device::RemoteBlockClient::new(proxy).await?;
+            let block_count = block_client.block_count();
+            let block_size = block_client.block_size();
+            let size = block_count.checked_mul(block_size.into()).ok_or_else(|| {
+                format_err!("size overflows: block_count={} block_size={}", block_count, block_size)
+            })?;
+            let buf = async {
+                let size = size.try_into()?;
+                let mut buf = vec![0u8; size];
+                let () = block_client
+                    .read_at(remote_block_device::MutableBufferSlice::Memory(buf.as_mut_slice()), 0)
+                    .await?;
+                Ok::<_, Error>(buf)
+            }
+            .await?;
             let vmo = zx::Vmo::create(size)?;
-            vmo.write(&reader_buf, 0)?;
+            let () = vmo.write(&buf, 0)?;
+
             let mut buf = Buffer { vmo, size };
 
             let ext4_server = fuchsia_component::client::connect_to_protocol::<Server_Marker>()?;
