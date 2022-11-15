@@ -1,2 +1,0 @@
-# Component Tests
-fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/cpu_resource_allowed.cmx
