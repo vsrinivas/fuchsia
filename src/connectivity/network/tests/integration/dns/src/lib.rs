@@ -31,10 +31,11 @@ use net_types::ip as net_types_ip;
 use netemul::{RealmTcpListener as _, RealmUdpSocket as _};
 use netstack_testing_common::{
     constants::ipv6 as ipv6_consts,
-    interfaces, pause_fake_clock,
+    interfaces,
+    ndp::send_ra_with_router_lifetime,
+    pause_fake_clock,
     realms::{KnownServiceProvider, Manager, ManagerConfig, Netstack2, TestSandboxExt as _},
-    send_ra_with_router_lifetime, wait_for_component_stopped, Result,
-    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    wait_for_component_stopped, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
 use packet::{

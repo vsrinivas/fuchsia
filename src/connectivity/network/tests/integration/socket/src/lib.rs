@@ -39,11 +39,12 @@ use net_types::{
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _, TestInterface};
 use netstack_testing_common::{
     constants::ipv6 as ipv6_consts,
+    ndp::send_ra_with_router_lifetime,
     ping,
     realms::{
         Netstack, Netstack2, Netstack2WithFastUdp, Netstack3, NetstackVersion, TestSandboxExt as _,
     },
-    send_ra_with_router_lifetime, Result,
+    Result,
 };
 use netstack_testing_macros::variants_test;
 use packet::Serializer as _;

@@ -27,12 +27,15 @@ use net_types::{
 use netstack_testing_common::{
     constants::{eth as eth_consts, ipv6 as ipv6_consts},
     interfaces,
+    ndp::{
+        self, assert_dad_failed, assert_dad_success, expect_dad_neighbor_solicitation,
+        fail_dad_with_na, fail_dad_with_ns, send_ra_with_router_lifetime, DadState,
+    },
     realms::{
         constants, KnownServiceProvider, Netstack, Netstack2, NetstackVersion, TestSandboxExt as _,
     },
-    send_ra_with_router_lifetime, setup_network, setup_network_with, sleep, write_ndp_message,
-    ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
-    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, NDP_MESSAGE_TTL,
+    setup_network, setup_network_with, sleep, ASYNC_EVENT_CHECK_INTERVAL,
+    ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
 use packet::{InnerPacketBuilder as _, ParsablePacket as _, Serializer as _};
@@ -42,8 +45,7 @@ use packet_formats::{
         mld::MldPacket,
         ndp::{
             options::{NdpOption, NdpOptionBuilder, PrefixInformation, RouteInformation},
-            NeighborAdvertisement, NeighborSolicitation, RoutePreference, RouterAdvertisement,
-            RouterSolicitation,
+            NeighborSolicitation, RoutePreference, RouterAdvertisement, RouterSolicitation,
         },
         IcmpParseArgs, Icmpv6Packet,
     },
@@ -284,7 +286,7 @@ async fn sends_router_solicitations<E: netemul::Endpoint>(
 
         assert_eq!(dst_ip, net_types_ip::Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.get());
 
-        assert_eq!(ttl, NDP_MESSAGE_TTL);
+        assert_eq!(ttl, ndp::MESSAGE_TTL);
 
         // The Router Solicitation should only ever have at max 1 source
         // link-layer option.
@@ -418,93 +420,6 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
 /// an interface, DAD should succeed.
 #[variants_test]
 async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
-    /// Transmits a Neighbor Solicitation message and expects `ipv6_consts::LINK_LOCAL_ADDR`
-    /// to not be assigned to the interface after the normal resolution time for DAD.
-    async fn fail_dad_with_ns(fake_ep: &netemul::TestFakeEndpoint<'_>) {
-        let snmc = ipv6_consts::LINK_LOCAL_ADDR.to_solicited_node_address();
-        let () = write_ndp_message::<&[u8], _>(
-            eth_consts::MAC_ADDR,
-            Mac::from(&snmc),
-            net_types_ip::Ipv6::UNSPECIFIED_ADDRESS,
-            snmc.get(),
-            NeighborSolicitation::new(ipv6_consts::LINK_LOCAL_ADDR),
-            &[],
-            fake_ep,
-        )
-        .await
-        .expect("failed to write NDP message");
-    }
-
-    /// Transmits a Neighbor Advertisement message and expects `ipv6_consts::LINK_LOCAL_ADDR`
-    /// to not be assigned to the interface after the normal resolution time for DAD.
-    async fn fail_dad_with_na(fake_ep: &netemul::TestFakeEndpoint<'_>) {
-        let () = write_ndp_message::<&[u8], _>(
-            eth_consts::MAC_ADDR,
-            Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
-            ipv6_consts::LINK_LOCAL_ADDR,
-            net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
-            NeighborAdvertisement::new(
-                false, /* router_flag */
-                false, /* solicited_flag */
-                false, /* override_flag */
-                ipv6_consts::LINK_LOCAL_ADDR,
-            ),
-            &[NdpOptionBuilder::TargetLinkLayerAddress(&eth_consts::MAC_ADDR.bytes())],
-            fake_ep,
-        )
-        .await
-        .expect("failed to write NDP message");
-    }
-
-    // Wait for and verify a NS message transmitted by netstack for DAD.
-    async fn expect_dad_neighbor_solicitation(fake_ep: &netemul::TestFakeEndpoint<'_>) {
-        let ret = fake_ep
-            .frame_stream()
-            .try_filter_map(|(data, dropped)| {
-                assert_eq!(dropped, 0);
-                future::ok(
-                    parse_icmp_packet_in_ip_packet_in_ethernet_frame::<
-                        net_types_ip::Ipv6,
-                        _,
-                        NeighborSolicitation,
-                        _,
-                    >(&data, |p| assert_eq!(p.body().iter().count(), 0))
-                    .map_or(None, |(_src_mac, dst_mac, src_ip, dst_ip, ttl, message, _code)| {
-                        // If the NS is not for the address we just added, this is for some
-                        // other address. We ignore it as it is not relevant to our test.
-                        if message.target_address() != &ipv6_consts::LINK_LOCAL_ADDR {
-                            return None;
-                        }
-
-                        Some((dst_mac, src_ip, dst_ip, ttl))
-                    }),
-                )
-            })
-            .try_next()
-            .map(|r| r.context("error getting OnData event"))
-            .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-                Err(anyhow::anyhow!(
-                    "timed out waiting for a neighbor solicitation targetting {}",
-                    ipv6_consts::LINK_LOCAL_ADDR
-                ))
-            })
-            .await
-            .unwrap()
-            .expect("failed to get next OnData event");
-
-        let (dst_mac, src_ip, dst_ip, ttl) = ret;
-        let expected_dst = ipv6_consts::LINK_LOCAL_ADDR.to_solicited_node_address();
-        assert_eq!(src_ip, net_types_ip::Ipv6::UNSPECIFIED_ADDRESS);
-        assert_eq!(dst_ip, expected_dst.get());
-        assert_eq!(dst_mac, Mac::from(&expected_dst));
-        assert_eq!(ttl, NDP_MESSAGE_TTL);
-    }
-
-    type State = Result<
-        fidl_fuchsia_net_interfaces_admin::AddressAssignmentState,
-        fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError,
-    >;
-
     /// Adds `ipv6_consts::LINK_LOCAL_ADDR` to the interface and makes sure a Neighbor Solicitation
     /// message is transmitted by the netstack for DAD.
     ///
@@ -521,7 +436,7 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         control: &'b fidl_fuchsia_net_interfaces_admin::ControlProxy,
         interface_up: bool,
         dad_fn: FN,
-    ) -> impl futures::stream::Stream<Item = State> {
+    ) -> impl futures::stream::Stream<Item = DadState> {
         let (address_state_provider, server) = fidl::endpoints::create_proxy::<
             fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
         >()
@@ -586,38 +501,6 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         .get_admin(iface.id(), server)
         .expect("fuchsia.net.debug/Interfaces.GetAdmin failed");
 
-    async fn dad_state(
-        state_stream: &mut (impl futures::stream::Stream<Item = State> + std::marker::Unpin),
-    ) -> State {
-        // The address state provider doesn't buffer events, so we might see the tentative state,
-        // but we might not.
-        let state = match state_stream.by_ref().next().await.expect("state stream not ended") {
-            Ok(fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Tentative) => {
-                state_stream.by_ref().next().await.expect("state stream not ended")
-            }
-            state => state,
-        };
-        // Ensure errors are terminal.
-        match state {
-            Ok(_) => {}
-            Err(_) => {
-                assert_matches::assert_matches!(state_stream.by_ref().next().await, None)
-            }
-        }
-        state
-    }
-
-    async fn assert_dad_failed(
-        mut state_stream: (impl futures::stream::Stream<Item = State> + std::marker::Unpin),
-    ) {
-        assert_matches::assert_matches!(
-            dad_state(&mut state_stream).await,
-            Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
-                fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::DadFailed
-            ))
-        );
-    }
-
     // Add an address and expect it to fail DAD because we simulate another node
     // performing DAD at the same time.
     {
@@ -631,15 +514,6 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         let state_stream =
             add_address_for_dad(&iface, &fake_ep, &control, true, fail_dad_with_na).await;
         assert_dad_failed(state_stream).await;
-    }
-
-    async fn assert_dad_success(
-        state_stream: &mut (impl futures::stream::Stream<Item = State> + std::marker::Unpin),
-    ) {
-        assert_matches::assert_matches!(
-            dad_state(state_stream).await,
-            Ok(fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned)
-        );
     }
 
     {
@@ -904,7 +778,7 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
 
     // We pretend there is a duplicate address situation.
     let snmc = tried_address.to_solicited_node_address();
-    let () = write_ndp_message::<&[u8], _>(
+    let () = ndp::write_message::<&[u8], _>(
         eth_consts::MAC_ADDR,
         Mac::from(&snmc),
         net_types_ip::Ipv6::UNSPECIFIED_ADDRESS,

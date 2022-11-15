@@ -9,12 +9,11 @@
 pub mod constants;
 pub mod devices;
 pub mod interfaces;
+pub mod ndp;
 pub mod packets;
 pub mod ping;
 #[macro_use]
 pub mod realms;
-
-use std::fmt::Debug;
 
 use component_events::events::EventStream;
 use fidl_fuchsia_netemul as fnetemul;
@@ -24,18 +23,6 @@ use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use futures::stream::{Stream, StreamExt as _, TryStreamExt as _};
-use net_types::{ethernet::Mac, ip as net_types_ip, Witness as _};
-use packet::serialize::{InnerPacketBuilder, Serializer};
-use packet_formats::{
-    ethernet::{EtherType, EthernetFrameBuilder},
-    icmp::{
-        ndp::{self, options::NdpOptionBuilder, RouterAdvertisement},
-        IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode,
-    },
-    ip::Ipv6Proto,
-    ipv6::Ipv6PacketBuilder,
-};
-use zerocopy::ByteSlice;
 
 use crate::realms::TestSandboxExt as _;
 
@@ -57,11 +44,6 @@ pub const ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_
 /// The time to wait between two consecutive checks of an event.
 pub const ASYNC_EVENT_CHECK_INTERVAL: zx::Duration = zx::Duration::from_seconds(1);
 
-/// As per [RFC 4861] sections 4.1-4.5, NDP packets MUST have a hop limit of 255.
-///
-/// [RFC 4861]: https://tools.ietf.org/html/rfc4861
-pub const NDP_MESSAGE_TTL: u8 = 255;
-
 /// Returns `true` once the stream yields a `true`.
 ///
 /// If the stream never yields `true` or never terminates, `try_any` may never resolve.
@@ -81,34 +63,6 @@ pub async fn try_all<S: Stream<Item = Result<bool>>>(stream: S) -> Result<bool> 
 /// Asynchronously sleeps for specified `secs` seconds.
 pub async fn sleep(secs: i64) {
     fasync::Timer::new(zx::Duration::from_seconds(secs).after_now()).await;
-}
-
-/// Writes an NDP message to the provided fake endpoint.
-///
-/// Given the source and destination MAC and IP addresses, NDP message and
-/// options, the full NDP packet (including IPv6 and Ethernet headers) will be
-/// transmitted to the fake endpoint's network.
-pub async fn write_ndp_message<
-    B: ByteSlice + Debug,
-    M: IcmpMessage<net_types_ip::Ipv6, B, Code = IcmpUnusedCode> + Debug,
->(
-    src_mac: Mac,
-    dst_mac: Mac,
-    src_ip: net_types_ip::Ipv6Addr,
-    dst_ip: net_types_ip::Ipv6Addr,
-    message: M,
-    options: &[NdpOptionBuilder<'_>],
-    ep: &netemul::TestFakeEndpoint<'_>,
-) -> Result {
-    let ser = ndp::OptionSequenceBuilder::new(options.iter())
-        .into_serializer()
-        .encapsulate(IcmpPacketBuilder::<_, B, _>::new(src_ip, dst_ip, IcmpUnusedCode, message))
-        .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, NDP_MESSAGE_TTL, Ipv6Proto::Icmpv6))
-        .encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, EtherType::Ipv6))
-        .serialize_vec_outer()
-        .map_err(|e| anyhow::anyhow!("failed to serialize NDP packet: {:?}", e))?
-        .unwrap_b();
-    ep.write(ser.as_ref()).await.context("failed to write to fake endpoint")
 }
 
 /// Gets a component event stream yielding component stopped events.
@@ -251,32 +205,6 @@ pub async fn get_inspect_data(
             }
         }
     }
-}
-
-/// Send Router Advertisement NDP message with router lifetime.
-pub async fn send_ra_with_router_lifetime<'a>(
-    fake_ep: &netemul::TestFakeEndpoint<'a>,
-    lifetime: u16,
-    options: &[NdpOptionBuilder<'_>],
-) -> Result {
-    let ra = RouterAdvertisement::new(
-        0,        /* current_hop_limit */
-        false,    /* managed_flag */
-        false,    /* other_config_flag */
-        lifetime, /* router_lifetime */
-        0,        /* reachable_time */
-        0,        /* retransmit_timer */
-    );
-    write_ndp_message::<&[u8], _>(
-        constants::eth::MAC_ADDR,
-        Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
-        constants::ipv6::LINK_LOCAL_ADDR,
-        net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
-        ra,
-        options,
-        fake_ep,
-    )
-    .await
 }
 
 /// Sets up a realm with a network with no required services.
