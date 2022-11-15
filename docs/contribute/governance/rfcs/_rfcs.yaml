@@ -2571,7 +2571,7 @@
   area: ['Driver SDK']
   issue: ['95821']
   gerrit_change_id: ['726075']
-  status: 'Review'
+  status: 'Accepted'
   reviewers: ['surajmalhotra@google.com', 'dgilhooley@google.com']
   submitted: '2022-11-01'
   reviewed: '2022-09-26'
