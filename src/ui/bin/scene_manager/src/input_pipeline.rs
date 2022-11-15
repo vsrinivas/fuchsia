@@ -80,8 +80,12 @@ pub async fn handle_input(
     let factory_reset_handler = FactoryResetHandler::new();
     let media_buttons_handler = MediaButtonsHandler::new();
 
+    // TODO(fxbug.dev/100664): Enable LightSensor when it's implemented.
     let supported_input_devices: Vec<input_device::InputDeviceType> =
-        input_device::InputDeviceType::list_from_structured_config_list(&supported_input_devices);
+        input_device::InputDeviceType::list_from_structured_config_list(&supported_input_devices)
+            .into_iter()
+            .filter(|d| d != &input_device::InputDeviceType::LightSensor)
+            .collect();
 
     let input_pipeline = InputPipeline::new(
         supported_input_devices.clone(),
