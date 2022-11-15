@@ -123,22 +123,33 @@ constexpr zx_time_t& operator+=(zx_time_t& value, SchedDuration delta) {
 // so that user mode tracing can track which threads are running.
 inline void TraceContextSwitch(const Thread* current_thread, const Thread* next_thread,
                                cpu_num_t current_cpu) {
-  const auto next_tid = static_cast<uint32_t>(next_thread->tid());
-  const SchedulerState& current_state = current_thread->scheduler_state();
-  const SchedulerState& next_state = next_thread->scheduler_state();
-  const uint32_t context = current_cpu | (current_thread->state() << 8) |
-                           (current_state.base_priority() << 16) |
-                           (next_state.base_priority() << 24);
-  const uint32_t current_relative_deadline =
-      current_state.discipline() == SchedDiscipline::Deadline
-          ? static_cast<uint32_t>(current_state.deadline().deadline_ns.raw_value())
-          : 0u;
-  const uint32_t next_relative_deadline =
-      next_state.discipline() == SchedDiscipline::Deadline
-          ? static_cast<uint32_t>(next_state.deadline().deadline_ns.raw_value())
-          : 0u;
-
-  ktrace(TAG_CONTEXT_SWITCH, next_tid, context, current_relative_deadline, next_relative_deadline);
+  if (unlikely(ktrace_tag_enabled(TAG_CONTEXT_SWITCH))) {
+    zx_thread_state_t user_thread_state = [](thread_state ts) {
+      switch (ts) {
+        case THREAD_INITIAL:
+        case THREAD_READY:
+          return ZX_THREAD_STATE_NEW;
+        case THREAD_RUNNING:
+          return ZX_THREAD_STATE_RUNNING;
+        case THREAD_BLOCKED:
+        case THREAD_BLOCKED_READ_LOCK:
+        case THREAD_SLEEPING:
+          return ZX_THREAD_STATE_BLOCKED;
+        case THREAD_SUSPENDED:
+          return ZX_THREAD_STATE_SUSPENDED;
+        case THREAD_DEATH:
+          return ZX_THREAD_STATE_DEAD;
+        default:
+          return UINT32_MAX;
+      }
+    }(current_thread->state());
+    fxt_context_switch(TAG_CONTEXT_SWITCH, current_ticks(), static_cast<uint8_t>(current_cpu),
+                       user_thread_state,
+                       fxt::ThreadRef(current_thread->pid(), current_thread->tid()),
+                       fxt::ThreadRef(next_thread->pid(), next_thread->tid()),
+                       static_cast<uint8_t>(current_thread->scheduler_state().base_priority()),
+                       static_cast<uint8_t>(next_thread->scheduler_state().base_priority()));
+  }
 }
 
 // Returns true if the given thread is fair scheduled.

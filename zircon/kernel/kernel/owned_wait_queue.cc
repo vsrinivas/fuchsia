@@ -86,12 +86,7 @@ enum class PiTracingLevel {
 // enabled.  By default, guards are enabled in everything but release builds.
 constexpr bool kEnablePiChainGuards = LK_DEBUGLEVEL > 0;
 
-// Default tracing level is Normal when lock tracing is disabled.
-#if LOCK_TRACING_ENABLED
 constexpr PiTracingLevel kDefaultPiTracingLevel = PiTracingLevel::None;
-#else
-constexpr PiTracingLevel kDefaultPiTracingLevel = PiTracingLevel::Normal;
-#endif
 
 // A couple of small stateful helper classes which drop out of release builds
 // which perform some sanity checks for us when propagating priority
@@ -202,7 +197,14 @@ class PiKTracer<Level, ktl::enable_if_t<(Level == PiTracingLevel::Normal) ||
       if (thread_ == nullptr) {
         // Generate the start event and a flow id.
         flow_id_ = PiKTracerFlowIdGenerator::gen_.fetch_add(1, ktl::memory_order_relaxed);
-        ktrace(TAG_INHERIT_PRIORITY_START, flow_id_, 0, 0, arch_curr_cpu_num());
+        zx_ticks_t ts = current_ticks();
+        fxt_duration_complete(TAG_INHERIT_PRIORITY_START, ts, fxt::ThreadRef{t->pid(), t->tid()},
+                              fxt::StringRef{"kernel:sched"_stringref->GetFxtId()},
+                              fxt::StringRef{"inherit_prio"_stringref->GetFxtId()}, ts + 50);
+
+        fxt_flow_begin(TAG_INHERIT_PRIORITY_START, ts, fxt::ThreadRef{t->pid(), t->tid()},
+                       fxt::StringRef{"kernel:sched"_stringref->GetFxtId()},
+                       fxt::StringRef{"inherit_prio"_stringref->GetFxtId()}, flow_id_);
       } else {
         // Flush the previous event, but do not declare it to be the last in
         // the flow.
@@ -228,21 +230,28 @@ class PiKTracer<Level, ktl::enable_if_t<(Level == PiTracingLevel::Normal) ||
       return;
     }
 
-    uint32_t tid;
-    uint32_t flags;
-    if (thread_->user_thread() != nullptr) {
-      tid = static_cast<uint32_t>(thread_->tid());
-      flags = static_cast<uint32_t>(arch_curr_cpu_num());
+    fxt::Argument old_ep_arg{fxt::StringRef{"old_ip"_stringref->GetFxtId()}, priorities_ & 0xFF};
+    fxt::Argument new_ep_arg{fxt::StringRef{"new_ip"_stringref->GetFxtId()},
+                             (priorities_ >> 8) & 0xFF};
+    fxt::Argument old_ip_arg{fxt::StringRef{"old_ep"_stringref->GetFxtId()},
+                             (priorities_ >> 16) & 0xFF};
+    fxt::Argument new_ip_arg{fxt::StringRef{"new_ep"_stringref->GetFxtId()},
+                             (priorities_ >> 24) & 0xFF};
+    zx_ticks_t ts = current_ticks();
+    fxt_duration_complete(TAG_INHERIT_PRIORITY_START, ts,
+                          fxt::ThreadRef{thread_->pid(), thread_->tid()},
+                          fxt::StringRef{"kernel:sched"_stringref->GetFxtId()},
+                          fxt::StringRef{"inherit_prio"_stringref->GetFxtId()}, ts + 50, old_ip_arg,
+                          new_ip_arg, old_ep_arg, new_ep_arg);
+    if (type == FlushType::INTERMEDIATE) {
+      fxt_flow_step(TAG_INHERIT_PRIORITY, ts, fxt::ThreadRef{thread_->pid(), thread_->tid()},
+                    fxt::StringRef{"kernel:sched"_stringref->GetFxtId()},
+                    fxt::StringRef{"inherit_prio"_stringref->GetFxtId()}, flow_id_);
     } else {
-      tid = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(thread_));
-      flags = static_cast<uint32_t>(arch_curr_cpu_num()) | KTRACE_FLAGS_INHERIT_PRIORITY_KERNEL_TID;
+      fxt_flow_end(TAG_INHERIT_PRIORITY, ts, fxt::ThreadRef{thread_->pid(), thread_->tid()},
+                   fxt::StringRef{"kernel:sched"_stringref->GetFxtId()},
+                   fxt::StringRef{"inherit_prio"_stringref->GetFxtId()}, flow_id_);
     }
-
-    if (type == FlushType::FINAL) {
-      flags |= KTRACE_FLAGS_INHERIT_PRIORITY_FINAL_EVT;
-    }
-
-    ktrace(TAG_INHERIT_PRIORITY, flow_id_, tid, priorities_, flags);
   }
 
   Thread* thread_ = nullptr;
