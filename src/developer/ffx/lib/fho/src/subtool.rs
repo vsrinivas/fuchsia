@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{fs::File, path::PathBuf};
+use std::{fs::File, path::PathBuf, rc::Rc, sync::Arc};
 
 use anyhow::Result;
 use argh::{CommandInfo, FromArgs, SubCommand, SubCommands};
@@ -104,7 +104,7 @@ impl<M: FfxMain> ToolRunner for FhoTool<M> {
                     context: &self.suite.context,
                     injector: &injector,
                 };
-                let mut main = M::from_env(env, tool).await?;
+                let main = M::from_env(env, tool).await?;
                 main.main().await
             }
         }
@@ -156,7 +156,7 @@ pub trait FfxTool: Sized + 'static {
 pub trait FfxMain: FfxTool {
     /// The entrypoint of the tool. Once FHO has set up the environment for the tool, this is
     /// invoked. Should not be invoked directly unless for testing.
-    async fn main(&mut self) -> Result<()>;
+    async fn main(self) -> Result<()>;
 
     /// Executes the tool. This is intended to be invoked by the user in main.
     async fn execute_tool() {
@@ -182,6 +182,56 @@ pub trait TryFromEnv: Sized {
 #[async_trait(?Send)]
 pub trait CheckEnv {
     async fn check_env(self, env: &FhoEnvironment<'_>) -> Result<()>;
+}
+
+#[async_trait(?Send)]
+impl<T> TryFromEnv for Arc<T>
+where
+    T: TryFromEnv,
+{
+    async fn try_from_env(env: &FhoEnvironment<'_>) -> Result<Self> {
+        T::try_from_env(env).await.map(Arc::new)
+    }
+}
+
+#[async_trait(?Send)]
+impl<T> TryFromEnv for Rc<T>
+where
+    T: TryFromEnv,
+{
+    async fn try_from_env(env: &FhoEnvironment<'_>) -> Result<Self> {
+        T::try_from_env(env).await.map(Rc::new)
+    }
+}
+
+#[async_trait(?Send)]
+impl<T> TryFromEnv for Box<T>
+where
+    T: TryFromEnv,
+{
+    async fn try_from_env(env: &FhoEnvironment<'_>) -> Result<Self> {
+        T::try_from_env(env).await.map(Box::new)
+    }
+}
+
+#[async_trait(?Send)]
+impl<T> TryFromEnv for Option<T>
+where
+    T: TryFromEnv,
+{
+    async fn try_from_env(env: &FhoEnvironment<'_>) -> Result<Self> {
+        Ok(T::try_from_env(env).await.ok())
+    }
+}
+
+#[async_trait(?Send)]
+impl<T> TryFromEnv for Result<T>
+where
+    T: TryFromEnv,
+{
+    async fn try_from_env(env: &FhoEnvironment<'_>) -> Result<Self> {
+        Ok(T::try_from_env(env).await)
+    }
 }
 
 /// Checks if the experimental config flag is set. This gates the execution of the command.
@@ -433,7 +483,7 @@ mod tests {
 
     #[async_trait(?Send)]
     impl FfxMain for FakeTool {
-        async fn main(&mut self) -> Result<()> {
+        async fn main(self) -> Result<()> {
             assert_eq!(self.from_env_string.0, "foobar");
             assert_eq!(self.fake_command.stuff, "stuff");
             self.writer.line("junk-line").unwrap();
@@ -473,7 +523,7 @@ mod tests {
             0,
             "tool pre-check should not have been called yet"
         );
-        let mut fake_tool = match tool_cmd.subcommand {
+        let fake_tool = match tool_cmd.subcommand {
             FhoHandler::Standalone(t) => FakeTool::from_env(fho_env, t).await.unwrap(),
             FhoHandler::Metadata(_) => panic!("Not testing metadata generation"),
         };
@@ -495,7 +545,7 @@ mod tests {
         }
         #[async_trait(?Send)]
         impl FfxMain for FakeToolWillFail {
-            async fn main(&mut self) -> Result<()> {
+            async fn main(self) -> Result<()> {
                 panic!("This should never get called")
             }
         }
