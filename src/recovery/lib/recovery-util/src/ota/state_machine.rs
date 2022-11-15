@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_wlan_policy::SecurityType;
+use crate::wlan::NetworkInfo;
 #[cfg(test)]
 use mockall::*;
 
@@ -10,15 +10,6 @@ use mockall::*;
 // new state. The states, events and state logic have all ben derived
 // from the Recovery OTA UX design.
 // The only state held by the state machine is the current state.
-
-/// Holds the network information necessary for showing the user
-/// the signal strength and whether the network is password protected.
-#[derive(Clone, Debug)]
-pub struct NetworkInfo {
-    pub ssid: String,
-    pub rssi: i8,
-    pub security_type: SecurityType,
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Operation {
@@ -28,6 +19,7 @@ pub enum Operation {
 
 pub(crate) type Network = String;
 pub(crate) type Password = String;
+pub(crate) type NetworkInfos = Vec<NetworkInfo>;
 type Text = String;
 type ErrorMessage = String;
 type PercentProgress = i32;
@@ -46,7 +38,7 @@ pub enum State {
     Reinstall,
     SetPrivacy(bool),
     GetWiFiNetworks,
-    SelectWiFi(Vec<NetworkInfo>),
+    SelectWiFi(NetworkInfos),
 }
 
 impl PartialEq for State {
@@ -62,7 +54,7 @@ pub enum Event {
     ChooseNetwork,
     Error(ErrorMessage),
     WiFiConnected,
-    Networks(Vec<NetworkInfo>),
+    Networks(NetworkInfos),
     Progress(PercentProgress),
     Reinstall,
     SendReports(bool),

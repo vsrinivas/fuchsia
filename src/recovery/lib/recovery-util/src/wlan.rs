@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     fidl::endpoints::{create_proxy, create_request_stream},
     fidl_fuchsia_wlan_common as wlan_common,
-    fidl_fuchsia_wlan_policy::{self as wlan_policy, NetworkConfig},
+    fidl_fuchsia_wlan_policy::{self as wlan_policy, NetworkConfig, SecurityType},
     fuchsia_async::{Time, TimeoutExt as _},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::Duration,
@@ -56,8 +56,9 @@ fn get_client_controller(
     Ok((client_controller, update_stream))
 }
 
-#[async_trait(?Send)]
+#[async_trait(? Send)]
 pub trait WifiConnect {
+    async fn scan_for_networks(&self) -> Result<Vec<NetworkInfo>, Error>;
     async fn connect(&self, network: NetworkConfig) -> Result<(), Error>;
 }
 
@@ -96,8 +97,42 @@ impl WifiConnectImpl {
     }
 }
 
-#[async_trait(?Send)]
+#[derive(Clone, Debug, PartialEq)]
+pub struct NetworkInfo {
+    pub ssid: String,
+    pub rssi: i8,
+    pub security_type: SecurityType,
+}
+
+#[async_trait(? Send)]
 impl WifiConnect for WifiConnectImpl {
+    async fn scan_for_networks(&self) -> Result<Vec<NetworkInfo>, Error> {
+        let mut networks: Vec<NetworkInfo> = Vec::new();
+        let (client_controller, _) = (self.get_client_controller)()?;
+        let scan_results = handle_scan(client_controller).await?;
+        for network in scan_results {
+            if let Some(id) = network.id {
+                let ssid = String::from_utf8(id.ssid).unwrap();
+                if network.entries.is_some() && !ssid.is_empty() {
+                    let mut best_rssi = -128;
+                    for entry in network.entries.unwrap() {
+                        let rssi = match entry.rssi {
+                            Some(rssi) => rssi,
+                            None => 0,
+                        };
+                        if rssi > best_rssi {
+                            best_rssi = rssi;
+                        }
+                    }
+                    networks.push(NetworkInfo { ssid, rssi: best_rssi, security_type: id.type_ });
+                }
+            }
+        }
+
+        networks.sort_by(|a, b| b.rssi.cmp(&a.rssi));
+        Ok(networks)
+    }
+
     async fn connect(&self, network_config: NetworkConfig) -> Result<(), Error> {
         let (client_controller, client_state_updates_request) = (self.get_client_controller)()?;
 
@@ -122,14 +157,40 @@ impl WifiConnect for WifiConnectImpl {
     }
 }
 
+/// Issues a scan request to the client policy layer.
+/// This function is largly copied from https://source.corp.google.com/fuchsia/src/connectivity/wlan/wlancfg/tool/policy/src/lib.rs;l=372?q=fn%20handle_scan&sq=package:fuchsia
+/// The match statement has been simplified.
+async fn handle_scan(
+    client_controller: wlan_policy::ClientControllerProxy,
+) -> Result<Vec<wlan_policy::ScanResult>, Error> {
+    let (client_proxy, server_end) =
+        create_proxy::<wlan_policy::ScanResultIteratorMarker>().unwrap();
+    client_controller.scan_for_networks(server_end)?;
+
+    let mut scanned_networks = Vec::<wlan_policy::ScanResult>::new();
+    loop {
+        match client_proxy.get_next().await? {
+            Ok(mut new_networks) => {
+                if new_networks.is_empty() {
+                    break;
+                }
+                scanned_networks.append(&mut new_networks);
+            }
+            Err(e) => return Err(format_err!("Scan failure error: {:?}", e)),
+        }
+    }
+
+    Ok(scanned_networks)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use {
         assert_matches::assert_matches, fuchsia_async as fasync, std::cell::Cell,
         std::future::Future,
     };
+
+    use super::*;
 
     fn mock_wlan_policy<H, F>(handler: H) -> Result<Box<GetClientController>, Error>
     where

@@ -66,8 +66,9 @@ async fn connect_to_wifi(
 
 #[cfg(test)]
 mod tests {
-    use crate::ota::actions::wifi_connect::{WifiConnect, WifiConnectAction};
+    use super::WifiConnectAction;
     use crate::ota::state_machine::{Event, EventHandler, MockEventHandler};
+    use crate::wlan::{NetworkInfo, WifiConnect};
     use anyhow::{anyhow, Error};
     use async_trait::async_trait;
     use fidl_fuchsia_wlan_policy::NetworkConfig;
@@ -89,6 +90,11 @@ mod tests {
 
     #[async_trait(?Send)]
     impl WifiConnect for FakeWifiConnectImpl {
+        // Not used in these tests
+        async fn scan_for_networks(&self) -> Result<Vec<NetworkInfo>, Error> {
+            Err(Error::msg("This should not be called"))
+        }
+
         async fn connect(&self, _network: NetworkConfig) -> Result<(), Error> {
             if self.connected {
                 Ok(())
