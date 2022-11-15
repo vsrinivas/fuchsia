@@ -2,8 +2,8 @@
 See the parent vkproto/README.md for general information about vkproto.
 
 ## AGI Instrumentation
-vkproto/example/main.cc is configured to request the `GraphicsSpyLayer`
-layer in its instance creation.  Providing this layer service and
+The layer overrides for vkproto is configured to request the
+`VK_LAYER_GOOGLE_gpu_inspector`.  Providing this layer service and
 capability is done using the gapii.far package as built within the
 AGI tree / build.
 
@@ -42,4 +42,4 @@ following steps.
 
 Creating and starting the vkproto component will implicitly load the
 gapii-server component needed to augment the Vulkan loader with the
-directory capability needed to load the `GraphicsSpyLayer` layer.
+directory capability needed to load the `VK_LAYER_GOOGLE_gpu_inspector` layer.

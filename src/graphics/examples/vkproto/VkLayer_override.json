@@ -7,8 +7,7 @@
         "app_keys": [],
         "blacklisted_layers": [],
         "component_layers": [
-            "GraphicsSpy",
-            "VK_LAYER_LUNARG_override"
+            "VK_LAYER_GOOGLE_gpu_inspector"
         ],
         "description": "LunarG Override Layer",
         "disable_environment": {
