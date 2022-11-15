@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.hardware.google.ec/cpp/wire_messaging.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/svc/outgoing.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <ddktl/device.h>
 
@@ -22,7 +22,9 @@ using DeviceType = ddk::Device<ChromiumosEcLpc, ddk::Initializable, ddk::Unbinda
 class ChromiumosEcLpc : public DeviceType {
  public:
   explicit ChromiumosEcLpc(zx_device_t* parent)
-      : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+      : DeviceType(parent),
+        loop_(&kAsyncLoopConfigNeverAttachToThread),
+        outgoing_(component::OutgoingDirectory::Create(loop_.dispatcher())) {}
   virtual ~ChromiumosEcLpc() = default;
 
   static zx_status_t Bind(void* ctx, zx_device_t* dev);
@@ -39,9 +41,9 @@ class ChromiumosEcLpc : public DeviceType {
 
  private:
   inspect::Inspector inspect_;
-  std::optional<svc::Outgoing> outgoing_;
   std::mutex io_lock_;
   async::Loop loop_;
+  component::OutgoingDirectory outgoing_;
 };
 
 }  // namespace chromiumos_ec_lpc

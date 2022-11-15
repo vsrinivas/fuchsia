@@ -41,8 +41,7 @@ fuchsia_driver_component("component") {
   component_name = "acpi-lid"
   deps = [ ":driver" ]
   info = "component-info.json"
-  colocate = true
-  default_dispatcher_opts = [ "allow_sync_calls" ]
+  manifest = "meta/acpi-lid.cml"
 }
 
 fuchsia_driver_package("acpi-lid") {

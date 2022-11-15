@@ -143,32 +143,21 @@ fpromise::promise<void, zx_status_t> ChromiumosEcCore::GetVersion() {
 }
 
 void ChromiumosEcCore::DdkInit(ddk::InitTxn txn) {
-  auto ec_endpoints = fidl::CreateEndpoints<fuchsia_hardware_google_ec::Device>();
-  if (ec_endpoints.is_error()) {
-    txn.Reply(ec_endpoints.status_value());
-    return;
-  }
-  zx_status_t result = DdkConnectFidlProtocol(std::move(ec_endpoints->server));
-  if (result != ZX_OK) {
-    txn.Reply(result);
+  auto ec_result = DdkConnectFidlProtocol<fuchsia_hardware_google_ec::Service::Device>();
+  if (!ec_result.is_ok()) {
+    txn.Reply(ec_result.error_value());
     return;
   }
 
-  auto acpi_endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
-  if (acpi_endpoints.is_error()) {
-    txn.Reply(acpi_endpoints.status_value());
-    return;
-  }
-
-  result = DdkConnectFidlProtocol(std::move(acpi_endpoints->server));
-  if (result != ZX_OK) {
-    txn.Reply(result);
+  auto acpi_result = DdkConnectFidlProtocol<fuchsia_hardware_acpi::Service::Device>();
+  if (!acpi_result.is_ok()) {
+    txn.Reply(acpi_result.error_value());
     return;
   }
 
   init_txn_ = std::move(txn);
   auto promise =
-      BindFidlClients(std::move(ec_endpoints->client), std::move(acpi_endpoints->client))
+      BindFidlClients(std::move(*ec_result), std::move(*acpi_result))
           .and_then([this]() -> fpromise::promise<void, zx_status_t> {
             return fpromise::join_promises(GetFeatures(), GetVersion())
                 .then(

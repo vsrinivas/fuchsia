@@ -53,7 +53,7 @@ fuchsia_driver_component("intel-rtc") {
   info = "intel-rtc-info.json"
   component_name = "intel-rtc"
   deps = [ ":intel-rtc-driver" ]
-  colocate = false
+  manifest = "meta/intel-rtc.cml"
 }
 
 test("intel-rtc-test-bin") {

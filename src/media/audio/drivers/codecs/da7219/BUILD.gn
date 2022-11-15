@@ -69,7 +69,7 @@ fuchsia_driver_component("component") {
   component_name = "da7219"
   deps = [ ":driver" ]
   info = "da7219-info.json"
-  colocate = true
+  manifest = "meta/da7219-dfv1.cml"
 }
 
 fuchsia_driver_package("pkg") {

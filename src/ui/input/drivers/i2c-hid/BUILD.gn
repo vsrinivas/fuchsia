@@ -63,8 +63,7 @@ fuchsia_driver_component("i2c-hid") {
     ":i2c_hid_bind",
   ]
   info = "i2c-hid-info.json"
-  colocate = true
-  default_dispatcher_opts = [ "allow_sync_calls" ]
+  manifest = "meta/i2c-hid.cml"
 }
 
 fuchsia_driver_component("i2c-hid-dfv2") {
@@ -73,8 +72,7 @@ fuchsia_driver_component("i2c-hid-dfv2") {
     ":i2c_hid_bind_dfv2",
   ]
   info = "i2c-hid-info.json"
-  colocate = true
-  default_dispatcher_opts = [ "allow_sync_calls" ]
+  manifest = "meta/i2c-hid-dfv2.cml"
 }
 
 test("i2c-hid-test") {

@@ -9,14 +9,12 @@
 #include <fidl/fuchsia.io/cpp/markers.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
-#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/server.h>
 
 #include <chromiumos-platform-ec/ec_commands.h>
 
 #include "src/devices/mcu/drivers/chromiumos-ec-lpc/chromiumos_ec_lpc_bind.h"
-#include "src/lib/storage/vfs/cpp/service.h"
 
 namespace chromiumos_ec_lpc {
 namespace fcrosec = fuchsia_hardware_google_ec;
@@ -72,39 +70,53 @@ zx_status_t ChromiumosEcLpc::Bind() {
     return status;
   }
 
-  outgoing_.emplace(loop_.dispatcher());
-  outgoing_->svc_dir()->AddEntry(
-      fidl::DiscoverableProtocolName<fcrosec::Device>,
-      fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<fcrosec::Device> request) mutable {
-        return fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(request), this);
-      }));
+  // Set up forwarding of ACPI to our ACPI parent.
+  component::ServiceInstanceHandler handler;
+  fuchsia_hardware_acpi::Service::Handler service(&handler);
+  auto provider_handler = [this](fidl::ServerEnd<fuchsia_hardware_acpi::Device> request) {
+    device_connect_fragment_fidl_protocol2(
+        parent(), "acpi", fuchsia_hardware_acpi::Service::Device::ServiceName,
+        fuchsia_hardware_acpi::Service::Device::Name, request.TakeChannel().release());
+  };
 
-  outgoing_->svc_dir()->AddEntry(
-      fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
-      fbl::MakeRefCounted<fs::Service>(
-          [this](fidl::ServerEnd<fuchsia_hardware_acpi::Device> request) mutable {
-            return DdkConnectFragmentFidlProtocol("acpi", std::move(request));
-          }));
+  auto result = service.add_device(std::move(provider_handler));
+  if (result.is_error()) {
+    return result.error_value();
+  }
+
+  result = outgoing_.AddService<fuchsia_hardware_acpi::Service>(std::move(handler));
+  if (result.is_error()) {
+    return result.error_value();
+  }
+
+  // Add the EC service, which we implement.
+  result = outgoing_.AddService<fuchsia_hardware_google_ec::Service>(
+      fuchsia_hardware_google_ec::Service::InstanceHandler(
+          {.device = bind_handler(loop_.dispatcher())}));
+  if (result.is_error()) {
+    return result.error_value();
+  }
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (endpoints.is_error()) {
-    return endpoints.status_value();
+    return endpoints.error_value();
   }
 
-  auto st = outgoing_->Serve(std::move(endpoints->server));
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "Failed to serve the outgoing directory: %s", zx_status_get_string(st));
-    return st;
+  result = outgoing_.Serve(std::move(endpoints->server));
+  if (result.is_error()) {
+    zxlogf(ERROR, "Failed to serve the outgoing directory: %s", result.status_string());
+    return result.error_value();
   }
 
   std::array offers = {
-      fidl::DiscoverableProtocolName<fcrosec::Device>,
+      fuchsia_hardware_acpi::Service::Name,
+      fuchsia_hardware_google_ec::Service::Name,
   };
 
   return DdkAdd(ddk::DeviceAddArgs("chromiumos_ec_lpc")
                     .set_flags(DEVICE_ADD_MUST_ISOLATE)
                     .set_inspect_vmo(inspect_.DuplicateVmo())
-                    .set_fidl_protocol_offers(offers)
+                    .set_fidl_service_offers(offers)
                     .set_outgoing_dir(endpoints->client.TakeChannel()));
 }
 

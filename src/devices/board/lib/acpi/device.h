@@ -8,6 +8,7 @@
 #include <lib/ddk/binding.h>
 #include <lib/fpromise/promise.h>
 #include <lib/svc/outgoing.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <zircon/compiler.h>
 
 #include <cstdint>
@@ -110,7 +111,8 @@ class Device : public DeviceType,
         metadata_{std::move(args.metadata_)},
         bus_type_{args.bus_type_},
         bus_id_{args.bus_id_},
-        pci_bdfs_{std::move(args.bdfs_)} {}
+        pci_bdfs_{std::move(args.bdfs_)},
+        outgoing_{component::OutgoingDirectory::Create(args.manager_->fidl_dispatcher())} {}
 
   // DDK mix-in impls.
   void DdkRelease() { delete this; }
@@ -237,7 +239,7 @@ class Device : public DeviceType,
   std::vector<fpromise::promise<void>> address_handler_teardown_finished_
       __TA_GUARDED(address_handler_lock_);
 
-  std::optional<svc::Outgoing> outgoing_;
+  component::OutgoingDirectory outgoing_;
 
   // Passthrough device -- the one that drivers actually bind to. This is a child of this |Device|
   // instance.

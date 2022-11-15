@@ -12,6 +12,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
 #include <lib/fpromise/promise.h>
+#include <lib/sys/component/cpp/handlers.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
@@ -322,24 +323,22 @@ void Device::AcpiConnectServer(zx::channel server) {
 }
 
 zx::result<zx::channel> Device::PrepareOutgoing() {
-  outgoing_.emplace(manager_->fidl_dispatcher());
-  outgoing_->svc_dir()->AddEntry(
-      fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
-      fbl::MakeRefCounted<fs::Service>(
-          [this](fidl::ServerEnd<fuchsia_hardware_acpi::Device> request) mutable {
-            return fidl::BindSingleInFlightOnly(manager_->fidl_dispatcher(), std::move(request),
-                                                this);
-          }));
+  auto result = outgoing_.AddService<fuchsia_hardware_acpi::Service>(
+      fuchsia_hardware_acpi::Service::InstanceHandler(
+          {.device = bind_handler(manager_->fidl_dispatcher())}));
+  if (result.is_error()) {
+    return result.take_error();
+  }
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
 
-  auto st = outgoing_->Serve(std::move(endpoints->server));
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "Failed to serve the outgoing directory: %s", zx_status_get_string(st));
-    return zx::error(st);
+  result = outgoing_.Serve(std::move(endpoints->server));
+  if (result.is_error()) {
+    zxlogf(ERROR, "Failed to serve the outgoing directory: %s", result.status_string());
+    return result.take_error();
   }
 
   return zx::ok(endpoints->client.TakeChannel());
@@ -643,10 +642,6 @@ PowerStateTransitionResponse Device::TransitionToPowerState(uint8_t requested_st
 
 zx::result<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
                                cpp20::span<zx_device_str_prop_t> str_props, uint32_t flags) {
-  std::array offers = {
-      fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
-  };
-
   auto outgoing = PrepareOutgoing();
   if (outgoing.is_error()) {
     zxlogf(ERROR, "failed to add acpi device '%s' - while setting up outgoing: %s", name,
@@ -695,6 +690,10 @@ zx::result<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> p
       .release = [](void* dev) {},
   };
 
+  std::array offers = {
+      fuchsia_hardware_acpi::Service::Name,
+  };
+
   device_add_args_t passthrough_args{
       .version = DEVICE_ADD_ARGS_VERSION,
       .name = "pt",
@@ -705,8 +704,8 @@ zx::result<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> p
       .str_props = str_props.data(),
       .str_prop_count = static_cast<uint32_t>(str_props.size()),
       .proto_id = ZX_PROTOCOL_ACPI,
-      .fidl_protocol_offers = offers.data(),
-      .fidl_protocol_offer_count = offers.size(),
+      .fidl_service_offers = offers.data(),
+      .fidl_service_offer_count = offers.size(),
       .flags = flags | DEVICE_ADD_MUST_ISOLATE | DEVICE_ADD_ALLOW_MULTI_COMPOSITE,
       .outgoing_dir_channel = outgoing->release(),
   };

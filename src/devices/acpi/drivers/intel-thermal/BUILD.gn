@@ -41,7 +41,7 @@ fuchsia_driver_component("component") {
   component_name = "intel-thermal"
   deps = [ ":driver" ]
   info = "component-info.json"
-  colocate = true
+  manifest = "meta/intel-thermal.cml"
 }
 
 fuchsia_driver_package("intel-thermal") {

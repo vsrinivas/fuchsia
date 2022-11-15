@@ -1,0 +1,35 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/driver/compat/compat.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "driver",
+        bind: "meta/bind/chromiumos_ec_lpc.bindbc",
+        colocate: "true",
+        compat: "driver/chromiumos-ec-lpc.so",
+        default_dispatcher_opts: [ "allow_sync_calls" ],
+    },
+    capabilities: [
+        { service: "fuchsia.hardware.acpi.Service" },
+        { service: "fuchsia.hardware.google.ec.Service" },
+    ],
+    use: [
+        { protocol: "fuchsia.boot.RootResource" },
+        { service: "fuchsia.hardware.acpi.Service" },
+    ],
+    expose: [
+        {
+            service: "fuchsia.hardware.acpi.Service",
+            from: "self",
+        },
+        {
+            service: "fuchsia.hardware.google.ec.Service",
+            from: "self",
+        },
+    ],
+}

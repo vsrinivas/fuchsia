@@ -59,6 +59,7 @@ source_set("test-common") {
     ":core",
     "//sdk/fidl/fuchsia.hardware.google.ec:fuchsia.hardware.google.ec_cpp_wire_testing",
     "//sdk/lib/inspect/testing/cpp:zxtest",
+    "//sdk/lib/sys/component/cpp:cpp",
     "//src/devices/lib/acpi/mock:mock-acpi",
     "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/zxtest",
@@ -121,7 +122,7 @@ fuchsia_driver_component("component") {
   info = "component-info.json"
   component_name = "chromiumos-ec-core"
   deps = [ ":driver" ]
-  colocate = false
+  manifest = "meta/chromiumos-ec-core.cml"
 }
 
 fuchsia_driver_package("chromiumos-ec-core") {

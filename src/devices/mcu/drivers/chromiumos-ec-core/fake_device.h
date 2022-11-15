@@ -6,6 +6,7 @@
 #include <fidl/fuchsia.hardware.google.ec/cpp/wire_test_base.h>
 #include <lib/async/dispatcher.h>
 #include <lib/inspect/testing/cpp/zxtest/inspect.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <unordered_map>
 #include <utility>
@@ -67,6 +68,7 @@ class ChromiumosEcTestBase : public inspect::InspectTestHelper, public zxtest::T
   FakeEcDevice fake_ec_;
   acpi::mock::Device fake_acpi_;
   ChromiumosEcCore* device_;
+  component::OutgoingDirectory outgoing_{component::OutgoingDirectory::Create(loop_.dispatcher())};
 
   sync_completion_t ec_shutdown_;
   sync_completion_t acpi_shutdown_;

@@ -91,24 +91,19 @@ zx_status_t IntelI2cController::Init() {
   mtx_init(&mutex_, mtx_plain);
   mtx_init(&irq_mask_mutex_, mtx_plain);
 
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
-  if (endpoints.is_error()) {
-    return endpoints.error_value();
+  auto acpi_result = DdkConnectFragmentFidlProtocol<fuchsia_hardware_acpi::Service::Device>("acpi");
+  if (acpi_result.is_error()) {
+    return acpi_result.error_value();
   }
 
-  zx_status_t status = DdkConnectFragmentFidlProtocol("acpi", std::move(endpoints->server));
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  acpi_.Bind(std::move(endpoints->client));
+  acpi_.Bind(std::move(*acpi_result));
 
   uint16_t vendor_id;
   uint16_t device_id;
   pci_.ReadConfig16(PCI_CONFIG_VENDOR_ID, &vendor_id);
   pci_.ReadConfig16(PCI_CONFIG_DEVICE_ID, &device_id);
 
-  status = pci_.MapMmio(0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
+  zx_status_t status = pci_.MapMmio(0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "i2c: failed to map mmio 0: %d", status);
     return status;

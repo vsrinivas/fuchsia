@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.hardware.google.ec/cpp/wire_test_base.h>
 #include <lib/ddk/debug.h>
+#include <lib/sys/component/cpp/handlers.h>
 
 #include <memory>
 
@@ -29,27 +30,46 @@ void ChromiumosEcTestBase::SetUp() {
 void ChromiumosEcTestBase::InitDevice() {
   device_ = new ChromiumosEcCore(fake_root_.get());
   ASSERT_OK(device_->Bind());
-  fake_root_->AddFidlProtocol(
-      fidl::DiscoverableProtocolName<fuchsia_hardware_google_ec::Device>, [this](zx::channel chan) {
-        fidl::ServerEnd<fuchsia_hardware_google_ec::Device> server(std::move(chan));
-        ec_binding_ = fidl::BindServer(loop_.dispatcher(), std::move(server), &fake_ec_,
-                                       [this](FakeEcDevice*, fidl::UnbindInfo,
-                                              fidl::ServerEnd<fuchsia_hardware_google_ec::Device>) {
-                                         sync_completion_signal(&ec_shutdown_);
-                                       });
-        return ZX_OK;
-      });
 
-  fake_root_->AddFidlProtocol(
-      fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>, [this](zx::channel chan) {
-        fidl::ServerEnd<fuchsia_hardware_acpi::Device> server(std::move(chan));
-        acpi_binding_ = fidl::BindServer(loop_.dispatcher(), std::move(server), &fake_acpi_,
-                                         [this](acpi::mock::Device*, fidl::UnbindInfo,
-                                                fidl::ServerEnd<fuchsia_hardware_acpi::Device>) {
-                                           sync_completion_signal(&acpi_shutdown_);
-                                         });
-        return ZX_OK;
-      });
+  component::ServiceInstanceHandler handler;
+  fuchsia_hardware_google_ec::Service::Handler ec_handler(&handler);
+  auto ec_connector = [this](fidl::ServerEnd<fuchsia_hardware_google_ec::Device> server) {
+    ec_binding_ = fidl::BindServer(loop_.dispatcher(), std::move(server), &fake_ec_,
+                                   [this](FakeEcDevice*, fidl::UnbindInfo,
+                                          fidl::ServerEnd<fuchsia_hardware_google_ec::Device>) {
+                                     sync_completion_signal(&ec_shutdown_);
+                                   });
+  };
+
+  ASSERT_OK(ec_handler.add_device(std::move(ec_connector)).status_value());
+  ASSERT_OK(
+      outgoing_.AddService<fuchsia_hardware_google_ec::Service>(std::move(handler)).status_value());
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_OK(endpoints.status_value());
+  ASSERT_OK(outgoing_.Serve(std::move(endpoints->server)).status_value());
+  fake_root_->AddFidlService(fuchsia_hardware_google_ec::Service::Name,
+                             std::move(endpoints->client));
+
+  handler = {};
+  fuchsia_hardware_acpi::Service::Handler acpi_handler(&handler);
+  auto acpi_connector = [this](fidl::ServerEnd<fuchsia_hardware_acpi::Device> server) {
+    acpi_binding_ = fidl::BindServer(loop_.dispatcher(), std::move(server), &fake_acpi_,
+                                     [this](acpi::mock::Device*, fidl::UnbindInfo,
+                                            fidl::ServerEnd<fuchsia_hardware_acpi::Device>) {
+                                       sync_completion_signal(&acpi_shutdown_);
+                                     });
+  };
+
+  ASSERT_OK(acpi_handler.add_device(std::move(acpi_connector)).status_value());
+  ASSERT_OK(
+      outgoing_.AddService<fuchsia_hardware_acpi::Service>(std::move(handler)).status_value());
+
+  endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_OK(endpoints.status_value());
+  ASSERT_OK(outgoing_.Serve(std::move(endpoints->server)).status_value());
+  fake_root_->AddFidlService(fuchsia_hardware_acpi::Service::Name, std::move(endpoints->client));
+
   device_->zxdev()->InitOp();
   ASSERT_OK(device_->zxdev()->WaitUntilInitReplyCalled(zx::time::infinite()));
   initialised_ = true;

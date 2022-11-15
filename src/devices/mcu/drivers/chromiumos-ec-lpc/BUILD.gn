@@ -23,12 +23,12 @@ common_deps = [
   ":bind",
   "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_cpp_wire",
   "//sdk/fidl/fuchsia.hardware.google.ec:fuchsia.hardware.google.ec_cpp_wire",
+  "//sdk/lib/sys/component/cpp",
   "//src/devices/lib/driver",
   "//src/lib/ddktl",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
   "//zircon/system/ulib/fbl",
   "//zircon/system/ulib/inspect",
-  "//zircon/system/ulib/svc",
   "//zircon/system/ulib/zx",
   "//zircon/third_party/ulib/chromiumos-platform-ec",
 ]
@@ -43,8 +43,7 @@ fuchsia_driver_component("component") {
   info = "component-info.json"
   component_name = "chromiumos-ec-lpc"
   deps = [ ":driver" ]
-  colocate = true
-  root_resource = true
+  manifest = "meta/chromiumos-ec-lpc.cml"
 }
 
 fuchsia_driver_package("chromiumos-ec-lpc") {

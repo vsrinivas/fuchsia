@@ -53,7 +53,7 @@ fuchsia_driver_component("tpm-lpc-driver") {
   component_name = "tpm-lpc"
   deps = [ ":fuchsia_driver" ]
   info = "tpm-lpc-info.json"
-  colocate = true
+  manifest = "meta/tpm-lpc.cml"
 }
 
 fuchsia_driver_package("tpm-lpc-pkg") {

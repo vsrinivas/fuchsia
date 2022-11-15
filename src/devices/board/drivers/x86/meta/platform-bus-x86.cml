@@ -14,8 +14,17 @@
         compat: "driver/platform-bus-x86.so",
         colocate: "true",
     },
+    capabilities: [
+        { service: "fuchsia.hardware.acpi.Service" },
+    ],
     use: [
         { protocol: "fuchsia.boot.RootResource" },
         { service: "fuchsia.hardware.platform.bus.Service" },
+    ],
+    expose: [
+        {
+            service: "fuchsia.hardware.acpi.Service",
+            from: "self",
+        },
     ],
 }

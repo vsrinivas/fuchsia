@@ -10,30 +10,23 @@
 #include <lib/ddk/driver.h>
 #include <zircon/types.h>
 
+#include <ddktl/device.h>
+
 #include "src/devices/lib/acpi/object.h"
 #include "util.h"
 
 namespace acpi {
 zx::result<fidl::ClientEnd<fuchsia_hardware_acpi::Device>> Client::Connect(zx_device_t* parent) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
-  if (endpoints.is_error()) {
-    return endpoints.take_error();
-  }
-  zx_status_t result;
+  zx::result<fidl::ClientEnd<fuchsia_hardware_acpi::Device>> result;
   if (device_get_fragment_count(parent) == 0) {
-    result = device_connect_fidl_protocol(
-        parent, fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
-        endpoints->server.TakeChannel().release());
+    result =
+        ddk::Device<void>::DdkConnectFidlProtocol<fuchsia_hardware_acpi::Service::Device>(parent);
   } else {
-    result = device_connect_fragment_fidl_protocol(
-        parent, "acpi", fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
-        endpoints->server.TakeChannel().release());
+    result =
+        ddk::Device<void>::DdkConnectFragmentFidlProtocol<fuchsia_hardware_acpi::Service::Device>(
+            parent, "acpi");
   }
-  if (result != ZX_OK) {
-    return zx::error(result);
-  }
-
-  return zx::ok(std::move(endpoints->client));
+  return result;
 }
 
 zx::result<Client> Client::Create(zx_device_t* parent) {
