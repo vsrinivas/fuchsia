@@ -23,7 +23,7 @@
 #include <unordered_map>
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
-#include "src/connectivity/bluetooth/hci/virtual/peer.h"
+#include "src/connectivity/bluetooth/hci/virtual/emulated_peer.h"
 #include "src/connectivity/bluetooth/lib/fidl/hanging_getter.h"
 
 namespace bt_hci_virtual {
@@ -65,7 +65,7 @@ class EmulatorDevice : public fuchsia::bluetooth::test::HciEmulator {
   void WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCallback callback) override;
 
   // Helper function used to initialize BR/EDR and LE peers.
-  void AddPeer(std::unique_ptr<Peer> peer);
+  void AddPeer(std::unique_ptr<EmulatedPeer> peer);
 
   void OnControllerParametersChanged();
   void OnLegacyAdvertisingStateChanged();
@@ -137,7 +137,7 @@ class EmulatorDevice : public fuchsia::bluetooth::test::HciEmulator {
   fidl::Binding<fuchsia::bluetooth::test::HciEmulator> binding_;
 
   // List of active peers that have been registered with us.
-  std::unordered_map<bt::DeviceAddress, std::unique_ptr<Peer>> peers_;
+  std::unordered_map<bt::DeviceAddress, std::unique_ptr<EmulatedPeer>> peers_;
 
   bt_lib_fidl::HangingGetter<fuchsia::bluetooth::test::ControllerParameters>
       controller_parameters_getter_;

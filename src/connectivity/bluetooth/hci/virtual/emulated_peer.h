@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_VIRTUAL_PEER_H_
-#define SRC_CONNECTIVITY_BLUETOOTH_HCI_VIRTUAL_PEER_H_
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_VIRTUAL_EMULATED_PEER_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_HCI_VIRTUAL_EMULATED_PEER_H_
 
 #include <fuchsia/bluetooth/test/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -29,10 +29,10 @@ namespace bt_hci_virtual {
 // When the remote end of the FIDL channel gets closed the underlying FakePeer will be removed from
 // the fake controller and the |closed_callback| that is passed to the constructor will get
 // notified. The owner of this object should act on this by destroying this Peer instance.
-class Peer : public fuchsia::bluetooth::test::Peer {
+class EmulatedPeer : public fuchsia::bluetooth::test::Peer {
  public:
   using Result =
-      fpromise::result<std::unique_ptr<Peer>, fuchsia::bluetooth::test::EmulatorPeerError>;
+      fpromise::result<std::unique_ptr<EmulatedPeer>, fuchsia::bluetooth::test::EmulatorPeerError>;
 
   // Registers a peer with the FakeController using the provided LE parameters. Returns the peer on
   // success or an error reporting the failure.
@@ -47,7 +47,7 @@ class Peer : public fuchsia::bluetooth::test::Peer {
                          bt::testing::FakeController* fake_controller);
 
   // The destructor unregisters the Peer if initialized.
-  ~Peer();
+  ~EmulatedPeer();
 
   // Rerturns the device address that this instance was initialized with based on the FIDL
   // parameters.
@@ -70,8 +70,9 @@ class Peer : public fuchsia::bluetooth::test::Peer {
   void UpdateConnectionState(bool connected);
 
  private:
-  Peer(bt::DeviceAddress address, fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
-       bt::testing::FakeController* fake_controller);
+  EmulatedPeer(bt::DeviceAddress address,
+               fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
+               bt::testing::FakeController* fake_controller);
 
   void OnChannelClosed(zx_status_t status);
   void CleanUp();
@@ -85,9 +86,9 @@ class Peer : public fuchsia::bluetooth::test::Peer {
   bt_lib_fidl::HangingVectorGetter<fuchsia::bluetooth::test::ConnectionState>
       connection_state_getter_;
 
-  DISALLOW_COPY_ASSIGN_AND_MOVE(Peer);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(EmulatedPeer);
 };
 
 }  // namespace bt_hci_virtual
 
-#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_VIRTUAL_PEER_H_
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_VIRTUAL_EMULATED_PEER_H_

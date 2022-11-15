@@ -20,13 +20,13 @@ fuchsia_driver("fuchsia_driver") {
   sources = [
     "controller.h",
     "driver.cc",
+    "emulated_peer.cc",
+    "emulated_peer.h",
     "emulator.cc",
     "emulator.h",
     "log.h",
     "loopback.cc",
     "loopback.h",
-    "peer.cc",
-    "peer.h",
   ]
 
   deps = [

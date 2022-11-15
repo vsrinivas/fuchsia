@@ -326,7 +326,7 @@ void EmulatorDevice::AddLowEnergyPeer(ftest::LowEnergyPeerParameters params,
 
   ftest::HciEmulator_AddLowEnergyPeer_Result fidl_result;
 
-  auto result = Peer::NewLowEnergy(std::move(params), std::move(request), &fake_device_);
+  auto result = EmulatedPeer::NewLowEnergy(std::move(params), std::move(request), &fake_device_);
   if (result.is_error()) {
     fidl_result.set_err(result.error());
     callback(std::move(fidl_result));
@@ -345,7 +345,7 @@ void EmulatorDevice::AddBredrPeer(ftest::BredrPeerParameters params,
 
   ftest::HciEmulator_AddBredrPeer_Result fidl_result;
 
-  auto result = Peer::NewBredr(std::move(params), std::move(request), &fake_device_);
+  auto result = EmulatedPeer::NewBredr(std::move(params), std::move(request), &fake_device_);
   if (result.is_error()) {
     fidl_result.set_err(result.error());
     callback(std::move(fidl_result));
@@ -371,7 +371,7 @@ void EmulatorDevice::WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCa
   legacy_adv_state_getter_.Watch(std::move(callback));
 }
 
-void EmulatorDevice::AddPeer(std::unique_ptr<Peer> peer) {
+void EmulatorDevice::AddPeer(std::unique_ptr<EmulatedPeer> peer) {
   auto address = peer->address();
   peer->set_closed_callback([this, address] { peers_.erase(address); });
   peers_[address] = std::move(peer);

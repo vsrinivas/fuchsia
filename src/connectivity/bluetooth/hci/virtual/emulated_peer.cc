@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peer.h"
+#include "emulated_peer.h"
 
 #include <fuchsia/bluetooth/test/cpp/fidl.h>
 
@@ -38,9 +38,10 @@ bt::hci_spec::ConnectionRole ConnectionRoleFromFidl(fbt::ConnectionRole role) {
 }  // namespace
 
 // static
-Peer::Result Peer::NewLowEnergy(ftest::LowEnergyPeerParameters parameters,
-                                fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
-                                bt::testing::FakeController* fake_controller) {
+EmulatedPeer::Result EmulatedPeer::NewLowEnergy(
+    ftest::LowEnergyPeerParameters parameters,
+    fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
+    bt::testing::FakeController* fake_controller) {
   ZX_DEBUG_ASSERT(request);
   ZX_DEBUG_ASSERT(fake_controller);
 
@@ -75,14 +76,15 @@ Peer::Result Peer::NewLowEnergy(ftest::LowEnergyPeerParameters parameters,
     return fpromise::error(ftest::EmulatorPeerError::ADDRESS_REPEATED);
   }
 
-  return fpromise::ok(
-      std::unique_ptr<Peer>(new Peer(address, std::move(request), fake_controller)));
+  return fpromise::ok(std::unique_ptr<EmulatedPeer>(
+      new EmulatedPeer(address, std::move(request), fake_controller)));
 }
 
 // static
-Peer::Result Peer::NewBredr(ftest::BredrPeerParameters parameters,
-                            fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
-                            bt::testing::FakeController* fake_controller) {
+EmulatedPeer::Result EmulatedPeer::NewBredr(
+    ftest::BredrPeerParameters parameters,
+    fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
+    bt::testing::FakeController* fake_controller) {
   ZX_DEBUG_ASSERT(request);
   ZX_DEBUG_ASSERT(fake_controller);
 
@@ -119,23 +121,24 @@ Peer::Result Peer::NewBredr(ftest::BredrPeerParameters parameters,
     return fpromise::error(ftest::EmulatorPeerError::ADDRESS_REPEATED);
   }
 
-  return fpromise::ok(
-      std::unique_ptr<Peer>(new Peer(address, std::move(request), fake_controller)));
+  return fpromise::ok(std::unique_ptr<EmulatedPeer>(
+      new EmulatedPeer(address, std::move(request), fake_controller)));
 }
 
-Peer::Peer(bt::DeviceAddress address, fidl::InterfaceRequest<ftest::Peer> request,
-           bt::testing::FakeController* fake_controller)
+EmulatedPeer::EmulatedPeer(bt::DeviceAddress address, fidl::InterfaceRequest<ftest::Peer> request,
+                           bt::testing::FakeController* fake_controller)
     : address_(address), fake_controller_(fake_controller), binding_(this, std::move(request)) {
   ZX_DEBUG_ASSERT(fake_controller_);
   ZX_DEBUG_ASSERT(binding_.is_bound());
 
-  binding_.set_error_handler(fit::bind_member<&Peer::OnChannelClosed>(this));
+  binding_.set_error_handler(fit::bind_member<&EmulatedPeer::OnChannelClosed>(this));
 }
 
-Peer::~Peer() { CleanUp(); }
+EmulatedPeer::~EmulatedPeer() { CleanUp(); }
 
-void Peer::AssignConnectionStatus(ftest::HciError status, AssignConnectionStatusCallback callback) {
-  logf(TRACE, "Peer.AssignConnectionStatus\n");
+void EmulatedPeer::AssignConnectionStatus(ftest::HciError status,
+                                          AssignConnectionStatusCallback callback) {
+  logf(TRACE, "EmulatedPeer.AssignConnectionStatus\n");
 
   auto peer = fake_controller_->FindPeer(address_);
   if (peer) {
@@ -145,34 +148,34 @@ void Peer::AssignConnectionStatus(ftest::HciError status, AssignConnectionStatus
   callback();
 }
 
-void Peer::EmulateLeConnectionComplete(fbt::ConnectionRole role) {
-  logf(TRACE, "Peer.EmulateLeConnectionComplete\n");
+void EmulatedPeer::EmulateLeConnectionComplete(fbt::ConnectionRole role) {
+  logf(TRACE, "EmulatedPeer.EmulateLeConnectionComplete\n");
   fake_controller_->ConnectLowEnergy(address_, ConnectionRoleFromFidl(role));
 }
 
-void Peer::EmulateDisconnectionComplete() {
-  logf(TRACE, "Peer.EmulateDisconnectionComplete\n");
+void EmulatedPeer::EmulateDisconnectionComplete() {
+  logf(TRACE, "EmulatedPeer.EmulateDisconnectionComplete\n");
   fake_controller_->Disconnect(address_);
 }
 
-void Peer::WatchConnectionStates(WatchConnectionStatesCallback callback) {
-  logf(TRACE, "Peer.WatchConnectionState\n");
+void EmulatedPeer::WatchConnectionStates(WatchConnectionStatesCallback callback) {
+  logf(TRACE, "EmulatedPeer.WatchConnectionState\n");
   connection_state_getter_.Watch(std::move(callback));
 }
 
-void Peer::UpdateConnectionState(bool connected) {
+void EmulatedPeer::UpdateConnectionState(bool connected) {
   connection_state_getter_.Add(connected ? ftest::ConnectionState::CONNECTED
                                          : ftest::ConnectionState::DISCONNECTED);
 }
 
-void Peer::OnChannelClosed(zx_status_t status) {
-  logf(TRACE, "Peer channel closed\n");
+void EmulatedPeer::OnChannelClosed(zx_status_t status) {
+  logf(TRACE, "EmulatedPeer channel closed\n");
   NotifyChannelClosed();
 }
 
-void Peer::CleanUp() { fake_controller_->RemovePeer(address_); }
+void EmulatedPeer::CleanUp() { fake_controller_->RemovePeer(address_); }
 
-void Peer::NotifyChannelClosed() {
+void EmulatedPeer::NotifyChannelClosed() {
   if (closed_callback_) {
     closed_callback_();
   }
