@@ -117,10 +117,12 @@ namespace termina_guest_manager {
 
 using ::fuchsia::virtualization::Listener;
 
-Guest::Guest(const termina_config::Config& config, GuestInfoCallback callback)
+Guest::Guest(const termina_config::Config& config, GuestInfoCallback callback,
+             GetGuestNetworkState get_network_state)
     : executor_(async_get_default_dispatcher()),
       callback_(std::move(callback)),
-      structured_config_(config) {
+      structured_config_(config),
+      get_network_state_(std::move(get_network_state)) {
   auto result = StartGrpcServer();
   if (!result.is_ok()) {
     FX_PLOGS(ERROR, result.status_value()) << "Failed to start grpc server";
@@ -383,7 +385,8 @@ void Guest::CreateContainer() {
       SetupUser();
       break;
     case vm_tools::tremplin::CreateContainerResponse::FAILED:
-      PostContainerFailure("Failed to create container: " + response.failure_reason());
+      PostContainerFailureWithNetworkStatus("Failed to create container: " +
+                                            response.failure_reason());
       break;
     case vm_tools::tremplin::CreateContainerResponse::UNKNOWN:
     default:
@@ -526,17 +529,18 @@ grpc::Status Guest::UpdateCreateStatus(grpc::ServerContext* context,
       }
       break;
     case vm_tools::tremplin::ContainerCreationProgress::DOWNLOAD_TIMED_OUT:
-      PostContainerFailure("Download timed out");
+      PostContainerFailureWithNetworkStatus("Download timed out");
       break;
     case vm_tools::tremplin::ContainerCreationProgress::CANCELLED:
-      PostContainerFailure("Download cancelled");
+      PostContainerFailureWithNetworkStatus("Download cancelled");
       break;
     case vm_tools::tremplin::ContainerCreationProgress::FAILED:
-      PostContainerFailure("Download failed: " + request->failure_reason());
+      PostContainerFailureWithNetworkStatus("Download failed: " + request->failure_reason());
       break;
     case vm_tools::tremplin::ContainerCreationProgress::UNKNOWN:
     default:
-      PostContainerFailure("Unknown download status: " + std::to_string(request->status()));
+      PostContainerFailureWithNetworkStatus("Unknown download status: " +
+                                            std::to_string(request->status()));
       break;
   }
   return grpc::Status::OK;
@@ -739,6 +743,42 @@ void Guest::PostContainerFailure(std::string failure_reason) {
       .container_status = fuchsia::virtualization::ContainerStatus::FAILED,
       .failure_reason = failure_reason,
   });
+}
+
+void Guest::PostContainerFailureWithNetworkStatus(std::string failure_reason) {
+  std::string network_info;
+  switch (get_network_state_()) {
+    case GuestNetworkState::OK:
+      network_info =
+          "Guest network likely configured correctly; "
+          "check host connectivity if suspected network failure";
+      break;
+    case GuestNetworkState::NO_NETWORK_DEVICE:
+      network_info = "Guest not configured with a network device; check guest configuration";
+      break;
+    case GuestNetworkState::FAILED_TO_QUERY:
+      network_info = "Failed to query guest network status";
+      break;
+    case GuestNetworkState::NO_HOST_NETWORKING:
+      network_info = "Host has no network interfaces; guest networking will not work";
+      break;
+    case GuestNetworkState::MISSING_VIRTUAL_INTERFACES:
+      network_info = "Fewer than expected virtual interfaces; guest failed network device startup";
+      break;
+    case GuestNetworkState::NO_BRIDGE_CREATED:
+      network_info =
+          "No bridge between guest and host network interaces; "
+          "this may be transient so retrying is recommended";
+      break;
+    case GuestNetworkState::ATTEMPTED_TO_BRIDGE_WITH_WLAN:
+      network_info =
+          "Cannot create bridged guest network when host is using WiFi; "
+          "disconnect WiFi and connect via ethernet";
+      break;
+  }
+
+  failure_reason += " !!NOTE: " + network_info;
+  PostContainerFailure(failure_reason);
 }
 
 void Guest::InitiateGuestShutdown() {

@@ -252,6 +252,11 @@ GuestNetworkState GuestManager::QueryGuestNetworkState() {
       continue;
     }
 
+    if (!event.existing().has_online() || !event.existing().online()) {
+      // Only consider enabled interfaces.
+      continue;
+    }
+
     switch (event.existing().device_class().device()) {
       case ::fuchsia::hardware::network::DeviceClass::VIRTUAL:
         num_virtual++;

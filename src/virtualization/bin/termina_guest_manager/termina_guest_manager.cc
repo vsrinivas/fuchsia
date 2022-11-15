@@ -63,8 +63,9 @@ TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
       context_(std::move(context)),
       structured_config_(std::move(structured_config)),
       stop_manager_callback_(std::move(stop_manager_callback)) {
-  guest_ = std::make_unique<Guest>(
-      structured_config_, fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged));
+  guest_ = std::make_unique<Guest>(structured_config_,
+                                   fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged),
+                                   [this] { return QueryGuestNetworkState(); });
   context_->outgoing()->AddPublicService<fuchsia::virtualization::LinuxManager>(
       [this](auto request) {
         manager_bindings_.AddBinding(this, std::move(request));
@@ -136,8 +137,9 @@ void TerminaGuestManager::OnGuestLaunched() {
 
 void TerminaGuestManager::OnGuestStopped() {
   info_ = std::nullopt;
-  guest_ = std::make_unique<Guest>(
-      structured_config_, fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged));
+  guest_ = std::make_unique<Guest>(structured_config_,
+                                   fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged),
+                                   [this] { return QueryGuestNetworkState(); });
 
   if (structured_config_.stateful_partition_type() == "fvm") {
     // The termina guest manager is dropping access to /dev preventing further accesses, so we

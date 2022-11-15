@@ -95,12 +95,14 @@ class FakeNetInterfaces : public ::fuchsia::net::interfaces::State,
     callback(std::move(event));
   }
 
-  void AddExistingInterface(::fuchsia::hardware::network::DeviceClass device_class) {
+  void AddExistingInterface(::fuchsia::hardware::network::DeviceClass device_class,
+                            bool online = true) {
     ::fuchsia::net::interfaces::DeviceClass device;
     device.set_device(device_class);
 
     ::fuchsia::net::interfaces::Properties properties;
     properties.set_device_class(std::move(device));
+    properties.set_online(online);
 
     ::fuchsia::net::interfaces::Event event;
     event.set_existing(std::move(properties));
@@ -750,6 +752,10 @@ TEST_F(GuestManagerTest, NoHostNetworking) {
                  });
   RunLoopUntilIdle();
   ASSERT_TRUE(launch_callback_called);
+
+  // Only active interfaces are used.
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::ETHERNET,
+                                             /*online=*/false);
 
   std::optional<GuestNetworkState> result;
   auto handle = std::async(std::launch::async, [&manager, &result] {

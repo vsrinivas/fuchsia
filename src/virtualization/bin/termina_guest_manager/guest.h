@@ -15,6 +15,7 @@
 #include <deque>
 #include <memory>
 
+#include "src/virtualization/bin/guest_manager/guest_manager.h"
 #include "src/virtualization/bin/termina_guest_manager/crash_listener.h"
 #include "src/virtualization/bin/termina_guest_manager/log_collector.h"
 #include "src/virtualization/bin/termina_guest_manager/termina_config.h"
@@ -36,12 +37,14 @@ struct GuestInfo {
 };
 
 using GuestInfoCallback = fit::function<void(GuestInfo)>;
+using GetGuestNetworkState = fit::function<GuestNetworkState()>;
 
 class Guest : public vm_tools::StartupListener::Service,
               public vm_tools::tremplin::TremplinListener::Service,
               public vm_tools::container::ContainerListener::Service {
  public:
-  Guest(const termina_config::Config& config, GuestInfoCallback callback);
+  Guest(const termina_config::Config& config, GuestInfoCallback callback,
+        GetGuestNetworkState get_network_state);
 
   ~Guest();
 
@@ -146,6 +149,7 @@ class Guest : public vm_tools::StartupListener::Service,
   void PostContainerStatus(fuchsia::virtualization::ContainerStatus container_status);
   void PostContainerDownloadProgress(int32_t download_progress);
   void PostContainerFailure(std::string failure_reason);
+  void PostContainerFailureWithNetworkStatus(std::string failure_reason);
 
   async::Executor executor_;
   GuestInfoCallback callback_;
@@ -167,6 +171,9 @@ class Guest : public vm_tools::StartupListener::Service,
 
   // Set to true if a shutdown was attempted before a maitre'd connection was established.
   bool must_send_shutdown_rpc_ = false;
+
+  // Queries the suspected guest network status. Can be used to generate better error messages.
+  GetGuestNetworkState get_network_state_;
 };
 }  // namespace termina_guest_manager
 
