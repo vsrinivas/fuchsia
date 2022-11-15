@@ -8,7 +8,6 @@
 use anyhow::{format_err, Error};
 use fuchsia_zircon as zx;
 use fuchsia_zircon::AsHandleRef;
-use std::ffi::CString;
 use std::sync::Arc;
 
 use super::shared::{execute_syscall, process_completed_syscall, TaskInfo};
@@ -143,11 +142,11 @@ pub fn create_zircon_process(
     pid: pid_t,
     process_group: Arc<ProcessGroup>,
     signal_actions: Arc<SignalActions>,
-    name: &CString,
+    name: &[u8],
 ) -> Result<TaskInfo, Errno> {
     let (process, root_vmar) = kernel
         .starnix_process
-        .create_shared(zx::ProcessOptions::empty(), name.as_bytes())
+        .create_shared(zx::ProcessOptions::empty(), name)
         .map_err(|status| from_status_like_fdio!(status))?;
 
     let debug_addr =

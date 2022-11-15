@@ -90,7 +90,7 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     .context("failed to open /pkg")?;
     let pkg_dir_proxy = fio::DirectorySynchronousProxy::new(client);
 
-    let mut kernel = Kernel::new(&to_cstr(&CONFIG.name), &CONFIG.features)?;
+    let mut kernel = Kernel::new(CONFIG.name.as_bytes(), &CONFIG.features)?;
     kernel.cmdline = CONFIG.kernel_cmdline.as_bytes().to_vec();
 
     let kernel = Arc::new(kernel);

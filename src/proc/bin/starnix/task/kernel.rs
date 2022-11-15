@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{self as zx, AsHandleRef, Process};
+use fuchsia_zircon::{self as zx, Process};
 use once_cell::sync::OnceCell;
 use std::collections::{BTreeMap, HashSet};
-use std::ffi::CStr;
 use std::iter::FromIterator;
 use std::sync::Arc;
 
@@ -14,6 +13,7 @@ use crate::device::{BinderDriver, DeviceMode, DeviceRegistry};
 use crate::fs::socket::SocketAddress;
 use crate::fs::{FileOps, FileSystemHandle, FsNode};
 use crate::lock::RwLock;
+use crate::logging::set_zx_name;
 use crate::task::*;
 use crate::types::{DeviceType, Errno, OpenFlags};
 
@@ -77,11 +77,11 @@ pub struct Kernel {
 }
 
 impl Kernel {
-    pub fn new(name: &CStr, features: &[String]) -> Result<Kernel, zx::Status> {
+    pub fn new(name: &[u8], features: &[String]) -> Result<Kernel, zx::Status> {
         let unix_address_maker = Box::new(|x: Vec<u8>| -> SocketAddress { SocketAddress::Unix(x) });
         let vsock_address_maker = Box::new(|x: u32| -> SocketAddress { SocketAddress::Vsock(x) });
         let job = fuchsia_runtime::job_default().create_child_job()?;
-        job.set_name(name)?;
+        set_zx_name(&job, name);
 
         Ok(Kernel {
             job,

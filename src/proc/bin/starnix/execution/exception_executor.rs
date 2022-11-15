@@ -12,7 +12,6 @@ use fuchsia_zircon::sys::{
     ZX_EXCP_POLICY_ERROR,
 };
 use fuchsia_zircon::{AsHandleRef, Task as zxTask};
-use std::ffi::CString;
 use std::mem;
 use std::sync::Arc;
 
@@ -203,14 +202,13 @@ pub fn create_zircon_process(
     pid: pid_t,
     process_group: Arc<ProcessGroup>,
     signal_actions: Arc<SignalActions>,
-    name: &CString,
+    name: &[u8],
 ) -> Result<TaskInfo, Errno> {
     let (process, root_vmar) = kernel
         .job
-        .create_child_process(zx::ProcessOptions::empty(), name.as_bytes())
+        .create_child_process(zx::ProcessOptions::empty(), name)
         .map_err(|status| from_status_like_fdio!(status))?;
-    let thread =
-        process.create_thread(name.as_bytes()).map_err(|status| from_status_like_fdio!(status))?;
+    let thread = process.create_thread(name).map_err(|status| from_status_like_fdio!(status))?;
 
     let memory_manager =
         Arc::new(MemoryManager::new(root_vmar).map_err(|status| from_status_like_fdio!(status))?);

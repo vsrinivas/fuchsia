@@ -286,7 +286,7 @@ impl Task {
             pid,
             process_group.clone(),
             SignalActions::default(),
-            &initial_name,
+            initial_name.as_bytes(),
         )?;
         process_group.insert(&thread_group);
 
@@ -409,7 +409,7 @@ impl Task {
                     pid,
                     process_group,
                     signal_actions,
-                    &command,
+                    command.as_bytes(),
                 )?
             }
         };
