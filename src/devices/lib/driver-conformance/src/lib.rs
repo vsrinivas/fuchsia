@@ -109,6 +109,16 @@ fn validate_test_flags(cmd: &TestCommand) -> Result<()> {
     if cmd.automated_only && cmd.manual_only {
         ffx_bail!("Either --automated-only or --manual-only can be provided, but not both.");
     }
+
+    match (&cmd.driver_source, &cmd.source_host_type) {
+        (Some(_), None) => {
+            ffx_bail!("A provided --driver-source must have an accompanying --source-host-type.")
+        }
+        (None, Some(_)) => {
+            ffx_bail!("A provided --source-host-type must have an accompanying --driver-source.")
+        }
+        _ => {}
+    }
     Ok(())
 }
 
@@ -197,11 +207,14 @@ fn generate_submission(
 ) -> Result<PathBuf> {
     let mut manifest = results::SuperjetManifest::new(name.to_string(), version.to_string());
     manifest.from_results(&report_dir)?;
-    if let Some(binary) = &cmd.driver_binary {
-        manifest.add_driver_binary(binary)?;
+    if let Some(binary) = &cmd.x64_package {
+        manifest.add_driver_binary(binary, results::ProcessorArch::X64)?;
     }
-    if let Some(source) = &cmd.driver_source {
-        manifest.add_driver_source(&source)?;
+    if let Some(binary) = &cmd.arm64_package {
+        manifest.add_driver_binary(binary, results::ProcessorArch::Arm64)?;
+    }
+    if let (Some(source), Some(host)) = (&cmd.driver_source, &cmd.source_host_type) {
+        manifest.add_driver_source(&source, host.clone())?;
     }
     let output_path = output_dir.join("package.tar.gz");
     manifest.make_tar(&output_path)?;
@@ -416,6 +429,28 @@ mod test {
             driver: Some("val".to_string()),
             automated_only: true,
             manual_only: true,
+            ..Default::default()
+        })
+        .is_err());
+
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            driver_source: Some("blah".to_string()),
+            ..Default::default()
+        })
+        .is_err());
+
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            driver_source: Some("blah".to_string()),
+            source_host_type: Some(results::SourceProvider::Gerrit),
+            ..Default::default()
+        })
+        .is_ok());
+
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            source_host_type: Some(results::SourceProvider::Gerrit),
             ..Default::default()
         })
         .is_err());
@@ -713,15 +748,27 @@ mod test {
         let driver_binary_dir = tempfile::TempDir::new().unwrap();
         let input = input_temp_dir.path();
         let output = output_temp_dir.path();
-        let driver_binary_path = driver_binary_dir.path().join("driver.far");
+        let driver_x64_package_path = driver_binary_dir.path().join("driver_x64.far");
+        let driver_arm64_package_path = driver_binary_dir.path().join("driver_arm64.far");
 
         create_dummy_ffx_test_results(&input).unwrap();
-        let _ = File::create(&driver_binary_path).unwrap().write_all(b"binary_content").unwrap();
+        let _ = File::create(&driver_x64_package_path)
+            .unwrap()
+            .write_all(b"binary_content_x64")
+            .unwrap();
+        let _ = File::create(&driver_arm64_package_path)
+            .unwrap()
+            .write_all(b"binary_content_arm64")
+            .unwrap();
 
         assert!(generate_submission(
             &TestCommand {
-                driver_binary: Some(driver_binary_path.into_os_string().into_string().unwrap()),
+                x64_package: Some(driver_x64_package_path.into_os_string().into_string().unwrap()),
+                arm64_package: Some(
+                    driver_arm64_package_path.into_os_string().into_string().unwrap()
+                ),
                 driver_source: Some("https://source.host/123".to_string()),
+                source_host_type: Some(results::SourceProvider::Gerrit),
                 ..Default::default()
             },
             &input,
@@ -736,7 +783,8 @@ mod test {
         let entries = archive.entries().unwrap();
         let expected_entries = HashMap::from([
             (Path::new("artifacts"), "".to_string()),
-            (Path::new("artifacts/driver.far"), "binary_content".to_string()),
+            (Path::new("artifacts/driver_x64.far"), "binary_content_x64".to_string()),
+            (Path::new("artifacts/driver_arm64.far"), "binary_content_arm64".to_string()),
             (Path::new("test_results"), "".to_string()),
             (Path::new("test_results/123"), "".to_string()),
             (Path::new("test_results/123/syslog.txt"), "123_syslog".to_string()),
@@ -771,7 +819,7 @@ mod test {
                 assert_eq!(manifest.name, "A Name");
                 assert_eq!(manifest.version, "1.2.3");
                 assert_eq!(manifest.pass, false);
-                assert_eq!(manifest.artifacts.len(), 2);
+                assert_eq!(manifest.artifacts.len(), 3);
                 assert_eq!(manifest.test_results.len(), 6);
             } else if expected_entries[&path.as_path()].len() > 0 {
                 // Have a file, check the contents are correct.

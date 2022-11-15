@@ -10,6 +10,7 @@ use {
     serde_json,
     std::fs,
     std::path::{Path, PathBuf},
+    std::str::FromStr,
     tar,
     test_output_directory::{ArtifactSubDirectory, MaybeUnknown, Outcome, TestRunResult},
 };
@@ -21,18 +22,30 @@ pub enum TestType {
     Case,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Eq, Hash, Copy)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ProcessorArch {
     X64,
     Arm64,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Eq, Hash, Copy)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum SourceProvider {
     Github,
     Gerrit,
+}
+
+impl FromStr for SourceProvider {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> Result<SourceProvider> {
+        match value.to_lowercase().as_str() {
+            "github" => Ok(SourceProvider::Github),
+            "gerrit" => Ok(SourceProvider::Gerrit),
+            _ => Err(anyhow!("{} is not a supported version control host.", value)),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Eq, Hash)]
@@ -217,20 +230,28 @@ impl SuperjetManifest {
         Ok(())
     }
 
-    pub fn add_driver_binary<T: AsRef<Path>>(&mut self, driver_binary_path: T) -> Result<()> {
+    pub fn add_driver_binary<T: AsRef<Path>>(
+        &mut self,
+        driver_binary_path: T,
+        arch: ProcessorArch,
+    ) -> Result<()> {
         let source_path = fs::canonicalize(driver_binary_path.as_ref())?;
         let destination_path =
             self.import_artifact(source_path.as_path(), SuperjetManifest::driver_dest_path)?;
         self.artifacts.push(DriverArtifact::Binary(Binary {
-            arch: ProcessorArch::X64,
+            arch: arch,
             location: destination_path.into_os_string().into_string().unwrap(),
         }));
         Ok(())
     }
 
-    pub fn add_driver_source(&mut self, driver_source: &String) -> Result<()> {
+    pub fn add_driver_source(
+        &mut self,
+        driver_source: &String,
+        host: SourceProvider,
+    ) -> Result<()> {
         self.artifacts.push(DriverArtifact::SourceCode(SourceCode {
-            provider: SourceProvider::Gerrit,
+            provider: host,
             location: driver_source.to_string(),
         }));
         Ok(())

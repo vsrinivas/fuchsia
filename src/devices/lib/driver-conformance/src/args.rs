@@ -144,13 +144,21 @@ pub struct TestCommand {
     #[argh(option)]
     pub cache: Option<String>,
 
-    /// path to driver binary.
+    /// path to the x64 driver binary package.
     #[argh(option)]
-    pub driver_binary: Option<String>,
+    pub x64_package: Option<String>,
+
+    /// path to the ARM64 driver binary package.
+    #[argh(option)]
+    pub arm64_package: Option<String>,
 
     /// driver source URL. (ex. Gerrit link).
     #[argh(option)]
     pub driver_source: Option<String>,
+
+    /// host type of the driver source. e.g. gerrit
+    #[argh(option)]
+    pub source_host_type: Option<crate::results::SourceProvider>,
 
     /// name of the driver submission. Defaults to driver package URL.
     #[argh(option)]
