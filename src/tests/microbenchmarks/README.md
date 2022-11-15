@@ -14,36 +14,64 @@ that it covers more than just Zircon.
 
 ## Writing Benchmarks
 
-This uses Zircon's
-[perftest](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/perftest/)
-library.
+This uses the [perftest C++ library][perftest].
 
 ## Running Benchmarks
 
-There are two ways to run fuchsia_microbenchmarks:
+fuchsia_microbenchmarks can be run the following ways:
 
-* perftest mode: This mode will record the times taken by each run of
-  the benchmarks, allowing further analysis, which is useful for
-  detecting performance regressions.  It also prints some summary
-  statistics.  This uses the test runner provided by Zircon's perftest
-  library.
+*   **Maximal:** You can use the
+    [`microbenchmarks_test`][microbenchmarks_test] entry point used in
+    Infra builds on CI and CQ.  For this, follow the instructions in
+    [How to run performance tests][running-perf-tests] and use this
+    command:
 
-  For this, run `fuchsia_microbenchmarks -p --out=output.json`. The result
-  data will be written to `output.json` in the [Fuchsiaperf format].
+    ```
+    fx test --e2e host_x64/microbenchmarks_test
+    ```
 
-  See Zircon's perftest library for details of the other command line
-  options.
+    This entry point is fairly slow because it runs the
+    fuchsia_microbenchmarks process multiple times.
 
-* Test-only mode: This runs on the bots via `runtests`, and it just checks
-  that each benchmark still works.  It runs quickly -- it runs only a small
-  number of iterations of each benchmark.  It does not print any
-  performance information.
+    This entry point will copy the performance results
+    ([`*.fuchsiaperf.json`][fuchsiaperf] files) back to the host in
+    `out/test_out` directory.
 
-  For this, run
-  `run-test-component fuchsia-pkg://fuchsia.com/fuchsia_microbenchmarks#meta/fuchsia_microbenchmarks.cmx`.
+*   **Minimal:** Unit test mode.  To check that the tests pass,
+    without collecting any performance results, you can run the
+    fuchsia_microbenchmarks component directly:
 
-[Fuchsiaperf format]: /docs/development/performance/fuchsiaperf_format.md
+    ```
+    ffx test run fuchsia-pkg://fuchsia.com/fuchsia_microbenchmarks#meta/fuchsia_microbenchmarks.cm
+    ```
 
+    This runs quickly because it runs only a small number of
+    iterations of each benchmark.
+
+*   **In-between:** If you want to run the tests differently from the
+    [`microbenchmarks_test`][microbenchmarks_test] entry point above,
+    such as to run a smaller or faster set of tests, you can invoke
+    the fuchsia_microbenchmarks component directly and pass some of
+    the options accepted by the [perftest C++ library][perftest].
+
+    For example, the following invocation runs only the `Syscall/Null`
+    test case and prints some summary statistics:
+
+    ```
+    ffx test run fuchsia-pkg://fuchsia.com/fuchsia_microbenchmarks#meta/fuchsia_microbenchmarks.cm -- -p --filter '^Syscall/Null$'
+    ```
+
+    The following invocation will produce an output file in
+    [`fuchsiaperf.json`][fuchsiaperf] format and will copy it back to
+    the host side:
+
+    ```
+    ffx test run fuchsia-pkg://fuchsia.com/fuchsia_microbenchmarks#meta/fuchsia_microbenchmarks.cm --output-directory host-output-dir -- -p --out /custom_artifacts/results.fuchsiaperf.json
+    ```
+
+    An alternative is to modify the `microbenchmarks_test` wrapper
+    program locally to change the set of tests it runs or the number
+    of iterations it runs.
 
 ## Direct Mode Microbenchmarks
 
@@ -70,4 +98,8 @@ Or, as a quick performance test, use:
 
 <!-- Links -->
 
+[perftest]: /zircon/system/ulib/perftest/README.md
+[microbenchmarks_test]: /src/tests/end_to_end/perf/test/microbenchmarks_test.dart
+[running-perf-tests]: /docs/development/performance/running_performance_tests.md
+[fuchsiaperf]: /docs/development/performance/fuchsiaperf_format.md
 [direct-mode]: https://fuchsia-review.googlesource.com/c/fuchsia/+/684845
