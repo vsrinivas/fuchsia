@@ -437,15 +437,6 @@ impl<D: IpDeviceId, S> AddressStatus<(D, S)> {
     }
 }
 
-impl<S> AddressStatus<S> {
-    fn with_device<D: IpDeviceId>(self, device: D) -> AddressStatus<(D, S)> {
-        match self {
-            Self::Present(s) => AddressStatus::Present((device, s)),
-            Self::Unassigned => AddressStatus::Unassigned,
-        }
-    }
-}
-
 /// The status of an IPv4 address.
 pub(crate) enum Ipv4PresentAddressStatus {
     LimitedBroadcast,
@@ -602,6 +593,21 @@ fn is_unicast_assigned<I: IpLayerIpExt>(status: &I::AddressStatus) -> bool {
     )
 }
 
+fn is_local_assigned_address<
+    I: Ip + IpLayerIpExt,
+    C: IpLayerNonSyncContext<I, SC::DeviceId>,
+    SC: IpLayerContext<I, C>,
+>(
+    sync_ctx: &SC,
+    device: &SC::DeviceId,
+    local_ip: SpecifiedAddr<I::Addr>,
+) -> bool {
+    match sync_ctx.address_status_for_device(local_ip, device) {
+        AddressStatus::Present(status) => is_unicast_assigned::<I>(&status),
+        AddressStatus::Unassigned => false,
+    }
+}
+
 impl<
         I: Ip + IpDeviceStateIpExt + IpDeviceIpExt + IpLayerIpExt,
         C: IpDeviceNonSyncContext<I, SC::DeviceId> + IpLayerNonSyncContext<I, SC::DeviceId>,
@@ -615,72 +621,93 @@ impl<
         local_ip: Option<SpecifiedAddr<I::Addr>>,
         addr: SpecifiedAddr<I::Addr>,
     ) -> Result<IpSockRoute<I, SC::DeviceId>, IpSockRouteError> {
-        let get_local_addr = |device: &SC::DeviceId, local_ip| {
+        // Returns the local IP address to use for sending packets from the
+        // given device to `addr`, restricting to `local_ip` if it is not
+        // `None`.
+        let get_local_addr = |device: &SC::DeviceId| {
             if let Some(local_ip) = local_ip {
-                // TODO(joshlf):
-                // - Allow the specified local IP to be the local IP of a
-                //   different device so long as we're operating in the weak
-                //   host model.
-                // - What about when the socket is bound to a device? How does
-                //   that affect things?
-                match self.address_status_for_device(local_ip, device) {
-                    AddressStatus::Present(status) if is_unicast_assigned::<I>(&status) => {
-                        Ok(local_ip)
-                    }
-                    AddressStatus::Present(_) | AddressStatus::Unassigned => {
-                        Err(IpSockUnroutableError::LocalAddrNotAssigned.into())
-                    }
-                }
+                is_local_assigned_address(self, device, local_ip)
+                    .then_some(local_ip)
+                    .ok_or(IpSockUnroutableError::LocalAddrNotAssigned.into())
             } else {
                 self.get_local_addr_for_remote(device, addr)
                     .ok_or(IpSockRouteError::NoLocalAddrAvailable)
             }
         };
 
-        // If the destination is an address assigned on an interface, and an
-        // egress interface wasn't specifically selected, route via the loopback
-        // device. This lets us operate as a strong host when an outgoing
-        // interface is explicitly requested while still enabling local delivery
-        // via the loopback interface, which is acting as a weak host. Note that
-        // if the loopback interface is requested as an outgoing interface,
-        // route selection is still performed as a strong host! This makes the
-        // loopback interface behave more like the other interfaces on the
-        // system.
-        let status = match device {
-            Some(device) => {
-                self.address_status_for_device(addr, device).with_device(device.clone())
-            }
-            None => self.address_status(addr),
-        };
-        // Check if locally destined.
+        enum LocalDelivery<D> {
+            WeakLoopback,
+            StrongForDevice(D),
+        }
+
+        // Check if locally destined. If the destination is an address assigned
+        // on an interface, and an egress interface wasn't specifically
+        // selected, route via the loopback device. This lets us operate as a
+        // strong host when an outgoing interface is explicitly requested while
+        // still enabling local delivery via the loopback interface, which is
+        // acting as a weak host. Note that if the loopback interface is
+        // requested as an outgoing interface, route selection is still
+        // performed as a strong host! This makes the loopback interface behave
+        // more like the other interfaces on the system.
         //
         // TODO(https://fxbug.dev/93870): Encode the delivery of locally-
         // destined packets to loopback in the route table.
-        let assigned_device = match status {
-            AddressStatus::Present((device_id, status)) => {
-                is_unicast_assigned::<I>(&status).then_some(device_id)
-            }
-            AddressStatus::Unassigned => None,
+        let local_delivery_instructions: Option<LocalDelivery<&SC::DeviceId>> = match device {
+            Some(device) => match self.address_status_for_device(addr, device) {
+                AddressStatus::Present(status) => {
+                    // If the destination is an address assigned to the
+                    // requested egress interface, route locally via the strong
+                    // host model.
+                    is_unicast_assigned::<I>(&status)
+                        .then_some(LocalDelivery::StrongForDevice(device))
+                }
+                AddressStatus::Unassigned => None,
+            },
+            None => match self.address_status(addr) {
+                AddressStatus::Present((_device, status)) => {
+                    // If the destination is an address assigned on an
+                    // interface, and an egress interface wasn't specifically
+                    // selected, route via the loopback device operating in a
+                    // weak host model.
+                    is_unicast_assigned::<I>(&status).then_some(LocalDelivery::WeakLoopback)
+                }
+                AddressStatus::Unassigned => None,
+            },
         };
 
-        if let Some(device_id) = assigned_device {
-            if let Some(loopback) = self.loopback_id() {
+        match local_delivery_instructions {
+            Some(local_delivery) => {
+                let Some(loopback) = self.loopback_id() else {
+                    return Err(IpSockUnroutableError::NoRouteToRemoteAddr.into())
+                };
+
+                let local_ip = match local_delivery {
+                    LocalDelivery::WeakLoopback => match local_ip {
+                        Some(local_ip) => match self.address_status(local_ip) {
+                            AddressStatus::Present((_device, status))
+                                if is_unicast_assigned::<I>(&status) =>
+                            {
+                                Ok(local_ip)
+                            }
+                            AddressStatus::Present(_) | AddressStatus::Unassigned => {
+                                Err(IpSockUnroutableError::LocalAddrNotAssigned)
+                            }
+                        }?,
+                        None => addr,
+                    },
+                    LocalDelivery::StrongForDevice(device) => get_local_addr(device)?,
+                };
                 Ok(IpSockRoute {
-                    // TODO(https://fxbug.dev/94965): Allow local IPs from any
-                    // interface for locally-destined packets.
-                    local_ip: get_local_addr(&device_id, local_ip)?,
+                    local_ip,
                     destination: Destination { device: loopback, next_hop: addr },
                 })
-            } else {
-                Err(IpSockUnroutableError::NoRouteToRemoteAddr.into())
             }
-        } else {
-            lookup_route_table(self, ctx, device, addr)
+            None => lookup_route_table(self, ctx, device, addr)
                 .map(|destination| {
                     let Destination { device, next_hop: _ } = &destination;
-                    Ok(IpSockRoute { local_ip: get_local_addr(device, local_ip)?, destination })
+                    Ok(IpSockRoute { local_ip: get_local_addr(device)?, destination })
                 })
-                .unwrap_or(Err(IpSockUnroutableError::NoRouteToRemoteAddr.into()))
+                .unwrap_or(Err(IpSockUnroutableError::NoRouteToRemoteAddr.into())),
         }
     }
 }
@@ -4425,9 +4452,9 @@ mod tests {
     #[test_case(Some(Device::Second.ip_address()),
                 None,
                 Device::First.ip_address(),
-                // TODO(https://fxbug.dev/94965): Allow local IPs from any
-                // interface for locally-destined packets.
-                Err(IpSockRouteError::Unroutable(IpSockUnroutableError::LocalAddrNotAssigned));
+                Ok(IpSockRoute {local_ip: Device::Second.ip_address(), destination: Destination {
+                    next_hop: Device::First.ip_address(), device: Device::Loopback
+                }});
                 "local delivery cross device")]
     fn lookup_route<I: Ip + TestIpExt + IpDeviceIpExt + IpLayerIpExt>(
         local_ip: Option<SpecifiedAddr<I::Addr>>,
