@@ -126,7 +126,7 @@ pub struct TestCommand {
 
     /// path to FHCP metadata file.
     #[argh(option)]
-    pub metadata_path: Option<String>,
+    pub metadata_path: Option<PathBuf>,
 
     /// WIP. comma-separated list of test types. e.g. performance,functional
     #[argh(option)]
@@ -142,15 +142,15 @@ pub struct TestCommand {
 
     /// WIP. local directory storing the resources required for offline testing.
     #[argh(option)]
-    pub cache: Option<String>,
+    pub cache: Option<PathBuf>,
 
     /// path to the x64 driver binary package.
     #[argh(option)]
-    pub x64_package: Option<String>,
+    pub x64_package: Option<PathBuf>,
 
     /// path to the ARM64 driver binary package.
     #[argh(option)]
-    pub arm64_package: Option<String>,
+    pub arm64_package: Option<PathBuf>,
 
     /// driver source URL. (ex. Gerrit link).
     #[argh(option)]
@@ -175,6 +175,10 @@ pub struct TestCommand {
     /// run only the manual tests.
     #[argh(switch)]
     pub manual_only: bool,
+
+    /// path to the license directory.
+    #[argh(option)]
+    pub licenses: Option<PathBuf>,
 
     // TODO(fxb/115097): Separate this logic into its own subcommand.
     /// generate submission package.

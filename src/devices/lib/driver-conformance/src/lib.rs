@@ -7,7 +7,7 @@ pub mod parser;
 pub mod results;
 
 use {
-    anyhow::Result,
+    anyhow::{anyhow, Result},
     args::{ConformanceCommand, ConformanceSubCommand, TestCommand},
     driver_connector::DriverConnector,
     errors::ffx_bail,
@@ -97,6 +97,24 @@ async fn run_tests(
     .await)
 }
 
+fn validate_license_dir(path: &Option<PathBuf>) -> Result<()> {
+    if let Some(dir) = path {
+        if !dir.exists() {
+            return Err(anyhow!("{} does not exist.", &dir.display()));
+        }
+        if !dir.is_dir() {
+            return Err(anyhow!("{} is not a directory.", &dir.display()));
+        }
+        let license_path = dir.join("LICENSE");
+        if !license_path.exists() || !license_path.is_file() {
+            return Err(anyhow!("{} is a required file.", &license_path.display()));
+        }
+    } else {
+        return Err(anyhow!("--licenses is is required if generating a submission package."));
+    }
+    Ok(())
+}
+
 /// Collection of various trivial flag validation.
 fn validate_test_flags(cmd: &TestCommand) -> Result<()> {
     if let (Some(_), Some(_)) = (&cmd.device, &cmd.driver) {
@@ -119,6 +137,11 @@ fn validate_test_flags(cmd: &TestCommand) -> Result<()> {
         }
         _ => {}
     }
+
+    match (&cmd.generate_submission, &cmd.package_output_dir) {
+        (true, _) | (_, Some(_)) => validate_license_dir(&cmd.licenses),
+        _ => Ok(()),
+    }?;
     Ok(())
 }
 
@@ -129,9 +152,9 @@ fn validate_test_flags(cmd: &TestCommand) -> Result<()> {
 /// with handling other possibilities in the future.
 fn parse_metadata(cmd: &TestCommand) -> Result<parser::TestMetadata> {
     let metadata_str = match &cmd.metadata_path {
-        Some(metadata_path_str) => match fs::read_to_string(&metadata_path_str) {
+        Some(metadata_path) => match fs::read_to_string(&metadata_path) {
             Ok(v) => v,
-            Err(e) => ffx_bail!("Unable to parse {}. {}", &metadata_path_str, e),
+            Err(e) => ffx_bail!("Unable to parse {}. {}", &metadata_path.display(), e),
         },
         None => ffx_bail!("The --metadata-path argument is required for now."),
     };
@@ -215,6 +238,9 @@ fn generate_submission(
     }
     if let (Some(source), Some(host)) = (&cmd.driver_source, &cmd.source_host_type) {
         manifest.add_driver_source(&source, host.clone())?;
+    }
+    if let Some(licenses) = &cmd.licenses {
+        manifest.add_licenses(&licenses)?;
     }
     let output_path = output_dir.join("package.tar.gz");
     manifest.make_tar(&output_path)?;
@@ -454,6 +480,52 @@ mod test {
             ..Default::default()
         })
         .is_err());
+
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            generate_submission: true,
+            ..Default::default()
+        })
+        .is_err());
+
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            generate_submission: true,
+            licenses: Some(Path::new("blah").to_path_buf()),
+            ..Default::default()
+        })
+        .is_err());
+
+        let license_temp_dir = tempfile::TempDir::new().unwrap();
+        let license_dir = license_temp_dir.path();
+        let license_file = license_dir.join("LICENSE");
+        let license_empty_dir = license_dir.join("empty");
+        let _ = fs::create_dir(&license_empty_dir).unwrap();
+        let _ = File::create(&license_file).unwrap();
+
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            generate_submission: true,
+            licenses: Some(license_dir.to_path_buf()),
+            ..Default::default()
+        })
+        .is_ok());
+
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            generate_submission: true,
+            licenses: Some(license_file),
+            ..Default::default()
+        })
+        .is_err());
+
+        assert!(validate_test_flags(&TestCommand {
+            driver: Some("val".to_string()),
+            generate_submission: true,
+            licenses: Some(license_empty_dir),
+            ..Default::default()
+        })
+        .is_err());
     }
 
     #[test]
@@ -489,18 +561,18 @@ mod test {
 
         // Bad path.
         assert!(parse_metadata(&TestCommand {
-            metadata_path: Some("/".to_string()),
+            metadata_path: Some(Path::new("/").to_path_buf()),
             ..Default::default()
         })
         .is_err());
 
         // Valid path, no json.
         let mut file = tempfile::NamedTempFile::new().unwrap();
-        let path = file.path().to_path_buf().into_os_string().into_string().unwrap();
+        let path = file.path().to_path_buf();
         file.write_all("".as_bytes()).unwrap();
 
         assert!(parse_metadata(&TestCommand {
-            metadata_path: Some(path.to_string()),
+            metadata_path: Some(path.clone()),
             ..Default::default()
         })
         .is_err());
@@ -558,7 +630,7 @@ mod test {
 
         // Valid path, valid json.
         let metadata = parse_metadata(&TestCommand {
-            metadata_path: Some(path.to_string()),
+            metadata_path: Some(path.clone()),
             ..Default::default()
         });
         assert!(metadata.is_ok());
@@ -746,11 +818,14 @@ mod test {
         let input_temp_dir = tempfile::TempDir::new().unwrap();
         let output_temp_dir = tempfile::TempDir::new().unwrap();
         let driver_binary_dir = tempfile::TempDir::new().unwrap();
+        let licenses_dir = tempfile::TempDir::new().unwrap();
         let input = input_temp_dir.path();
         let output = output_temp_dir.path();
         let driver_x64_package_path = driver_binary_dir.path().join("driver_x64.far");
         let driver_arm64_package_path = driver_binary_dir.path().join("driver_arm64.far");
-
+        let license_file_path = licenses_dir.path().join("LICENSE");
+        let license_subdir_path = licenses_dir.path().join("sub");
+        let license_2_file_path = license_subdir_path.join("license-2.txt");
         create_dummy_ffx_test_results(&input).unwrap();
         let _ = File::create(&driver_x64_package_path)
             .unwrap()
@@ -760,15 +835,17 @@ mod test {
             .unwrap()
             .write_all(b"binary_content_arm64")
             .unwrap();
+        let _ = File::create(&license_file_path).unwrap().write_all(b"license").unwrap();
+        let _ = fs::create_dir(&license_subdir_path).unwrap();
+        let _ = File::create(&license_2_file_path).unwrap().write_all(b"license_2_txt").unwrap();
 
         assert!(generate_submission(
             &TestCommand {
-                x64_package: Some(driver_x64_package_path.into_os_string().into_string().unwrap()),
-                arm64_package: Some(
-                    driver_arm64_package_path.into_os_string().into_string().unwrap()
-                ),
+                x64_package: Some(driver_x64_package_path),
+                arm64_package: Some(driver_arm64_package_path),
                 driver_source: Some("https://source.host/123".to_string()),
                 source_host_type: Some(results::SourceProvider::Gerrit),
+                licenses: Some(licenses_dir.path().to_path_buf()),
                 ..Default::default()
             },
             &input,
@@ -785,6 +862,10 @@ mod test {
             (Path::new("artifacts"), "".to_string()),
             (Path::new("artifacts/driver_x64.far"), "binary_content_x64".to_string()),
             (Path::new("artifacts/driver_arm64.far"), "binary_content_arm64".to_string()),
+            (Path::new("licenses"), "".to_string()),
+            (Path::new("licenses/LICENSE"), "license".to_string()),
+            (Path::new("licenses/sub"), "".to_string()),
+            (Path::new("licenses/sub/license-2.txt"), "license_2_txt".to_string()),
             (Path::new("test_results"), "".to_string()),
             (Path::new("test_results/123"), "".to_string()),
             (Path::new("test_results/123/syslog.txt"), "123_syslog".to_string()),
@@ -820,6 +901,7 @@ mod test {
                 assert_eq!(manifest.version, "1.2.3");
                 assert_eq!(manifest.pass, false);
                 assert_eq!(manifest.artifacts.len(), 3);
+                assert_eq!(manifest.licenses.len(), 2);
                 assert_eq!(manifest.test_results.len(), 6);
             } else if expected_entries[&path.as_path()].len() > 0 {
                 // Have a file, check the contents are correct.

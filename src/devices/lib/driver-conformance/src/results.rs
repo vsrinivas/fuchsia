@@ -13,6 +13,7 @@ use {
     std::str::FromStr,
     tar,
     test_output_directory::{ArtifactSubDirectory, MaybeUnknown, Outcome, TestRunResult},
+    walkdir::WalkDir,
 };
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Eq, Hash)]
@@ -92,6 +93,7 @@ pub struct SuperjetManifest {
     pub version: String,
     pub pass: bool,
     pub artifacts: Box<Vec<DriverArtifact>>,
+    pub licenses: Box<Vec<String>>,
     pub test_results: Box<Vec<TestResult>>,
     #[serde(skip)]
     #[serde(default = "get_temp_dir")]
@@ -109,6 +111,7 @@ impl SuperjetManifest {
             version: version.to_string(),
             pass: false,
             artifacts: Box::new(vec![]),
+            licenses: Box::new(vec![]),
             test_results: Box::new(vec![]),
             working_dir: get_temp_dir(),
         }
@@ -131,22 +134,35 @@ impl SuperjetManifest {
         Ok(())
     }
 
-    fn driver_dest_path(artifact_path: &Path) -> Result<PathBuf> {
+    fn driver_dest_path(artifact_path: &Path, _: &Option<PathBuf>) -> Result<PathBuf> {
         Ok(Path::new("artifacts").join(artifact_path.file_name().unwrap()))
     }
 
-    fn result_dest_path(artifact_path: &Path) -> Result<PathBuf> {
+    fn result_dest_path(artifact_path: &Path, _: &Option<PathBuf>) -> Result<PathBuf> {
         Ok(Path::new("test_results")
             .join(artifact_path.parent().unwrap().file_name().unwrap())
             .join(artifact_path.file_name().unwrap()))
     }
 
-    fn import_artifact<C>(&self, artifact_path: &Path, dest_path_fn: C) -> Result<PathBuf>
+    fn license_dest_path(artifact_path: &Path, base: &Option<PathBuf>) -> Result<PathBuf> {
+        if let Some(base) = base {
+            Ok(Path::new("licenses").join(artifact_path.strip_prefix(base.as_path())?))
+        } else {
+            Err(anyhow!("A license path must provide its base/parent path."))
+        }
+    }
+
+    fn import_artifact<C>(
+        &self,
+        artifact_path: &Path,
+        dest_path_fn: C,
+        source_base: &Option<PathBuf>,
+    ) -> Result<PathBuf>
     where
-        C: Fn(&Path) -> Result<PathBuf>,
+        C: Fn(&Path, &Option<PathBuf>) -> Result<PathBuf>,
     {
         let working_path = self.working_dir.path();
-        let in_archive_path = dest_path_fn(artifact_path)?;
+        let in_archive_path = dest_path_fn(artifact_path, source_base)?;
         let destination_path = working_path.join(in_archive_path.as_path());
         SuperjetManifest::copy_or_tar(artifact_path, &destination_path)?;
         Ok(in_archive_path)
@@ -175,8 +191,11 @@ impl SuperjetManifest {
         };
         for (path, art_info) in artifact_dir.artifact_iter() {
             if let Some(source_path) = artifact_dir.path_to_artifact(path) {
-                let destination_path = self
-                    .import_artifact(source_path.as_path(), SuperjetManifest::result_dest_path)?;
+                let destination_path = self.import_artifact(
+                    source_path.as_path(),
+                    SuperjetManifest::result_dest_path,
+                    &None,
+                )?;
                 artifacts.push(TestArtifact {
                     location: destination_path.into_os_string().into_string().unwrap(),
                     artifact_type: art_info.artifact_type.clone(),
@@ -237,7 +256,7 @@ impl SuperjetManifest {
     ) -> Result<()> {
         let source_path = fs::canonicalize(driver_binary_path.as_ref())?;
         let destination_path =
-            self.import_artifact(source_path.as_path(), SuperjetManifest::driver_dest_path)?;
+            self.import_artifact(source_path.as_path(), SuperjetManifest::driver_dest_path, &None)?;
         self.artifacts.push(DriverArtifact::Binary(Binary {
             arch: arch,
             location: destination_path.into_os_string().into_string().unwrap(),
@@ -254,6 +273,34 @@ impl SuperjetManifest {
             provider: host,
             location: driver_source.to_string(),
         }));
+        Ok(())
+    }
+
+    pub fn add_licenses<T: AsRef<Path>>(&mut self, license_dir: T) -> Result<()> {
+        WalkDir::new(&license_dir)
+            .into_iter()
+            .filter_map(|e| match e {
+                Ok(val) => {
+                    if val.file_type().is_file() {
+                        Some(val)
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            })
+            .for_each(|entry| {
+                let path = entry.path();
+                let source_path = fs::canonicalize(path).unwrap();
+                let destination_path = self
+                    .import_artifact(
+                        source_path.as_path(),
+                        SuperjetManifest::license_dest_path,
+                        &Some(license_dir.as_ref().to_path_buf()),
+                    )
+                    .unwrap();
+                self.licenses.push(destination_path.into_os_string().into_string().unwrap());
+            });
         Ok(())
     }
 }
