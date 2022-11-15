@@ -1381,7 +1381,6 @@ impl MemoryAccessorExt for dyn RunningBinderTask + '_ {}
 
 /// Implementation of BinderTask and RunningBinderTask for a local task, represented by a
 /// `CurrentTask`.
-#[derive(Debug)]
 struct CurrentBinderTask<'a> {
     task: &'a CurrentTask,
 }
@@ -1418,6 +1417,12 @@ impl<'a> RunningBinderTask for CurrentBinderTask<'a> {
     }
     fn as_memory_accessor(&self) -> &dyn MemoryAccessor {
         self
+    }
+}
+
+impl std::fmt::Debug for CurrentBinderTask<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.task.fmt(f)
     }
 }
 
