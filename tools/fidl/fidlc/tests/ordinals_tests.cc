@@ -265,12 +265,8 @@ protocol protocol {
 }
 
 TEST(OrdinalsTests, GoodHackToRenameFuchsiaIoToFuchsiaIoOneNoSelector) {
-  TestLibrary library(R"FIDL(library fuchsia.io;
-
-protocol SomeProtocol {
-    SomeMethod();
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0083.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFuchsiaIoExplicitOrdinals);
 }
 

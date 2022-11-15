@@ -185,7 +185,7 @@ constexpr ErrorDef<81, SourceSpan> ErrDuplicateMethodOrdinal(
     "Multiple methods with the same ordinal in a protocol; previous was at {}.");
 constexpr ErrorDef<82> ErrInvalidSelectorValue(
     "invalid selector value, must be a method name or a fully qualified method name");
-constexpr UndocumentedErrorDef<83> ErrFuchsiaIoExplicitOrdinals(
+constexpr ErrorDef<83> ErrFuchsiaIoExplicitOrdinals(
     "fuchsia.io must have explicit ordinals (https://fxbug.dev/77623)");
 constexpr ErrorDef<84> ErrPayloadStructHasDefaultMembers(
     "default values are not allowed on members of request/response structs");
