@@ -67,7 +67,7 @@ __END_CDECLS
 #define ZX_DEBUG_ASSERT(x)                                                      \
   do {                                                                          \
     if (ZX_DEBUG_ASSERT_IMPLEMENTED && unlikely(!(x))) {                        \
-      ZX_PANIC("DEBUG ASSERT FAILED at (%s:%d): %s\n", __FILE__, __LINE__, #x); \
+      ZX_PANIC("DEBUG ASSERT FAILED at (%s:%d): %s", __FILE__, __LINE__, #x); \
     }                                                                           \
   } while (0)
 
