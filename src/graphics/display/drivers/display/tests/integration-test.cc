@@ -101,8 +101,7 @@ class IntegrationTest : public TestBase, public zxtest::WithParamInterface<bool>
     TestBase::SetUp();
     zx::channel client, server;
     EXPECT_OK(zx::channel::create(0, &client, &server));
-    fidl::UnownedClientEnd<sysmem::DriverConnector> connector{sysmem_fidl()->get()};
-    EXPECT_TRUE(fidl::WireCall(connector)->Connect(std::move(server)).ok());
+    EXPECT_TRUE(fidl::WireCall(sysmem_fidl())->Connect(std::move(server)).ok());
     sysmem_ = fidl::WireSyncClient<sysmem::Allocator>(std::move(client));
     // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
     (void)sysmem_->SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),

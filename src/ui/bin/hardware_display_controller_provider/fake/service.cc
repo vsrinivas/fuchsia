@@ -5,6 +5,7 @@
 #include "src/ui/bin/hardware_display_controller_provider/fake/service.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -21,7 +22,8 @@ ProviderService::ProviderService(sys::ComponentContext* app_context,
     app_context->outgoing()->AddPublicService(bindings_.GetHandler(this));
   }
 
-  auto sysmem = std::make_unique<display::GenericSysmemDeviceWrapper<display::SysmemProxyDevice>>();
+  auto sysmem = std::make_unique<display::GenericSysmemDeviceWrapper<display::SysmemProxyDevice>>(
+      fake_ddk::kFakeParent);
   state_ = std::make_shared<State>(State{.dispatcher = dispatcher,
                                          .tree = std::make_unique<display::FakeDisplayDeviceTree>(
                                              std::move(sysmem), /*start_vsync=*/true)});

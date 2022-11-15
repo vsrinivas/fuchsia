@@ -36,9 +36,9 @@ class SysmemDeviceWrapper {
 template <typename T>
 class GenericSysmemDeviceWrapper : public SysmemDeviceWrapper {
  public:
-  GenericSysmemDeviceWrapper()
+  explicit GenericSysmemDeviceWrapper(zx_device_t* parent)
       : sysmem_ctx_(std::make_unique<sysmem_driver::Driver>()),
-        owned_sysmem_(std::make_unique<T>(fake_ddk::kFakeParent, sysmem_ctx_.get())) {
+        owned_sysmem_(std::make_unique<T>(parent, sysmem_ctx_.get())) {
     sysmem_ = owned_sysmem_.get();
   }
 

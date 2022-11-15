@@ -72,6 +72,9 @@ class Binder : public fake_ddk::Bind {
 
 // FakeDisplayDeviceTree encapusulates the requirements for creating a fake DDK device tree with a
 // FakeDisplay device attached to it.
+//
+// FakeDisplayDeviceTree uses the deprecated fake_ddk library; new clients should use
+// MockDisplayDeviceTree instead, which is based on the mock-ddk library.
 class FakeDisplayDeviceTree {
  public:
   // |sysmem| allows the caller to customize the sysmem implementation used by the

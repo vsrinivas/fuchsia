@@ -304,7 +304,7 @@ zx::result<uint64_t> TestFidlClient::ImportImageWithSysmemLocked(
     }
     auto result = sysmem_->AllocateSharedCollection(std::move(server));
     if (!result.ok()) {
-      zxlogf(ERROR, "Failed to allocate shared collection %d", result.status());
+      zxlogf(ERROR, "Failed to allocate shared collection: %s", result.status_string());
       return zx::error(result.status());
     }
     local_token = fidl::WireSyncClient<sysmem::BufferCollectionToken>(std::move(client));

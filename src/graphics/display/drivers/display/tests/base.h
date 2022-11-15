@@ -21,7 +21,7 @@
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 
-#include "src/graphics/display/drivers/fake/fake-display-device-tree.h"
+#include "src/graphics/display/drivers/fake/mock-display-device-tree.h"
 
 namespace display {
 
@@ -34,7 +34,8 @@ class TestBase : public zxtest::Test {
 
   Controller* controller() { return tree_->controller(); }
   fake_display::FakeDisplay* display() { return tree_->display(); }
-  zx::unowned_channel sysmem_fidl();
+
+  fidl::UnownedClientEnd<fuchsia_sysmem::DriverConnector> sysmem_fidl();
   zx::unowned_channel display_fidl();
 
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
@@ -46,7 +47,7 @@ class TestBase : public zxtest::Test {
   async::Loop loop_;
   thrd_t loop_thrd_ = 0;
 
-  std::unique_ptr<FakeDisplayDeviceTree> tree_;
+  std::unique_ptr<MockDisplayDeviceTree> tree_;
 };
 
 }  // namespace display

@@ -22,9 +22,6 @@ test("display-core-unittests") {
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_cpp_wire_testing",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
-
-    # TODO(fxb/114433): Migrate from fake_ddk to mock-ddk.
-    "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zircon-internal",
@@ -47,6 +44,7 @@ static_library("base") {
   deps = [
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/fsl",
   ]
   public_deps = [
@@ -54,7 +52,7 @@ static_library("base") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
     "//src/graphics/display/drivers/display:shared",
-    "//src/graphics/display/drivers/fake:fake-display-device-tree",
+    "//src/graphics/display/drivers/fake:mock-display-device-tree",
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",
@@ -78,4 +76,9 @@ group("tests") {
 fuchsia_unittest_package("display-core-unittests-package") {
   package_name = "display-core-unittests"
   deps = [ ":display-core-unittests" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

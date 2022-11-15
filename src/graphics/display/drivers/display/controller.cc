@@ -915,12 +915,12 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
     zx_handle_t profile = ZX_HANDLE_INVALID;
     if ((status = device_get_deadline_profile(this->zxdev(), capacity, deadline, period,
                                               "dev/display/controller", &profile)) != ZX_OK) {
-      zxlogf(ERROR, "Failed to get deadline profile %d", status);
+      zxlogf(ERROR, "Failed to get deadline profile: %s", zx_status_get_string(status));
     } else {
       zx_handle_t thread_handle = thrd_get_zx_handle(loop_thread_);
       status = zx_object_set_profile(thread_handle, profile, 0);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to set deadline profile %d", status);
+        zxlogf(ERROR, "Failed to set deadline profile: %s", zx_status_get_string(status));
       }
       zx_handle_close(profile);
     }

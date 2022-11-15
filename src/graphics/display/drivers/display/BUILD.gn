@@ -38,6 +38,7 @@ fuchsia_driver_component("display") {
 source_set("shared") {
   visibility = [
     "../fake:fake-display-device-tree",
+    "../fake:mock-display-device-tree",
     "./*",
   ]
   configs += [ "//build/config:all_source" ]

@@ -123,3 +123,27 @@ static_library("fake-display-device-tree") {
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
+
+static_library("mock-display-device-tree") {
+  testonly = true
+
+  configs += [ "//build/config:all_source" ]
+
+  sources = [
+    "mock-display-device-tree.cc",
+    "mock-display-device-tree.h",
+    "sysmem-device-wrapper.h",
+  ]
+  public_deps = [
+    ":fake-lib",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_cpp_wire",
+    "//src/devices/bus/testing/fake-pdev",
+    "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
+    "//src/devices/testing/mock-ddk",
+    "//src/graphics/display/drivers/display:shared",
+    "//src/lib/ddktl",
+  ]
+}

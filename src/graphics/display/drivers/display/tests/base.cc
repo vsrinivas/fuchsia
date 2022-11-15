@@ -10,15 +10,19 @@
 #include <memory>
 
 #include "src/devices/sysmem/drivers/sysmem/device.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 #include "src/graphics/display/drivers/display/controller.h"
 #include "src/graphics/display/drivers/fake/fake-display.h"
 
 namespace display {
 
 void TestBase::SetUp() {
+  std::shared_ptr<zx_device> mock_root = MockDevice::FakeRootParent();
   loop_.StartThread("display::TestBase::loop_", &loop_thrd_);
-  auto sysmem = std::make_unique<GenericSysmemDeviceWrapper<sysmem_driver::Device>>();
-  tree_ = std::make_unique<FakeDisplayDeviceTree>(std::move(sysmem), /*start_vsync=*/false);
+  auto sysmem =
+      std::make_unique<GenericSysmemDeviceWrapper<sysmem_driver::Device>>(mock_root.get());
+  tree_ = std::make_unique<MockDisplayDeviceTree>(std::move(mock_root), std::move(sysmem),
+                                                  /*start_vsync=*/false);
 }
 
 void TestBase::TearDown() {
@@ -28,7 +32,6 @@ void TestBase::TearDown() {
   // Wait for loop_.Quit() to execute.
   loop_.JoinThreads();
 
-  EXPECT_TRUE(tree_->ddk().Ok());
   tree_.reset();
 }
 
@@ -78,16 +81,10 @@ bool TestBase::RunLoopWithTimeoutOrUntil(fit::function<bool()>&& condition, zx::
   return result->load();
 }
 
-zx::unowned_channel TestBase::sysmem_fidl() {
-  auto channel = tree_->ddk().fidl_loop(tree_->sysmem_device());
-  ZX_ASSERT(channel->is_valid());
-  return channel;
+fidl::UnownedClientEnd<fuchsia_sysmem::DriverConnector> TestBase::sysmem_fidl() {
+  return tree_->sysmem_client();
 }
 
-zx::unowned_channel TestBase::display_fidl() {
-  auto channel = tree_->ddk().fidl_loop(tree_->controller()->zxdev());
-  ZX_ASSERT(channel->is_valid());
-  return channel;
-}
+zx::unowned_channel TestBase::display_fidl() { return tree_->display_client(); }
 
 }  // namespace display
