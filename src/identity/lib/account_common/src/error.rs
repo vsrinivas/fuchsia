@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Error};
-use fidl_fuchsia_auth::Status::{self as TokenManagerStatus, *};
 use fidl_fuchsia_identity_account::Error as AccountApiError;
 use fidl_fuchsia_identity_authentication::Error as AuthenticationApiError;
 use fidl_fuchsia_identity_authentication::ErrorUnknown as AuthenticationApiErrorUnknown;
@@ -62,30 +61,6 @@ impl From<fidl::Error> for AccountManagerError {
 impl From<AccountApiError> for AccountManagerError {
     fn from(api_error: AccountApiError) -> Self {
         AccountManagerError::new(api_error)
-    }
-}
-
-impl From<TokenManagerStatus> for AccountManagerError {
-    fn from(token_manager_status: TokenManagerStatus) -> Self {
-        AccountManagerError {
-            api_error: match token_manager_status {
-                Ok => AccountApiError::Internal, // Invalid conversion
-                InternalError => AccountApiError::Internal,
-                InvalidAuthContext => AccountApiError::InvalidRequest,
-                InvalidRequest => AccountApiError::InvalidRequest,
-                IoError => AccountApiError::Resource,
-                NetworkError => AccountApiError::Network,
-
-                AuthProviderServiceUnavailable
-                | AuthProviderServerError
-                | UserNotFound
-                | ReauthRequired
-                | UserCancelled
-                | UnknownError => AccountApiError::Unknown,
-            },
-            fatal: false,
-            cause: Some(format_err!("Token manager error: {:?}", token_manager_status)),
-        }
     }
 }
 
