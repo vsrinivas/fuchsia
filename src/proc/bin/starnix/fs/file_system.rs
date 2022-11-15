@@ -243,7 +243,11 @@ impl FileSystem {
     ///
     /// Returns `ENOSYS` if the `FileSystemOps` don't implement `stat`.
     pub fn statfs(&self) -> Result<statfs, Errno> {
-        self.ops.statfs(self)
+        let mut stat = self.ops.statfs(self)?;
+        if stat.f_frsize == 0 {
+            stat.f_frsize = stat.f_bsize as i64;
+        }
+        Ok(stat)
     }
 
     pub fn did_create_dir_entry(&self, entry: &DirEntryHandle) {

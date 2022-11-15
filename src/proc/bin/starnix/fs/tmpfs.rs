@@ -61,7 +61,13 @@ impl FileSystemOps for Arc<TmpFs> {
     }
 
     fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
-        Ok(statfs::default(TMPFS_MAGIC))
+        Ok(statfs {
+            // Pretend we have a ton of free space.
+            f_blocks: 0x100000000,
+            f_bavail: 0x100000000,
+            f_bfree: 0x100000000,
+            ..statfs::default(TMPFS_MAGIC)
+        })
     }
 }
 
