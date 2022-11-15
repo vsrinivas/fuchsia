@@ -12,25 +12,32 @@
 extern "C" {
 #endif /* __cplusplus */
 
-// This library has to be depended on by the TSS 2.0 interface written in plain C.
-// So we must provide a C compatible interface while internally holding C++ types.
+/// This library has to be depended on by the TSS 2.0 interface written in
+/// plain C. So we must provide a C compatible interface while internally
+/// holding C++ types.
 typedef void opaque_ctx_t;
 
-// Initializes the Fuchsia TCTI interface by binding to "/dev/class/tpm" and returning
-// a FuchsiaInternalContext as an opaque_ctx.
-// The ownership of opaque_ctx_t is transferred to the caller.
+/// Initializes the Fuchsia TCTI interface returning a FuchsiaInternalContext
+/// as an opaque_ctx. This is intended to be the general purpose interface that
+/// connects to a TPM transport.
+/// The ownership of opaque_ctx_t is transferred to the caller.
 opaque_ctx_t* fuchsia_tpm_init(void);
 
-// Unwraps the opaque_ctx into a FuchsiaInternalContext and then calls the TPM driver FIDL
-// interface to send a command to the driver.
+/// Unwraps the opaque_ctx into a FuchsiaInternalContext and then calls the
+/// TPM driver FIDL interface to send a command to the driver.
 int fuchsia_tpm_send(opaque_ctx_t* opaque_ctx, int command_code, const uint8_t* in_buffer,
                      size_t len);
 
-// Unwraps the opaque_cxt into a FuchshiaInternalContext and then attempts to extract the
-// requested number of bytes defined by len into the out_buffer. This function does not
-// perform a FIDL request but instead reads from its own recv_buffer stored in the context
-// that is appended to from the results of fuchsia_tpm_send.
+/// Unwraps the opaque_cxt into a FuchshiaInternalContext and then attempts to
+/// extract the requested number of bytes defined by len into the out_buffer.
+/// This function does not perform a FIDL request but instead reads from its
+/// own recv_buffer stored in the context that is appended to from the results
+/// of fuchsia_tpm_send.
 size_t fuchsia_tpm_recv(opaque_ctx_t* opaque_ctx, uint8_t* out_buffer, size_t len);
+
+/// Frees the underlying memory structures from the context and finalizes
+/// closes any remaining channels.
+void fuchsia_tpm_finalize(opaque_ctx_t* opaque_context);
 
 #ifdef __cplusplus
 }
