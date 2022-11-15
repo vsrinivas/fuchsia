@@ -30,6 +30,7 @@ source_set("lib") {
   deps = [ "//zircon/system/ulib/virtio" ]
   public_deps = [
     "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_cpp",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_hlcpp",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_cpp",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
     "//sdk/lib/component/incoming/cpp",

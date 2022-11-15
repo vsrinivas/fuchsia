@@ -4,12 +4,15 @@
 
 #include "src/virtualization/bin/guest_manager/guest_manager.h"
 
+#include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include <src/lib/testing/loop_fixture/test_loop_fixture.h>
+#include <future>
+
+#include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 #include <test/placeholders/cpp/fidl.h>
 
 namespace {
@@ -65,14 +68,62 @@ class FakeGuestLifecycle : public GuestLifecycle {
   async_dispatcher_t* dispatcher_ = nullptr;  // Unowned.
 };
 
-class GuestManagerTest : public gtest::TestLoopFixture {
+class FakeNetInterfaces : public ::fuchsia::net::interfaces::State,
+                          fuchsia::net::interfaces::Watcher {
+ public:
+  explicit FakeNetInterfaces(sys::testing::ComponentContextProvider* provider) {
+    FX_CHECK(ZX_OK ==
+             provider->service_directory_provider()->AddService(state_bindings_.GetHandler(this)));
+  }
+
+  // |fuchsia::net::interfaces::State|
+  void GetWatcher(::fuchsia::net::interfaces::WatcherOptions options,
+                  ::fidl::InterfaceRequest<fuchsia::net::interfaces::Watcher> watcher) override {
+    watcher_binding_.Bind(std::move(watcher));
+  }
+
+  // |fuchsia::net::interfaces::Watcher|
+  void Watch(WatchCallback callback) override {
+    ::fuchsia::net::interfaces::Event event;
+    if (events_.empty()) {
+      event.set_idle({});
+    } else {
+      event = std::move(events_.front());
+      events_.pop();
+    }
+
+    callback(std::move(event));
+  }
+
+  void AddExistingInterface(::fuchsia::hardware::network::DeviceClass device_class) {
+    ::fuchsia::net::interfaces::DeviceClass device;
+    device.set_device(device_class);
+
+    ::fuchsia::net::interfaces::Properties properties;
+    properties.set_device_class(std::move(device));
+
+    ::fuchsia::net::interfaces::Event event;
+    event.set_existing(std::move(properties));
+
+    events_.push(std::move(event));
+  }
+
+ private:
+  std::queue<::fuchsia::net::interfaces::Event> events_;
+  ::fidl::BindingSet<::fuchsia::net::interfaces::State> state_bindings_;
+  ::fidl::Binding<fuchsia::net::interfaces::Watcher> watcher_binding_{this};
+};
+
+class GuestManagerTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
-    TestLoopFixture::SetUp();
+    RealLoopFixture::SetUp();
+    fake_net_interfaces_ = std::make_unique<FakeNetInterfaces>(&provider_);
     fake_guest_lifecycle_ = std::make_unique<FakeGuestLifecycle>(&provider_, dispatcher());
   }
 
   sys::testing::ComponentContextProvider provider_;
+  std::unique_ptr<FakeNetInterfaces> fake_net_interfaces_;
   std::unique_ptr<FakeGuestLifecycle> fake_guest_lifecycle_;
 };
 
@@ -472,6 +523,243 @@ TEST_F(GuestManagerTest, UserProvidedInitialListeners) {
       fake_guest_lifecycle_->take_guest_config();
   ASSERT_TRUE(finalized_config.has_vsock_listeners());
   ASSERT_EQ(finalized_config.vsock_listeners().size(), 2ul);
+}
+
+TEST_F(GuestManagerTest, GuestProbablyHasNetworking) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+
+  fuchsia::virtualization::GuestConfig user_guest_config;
+  user_guest_config.mutable_net_devices()->push_back({
+      .mac_address = {{0x02, 0x1a, 0x11, 0x00, 0x01, 0x00}},
+      .enable_bridge = true,
+  });
+
+  fuchsia::virtualization::GuestPtr guest;
+  bool launch_callback_called = false;
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(launch_callback_called);
+
+  // There's a virtual interface, a bridge, and host networking. Everything looks good!
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::ETHERNET);
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::VIRTUAL);
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::BRIDGE);
+
+  std::optional<GuestNetworkState> result;
+  auto handle = std::async(std::launch::async, [&manager, &result] {
+    // Blocking, so run on a non-dispatch loop thread.
+    result = manager.QueryGuestNetworkState();
+  });
+
+  RunLoopUntil([&result]() { return result.has_value(); });
+
+  ASSERT_EQ(result.value(), GuestNetworkState::OK);
+}
+
+TEST_F(GuestManagerTest, NoNetworkDevices) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+
+  fuchsia::virtualization::GuestConfig user_guest_config;
+  fuchsia::virtualization::GuestPtr guest;
+  bool launch_callback_called = false;
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(launch_callback_called);
+
+  const GuestConfig config = fake_guest_lifecycle_->take_guest_config();
+  ASSERT_FALSE((config.has_net_devices() && !config.net_devices().empty()));
+
+  std::optional<GuestNetworkState> result;
+  auto handle = std::async(std::launch::async, [&manager, &result] {
+    // Blocking, so run on a non-dispatch loop thread.
+    result = manager.QueryGuestNetworkState();
+  });
+
+  RunLoopUntil([&result]() { return result.has_value(); });
+
+  ASSERT_EQ(result.value(), GuestNetworkState::NO_NETWORK_DEVICE);
+}
+
+TEST_F(GuestManagerTest, BridgingRequiredHostOnWifi) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+
+  fuchsia::virtualization::GuestConfig user_guest_config;
+  user_guest_config.mutable_net_devices()->push_back({
+      .mac_address = {{0x02, 0x1a, 0x11, 0x00, 0x01, 0x00}},
+      .enable_bridge = true,
+  });
+
+  fuchsia::virtualization::GuestPtr guest;
+  bool launch_callback_called = false;
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(launch_callback_called);
+
+  // There's no bridge, and the host is on WiFi with no ethernet connection. This will result
+  // in no internet connection.
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::WLAN);
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::VIRTUAL);
+
+  std::optional<GuestNetworkState> result;
+  auto handle = std::async(std::launch::async, [&manager, &result] {
+    // Blocking, so run on a non-dispatch loop thread.
+    result = manager.QueryGuestNetworkState();
+  });
+
+  RunLoopUntil([&result]() { return result.has_value(); });
+
+  ASSERT_EQ(result.value(), GuestNetworkState::ATTEMPTED_TO_BRIDGE_WITH_WLAN);
+}
+
+TEST_F(GuestManagerTest, BridgingRequiredHostOnWifiAndEthernet) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+
+  fuchsia::virtualization::GuestConfig user_guest_config;
+  user_guest_config.mutable_net_devices()->push_back({
+      .mac_address = {{0x02, 0x1a, 0x11, 0x00, 0x01, 0x00}},
+      .enable_bridge = true,
+  });
+
+  fuchsia::virtualization::GuestPtr guest;
+  bool launch_callback_called = false;
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(launch_callback_called);
+
+  // There's no bridge, but the host has both a WiFi and ethernet connection. The host should
+  // be able to bridge the virtual connection to the ethernet connection, so the lack of a bridge
+  // may be transient.
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::WLAN);
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::ETHERNET);
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::VIRTUAL);
+
+  std::optional<GuestNetworkState> result;
+  auto handle = std::async(std::launch::async, [&manager, &result] {
+    // Blocking, so run on a non-dispatch loop thread.
+    result = manager.QueryGuestNetworkState();
+  });
+
+  RunLoopUntil([&result]() { return result.has_value(); });
+
+  ASSERT_EQ(result.value(), GuestNetworkState::NO_BRIDGE_CREATED);
+}
+
+TEST_F(GuestManagerTest, BridgingRequiredHostOnEthernet) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+
+  fuchsia::virtualization::GuestConfig user_guest_config;
+  user_guest_config.mutable_net_devices()->push_back({
+      .mac_address = {{0x02, 0x1a, 0x11, 0x00, 0x01, 0x00}},
+      .enable_bridge = true,
+  });
+
+  fuchsia::virtualization::GuestPtr guest;
+  bool launch_callback_called = false;
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(launch_callback_called);
+
+  // There's no bridge, but the host has a working ethernet connection. This may be transient.
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::ETHERNET);
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::VIRTUAL);
+
+  std::optional<GuestNetworkState> result;
+  auto handle = std::async(std::launch::async, [&manager, &result] {
+    // Blocking, so run on a non-dispatch loop thread.
+    result = manager.QueryGuestNetworkState();
+  });
+
+  RunLoopUntil([&result]() { return result.has_value(); });
+
+  ASSERT_EQ(result.value(), GuestNetworkState::NO_BRIDGE_CREATED);
+}
+
+TEST_F(GuestManagerTest, NotEnoughVirtualInterfaces) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+
+  fuchsia::virtualization::GuestConfig user_guest_config;
+  user_guest_config.mutable_net_devices()->push_back({
+      .mac_address = {{0x02, 0x1a, 0x11, 0x00, 0x01, 0x00}},
+      .enable_bridge = true,
+  });
+  user_guest_config.mutable_net_devices()->push_back({
+      .mac_address = {{0x01, 0x02, 0x03, 0x04, 0x05, 0x06}},
+      .enable_bridge = true,
+  });
+
+  fuchsia::virtualization::GuestPtr guest;
+  bool launch_callback_called = false;
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(launch_callback_called);
+
+  // Config has two guest interfaces, but there's only one present.
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::ETHERNET);
+  fake_net_interfaces_->AddExistingInterface(::fuchsia::hardware::network::DeviceClass::VIRTUAL);
+
+  std::optional<GuestNetworkState> result;
+  auto handle = std::async(std::launch::async, [&manager, &result] {
+    // Blocking, so run on a non-dispatch loop thread.
+    result = manager.QueryGuestNetworkState();
+  });
+
+  RunLoopUntil([&result]() { return result.has_value(); });
+
+  ASSERT_EQ(result.value(), GuestNetworkState::MISSING_VIRTUAL_INTERFACES);
+}
+
+TEST_F(GuestManagerTest, NoHostNetworking) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+
+  fuchsia::virtualization::GuestConfig user_guest_config;
+  user_guest_config.mutable_net_devices()->push_back({
+      .mac_address = {{0x02, 0x1a, 0x11, 0x00, 0x01, 0x00}},
+      .enable_bridge = true,
+  });
+
+  fuchsia::virtualization::GuestPtr guest;
+  bool launch_callback_called = false;
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(launch_callback_called);
+
+  std::optional<GuestNetworkState> result;
+  auto handle = std::async(std::launch::async, [&manager, &result] {
+    // Blocking, so run on a non-dispatch loop thread.
+    result = manager.QueryGuestNetworkState();
+  });
+
+  RunLoopUntil([&result]() { return result.has_value(); });
+
+  ASSERT_EQ(result.value(), GuestNetworkState::NO_HOST_NETWORKING);
 }
 
 }  // namespace

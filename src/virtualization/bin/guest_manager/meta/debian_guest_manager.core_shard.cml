@@ -59,7 +59,10 @@
             to: "#debian-guest-manager",
         },
         {
-            protocol: [ "fuchsia.net.virtualization.Control" ],
+            protocol: [
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.virtualization.Control",
+            ],
             from: "#network",
             to: "#debian-guest-manager",
         },

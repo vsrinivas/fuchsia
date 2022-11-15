@@ -4,6 +4,7 @@
 
 #include "src/virtualization/bin/guest_manager/guest_manager.h"
 
+#include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fpromise/result.h>
@@ -210,6 +211,99 @@ void GuestManager::ForceShutdown(ForceShutdownCallback callback) {
 
   state_ = GuestStatus::STOPPING;
   lifecycle_->Stop([callback = std::move(callback)]() { callback(); });
+}
+
+GuestNetworkState GuestManager::QueryGuestNetworkState() {
+  if (!guest_descriptor_.has_networks() || guest_descriptor_.networks().empty()) {
+    return GuestNetworkState::NO_NETWORK_DEVICE;
+  }
+
+  ::fuchsia::net::interfaces::StateSyncPtr state;
+  zx_status_t status = context_->svc()->Connect(state.NewRequest());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to connect to network interface service";
+    return GuestNetworkState::FAILED_TO_QUERY;
+  }
+
+  ::fuchsia::net::interfaces::WatcherSyncPtr watcher;
+  status = state->GetWatcher(::fuchsia::net::interfaces::WatcherOptions(), watcher.NewRequest());
+  if (status != ZX_OK || !watcher.is_bound()) {
+    FX_PLOGS(ERROR, status) << "Failed to bind to network watcher service";
+    return GuestNetworkState::FAILED_TO_QUERY;
+  }
+
+  bool has_bridge = false, has_ethernet = false, has_wlan = false;
+  uint32_t num_virtual = 0;
+  ::fuchsia::net::interfaces::Event event;
+  do {
+    status = watcher->Watch(&event);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to watch for interface event";
+      return GuestNetworkState::FAILED_TO_QUERY;
+    }
+
+    if (!event.is_existing()) {
+      // Only care about existing interfaces at the moment of this query.
+      continue;
+    }
+
+    if (!event.existing().has_device_class() || !event.existing().device_class().is_device()) {
+      // Ignore loopback interfaces.
+      continue;
+    }
+
+    switch (event.existing().device_class().device()) {
+      case ::fuchsia::hardware::network::DeviceClass::VIRTUAL:
+        num_virtual++;
+        break;
+      case ::fuchsia::hardware::network::DeviceClass::ETHERNET:
+        has_ethernet = true;
+        break;
+      case ::fuchsia::hardware::network::DeviceClass::WLAN:
+        has_wlan = true;
+        break;
+      case ::fuchsia::hardware::network::DeviceClass::BRIDGE:
+        has_bridge = true;
+        break;
+      case ::fuchsia::hardware::network::DeviceClass::PPP:
+      case ::fuchsia::hardware::network::DeviceClass::WLAN_AP:
+        // Ignore.
+        break;
+    }
+  } while (!event.is_idle());
+
+  if (!has_ethernet && !has_wlan) {
+    // No usable host networking, so there won't be any functional guest networking.
+    return GuestNetworkState::NO_HOST_NETWORKING;
+  }
+
+  if (num_virtual < guest_descriptor_.networks().size()) {
+    // Something went wrong during virtio-net device initialization, and there are fewer virtual
+    // interfaces than there should be. This is an unlikely state as virtual interfaces may be
+    // non-functional, but they should at least be present.
+    return GuestNetworkState::MISSING_VIRTUAL_INTERFACES;
+  }
+
+  // See if a bridge is expected from the guest network configurations.
+  bool expected_bridge =
+      std::any_of(guest_descriptor_.networks().begin(), guest_descriptor_.networks().end(),
+                  [](auto& spec) { return spec.enable_bridge; });
+
+  if (expected_bridge && !has_bridge) {
+    // A bridge was expected from the guest network configurations, but none are present.
+    if (has_wlan && !has_ethernet) {
+      // There's no ethernet interface to bridge against, but there is a WLAN interface. Bridging
+      // against WLAN isn't supported, so the user needs to disconnect from WiFi and connect
+      // ethernet.
+      return GuestNetworkState::ATTEMPTED_TO_BRIDGE_WITH_WLAN;
+    }
+
+    // Possibly a transient state where a bridge is still being created.
+    return GuestNetworkState::NO_BRIDGE_CREATED;
+  }
+
+  // The host and guest are likely correctly configured for guest networking.
+  return GuestNetworkState::OK;
 }
 
 void GuestManager::Connect(fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,

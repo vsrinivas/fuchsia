@@ -14,6 +14,35 @@
 #include "src/virtualization/bin/guest_manager/memory_pressure_handler.h"
 #include "src/virtualization/lib/guest_config/guest_config.h"
 
+enum class GuestNetworkState {
+  // There are at least enough virtual device interfaces to match the guest configuration, and
+  // if there is a bridged configuration, there's at least one bridged interface. This doesn't
+  // guarantee working networking, but means that the system state is likely correct.
+  OK = 0,
+
+  // This guest wasn't started with a network device, so no networking is expected.
+  NO_NETWORK_DEVICE = 1,
+
+  // Failed to query network interfaces. Note that if there's no guest network device, ability to
+  // query network interfaces is irrelevant.
+  FAILED_TO_QUERY = 2,
+
+  // Host doesn't have a WLAN or ethernet interface, so there's probably no guest networking.
+  NO_HOST_NETWORKING = 3,
+
+  // There's at least one missing virtual interface that was expected to be present. Check
+  // virtio-net device logs for a failure.
+  MISSING_VIRTUAL_INTERFACES = 4,
+
+  // An interface is bridged, there's an ethernet interface to bridge against, but the
+  // bridge hasn't been created yet. This might be a transient issue while the bridge is created.
+  NO_BRIDGE_CREATED = 5,
+
+  // An interface is bridged, and there's no ethernet to bridge against, but the host is
+  // connected to WLAN. This is a common user misconfiguration.
+  ATTEMPTED_TO_BRIDGE_WITH_WLAN = 6,
+};
+
 class GuestManager : public fuchsia::virtualization::GuestManager {
  public:
   GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
@@ -34,6 +63,9 @@ class GuestManager : public fuchsia::virtualization::GuestManager {
   // Store a subset of the configuration. This can be queried while the guest is running using
   // the GuestManager::GetInfo FIDL message.
   void SnapshotConfig(const fuchsia::virtualization::GuestConfig& config);
+
+  // Attempt to query the guest network state by iterating over the host network interfaces.
+  GuestNetworkState QueryGuestNetworkState();
 
   // Returns true if the guest was started, but hasn't stopped.
   bool is_guest_started() const;
