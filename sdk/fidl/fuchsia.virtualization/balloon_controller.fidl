@@ -39,6 +39,6 @@ protocol BalloonController {
     /// Get memory statistics of the guest instance.
     GetMemStats() -> (struct {
         status zx.status;
-        mem_stats vector<MemStat>:optional;
+        mem_stats vector<MemStat>:<MAX, optional>;
     });
 };

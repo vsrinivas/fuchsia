@@ -31,7 +31,7 @@ type LinuxGuestInfo = table {
 
     /// The reason for failure if the container could not be created,
     /// set if container status is FAILED.
-    4: failure_reason string;
+    4: failure_reason string:MAX;
 };
 
 /// A `LinuxManager` provides access to the status of Linux guest instances.
@@ -41,7 +41,7 @@ protocol LinuxManager {
     ///
     /// Returns ZX_ERR_UNAVAILABLE if the Linux guest is not available.
     StartAndGetLinuxGuestInfo(struct {
-        label string;
+        label string:MAX;
     }) -> (struct {
         info LinuxGuestInfo;
     }) error zx.status;
@@ -50,7 +50,7 @@ protocol LinuxManager {
     ///
     /// Sent to the client when the status of the container changed.
     -> OnGuestInfoChanged(struct {
-        label string;
+        label string:MAX;
         info LinuxGuestInfo;
     });
 
