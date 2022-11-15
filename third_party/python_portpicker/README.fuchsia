@@ -1,0 +1,7 @@
+Name: portpicker
+License: Apache 2.0
+License File: src/LICENSE
+Upstream Git: https://github.com/google/python_portpicker
+Description:
+
+Module for finding unused network ports on host
