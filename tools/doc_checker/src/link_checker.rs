@@ -134,6 +134,10 @@ impl LinkChecker {
             } else {
                 link_to_check = url.to_string();
             }
+        } else if link.starts_with("/reference") {
+            // Generated reference docs are in /reference, and are
+            // treated as external since they are not part of the source tree.
+            link_to_check = format!("https://{}{}", PUBLISHED_DOCS_HOST, link);
         } else if link.starts_with('/') {
             // paths are used as-is.
             link_to_check = link.to_string();
@@ -575,6 +579,11 @@ pub async fn check_external_links(links: &Vec<LinkReference>) -> Option<Vec<DocC
 
                     let set = domain_sorted_links.entry(key).or_default();
                     set.insert(link);
+                } else {
+                    errors.push(DocCheckError {
+                        doc_line: link.location.clone(),
+                        message: format!("Error parsing {}: no authority found", link.link),
+                    });
                 }
             }
             Err(e) => errors.push(DocCheckError {
@@ -682,6 +691,7 @@ mod tests {
             ("path/to/sub/info.md", "/docs/path/to/sub/info.md"),
             ("mailto:someone@somewhere.tld", "mailto:someone@somewhere.tld"),
             ("https:///bad-url?x=", "https:///bad-url?x="),
+            ("/reference/to/generated.md", "https://fuchsia.dev/reference/to/generated.md"),
         ];
 
         for (input, expected) in test_data {
@@ -756,7 +766,6 @@ mod tests {
     ("https://fuchsia.googlesource.com/fuchsia/+show/HEAD/docs/concepts/kernel/_toc.yaml", Some(PathBuf::from("/docs/concepts/kernel/_toc.yaml"))),
     ("https://fuchsia.googlesource.com/fuchsia", None),
     ("https://fuchsia.googlesource.com/fuchsia/", None)
-
 
   ];
         for (link_to_check, expected) in test_cases {
