@@ -369,8 +369,12 @@ esac
 # TODO(b/241306350): inspect an individual action's log, not global log.
 tmpdir="${RBE_proxy_log_dir:-/tmp}"
 reproxy_errors="$tmpdir"/reproxy.ERROR
+if ! test -r "$reproxy_errors" ; then
+  exit "$status"
+fi
+
 message "The last lines of $reproxy_errors might explain a remote failure:"
-if test -r "$reproxy_errors" ; then tail "$reproxy_errors" ; fi
+tail "$reproxy_errors"
 
 if grep -q "Fail to dial" "$reproxy_errors"
 then
