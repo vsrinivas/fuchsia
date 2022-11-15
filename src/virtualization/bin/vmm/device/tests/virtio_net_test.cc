@@ -337,8 +337,6 @@ TEST_F(VirtioNetTest, SendToGuest) {
   constexpr uint8_t expected_packet[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
   // Add a descriptor to the RX queue, allowing the guest to receive a packet.
-  // Note that the C++ device didn't correctly validate RX buffer lengths.
-  // TODO(fxbug.dev/95485): Remove the above note once these tests are improved.
   constexpr size_t kPacketDataSize = sizeof(expected_packet);
   Packet<kRxBufferSize>* packet;
   zx_status_t status =

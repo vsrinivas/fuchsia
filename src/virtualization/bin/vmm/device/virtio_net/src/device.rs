@@ -63,7 +63,6 @@ impl<T: GuestEthernetInterface> NetDevice<T> {
         while let Some(chain) = tx_stream.next().await {
             let readable_chain = ReadableChain::new(chain, guest_mem);
             if let Err(err) = self.handle_readable_chain(readable_chain).await {
-                // TODO(fxbug.dev/95485): See if we want to drop this to debug level due to noise.
                 tracing::error!("Dropping TX packet: {}", err);
             }
         }
@@ -163,7 +162,6 @@ impl<T: GuestEthernetInterface> NetDevice<T> {
             };
 
             if let Err(err) = self.handle_writable_chain(writable_chain).await {
-                // TODO(fxbug.dev/95485): See if we want to drop this to debug level due to noise.
                 tracing::error!("Error processing RX packet: {}", err);
             }
         }

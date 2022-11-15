@@ -218,7 +218,7 @@ TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndEchoMultiple) {
   // We can just disable this since we don't actually want our networks managed, but longer term
   // we need to improve the fake network logic.
   //
-  // TODO(fxbug.dev/95485): Improve fake network to reply to NetworkManager.
+  // TODO(fxbug.dev/114651): Improve fake network to reply to NetworkManager.
   EXPECT_EQ(this->Execute({"sudo", "systemctl", "mask", "NetworkManager.service"}), ZX_OK);
   EXPECT_EQ(this->Execute({"sudo", "systemctl", "stop", "NetworkManager.service"}), ZX_OK);
 
