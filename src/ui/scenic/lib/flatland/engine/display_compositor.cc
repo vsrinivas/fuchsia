@@ -26,7 +26,7 @@ using fuchsia::ui::composition::Orientation;
 using fhd_Transform = fuchsia::hardware::display::Transform;
 
 // Debugging color used to highlight images that have gone through the GPU rendering path.
-const std::array<float, 4> kDebugColor = {0.9, 0.5, 0.5, 1};
+const std::array<float, 4> kGpuRenderingDebugColor = {0.9f, 0.5f, 0.5f, 1.f};
 
 // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
 fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_format_t format) {
@@ -420,7 +420,7 @@ void DisplayCompositor::SetDisplayLayers(uint64_t display_id, const std::vector<
 
 bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
   // Every rectangle should have an associated image.
-  uint32_t num_images = data.images.size();
+  const uint32_t num_images = static_cast<uint32_t>(data.images.size());
 
   // Since we map 1 image to 1 layer, if there are more images than layers available for
   // the given display, then they cannot be directly composited to the display in hardware.
@@ -436,7 +436,7 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
   }
 
   for (uint32_t i = 0; i < num_images; i++) {
-    const uint32_t image_id = data.images[i].identifier;
+    const allocation::GlobalImageId image_id = data.images[i].identifier;
     if (image_event_map_.find(image_id) == image_event_map_.end()) {
       image_event_map_[image_id] = NewImageEventData();
     } else {
@@ -456,7 +456,7 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
                    std::vector<uint64_t>(layers.begin(), layers.begin() + num_images));
 
   for (uint32_t i = 0; i < num_images; i++) {
-    const uint32_t image_id = data.images[i].identifier;
+    const allocation::GlobalImageId image_id = data.images[i].identifier;
     if (image_id != allocation::kInvalidImageId) {
       if (buffer_collection_supports_display_[data.images[i].collection_id]) {
         ApplyLayerImage(layers[i], data.rectangles[i], data.images[i], /*wait_id*/ 0,
@@ -471,8 +471,9 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
       // -- then we abort.
       const auto& rect = data.rectangles[i];
       const auto& display_size = display_info_map_[data.display_id].dimensions;
-      if (i == 0 && rect.origin.x == 0 && rect.origin.y == 0 && rect.extent.x == display_size.x &&
-          rect.extent.y == display_size.y) {
+      if (i == 0 && rect.origin.x == 0 && rect.origin.y == 0 &&
+          rect.extent.x == static_cast<float>(display_size.x) &&
+          rect.extent.y == static_cast<float>(display_size.y)) {
         ApplyLayerColor(layers[i], rect, data.images[i]);
       } else {
         return false;
@@ -482,7 +483,7 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
   return true;
 }
 
-void DisplayCompositor::ApplyLayerColor(uint32_t layer_id, ImageRect rectangle,
+void DisplayCompositor::ApplyLayerColor(uint64_t layer_id, ImageRect rectangle,
                                         allocation::ImageMetadata image) {
   std::unique_lock<std::mutex> lock(lock_);
 
@@ -517,7 +518,7 @@ void DisplayCompositor::ApplyLayerColor(uint32_t layer_id, ImageRect rectangle,
 #endif
 }
 
-void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, ImageRect rectangle,
+void DisplayCompositor::ApplyLayerImage(uint64_t layer_id, ImageRect rectangle,
                                         allocation::ImageMetadata image,
                                         scenic_impl::DisplayEventId wait_id,
                                         scenic_impl::DisplayEventId signal_id) {
@@ -680,10 +681,10 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
 #ifdef VISUAL_DEBUGGING_ENABLED
       auto images = data.images;
       for (auto& image : images) {
-        image.multiply_color[0] *= kDebugColor[0];
-        image.multiply_color[1] *= kDebugColor[1];
-        image.multiply_color[2] *= kDebugColor[2];
-        image.multiply_color[3] *= kDebugColor[3];
+        image.multiply_color[0] *= kGpuRenderingDebugColor[0];
+        image.multiply_color[1] *= kGpuRenderingDebugColor[1];
+        image.multiply_color[2] *= kGpuRenderingDebugColor[2];
+        image.multiply_color[3] *= kGpuRenderingDebugColor[3];
       }
 #else
       auto& images = data.images;
