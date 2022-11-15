@@ -36,10 +36,10 @@ use crate::bindings::{
     LockableContext, StackTime,
 };
 
-// Socket constants defined in FDIO in
-// https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/fdio/socket.cc
+// Socket constants defined in zxio in
+// https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/zxio/socket.cc
 // TODO(brunodalbo) Come back to this, see if we can have those definitions in a
-// public header from FDIO somehow so we don't need to redefine.
+// public header from zxio somehow so we don't need to redefine.
 const ZXSIO_SIGNAL_INCOMING: zx::Signals = zx::Signals::USER_0;
 const ZXSIO_SIGNAL_OUTGOING: zx::Signals = zx::Signals::USER_1;
 const ZXSIO_SIGNAL_CONNECTED: zx::Signals = zx::Signals::USER_3;

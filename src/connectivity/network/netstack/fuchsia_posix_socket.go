@@ -1462,10 +1462,10 @@ func (s *streamSocketImpl) accept(wantAddr bool) (posix.Errno, *tcpip.FullAddres
 			s := makeStreamSocketImpl(eps)
 
 			// NB: signal connectedness before handling any error below to ensure
-			// correct interpretation in fdio.
+			// correct interpretation in zxio.
 			//
-			// See //sdk/lib/fdio/socket.cc:stream_socket::wait_begin/wait_end for
-			// details on how fdio infers the error code from asserted signals.
+			// See //sdk/lib/zxio/socket.cc:stream_socket::wait_begin/wait_end for
+			// details on how zxio infers the error code from asserted signals.
 			s.sharedState.onConnect.Do(func() { s.startReadWriteLoops(s.loopRead, s.loopWrite) })
 
 			// Check if the endpoint has already encountered an error since

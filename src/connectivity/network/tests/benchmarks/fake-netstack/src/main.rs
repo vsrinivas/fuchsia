@@ -159,7 +159,7 @@ async fn handle_provider_request(
 const DEFAULT_BUFFER_SIZE: u64 = 32 << 10; // 32KiB
 
 // These constants mirror those defined in
-// https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/fdio/socket.cc
+// https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/zxio/socket.cc
 const ZXSIO_SIGNAL_DATAGRAM_INCOMING: zx::Signals = zx::Signals::USER_0;
 const ZXSIO_SIGNAL_DATAGRAM_OUTGOING: zx::Signals = zx::Signals::USER_1;
 const ZXSIO_SIGNAL_STREAM_CONNECTED: zx::Signals = zx::Signals::USER_3;
