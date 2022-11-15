@@ -46,7 +46,8 @@ std::string Reporter::Format(std::string_view qualifier, SourceSpan span, std::s
   // If the span is size 0 (ie, something is completely missing), highlight the entire surrounding
   // line.
   const auto squiggle_size = (span.data().empty() ? surrounding_line.size() : span.data().size());
-  squiggle += std::string(squiggle_size - 1, '~');
+  if (squiggle_size > 1)
+    squiggle += std::string(squiggle_size - 1, '~');
 
   // Some tokens (like string literals) can span multiple lines. Truncate the
   // string to just one line at most.

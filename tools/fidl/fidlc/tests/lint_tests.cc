@@ -4,6 +4,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
+#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
 #include "tools/fidl/fidlc/tests/error_test.h"
 #include "tools/fidl/fidlc/tests/test_library.h"
 
@@ -158,4 +160,148 @@ type TransactionId = uint64;
   ASSERT_TRUE(library.Lint());
 }
 
+TEST(LintTests, GoodProtocolOpenness) {
+  TestLibrary library(R"FIDL(
+library fuchsia.a;
+
+open protocol OpenExample {};
+ajar protocol AjarExample {};
+closed protocol ClosedExample {};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+  ASSERT_TRUE(library.Lint({.included_check_ids = {"explicit-openness-modifier"}}));
+  ASSERT_WARNINGS(0, library, "");
+}
+
+TEST(LintTests, BadMissingProtocolOpenness) {
+  TestLibrary library(R"FIDL(
+library fuchsia.a;
+
+protocol Example {};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+  ASSERT_FALSE(library.Lint({.included_check_ids = {"explicit-openness-modifier"}}));
+  ASSERT_WARNINGS(1, library, "Example must have an explicit openness modifier");
+}
+
+TEST(LintTests, GoodMethodStrictness) {
+  TestLibrary library(R"FIDL(
+library fuchsia.a;
+
+protocol DefaultOpenExample {
+  strict Foo1();
+  flexible Foo2();
+
+  strict Bar1() -> ();
+  flexible Bar2() -> ();
+
+  strict -> OnBaz1();
+  flexible -> OnBaz2();
+};
+open protocol OpenExample {
+  strict Foo1();
+  flexible Foo2();
+
+  strict Bar1() -> ();
+  flexible Bar2() -> ();
+
+  strict -> OnBaz1();
+  flexible -> OnBaz2();
+};
+ajar protocol AjarExample {
+  strict Foo1();
+  flexible Foo2();
+
+  strict Bar() -> ();
+
+  strict -> OnBaz1();
+  flexible -> OnBaz2();
+};
+closed protocol ClosedExample {
+  strict Foo();
+  strict Bar() -> ();
+  strict -> OnBaz();
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+  ASSERT_TRUE(library.Lint({.included_check_ids = {"explicit-flexible-method-modifier"}}));
+  ASSERT_WARNINGS(0, library, "");
+}
+
+TEST(LintTests, BadMissingOneWayMethodStrictness) {
+  TestLibrary library(R"FIDL(
+library fuchsia.a;
+
+open protocol Example {
+  Foo();
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+  ASSERT_FALSE(library.Lint({.included_check_ids = {"explicit-flexible-method-modifier"}}));
+  ASSERT_WARNINGS(1, library, "Foo must have an explicit 'flexible' modifier");
+}
+
+TEST(LintTests, BadMissingTwoWayMethodStrictness) {
+  TestLibrary library(R"FIDL(
+library fuchsia.a;
+
+open protocol Example {
+  Foo() -> ();
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+  ASSERT_FALSE(library.Lint({.included_check_ids = {"explicit-flexible-method-modifier"}}));
+  ASSERT_WARNINGS(1, library, "Foo must have an explicit 'flexible' modifier");
+}
+
+TEST(LintTests, BadMissingEventStrictness) {
+  TestLibrary library(R"FIDL(
+library fuchsia.a;
+
+open protocol Example {
+  -> OnFoo();
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+  ASSERT_FALSE(library.Lint({.included_check_ids = {"explicit-flexible-method-modifier"}}));
+  ASSERT_WARNINGS(1, library, "OnFoo must have an explicit 'flexible' modifier");
+}
+
+TEST(LintTests, BadMissingMethodStrictnessClosedProtocol) {
+  // A closed protocol with missing method strictness won't compile, but the
+  // linter will still emit a warning as well.
+  TestLibrary library(R"FIDL(
+library fuchsia.a;
+
+closed protocol Example {
+  Foo();
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleOneWayMethodInClosedProtocol);
+  ASSERT_FALSE(library.Lint({.included_check_ids = {"explicit-flexible-method-modifier"}}));
+  ASSERT_WARNINGS(1, library, "Foo must have an explicit 'flexible' modifier");
+}
+
+TEST(LintTests, BadMissingEventStrictnessClosedProtocol) {
+  // A closed protocol with missing event strictness won't compile, but the
+  // linter will still emit a warning as well.
+  TestLibrary library(R"FIDL(
+library fuchsia.a;
+
+closed protocol Example {
+  -> OnFoo();
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleOneWayMethodInClosedProtocol);
+  ASSERT_FALSE(library.Lint({.included_check_ids = {"explicit-flexible-method-modifier"}}));
+  ASSERT_WARNINGS(1, library, "OnFoo must have an explicit 'flexible' modifier");
+}
 }  // namespace

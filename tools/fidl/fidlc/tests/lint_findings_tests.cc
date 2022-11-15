@@ -194,11 +194,12 @@ class LintTest {
 
     // The test looks good, so run the linter, and update the context
     // value by replacing "Bad test!" with the FIDL source code.
-    Findings findings;
-    bool passed = library().Lint(&findings, included_check_ids_, excluded_check_ids_,
-                                 exclude_by_default_, &excluded_check_ids_to_confirm_);
+    bool passed = library().Lint({.included_check_ids = included_check_ids_,
+                                  .excluded_check_ids = excluded_check_ids_,
+                                  .exclude_by_default = exclude_by_default_,
+                                  .excluded_checks_not_found = &excluded_check_ids_to_confirm_});
 
-    EXPECT_TRUE(passed == (findings.empty()));
+    EXPECT_TRUE(passed == (library().findings().empty()));
 
     if (!excluded_check_ids_to_confirm_.empty()) {
       ss << "Excluded check-ids not found: " << std::endl;
@@ -216,16 +217,16 @@ class LintTest {
     ss << source_code;
     context = ss.str();
 
-    auto finding = findings.begin();
+    auto finding = library().findings().begin();
     auto expected_finding = expected_findings_.begin();
 
-    while (finding != findings.end() && expected_finding != expected_findings_.end()) {
+    while (finding != library().findings().end() && expected_finding != expected_findings_.end()) {
       CompareExpectedToActualFinding(*expected_finding, *finding, ss.str(), assert_positions_match);
       expected_finding++;
       finding++;
     }
-    if (finding != findings.end()) {
-      PrintFindings(ss, finding, findings.end(), "UNEXPECTED FINDINGS");
+    if (finding != library().findings().end()) {
+      PrintFindings(ss, finding, library().findings().end(), "UNEXPECTED FINDINGS");
       context = ss.str();
       bool has_unexpected_findings = true;
       EXPECT_FALSE(has_unexpected_findings, "%s", context.c_str());

@@ -27,6 +27,14 @@ namespace {
 constexpr std::string_view kZirconLibraryZx = "zx";
 constexpr std::string_view kZirconLibraryZbi = "zbi";
 
+// Tests whether a check id is considered experimental in this version of the
+// linter. Experimental checks only appear if they are explicitly included, even
+// if they are not excluded.
+constexpr bool IsCheckExperimental(std::string_view check_id) {
+  return check_id == "explicit-flexible-method-modifier" ||
+         check_id == "explicit-openness-modifier";
+}
+
 constexpr bool IsZirconLibrary(std::string_view name) {
   return name == kZirconLibraryZx || name == kZirconLibraryZbi;
 }
@@ -203,7 +211,8 @@ bool Linter::Lint(std::unique_ptr<raw::File> const& parsed_source, Findings* fin
     bool is_included = included_check_ids_.find(check_id) != included_check_ids_.end();
     bool is_excluded =
         exclude_by_default_ || excluded_check_ids_.find(check_id) != excluded_check_ids_.end();
-    if (!is_excluded || is_included) {
+    bool is_experimental = IsCheckExperimental(check_id);
+    if ((!is_excluded && !is_experimental) || is_included) {
       findings->emplace_back(std::move(*finding_ptr));
     }
   }
@@ -364,8 +373,10 @@ Linter::Linter()
   auto copyright_should_not_be_doc_comment =
       DefineCheck("copyright-should-not-be-doc-comment",
                   "Copyright notice should use non-flow-through comment markers");
-  auto explict_flexible_modifier = DefineCheck("explicit-flexible-modifier",
-                                               "${TYPE} must have an explicit 'flexible' modifier");
+  auto explicit_flexible_modifier = DefineCheck(
+      "explicit-flexible-modifier", "${TYPE} must have an explicit 'flexible' modifier");
+  auto explicit_flexible_method_modifier = DefineCheck(
+      "explicit-flexible-method-modifier", "${METHOD} must have an explicit 'flexible' modifier");
   auto invalid_case_for_constant =
       DefineCheck("invalid-case-for-constant", "${TYPE} must be named in ALL_CAPS_SNAKE_CASE");
   auto invalid_case_for_decl_member =
@@ -478,7 +489,9 @@ Linter::Linter()
   callbacks_.OnProtocolDeclaration(
       [&linter = *this,
        name_contains_service_check = DefineCheck("protocol-name-includes-service",
-                                                 "Protocols must not include the name 'service.'")]
+                                                 "Protocols must not include the name 'service.'"),
+       explicit_openness_modifier_check = DefineCheck(
+           "explicit-openness-modifier", "${PROTOCOL} must have an explicit openness modifier")]
       //
       (const raw::ProtocolDeclaration& element) {
         linter.CheckCase("protocols", element.identifier, linter.invalid_case_for_decl_name(),
@@ -489,17 +502,42 @@ Linter::Linter()
             break;
           }
         }
+        if (element.modifiers == nullptr || !element.modifiers->maybe_openness.has_value()) {
+          std::string id = to_string(element.identifier);
+          linter.AddFinding(
+              element.identifier, explicit_openness_modifier_check,
+              {
+                  {"PROTOCOL", id},
+              },
+              "Add 'open', 'ajar', or 'closed' as appropriate. See the FIDL API Rubric for guidance "
+              "on which one to choose: https://fuchsia.dev/fuchsia-src/development/api/fidl#open-ajar-closed",
+              "");
+        }
         linter.EnterContext("protocol");
       });
-  callbacks_.OnMethod([&linter = *this]
-                      //
-                      (const raw::ProtocolMethod& element) {
-                        linter.CheckCase("methods", element.identifier,
-                                         linter.invalid_case_for_decl_name(), linter.upper_camel_);
-                      });
+  callbacks_.OnMethod(
+      [&linter = *this, explicit_flexible_method_modifier_check = explicit_flexible_method_modifier]
+      //
+      (const raw::ProtocolMethod& element) {
+        linter.CheckCase("methods", element.identifier, linter.invalid_case_for_decl_name(),
+                         linter.upper_camel_);
+        if (element.modifiers == nullptr || !element.modifiers->maybe_strictness.has_value()) {
+          std::string id = to_string(element.identifier);
+          linter.AddFinding(
+              element.identifier, explicit_flexible_method_modifier_check,
+              {
+                  {"METHOD", id},
+              },
+              "Add 'flexible' or 'strict' as appropriate. See the FIDL API Rubric for guidance on "
+              "which one to choose: https://fuchsia.dev/fuchsia-src/development/api/fidl#strict-flexible-method",
+              "");
+        }
+      });
   callbacks_.OnEvent(
-      [&linter = *this, event_check = DefineCheck("event-names-must-start-with-on",
-                                                  "Event names must start with 'On'")]
+      [&linter = *this,
+       event_check =
+           DefineCheck("event-names-must-start-with-on", "Event names must start with 'On'"),
+       explicit_flexible_method_modifier_check = explicit_flexible_method_modifier]
       //
       (const raw::ProtocolMethod& element) {
         std::string id = to_string(element.identifier);
@@ -519,6 +557,16 @@ Linter::Linter()
                                 {"REPLACEMENT", replacement},
                             },
                             "change '${IDENTIFIER}' to '${REPLACEMENT}'", "${REPLACEMENT}");
+        }
+        if (element.modifiers == nullptr || !element.modifiers->maybe_strictness.has_value()) {
+          linter.AddFinding(
+              element.identifier, explicit_flexible_method_modifier_check,
+              {
+                  {"METHOD", id},
+              },
+              "Add 'flexible' or 'strict' as appropriate. See the FIDL API Rubric for guidance on "
+              "which one to choose: https://fuchsia.dev/fuchsia-src/development/api/fidl#strict-flexible-method",
+              "");
         }
       });
   callbacks_.OnExitProtocolDeclaration(
@@ -578,7 +626,7 @@ Linter::Linter()
                                   }
                                 });
   callbacks_.OnLayout(
-      [&linter = *this, explict_flexible_modifier_check = explict_flexible_modifier,
+      [&linter = *this, explicit_flexible_modifier_check = explicit_flexible_modifier,
        modifiers_order_check = modifiers_order]
       //
       (const raw::Layout& element) {
@@ -589,7 +637,7 @@ Linter::Linter()
         // explicitly.
         if (layout_kind != "table" && layout_kind != "struct" &&
             (element.modifiers == nullptr || element.modifiers->maybe_strictness == std::nullopt)) {
-          linter.AddFinding(element, explict_flexible_modifier_check,
+          linter.AddFinding(element, explicit_flexible_modifier_check,
                             {
                                 {"TYPE", layout_kind},
                             },

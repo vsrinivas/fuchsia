@@ -864,7 +864,7 @@ be present.
 This section describes several good design patterns that recur in many FIDL
 protocols.
 
-### Should I use `strict` or `flexible` on methods and events?
+### Should I use `strict` or `flexible` on methods and events? {#strict-flexible-method}
 
 Marking a method or event as [`flexible`][unknown-interactions-lang] makes it
 easier to deal with removing the method or event when different components might
@@ -933,7 +933,7 @@ It is
 to always specify this modifier. The Fuchsia project enforces this style with a
 linter check.
 
-### Should I use `open`, `ajar`, or `closed`?
+### Should I use `open`, `ajar`, or `closed`? {#open-ajar-closed}
 
 Marking a protocol as [`open`][unknown-interactions-lang] makes it
 easier to deal with removing methods or events when different components might

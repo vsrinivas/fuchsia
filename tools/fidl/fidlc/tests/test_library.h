@@ -11,6 +11,7 @@
 #include <fstream>
 
 #include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
+#include "tools/fidl/fidlc/include/fidl/findings.h"
 #include "tools/fidl/fidlc/include/fidl/flat/compiler.h"
 #include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 #include "tools/fidl/fidlc/include/fidl/json_generator.h"
@@ -21,6 +22,14 @@
 #include "tools/fidl/fidlc/include/fidl/source_file.h"
 #include "tools/fidl/fidlc/include/fidl/tables_generator.h"
 #include "tools/fidl/fidlc/include/fidl/versioning_types.h"
+
+struct LintArgs {
+ public:
+  const std::set<std::string>& included_check_ids = {};
+  const std::set<std::string>& excluded_check_ids = {};
+  bool exclude_by_default = false;
+  std::set<std::string>* excluded_checks_not_found = nullptr;
+};
 
 // Behavior that applies to SharedAmongstLibraries, but that is also provided on
 // TestLibrary for convenience in single-library tests.
@@ -201,39 +210,36 @@ class TestLibrary final : public SharedInterface {
     return true;
   }
 
-  // TODO(pascallouis): remove, this does not use a library.
-  bool Lint(fidl::Findings* findings, const std::set<std::string>& included_check_ids = {},
-            const std::set<std::string>& excluded_check_ids = {}, bool exclude_by_default = false,
-            std::set<std::string>* excluded_checks_not_found = nullptr) {
-    ZX_ASSERT_MSG(all_sources_.size() == 1, "lint can only be used with one source");
-    auto source_file = all_sources_.at(0);
-    fidl::Lexer lexer(*source_file, reporter());
-    fidl::Parser parser(&lexer, reporter(), experimental_flags());
-    auto ast = parser.Parse();
-    if (!parser.Success()) {
-      std::string_view beginning(source_file->data().data(), 0);
-      fidl::SourceSpan span(beginning, *source_file);
-      const auto& error = errors().at(0);
-      auto error_msg =
-          fidl::Reporter::Format("error", error->span, error->Print(), /*color=*/false);
-      findings->emplace_back(span, "parser-error", error_msg + "\n");
-      return false;
-    }
-    fidl::linter::Linter linter;
-    if (!included_check_ids.empty()) {
-      linter.set_included_checks(included_check_ids);
-    }
-    if (!excluded_check_ids.empty()) {
-      linter.set_excluded_checks(excluded_check_ids);
-    }
-    linter.set_exclude_by_default(exclude_by_default);
-    return linter.Lint(ast, findings, excluded_checks_not_found);
-  }
+  bool Lint(LintArgs args = {}) {
+    findings_ = fidl::Findings();
 
-  bool Lint() {
-    fidl::Findings findings;
-    bool passed = Lint(&findings);
-    lints_ = fidl::utils::FormatFindings(findings, false);
+    bool passed = [&]() {
+      ZX_ASSERT_MSG(all_sources_.size() == 1, "lint can only be used with one source");
+      auto source_file = all_sources_.at(0);
+      fidl::Lexer lexer(*source_file, reporter());
+      fidl::Parser parser(&lexer, reporter(), experimental_flags());
+      auto ast = parser.Parse();
+      if (!parser.Success()) {
+        std::string_view beginning(source_file->data().data(), 0);
+        fidl::SourceSpan span(beginning, *source_file);
+        const auto& error = errors().at(0);
+        auto error_msg =
+            fidl::Reporter::Format("error", error->span, error->Print(), /*color=*/false);
+        findings_.emplace_back(span, "parser-error", error_msg + "\n");
+        return false;
+      }
+      fidl::linter::Linter linter;
+      if (!args.included_check_ids.empty()) {
+        linter.set_included_checks(args.included_check_ids);
+      }
+      if (!args.excluded_check_ids.empty()) {
+        linter.set_excluded_checks(args.excluded_check_ids);
+      }
+      linter.set_exclude_by_default(args.exclude_by_default);
+      return linter.Lint(ast, &findings_, args.excluded_checks_not_found);
+    }();
+
+    lints_ = fidl::utils::FormatFindings(findings_, false);
     return passed;
   }
 
@@ -378,6 +384,8 @@ class TestLibrary final : public SharedInterface {
     return fidl::SourceSpan(data, *all_sources_.at(0));
   }
 
+  const fidl::Findings& findings() const { return findings_; }
+
   const std::vector<std::string>& lints() const { return lints_; }
 
   const fidl::flat::Compilation* compilation() const {
@@ -406,6 +414,7 @@ class TestLibrary final : public SharedInterface {
  private:
   std::optional<SharedAmongstLibraries> owned_shared_;
   SharedAmongstLibraries* shared_;
+  fidl::Findings findings_;
   std::vector<std::string> lints_;
   std::vector<fidl::SourceFile*> all_sources_;
   std::unique_ptr<fidl::flat::Compilation> compilation_;
