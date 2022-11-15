@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_RS_SRC_CPP_GUEST_ETHERNET_H_
-#define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_RS_SRC_CPP_GUEST_ETHERNET_H_
+#ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_SRC_CPP_GUEST_ETHERNET_H_
+#define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_SRC_CPP_GUEST_ETHERNET_H_
 
 // Don't reorder this header to avoid conflicting implementations of MAX_PORTS.
 // clang-format off
@@ -23,7 +23,7 @@
 #include <virtio/net.h>
 
 #include "src/connectivity/network/drivers/network-device/device/public/network_device.h"
-#include "src/virtualization/bin/vmm/device/virtio_net_rs/src/cpp/completion_queue.h"
+#include "src/virtualization/bin/vmm/device/virtio_net/src/cpp/completion_queue.h"
 
 class GuestEthernet : public ddk::NetworkDeviceImplProtocol<GuestEthernet>,
                       ddk::MacAddrProtocol<GuestEthernet>,
@@ -159,4 +159,4 @@ class GuestEthernet : public ddk::NetworkDeviceImplProtocol<GuestEthernet>,
   fit::function<void(uint8_t*, size_t, uint32_t)> send_guest_rx_;
 };
 
-#endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_RS_SRC_CPP_GUEST_ETHERNET_H_
+#endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_SRC_CPP_GUEST_ETHERNET_H_

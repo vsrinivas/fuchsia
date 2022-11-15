@@ -17,7 +17,7 @@
                 "virtio_console",
                 "virtio_gpu",
                 "virtio_input",
-                "virtio_net_rs",
+                "virtio_net",
                 "virtio_rng",
                 "virtio_sound",
                 "virtio_vsock",

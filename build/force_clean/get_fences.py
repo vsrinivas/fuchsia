@@ -23,6 +23,9 @@ def print_fences():
     print(
         "ninja complains about a cyclic dependency in //examples/components/config/integration_test (http://fxbug.dev/97837)"
     )
+    print(
+        "ninja complains about a cyclic dependency in //src/virtualization/bin/vmm/device/virtio_net/virtio_net (http://fxbug.dev/114895)"
+    )
     pass
 
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_RS_SRC_CPP_COMPLETION_QUEUE_H_
-#define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_RS_SRC_CPP_COMPLETION_QUEUE_H_
+#ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_SRC_CPP_COMPLETION_QUEUE_H_
+#define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_SRC_CPP_COMPLETION_QUEUE_H_
 
 // Don't reorder this header to avoid conflicting implementations of MAX_PORTS.
 // clang-format off
@@ -91,4 +91,4 @@ class GuestToHostCompletionQueue {
   uint32_t count_ __TA_GUARDED(mutex_) = 0;
 };
 
-#endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_RS_SRC_CPP_COMPLETION_QUEUE_H_
+#endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_NET_SRC_CPP_COMPLETION_QUEUE_H_

@@ -17,7 +17,7 @@ group("tests") {
     "virtio_input:tests",
     "virtio_magma:tests",
     "virtio_mem:tests",
-    "virtio_net_rs:tests",
+    "virtio_net:tests",
     "virtio_sound:tests",
     "virtio_vsock:tests",
   ]
@@ -33,7 +33,7 @@ group("packages") {
     "virtio_input",
     "virtio_magma",
     "virtio_mem",
-    "virtio_net_rs",
+    "virtio_net",
     "virtio_rng",
     "virtio_sound",
     "virtio_vsock",

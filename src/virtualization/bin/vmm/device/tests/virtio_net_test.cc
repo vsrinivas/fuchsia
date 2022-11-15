@@ -34,7 +34,7 @@ constexpr uint16_t kQueueSize = 64;
 constexpr size_t kVmoSize = 4096ul * kQueueSize * kRxBufferSize;
 constexpr size_t kNetclientNumDescriptors = 16;
 
-constexpr auto kComponentUrl = "#meta/virtio_net_rs.cm";
+constexpr auto kComponentUrl = "#meta/virtio_net.cm";
 constexpr auto kComponentName = "virtio_net";
 constexpr auto kFakeNetwork = "fake_network";
 
