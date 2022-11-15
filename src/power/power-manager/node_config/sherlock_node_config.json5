@@ -263,10 +263,8 @@
   },
   {
     type: "ThermalStateHandler",
-    name: "thermal_state_handler",
-    dependencies: {
-      platform_metrics_node: "platform_metrics"
-    }
+    name: "audio_thermal_state_handler",
+    // platform_metrics are disabled for this node.
   },
   {
     // Calculates thermal load used to trigger audio limiting trip points. The reboot threshold
@@ -287,7 +285,7 @@
     dependencies: {
       system_shutdown_node: "sys_shutdown",
       thermal_load_notify_nodes: [
-        "thermal_state_handler"
+        "audio_thermal_state_handler"
       ],
       temperature_handler_node_names: [
         "temperature_soc_pll"

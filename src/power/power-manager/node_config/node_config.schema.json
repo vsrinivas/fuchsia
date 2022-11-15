@@ -868,8 +868,7 @@
         "additionalProperties": false,
         "required": [
           "type",
-          "name",
-          "dependencies"
+          "name"
         ]
       }
     ]
