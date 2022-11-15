@@ -5,7 +5,8 @@
     include: [ "//src/ui/bin/terminal/meta/terminal.cml" ],
     program: {
         args: [
-            "/bin/vsh",
+            "/bin/guest",
+            "vsh",
             "-c",
         ],
     },

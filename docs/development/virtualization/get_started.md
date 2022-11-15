@@ -142,7 +142,7 @@ Once you have built `workstation` you can launch the in one of two ways:
 1. If you have a `Linux Terminal` button in your sysui, you can click that and
 the VM will start and drop you into a linux shell once it has booted.
 1. If you don't have the `Linux Terminal` button, you can open the Fuchsia
-`Terminal` and run `vsh -c` to accomplish the same result.
+`Terminal` and run `guest vsh -c` to accomplish the same result.
 
 From here you can launch graphical Linux applications. As a simple example,
 here's how to run a simple Vulkan test application:
