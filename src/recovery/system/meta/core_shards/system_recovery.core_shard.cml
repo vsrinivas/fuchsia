@@ -15,7 +15,10 @@
     ],
     offer: [
         {
-            protocol: "fuchsia.metrics.MetricEventLoggerFactory",
+            protocol: [
+                "fuchsia.cobalt.AggregateAndUpload",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+            ],
             from: "#cobalt",
             to: "#system_recovery",
         },

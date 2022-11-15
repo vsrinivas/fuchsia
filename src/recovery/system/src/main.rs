@@ -983,13 +983,19 @@ impl RecoveryViewAssistant {
                                             cobalt::log_recovery_stage,
                                             metrics::RecoveryEventMetricDimensionResult::OtaSuccess
                                         );
-                                    })
-                                    .detach();
 
-                                    fasync::Task::local(async move {
-                                        if let Err(e) =
-                                            request_reboot(Some(REBOOT_DELAY_SECONDS)).await
-                                        {
+                                        if let Err(err) = cobalt::aggregate_upload(
+                                            REBOOT_DELAY_SECONDS.try_into().unwrap(),
+                                        ) {
+                                            eprintln!(
+                                                "aggregate_upload encountered an error {:?}",
+                                                err
+                                            )
+                                        } else {
+                                            println!("aggregate_upload finished");
+                                        }
+
+                                        if let Err(e) = request_reboot(None).await {
                                             eprintln!("Failed to reboot: {:?}", e);
                                         }
                                     })

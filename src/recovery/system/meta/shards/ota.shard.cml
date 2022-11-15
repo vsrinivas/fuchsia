@@ -19,6 +19,7 @@
     use: [
         {
             protocol: [
+                "fuchsia.cobalt.AggregateAndUpload",
                 "fuchsia.fshost.Admin",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.metrics.MetricEventLoggerFactory",

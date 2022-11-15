@@ -4,15 +4,30 @@
 
 use {
     anyhow::{format_err, Context, Error},
+    fidl_fuchsia_cobalt::{AggregateAndUploadMarker, AggregateAndUploadSynchronousProxy},
     fidl_fuchsia_metrics::{
         MetricEventLoggerFactoryMarker, MetricEventLoggerFactoryProxy, MetricEventLoggerProxy,
         ProjectSpec,
     },
     fuchsia_async as fasync,
+    fuchsia_component::client::connect_channel_to_protocol,
     fuchsia_component::client::connect_to_protocol,
+    fuchsia_zircon as zx,
     recovery_metrics_registry::cobalt_registry as metrics,
     tracing::error,
 };
+
+pub fn aggregate_upload(timeout: i64) -> Result<(), Error> {
+    let (server_end, client_end) = zx::Channel::create()?;
+    connect_channel_to_protocol::<AggregateAndUploadMarker>(server_end)
+        .context("Failed to connect to the Cobalt AggregateAndUploadMarker")?;
+
+    let cobalt = AggregateAndUploadSynchronousProxy::new(client_end);
+    let deadline = zx::Time::after(zx::Duration::from_seconds(timeout));
+    cobalt
+        .aggregate_and_upload_metric_events(deadline)
+        .map_err(|e| format_err!("AggregateAndUploadMetric returned an error: {:?}", e))
+}
 
 /// Creates a LoggerProxy connected to Cobalt.
 ///

@@ -186,6 +186,7 @@ rustc_binary("bin") {
     ":ota_lib",
     ":recovery_metrics_registry_rustlib",
     ":recovery_ui_config",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_rust",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy_rust",
