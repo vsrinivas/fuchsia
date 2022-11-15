@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/hw/gpt.h>
+
 #include "backends.h"
 
 namespace gigaboot {
@@ -17,7 +19,6 @@ static const PartitionMap::PartitionEntry kNucPartitions[] = {
     {GPT_ZIRCON_B_NAME, 0x4000000, GPT_ZIRCON_ABR_TYPE_GUID},
     {GPT_ZIRCON_R_NAME, 0x8000000, GPT_ZIRCON_ABR_TYPE_GUID},
     {GPT_FACTORY_NAME, 0x2000000, GPT_FACTORY_TYPE_GUID},
-    {GPT_DURABLE_NAME, 0x100000, GPT_DURABLE_TYPE_GUID},
     // When actually writing partitions, fvm will take all remaining space.
     {GPT_FVM_NAME, SIZE_MAX, GPT_FVM_TYPE_GUID},
 

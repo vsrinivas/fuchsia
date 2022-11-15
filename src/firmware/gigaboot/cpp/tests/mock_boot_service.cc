@@ -254,7 +254,9 @@ efi_status MockStubService::GetMemoryMap(size_t* memory_map_size, efi_memory_des
   }
 
   *memory_map_size = total_size;
-  memcpy(memory_map, memory_map_.data(), total_size);
+  if (total_size) {
+    memcpy(memory_map, memory_map_.data(), total_size);
+  }
 
   return EFI_SUCCESS;
 }

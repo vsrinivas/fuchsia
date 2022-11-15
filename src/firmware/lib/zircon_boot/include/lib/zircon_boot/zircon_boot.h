@@ -213,6 +213,21 @@ struct ZirconBootOps {
   //
   // Returns true on success.
   bool (*verified_boot_read_permanent_attributes_hash)(ZirconBootOps* ops, uint8_t* hash);
+
+  // Returns a buffer of at least 'size' bytes.
+  // This function will be called during boot to locate the buffer into which the
+  // ZBI will be loaded from disk. This buffer may be static or dynamically
+  // allocated, and should provide enough extra space to accommodate any additional
+  // ZBI items that the bootloader will append before booting.
+  //
+  // @ops: Pointer to the ZirconBootOps that host this ZirconVBootOps object.
+  // @request_size: As an input parameter, size of kernel load buffer to return.
+  //                As an output, describes the actual size of the buffer in bytes.
+  //                If returned buffer is not NULL, this must be at least
+  //                as large as the size requested.
+  //
+  // Returns a pointer to a buffer at least 'size' bytes long, or NULL on error.
+  uint8_t* (*get_kernel_load_buffer)(ZirconBootOps* ops, size_t* size);
 };
 
 typedef enum ForceRecovery {
@@ -224,13 +239,10 @@ typedef enum ForceRecovery {
 // boots according to firwmare ABR. Otherwise it boots according to OS ABR.
 //
 // @ops: Required operations.
-// @load_address: Pointer to the target memory to load image.
-// @load_address_size: Maximum size of the memory for loading the image.
 // @force_recovery: Enable/Disable force recovery.
 //
 // The function is not expected to return if boot is successful.
-ZirconBootResult LoadAndBoot(ZirconBootOps* ops, void* load_address, size_t load_address_size,
-                             ForceRecovery force_recovery);
+ZirconBootResult LoadAndBoot(ZirconBootOps* ops, ForceRecovery force_recovery);
 
 // Create operations for libabr from a ZirconBootOps.
 AbrOps GetAbrOpsFromZirconBootOps(ZirconBootOps* ops);

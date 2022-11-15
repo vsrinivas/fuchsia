@@ -76,14 +76,18 @@ static ZirconBootResult VerifyKernel(ZirconBootOps* zb_ops, void* load_address,
   return kBootResultOK;
 }
 
-static ZirconBootResult LoadKernel(void* load_address, size_t load_address_size, AbrSlotIndex slot,
-                                   ZirconBootOps* ops) {
+static ZirconBootResult LoadKernel(AbrSlotIndex slot, ZirconBootOps* ops, void** load_address,
+                                   size_t* load_address_size) {
   const char* zircon_part = GetSlotPartitionName(slot);
   if (zircon_part == NULL) {
     zircon_boot_dlog("Invalid slot idx %d\n", slot);
     return kBootResultErrorInvalidSlotIdx;
   }
   zircon_boot_dlog("ABR: loading kernel from slot %s...\n", zircon_part);
+
+  if (!ops->get_kernel_load_buffer) {
+    return kBootResultErrorImageTooLarge;
+  }
 
   zbi_header_t zbi_hdr __attribute__((aligned(ZBI_ALIGNMENT)));
   size_t read_size;
@@ -101,13 +105,17 @@ static ZirconBootResult LoadKernel(void* load_address, size_t load_address_size,
     return kBootResultErrorZbiHeaderNotFound;
   }
 
-  uint64_t image_size = zbi_hdr.length + sizeof(zbi_header_t);
-  if (image_size > load_address_size) {
-    zircon_boot_dlog("Image is too large to load (%lu > %zu)\n", image_size, load_address_size);
+  size_t image_size = zbi_hdr.length + sizeof(zbi_header_t);
+  *load_address = ops->get_kernel_load_buffer(ops, &image_size);
+  if (*load_address == NULL) {
+    *load_address_size = 0;
+    zircon_boot_dlog("Cannot get kernel load buffer\n");
     return kBootResultErrorImageTooLarge;
   }
 
-  if (!ZIRCON_BOOT_OPS_CALL(ops, read_from_partition, zircon_part, 0, image_size, load_address,
+  *load_address_size = image_size;
+
+  if (!ZIRCON_BOOT_OPS_CALL(ops, read_from_partition, zircon_part, 0, image_size, *load_address,
                             &read_size) ||
       read_size != image_size) {
     zircon_boot_dlog("Fail to read image from slot\n");
@@ -115,7 +123,7 @@ static ZirconBootResult LoadKernel(void* load_address, size_t load_address_size,
   }
 
   if (IsVerifiedBootOpsImplemented(ops)) {
-    ZirconBootResult res = VerifyKernel(ops, load_address, load_address_size, slot);
+    ZirconBootResult res = VerifyKernel(ops, *load_address, *load_address_size, slot);
     if (res != kBootResultOK) {
       return res;
     }
@@ -156,8 +164,9 @@ AbrSlotIndex AbrPeekBootSlot(const AbrOps* abr_ops) {
   return ret;
 }
 
-static ZirconBootResult LoadImage(ZirconBootOps* ops, void* load_address, size_t load_address_size,
-                                  ForceRecovery force_recovery, AbrSlotIndex* out_slot) {
+static ZirconBootResult LoadImage(ZirconBootOps* ops, ForceRecovery force_recovery,
+                                  AbrSlotIndex* out_slot, void** load_address,
+                                  size_t* load_address_size) {
   ZirconBootResult ret;
   AbrSlotIndex cur_slot;
   AbrOps abr_ops = GetAbrOpsFromZirconBootOps(ops);
@@ -182,7 +191,7 @@ static ZirconBootResult LoadImage(ZirconBootOps* ops, void* load_address, size_t
 
     cur_slot =
         force_recovery == kForceRecoveryOn ? kAbrSlotIndexR : AbrGetBootSlot(&abr_ops, true, NULL);
-    ret = LoadKernel(load_address, load_address_size, cur_slot, ops);
+    ret = LoadKernel(cur_slot, ops, load_address, load_address_size);
     if (ret != kBootResultOK) {
       zircon_boot_dlog("ABR: failed to load slot %d\n", cur_slot);
       if (cur_slot != kAbrSlotIndexR && AbrMarkSlotUnbootable(&abr_ops, cur_slot) != kAbrResultOk) {
@@ -200,14 +209,12 @@ static ZirconBootResult LoadImage(ZirconBootOps* ops, void* load_address, size_t
   return kBootResultOK;
 }
 
-ZirconBootResult LoadAndBoot(ZirconBootOps* ops, void* load_address, size_t load_address_size,
-                             ForceRecovery force_recovery) {
-  if (!load_address) {
-    return kBootResultErrorInvalidArguments;
-  }
+ZirconBootResult LoadAndBoot(ZirconBootOps* ops, ForceRecovery force_recovery) {
+  void* load_address;
+  size_t load_address_size;
 
   AbrSlotIndex slot;
-  ZirconBootResult res = LoadImage(ops, load_address, load_address_size, force_recovery, &slot);
+  ZirconBootResult res = LoadImage(ops, force_recovery, &slot, &load_address, &load_address_size);
   if (res != kBootResultOK) {
     return res;
   }

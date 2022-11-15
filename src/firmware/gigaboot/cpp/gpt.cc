@@ -20,10 +20,6 @@ namespace gigaboot {
 uint64_t EfiGptBlockDevice::GENERATION_ID = 1;
 
 namespace {
-template <typename T>
-auto constexpr DivideRoundUp(T t1, T t2) -> decltype(t1 + t2) {
-  return (t1 + t2 - 1) / t2;
-}
 
 bool ValidateHeader(const gpt_header_t &header) {
   if (header.magic != GPT_MAGIC || header.size != GPT_HEADER_SIZE ||
@@ -345,8 +341,8 @@ fit::result<efi_status> EfiGptBlockDevice::ReadPartition(std::string_view name, 
                                                          size_t length, void *out) {
   auto res = CheckAndGetPartitionAccessRangeInStorage(name, offset, length);
   if (res.is_error()) {
-    printf("ReadPartition: failed while checking and getting read range %s\n",
-           EfiStatusToString(res.error_value()));
+    printf("ReadPartition: failed while checking and getting read range for partition '%.*s': %s\n",
+           static_cast<int>(name.length()), name.data(), EfiStatusToString(res.error_value()));
     return fit::error(res.error_value());
   }
 

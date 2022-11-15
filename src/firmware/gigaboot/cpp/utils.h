@@ -32,6 +32,14 @@ inline constexpr const efi_guid& kEfiProtocolGuid<efi_tcg2_protocol> = Tcg2Proto
 
 namespace gigaboot {
 
+// This is a utility function useful for calculating e.g. the number of pages to allocate to back a
+// certain number of bytes, or the number of disk blocks to back a partition, rounding up for a
+// margin of safety.
+template <typename T>
+auto constexpr DivideRoundUp(T t1, T t2) -> decltype(t1 + t2) {
+  return (t1 + t2 - 1) / t2;
+}
+
 // This calls into the LocateProtocol() boot service. It returns a null pointer if operation fails.
 template <class Protocol>
 inline fit::result<efi_status, EfiProtocolPtr<Protocol>> EfiLocateProtocol() {

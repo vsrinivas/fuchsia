@@ -10,9 +10,12 @@
 #include "backends.h"
 #include "boot_zbi_items.h"
 #include "gpt.h"
+#include "utils.h"
 
 namespace gigaboot {
 namespace {
+// Reasonable guess for the size of additional zbi items on this platform.
+constexpr size_t kKernelBufferZbiSizeEstimate = 0x1000;
 
 // TODO(b/235489025): NUC GPT partitions still uses legacy zircon partition names. Thus we use the
 // following mapping as a workaround so that zircon_boot library works correctly. Remove this after
@@ -120,6 +123,15 @@ bool ReadPermanentAttributesHash(ZirconBootOps* ops, uint8_t* hash) {
   return true;
 }
 
+uint8_t* GetLoadBuffer(ZirconBootOps* ops, size_t* size) {
+  ZX_ASSERT(size);
+  efi_physical_addr addr;
+  *size += kKernelBufferZbiSizeEstimate;
+  efi_status status = gEfiSystemTable->BootServices->AllocatePages(
+      AllocateAnyPages, EfiLoaderData, DivideRoundUp(*size, kUefiPageSize), &addr);
+  return status == EFI_SUCCESS ? reinterpret_cast<uint8_t*>(addr) : nullptr;
+}
+
 }  // namespace
 
 ZirconBootOps GetZirconBootOps() {
@@ -129,6 +141,7 @@ ZirconBootOps GetZirconBootOps() {
   zircon_boot_ops.write_to_partition = WriteToPartition;
   zircon_boot_ops.boot = Boot;
   zircon_boot_ops.add_zbi_items = AddZbiItems;
+  zircon_boot_ops.get_kernel_load_buffer = GetLoadBuffer;
   zircon_boot_ops.firmware_can_boot_kernel_slot = nullptr;
 
   // TODO(b/235489025): Implement the following callbacks for libavb integration. These operations

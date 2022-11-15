@@ -51,6 +51,9 @@ class MockZirconBootOps {
   ZirconBootOps GetZirconBootOps();
   ZirconBootOps GetZirconBootOpsWithAvb();
 
+  uint8_t* GetKernelLoadBuffer(size_t size);
+  void SetKernelLoadBufferSize(size_t size);
+
  private:
   std::unordered_map<std::string, std::vector<uint8_t>> partitions_;
   std::unordered_map<size_t, uint64_t> rollback_index_;
@@ -59,6 +62,7 @@ class MockZirconBootOps {
   AbrSlotIndex firmware_slot_;
   std::vector<uint8_t> booted_image_;
   std::optional<AbrSlotIndex> booted_slot_;
+  std::vector<uint8_t> load_buffer_;
   std::function<bool(zbi_header_t*, size_t, AbrSlotIndex)> add_zbi_items_;
   AvbAtxPermanentAttributes permanent_attributes_;
 
@@ -84,6 +88,8 @@ class MockZirconBootOps {
   static bool ReadIsDeivceLocked(ZirconBootOps* ops, bool* out_is_locked);
   static bool ReadPermanentAttributes(ZirconBootOps* ops, AvbAtxPermanentAttributes* attribute);
   static bool ReadPermanentAttributesHash(ZirconBootOps* ops, uint8_t hash[AVB_SHA256_DIGEST_SIZE]);
+
+  static uint8_t* GetKernelLoadBuffer(ZirconBootOps* ops, size_t* size);
 };
 
 #endif  // SRC_FIRMWARE_LIB_ZIRCON_BOOT_INCLUDE_LIB_ZIRCON_BOOT_TEST_MOCK_ZIRCON_BOOT_OPS_H_

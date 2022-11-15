@@ -28,7 +28,6 @@ source_set("legacy_c_gigaboot") {
     "$dir_gigaboot/lib/loadfile.c",
     "$dir_gigaboot/lib/printf.c",
     "$dir_gigaboot/lib/stdlib.c",
-    "$dir_gigaboot/lib/string.c",
     "$dir_gigaboot/lib/strings.c",
     "$dir_gigaboot/lib/xefi.c",
     "$dir_gigaboot/src/abr.c",

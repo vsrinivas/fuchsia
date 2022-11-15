@@ -903,7 +903,7 @@ TEST_F(FastbootFlashTest, GptReinitialize) {
 TEST_F(FastbootFlashTest, GptReinitializeNoMaxSize) {
   PartitionMap::PartitionEntry custom_partitions[] = {
       {GPT_DURABLE_BOOT_NAME, 0x1000, GPT_DURABLE_BOOT_TYPE_GUID},
-      {GPT_DURABLE_NAME, 0x1000, GPT_DURABLE_TYPE_GUID},
+      {GPT_FACTORY_NAME, 0x1000, GPT_FACTORY_TYPE_GUID},
   };
   PartitionCustomizer customizer(custom_partitions);
 
@@ -934,7 +934,7 @@ TEST_F(FastbootFlashTest, GptReinitializeNoMaxSize) {
                      sizeof(durable_boot_partition.type_guid)) == 0);
 
   // Check the durable partition
-  gpt_entry_t const* durable_entry = gpt_device.FindPartition("durable");
+  gpt_entry_t const* durable_entry = gpt_device.FindPartition("factory");
   ASSERT_NE(durable_entry, nullptr);
 
   PartitionMap::PartitionEntry const& durable_partition = custom_partitions[1];
@@ -1003,7 +1003,7 @@ TEST(FastbootTest, GptReinitializeDiskFailure) {
 TEST_F(FastbootFlashTest, GptReinitializeTwoMaxPartFailure) {
   PartitionMap::PartitionEntry custom_partitions[] = {
       {GPT_DURABLE_BOOT_NAME, SIZE_MAX},
-      {GPT_DURABLE_NAME, SIZE_MAX},
+      {GPT_FACTORY_NAME, SIZE_MAX},
   };
   PartitionCustomizer customizer(custom_partitions);
 
@@ -1024,7 +1024,7 @@ TEST_F(FastbootFlashTest, GptReinitializeTwoMaxPartFailure) {
 TEST_F(FastbootFlashTest, GptReinitializeMaxNotLastFailure) {
   PartitionMap::PartitionEntry custom_partitions[] = {
       {GPT_DURABLE_BOOT_NAME, SIZE_MAX},
-      {GPT_DURABLE_NAME, 0x1000},
+      {GPT_FACTORY_NAME, 0x1000},
   };
   PartitionCustomizer customizer(custom_partitions);
 

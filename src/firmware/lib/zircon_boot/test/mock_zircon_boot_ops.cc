@@ -72,6 +72,12 @@ void MockZirconBootOps::Reboot(bool force_recovery) {
   firmware_slot_ = force_recovery == kForceRecoveryOn ? kAbrSlotIndexR : AbrPeekBootSlot(&ops);
 }
 
+void MockZirconBootOps::SetKernelLoadBufferSize(size_t size) { load_buffer_.resize(size); }
+
+uint8_t* MockZirconBootOps::GetKernelLoadBuffer(size_t size) {
+  return size <= load_buffer_.size() ? load_buffer_.data() : nullptr;
+}
+
 static bool ReadAbrMetadata(void* context, size_t size, uint8_t* buffer) {
   MockZirconBootOps* dev = static_cast<MockZirconBootOps*>(context);
   return dev->ReadFromPartition(GPT_DURABLE_BOOT_NAME, 0, size, buffer).is_ok();
@@ -214,6 +220,13 @@ bool MockZirconBootOps::ReadPermanentAttributesHash(ZirconBootOps* ops,
   return true;
 }
 
+uint8_t* MockZirconBootOps::GetKernelLoadBuffer(ZirconBootOps* ops, size_t* size) {
+  MockZirconBootOps* dev = static_cast<MockZirconBootOps*>(ops->context);
+  // Zbi item margin of safety
+  *size += 0x1000;
+  return dev->GetKernelLoadBuffer(*size);
+}
+
 ZirconBootOps MockZirconBootOps::GetZirconBootOps() {
   ZirconBootOps zircon_boot_ops;
   zircon_boot_ops.context = this;
@@ -223,6 +236,7 @@ ZirconBootOps MockZirconBootOps::GetZirconBootOps() {
   zircon_boot_ops.reboot = Reboot;
   zircon_boot_ops.boot = Boot;
   zircon_boot_ops.add_zbi_items = AddDeviceZbiItems;
+  zircon_boot_ops.get_kernel_load_buffer = GetKernelLoadBuffer;
   zircon_boot_ops.verified_boot_get_partition_size = nullptr;
   zircon_boot_ops.verified_boot_read_rollback_index = nullptr;
   zircon_boot_ops.verified_boot_write_rollback_index = nullptr;

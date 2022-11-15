@@ -8,6 +8,7 @@ group("tests") {
     "bin:tests",
     "fastboot-tcp:tests",
     "gigaboot:tests",
+    "gigaboot/cpp/tests:tests",
     "lib/abr/test",
     "lib/fastboot/test",
     "lib/zbi/test",
