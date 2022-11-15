@@ -7,6 +7,10 @@ import("//build/testing/environments.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/ui/lib/escher/build_args.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":escher_tests" ]
+}
 config("use_runtime_glsl_config") {
   defines = [ "ESCHER_USE_RUNTIME_GLSL=1" ]
 }
