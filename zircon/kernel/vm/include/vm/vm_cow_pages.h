@@ -834,7 +834,8 @@ class VmCowPages final
   // LookupPagesLocked helper function that 'forks' the page at |offset| of the current vmo. If
   // this function successfully inserts a page into |offset| of the current vmo, it returns ZX_OK
   // and populates |out_page|. |page_request| must be provided and if ZX_ERR_SHOULD_WAIT is returned
-  // then this indicates a transient failure that should be resolved by waiting on the page_request.
+  // then this indicates a transient allocation failure that should be resolved by waiting on the
+  // page_request and retrying.
   //
   // The source page that is being forked has already been calculated - it is |page|, which
   // is currently in |page_owner| at offset |owner_offset|.

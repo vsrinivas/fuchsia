@@ -1569,8 +1569,7 @@ zx_status_t VmCowPages::CloneCowPageLocked(uint64_t offset, list_node_t* alloc_l
   do {
     AssertHeld(cur->lock_);
     VmCowPages* next = cur->parent_.get();
-    // We can't make COW clones of physical vmos, so this can only happen if we
-    // somehow don't find |page_owner| in the ancestor chain.
+    // We should always be able to find |page_owner| in the ancestor chain.
     DEBUG_ASSERT(next);
     AssertHeld(next->lock_);
 
@@ -1594,7 +1593,7 @@ zx_status_t VmCowPages::CloneCowPageLocked(uint64_t offset, list_node_t* alloc_l
   // update all mappings at or below that level.
   bool skip_range_update = true;
   do {
-    // |target_page| is always located at in |cur| at |cur_offset| at the start of the loop.
+    // |target_page| is always located in |cur| at |cur_offset| at the start of the loop.
     VmCowPages* target_page_owner = cur;
     AssertHeld(target_page_owner->lock_);
     uint64_t target_page_offset = cur_offset;
