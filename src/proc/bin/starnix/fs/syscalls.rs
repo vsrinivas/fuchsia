@@ -1754,6 +1754,11 @@ pub fn sys_inotify_rm_watch(
     Ok(())
 }
 
+pub fn sys_utimensat(current_task: &CurrentTask) -> Result<(), Errno> {
+    not_implemented!(current_task, "utimensat");
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
