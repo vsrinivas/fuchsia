@@ -201,10 +201,7 @@ UDP_SERDE_EXPORT SerializeSendMsgMetaError serialize_send_msg_meta(fsocket::wire
                                                                    cpp20::span<uint8_t> out_buf);
 
 // Utility for deserializing a RecvMsgMeta from the provided buffer.
-//
-// Returns a DecodedMessage<RecvMsgPayload>. On success, the DecodedMessage will
-// be have `ok() == true`. On failure, the DecodedMessage will have `ok() == false`.
-UDP_SERDE_EXPORT fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta>
+UDP_SERDE_EXPORT fit::result<fidl::Error, fidl::DecodedValue<fsocket::wire::RecvMsgMeta>>
 deserialize_recv_msg_meta(cpp20::span<uint8_t> buf);
 
 #endif  // __cplusplus

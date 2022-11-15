@@ -170,11 +170,11 @@ TEST_P(UdpSerdeMultiDataFormatTest, SerializeThenDeserializeRecvSucceeds) {
 
   switch (data_format) {
     case DataFormat::FidlTable: {
-      fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> decoded =
+      fit::result decoded =
           deserialize_recv_msg_meta(cpp20::span<uint8_t>(out_buf.buf, out_buf.buf_size));
-      ASSERT_TRUE(decoded.ok());
+      ASSERT_TRUE(decoded.is_ok());
 
-      const fsocket::wire::RecvMsgMeta& recv_meta = *decoded.PrimaryObject();
+      const fsocket::wire::RecvMsgMeta& recv_meta = *decoded.value();
 
       ASSERT_TRUE(recv_meta.has_control());
       const fsocket::wire::DatagramSocketRecvControlData& control = recv_meta.control();
@@ -287,9 +287,8 @@ TEST_P(UdpSerdeMultiDataFormatTest, DeserializeRecvErrors) {
                                                       DeserializeRecvMsgMetaError expected) {
     switch (data_format) {
       case DataFormat::FidlTable: {
-        fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> res =
-            deserialize_recv_msg_meta(cpp20::span<uint8_t>(buf, buf_size));
-        EXPECT_FALSE(res.ok());
+        fit::result res = deserialize_recv_msg_meta(cpp20::span<uint8_t>(buf, buf_size));
+        EXPECT_FALSE(res.is_ok());
       } break;
       case DataFormat::CStruct: {
         DeserializeRecvMsgMetaResult res = deserialize_recv_msg_meta(Buffer{

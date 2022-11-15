@@ -98,10 +98,9 @@ bool RecvMsgMeta(perftest::RepeatState* const state, AddrKind::Kind addr_kind, b
 
   auto validate_deserialize = [](const cpp20::span<uint8_t>& span) {
     perftest::DoNotOptimize(&span);
-    fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> decoded =
-        deserialize_recv_msg_meta(span);
+    fit::result decoded = deserialize_recv_msg_meta(span);
     perftest::DoNotOptimize(decoded);
-    FX_CHECK(decoded.ok());
+    FX_CHECK(decoded.is_ok());
   };
 
   switch (op_sequence) {

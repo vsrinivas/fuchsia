@@ -168,15 +168,16 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
     res.err = DeserializeSendMsgMetaErrorInputBufferTooSmall;
     return res;
   }
-  fidl::unstable::DecodedMessage<fsocket::wire::SendMsgMeta> decoded(
-      fidl::internal::WireFormatVersion::kV2, span.begin(), static_cast<uint32_t>(meta_size));
+  fit::result decoded = fidl::InplaceDecode<fsocket::wire::SendMsgMeta>(
+      fidl::EncodedMessage::Create(span.subspan(0, meta_size)),
+      fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2));
 
-  if (!decoded.ok()) {
+  if (!decoded.is_ok()) {
     res.err = DeserializeSendMsgMetaErrorFailedToDecode;
     return res;
   }
 
-  fsocket::wire::SendMsgMeta& meta = *decoded.PrimaryObject();
+  fsocket::wire::SendMsgMeta& meta = *decoded.value();
 
   if (meta.has_to()) {
     copy_from_fidl_sockaddr(res, meta.to());
@@ -317,14 +318,12 @@ DeserializeRecvMsgMetaResult deserialize_recv_msg_meta(Buffer buf) {
     res.err = DeserializeRecvMsgMetaErrorInputBufferNull;
     return res;
   }
-  fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> decoded_meta =
-      deserialize_recv_msg_meta(cpp20::span<uint8_t>(buf.buf, buf.buf_size));
-  if (!decoded_meta.ok()) {
+  fit::result decoded_meta = deserialize_recv_msg_meta(cpp20::span<uint8_t>(buf.buf, buf.buf_size));
+  if (!decoded_meta.is_ok()) {
     res.err = DeserializeRecvMsgMetaErrorUnspecifiedDecodingFailure;
     return res;
   }
-  const fuchsia_posix_socket::wire::RecvMsgMeta& meta = *decoded_meta.PrimaryObject();
-
+  const fuchsia_posix_socket::wire::RecvMsgMeta& meta = *decoded_meta.value();
   if (meta.has_from()) {
     copy_from_fidl_sockaddr(res, meta.from());
   }
@@ -382,18 +381,19 @@ DeserializeRecvMsgMetaResult deserialize_recv_msg_meta(Buffer buf) {
   return res;
 }
 
-fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> deserialize_recv_msg_meta(
+fit::result<fidl::Error, fidl::DecodedValue<fsocket::wire::RecvMsgMeta>> deserialize_recv_msg_meta(
     cpp20::span<uint8_t> buf) {
   if (buf.size() < kMetadataSizeSegmentSize) {
-    return fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta>(nullptr, 0);
+    return fit::error(fidl::Error::DecodeError(ZX_ERR_BUFFER_TOO_SMALL));
   }
   uint16_t meta_size = consume_meta_size_segment_unchecked(buf);
   if (meta_size > buf.size()) {
-    return fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta>(nullptr, 0);
+    return fit::error(fidl::Error::DecodeError(ZX_ERR_BUFFER_TOO_SMALL));
   }
 
-  return fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta>(
-      fidl::internal::WireFormatVersion::kV2, buf.data(), static_cast<uint32_t>(meta_size));
+  return fidl::InplaceDecode<fsocket::wire::RecvMsgMeta>(
+      fidl::EncodedMessage::Create(buf.subspan(0, meta_size)),
+      fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2));
 }
 
 SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, ConstBuffer addr,

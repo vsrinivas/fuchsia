@@ -2448,15 +2448,15 @@ struct datagram_socket
       return ZX_OK;
     }
 
-    fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> decoded_meta =
+    fit::result decoded_meta =
         deserialize_recv_msg_meta(cpp20::span<uint8_t>(buf, datagram_socket_.prelude_size.rx));
 
-    if (!decoded_meta.ok()) {
+    if (!decoded_meta.is_ok()) {
       *out_code = EIO;
       return ZX_OK;
     }
 
-    const fuchsia_posix_socket::wire::RecvMsgMeta& meta = *decoded_meta.PrimaryObject();
+    const fuchsia_posix_socket::wire::RecvMsgMeta& meta = *decoded_meta.value();
 
     if (msg->msg_namelen != 0 && msg->msg_name != nullptr) {
       if (!meta.has_from()) {
