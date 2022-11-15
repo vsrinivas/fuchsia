@@ -10,7 +10,9 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_component::{BinderMarker, CreateChildArgs, RealmMarker, RealmProxy};
 use fidl_fuchsia_component_decl::{Child, ChildRef, CollectionRef, StartupMode};
+use fidl_fuchsia_logger as flog;
 use fuchsia_component::client;
+use fuchsia_syslog_listener::LogProcessor;
 use futures::{channel::oneshot, lock::Mutex, Future, FutureExt};
 use std::pin::Pin;
 
@@ -116,6 +118,98 @@ impl OtaManager for OtaComponent {
             // If receiver was dropped, ignore. Status is sent in `start_and_wait_for_result`.
             _ = completer.send(status.clone());
         }
+    }
+}
+
+fn get_log_level(level: i32) -> String {
+    // note levels align with syslog logger.h definitions
+    match level {
+        l if (l == flog::LogLevelFilter::Trace as i32) => "TRACE".to_string(),
+        l if (l == flog::LogLevelFilter::Debug as i32) => "DEBUG".to_string(),
+        l if (l < flog::LogLevelFilter::Info as i32 && l > flog::LogLevelFilter::Debug as i32) => {
+            format!("VLOG({})", (flog::LogLevelFilter::Info as i32) - l)
+        }
+        l if (l == flog::LogLevelFilter::Info as i32) => "INFO".to_string(),
+        l if (l == flog::LogLevelFilter::Warn as i32) => "WARNING".to_string(),
+        l if (l == flog::LogLevelFilter::Error as i32) => "ERROR".to_string(),
+        l if (l == flog::LogLevelFilter::Fatal as i32) => "FATAL".to_string(),
+        l => format!("INVALID({})", l),
+    }
+}
+
+// Assume monotonic time is sufficient for debug logs in recovery.
+fn format_time(timestamp: fuchsia_zircon::sys::zx_time_t) -> String {
+    format!("{:05}.{:06}", timestamp / 1000000000, (timestamp / 1000) % 1000000)
+}
+
+pub type LogHandlerFnPtr = Box<dyn FnMut(String)>;
+
+#[async_trait(?Send)]
+pub trait OtaLogListener {
+    async fn listen(&self, handler: LogHandlerFnPtr) -> Result<(), Error>;
+}
+
+pub struct OtaLogListenerImpl {
+    log_proxy: flog::LogProxy,
+}
+
+impl OtaLogListenerImpl {
+    pub fn new() -> Result<Self, Error> {
+        let log_proxy = client::connect_to_protocol::<flog::LogMarker>()
+            .map_err(|e| format_err!("failed to connect to fuchsia.logger.Log: {:?}", e))?;
+        Ok(Self::new_with_proxy(log_proxy))
+    }
+
+    pub fn new_with_proxy(log_proxy: flog::LogProxy) -> Self {
+        Self { log_proxy }
+    }
+}
+
+#[async_trait(?Send)]
+impl OtaLogListener for OtaLogListenerImpl {
+    async fn listen(&self, handler: LogHandlerFnPtr) -> Result<(), Error> {
+        let mut options = flog::LogFilterOptions {
+            filter_by_pid: false,
+            pid: 0,
+            min_severity: flog::LogLevelFilter::None,
+            verbosity: 0,
+            filter_by_tid: false,
+            tid: 0,
+            tags: vec![format!("{}:{}", COLLECTION_NAME, CHILD_NAME)],
+        };
+
+        fuchsia_syslog_listener::run_log_listener_with_proxy(
+            &self.log_proxy,
+            LogProcessorFn(handler),
+            Some(&mut options),
+            false,
+            None,
+        )
+        .await
+    }
+}
+
+// We cannot directly implement LogProcessor for FnMut(String). See rustc error E0210 for more info.
+// To work around this, the FnMut(String) must be wrapped in a local type that implements the trait.
+struct LogProcessorFn(LogHandlerFnPtr);
+
+impl LogProcessor for LogProcessorFn {
+    fn log(&mut self, message: flog::LogMessage) {
+        let tags = message.tags.join(", ");
+
+        let line = format!(
+            "[{}][{}] {}: {}",
+            format_time(message.time),
+            tags,
+            get_log_level(message.severity),
+            message.msg
+        );
+
+        (self.0)(line);
+    }
+
+    fn done(&mut self) {
+        // No need to do anything since we are streaming rather than requesting a one-time dump.
     }
 }
 
@@ -351,5 +445,58 @@ mod tests {
             assert_eq!(Some(COLLECTION_NAME.to_string()), child.collection);
             responder.send(&mut Ok(())).unwrap();
         });
+    }
+
+    #[fuchsia::test]
+    async fn test_log_listener_listens() -> Result<(), Error> {
+        let (log_proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<flog::LogMarker>().unwrap();
+        let listener = OtaLogListenerImpl::new_with_proxy(log_proxy);
+        let lines = Arc::new(Mutex::new(Vec::new()));
+        let lines2 = lines.clone();
+        let expected_msg = "this is a test message".to_string();
+
+        fasync::Task::local(async move {
+            let lines = lines2.clone();
+            listener
+                .listen(Box::new(move |line| {
+                    let lines = lines.clone();
+                    futures::executor::block_on(async move {
+                        lines.lock().await.push(line);
+                    });
+                }))
+                .await
+                .unwrap();
+        })
+        .detach();
+
+        let request = stream.next().await.unwrap().unwrap();
+        match request {
+            flog::LogRequest::ListenSafe { log_listener, options, .. } => {
+                let tag = format!("{}:{}", COLLECTION_NAME, CHILD_NAME);
+                assert_eq!(tag, options.unwrap().tags[0]);
+
+                log_listener
+                    .into_proxy()
+                    .expect("create log_listener proxy")
+                    .log(&mut flog::LogMessage {
+                        pid: 0,
+                        tid: 0,
+                        time: 0,
+                        severity: 0,
+                        dropped_logs: 0,
+                        tags: vec![tag],
+                        msg: expected_msg.clone(),
+                    })
+                    .await
+                    .unwrap();
+            }
+            e => panic!("Unexpected request: {:?}", e),
+        }
+
+        assert_eq!(1, lines.lock().await.len());
+        assert!(lines.lock().await[0].ends_with(&expected_msg));
+
+        Ok(())
     }
 }
