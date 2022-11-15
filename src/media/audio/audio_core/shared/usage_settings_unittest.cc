@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/v1/usage_settings.h"
+#include "src/media/audio/audio_core/shared/usage_settings.h"
 
 #include <gtest/gtest.h>
 
@@ -11,10 +11,10 @@
 namespace media::audio {
 namespace {
 
-constexpr float kArbitraryGainValue = -45.0;
-constexpr float kArbitraryGainAdjustment = -2.0;
+constexpr float kArbitraryGainValue = -45.0f;
+constexpr float kArbitraryGainAdjustment = -2.0f;
 
-constexpr float kArbitraryVolumeValue = 0.14;
+constexpr float kArbitraryVolumeValue = 0.14f;
 
 TEST(UsageGainSettingsTest, RenderUsageGainPersists) {
   UsageGainSettings under_test;
@@ -152,7 +152,7 @@ TEST(UsageGainSettingsTest, UsageGainCannotExceedUnity) {
   const auto usage =
       fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
   UsageGainSettings under_test;
-  under_test.SetUsageGain(fidl::Clone(usage), 10.0);
+  under_test.SetUsageGain(fidl::Clone(usage), 10.0f);
 
   EXPECT_FLOAT_EQ(under_test.GetAdjustedUsageGain(std::move(usage)), media_audio::kUnityGainDb);
 }

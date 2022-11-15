@@ -78,8 +78,6 @@ class ProcessConfig {
   }
 
  private:
-  static std::optional<ProcessConfig> instance_;
-
   VolumeCurve default_volume_curve_;
   std::shared_ptr<LoudnessTransform> default_loudness_transform_;
   DeviceConfig device_config_;

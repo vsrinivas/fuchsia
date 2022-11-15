@@ -9,6 +9,7 @@ source_set("testing") {
 
   sources = [
     "fake_profile_provider.h",
+    "matchers.h",
     "null_audio_capturer.h",
     "null_audio_renderer.h",
   ]

@@ -185,10 +185,17 @@ executable("unittest_bin") {
 }
 
 fuchsia_unittest_package("audio_core_shared_unittests") {
+  manifest = "meta/audio_core_shared_unittests.cml"
   deps = [
     ":unittest_bin",
     "//src/media/audio/effects/test_effects:test_effects_v1",
   ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "FATAL"
+    }
+  }
 }
 
 fuzzer("audio_core_config_fuzzer") {

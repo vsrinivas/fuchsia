@@ -20,7 +20,6 @@ source_set("testing") {
     "fake_plug_detector.h",
     "fake_stream.cc",
     "fake_stream.h",
-    "matchers.h",
     "packet_factory.cc",
     "packet_factory.h",
     "sine_wave_stream.h",

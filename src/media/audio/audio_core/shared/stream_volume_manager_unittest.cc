@@ -128,26 +128,26 @@ TEST_F(StreamVolumeManagerTest, UsageVolumeChangeUpdatesStream) {
 
   auto media_client = AddClientForUsage(
       fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA));
-  media_client->SetVolume(0.8);
+  media_client->SetVolume(0.8f);
   RunLoopUntilIdle();
 
-  EXPECT_FLOAT_EQ(media_stream.volume_command_.volume, 0.8);
+  EXPECT_FLOAT_EQ(media_stream.volume_command_.volume, 0.8f);
   ASSERT_TRUE(media_stream.volume_command_.ramp.has_value());
   EXPECT_EQ(media_stream.volume_command_.ramp->duration, zx::msec(5));
 
-  EXPECT_FLOAT_EQ(system_agent_stream.volume_command_.volume, 1.0);
+  EXPECT_FLOAT_EQ(system_agent_stream.volume_command_.volume, 1.0f);
   EXPECT_FALSE(system_agent_stream.volume_command_.ramp.has_value());
 
   auto system_client = AddClientForUsage(
       fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT));
-  system_client->SetVolume(0.9);
+  system_client->SetVolume(0.9f);
   RunLoopUntilIdle();
 
-  EXPECT_FLOAT_EQ(media_stream.volume_command_.volume, 0.8);
+  EXPECT_FLOAT_EQ(media_stream.volume_command_.volume, 0.8f);
   ASSERT_TRUE(media_stream.volume_command_.ramp.has_value());
   EXPECT_EQ(media_stream.volume_command_.ramp->duration, zx::msec(5));
 
-  EXPECT_FLOAT_EQ(system_agent_stream.volume_command_.volume, 0.9);
+  EXPECT_FLOAT_EQ(system_agent_stream.volume_command_.volume, 0.9f);
   ASSERT_FALSE(system_agent_stream.volume_command_.ramp.has_value());
 }
 

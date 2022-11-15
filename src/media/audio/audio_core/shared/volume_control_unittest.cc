@@ -40,59 +40,59 @@ class VolumeControlTest : public ::gtest::TestLoopFixture {
 TEST_F(VolumeControlTest, SetsVolume) {
   auto client = BindVolumeControl();
 
-  client->SetVolume(0.5);
+  client->SetVolume(0.5f);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(setting_.volume(), 0.5);
+  EXPECT_FLOAT_EQ(setting_.volume(), 0.5f);
 }
 
 TEST_F(VolumeControlTest, SetsMute) {
   auto client = BindVolumeControl();
 
-  client->SetVolume(0.5);
+  client->SetVolume(0.5f);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(setting_.volume(), 0.5);
+  EXPECT_FLOAT_EQ(setting_.volume(), 0.5f);
 
   client->SetMute(true);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(setting_.volume(), 0.0);
+  EXPECT_FLOAT_EQ(setting_.volume(), 0.0f);
 
   // On unmute, volume should restore.
   client->SetMute(false);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(setting_.volume(), 0.5);
+  EXPECT_FLOAT_EQ(setting_.volume(), 0.5f);
 }
 
 TEST_F(VolumeControlTest, MultipleClients) {
   auto client1 = BindVolumeControl();
   auto client2 = BindVolumeControl();
 
-  client1->SetVolume(0.1);
+  client1->SetVolume(0.1f);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(setting_.volume(), 0.1);
+  EXPECT_FLOAT_EQ(setting_.volume(), 0.1f);
 
-  client2->SetVolume(0.4);
+  client2->SetVolume(0.4f);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(setting_.volume(), 0.4);
+  EXPECT_FLOAT_EQ(setting_.volume(), 0.4f);
 }
 
 TEST_F(VolumeControlTest, SetVolumeDoesNotUnmute) {
   auto client = BindVolumeControl();
 
-  client->SetVolume(0.1);
+  client->SetVolume(0.1f);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(setting_.volume(), 0.1);
+  EXPECT_FLOAT_EQ(setting_.volume(), 0.1f);
 
   client->SetMute(true);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(setting_.volume(), 0.0);
+  EXPECT_FLOAT_EQ(setting_.volume(), 0.0f);
 
-  client->SetVolume(0.8);
+  client->SetVolume(0.8f);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(setting_.volume(), 0.0);
+  EXPECT_FLOAT_EQ(setting_.volume(), 0.0f);
 
   client->SetMute(false);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(setting_.volume(), 0.8);
+  EXPECT_FLOAT_EQ(setting_.volume(), 0.8f);
 }
 
 TEST_F(VolumeControlTest, ClientEvents) {
@@ -104,24 +104,24 @@ TEST_F(VolumeControlTest, ClientEvents) {
     muted = new_muted;
   };
 
-  client->SetVolume(0.1);
+  client->SetVolume(0.1f);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(volume, 0.1);
+  EXPECT_FLOAT_EQ(volume, 0.1f);
   EXPECT_FALSE(muted);
 
   client->SetMute(true);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(volume, 0.1);
+  EXPECT_FLOAT_EQ(volume, 0.1f);
   EXPECT_TRUE(muted);
 
-  client->SetVolume(0.8);
+  client->SetVolume(0.8f);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(volume, 0.8);
+  EXPECT_FLOAT_EQ(volume, 0.8f);
   EXPECT_TRUE(muted);
 
   client->SetMute(false);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(volume, 0.8);
+  EXPECT_FLOAT_EQ(volume, 0.8f);
   EXPECT_FALSE(muted);
 }
 
@@ -140,10 +140,10 @@ TEST_F(VolumeControlTest, DuplicateSetsGenerateNoEvents) {
   EXPECT_EQ(event_count, 1u);
   event_count = 0;
 
-  client->SetVolume(0.1);
-  client->SetVolume(0.1);
+  client->SetVolume(0.1f);
+  client->SetVolume(0.1f);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(volume, 0.1);
+  EXPECT_FLOAT_EQ(volume, 0.1f);
   EXPECT_FALSE(muted);
   EXPECT_EQ(event_count, 1u);
 
@@ -172,18 +172,18 @@ TEST_F(VolumeControlTest, AllClientsReceiveEvents) {
     muted2 = new_muted;
   };
 
-  client1->SetVolume(0.1);
+  client1->SetVolume(0.1f);
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(volume1, 0.1);
+  EXPECT_FLOAT_EQ(volume1, 0.1f);
   EXPECT_FALSE(muted1);
-  EXPECT_FLOAT_EQ(volume2, 0.1);
+  EXPECT_FLOAT_EQ(volume2, 0.1f);
   EXPECT_FALSE(muted2);
 }
 
 TEST_F(VolumeControlTest, ClientsReceiveStateOnConnection) {
   auto client1 = BindVolumeControl();
   client1.events().OnVolumeMuteChanged = [](float new_volume, bool new_muted) {};
-  client1->SetVolume(0.1);
+  client1->SetVolume(0.1f);
   RunLoopUntilIdle();
 
   float volume2;
@@ -195,7 +195,7 @@ TEST_F(VolumeControlTest, ClientsReceiveStateOnConnection) {
   };
 
   RunLoopUntilIdle();
-  EXPECT_FLOAT_EQ(volume2, 0.1);
+  EXPECT_FLOAT_EQ(volume2, 0.1f);
   EXPECT_FALSE(muted2);
 }
 

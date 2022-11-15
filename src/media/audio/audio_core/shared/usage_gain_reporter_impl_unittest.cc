@@ -2,23 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/v1/usage_gain_reporter_impl.h"
+#include "src/media/audio/audio_core/shared/usage_gain_reporter_impl.h"
 
 #include <lib/fidl/cpp/binding.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/media/audio/audio_core/shared/device_id.h"
+
 namespace media::audio {
 namespace {
 
 const std::string DEVICE_ID_STRING = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 const audio_stream_unique_id_t DEVICE_ID_AUDIO_STREAM =
-    AudioDevice::UniqueIdFromString(DEVICE_ID_STRING).take_value();
+    DeviceUniqueIdFromString(DEVICE_ID_STRING).take_value();
 
 const std::string BLUETOOTH_DEVICE_ID_STRING = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 const audio_stream_unique_id_t BLUETOOTH_DEVICE_ID_AUDIO_STREAM =
-    AudioDevice::UniqueIdFromString(BLUETOOTH_DEVICE_ID_STRING).take_value();
+    DeviceUniqueIdFromString(BLUETOOTH_DEVICE_ID_STRING).take_value();
 
 class FakeGainListener : public fuchsia::media::UsageGainListener {
  public:
@@ -48,13 +51,13 @@ class FakeGainListener : public fuchsia::media::UsageGainListener {
   size_t call_count_ = 0;
 };
 
-class TestDeviceListener : public DeviceListener {
+class TestDeviceLister : public DeviceLister {
  public:
   void AddDeviceInfo(fuchsia::media::AudioDeviceInfo device_info) {
     device_info_.push_back(device_info);
   }
 
-  // |DeviceListener|
+  // |DeviceLister|
   std::vector<fuchsia::media::AudioDeviceInfo> GetDeviceInfos() final { return device_info_; }
 
  private:
@@ -83,7 +86,7 @@ class UsageGainReporterTest : public gtest::TestLoopFixture {
         usage_(fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)) {}
 
   std::unique_ptr<FakeGainListener> Listen(std::string device_id) {
-    auto device_lister = std::make_unique<TestDeviceListener>();
+    auto device_lister = std::make_unique<TestDeviceLister>();
     device_lister->AddDeviceInfo({.unique_id = device_id});
 
     stream_volume_manager_ = std::make_unique<StreamVolumeManager>(dispatcher());
@@ -161,7 +164,7 @@ TEST_F(UsageGainReporterTest, HandlesClosedChannel) {
   // Verify we removed the listener from StreamVolumeManager.
   // If we did not, this will crash.
   stream_volume_manager_->SetUsageGain(
-      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA), 0.42);
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA), 0.42f);
 }
 
 }  // namespace media::audio

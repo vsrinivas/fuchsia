@@ -446,7 +446,7 @@ TEST_F(AudioAdminTest, RenderActivityDispatched) {
   };
 
   // Check all of the possible state transitions from each possible activity.
-  int possible_activities_count = std::pow(2, fuchsia::media::RENDER_USAGE_COUNT);
+  int possible_activities_count = static_cast<int>(std::pow(2, fuchsia::media::RENDER_USAGE_COUNT));
   for (int i = 0; i < possible_activities_count; i++) {
     for (int j = 0; j < fuchsia::media::RENDER_USAGE_COUNT; j++) {
       auto initial_activity = static_cast<std::bitset<fuchsia::media::RENDER_USAGE_COUNT>>(i);
@@ -493,7 +493,8 @@ TEST_F(AudioAdminTest, CaptureActivityDispatched) {
   };
 
   // Check all of the possible state transitions from each possible activity.
-  int possible_activities_count = std::pow(2, fuchsia::media::CAPTURE_USAGE_COUNT);
+  int possible_activities_count =
+      static_cast<int>(std::pow(2, fuchsia::media::CAPTURE_USAGE_COUNT));
   for (int i = 0; i < possible_activities_count; i++) {
     for (int j = 0; j < fuchsia::media::CAPTURE_USAGE_COUNT; j++) {
       auto initial_activity = static_cast<std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT>>(i);
