@@ -13,6 +13,48 @@
 
 namespace {
 
+void VerifyPropertyKey(device_bind_prop_key_t expected, device_bind_prop_key_t actual) {
+  ASSERT_EQ(expected.key_type, actual.key_type);
+  switch (expected.key_type) {
+    case DEVICE_BIND_PROPERTY_KEY_INT: {
+      ASSERT_EQ(expected.data.int_key, actual.data.int_key);
+      break;
+    }
+    case DEVICE_BIND_PROPERTY_KEY_STRING: {
+      ASSERT_STREQ(expected.data.str_key, actual.data.str_key);
+      break;
+    }
+    default: {
+      ASSERT_TRUE(false);
+    }
+  }
+}
+
+void VerifyPropertyValue(device_bind_prop_value_t expected, device_bind_prop_value_t actual) {
+  ASSERT_EQ(expected.data_type, actual.data_type);
+  switch (expected.data_type) {
+    case ZX_DEVICE_PROPERTY_VALUE_INT: {
+      ASSERT_EQ(expected.data.int_value, actual.data.int_value);
+      break;
+    }
+    case ZX_DEVICE_PROPERTY_VALUE_STRING: {
+      ASSERT_STREQ(expected.data.str_value, actual.data.str_value);
+      break;
+    }
+    case ZX_DEVICE_PROPERTY_VALUE_BOOL: {
+      ASSERT_EQ(expected.data.bool_value, actual.data.bool_value);
+      break;
+    }
+    case ZX_DEVICE_PROPERTY_VALUE_ENUM: {
+      ASSERT_STREQ(expected.data.enum_value, actual.data.enum_value);
+      break;
+    }
+    default: {
+      ASSERT_TRUE(false);
+    }
+  }
+}
+
 class DeviceGroupTest : public zxtest::Test {};
 
 TEST_F(DeviceGroupTest, CreateAcceptBindRules) {
@@ -325,6 +367,76 @@ TEST_F(DeviceGroupTest, CreateBindPropertiesWithContants) {
       ddk::MakeProperty(bind_testlib::ENUM_PROP, bind_testlib::ENUM_PROP_VALUE);
   ASSERT_STREQ(bind_testlib::ENUM_PROP, enum_val_bind_prop.key.data.str_key);
   ASSERT_STREQ(bind_testlib::ENUM_PROP_VALUE, enum_val_bind_prop.value.data.enum_value);
+}
+
+TEST_F(DeviceGroupTest, CreateDeviceGroupDescValues) {
+  const ddk::DeviceGroupBindRule kBindRules[] = {
+      ddk::MakeAcceptBindRule("test", static_cast<uint32_t>(10)),
+  };
+
+  const device_bind_prop_t kBindProperties[] = {
+      ddk::MakeProperty("test", static_cast<uint32_t>(10)),
+  };
+
+  auto device_group_desc = ddk::DeviceGroupDesc(kBindRules, kBindProperties);
+
+  {
+    auto dealloc_props = std::vector{
+        ddk::MakeProperty("test", static_cast<uint32_t>(10)),
+        ddk::MakeProperty("swallow", true),
+    };
+
+    // Store the int values dynacmically into a vector and then pass
+    // it to |device_group_desc|.
+    uint32_t kTestDeallocIntValues[] = {10, 20, 100};
+    std::vector<ddk::DeviceGroupBindRule> dealloc_rules;
+    for (auto val : kTestDeallocIntValues) {
+      dealloc_rules.push_back(ddk::MakeAcceptBindRule("test", val));
+    }
+    device_group_desc.AddNode(dealloc_rules, dealloc_props);
+  }
+
+  // Verifying the device group desc.
+  auto desc = device_group_desc.get();
+  ASSERT_EQ(2, desc.nodes_count);
+
+  // Verify the bind properties in the first node.
+  auto node_1 = desc.nodes[0];
+  ASSERT_EQ(1, node_1.bind_property_count);
+  VerifyPropertyKey(device_bind_prop_str_key("test"), node_1.bind_properties[0].key);
+  VerifyPropertyValue(device_bind_prop_int_val(10), node_1.bind_properties[0].value);
+
+  // Verify the bind rules in the first node.
+  ASSERT_EQ(1, node_1.bind_rule_count);
+  VerifyPropertyKey(device_bind_prop_str_key("test"), node_1.bind_rules[0].key);
+  ASSERT_EQ(DEVICE_BIND_RULE_CONDITION_ACCEPT, node_1.bind_rules[0].condition);
+  ASSERT_EQ(1, node_1.bind_rules[0].values_count);
+  VerifyPropertyValue(device_bind_prop_int_val(10), node_1.bind_rules[0].values[0]);
+
+  // Verify the bind properties in the second node.
+  auto node_2 = desc.nodes[1];
+  ASSERT_EQ(2, node_2.bind_property_count);
+  VerifyPropertyKey(device_bind_prop_str_key("test"), node_2.bind_properties[0].key);
+  VerifyPropertyValue(device_bind_prop_int_val(10), node_2.bind_properties[0].value);
+  VerifyPropertyKey(device_bind_prop_str_key("swallow"), node_2.bind_properties[1].key);
+  VerifyPropertyValue(device_bind_prop_bool_val(true), node_2.bind_properties[1].value);
+
+  // Verify the bind rules in the second node.
+  ASSERT_EQ(3, node_2.bind_rule_count);
+  VerifyPropertyKey(device_bind_prop_str_key("test"), node_2.bind_rules[0].key);
+  ASSERT_EQ(DEVICE_BIND_RULE_CONDITION_ACCEPT, node_2.bind_rules[0].condition);
+  ASSERT_EQ(1, node_2.bind_rules[1].values_count);
+  VerifyPropertyValue(device_bind_prop_int_val(10), node_2.bind_rules[0].values[0]);
+
+  VerifyPropertyKey(device_bind_prop_str_key("test"), node_2.bind_rules[1].key);
+  ASSERT_EQ(DEVICE_BIND_RULE_CONDITION_ACCEPT, node_2.bind_rules[1].condition);
+  ASSERT_EQ(1, node_2.bind_rules[1].values_count);
+  VerifyPropertyValue(device_bind_prop_int_val(20), node_2.bind_rules[1].values[0]);
+
+  VerifyPropertyKey(device_bind_prop_str_key("test"), node_2.bind_rules[2].key);
+  ASSERT_EQ(DEVICE_BIND_RULE_CONDITION_ACCEPT, node_2.bind_rules[2].condition);
+  ASSERT_EQ(1, node_2.bind_rules[2].values_count);
+  VerifyPropertyValue(device_bind_prop_int_val(100), node_2.bind_rules[2].values[0]);
 }
 
 }  // namespace
