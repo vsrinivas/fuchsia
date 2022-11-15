@@ -27,10 +27,10 @@ use {
     ftest::Invocation,
     ftest_manager::{CaseStatus, LaunchError, SuiteEvent as FidlSuiteEvent, SuiteStatus},
     fuchsia_async::{self as fasync, TimeoutExt},
-    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_component_test::{
-        error::Error as RealmBuilderError, Capability, ChildOptions, Event, LocalComponentHandles,
-        RealmBuilder, RealmInstance, Ref, Route,
+        error::Error as RealmBuilderError, Capability, ChildOptions, Event, RealmBuilder,
+        RealmInstance, Ref, Route,
     },
     fuchsia_url::AbsoluteComponentUrl,
     fuchsia_zircon as zx,
@@ -58,7 +58,6 @@ use {
 };
 
 const WRAPPER_REALM_NAME: &'static str = "test_wrapper";
-const MOCKS_SERVER_REALM_NAME: &'static str = "mocks-server";
 const ENCLOSING_ENV_REALM_NAME: &'static str = "enclosing_env";
 
 const ARCHIVIST_REALM_NAME: &'static str = "archivist";
@@ -538,14 +537,6 @@ async fn get_realm(
     let wrapper_realm =
         builder.add_child_realm(WRAPPER_REALM_NAME, ChildOptions::new().eager()).await?;
 
-    let mocks_server = wrapper_realm
-        .add_local_child(
-            MOCKS_SERVER_REALM_NAME,
-            move |handles| Box::pin(serve_mocks(handles)),
-            ChildOptions::new(),
-        )
-        .await?;
-
     let hermetic_test_package_name = Arc::new(test_package.to_owned());
     let other_allowed_packages = get_allowed_package_value(&test_url, &suite_facet);
 
@@ -673,24 +664,14 @@ async fn get_realm(
         )
         .await?;
 
-    // Mocks server to test root
-    wrapper_realm
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol::<fdiagnostics::ArchiveAccessorMarker>())
-                .from(&mocks_server)
-                .to(&test_root),
-        )
-        .await?;
-
-    // archivist to parent and mocks
+    // archivist to parent and test root
     wrapper_realm
         .add_route(
             Route::new()
                 .capability(Capability::protocol::<fdiagnostics::ArchiveAccessorMarker>())
                 .from(&archivist)
                 .to(Ref::parent())
-                .to(&mocks_server),
+                .to(&test_root),
         )
         .await?;
 
@@ -1082,33 +1063,6 @@ fn enumeration_error(err: fidl::Error) -> anyhow::Error {
         ),
         err => err.into(),
     }
-}
-
-async fn serve_mocks(mut handles: LocalComponentHandles) -> Result<(), Error> {
-    let mut outgoing_dir_handle = zx::Handle::invalid().into();
-    std::mem::swap(&mut handles.outgoing_dir, &mut outgoing_dir_handle);
-    let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(move |stream| {
-        let archive_accessor =
-            match handles.connect_to_protocol::<fdiagnostics::ArchiveAccessorMarker>() {
-                Ok(accessor) => accessor,
-                Err(e) => {
-                    warn!("Mock failed to connect to Archivist: {:?}", e);
-                    return;
-                }
-            };
-        fasync::Task::spawn(async move {
-            diagnostics::run_intermediary_archive_accessor(archive_accessor, stream)
-                .await
-                .unwrap_or_else(|e| {
-                    warn!("Couldn't run proxied ArchiveAccessor: {:?}", e);
-                })
-        })
-        .detach()
-    });
-    fs.serve_connection(outgoing_dir_handle)?;
-    fs.collect::<()>().await;
-    Ok(())
 }
 
 /// Listen for test completion on the given |listener|. Returns None if the channel is closed
