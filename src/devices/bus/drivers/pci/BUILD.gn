@@ -18,10 +18,6 @@ source_set("user_pci") {
     "test/:*",
   ]
 
-  if (userspace_pci_enable_msi_x) {
-    defines = [ "ENABLE_MSIX" ]
-  }
-
   sources = [
     "allocation.cc",
     "banjo.cc",

@@ -217,7 +217,6 @@ zx_status_t BanjoDevice::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
   }
 
   size_t bar_size = bar->size;
-#ifdef ENABLE_MSIX
   // If this device shares BAR data with either of the MSI-X tables then we need
   // to determine what portions of the BAR the driver can be permitted to
   // access.
@@ -228,7 +227,6 @@ zx_status_t BanjoDevice::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
     }
     bar_size = result.value();
   }
-#endif
 
   out_bar->bar_id = bar_id;
   out_bar->size = bar_size;

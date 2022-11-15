@@ -21,10 +21,6 @@ test("pci-unit") {
     "unit/device_tests.cc",
   ]
 
-  if (userspace_pci_enable_msi_x) {
-    defines = [ "ENABLE_MSIX" ]
-  }
-
   deps = [
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/bus/drivers/pci:user_pci",
@@ -51,10 +47,6 @@ test("pci-unit-fake_ddk") {
     "unit/fake_pciroot_tests.cc",
     "unit/msix_tests.cc",
   ]
-
-  if (userspace_pci_enable_msi_x) {
-    defines = [ "ENABLE_MSIX" ]
-  }
 
   deps = [
     "//sdk/lib/inspect/testing/cpp:zxtest",
@@ -128,10 +120,6 @@ fuchsia_driver("pci_protocol_test_driver-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-
-  if (userspace_pci_enable_msi_x) {
-    defines = [ "ENABLE_MSIX" ]
-  }
 
   sources = [ "driver/protocol_test_driver.cc" ]
   deps = [

@@ -408,7 +408,6 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
                       inspect::StringPropertyValue(Device::Inspect::kInspectIrqModes[mode])));
   }
 
-#ifdef ENABLE_MSIX
   {
     const pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_MSI_X;
     ASSERT_OK(dev->PciSetInterruptMode(mode, 1));
@@ -419,7 +418,6 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
         CheckProperty(node->node(), Device::Inspect::kInspectIrqMode,
                       inspect::StringPropertyValue(Device::Inspect::kInspectIrqModes[mode])));
   }
-#endif
 }
 
 TEST_F(PciDeviceTests, InspectLegacy) {
@@ -462,7 +460,6 @@ TEST_F(PciDeviceTests, InspectLegacy) {
   }
 }
 
-#ifdef ENABLE_MSIX
 TEST_F(PciDeviceTests, InspectMsi) {
   const uint32_t irq_cnt = 4;
   auto dev = std::make_unique<BanjoDevice>(
@@ -485,7 +482,6 @@ TEST_F(PciDeviceTests, InspectMsi) {
   ASSERT_NO_FATAL_FAILURE(CheckProperty(node, Device::Inspect::kInspectMsiAllocated,
                                         inspect::UintPropertyValue(irq_cnt)));
 }
-#endif
 
 // Verify that power state transitions wait the necessary amount of time, and that they end up in
 // the correct state.

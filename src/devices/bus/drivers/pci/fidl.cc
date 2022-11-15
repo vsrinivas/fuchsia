@@ -194,7 +194,6 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
   }
 
   size_t bar_size = bar->size;
-#ifdef ENABLE_MSIX
   // If this device shares BAR data with either of the MSI-X tables then we need
   // to determine what portions of the BAR the driver can be permitted to
   // access. If the MSI-X bar exists in the only page present in the BAR then we
@@ -207,7 +206,6 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
     }
     bar_size = result.value();
   }
-#endif
 
   zx_status_t status = ZX_OK;
   if (bar->is_mmio) {

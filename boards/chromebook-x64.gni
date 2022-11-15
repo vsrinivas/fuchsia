@@ -11,7 +11,6 @@ board_information_for_assembly =
 # userspace PCI migration flags (Chromebook needs more testing)
 # fxbug.dev/32978
 platform_enable_user_pci = false
-userspace_pci_enable_msi_x = false
 
 board_name = "chromebook-x64"
 

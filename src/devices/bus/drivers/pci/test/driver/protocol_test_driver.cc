@@ -244,11 +244,9 @@ TEST_F(PciProtocolTests, GetBar1) {
 }
 
 TEST_F(PciProtocolTests, GetBar2) {
-#ifdef ENABLE_MSIX
   pci_bar_t info = {};
   // BAR 2 contains MSI-X registers and should be denied
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED, pci().GetBar(2, &info));
-#endif
 }
 
 TEST_F(PciProtocolTests, GetBar3) {
@@ -444,7 +442,6 @@ TEST_F(PciProtocolTests, GetDeviceInfo) {
   ASSERT_EQ(func_id, info.func_id);
 }
 
-#ifdef ENABLE_MSIX
 // MSI-X interrupts should be bound by the platform support.
 TEST_F(PciProtocolTests, MsiX) {
   pci_interrupt_modes_t modes{};
@@ -462,7 +459,6 @@ TEST_F(PciProtocolTests, MsiX) {
   }
   EXPECT_OK(pci().SetInterruptMode(PCI_INTERRUPT_MODE_DISABLED, 0));
 }
-#endif
 
 // Ensure that bus mastering is enabled when requesting MSI modes.
 TEST_F(PciProtocolTests, MsiEnablesBusMastering) {
@@ -472,12 +468,10 @@ TEST_F(PciProtocolTests, MsiEnablesBusMastering) {
   ASSERT_OK(pci().ReadConfig16(PCI_CONFIG_COMMAND, &value));
   ASSERT_EQ(PCI_CONFIG_COMMAND_BUS_MASTER_EN, value & PCI_CONFIG_COMMAND_BUS_MASTER_EN);
 
-#ifdef ENABLE_MSIX
   pci().SetBusMastering(false);
   ASSERT_OK(pci().SetInterruptMode(PCI_INTERRUPT_MODE_MSI_X, 1));
   ASSERT_OK(pci().ReadConfig16(PCI_CONFIG_COMMAND, &value));
   ASSERT_EQ(PCI_CONFIG_COMMAND_BUS_MASTER_EN, value & PCI_CONFIG_COMMAND_BUS_MASTER_EN);
-#endif
 }
 
 // The Quadro card supports 4 MSI interrupts.
@@ -509,9 +503,7 @@ TEST_F(PciProtocolTests, GetInterruptModes) {
   pci().GetInterruptModes(&modes);
   EXPECT_EQ(modes.has_legacy, PCI_LEGACY_INT_COUNT);
   EXPECT_EQ(modes.msi_count, pci::MsiCapability::MmcToCount(msi_ctrl.mm_capable()));
-#ifdef ENABLE_MSIX
   EXPECT_EQ(modes.msix_count, kFakeQuadroMsiXIrqCnt);
-#endif
 }
 
 // TODO(fxbug.dev/61631): Without USERSPACE_PCI defined in proxy it presently
