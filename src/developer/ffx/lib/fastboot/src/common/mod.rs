@@ -579,7 +579,7 @@ where
     P: Product<Part>,
 {
     flash_partitions(writer, file_resolver, product.partitions(), fastboot_proxy).await?;
-    if is_userspace_fastboot(fastboot_proxy).await? {
+    if !cmd.no_bootloader_reboot && is_userspace_fastboot(fastboot_proxy).await? {
         write!(writer, "Rebooting into updated userspace fastboot...\n")?;
         reboot_bootloader(writer, &fastboot_proxy).await?;
     }
