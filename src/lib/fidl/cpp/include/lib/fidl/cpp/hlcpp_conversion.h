@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_HLCPP_CONVERSION_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_HLCPP_CONVERSION_H_
 
+#include <lib/fidl/cpp/box.h>
 #include <lib/fidl/cpp/enum.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/wire/wire_types.h>
@@ -227,11 +228,43 @@ struct NaturalToHLCPPTraits<std::unique_ptr<Natural>> {
   }
 };
 
-/* HLCPP to Natural type traits for boxed types */
+/* HLCPP to Natural type traits for optional unions */
 template <typename HLCPP>
-struct HLCPPToNaturalTraits<std::unique_ptr<HLCPP>> {
+struct HLCPPToNaturalTraits<
+    std::unique_ptr<HLCPP>,
+    std::enable_if_t<IsUnion<typename HLCPPToNaturalTraits<HLCPP>::NaturalType>::value>> {
   using HLCPPInnerTraits = HLCPPToNaturalTraits<HLCPP>;
   using NaturalType = std::unique_ptr<typename HLCPPInnerTraits::NaturalType>;
+  static inline NaturalType Convert(std::unique_ptr<HLCPP>&& hlcpp) {
+    if (hlcpp) {
+      return std::make_unique<typename HLCPPInnerTraits::NaturalType>(
+          HLCPPInnerTraits::Convert(std::move(*hlcpp)));
+    }
+    return nullptr;
+  }
+};
+
+/* Natural to HLCPP type traits for boxed types */
+template <typename Natural>
+struct NaturalToHLCPPTraits<fidl::Box<Natural>> {
+  using NaturalInnerTraits = NaturalToHLCPPTraits<Natural>;
+  using HLCPPType = std::unique_ptr<typename NaturalInnerTraits::HLCPPType>;
+  static inline HLCPPType Convert(fidl::Box<Natural>&& natural) {
+    if (natural) {
+      return std::make_unique<typename NaturalInnerTraits::HLCPPType>(
+          NaturalInnerTraits::Convert(std::move(*natural)));
+    }
+    return nullptr;
+  }
+};
+
+/* HLCPP to Natural type traits for boxed structs */
+template <typename HLCPP>
+struct HLCPPToNaturalTraits<
+    std::unique_ptr<HLCPP>,
+    std::enable_if_t<!IsUnion<typename HLCPPToNaturalTraits<HLCPP>::NaturalType>::value>> {
+  using HLCPPInnerTraits = HLCPPToNaturalTraits<HLCPP>;
+  using NaturalType = fidl::Box<typename HLCPPInnerTraits::NaturalType>;
   static inline NaturalType Convert(std::unique_ptr<HLCPP>&& hlcpp) {
     if (hlcpp) {
       return std::make_unique<typename HLCPPInnerTraits::NaturalType>(

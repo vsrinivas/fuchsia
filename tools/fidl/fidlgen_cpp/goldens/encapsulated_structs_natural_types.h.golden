@@ -401,7 +401,7 @@ class NonInlineStructTestStruct {
 
  public:
   NonInlineStructTestStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  NonInlineStructTestStruct(::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element, ::zx::handle h) noexcept
+  NonInlineStructTestStruct(::fidl::Box<::test_encapsulatedstructs::Int16Int8> element, ::zx::handle h) noexcept
       : storage_({.element = std::move(element),
                   .h = std::move(h)}) {}
 
@@ -414,19 +414,19 @@ class NonInlineStructTestStruct {
   NonInlineStructTestStruct(NonInlineStructTestStruct&&) noexcept = default;
   NonInlineStructTestStruct& operator=(NonInlineStructTestStruct&&) noexcept = default;
 
-  const ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>&
+  const ::fidl::Box<::test_encapsulatedstructs::Int16Int8>&
   element() const {
     return storage_.element;
   }
 
-  ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>& element() {
+  ::fidl::Box<::test_encapsulatedstructs::Int16Int8>& element() {
     return storage_.element;
   }
 
   // Setter for element.
   //
 
-  NonInlineStructTestStruct& element(::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> value) {
+  NonInlineStructTestStruct& element(::fidl::Box<::test_encapsulatedstructs::Int16Int8> value) {
     storage_.element = std::move(value);
     return *this;
   }
@@ -455,7 +455,7 @@ class NonInlineStructTestStruct {
 
  private:
   struct Storage_ final {
-    ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element;
+    ::fidl::Box<::test_encapsulatedstructs::Int16Int8> element;
     ::zx::handle h;
   };
 
@@ -463,7 +463,7 @@ class NonInlineStructTestStruct {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct, 16>;
   friend struct ::fidl::internal::MemberVisitor<::test_encapsulatedstructs::NonInlineStructTestStruct>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>, fidl::internal::NaturalCodingConstraintEmpty>{
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fidl::Box<::test_encapsulatedstructs::Int16Int8>, fidl::internal::NaturalCodingConstraintEmpty>{
                                                        &Storage_::element, 0},
                                                    ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE, 0x80000000, false>>{&Storage_::h, 8});
   static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{

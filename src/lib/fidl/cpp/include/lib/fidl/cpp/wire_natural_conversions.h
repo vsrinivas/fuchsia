@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_WIRE_NATURAL_CONVERSIONS_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_WIRE_NATURAL_CONVERSIONS_H_
 
+#include <lib/fidl/cpp/box.h>
 #include <lib/fidl/cpp/wire/object_view.h>
 #include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/fidl/cpp/wire/traits.h>
@@ -191,16 +192,15 @@ struct WireTypeForNaturalType<std::array<NaturalType, N>> {
 };
 
 template <typename WireType, typename NaturalType>
-struct WireNaturalConversionTraits<fidl::ObjectView<WireType>, std::unique_ptr<NaturalType>> {
-  static std::unique_ptr<NaturalType> ToNatural(fidl::ObjectView<WireType> src) {
+struct WireNaturalConversionTraits<fidl::ObjectView<WireType>, fidl::Box<NaturalType>> {
+  static fidl::Box<NaturalType> ToNatural(fidl::ObjectView<WireType> src) {
     if (!src) {
       return nullptr;
     }
     return std::make_unique<NaturalType>(
         WireNaturalConversionTraits<WireType, NaturalType>::ToNatural(std::move(*src)));
   }
-  static fidl::ObjectView<WireType> ToWire(fidl::AnyArena& arena,
-                                           std::unique_ptr<NaturalType> src) {
+  static fidl::ObjectView<WireType> ToWire(fidl::AnyArena& arena, fidl::Box<NaturalType> src) {
     if (!src) {
       return nullptr;
     }
@@ -211,10 +211,10 @@ struct WireNaturalConversionTraits<fidl::ObjectView<WireType>, std::unique_ptr<N
 
 template <typename WireType>
 struct NaturalTypeForWireType<fidl::ObjectView<WireType>> {
-  using type = std::unique_ptr<typename NaturalTypeForWireType<WireType>::type>;
+  using type = fidl::Box<typename NaturalTypeForWireType<WireType>::type>;
 };
 template <typename NaturalType>
-struct WireTypeForNaturalType<std::unique_ptr<NaturalType>> {
+struct WireTypeForNaturalType<fidl::Box<NaturalType>> {
   using type = fidl::ObjectView<typename WireTypeForNaturalType<NaturalType>::type>;
 };
 

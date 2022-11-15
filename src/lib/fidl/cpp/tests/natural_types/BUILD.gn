@@ -14,6 +14,7 @@ test("fidl_cpp_natural_type_api_tests_bin") {
   output_name = "fidl_cpp_natural_type_api_tests"
   sources = [
     "bits_test.cc",
+    "box_test.cc",
     "enum_test.cc",
     "struct_test.cc",
     "table_test.cc",

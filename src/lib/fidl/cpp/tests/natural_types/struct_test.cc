@@ -99,6 +99,53 @@ TEST(Struct, Equality) {
   EXPECT_NE(test_types::VectorStruct{{.v = vec}}, test_types::VectorStruct{{.v = {}}});
 }
 
+TEST(Struct, EqualityOfOptionalFields) {
+  const test_types::StructOfOptionals opts1 = {{
+      .s = std::make_optional<std::string>("test"),
+      .v = {},
+      .t = std::make_unique<test_types::CopyableStruct>(1),
+  }};
+  const test_types::StructOfOptionals opts2 = {{
+      .s = std::make_optional<std::string>("test"),
+      .v = {},
+      .t = std::make_unique<test_types::CopyableStruct>(1),
+  }};
+  const test_types::StructOfOptionals different_inlined = {{
+      .s = std::make_optional<std::string>("different"),
+      .v = {},
+      .t = std::make_unique<test_types::CopyableStruct>(1),
+  }};
+  const test_types::StructOfOptionals different_boxed = {{
+      .s = std::make_optional<std::string>("test"),
+      .v = {},
+      .t = std::make_unique<test_types::CopyableStruct>(1000),
+  }};
+  EXPECT_EQ(opts1.s(), opts2.s());
+  EXPECT_EQ(opts1.v(), opts2.v());
+  EXPECT_EQ(opts1.t(), opts2.t());
+  EXPECT_EQ(opts1, opts1);
+  EXPECT_EQ(opts1, opts2);
+  EXPECT_NE(opts1, different_inlined);
+  EXPECT_NE(opts1, different_boxed);
+  EXPECT_EQ(opts1.s(), different_boxed.s());
+  EXPECT_NE(opts1.t(), different_boxed.t());
+  EXPECT_EQ(different_boxed, different_boxed);
+  EXPECT_EQ(different_inlined, different_inlined);
+
+  const test_types::StructOfOptionals absent1 = {};
+  const test_types::StructOfOptionals absent2 = {};
+  EXPECT_EQ(absent1, absent2);
+  EXPECT_EQ(absent1.s(), absent2.s());
+  EXPECT_EQ(absent1.v(), absent2.v());
+  EXPECT_EQ(absent1.t(), absent2.t());
+  EXPECT_NE(absent1.t(), different_boxed.t());
+  EXPECT_NE(absent1, different_boxed);
+
+  EXPECT_EQ(absent1.s(), std::nullopt);
+  EXPECT_EQ(absent1.v(), std::nullopt);
+  EXPECT_EQ(absent1.t(), nullptr);
+}
+
 TEST(Struct, Setters) {
   test_types::CopyableStruct cs;
   EXPECT_EQ(cs.x(), 0);
@@ -162,6 +209,27 @@ TEST(Struct, Copy) {
   test_types::VectorStruct copy = original;
   EXPECT_EQ(copy, original);
   original.v().push_back(4);
+  EXPECT_NE(copy, original);
+}
+
+TEST(Struct, CopyBoxedField) {
+  test_types::StructOfOptionals original{{
+      .s = "a",
+      .v = std::vector<uint32_t>{},
+      .t = std::make_unique<test_types::CopyableStruct>(1),
+  }};
+  test_types::StructOfOptionals copy = original;
+  EXPECT_EQ(copy, original);
+  ASSERT_TRUE(original.v().has_value());
+  original.v().value().push_back(4);
+  EXPECT_NE(copy, original);
+}
+
+TEST(Struct, CopyAbsentBoxedField) {
+  test_types::StructOfOptionals original;
+  test_types::StructOfOptionals copy = original;
+  EXPECT_EQ(copy, original);
+  original.t(std::make_unique<test_types::CopyableStruct>());
   EXPECT_NE(copy, original);
 }
 

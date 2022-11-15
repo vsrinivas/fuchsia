@@ -46,7 +46,7 @@ std::ostream& fidl::ostream::Formatter<::test_encapsulatedstructs::NonInlineStru
   os << "test_encapsulatedstructs::NonInlineStructTestStruct";
   os << "{ ";
   os << "element";
-  os << " = " << fidl::ostream::Formatted<::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>>(value.element()) << ", ";
+  os << " = " << fidl::ostream::Formatted<::fidl::Box<::test_encapsulatedstructs::Int16Int8>>(value.element()) << ", ";
   os << "h";
   os << " = " << fidl::ostream::Formatted<::zx::handle>(value.h()) << ", ";
   os << "}";

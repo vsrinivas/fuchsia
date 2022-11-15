@@ -59,13 +59,13 @@ namespace internal {
 
 ::test_encapsulatedstructs::NonInlineStructTestStruct WireNaturalConversionTraits<::test_encapsulatedstructs::wire::NonInlineStructTestStruct, ::test_encapsulatedstructs::NonInlineStructTestStruct>::ToNatural(::test_encapsulatedstructs::wire::NonInlineStructTestStruct src) {
   return ::test_encapsulatedstructs::NonInlineStructTestStruct{{
-      .element = WireNaturalConversionTraits<::fidl::ObjectView<::test_encapsulatedstructs::wire::Int16Int8>, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>>::ToNatural(std::move(src.element)),
+      .element = WireNaturalConversionTraits<::fidl::ObjectView<::test_encapsulatedstructs::wire::Int16Int8>, ::fidl::Box<::test_encapsulatedstructs::Int16Int8>>::ToNatural(std::move(src.element)),
       .h = WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToNatural(std::move(src.h)),
   }};
 }
 ::test_encapsulatedstructs::wire::NonInlineStructTestStruct WireNaturalConversionTraits<::test_encapsulatedstructs::wire::NonInlineStructTestStruct, ::test_encapsulatedstructs::NonInlineStructTestStruct>::ToWire(fidl::AnyArena& arena, ::test_encapsulatedstructs::NonInlineStructTestStruct src) {
   return ::test_encapsulatedstructs::wire::NonInlineStructTestStruct{
-      .element = WireNaturalConversionTraits<::fidl::ObjectView<::test_encapsulatedstructs::wire::Int16Int8>, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>>::ToWire(arena, std::move(src.element())),
+      .element = WireNaturalConversionTraits<::fidl::ObjectView<::test_encapsulatedstructs::wire::Int16Int8>, ::fidl::Box<::test_encapsulatedstructs::Int16Int8>>::ToWire(arena, std::move(src.element())),
       .h = WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToWire(arena, std::move(src.h())),
   };
 }

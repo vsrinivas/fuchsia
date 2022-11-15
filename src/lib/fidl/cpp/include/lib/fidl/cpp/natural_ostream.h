@@ -5,6 +5,8 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_OSTREAM_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_OSTREAM_H_
 
+#include <lib/fidl/cpp/box.h>
+
 #include <iostream>
 #include <optional>
 
@@ -213,6 +215,17 @@ struct Formatter<std::optional<T>> {
 template <typename T>
 struct Formatter<std::unique_ptr<T>> {
   static std::ostream& Format(std::ostream& os, const std::unique_ptr<T>& value) {
+    if (value) {
+      return Formatter<T>::Format(os, *value);
+    } else {
+      return os << "null";
+    }
+  }
+};
+
+template <typename T>
+struct Formatter<fidl::Box<T>> {
+  static std::ostream& Format(std::ostream& os, const fidl::Box<T>& value) {
     if (value) {
       return Formatter<T>::Format(os, *value);
     } else {

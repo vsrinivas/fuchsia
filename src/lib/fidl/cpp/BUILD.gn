@@ -20,6 +20,7 @@ sdk_source_set("cpp_base") {
   build_as_static = true
 
   public = [
+    "include/lib/fidl/cpp/box.h",
     "include/lib/fidl/cpp/internal/natural_types.h",
     "include/lib/fidl/cpp/internal/transport_err.h",
     "include/lib/fidl/cpp/natural_coding_traits.h",
@@ -93,11 +94,15 @@ sdk_source_set("hlcpp_conversion") {
   sdk_name = "fidl_cpp_hlcpp_conversion"
   public = [ "include/lib/fidl/cpp/hlcpp_conversion.h" ]
   public_configs = [ ":cpp_base.headers" ]
-  public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
+  public_deps = [
+    "//sdk/lib/fidl/cpp:cpp_base",
+    "//src/lib/fidl/cpp:cpp_base",
+  ]
 }
 
 # The support header for Natural type printing
 source_set("natural_ostream") {
   public = [ "include/lib/fidl/cpp/natural_ostream.h" ]
+  public_deps = [ "//src/lib/fidl/cpp:cpp_base" ]
   public_configs = [ ":cpp_base.headers" ]
 }

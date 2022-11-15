@@ -146,7 +146,7 @@ func (b *builder) visitStructOrTable(value gidlir.Record, decl gidlmixer.RecordD
 	var op string
 	if isPointer {
 		op = "->"
-		b.write("auto %s = std::make_unique<%s>(%s);\n", s, typeNameIgnoreNullable(decl), structRaw)
+		b.write("auto %s = fidl::Box(std::make_unique<%s>(%s));\n", s, typeNameIgnoreNullable(decl), structRaw)
 	} else {
 		op = "."
 		b.write("auto %s = %s;\n", s, structRaw)
@@ -207,7 +207,6 @@ func (a *builder) visitVector(value []gidlir.Value, decl *gidlmixer.VectorDecl, 
 	// Special case unsigned integer vectors, because clang otherwise has issues with large vectors on arm.
 	// This uses pattern matching so only a subset of byte vectors that fit the pattern (repeating sequence) will be optimized.
 	if elemDecl, ok := decl.Elem().(gidlmixer.PrimitiveDeclaration); ok && elemDecl.Subtype() == fidlgen.Uint8 {
-
 		var uintValues []uint64
 		for _, v := range value {
 			uintValues = append(uintValues, v.(uint64))
@@ -257,7 +256,7 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 		return "std::string"
 	case *gidlmixer.StructDecl:
 		if !ignoreNullable && decl.IsNullable() {
-			return fmt.Sprintf("std::unique_ptr<%s>", declName(decl))
+			return fmt.Sprintf("fidl::Box<%s>", declName(decl))
 		}
 		return declName(decl)
 	case *gidlmixer.UnionDecl:

@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_NATURAL_TYPES_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_NATURAL_TYPES_H_
 
+#include <lib/fidl/cpp/box.h>
 #include <lib/fidl/cpp/internal/transport_err.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/natural_encoder.h>
@@ -617,7 +618,20 @@ struct NaturalCloneHelper<std::optional<T>> {
 template <typename T>
 struct NaturalCloneHelper<std::unique_ptr<T>> {
   static std::unique_ptr<T> Clone(const std::unique_ptr<T>& value) {
-    return std::make_unique<T>(*value.get());
+    if (value) {
+      return std::make_unique<T>(*value.get());
+    }
+    return nullptr;
+  }
+};
+
+template <typename T>
+struct NaturalCloneHelper<fidl::Box<T>> {
+  static fidl::Box<T> Clone(const fidl::Box<T>& value) {
+    if (value) {
+      return std::make_unique<T>(*value.unique_ptr().get());
+    }
+    return fidl::Box<T>{};
   }
 };
 

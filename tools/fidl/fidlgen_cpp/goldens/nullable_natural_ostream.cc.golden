@@ -72,7 +72,7 @@ std::ostream& fidl::ostream::Formatter<::test_nullable::StructWithNullableStruct
   os << "test_nullable::StructWithNullableStruct";
   os << "{ ";
   os << "val";
-  os << " = " << fidl::ostream::Formatted<::std::unique_ptr<::test_nullable::Int32Wrapper>>(value.val()) << ", ";
+  os << " = " << fidl::ostream::Formatted<::fidl::Box<::test_nullable::Int32Wrapper>>(value.val()) << ", ";
   os << "}";
   return os;
 }

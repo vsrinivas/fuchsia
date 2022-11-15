@@ -325,7 +325,7 @@ var1.v() = std::move(var2);
 
 TEST(Conformance, GoldenNullableStructNonNull_V2_Encode) {
   auto var1 = test_conformance::GoldenNullableStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
-auto var2 = std::make_unique<test_conformance::GoldenBoolStruct>(test_conformance::GoldenBoolStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}});
+auto var2 = fidl::Box(std::make_unique<test_conformance::GoldenBoolStruct>(test_conformance::GoldenBoolStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}}));
 var2->v() = bool(true);
 var1.v() = std::move(var2);
 
@@ -341,7 +341,7 @@ var1.v() = std::move(var2);
 
 TEST(Conformance, GoldenNullableStructNull_V2_Encode) {
   auto var1 = test_conformance::GoldenNullableStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
-var1.v() = std::unique_ptr<test_conformance::GoldenBoolStruct>();
+var1.v() = fidl::Box<test_conformance::GoldenBoolStruct>();
 
   auto obj = std::move(var1);
   const auto expected_bytes = std::vector<uint8_t>{

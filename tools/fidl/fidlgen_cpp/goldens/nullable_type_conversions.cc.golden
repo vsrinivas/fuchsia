@@ -94,11 +94,11 @@ namespace internal {
 }
 
 ::test_nullable::StructWithNullableStruct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableStruct, ::test_nullable::StructWithNullableStruct>::ToNatural(::test_nullable::wire::StructWithNullableStruct src) {
-  return ::test_nullable::StructWithNullableStruct(WireNaturalConversionTraits<::fidl::ObjectView<::test_nullable::wire::Int32Wrapper>, ::std::unique_ptr<::test_nullable::Int32Wrapper>>::ToNatural(std::move(src.val)));
+  return ::test_nullable::StructWithNullableStruct(WireNaturalConversionTraits<::fidl::ObjectView<::test_nullable::wire::Int32Wrapper>, ::fidl::Box<::test_nullable::Int32Wrapper>>::ToNatural(std::move(src.val)));
 }
 ::test_nullable::wire::StructWithNullableStruct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableStruct, ::test_nullable::StructWithNullableStruct>::ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableStruct src) {
   return ::test_nullable::wire::StructWithNullableStruct{
-      .val = WireNaturalConversionTraits<::fidl::ObjectView<::test_nullable::wire::Int32Wrapper>, ::std::unique_ptr<::test_nullable::Int32Wrapper>>::ToWire(arena, std::move(src.val())),
+      .val = WireNaturalConversionTraits<::fidl::ObjectView<::test_nullable::wire::Int32Wrapper>, ::fidl::Box<::test_nullable::Int32Wrapper>>::ToWire(arena, std::move(src.val())),
   };
 }
 

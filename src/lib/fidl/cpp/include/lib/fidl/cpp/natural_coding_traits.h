@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_CODING_TRAITS_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_CODING_TRAITS_H_
 
+#include <lib/fidl/cpp/box.h>
 #include <lib/fidl/cpp/natural_decoder.h>
 #include <lib/fidl/cpp/natural_encoder.h>
 #include <lib/fidl/cpp/wire/traits.h>
@@ -410,14 +411,14 @@ struct NaturalCodingTraits<cpp17::optional<std::vector<T>>, Constraint> {
 };
 
 template <typename T, typename Constraint>
-struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
+struct NaturalCodingTraits<fidl::Box<T>, Constraint,
                            typename std::enable_if<!IsUnion<T>::value>::type> {
   static constexpr size_t inline_size_v2 = sizeof(uintptr_t);
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(NaturalEncoder* encoder, std::unique_ptr<T>* value, size_t offset,
+  static void Encode(NaturalEncoder* encoder, fidl::Box<T>* value, size_t offset,
                      size_t recursion_depth) {
-    if (value->get()) {
+    if (value->unique_ptr().get()) {
       if (recursion_depth + 1 > kRecursionDepthMax) {
         encoder->SetError(kCodingErrorRecursionDepthExceeded);
         return;
@@ -426,13 +427,13 @@ struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
       *encoder->template GetPtr<uintptr_t>(offset) = FIDL_ALLOC_PRESENT;
 
       size_t alloc_size = NaturalEncodingInlineSize<T, Constraint>(encoder);
-      NaturalCodingTraits<T, Constraint>::Encode(encoder, value->get(), encoder->Alloc(alloc_size),
-                                                 recursion_depth + 1);
+      NaturalCodingTraits<T, Constraint>::Encode(encoder, value->unique_ptr().get(),
+                                                 encoder->Alloc(alloc_size), recursion_depth + 1);
     } else {
       *encoder->template GetPtr<uintptr_t>(offset) = FIDL_ALLOC_ABSENT;
     }
   }
-  static void Decode(NaturalDecoder* decoder, std::unique_ptr<T>* value, size_t offset,
+  static void Decode(NaturalDecoder* decoder, fidl::Box<T>* value, size_t offset,
                      size_t recursion_depth) {
     uintptr_t ptr = *decoder->template GetPtr<uintptr_t>(offset);
     if (!ptr) {
@@ -449,7 +450,7 @@ struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
     if (!decoder->Alloc(alloc_size, &body_offset)) {
       return;
     }
-    NaturalCodingTraits<T, Constraint>::Decode(decoder, value->get(), body_offset,
+    NaturalCodingTraits<T, Constraint>::Decode(decoder, value->unique_ptr().get(), body_offset,
                                                recursion_depth + 1);
   }
 };

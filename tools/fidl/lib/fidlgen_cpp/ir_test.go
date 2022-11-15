@@ -20,13 +20,17 @@ type U = union {
 };
 
 protocol P {
-	M(resource struct { a array<U:optional, 3>; b vector<client_end:<P, optional>>; });
+	M(resource struct {
+		a array<U:optional, 3>;
+		b vector<client_end:<P, optional>>;
+		c box<struct {}>;
+	});
 };
 `))
 	p := onlyProtocol(t, root)
 	assertEqual(t, len(p.Methods), 1)
 	m := p.Methods[0]
-	assertEqual(t, len(m.RequestArgs), 2)
+	assertEqual(t, len(m.RequestArgs), 3)
 
 	ty := m.RequestArgs[0].Type
 	expectEqual(t, ty.HLCPP.String(), "::std::array<::std::unique_ptr<::foo::bar::U>, 3>")
@@ -37,6 +41,11 @@ protocol P {
 	expectEqual(t, ty.HLCPP.String(), "::std::vector<::fidl::InterfaceHandle<::foo::bar::P>>")
 	expectEqual(t, ty.Wire.String(), "::fidl::VectorView<::fidl::ClientEnd<::foo_bar::P>>")
 	expectEqual(t, ty.Unified.String(), "::std::vector<::fidl::ClientEnd<::foo_bar::P>>")
+
+	ty = m.RequestArgs[2].Type
+	expectEqual(t, ty.HLCPP.String(), "::std::unique_ptr<::foo::bar::C>")
+	expectEqual(t, ty.Wire.String(), "::fidl::ObjectView<::foo_bar::wire::C>")
+	expectEqual(t, ty.Unified.String(), "::fidl::Box<::foo_bar::C>")
 }
 
 func makeTestName(s string) nameVariants {

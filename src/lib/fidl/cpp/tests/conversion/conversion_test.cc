@@ -229,7 +229,7 @@ TEST(WireToNaturalConversion, ObjectView) {
   EXPECT_EQ(nullptr, fidl::ToNatural(fidl::ObjectView<test_types::wire::CopyableStruct>()));
 
   fidl::Arena<512> arena;
-  std::unique_ptr<test_types::CopyableStruct> val =
+  fidl::Box<test_types::CopyableStruct> val =
       fidl::ToNatural(fidl::ObjectView<test_types::wire::CopyableStruct>(
           arena, test_types::wire::CopyableStruct{.x = 123}));
   EXPECT_EQ(123, val->x());
@@ -237,10 +237,10 @@ TEST(WireToNaturalConversion, ObjectView) {
 
 TEST(NaturalToWireConversion, ObjectView) {
   fidl::Arena arena;
-  EXPECT_EQ(nullptr, fidl::ToWire(arena, std::unique_ptr<test_types::CopyableStruct>(nullptr)));
+  EXPECT_EQ(nullptr, fidl::ToWire(arena, fidl::Box<test_types::CopyableStruct>(nullptr)));
 
   fidl::ObjectView<test_types::wire::CopyableStruct> val =
-      fidl::ToWire(arena, std::make_unique<test_types::CopyableStruct>(123));
+      fidl::ToWire(arena, fidl::Box(std::make_unique<test_types::CopyableStruct>(123)));
   EXPECT_EQ(123, val->x);
   EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(val.get(), arena));
 }
