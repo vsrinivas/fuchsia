@@ -437,6 +437,15 @@ impl<D: IpDeviceId, S> AddressStatus<(D, S)> {
     }
 }
 
+impl<S> AddressStatus<S> {
+    fn with_device<D: IpDeviceId>(self, device: D) -> AddressStatus<(D, S)> {
+        match self {
+            Self::Present(s) => AddressStatus::Present((device, s)),
+            Self::Unassigned => AddressStatus::Unassigned,
+        }
+    }
+}
+
 /// The status of an IPv4 address.
 pub(crate) enum Ipv4PresentAddressStatus {
     LimitedBroadcast,
@@ -487,7 +496,7 @@ pub(crate) trait IpDeviceContext<I: IpLayerIpExt, C>: IpDeviceIdContext<I> {
     /// Is the device enabled?
     fn is_ip_device_enabled(&self, device_id: &Self::DeviceId) -> bool;
 
-    /// Returns the best local address with communicating with the remote.
+    /// Returns the best local address for communicating with the remote.
     fn get_local_addr_for_remote(
         &self,
         device_id: &Self::DeviceId,
@@ -628,11 +637,26 @@ impl<
             }
         };
 
+        // If the destination is an address assigned on an interface, and an
+        // egress interface wasn't specifically selected, route via the loopback
+        // device. This lets us operate as a strong host when an outgoing
+        // interface is explicitly requested while still enabling local delivery
+        // via the loopback interface, which is acting as a weak host. Note that
+        // if the loopback interface is requested as an outgoing interface,
+        // route selection is still performed as a strong host! This makes the
+        // loopback interface behave more like the other interfaces on the
+        // system.
+        let status = match device {
+            Some(device) => {
+                self.address_status_for_device(addr, device).with_device(device.clone())
+            }
+            None => self.address_status(addr),
+        };
         // Check if locally destined.
         //
         // TODO(https://fxbug.dev/93870): Encode the delivery of locally-
         // destined packets to loopback in the route table.
-        let assigned_device = match self.address_status(addr) {
+        let assigned_device = match status {
             AddressStatus::Present((device_id, status)) => {
                 is_unicast_assigned::<I>(&status).then_some(device_id)
             }
@@ -651,7 +675,7 @@ impl<
                 Err(IpSockUnroutableError::NoRouteToRemoteAddr.into())
             }
         } else {
-            lookup_route(self, ctx, device, addr)
+            lookup_route_table(self, ctx, device, addr)
                 .map(|destination| {
                     let Destination { device, next_hop: _ } = &destination;
                     Ok(IpSockRoute { local_ip: get_local_addr(device, local_ip)?, destination })
@@ -2024,7 +2048,7 @@ fn receive_ip_packet_action_common<
         ctx.increment_counter("receive_ip_packet_action_common::routing_disabled_per_device");
         ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabledInboundIface }
     } else {
-        match lookup_route(sync_ctx, ctx, None, dst_ip) {
+        match lookup_route_table(sync_ctx, ctx, None, dst_ip) {
             Some(dst) => {
                 ctx.increment_counter("receive_ip_packet_action_common::forward");
                 ReceivePacketAction::Forward { dst }
@@ -2038,7 +2062,7 @@ fn receive_ip_packet_action_common<
 }
 
 // Look up the route to a host.
-fn lookup_route<
+fn lookup_route_table<
     I: IpLayerIpExt,
     C: IpLayerNonSyncContext<I, SC::DeviceId>,
     SC: IpLayerContext<I, C>,
@@ -4351,9 +4375,8 @@ mod tests {
     #[test_case(None,
                 Some(Device::Loopback),
                 Device::First.ip_address(),
-                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
-                    next_hop: Device::First.ip_address(), device: Device::Loopback
-                }}); "local delivery specified loopback device no addr")]
+                Err(IpSockRouteError::Unroutable(IpSockUnroutableError::NoRouteToRemoteAddr));
+                "local delivery specified loopback device no addr")]
     #[test_case(None,
                 Some(Device::Loopback),
                 Device::Loopback.ip_address(),
@@ -4363,21 +4386,18 @@ mod tests {
     #[test_case(None,
                 Some(Device::Second),
                 Device::First.ip_address(),
-                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
-                    next_hop: Device::First.ip_address(), device: Device::Loopback
-                }}); "local delivery specified mismatched device no addr")]
+                Err(IpSockRouteError::Unroutable(IpSockUnroutableError::NoRouteToRemoteAddr));
+                "local delivery specified mismatched device no addr")]
     #[test_case(Some(Device::First.ip_address()),
                 Some(Device::Loopback),
                 Device::First.ip_address(),
-                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
-                    next_hop: Device::First.ip_address(), device: Device::Loopback
-                }}); "local delivery specified loopback device")]
+                Err(IpSockRouteError::Unroutable(IpSockUnroutableError::NoRouteToRemoteAddr));
+                "local delivery specified loopback device")]
     #[test_case(Some(Device::First.ip_address()),
                 Some(Device::Second),
                 Device::First.ip_address(),
-                Ok(IpSockRoute { local_ip: Device::First.ip_address(), destination: Destination {
-                    next_hop: Device::First.ip_address(), device: Device::Loopback
-                }}); "local delivery specified mismatched device")]
+                Err(IpSockRouteError::Unroutable(IpSockUnroutableError::NoRouteToRemoteAddr));
+                "local delivery specified mismatched device")]
     #[test_case(None,
                 None,
                 remote_ip::<I>(),
