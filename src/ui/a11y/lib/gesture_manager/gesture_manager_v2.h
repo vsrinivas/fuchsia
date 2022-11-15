@@ -13,33 +13,48 @@
 #include <unordered_map>
 #include <vector>
 
-#include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
+#include "src/ui/a11y/lib/gesture_manager/arena_v2/gesture_arena_v2.h"
 
 namespace a11y {
 
-// Talks to `fuchsia.ui.pointer.augment.TouchSourceWithLocalHit.Watch`
-// to receive touch events and participate in gesture disambiguation.
+// Talks to `fuchsia.ui.pointer.augment.TouchSourceWithLocalHit.Watch` to
+// receive touch events and participate in system-level gesture disambiguation.
 //
 // Starts calling `Watch` immediately upon construction.
 //
-// NOTE: this is just a skeleton, and not instantiated anywhere yet.
+// NOTE: this is not instantiated anywhere yet.
 class GestureManagerV2 {
  public:
+  // Used in unit tests, to inject a fake GestureArena.
+  using ArenaFactory =
+      fit::function<std::unique_ptr<GestureArenaV2>(InteractionTracker::HeldInteractionCallback)>;
+
+  explicit GestureManagerV2(fuchsia::ui::pointer::augment::TouchSourceWithLocalHitPtr touch_source);
+
+  // Used in unit tests, to inject a fake GestureArena.
   explicit GestureManagerV2(fuchsia::ui::pointer::augment::TouchSourceWithLocalHitPtr touch_source,
-                            std::unique_ptr<GestureArena> arena);
+                            ArenaFactory arena_factory);
 
  private:
   // Call `TouchSourceWithLocalHit.Watch` repeatedly, responding to touch events.
   void WatchForTouchEvents(std::vector<fuchsia::ui::pointer::TouchResponse> responses);
 
-  // Scenic fidl to get touch events, and participate in system-level gesture disambiguation.
+  // Send the events to the a11y gesture arena, and generate responses.
+  std::vector<fuchsia::ui::pointer::TouchResponse> HandleEvents(
+      std::vector<fuchsia::ui::pointer::augment::TouchEventWithLocalHit> events);
+
+  // Send the event to the a11y gesture arena, and generate a response.
+  fuchsia::ui::pointer::TouchResponse HandleEvent(
+      const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
+
+  // API to get touch events, and participate in system-level gesture disambiguation.
   fuchsia::ui::pointer::augment::TouchSourceWithLocalHitPtr touch_source_;
 
   // Gesture arena, to perform a11y-specific gesture disambiguation.
   //
-  // Whenever an a11y gesture is recognized, we tell Scenic that those touch
-  // events are ours.
-  std::unique_ptr<GestureArena> arena_;
+  // Whenever an a11y gesture is recognized, we notify the system-level gesture
+  // disambiguation that those touch events are ours.
+  std::unique_ptr<GestureArenaV2> arena_;
 
   std::optional<int32_t> touch_device_id_;
 
@@ -48,12 +63,6 @@ class GestureManagerV2 {
   //
   // All touch events are expected to lie inside this rectangle.
   std::optional<fuchsia::ui::pointer::Rectangle> viewport_bounds_;
-
-  // A list of interactions that are "unresolved" in a11y gesture disambiguation.
-  //
-  // Once the current a11y gesture disambiguation contest ends, we will update
-  // Scenic to let them know whether these interactions belong to us or not.
-  std::vector<fuchsia::ui::pointer::TouchInteractionId> interactions_on_hold_;
 };
 
 }  // namespace a11y

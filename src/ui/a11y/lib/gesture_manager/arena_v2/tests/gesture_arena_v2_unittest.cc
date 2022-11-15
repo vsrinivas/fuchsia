@@ -136,6 +136,8 @@ fuchsia::ui::pointer::augment::TouchEventWithLocalHit touchEvent(const PointerPa
   fuchsia::ui::pointer::TouchEvent inner;
   inner.set_timestamp(event_time);
   inner.set_pointer_sample(std::move(sample));
+  uint64_t trace_flow_id = 0;
+  inner.set_trace_flow_id(trace_flow_id++);
 
   const auto& local_point = ToLocalCoordinates(params.coordinate);
   fuchsia::ui::pointer::augment::TouchEventWithLocalHit event{
@@ -284,7 +286,7 @@ TEST(GestureArenaTest, RoutePointerEvents) {
   std::optional<fuchsia::ui::pointer::TouchInteractionId> interaction_id;
   std::optional<a11y::InteractionTracker::ConsumptionStatus> consumption_status;
   auto callback = [&interaction_id, &consumption_status](
-                      fuchsia::ui::pointer::TouchInteractionId id,
+                      fuchsia::ui::pointer::TouchInteractionId id, uint64_t trace_flow_id,
                       a11y::InteractionTracker::ConsumptionStatus status) {
     interaction_id = id;
     consumption_status = status;
@@ -330,7 +332,7 @@ TEST(GestureArenaTest, FireAcceptCallbackForHeldEvents) {
   std::optional<fuchsia::ui::pointer::TouchInteractionId> interaction_id;
   std::optional<a11y::InteractionTracker::ConsumptionStatus> consumption_status;
   auto callback = [&interaction_id, &consumption_status](
-                      fuchsia::ui::pointer::TouchInteractionId id,
+                      fuchsia::ui::pointer::TouchInteractionId id, uint64_t trace_flow_id,
                       a11y::InteractionTracker::ConsumptionStatus status) {
     interaction_id = id;
     consumption_status = status;
@@ -372,7 +374,7 @@ TEST(GestureArenaTest, FireRejectCallbackForHeldEvents) {
   std::optional<fuchsia::ui::pointer::TouchInteractionId> interaction_id;
   std::optional<a11y::InteractionTracker::ConsumptionStatus> consumption_status;
   auto callback = [&interaction_id, &consumption_status](
-                      fuchsia::ui::pointer::TouchInteractionId id,
+                      fuchsia::ui::pointer::TouchInteractionId id, uint64_t trace_flow_id,
                       a11y::InteractionTracker::ConsumptionStatus status) {
     interaction_id = id;
     consumption_status = status;
@@ -447,6 +449,7 @@ TEST(GestureArenaTest, ConsumeAfterInteraction) {
   std::optional<a11y::InteractionTracker::ConsumptionStatus> actual_status;
   a11y::GestureArenaV2 arena(
       [&actual_interaction, &actual_status](fuchsia::ui::pointer::TouchInteractionId interaction,
+                                            uint64_t trace_flow_id,
                                             a11y::InteractionTracker::ConsumptionStatus status) {
         actual_interaction = interaction;
         actual_status = status;

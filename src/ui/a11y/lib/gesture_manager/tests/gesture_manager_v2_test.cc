@@ -18,16 +18,17 @@
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
+#include "src/ui/a11y/lib/gesture_manager/arena_v2/gesture_arena_v2.h"
 
 namespace accessibility_test {
 namespace {
 
-using a11y::GestureArena;
+using a11y::GestureArenaV2;
 using a11y::GestureManagerV2;
+using ConsumptionStatus = a11y::InteractionTracker::ConsumptionStatus;
 using fidl::Binding;
 using fidl::InterfaceRequest;
 using fuchsia::ui::pointer::EventPhase;
-using fuchsia::ui::pointer::TouchDeviceInfo;
 using fuchsia::ui::pointer::TouchEvent;
 using fuchsia::ui::pointer::TouchInteractionId;
 using fuchsia::ui::pointer::TouchPointerSample;
@@ -62,17 +63,19 @@ std::vector<TouchEventWithLocalHit> n_events(uint64_t n) {
 
 TouchEventWithLocalHit fake_view_parameters() {
   const ViewParameters parameters = {
-      /* view= */ {{0, 0}, {1, 1}},
-      /* viewport= */ {{0, 0}, {1, 1}},
-      /* viewport_to_view_transform= */ {0},
+      .view = {{0, 0}, {1, 1}},
+      .viewport = {{0, 0}, {1, 1}},
+      .viewport_to_view_transform = {0},
   };
 
   TouchEvent inner;
   inner.set_view_parameters(parameters);
 
-  return {/* touch_event= */ std::move(inner),
-          /* local_viewref_koid= */ 0,
-          /* local_point= */ {0, 0}};
+  return {
+      .touch_event = std::move(inner),
+      .local_viewref_koid = 0,
+      .local_point = {0, 0},
+  };
 }
 
 bool interaction_equals(TouchInteractionId id1, TouchInteractionId id2) {
@@ -123,26 +126,36 @@ class FakeTouchSource : public TouchSourceWithLocalHit {
   Binding<TouchSourceWithLocalHit> connected_client_;
 };
 
-class FakeGestureArena : public GestureArena {
+class FakeGestureArena : public GestureArenaV2 {
  public:
-  // |GestureArena|
-  void OnEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) override {}
-
-  void SetFutureStates(std::deque<GestureArena::State> future_states) {
-    FX_CHECK(future_states_.empty());
-    future_states_ = std::move(future_states);
+  explicit FakeGestureArena(a11y::InteractionTracker::HeldInteractionCallback callback =
+                                [](auto...) {}) {
+    callback_ = std::move(callback);
   }
 
-  // |GestureArena|
-  GestureArena::State GetState() override {
-    FX_CHECK(!future_states_.empty());
-    auto state = future_states_.front();
-    future_states_.pop_front();
-    return state;
+  // |GestureArenaV2|
+  ConsumptionStatus OnEvent(
+      const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) override {
+    FX_CHECK(!future_statuses_.empty());
+    auto status = future_statuses_.front();
+    future_statuses_.pop_front();
+    return status;
+  }
+
+  void InvokeCallback(fuchsia::ui::pointer::TouchInteractionId interaction, uint64_t trace_flow_id,
+                      ConsumptionStatus status) {
+    callback_(interaction, trace_flow_id, status);
+  }
+
+  void SetFutureStatuses(std::deque<ConsumptionStatus> statuses) {
+    FX_CHECK(future_statuses_.empty());
+    future_statuses_ = std::move(statuses);
   }
 
  private:
-  std::deque<GestureArena::State> future_states_;
+  a11y::InteractionTracker::HeldInteractionCallback callback_;
+
+  std::deque<ConsumptionStatus> future_statuses_;
 };
 
 class GestureManagerV2Test : public gtest::TestLoopFixture {
@@ -153,10 +166,15 @@ class GestureManagerV2Test : public gtest::TestLoopFixture {
     TouchSourceWithLocalHitPtr client_end;
     auto server_end = client_end.NewRequest();
     fake_touch_source_ = std::make_unique<FakeTouchSource>(std::move(server_end));
-    auto fake_arena = std::make_unique<FakeGestureArena>();
-    fake_arena_ptr_ = fake_arena.get();
+
+    auto arena_factory = [this](a11y::InteractionTracker::HeldInteractionCallback callback) {
+      auto fake_arena = std::make_unique<FakeGestureArena>(std::move(callback));
+      fake_arena_ptr_ = fake_arena.get();
+      return fake_arena;
+    };
+
     gesture_manager_ =
-        std::make_unique<GestureManagerV2>(std::move(client_end), std::move(fake_arena));
+        std::make_unique<GestureManagerV2>(std::move(client_end), std::move(arena_factory));
   }
 
  protected:
@@ -177,11 +195,11 @@ TEST_F(GestureManagerV2Test, RespondToTouchEvents) {
 
   for (const uint32_t n : {3, 0, 1}) {
     auto events = n_events(n);
-    std::deque<GestureArena::State> future_states;
+    std::deque<ConsumptionStatus> statuses;
     for (uint32_t i = 0; i < n; ++i) {
-      future_states.emplace_back(GestureArena::State::kInProgress);
+      statuses.emplace_back(ConsumptionStatus::kUndecided);
     }
-    fake_arena_ptr_->SetFutureStates(future_states);
+    fake_arena_ptr_->SetFutureStatuses(statuses);
     fake_touch_source_->SimulateEvents(std::move(events));
 
     RunLoopUntilIdle();
@@ -203,7 +221,7 @@ TEST_F(GestureManagerV2Test, SimulateOneFingerSingleTap) {
   fake_touch_source_->SimulateEvents(std::move(events));
   RunLoopUntilIdle();
 
-  fake_arena_ptr_->SetFutureStates({GestureArena::State::kInProgress});
+  fake_arena_ptr_->SetFutureStatuses({ConsumptionStatus::kUndecided});
   events.clear();
   events.emplace_back(fake_touch_event(EventPhase::ADD));
   fake_touch_source_->SimulateEvents(std::move(events));
@@ -212,7 +230,7 @@ TEST_F(GestureManagerV2Test, SimulateOneFingerSingleTap) {
   EXPECT_EQ(responses.size(), 1u);
   EXPECT_EQ(responses[0].response_type(), TouchResponseType::MAYBE_PRIORITIZE_SUPPRESS);
 
-  fake_arena_ptr_->SetFutureStates({GestureArena::State::kWinnerAssigned});
+  fake_arena_ptr_->SetFutureStatuses({ConsumptionStatus::kAccept});
   events.clear();
   events.emplace_back(fake_touch_event(EventPhase::CHANGE));
   fake_touch_source_->SimulateEvents(std::move(events));
@@ -221,7 +239,7 @@ TEST_F(GestureManagerV2Test, SimulateOneFingerSingleTap) {
   EXPECT_EQ(responses.size(), 1u);
   EXPECT_EQ(responses[0].response_type(), TouchResponseType::YES_PRIORITIZE);
 
-  fake_arena_ptr_->SetFutureStates({GestureArena::State::kWinnerAssigned});
+  fake_arena_ptr_->SetFutureStatuses({ConsumptionStatus::kAccept});
   events.clear();
   events.emplace_back(fake_touch_event(EventPhase::REMOVE));
   fake_touch_source_->SimulateEvents(std::move(events));
@@ -239,11 +257,11 @@ TEST_F(GestureManagerV2Test, SimulateOneFingerSingleTap) {
 TEST_F(GestureManagerV2Test, SimulateOneFingerDoubleTap) {
   RunLoopUntilIdle();
 
-  fake_arena_ptr_->SetFutureStates({
-      GestureArena::State::kInProgress,
-      GestureArena::State::kInProgress,
-      GestureArena::State::kInProgress,
-      GestureArena::State::kContestEndedWinnerAssigned,
+  fake_arena_ptr_->SetFutureStatuses({
+      ConsumptionStatus::kUndecided,
+      ConsumptionStatus::kUndecided,
+      ConsumptionStatus::kUndecided,
+      ConsumptionStatus::kAccept,
   });
   std::vector<TouchEventWithLocalHit> events;
   events.emplace_back(fake_view_parameters());
@@ -264,6 +282,9 @@ TEST_F(GestureManagerV2Test, SimulateOneFingerDoubleTap) {
   EXPECT_EQ(responses[3].response_type(), TouchResponseType::MAYBE_PRIORITIZE_SUPPRESS);
   EXPECT_EQ(responses[4].response_type(), TouchResponseType::YES_PRIORITIZE);
 
+  fake_arena_ptr_->InvokeCallback(first_interaction, 0, ConsumptionStatus::kAccept);
+  RunLoopUntilIdle();
+
   auto updated_responses = fake_touch_source_->TakeUpdatedResponses();
   EXPECT_EQ(updated_responses.size(), 1u);
   EXPECT_TRUE(interaction_equals(updated_responses[0].first, first_interaction));
@@ -273,15 +294,15 @@ TEST_F(GestureManagerV2Test, SimulateOneFingerDoubleTap) {
 TEST_F(GestureManagerV2Test, SimulateTwoFingerDoubleTap) {
   RunLoopUntilIdle();
 
-  fake_arena_ptr_->SetFutureStates({
-      GestureArena::State::kInProgress,
-      GestureArena::State::kInProgress,
-      GestureArena::State::kInProgress,
-      GestureArena::State::kInProgress,
-      GestureArena::State::kInProgress,
-      GestureArena::State::kInProgress,
-      GestureArena::State::kInProgress,
-      GestureArena::State::kContestEndedWinnerAssigned,
+  fake_arena_ptr_->SetFutureStatuses({
+      ConsumptionStatus::kUndecided,
+      ConsumptionStatus::kUndecided,
+      ConsumptionStatus::kUndecided,
+      ConsumptionStatus::kUndecided,
+      ConsumptionStatus::kUndecided,
+      ConsumptionStatus::kUndecided,
+      ConsumptionStatus::kUndecided,
+      ConsumptionStatus::kAccept,
   });
   std::vector<TouchEventWithLocalHit> events;
   events.emplace_back(fake_view_parameters());
@@ -311,6 +332,11 @@ TEST_F(GestureManagerV2Test, SimulateTwoFingerDoubleTap) {
   EXPECT_EQ(responses[6].response_type(), TouchResponseType::MAYBE_PRIORITIZE_SUPPRESS);
   EXPECT_EQ(responses[7].response_type(), TouchResponseType::HOLD_SUPPRESS);
   EXPECT_EQ(responses[8].response_type(), TouchResponseType::YES_PRIORITIZE);
+
+  fake_arena_ptr_->InvokeCallback(first_interaction, 0, ConsumptionStatus::kAccept);
+  fake_arena_ptr_->InvokeCallback(second_interaction, 0, ConsumptionStatus::kAccept);
+  fake_arena_ptr_->InvokeCallback(fourth_interaction, 0, ConsumptionStatus::kAccept);
+  RunLoopUntilIdle();
 
   auto updated_responses = fake_touch_source_->TakeUpdatedResponses();
   EXPECT_EQ(updated_responses.size(), 3u);

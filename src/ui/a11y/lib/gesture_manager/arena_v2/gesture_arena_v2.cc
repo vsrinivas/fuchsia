@@ -6,9 +6,11 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <cstdint>
 #include <utility>
 
 #include "fuchsia/ui/input/accessibility/cpp/fidl.h"
+#include "fuchsia/ui/pointer/cpp/fidl.h"
 #include "src/ui/a11y/lib/gesture_manager/arena_v2/recognizer_v2.h"
 
 namespace a11y {
@@ -49,9 +51,9 @@ void InteractionTracker::RejectInteractions() {
   status_ = ConsumptionStatus::kReject;
   NotifyHeldInteractions();
 
-  // We must clear the open interactions, because Scenic may stop sending us
-  // events for those interactions once we reject them. (It also may continue
-  // in some cases, since the events are sent in batches.)
+  // We must clear the open interactions, because the TouchSource API may stop
+  // sending us events for those interactions once we reject them. (It also may
+  // continue in some cases, since the events are sent in batches.)
   //
   // TODO(fxbug.dev/113881): investigate possible issues.
   open_interactions_.clear();
@@ -60,8 +62,10 @@ void InteractionTracker::RejectInteractions() {
 void InteractionTracker::OnEvent(
     const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) {
   FX_CHECK(event.touch_event.has_pointer_sample());
+  FX_CHECK(event.touch_event.has_trace_flow_id());
   const auto& sample = event.touch_event.pointer_sample();
-  const auto& interaction = sample.interaction();
+  const uint64_t trace_flow_id = event.touch_event.trace_flow_id();
+  const fuchsia::ui::pointer::TouchInteractionId interaction = sample.interaction();
   const auto triple = interactionToTriple(interaction);
 
   switch (sample.phase()) {
@@ -77,7 +81,9 @@ void InteractionTracker::OnEvent(
       // interaction "on hold", and fire a callback for it later, when the
       // status is decided.
       if (status_ == ConsumptionStatus::kUndecided) {
-        held_interactions_.push_back(interaction);
+        std::pair<fuchsia::ui::pointer::TouchInteractionId, uint64_t> pair = {interaction,
+                                                                              trace_flow_id};
+        held_interactions_.emplace_back(std::move(pair));
       }
 
       open_interactions_.erase(triple);
@@ -92,8 +98,8 @@ bool InteractionTracker::HasOpenInteractions() const { return !open_interactions
 void InteractionTracker::NotifyHeldInteractions() {
   FX_DCHECK(status_ != InteractionTracker::ConsumptionStatus::kUndecided);
 
-  for (const auto interaction : held_interactions_) {
-    callback_(interaction, status_);
+  for (const auto& [interaction, trace_flow_id] : held_interactions_) {
+    callback_(interaction, trace_flow_id, status_);
   }
 
   held_interactions_.clear();

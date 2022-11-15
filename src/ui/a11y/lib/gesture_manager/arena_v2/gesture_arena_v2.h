@@ -54,7 +54,8 @@ class InteractionTracker {
   //
   // `status` will never be |ConsumptionStatus::kUndecided|.
   using HeldInteractionCallback =
-      fit::function<void(fuchsia::ui::pointer::TouchInteractionId id, ConsumptionStatus status)>;
+      fit::function<void(fuchsia::ui::pointer::TouchInteractionId id, uint64_t trace_flow_id,
+                         ConsumptionStatus status)>;
 
   explicit InteractionTracker(HeldInteractionCallback callback);
 
@@ -95,7 +96,8 @@ class InteractionTracker {
   std::set<std::tuple<uint32_t, uint32_t, uint32_t>> open_interactions_;
 
   // The set of interactions that are currently on hold.
-  std::vector<fuchsia::ui::pointer::TouchInteractionId> held_interactions_;
+  std::vector<std::pair<fuchsia::ui::pointer::TouchInteractionId, /*trace_flow_id*/ uint64_t>>
+      held_interactions_;
 };
 
 class GestureRecognizerV2;
