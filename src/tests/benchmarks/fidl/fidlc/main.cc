@@ -12,6 +12,7 @@
 #include "tools/fidl/fidlc/include/fidl/ordinals.h"
 #include "tools/fidl/fidlc/include/fidl/parser.h"
 #include "tools/fidl/fidlc/include/fidl/source_file.h"
+#include "tools/fidl/fidlc/include/fidl/virtual_source_file.h"
 
 // This measures the time to compile the given input fidl text and generate
 // JSON IR output, which is discarded after it is produced in-memory.
@@ -28,7 +29,8 @@ bool RunBenchmark(perftest::RepeatState* state, const char* fidl) {
     fidl::ExperimentalFlags experimental_flags;
     fidl::Lexer lexer(source_file, &reporter);
     fidl::Parser parser(&lexer, &reporter, experimental_flags);
-    fidl::flat::Libraries all_libraries(&reporter);
+    fidl::VirtualSourceFile virtual_file("generated");
+    fidl::flat::Libraries all_libraries(&reporter, &virtual_file);
     fidl::VersionSelection version_selection;
     fidl::flat::Compiler compiler(&all_libraries, &version_selection,
                                   fidl::ordinals::GetGeneratedOrdinal64, experimental_flags);

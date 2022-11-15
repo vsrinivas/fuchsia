@@ -35,6 +35,7 @@
 #include "tools/fidl/fidlc/include/fidl/source_manager.h"
 #include "tools/fidl/fidlc/include/fidl/tables_generator.h"
 #include "tools/fidl/fidlc/include/fidl/versioning_types.h"
+#include "tools/fidl/fidlc/include/fidl/virtual_source_file.h"
 
 namespace {
 
@@ -308,7 +309,7 @@ int compile(fidl::Reporter* reporter, const std::string& library_name,
             const std::string& dep_file_path, const std::vector<std::string>& source_list,
             const std::vector<std::pair<Behavior, std::string>>& outputs,
             const std::vector<fidl::SourceManager>& source_managers,
-            const fidl::VersionSelection* version_selection,
+            fidl::VirtualSourceFile* virtual_file, const fidl::VersionSelection* version_selection,
             fidl::ExperimentalFlags experimental_flags);
 
 int main(int argc, char* argv[]) {
@@ -424,9 +425,10 @@ int main(int argc, char* argv[]) {
     outputs.emplace_back(Behavior::kIndex, path);
   }
   fidl::Reporter reporter;
+  fidl::VirtualSourceFile virtual_file("generated");
   reporter.set_warnings_as_errors(warnings_as_errors);
   auto status = compile(&reporter, library_name, dep_file_path, source_list, outputs,
-                        source_managers, &version_selection, experimental_flags);
+                        source_managers, &virtual_file, &version_selection, experimental_flags);
   if (format == "json") {
     reporter.PrintReportsJson();
   } else {
@@ -440,9 +442,9 @@ int compile(fidl::Reporter* reporter, const std::string& library_name,
             const std::string& dep_file_path, const std::vector<std::string>& source_list,
             const std::vector<std::pair<Behavior, std::string>>& outputs,
             const std::vector<fidl::SourceManager>& source_managers,
-            const fidl::VersionSelection* version_selection,
+            fidl::VirtualSourceFile* virtual_file, const fidl::VersionSelection* version_selection,
             fidl::ExperimentalFlags experimental_flags) {
-  fidl::flat::Libraries all_libraries(reporter);
+  fidl::flat::Libraries all_libraries(reporter, virtual_file);
   for (const auto& source_manager : source_managers) {
     if (source_manager.sources().empty()) {
       continue;

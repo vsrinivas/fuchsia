@@ -22,6 +22,7 @@
 #include "tools/fidl/fidlc/include/fidl/source_file.h"
 #include "tools/fidl/fidlc/include/fidl/tables_generator.h"
 #include "tools/fidl/fidlc/include/fidl/versioning_types.h"
+#include "tools/fidl/fidlc/include/fidl/virtual_source_file.h"
 
 struct LintArgs {
  public:
@@ -58,7 +59,7 @@ class SharedInterface {
 // together (i.e. the dependencies and the final library).
 class SharedAmongstLibraries final : public SharedInterface {
  public:
-  SharedAmongstLibraries() : all_libraries_(&reporter_) {}
+  SharedAmongstLibraries() : all_libraries_(&reporter_, &virtual_file_) {}
   // Unsafe to copy/move because all_libraries_ stores a pointer to reporter_.
   SharedAmongstLibraries(const SharedAmongstLibraries&) = delete;
   SharedAmongstLibraries(SharedAmongstLibraries&&) = delete;
@@ -81,6 +82,7 @@ class SharedAmongstLibraries final : public SharedInterface {
 
  private:
   fidl::Reporter reporter_;
+  fidl::VirtualSourceFile virtual_file_{"generated"};
   fidl::flat::Libraries all_libraries_;
   std::vector<std::unique_ptr<fidl::SourceFile>> all_sources_of_all_libraries_;
   fidl::VersionSelection version_selection_;

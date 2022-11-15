@@ -82,11 +82,12 @@ struct Compilation;
 // came before it, and lastly the target library.
 class Libraries : private ReporterMixin {
  public:
-  explicit Libraries(Reporter* reporter)
+  explicit Libraries(Reporter* reporter, VirtualSourceFile* generated_source_file)
       : ReporterMixin(reporter),
         root_library_(Library::CreateRootLibrary()),
         typespace_(root_library_.get(), reporter),
-        attribute_schemas_(AttributeSchema::OfficialAttributes()) {}
+        attribute_schemas_(AttributeSchema::OfficialAttributes()),
+        generated_source_file_(generated_source_file) {}
   Libraries(const Libraries&) = delete;
   Libraries(Libraries&&) = default;
 
@@ -134,7 +135,7 @@ class Libraries : private ReporterMixin {
 
   using ReporterMixin::reporter;
   Typespace* typespace() { return &typespace_; }
-  VirtualSourceFile* generated_source_file() { return &generated_source_file_; }
+  VirtualSourceFile* generated_source_file() { return generated_source_file_; }
 
  private:
   std::unique_ptr<Library> root_library_;
@@ -144,7 +145,7 @@ class Libraries : private ReporterMixin {
   AttributeSchemaMap attribute_schemas_;
 
   // TODO(fxbug.dev/8027): Remove this field.
-  VirtualSourceFile generated_source_file_{"generated"};
+  VirtualSourceFile* generated_source_file_;
 };
 
 // A compilation is the result of compiling a library and all its transitive

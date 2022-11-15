@@ -142,6 +142,11 @@ void Reporter::PrintReports(bool enable_color) const {
     std::string qualifier = diag->get_severity() == DiagnosticKind::kError ? "error" : "warning";
     auto msg = Format(qualifier, diag->span, diag->Print(), enable_color);
     fprintf(stderr, "%s\n", msg.c_str());
+    // There should never be errors in virtual files. These contain code
+    // synthesized by the compiler, and the user has no control over them.
+    // For easier debugging, we assert this late, after printing.
+    ZX_ASSERT_MSG(!diag->span.source_file().IsVirtual(),
+                  "diagnostics should not refer to virtual files");
   }
 
   if (!errors_.empty() && warnings_.empty()) {
