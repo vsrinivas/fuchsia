@@ -122,7 +122,7 @@ pub fn sys_bind(
 ) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    let address = parse_socket_address(current_task, user_socket_address, address_length)?;
+    let mut address = parse_socket_address(current_task, user_socket_address, address_length)?;
     if !address.valid_for_domain(socket.domain) {
         return error!(EINVAL);
     }
@@ -161,8 +161,10 @@ pub fn sys_bind(
             current_task.abstract_vsock_namespace.bind(port, socket)?;
         }
         SocketAddress::Inet(_) | SocketAddress::Inet6(_) => socket.bind(address)?,
-        SocketAddress::Netlink(_) => {
-            socket.bind(SocketAddress::default_for_domain(SocketDomain::Netlink))?
+        SocketAddress::Netlink(ref mut addr) => {
+            // TODO: Support distinct IDs for processes with multiple netlink sockets.
+            addr.set_pid_if_zero(current_task.get_pid());
+            socket.bind(address)?
         }
     }
 
@@ -260,7 +262,13 @@ pub fn sys_connect(
             );
             SocketPeer::Address(address)
         }
-        SocketAddress::Netlink(_) => return error!(ENOSYS),
+        SocketAddress::Netlink(_) => {
+            // Connect automatically binds netlink sockets if not already bound.
+            if let Some(netlink_socket) = client_socket.downcast_socket::<NetlinkSocket>() {
+                netlink_socket.bind_if_not_bound(current_task.get_pid());
+            }
+            SocketPeer::Address(address)
+        }
     };
 
     // TODO(tbodt): Support blocking when the UNIX domain socket queue fills up. This one's weird

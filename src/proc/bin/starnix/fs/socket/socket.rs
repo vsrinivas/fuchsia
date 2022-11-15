@@ -226,7 +226,10 @@ fn create_socket_ops(
         SocketDomain::Inet | SocketDomain::Inet6 => {
             Ok(Box::new(InetSocket::new(domain, socket_type, protocol)?))
         }
-        SocketDomain::Netlink => Ok(Box::new(NetlinkSocket::new(socket_type))),
+        SocketDomain::Netlink => {
+            let netlink_family = NetlinkFamily::from_raw(protocol.as_raw());
+            Ok(Box::new(NetlinkSocket::new(socket_type, netlink_family)?))
+        }
     }
 }
 
@@ -315,8 +318,10 @@ impl Socket {
         let value = match level {
             SOL_SOCKET => match optname {
                 SO_TYPE => self.socket_type.as_raw().to_ne_bytes().to_vec(),
-                SO_DOMAIN => self.domain.as_raw().to_ne_bytes().to_vec(),
-
+                SO_DOMAIN => {
+                    let domain = self.domain.as_raw() as u32;
+                    domain.to_ne_bytes().to_vec()
+                }
                 SO_RCVTIMEO => {
                     let duration = self.receive_timeout().unwrap_or_default();
                     timeval_from_duration(duration).as_bytes().to_owned()

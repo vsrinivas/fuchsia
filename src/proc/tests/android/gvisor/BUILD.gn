@@ -219,8 +219,9 @@ gvisor_tests = [
   "socket_ipv6_unbound_test",
 
   # "socket_netdevice_test",
-  # "socket_netlink_route_test",
-  # "socket_netlink_test",
+  "socket_netlink_route_test",
+  "socket_netlink_test",
+
   # "socket_netlink_uevent_test",
   "socket_non_stream_blocking_local_test",
   "socket_non_stream_blocking_udp_test",

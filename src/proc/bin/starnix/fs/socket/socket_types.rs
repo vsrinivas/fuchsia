@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::logging::not_implemented;
 use bitflags::bitflags;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::fs::*;
 use crate::types::*;
 pub use syncio::ZxioShutdownFlags as SocketShutdownFlags;
+
+use super::NetlinkAddress;
 
 bitflags! {
     pub struct SocketMessageFlags: u32 {
@@ -137,8 +138,8 @@ pub enum SocketAddress {
     /// AF_INET6 socket addresses are passed through as a sockaddr* to zxio.
     Inet6(Vec<u8>),
 
-    /// No address for netlink sockets while stubbed.
-    Netlink(u32),
+    /// AF_NETLINK addresses contain a unicast pid and multicast groups.
+    Netlink(NetlinkAddress),
 }
 
 pub const SA_FAMILY_SIZE: usize = std::mem::size_of::<uapi::__kernel_sa_family_t>();
@@ -154,7 +155,7 @@ impl SocketAddress {
             SocketDomain::Inet6 => {
                 SocketAddress::Inet6(uapi::sockaddr_in6::default().as_bytes().to_vec())
             }
-            SocketDomain::Netlink => SocketAddress::Netlink(0),
+            SocketDomain::Netlink => SocketAddress::Netlink(NetlinkAddress::default()),
         }
     }
 
@@ -204,7 +205,12 @@ impl SocketAddress {
                 let addrlen = std::cmp::min(address.len(), sockaddr_len);
                 SocketAddress::Inet6(address[..addrlen].to_vec())
             }
-            AF_NETLINK => SocketAddress::default_for_domain(SocketDomain::Netlink),
+            AF_NETLINK => match sockaddr_nl::read_from(&*address) {
+                Some(addr) => {
+                    SocketAddress::Netlink(NetlinkAddress::new(addr.nl_pid, addr.nl_groups))
+                }
+                None => return error!(EINVAL),
+            },
             _ => SocketAddress::Unspecified,
         };
         Ok(address)
@@ -244,10 +250,7 @@ impl SocketAddress {
                 bytes
             }
             SocketAddress::Inet(addr) | SocketAddress::Inet6(addr) => addr.to_vec(),
-            SocketAddress::Netlink(_) => {
-                not_implemented!("?", "SocketAddress::to_bytes is stubbed for Netlink");
-                vec![]
-            }
+            SocketAddress::Netlink(addr) => addr.to_bytes(),
         }
     }
 
