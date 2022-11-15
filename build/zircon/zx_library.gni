@@ -345,6 +345,13 @@ template("zx_library") {
         foreach(header, invoker.sdk_headers) {
           public += [ "include/$header" ]
         }
+        if (sdkable && sdk_category == "internal") {
+          # By default, templates like sdk_source_set() set the `include_base` value to "//" for
+          # targets in the 'internal' category. Set if to the correct value here to avoid
+          # issues later when trying to use the library from the SDK.
+          # See https://fxbug.dev/114820 for details.
+          include_base = "include"
+        }
       }
 
       if (!defined(public_configs)) {
