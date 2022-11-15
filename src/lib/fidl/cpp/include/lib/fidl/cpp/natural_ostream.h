@@ -17,11 +17,12 @@
 namespace fidl::ostream {
 // Wrapper type to disambiguate formatting operator overloads.
 //
-// This file avoids defining any overloads for types in the std namespace. To correctly format
-// arrays, vectors and unique pointers, this wrapper is used so we can define an overload for
-// e.g. fidl::ostream::Formatted<std::unique_ptr<T>> instead of defining one for std::unique_ptr<T>.
-// Consequently, this wrapper must be used for the supported std types. The wrapper has no effect
-// for other types, so it can safely be applied to any value.
+// This file avoids defining any overloads for types in the std namespace. To
+// correctly format arrays and vectors, this wrapper is used so we can define an
+// overload for e.g. fidl::ostream::Formatted<std::vector<T>> instead of
+// defining one for std::vector<T>. Consequently, this wrapper must be used for
+// the supported std types. The wrapper has no effect for other types, so it can
+// safely be applied to any value.
 //
 //     std::vector<int32_t> my_vector;
 //     os << fidl::ostream::Formatted(my_vector);
@@ -206,17 +207,6 @@ struct Formatter<std::optional<T>> {
   static std::ostream& Format(std::ostream& os, const std::optional<T>& value) {
     if (value.has_value()) {
       return Formatter<T>::Format(os, value.value());
-    } else {
-      return os << "null";
-    }
-  }
-};
-
-template <typename T>
-struct Formatter<std::unique_ptr<T>> {
-  static std::ostream& Format(std::ostream& os, const std::unique_ptr<T>& value) {
-    if (value) {
-      return Formatter<T>::Format(os, *value);
     } else {
       return os << "null";
     }

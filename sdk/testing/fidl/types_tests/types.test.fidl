@@ -55,6 +55,10 @@ type TestStrictXUnionInStruct = struct {
     xu TestStrictXUnion;
 };
 
+type TestStrictOptionalXUnionInStruct = struct {
+    xu TestStrictXUnion:optional;
+};
+
 type TestStrictXUnionInArrayInStruct = struct {
     arr array<TestStrictXUnion, 10>;
 };

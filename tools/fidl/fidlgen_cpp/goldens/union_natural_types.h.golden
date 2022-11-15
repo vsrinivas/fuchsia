@@ -1686,7 +1686,7 @@ class NullableUnionStruct {
   struct Storage_;
  public:
   NullableUnionStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    NullableUnionStruct(::std::unique_ptr<::test_union::Union> the_union) noexcept
+    NullableUnionStruct(::fidl::Box<::test_union::Union> the_union) noexcept
     : storage_({
       .the_union = std::move(the_union)
     }) {}
@@ -1712,20 +1712,20 @@ class NullableUnionStruct {
       return !::fidl::internal::NaturalStructCodingTraits<::test_union::NullableUnionStruct, 16>::Equal(this, &other);
     }
     
-      const ::std::unique_ptr<::test_union::Union> &
+      const ::fidl::Box<::test_union::Union> &
     the_union() const {
       return storage_.the_union;
     }
 
     
-    ::std::unique_ptr<::test_union::Union>& the_union() {
+    ::fidl::Box<::test_union::Union>& the_union() {
       return storage_.the_union;
     }
 
     // Setter for the_union.
     //
     
-    NullableUnionStruct& the_union(::std::unique_ptr<::test_union::Union> value) {
+    NullableUnionStruct& the_union(::fidl::Box<::test_union::Union> value) {
       storage_.the_union = std::move(value);
       return *this;
     }
@@ -1736,7 +1736,7 @@ class NullableUnionStruct {
 
  private:
   struct Storage_ final {
-      ::std::unique_ptr<::test_union::Union> the_union;
+      ::fidl::Box<::test_union::Union> the_union;
   };
 
   Storage_ storage_;
@@ -1744,7 +1744,7 @@ class NullableUnionStruct {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::NullableUnionStruct, 16>;
   friend struct ::fidl::internal::MemberVisitor<::test_union::NullableUnionStruct>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_union::Union>, fidl::internal::NaturalCodingConstraintEmpty>{
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fidl::Box<::test_union::Union>, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::the_union, 0
       });
   static constexpr auto kPadding = std::make_tuple();
@@ -3204,7 +3204,7 @@ class StructWithNullableXUnion {
   struct Storage_;
  public:
   StructWithNullableXUnion(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    StructWithNullableXUnion(::std::unique_ptr<::test_union::OlderSimpleUnion> x1) noexcept
+    StructWithNullableXUnion(::fidl::Box<::test_union::OlderSimpleUnion> x1) noexcept
     : storage_({
       .x1 = std::move(x1)
     }) {}
@@ -3230,20 +3230,20 @@ class StructWithNullableXUnion {
       return !::fidl::internal::NaturalStructCodingTraits<::test_union::StructWithNullableXUnion, 16>::Equal(this, &other);
     }
     
-      const ::std::unique_ptr<::test_union::OlderSimpleUnion> &
+      const ::fidl::Box<::test_union::OlderSimpleUnion> &
     x1() const {
       return storage_.x1;
     }
 
     
-    ::std::unique_ptr<::test_union::OlderSimpleUnion>& x1() {
+    ::fidl::Box<::test_union::OlderSimpleUnion>& x1() {
       return storage_.x1;
     }
 
     // Setter for x1.
     //
     
-    StructWithNullableXUnion& x1(::std::unique_ptr<::test_union::OlderSimpleUnion> value) {
+    StructWithNullableXUnion& x1(::fidl::Box<::test_union::OlderSimpleUnion> value) {
       storage_.x1 = std::move(value);
       return *this;
     }
@@ -3254,7 +3254,7 @@ class StructWithNullableXUnion {
 
  private:
   struct Storage_ final {
-      ::std::unique_ptr<::test_union::OlderSimpleUnion> x1;
+      ::fidl::Box<::test_union::OlderSimpleUnion> x1;
   };
 
   Storage_ storage_;
@@ -3262,7 +3262,7 @@ class StructWithNullableXUnion {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::StructWithNullableXUnion, 16>;
   friend struct ::fidl::internal::MemberVisitor<::test_union::StructWithNullableXUnion>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_union::OlderSimpleUnion>, fidl::internal::NaturalCodingConstraintEmpty>{
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fidl::Box<::test_union::OlderSimpleUnion>, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::x1, 0
       });
   static constexpr auto kPadding = std::make_tuple();

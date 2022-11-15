@@ -287,16 +287,8 @@ struct NaturalTypeForWireType<::test_bindingsdenylist::wire::OnlyLlcpp> {
   using type = ::test_bindingsdenylist::OnlyLlcpp;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_bindingsdenylist::wire::OnlyLlcpp>> {
-  using type = std::unique_ptr<::test_bindingsdenylist::OnlyLlcpp>;
-};
-template <>
 struct WireTypeForNaturalType<::test_bindingsdenylist::OnlyLlcpp> {
   using type = ::test_bindingsdenylist::wire::OnlyLlcpp;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_bindingsdenylist::OnlyLlcpp>> {
-  using type = ::fidl::WireOptional<::test_bindingsdenylist::wire::OnlyLlcpp>;
 };
 
 template <>
@@ -316,16 +308,8 @@ struct NaturalTypeForWireType<::test_bindingsdenylist::wire::DenyEachBindingOnly
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult>> {
-  using type = std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult> {
   using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult>> {
-  using type = ::fidl::WireOptional<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult>;
 };
 
 template <>
@@ -345,16 +329,8 @@ struct NaturalTypeForWireType<::test_bindingsdenylist::wire::DenyEachBindingOnly
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult>> {
-  using type = std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult> {
   using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>> {
-  using type = ::fidl::WireOptional<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult>;
 };
 
 template <>
@@ -374,16 +350,8 @@ struct NaturalTypeForWireType<::test_bindingsdenylist::wire::DenyEachBindingOnly
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult>> {
-  using type = std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult> {
   using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>> {
-  using type = ::fidl::WireOptional<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult>;
 };
 
 template <>
@@ -403,16 +371,8 @@ struct NaturalTypeForWireType<::test_bindingsdenylist::wire::DenyEachBindingOnly
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult>> {
-  using type = std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult> {
   using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>> {
-  using type = ::fidl::WireOptional<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult>;
 };
 
 template <>
@@ -432,16 +392,8 @@ struct NaturalTypeForWireType<::test_bindingsdenylist::wire::DenyEachBindingOnly
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult>> {
-  using type = std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult> {
   using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>> {
-  using type = ::fidl::WireOptional<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult>;
 };
 
 #ifdef __Fuchsia__

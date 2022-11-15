@@ -96,16 +96,8 @@ struct NaturalTypeForWireType<::test_doccomments::wire::StrictUnion> {
   using type = ::test_doccomments::StrictUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_doccomments::wire::StrictUnion>> {
-  using type = std::unique_ptr<::test_doccomments::StrictUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_doccomments::StrictUnion> {
   using type = ::test_doccomments::wire::StrictUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_doccomments::StrictUnion>> {
-  using type = ::fidl::WireOptional<::test_doccomments::wire::StrictUnion>;
 };
 
 template <>
@@ -125,16 +117,8 @@ struct NaturalTypeForWireType<::test_doccomments::wire::FlexibleUnion> {
   using type = ::test_doccomments::FlexibleUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_doccomments::wire::FlexibleUnion>> {
-  using type = std::unique_ptr<::test_doccomments::FlexibleUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_doccomments::FlexibleUnion> {
   using type = ::test_doccomments::wire::FlexibleUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_doccomments::FlexibleUnion>> {
-  using type = ::fidl::WireOptional<::test_doccomments::wire::FlexibleUnion>;
 };
 
 #ifdef __Fuchsia__

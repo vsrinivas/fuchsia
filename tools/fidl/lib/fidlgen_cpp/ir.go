@@ -683,11 +683,10 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 
 			if val.Nullable {
 				r.nameVariants.HLCPP = makeName("std::unique_ptr").template(name.HLCPP)
+				r.nameVariants.Unified = makeName("fidl::Box").template(name.Unified)
 				if declType == fidlgen.UnionDeclType {
-					r.nameVariants.Unified = makeName("std::unique_ptr").template(name.Unified)
 					r.nameVariants.Wire = makeName("fidl::WireOptional").template(name.Wire)
 				} else {
-					r.nameVariants.Unified = makeName("fidl::Box").template(name.Unified)
 					r.nameVariants.Wire = makeName("fidl::ObjectView").template(name.Wire)
 				}
 				r.NeedsDtor = true

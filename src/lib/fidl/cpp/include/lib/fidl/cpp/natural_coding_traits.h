@@ -456,22 +456,23 @@ struct NaturalCodingTraits<fidl::Box<T>, Constraint,
 };
 
 template <typename T, typename Constraint>
-struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
+struct NaturalCodingTraits<fidl::Box<T>, Constraint,
                            typename std::enable_if<IsUnion<T>::value>::type> {
   static constexpr size_t inline_size_v2 = sizeof(fidl_xunion_v2_t);
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(NaturalEncoder* encoder, std::unique_ptr<T>* value, size_t offset,
+  static void Encode(NaturalEncoder* encoder, fidl::Box<T>* value, size_t offset,
                      size_t recursion_depth) {
     if (*value) {
-      NaturalCodingTraits<T, Constraint>::Encode(encoder, value->get(), offset, recursion_depth);
+      NaturalCodingTraits<T, Constraint>::Encode(encoder, value->unique_ptr().get(), offset,
+                                                 recursion_depth);
       return;
     }
 
     // Buffer is zero-initialized.
   }
 
-  static void Decode(NaturalDecoder* decoder, std::unique_ptr<T>* value, size_t offset,
+  static void Decode(NaturalDecoder* decoder, fidl::Box<T>* value, size_t offset,
                      size_t recursion_depth) {
     fidl_xunion_v2_t* u = decoder->template GetPtr<fidl_xunion_v2_t>(offset);
     if (u->tag == 0) {
@@ -482,7 +483,8 @@ struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
       decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
     }
     *value = std::make_unique<T>(DefaultConstructPossiblyInvalidObject<T>::Make());
-    NaturalCodingTraits<T, Constraint>::Decode(decoder, value->get(), offset, recursion_depth);
+    NaturalCodingTraits<T, Constraint>::Decode(decoder, value->unique_ptr().get(), offset,
+                                               recursion_depth);
   }
 };
 

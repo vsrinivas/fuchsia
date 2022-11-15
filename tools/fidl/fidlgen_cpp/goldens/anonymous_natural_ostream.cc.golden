@@ -78,9 +78,9 @@ std::ostream& fidl::ostream::Formatter<::test_anonymous::OverrideTest>::Format(s
   os << "op";
   os << " = " << fidl::ostream::Formatted<::test_anonymous::Op>(value.op()) << ", ";
   os << "left";
-  os << " = " << fidl::ostream::Formatted<::std::unique_ptr<::test_anonymous::Expression>>(value.left()) << ", ";
+  os << " = " << fidl::ostream::Formatted<::fidl::Box<::test_anonymous::Expression>>(value.left()) << ", ";
   os << "right";
-  os << " = " << fidl::ostream::Formatted<::std::unique_ptr<::test_anonymous::Expression>>(value.right()) << ", ";
+  os << " = " << fidl::ostream::Formatted<::fidl::Box<::test_anonymous::Expression>>(value.right()) << ", ";
   os << "}";
   return os;
 }
@@ -127,7 +127,7 @@ std::ostream& fidl::ostream::Formatter<::test_anonymous::FunctionApplication>::F
   }
   if (value.args().has_value()) {
     os << "args";
-    os << " = " << fidl::ostream::Formatted<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>(value.args().value()) << ", ";
+    os << " = " << fidl::ostream::Formatted<::std::vector<::fidl::Box<::test_anonymous::Expression>>>(value.args().value()) << ", ";
   }
   if (value.flags().has_value()) {
     os << "flags";

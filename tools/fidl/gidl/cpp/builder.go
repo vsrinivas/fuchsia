@@ -261,7 +261,7 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 		return declName(decl)
 	case *gidlmixer.UnionDecl:
 		if !ignoreNullable && decl.IsNullable() {
-			return fmt.Sprintf("std::unique_ptr<%s>", declName(decl))
+			return fmt.Sprintf("fidl::Box<%s>", declName(decl))
 		}
 		return declName(decl)
 	case *gidlmixer.ArrayDecl:

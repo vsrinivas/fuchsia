@@ -183,6 +183,22 @@ TEST(Union, Equality) {
   EXPECT_NE(u, different2);
 }
 
+TEST(Union, OptionalUnion) {
+  test_types::TestStrictOptionalXUnionInStruct us;
+  us.xu(std::make_unique<test_types::TestStrictXUnion>(
+      test_types::TestStrictXUnion::WithPrimitive(42)));
+  EXPECT_TRUE(us.xu().has_value());
+  test_types::TestStrictOptionalXUnionInStruct us2 = std::move(us);
+  EXPECT_FALSE(us.xu().has_value());
+  EXPECT_TRUE(us2.xu().has_value());
+  EXPECT_EQ(us2.xu().value(), test_types::TestStrictXUnion::WithPrimitive(42));
+
+  us2.xu().reset();
+  EXPECT_FALSE(us2.xu().has_value());
+  EXPECT_EQ(us2.xu().value_or(test_types::TestStrictXUnion::WithPrimitive(1)),
+            test_types::TestStrictXUnion::WithPrimitive(1));
+}
+
 TEST(Union, Traits) {
   static_assert(fidl::IsFidlType<test_types::TestStrictXUnion>::value);
   static_assert(fidl::IsUnion<test_types::TestStrictXUnion>::value);

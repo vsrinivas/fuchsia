@@ -599,7 +599,7 @@ struct NaturalUnionCodingTraits {
 };
 
 // Helpers for deep-copying some types that aren't copy-constructible.
-// In particular ones that use std::unique_ptr, a common pattern in natural domain objects.
+// In particular ones that use fidl::Box, a common pattern in natural domain objects.
 template <typename T>
 struct NaturalCloneHelper {
   static T Clone(const T& value) { return value; }
@@ -612,16 +612,6 @@ struct NaturalCloneHelper<std::optional<T>> {
       return std::make_optional<T>(NaturalCloneHelper<T>::Clone(value.value()));
     }
     return std::nullopt;
-  }
-};
-
-template <typename T>
-struct NaturalCloneHelper<std::unique_ptr<T>> {
-  static std::unique_ptr<T> Clone(const std::unique_ptr<T>& value) {
-    if (value) {
-      return std::make_unique<T>(*value.get());
-    }
-    return nullptr;
   }
 };
 

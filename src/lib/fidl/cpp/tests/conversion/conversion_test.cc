@@ -284,13 +284,13 @@ TEST(WireToNaturalConversion, OptionalUnion) {
 
   ASSERT_EQ(nullptr, fidl::ToNatural(fidl::WireOptional<test_types::wire::TestStrictXUnion>()));
 
-  std::unique_ptr<test_types::TestStrictXUnion> union_with_uint32 =
+  fidl::Box<test_types::TestStrictXUnion> union_with_uint32 =
       fidl::ToNatural(fidl::WireOptional<test_types::wire::TestStrictXUnion>(
           test_types::wire::TestStrictXUnion::WithPrimitive(123)));
   ASSERT_EQ(test_types::TestStrictXUnion::Tag::kPrimitive, union_with_uint32->Which());
   EXPECT_EQ(123, union_with_uint32->primitive().value());
 
-  std::unique_ptr<test_types::UnionWithUint64> union_with_uint64 =
+  fidl::Box<test_types::UnionWithUint64> union_with_uint64 =
       fidl::ToNatural(fidl::WireOptional<test_types::wire::UnionWithUint64>(
           test_types::wire::UnionWithUint64::WithValue(arena, 123ll)));
   ASSERT_EQ(test_types::UnionWithUint64::Tag::kValue, union_with_uint64->Which());
@@ -301,21 +301,21 @@ TEST(NaturalToWireConversion, OptionalUnion) {
   fidl::Arena arena;
 
   fidl::WireOptional<test_types::wire::TestStrictXUnion> empty =
-      fidl::ToWire(arena, std::unique_ptr<test_types::TestStrictXUnion>());
+      fidl::ToWire(arena, fidl::Box(std::unique_ptr<test_types::TestStrictXUnion>()));
   ASSERT_FALSE(empty.has_value());
 
   fidl::WireOptional<test_types::wire::TestStrictXUnion> xunion =
-      fidl::ToWire(arena, std::make_unique<test_types::TestStrictXUnion>(
-                              test_types::TestStrictXUnion::WithPrimitive(123)));
+      fidl::ToWire(arena, fidl::Box(std::make_unique<test_types::TestStrictXUnion>(
+                              test_types::TestStrictXUnion::WithPrimitive(123))));
   ASSERT_TRUE(xunion.has_value());
   ASSERT_EQ(test_types::wire::TestStrictXUnion::Tag::kPrimitive, xunion->Which());
   EXPECT_EQ(123, xunion->primitive());
   // Inline union value.
   EXPECT_FALSE(fidl_testing::ArenaChecker::IsPointerInArena(&xunion->primitive(), arena));
 
-  fidl::WireOptional<test_types::wire::UnionWithUint64> union_with_uint64 = fidl::ToWire(
-      arena,
-      std::make_unique<test_types::UnionWithUint64>(test_types::UnionWithUint64::WithValue(123ll)));
+  fidl::WireOptional<test_types::wire::UnionWithUint64> union_with_uint64 =
+      fidl::ToWire(arena, fidl::Box(std::make_unique<test_types::UnionWithUint64>(
+                              test_types::UnionWithUint64::WithValue(123ll))));
   ASSERT_TRUE(union_with_uint64.has_value());
   ASSERT_EQ(test_types::wire::UnionWithUint64::Tag::kValue, union_with_uint64->Which());
   EXPECT_EQ(123ll, union_with_uint64->value());

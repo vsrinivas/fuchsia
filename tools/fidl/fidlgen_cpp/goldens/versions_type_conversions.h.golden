@@ -80,16 +80,8 @@ struct NaturalTypeForWireType<::test_versions::wire::Union> {
   using type = ::test_versions::Union;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_versions::wire::Union>> {
-  using type = std::unique_ptr<::test_versions::Union>;
-};
-template <>
 struct WireTypeForNaturalType<::test_versions::Union> {
   using type = ::test_versions::wire::Union;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_versions::Union>> {
-  using type = ::fidl::WireOptional<::test_versions::wire::Union>;
 };
 
 #ifdef __Fuchsia__

@@ -55,19 +55,6 @@ namespace internal {
   }
 }
 
-std::unique_ptr<::test_error::ExampleFooResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_error::wire::ExampleFooResult>, std::unique_ptr<::test_error::ExampleFooResult>>::ToNatural(::fidl::WireOptional<::test_error::wire::ExampleFooResult> src) {
-  if (!src.has_value()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_error::ExampleFooResult>(WireNaturalConversionTraits<::test_error::wire::ExampleFooResult, ::test_error::ExampleFooResult>::ToNatural(std::move(src.value())));
-}
-::fidl::WireOptional<::test_error::wire::ExampleFooResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_error::wire::ExampleFooResult>, std::unique_ptr<::test_error::ExampleFooResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_error::ExampleFooResult> src) {
-  if (!src) {
-    return ::fidl::WireOptional<::test_error::wire::ExampleFooResult>();
-  }
-  return WireNaturalConversionTraits<::test_error::wire::ExampleFooResult, ::test_error::ExampleFooResult>::ToWire(arena, std::move(*src));
-}
-
 #ifdef __Fuchsia__
 
 ::fidl::Response<::test_error::Example::Foo> WireNaturalConversionTraits<::fidl::WireResponse<::test_error::Example::Foo>, ::fidl::Response<::test_error::Example::Foo>>::ToNatural(::fidl::WireResponse<::test_error::Example::Foo> src) {

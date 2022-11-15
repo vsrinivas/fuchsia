@@ -214,37 +214,7 @@ struct HLCPPToNaturalTraits<std::array<HLCPPMember, N>> {
   }
 };
 
-/* Natural to HLCPP type traits for boxed types */
-template <typename Natural>
-struct NaturalToHLCPPTraits<std::unique_ptr<Natural>> {
-  using NaturalInnerTraits = NaturalToHLCPPTraits<Natural>;
-  using HLCPPType = std::unique_ptr<typename NaturalInnerTraits::HLCPPType>;
-  static inline HLCPPType Convert(std::unique_ptr<Natural>&& natural) {
-    if (natural) {
-      return std::make_unique<typename NaturalInnerTraits::HLCPPType>(
-          NaturalInnerTraits::Convert(std::move(*natural)));
-    }
-    return nullptr;
-  }
-};
-
-/* HLCPP to Natural type traits for optional unions */
-template <typename HLCPP>
-struct HLCPPToNaturalTraits<
-    std::unique_ptr<HLCPP>,
-    std::enable_if_t<IsUnion<typename HLCPPToNaturalTraits<HLCPP>::NaturalType>::value>> {
-  using HLCPPInnerTraits = HLCPPToNaturalTraits<HLCPP>;
-  using NaturalType = std::unique_ptr<typename HLCPPInnerTraits::NaturalType>;
-  static inline NaturalType Convert(std::unique_ptr<HLCPP>&& hlcpp) {
-    if (hlcpp) {
-      return std::make_unique<typename HLCPPInnerTraits::NaturalType>(
-          HLCPPInnerTraits::Convert(std::move(*hlcpp)));
-    }
-    return nullptr;
-  }
-};
-
-/* Natural to HLCPP type traits for boxed types */
+/* Natural to HLCPP type traits for boxed structs and optional unions */
 template <typename Natural>
 struct NaturalToHLCPPTraits<fidl::Box<Natural>> {
   using NaturalInnerTraits = NaturalToHLCPPTraits<Natural>;
@@ -258,11 +228,9 @@ struct NaturalToHLCPPTraits<fidl::Box<Natural>> {
   }
 };
 
-/* HLCPP to Natural type traits for boxed structs */
+/* HLCPP to Natural type traits for boxed structs and optional unions */
 template <typename HLCPP>
-struct HLCPPToNaturalTraits<
-    std::unique_ptr<HLCPP>,
-    std::enable_if_t<!IsUnion<typename HLCPPToNaturalTraits<HLCPP>::NaturalType>::value>> {
+struct HLCPPToNaturalTraits<std::unique_ptr<HLCPP>> {
   using HLCPPInnerTraits = HLCPPToNaturalTraits<HLCPP>;
   using NaturalType = fidl::Box<typename HLCPPInnerTraits::NaturalType>;
   static inline NaturalType Convert(std::unique_ptr<HLCPP>&& hlcpp) {

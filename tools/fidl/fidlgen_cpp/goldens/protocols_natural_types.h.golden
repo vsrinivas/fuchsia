@@ -4393,7 +4393,7 @@ class MethodWithUnionUnionMethodResponse {
   struct Storage_;
  public:
   MethodWithUnionUnionMethodResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    MethodWithUnionUnionMethodResponse(::std::unique_ptr<::test_protocols::TheUnion> u) noexcept
+    MethodWithUnionUnionMethodResponse(::fidl::Box<::test_protocols::TheUnion> u) noexcept
     : storage_({
       .u = std::move(u)
     }) {}
@@ -4419,20 +4419,20 @@ class MethodWithUnionUnionMethodResponse {
       return !::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodResponse, 16>::Equal(this, &other);
     }
     
-      const ::std::unique_ptr<::test_protocols::TheUnion> &
+      const ::fidl::Box<::test_protocols::TheUnion> &
     u() const {
       return storage_.u;
     }
 
     
-    ::std::unique_ptr<::test_protocols::TheUnion>& u() {
+    ::fidl::Box<::test_protocols::TheUnion>& u() {
       return storage_.u;
     }
 
     // Setter for u.
     //
     
-    MethodWithUnionUnionMethodResponse& u(::std::unique_ptr<::test_protocols::TheUnion> value) {
+    MethodWithUnionUnionMethodResponse& u(::fidl::Box<::test_protocols::TheUnion> value) {
       storage_.u = std::move(value);
       return *this;
     }
@@ -4443,7 +4443,7 @@ class MethodWithUnionUnionMethodResponse {
 
  private:
   struct Storage_ final {
-      ::std::unique_ptr<::test_protocols::TheUnion> u;
+      ::fidl::Box<::test_protocols::TheUnion> u;
   };
 
   Storage_ storage_;
@@ -4451,7 +4451,7 @@ class MethodWithUnionUnionMethodResponse {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodResponse, 16>;
   friend struct ::fidl::internal::MemberVisitor<::test_protocols::MethodWithUnionUnionMethodResponse>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_protocols::TheUnion>, fidl::internal::NaturalCodingConstraintEmpty>{
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fidl::Box<::test_protocols::TheUnion>, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::u, 0
       });
   static constexpr auto kPadding = std::make_tuple();

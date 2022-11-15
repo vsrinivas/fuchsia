@@ -705,16 +705,8 @@ struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxResponseAsS
   using type = ::test_protocols::WithErrorSyntaxResponseAsStructResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>> {
-  using type = std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxResponseAsStructResult> {
   using type = ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>> {
-  using type = ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>;
 };
 
 template <>
@@ -734,16 +726,8 @@ struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxErrorAsPrim
   using type = ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>> {
-  using type = std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> {
   using type = ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>> {
-  using type = ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>;
 };
 
 template <>
@@ -763,16 +747,8 @@ struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxErrorAsEnum
   using type = ::test_protocols::WithErrorSyntaxErrorAsEnumResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>> {
-  using type = std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxErrorAsEnumResult> {
   using type = ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>> {
-  using type = ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>;
 };
 
 #ifdef __Fuchsia__
@@ -794,16 +770,8 @@ struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxHandleInRes
   using type = ::test_protocols::WithErrorSyntaxHandleInResultResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>> {
-  using type = std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxHandleInResultResult> {
   using type = ::test_protocols::wire::WithErrorSyntaxHandleInResultResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>> {
-  using type = ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>;
 };
 
 #endif  // __Fuchsia__
@@ -825,16 +793,8 @@ struct NaturalTypeForWireType<::test_protocols::wire::TheUnion> {
   using type = ::test_protocols::TheUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocols::wire::TheUnion>> {
-  using type = std::unique_ptr<::test_protocols::TheUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_protocols::TheUnion> {
   using type = ::test_protocols::wire::TheUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::TheUnion>> {
-  using type = ::fidl::WireOptional<::test_protocols::wire::TheUnion>;
 };
 
 #ifdef __Fuchsia__

@@ -35,7 +35,7 @@ protocol P {
 	ty := m.RequestArgs[0].Type
 	expectEqual(t, ty.HLCPP.String(), "::std::array<::std::unique_ptr<::foo::bar::U>, 3>")
 	expectEqual(t, ty.Wire.String(), "::fidl::Array<::fidl::WireOptional<::foo_bar::wire::U>, 3>")
-	expectEqual(t, ty.Unified.String(), "::std::array<::std::unique_ptr<::foo_bar::U>, 3>")
+	expectEqual(t, ty.Unified.String(), "::std::array<::fidl::Box<::foo_bar::U>, 3>")
 
 	ty = m.RequestArgs[1].Type
 	expectEqual(t, ty.HLCPP.String(), "::std::vector<::fidl::InterfaceHandle<::foo::bar::P>>")

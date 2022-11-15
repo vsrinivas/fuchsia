@@ -22,7 +22,7 @@ std::ostream& fidl::ostream::Formatter<::test_union::NullableUnionStruct>::Forma
   os << "test_union::NullableUnionStruct";
   os << "{ ";
   os << "the_union";
-  os << " = " << fidl::ostream::Formatted<::std::unique_ptr<::test_union::Union>>(value.the_union()) << ", ";
+  os << " = " << fidl::ostream::Formatted<::fidl::Box<::test_union::Union>>(value.the_union()) << ", ";
   os << "}";
   return os;
 }
@@ -54,7 +54,7 @@ std::ostream& fidl::ostream::Formatter<::test_union::StructWithNullableXUnion>::
   os << "test_union::StructWithNullableXUnion";
   os << "{ ";
   os << "x1";
-  os << " = " << fidl::ostream::Formatted<::std::unique_ptr<::test_union::OlderSimpleUnion>>(value.x1()) << ", ";
+  os << " = " << fidl::ostream::Formatted<::fidl::Box<::test_union::OlderSimpleUnion>>(value.x1()) << ", ";
   os << "}";
   return os;
 }

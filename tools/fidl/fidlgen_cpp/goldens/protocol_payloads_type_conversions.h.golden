@@ -242,16 +242,8 @@ struct NaturalTypeForWireType<::test_protocolpayloads::wire::MainProtocolTwoWayL
   using type = ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult>> {
-  using type = std::unique_ptr<::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult> {
   using type = ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult>> {
-  using type = ::fidl::WireOptional<::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult>;
 };
 
 template <>
@@ -271,16 +263,8 @@ struct NaturalTypeForWireType<::test_protocolpayloads::wire::MainProtocolOnLocal
   using type = ::test_protocolpayloads::MainProtocolOnLocalWithErrorResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult>> {
-  using type = std::unique_ptr<::test_protocolpayloads::MainProtocolOnLocalWithErrorResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_protocolpayloads::MainProtocolOnLocalWithErrorResult> {
   using type = ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_protocolpayloads::MainProtocolOnLocalWithErrorResult>> {
-  using type = ::fidl::WireOptional<::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult>;
 };
 
 template <>
@@ -300,16 +284,8 @@ struct NaturalTypeForWireType<::test_protocolpayloads::wire::MainProtocolTwoWayA
   using type = ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult>> {
-  using type = std::unique_ptr<::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResult> {
   using type = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResult>> {
-  using type = ::fidl::WireOptional<::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult>;
 };
 
 template <>
@@ -329,16 +305,8 @@ struct NaturalTypeForWireType<::test_protocolpayloads::wire::MainProtocolOnAnonW
   using type = ::test_protocolpayloads::MainProtocolOnAnonWithErrorResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult>> {
-  using type = std::unique_ptr<::test_protocolpayloads::MainProtocolOnAnonWithErrorResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_protocolpayloads::MainProtocolOnAnonWithErrorResult> {
   using type = ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_protocolpayloads::MainProtocolOnAnonWithErrorResult>> {
-  using type = ::fidl::WireOptional<::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult>;
 };
 
 template <>
@@ -358,16 +326,8 @@ struct NaturalTypeForWireType<::test_protocolpayloads::wire::MainProtocolTwoWayI
   using type = ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult>> {
-  using type = std::unique_ptr<::test_protocolpayloads::MainProtocolTwoWayImportWithErrorResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_protocolpayloads::MainProtocolTwoWayImportWithErrorResult> {
   using type = ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_protocolpayloads::MainProtocolTwoWayImportWithErrorResult>> {
-  using type = ::fidl::WireOptional<::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult>;
 };
 
 template <>
@@ -387,16 +347,8 @@ struct NaturalTypeForWireType<::test_protocolpayloads::wire::MainProtocolOnImpor
   using type = ::test_protocolpayloads::MainProtocolOnImportWithErrorResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult>> {
-  using type = std::unique_ptr<::test_protocolpayloads::MainProtocolOnImportWithErrorResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_protocolpayloads::MainProtocolOnImportWithErrorResult> {
   using type = ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_protocolpayloads::MainProtocolOnImportWithErrorResult>> {
-  using type = ::fidl::WireOptional<::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult>;
 };
 
 #ifdef __Fuchsia__

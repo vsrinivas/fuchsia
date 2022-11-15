@@ -81,16 +81,8 @@ struct NaturalTypeForWireType<::test_handlesintypes::wire::UnionWithHandle> {
   using type = ::test_handlesintypes::UnionWithHandle;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle>> {
-  using type = std::unique_ptr<::test_handlesintypes::UnionWithHandle>;
-};
-template <>
 struct WireTypeForNaturalType<::test_handlesintypes::UnionWithHandle> {
   using type = ::test_handlesintypes::wire::UnionWithHandle;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_handlesintypes::UnionWithHandle>> {
-  using type = ::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle>;
 };
 
 #endif  // __Fuchsia__

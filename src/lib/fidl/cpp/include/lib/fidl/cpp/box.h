@@ -5,6 +5,8 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_BOX_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_BOX_H_
 
+#include <zircon/assert.h>
+
 #include <memory>
 
 namespace fidl {
@@ -55,6 +57,26 @@ class Box : private std::unique_ptr<T> {
   using std::unique_ptr<T>::operator->;
   using std::unique_ptr<T>::operator bool;
   using std::unique_ptr<T>::reset;
+
+  // A std::optional-like API:
+  bool has_value() const { return std::unique_ptr<T>::get(); }
+
+  const T& value() const& {
+    ZX_ASSERT(has_value());
+    return *std::unique_ptr<T>::get();
+  }
+  T& value() & {
+    ZX_ASSERT(has_value());
+    return *std::unique_ptr<T>::get();
+  }
+
+  template <class U>
+  constexpr T value_or(U&& default_value) const& {
+    if (has_value()) {
+      return value();
+    }
+    return default_value;
+  }
 
   // Returns the wrapped |unique_ptr|.
   std::unique_ptr<T>& unique_ptr() { return *this; }

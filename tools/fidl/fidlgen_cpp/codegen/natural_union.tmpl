@@ -243,16 +243,8 @@ struct NaturalTypeForWireType<{{ $wireType }}> {
   using type = {{ $naturalType }};
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<{{ $wireType }}>> {
-  using type = std::unique_ptr<{{ $naturalType }}>;
-};
-template <>
 struct WireTypeForNaturalType<{{ $naturalType }}> {
     using type = {{ $wireType }};
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<{{ $naturalType }}>> {
-    using type = ::fidl::WireOptional<{{ $wireType }}>;
 };
 
 {{ if .IsResourceType }}
@@ -296,19 +288,6 @@ struct WireTypeForNaturalType<std::unique_ptr<{{ $naturalType }}>> {
       return {{ $wireType }}();
     {{- end }}
   }
-}
-
-std::unique_ptr<{{ $naturalType }}> WireNaturalConversionTraits<::fidl::WireOptional<{{ .Wire }}>, std::unique_ptr<{{ $naturalType }}>>::ToNatural(::fidl::WireOptional<{{ .Wire }}> src) {
-  if (!src.has_value()) {
-    return nullptr;
-  }
-  return std::make_unique<{{ $naturalType }}>(WireNaturalConversionTraits<{{ .Wire }}, {{ $naturalType }}>::ToNatural(std::move(src.value())));
-}
-::fidl::WireOptional<{{ $wireType }}> WireNaturalConversionTraits<::fidl::WireOptional<{{ $wireType }}>, std::unique_ptr<{{ $naturalType }}>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<{{ $naturalType }}> src) {
-  if (!src) {
-    return ::fidl::WireOptional<{{ $wireType }}>();
-  }
-  return WireNaturalConversionTraits<{{ $wireType }}, {{ $naturalType }}>::ToWire(arena, std::move(*src));
 }
 
 {{ if .IsResourceType }}

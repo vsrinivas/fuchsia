@@ -92,16 +92,8 @@ struct NaturalTypeForWireType<::test_arrays::wire::UnionSmallArray> {
   using type = ::test_arrays::UnionSmallArray;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_arrays::wire::UnionSmallArray>> {
-  using type = std::unique_ptr<::test_arrays::UnionSmallArray>;
-};
-template <>
 struct WireTypeForNaturalType<::test_arrays::UnionSmallArray> {
   using type = ::test_arrays::wire::UnionSmallArray;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_arrays::UnionSmallArray>> {
-  using type = ::fidl::WireOptional<::test_arrays::wire::UnionSmallArray>;
 };
 
 template <>
@@ -121,16 +113,8 @@ struct NaturalTypeForWireType<::test_arrays::wire::UnionLargeArray> {
   using type = ::test_arrays::UnionLargeArray;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_arrays::wire::UnionLargeArray>> {
-  using type = std::unique_ptr<::test_arrays::UnionLargeArray>;
-};
-template <>
 struct WireTypeForNaturalType<::test_arrays::UnionLargeArray> {
   using type = ::test_arrays::wire::UnionLargeArray;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_arrays::UnionLargeArray>> {
-  using type = ::fidl::WireOptional<::test_arrays::wire::UnionLargeArray>;
 };
 
 #ifdef __Fuchsia__

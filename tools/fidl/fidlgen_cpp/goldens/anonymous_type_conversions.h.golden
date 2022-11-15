@@ -171,16 +171,8 @@ struct NaturalTypeForWireType<::test_anonymous::wire::Expression> {
   using type = ::test_anonymous::Expression;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_anonymous::wire::Expression>> {
-  using type = std::unique_ptr<::test_anonymous::Expression>;
-};
-template <>
 struct WireTypeForNaturalType<::test_anonymous::Expression> {
   using type = ::test_anonymous::wire::Expression;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_anonymous::Expression>> {
-  using type = ::fidl::WireOptional<::test_anonymous::wire::Expression>;
 };
 
 template <>
@@ -200,16 +192,8 @@ struct NaturalTypeForWireType<::test_anonymous::wire::UnionMember> {
   using type = ::test_anonymous::UnionMember;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_anonymous::wire::UnionMember>> {
-  using type = std::unique_ptr<::test_anonymous::UnionMember>;
-};
-template <>
 struct WireTypeForNaturalType<::test_anonymous::UnionMember> {
   using type = ::test_anonymous::wire::UnionMember;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_anonymous::UnionMember>> {
-  using type = ::fidl::WireOptional<::test_anonymous::wire::UnionMember>;
 };
 
 template <>
@@ -229,16 +213,8 @@ struct NaturalTypeForWireType<::test_anonymous::wire::SomeProtocolSomeMethodResu
   using type = ::test_anonymous::SomeProtocolSomeMethodResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_anonymous::wire::SomeProtocolSomeMethodResult>> {
-  using type = std::unique_ptr<::test_anonymous::SomeProtocolSomeMethodResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_anonymous::SomeProtocolSomeMethodResult> {
   using type = ::test_anonymous::wire::SomeProtocolSomeMethodResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_anonymous::SomeProtocolSomeMethodResult>> {
-  using type = ::fidl::WireOptional<::test_anonymous::wire::SomeProtocolSomeMethodResult>;
 };
 
 #ifdef __Fuchsia__

@@ -77,16 +77,8 @@ struct NaturalTypeForWireType<::test_error::wire::ExampleFooResult> {
   using type = ::test_error::ExampleFooResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_error::wire::ExampleFooResult>> {
-  using type = std::unique_ptr<::test_error::ExampleFooResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_error::ExampleFooResult> {
   using type = ::test_error::wire::ExampleFooResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_error::ExampleFooResult>> {
-  using type = ::fidl::WireOptional<::test_error::wire::ExampleFooResult>;
 };
 
 #ifdef __Fuchsia__

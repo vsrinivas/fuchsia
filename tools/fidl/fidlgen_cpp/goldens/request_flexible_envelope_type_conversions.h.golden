@@ -92,16 +92,8 @@ struct NaturalTypeForWireType<::test_requestflexibleenvelope::wire::FlexibleFoo>
   using type = ::test_requestflexibleenvelope::FlexibleFoo;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_requestflexibleenvelope::wire::FlexibleFoo>> {
-  using type = std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>;
-};
-template <>
 struct WireTypeForNaturalType<::test_requestflexibleenvelope::FlexibleFoo> {
   using type = ::test_requestflexibleenvelope::wire::FlexibleFoo;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>> {
-  using type = ::fidl::WireOptional<::test_requestflexibleenvelope::wire::FlexibleFoo>;
 };
 
 template <>
@@ -121,16 +113,8 @@ struct NaturalTypeForWireType<::test_requestflexibleenvelope::wire::StrictFoo> {
   using type = ::test_requestflexibleenvelope::StrictFoo;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_requestflexibleenvelope::wire::StrictFoo>> {
-  using type = std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>;
-};
-template <>
 struct WireTypeForNaturalType<::test_requestflexibleenvelope::StrictFoo> {
   using type = ::test_requestflexibleenvelope::wire::StrictFoo;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>> {
-  using type = ::fidl::WireOptional<::test_requestflexibleenvelope::wire::StrictFoo>;
 };
 
 #ifdef __Fuchsia__

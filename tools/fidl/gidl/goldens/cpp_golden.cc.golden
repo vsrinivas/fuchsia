@@ -191,7 +191,7 @@ var1.v() = std::move(var2);
 
 TEST(Conformance, GoldenNullableUnionStructNull_V2_Encode) {
   auto var1 = test_conformance::GoldenNullableUnionStruct{::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
-var1.v() = std::unique_ptr<test_conformance::GoldenUnion>();
+var1.v() = fidl::Box<test_conformance::GoldenUnion>();
 
   auto obj = std::move(var1);
   const auto expected_bytes = std::vector<uint8_t>{
@@ -599,7 +599,7 @@ TEST(Conformance, GoldenNullableUnionStructNonNull_V2_Decode) {
     ::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenNullableUnionStruct& value) {
     [[maybe_unused]] const auto& f1 = value;
 [[maybe_unused]] const auto& f2 = f1.v();
-ASSERT_NE(f2, nullptr);
+ASSERT_TRUE(f2.has_value());
 ASSERT_EQ(f2->Which(), test_conformance::GoldenUnion::Tag::kV);
 ASSERT_TRUE(f2->v().has_value());
 ASSERT_EQ(f2->v().value(), int16_t(1ull));
@@ -616,7 +616,7 @@ TEST(Conformance, GoldenNullableUnionStructNull_V2_Decode) {
   conformance_utils::DecodeSuccess<test_conformance::GoldenNullableUnionStruct>(
     ::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenNullableUnionStruct& value) {
     [[maybe_unused]] const auto& f1 = value;
-ASSERT_NULL(f1.v());
+ASSERT_FALSE(f1.v().has_value());
 
   });
 }
@@ -748,7 +748,7 @@ TEST(Conformance, GoldenNullableStructNonNull_V2_Decode) {
     ::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenNullableStruct& value) {
     [[maybe_unused]] const auto& f1 = value;
 [[maybe_unused]] const auto& f2 = f1.v();
-ASSERT_NE(f2, nullptr);
+ASSERT_TRUE(f2.has_value());
 ASSERT_EQ(f2->v(), bool(true));
 
   });
@@ -762,7 +762,7 @@ TEST(Conformance, GoldenNullableStructNull_V2_Decode) {
   conformance_utils::DecodeSuccess<test_conformance::GoldenNullableStruct>(
     ::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenNullableStruct& value) {
     [[maybe_unused]] const auto& f1 = value;
-ASSERT_NULL(f1.v());
+ASSERT_FALSE(f1.v().has_value());
 
   });
 }

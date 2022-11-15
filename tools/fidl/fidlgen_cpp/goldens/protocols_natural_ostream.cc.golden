@@ -379,7 +379,7 @@ std::ostream& fidl::ostream::Formatter<::test_protocols::MethodWithUnionUnionMet
   os << "test_protocols::MethodWithUnionUnionMethodResponse";
   os << "{ ";
   os << "u";
-  os << " = " << fidl::ostream::Formatted<::std::unique_ptr<::test_protocols::TheUnion>>(value.u()) << ", ";
+  os << " = " << fidl::ostream::Formatted<::fidl::Box<::test_protocols::TheUnion>>(value.u()) << ", ";
   os << "}";
   return os;
 }

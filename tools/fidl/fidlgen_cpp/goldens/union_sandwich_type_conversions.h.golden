@@ -107,16 +107,8 @@ struct NaturalTypeForWireType<::test_unionsandwich::wire::UnionSize8Alignment4> 
   using type = ::test_unionsandwich::UnionSize8Alignment4;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unionsandwich::wire::UnionSize8Alignment4>> {
-  using type = std::unique_ptr<::test_unionsandwich::UnionSize8Alignment4>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unionsandwich::UnionSize8Alignment4> {
   using type = ::test_unionsandwich::wire::UnionSize8Alignment4;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unionsandwich::UnionSize8Alignment4>> {
-  using type = ::fidl::WireOptional<::test_unionsandwich::wire::UnionSize8Alignment4>;
 };
 
 template <>
@@ -136,16 +128,8 @@ struct NaturalTypeForWireType<::test_unionsandwich::wire::UnionSize12Alignment4>
   using type = ::test_unionsandwich::UnionSize12Alignment4;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unionsandwich::wire::UnionSize12Alignment4>> {
-  using type = std::unique_ptr<::test_unionsandwich::UnionSize12Alignment4>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unionsandwich::UnionSize12Alignment4> {
   using type = ::test_unionsandwich::wire::UnionSize12Alignment4;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unionsandwich::UnionSize12Alignment4>> {
-  using type = ::fidl::WireOptional<::test_unionsandwich::wire::UnionSize12Alignment4>;
 };
 
 template <>
@@ -165,16 +149,8 @@ struct NaturalTypeForWireType<::test_unionsandwich::wire::UnionSize24Alignment8>
   using type = ::test_unionsandwich::UnionSize24Alignment8;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unionsandwich::wire::UnionSize24Alignment8>> {
-  using type = std::unique_ptr<::test_unionsandwich::UnionSize24Alignment8>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unionsandwich::UnionSize24Alignment8> {
   using type = ::test_unionsandwich::wire::UnionSize24Alignment8;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unionsandwich::UnionSize24Alignment8>> {
-  using type = ::fidl::WireOptional<::test_unionsandwich::wire::UnionSize24Alignment8>;
 };
 
 template <>
@@ -194,16 +170,8 @@ struct NaturalTypeForWireType<::test_unionsandwich::wire::UnionSize36Alignment4>
   using type = ::test_unionsandwich::UnionSize36Alignment4;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unionsandwich::wire::UnionSize36Alignment4>> {
-  using type = std::unique_ptr<::test_unionsandwich::UnionSize36Alignment4>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unionsandwich::UnionSize36Alignment4> {
   using type = ::test_unionsandwich::wire::UnionSize36Alignment4;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unionsandwich::UnionSize36Alignment4>> {
-  using type = ::fidl::WireOptional<::test_unionsandwich::wire::UnionSize36Alignment4>;
 };
 
 #ifdef __Fuchsia__

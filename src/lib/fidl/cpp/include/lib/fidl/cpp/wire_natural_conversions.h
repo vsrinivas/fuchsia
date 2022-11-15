@@ -7,6 +7,7 @@
 
 #include <lib/fidl/cpp/box.h>
 #include <lib/fidl/cpp/wire/object_view.h>
+#include <lib/fidl/cpp/wire/optional.h>
 #include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fidl/cpp/wire/vector_view.h>
@@ -209,13 +210,41 @@ struct WireNaturalConversionTraits<fidl::ObjectView<WireType>, fidl::Box<Natural
   }
 };
 
+template <typename WireType, typename NaturalType>
+struct WireNaturalConversionTraits<fidl::WireOptional<WireType>, fidl::Box<NaturalType>> {
+  static fidl::Box<NaturalType> ToNatural(fidl::WireOptional<WireType> src) {
+    if (!src.has_value()) {
+      return nullptr;
+    }
+    return std::make_unique<NaturalType>(
+        WireNaturalConversionTraits<WireType, NaturalType>::ToNatural(std::move(*src)));
+  }
+  static fidl::WireOptional<WireType> ToWire(fidl::AnyArena& arena, fidl::Box<NaturalType> src) {
+    if (!src) {
+      return {};
+    }
+    return WireNaturalConversionTraits<WireType, NaturalType>::ToWire(arena, std::move(*src));
+  }
+};
+
 template <typename WireType>
 struct NaturalTypeForWireType<fidl::ObjectView<WireType>> {
   using type = fidl::Box<typename NaturalTypeForWireType<WireType>::type>;
 };
 template <typename NaturalType>
-struct WireTypeForNaturalType<fidl::Box<NaturalType>> {
+struct WireTypeForNaturalType<fidl::Box<NaturalType>,
+                              std::enable_if_t<!IsUnion<NaturalType>::value>> {
   using type = fidl::ObjectView<typename WireTypeForNaturalType<NaturalType>::type>;
+};
+
+template <typename WireType>
+struct NaturalTypeForWireType<fidl::WireOptional<WireType>> {
+  using type = fidl::Box<typename NaturalTypeForWireType<WireType>::type>;
+};
+template <typename NaturalType>
+struct WireTypeForNaturalType<fidl::Box<NaturalType>,
+                              std::enable_if_t<IsUnion<NaturalType>::value>> {
+  using type = fidl::WireOptional<typename WireTypeForNaturalType<NaturalType>::type>;
 };
 
 template <typename WireTopResponseType, typename NaturalErrorType, typename NaturalValueType>

@@ -778,7 +778,7 @@ class StructWithNullableUnion {
 
  public:
   StructWithNullableUnion(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  StructWithNullableUnion(::std::unique_ptr<::test_nullable::SimpleUnion> val) noexcept
+  StructWithNullableUnion(::fidl::Box<::test_nullable::SimpleUnion> val) noexcept
       : storage_({.val = std::move(val)}) {}
 
 #pragma clang diagnostic push
@@ -802,19 +802,19 @@ class StructWithNullableUnion {
     return !::fidl::internal::NaturalStructCodingTraits<::test_nullable::StructWithNullableUnion, 16>::Equal(this, &other);
   }
 
-  const ::std::unique_ptr<::test_nullable::SimpleUnion>&
+  const ::fidl::Box<::test_nullable::SimpleUnion>&
   val() const {
     return storage_.val;
   }
 
-  ::std::unique_ptr<::test_nullable::SimpleUnion>& val() {
+  ::fidl::Box<::test_nullable::SimpleUnion>& val() {
     return storage_.val;
   }
 
   // Setter for val.
   //
 
-  StructWithNullableUnion& val(::std::unique_ptr<::test_nullable::SimpleUnion> value) {
+  StructWithNullableUnion& val(::fidl::Box<::test_nullable::SimpleUnion> value) {
     storage_.val = std::move(value);
     return *this;
   }
@@ -825,7 +825,7 @@ class StructWithNullableUnion {
 
  private:
   struct Storage_ final {
-    ::std::unique_ptr<::test_nullable::SimpleUnion> val;
+    ::fidl::Box<::test_nullable::SimpleUnion> val;
   };
 
   Storage_ storage_;
@@ -833,7 +833,7 @@ class StructWithNullableUnion {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<::test_nullable::StructWithNullableUnion, 16>;
   friend struct ::fidl::internal::MemberVisitor<::test_nullable::StructWithNullableUnion>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_nullable::SimpleUnion>, fidl::internal::NaturalCodingConstraintEmpty>{
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fidl::Box<::test_nullable::SimpleUnion>, fidl::internal::NaturalCodingConstraintEmpty>{
       &Storage_::val, 0});
   static constexpr auto kPadding = std::make_tuple();
 };

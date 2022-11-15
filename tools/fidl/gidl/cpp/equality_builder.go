@@ -73,6 +73,12 @@ func (b *equalityCheckBuilder) assertTrue(value string) {
 func (b *equalityCheckBuilder) assertNull(value string) {
 	b.write("ASSERT_NULL(%s);\n", value)
 }
+func (b *equalityCheckBuilder) assertAbsent(value string) {
+	b.write("ASSERT_FALSE(%s.has_value());\n", value)
+}
+func (b *equalityCheckBuilder) assertPresent(value string) {
+	b.write("ASSERT_TRUE(%s.has_value());\n", value)
+}
 
 func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue gidlir.Value, decl gidlmixer.Declaration) {
 	switch expectedValue := expectedValue.(type) {
@@ -141,13 +147,13 @@ func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue gidlir.Val
 			b.assertFalse(fmt.Sprintf("%s.is_valid()", actualExpr))
 			return
 		case *gidlmixer.UnionDecl:
-			b.assertNull(actualExpr)
+			b.assertAbsent(actualExpr)
 			return
 		case *gidlmixer.VectorDecl:
 			b.assertFalse(fmt.Sprintf("%s.has_value()", actualExpr))
 			return
 		case *gidlmixer.StructDecl:
-			b.assertNull(actualExpr)
+			b.assertAbsent(actualExpr)
 			return
 		}
 	}
@@ -197,7 +203,7 @@ func (b *equalityCheckBuilder) visitStruct(actualExpr string, expectedValue gidl
 	op := "."
 	if decl.IsNullable() {
 		op = "->"
-		b.assertNotEquals(actualVar, "nullptr")
+		b.assertPresent(actualVar)
 	}
 	for _, field := range expectedValue.Fields {
 		fieldDecl, ok := decl.Field(field.Key.Name)
@@ -240,7 +246,7 @@ func (b *equalityCheckBuilder) visitUnion(actualExpr string, expectedValue gidli
 	op := "."
 	if decl.IsNullable() {
 		op = "->"
-		b.assertNotEquals(actualVar, "nullptr")
+		b.assertPresent(actualVar)
 	}
 	if len(expectedValue.Fields) != 1 {
 		panic("shouldn't happen")

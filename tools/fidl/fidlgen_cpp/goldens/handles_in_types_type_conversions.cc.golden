@@ -73,19 +73,6 @@ namespace internal {
   }
 }
 
-std::unique_ptr<::test_handlesintypes::UnionWithHandle> WireNaturalConversionTraits<::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle>, std::unique_ptr<::test_handlesintypes::UnionWithHandle>>::ToNatural(::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle> src) {
-  if (!src.has_value()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_handlesintypes::UnionWithHandle>(WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, ::test_handlesintypes::UnionWithHandle>::ToNatural(std::move(src.value())));
-}
-::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle> WireNaturalConversionTraits<::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle>, std::unique_ptr<::test_handlesintypes::UnionWithHandle>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_handlesintypes::UnionWithHandle> src) {
-  if (!src) {
-    return ::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle>();
-  }
-  return WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, ::test_handlesintypes::UnionWithHandle>::ToWire(arena, std::move(*src));
-}
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

@@ -46,7 +46,7 @@ class OverrideTest {
 
  public:
   OverrideTest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  OverrideTest(::test_anonymous::Op op, ::std::unique_ptr<::test_anonymous::Expression> left, ::std::unique_ptr<::test_anonymous::Expression> right) noexcept
+  OverrideTest(::test_anonymous::Op op, ::fidl::Box<::test_anonymous::Expression> left, ::fidl::Box<::test_anonymous::Expression> right) noexcept
       : storage_({.op = std::move(op),
                   .left = std::move(left),
                   .right = std::move(right)}) {}
@@ -89,36 +89,36 @@ class OverrideTest {
     return *this;
   }
 
-  const ::std::unique_ptr<::test_anonymous::Expression>&
+  const ::fidl::Box<::test_anonymous::Expression>&
   left() const {
     return storage_.left;
   }
 
-  ::std::unique_ptr<::test_anonymous::Expression>& left() {
+  ::fidl::Box<::test_anonymous::Expression>& left() {
     return storage_.left;
   }
 
   // Setter for left.
   //
 
-  OverrideTest& left(::std::unique_ptr<::test_anonymous::Expression> value) {
+  OverrideTest& left(::fidl::Box<::test_anonymous::Expression> value) {
     storage_.left = std::move(value);
     return *this;
   }
 
-  const ::std::unique_ptr<::test_anonymous::Expression>&
+  const ::fidl::Box<::test_anonymous::Expression>&
   right() const {
     return storage_.right;
   }
 
-  ::std::unique_ptr<::test_anonymous::Expression>& right() {
+  ::fidl::Box<::test_anonymous::Expression>& right() {
     return storage_.right;
   }
 
   // Setter for right.
   //
 
-  OverrideTest& right(::std::unique_ptr<::test_anonymous::Expression> value) {
+  OverrideTest& right(::fidl::Box<::test_anonymous::Expression> value) {
     storage_.right = std::move(value);
     return *this;
   }
@@ -132,8 +132,8 @@ class OverrideTest {
  private:
   struct Storage_ final {
     ::test_anonymous::Op op = {};
-    ::std::unique_ptr<::test_anonymous::Expression> left;
-    ::std::unique_ptr<::test_anonymous::Expression> right;
+    ::fidl::Box<::test_anonymous::Expression> left;
+    ::fidl::Box<::test_anonymous::Expression> right;
   };
 
   Storage_ storage_;
@@ -143,7 +143,7 @@ class OverrideTest {
   friend struct ::fidl::internal::MemberVisitor<::test_anonymous::OverrideTest>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_anonymous::Op, fidl::internal::NaturalCodingConstraintEmpty>{
                                                        &Storage_::op, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_anonymous::Expression>, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::left, 8}, ::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_anonymous::Expression>, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::right, 24});
+                                                   ::fidl::internal::NaturalStructMember<Storage_, ::fidl::Box<::test_anonymous::Expression>, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::left, 8}, ::fidl::internal::NaturalStructMember<Storage_, ::fidl::Box<::test_anonymous::Expression>, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::right, 24});
   static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
       .offset = 0,
       .mask = 0xffffffff00000000ull,
@@ -188,13 +188,13 @@ class FunctionApplication {
     return *this;
   }
 
-  const std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>& args() const { return storage_.args; }
-  ::std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>& args() { return storage_.args; }
+  const std::optional<::std::vector<::fidl::Box<::test_anonymous::Expression>>>& args() const { return storage_.args; }
+  ::std::optional<::std::vector<::fidl::Box<::test_anonymous::Expression>>>& args() { return storage_.args; }
 
   // Setter for args.
   //
 
-  FunctionApplication& args(std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>> value) {
+  FunctionApplication& args(std::optional<::std::vector<::fidl::Box<::test_anonymous::Expression>>> value) {
     storage_.args = std::move(value);
     return *this;
   }
@@ -215,7 +215,7 @@ class FunctionApplication {
  private:
   struct Storage_ final {
     ::std::optional<::std::string> func{};
-    ::std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>> args{};
+    ::std::optional<::std::vector<::fidl::Box<::test_anonymous::Expression>>> args{};
     ::std::optional<::test_anonymous::Flags> flags{};
   };
 
@@ -226,7 +226,7 @@ class FunctionApplication {
   friend struct ::fidl::internal::MemberVisitor<::test_anonymous::FunctionApplication>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::std::string, fidl::internal::NaturalCodingConstraintString<100>>{
                                                        1, &Storage_::func},
-                                                   ::fidl::internal::NaturalTableMember<Storage_, ::std::vector<::std::unique_ptr<::test_anonymous::Expression>>, fidl::internal::NaturalCodingConstraintVector<fidl::internal::NaturalCodingConstraintEmpty, 5>>{3, &Storage_::args}, ::fidl::internal::NaturalTableMember<Storage_, ::test_anonymous::Flags, fidl::internal::NaturalCodingConstraintEmpty>{4, &Storage_::flags});
+                                                   ::fidl::internal::NaturalTableMember<Storage_, ::std::vector<::fidl::Box<::test_anonymous::Expression>>, fidl::internal::NaturalCodingConstraintVector<fidl::internal::NaturalCodingConstraintEmpty, 5>>{3, &Storage_::args}, ::fidl::internal::NaturalTableMember<Storage_, ::test_anonymous::Flags, fidl::internal::NaturalCodingConstraintEmpty>{4, &Storage_::flags});
 };
 
 extern "C" const fidl_type_t test_anonymous_ExpressionTable;

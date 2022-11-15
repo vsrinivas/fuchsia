@@ -194,16 +194,8 @@ struct NaturalTypeForWireType<::test_nullable::wire::SimpleUnion> {
   using type = ::test_nullable::SimpleUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_nullable::wire::SimpleUnion>> {
-  using type = std::unique_ptr<::test_nullable::SimpleUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_nullable::SimpleUnion> {
   using type = ::test_nullable::wire::SimpleUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_nullable::SimpleUnion>> {
-  using type = ::fidl::WireOptional<::test_nullable::wire::SimpleUnion>;
 };
 
 #ifdef __Fuchsia__

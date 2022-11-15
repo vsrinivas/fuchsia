@@ -95,16 +95,8 @@ struct NaturalTypeForWireType<::test_placementofattributes::wire::ExampleUnion> 
   using type = ::test_placementofattributes::ExampleUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_placementofattributes::wire::ExampleUnion>> {
-  using type = std::unique_ptr<::test_placementofattributes::ExampleUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_placementofattributes::ExampleUnion> {
   using type = ::test_placementofattributes::wire::ExampleUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_placementofattributes::ExampleUnion>> {
-  using type = ::fidl::WireOptional<::test_placementofattributes::wire::ExampleUnion>;
 };
 
 template <>
@@ -124,16 +116,8 @@ struct NaturalTypeForWireType<::test_placementofattributes::wire::ExampleXUnion>
   using type = ::test_placementofattributes::ExampleXUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_placementofattributes::wire::ExampleXUnion>> {
-  using type = std::unique_ptr<::test_placementofattributes::ExampleXUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_placementofattributes::ExampleXUnion> {
   using type = ::test_placementofattributes::wire::ExampleXUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_placementofattributes::ExampleXUnion>> {
-  using type = ::fidl::WireOptional<::test_placementofattributes::wire::ExampleXUnion>;
 };
 
 #ifdef __Fuchsia__

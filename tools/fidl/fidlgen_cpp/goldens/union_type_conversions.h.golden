@@ -152,16 +152,8 @@ struct NaturalTypeForWireType<::test_union::wire::PizzaOrPasta> {
   using type = ::test_union::PizzaOrPasta;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::PizzaOrPasta>> {
-  using type = std::unique_ptr<::test_union::PizzaOrPasta>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::PizzaOrPasta> {
   using type = ::test_union::wire::PizzaOrPasta;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::PizzaOrPasta>> {
-  using type = ::fidl::WireOptional<::test_union::wire::PizzaOrPasta>;
 };
 
 template <>
@@ -181,16 +173,8 @@ struct NaturalTypeForWireType<::test_union::wire::ExplicitPizzaOrPasta> {
   using type = ::test_union::ExplicitPizzaOrPasta;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::ExplicitPizzaOrPasta>> {
-  using type = std::unique_ptr<::test_union::ExplicitPizzaOrPasta>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::ExplicitPizzaOrPasta> {
   using type = ::test_union::wire::ExplicitPizzaOrPasta;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::ExplicitPizzaOrPasta>> {
-  using type = ::fidl::WireOptional<::test_union::wire::ExplicitPizzaOrPasta>;
 };
 
 template <>
@@ -210,16 +194,8 @@ struct NaturalTypeForWireType<::test_union::wire::FlexiblePizzaOrPasta> {
   using type = ::test_union::FlexiblePizzaOrPasta;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::FlexiblePizzaOrPasta>> {
-  using type = std::unique_ptr<::test_union::FlexiblePizzaOrPasta>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::FlexiblePizzaOrPasta> {
   using type = ::test_union::wire::FlexiblePizzaOrPasta;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::FlexiblePizzaOrPasta>> {
-  using type = ::fidl::WireOptional<::test_union::wire::FlexiblePizzaOrPasta>;
 };
 
 template <>
@@ -239,16 +215,8 @@ struct NaturalTypeForWireType<::test_union::wire::StrictPizzaOrPasta> {
   using type = ::test_union::StrictPizzaOrPasta;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::StrictPizzaOrPasta>> {
-  using type = std::unique_ptr<::test_union::StrictPizzaOrPasta>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::StrictPizzaOrPasta> {
   using type = ::test_union::wire::StrictPizzaOrPasta;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::StrictPizzaOrPasta>> {
-  using type = ::fidl::WireOptional<::test_union::wire::StrictPizzaOrPasta>;
 };
 
 template <>
@@ -268,16 +236,8 @@ struct NaturalTypeForWireType<::test_union::wire::Union> {
   using type = ::test_union::Union;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::Union>> {
-  using type = std::unique_ptr<::test_union::Union>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::Union> {
   using type = ::test_union::wire::Union;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::Union>> {
-  using type = ::fidl::WireOptional<::test_union::wire::Union>;
 };
 
 template <>
@@ -297,16 +257,8 @@ struct NaturalTypeForWireType<::test_union::wire::FlexibleUnion> {
   using type = ::test_union::FlexibleUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::FlexibleUnion>> {
-  using type = std::unique_ptr<::test_union::FlexibleUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::FlexibleUnion> {
   using type = ::test_union::wire::FlexibleUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::FlexibleUnion>> {
-  using type = ::fidl::WireOptional<::test_union::wire::FlexibleUnion>;
 };
 
 template <>
@@ -326,16 +278,8 @@ struct NaturalTypeForWireType<::test_union::wire::StrictUnion> {
   using type = ::test_union::StrictUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::StrictUnion>> {
-  using type = std::unique_ptr<::test_union::StrictUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::StrictUnion> {
   using type = ::test_union::wire::StrictUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::StrictUnion>> {
-  using type = ::fidl::WireOptional<::test_union::wire::StrictUnion>;
 };
 
 template <>
@@ -355,16 +299,8 @@ struct NaturalTypeForWireType<::test_union::wire::FieldCollision> {
   using type = ::test_union::FieldCollision;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::FieldCollision>> {
-  using type = std::unique_ptr<::test_union::FieldCollision>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::FieldCollision> {
   using type = ::test_union::wire::FieldCollision;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::FieldCollision>> {
-  using type = ::fidl::WireOptional<::test_union::wire::FieldCollision>;
 };
 
 template <>
@@ -384,16 +320,8 @@ struct NaturalTypeForWireType<::test_union::wire::ExplicitUnion> {
   using type = ::test_union::ExplicitUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::ExplicitUnion>> {
-  using type = std::unique_ptr<::test_union::ExplicitUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::ExplicitUnion> {
   using type = ::test_union::wire::ExplicitUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::ExplicitUnion>> {
-  using type = ::fidl::WireOptional<::test_union::wire::ExplicitUnion>;
 };
 
 template <>
@@ -413,16 +341,8 @@ struct NaturalTypeForWireType<::test_union::wire::ReverseOrdinalUnion> {
   using type = ::test_union::ReverseOrdinalUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::ReverseOrdinalUnion>> {
-  using type = std::unique_ptr<::test_union::ReverseOrdinalUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::ReverseOrdinalUnion> {
   using type = ::test_union::wire::ReverseOrdinalUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::ReverseOrdinalUnion>> {
-  using type = ::fidl::WireOptional<::test_union::wire::ReverseOrdinalUnion>;
 };
 
 template <>
@@ -442,16 +362,8 @@ struct NaturalTypeForWireType<::test_union::wire::FlexibleFoo> {
   using type = ::test_union::FlexibleFoo;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::FlexibleFoo>> {
-  using type = std::unique_ptr<::test_union::FlexibleFoo>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::FlexibleFoo> {
   using type = ::test_union::wire::FlexibleFoo;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::FlexibleFoo>> {
-  using type = ::fidl::WireOptional<::test_union::wire::FlexibleFoo>;
 };
 
 template <>
@@ -471,16 +383,8 @@ struct NaturalTypeForWireType<::test_union::wire::StrictFoo> {
   using type = ::test_union::StrictFoo;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::StrictFoo>> {
-  using type = std::unique_ptr<::test_union::StrictFoo>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::StrictFoo> {
   using type = ::test_union::wire::StrictFoo;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::StrictFoo>> {
-  using type = ::fidl::WireOptional<::test_union::wire::StrictFoo>;
 };
 
 template <>
@@ -500,16 +404,8 @@ struct NaturalTypeForWireType<::test_union::wire::ExplicitFoo> {
   using type = ::test_union::ExplicitFoo;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::ExplicitFoo>> {
-  using type = std::unique_ptr<::test_union::ExplicitFoo>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::ExplicitFoo> {
   using type = ::test_union::wire::ExplicitFoo;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::ExplicitFoo>> {
-  using type = ::fidl::WireOptional<::test_union::wire::ExplicitFoo>;
 };
 
 template <>
@@ -529,16 +425,8 @@ struct NaturalTypeForWireType<::test_union::wire::ExplicitStrictFoo> {
   using type = ::test_union::ExplicitStrictFoo;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::ExplicitStrictFoo>> {
-  using type = std::unique_ptr<::test_union::ExplicitStrictFoo>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::ExplicitStrictFoo> {
   using type = ::test_union::wire::ExplicitStrictFoo;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::ExplicitStrictFoo>> {
-  using type = ::fidl::WireOptional<::test_union::wire::ExplicitStrictFoo>;
 };
 
 template <>
@@ -558,16 +446,8 @@ struct NaturalTypeForWireType<::test_union::wire::OlderSimpleUnion> {
   using type = ::test_union::OlderSimpleUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::OlderSimpleUnion>> {
-  using type = std::unique_ptr<::test_union::OlderSimpleUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::OlderSimpleUnion> {
   using type = ::test_union::wire::OlderSimpleUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::OlderSimpleUnion>> {
-  using type = ::fidl::WireOptional<::test_union::wire::OlderSimpleUnion>;
 };
 
 template <>
@@ -587,16 +467,8 @@ struct NaturalTypeForWireType<::test_union::wire::NewerSimpleUnion> {
   using type = ::test_union::NewerSimpleUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::NewerSimpleUnion>> {
-  using type = std::unique_ptr<::test_union::NewerSimpleUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::NewerSimpleUnion> {
   using type = ::test_union::wire::NewerSimpleUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::NewerSimpleUnion>> {
-  using type = ::fidl::WireOptional<::test_union::wire::NewerSimpleUnion>;
 };
 
 template <>
@@ -616,16 +488,8 @@ struct NaturalTypeForWireType<::test_union::wire::StrictSimpleXUnion> {
   using type = ::test_union::StrictSimpleXUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::StrictSimpleXUnion>> {
-  using type = std::unique_ptr<::test_union::StrictSimpleXUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::StrictSimpleXUnion> {
   using type = ::test_union::wire::StrictSimpleXUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::StrictSimpleXUnion>> {
-  using type = ::fidl::WireOptional<::test_union::wire::StrictSimpleXUnion>;
 };
 
 template <>
@@ -645,16 +509,8 @@ struct NaturalTypeForWireType<::test_union::wire::XUnionContainingEmptyStruct> {
   using type = ::test_union::XUnionContainingEmptyStruct;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::XUnionContainingEmptyStruct>> {
-  using type = std::unique_ptr<::test_union::XUnionContainingEmptyStruct>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::XUnionContainingEmptyStruct> {
   using type = ::test_union::wire::XUnionContainingEmptyStruct;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::XUnionContainingEmptyStruct>> {
-  using type = ::fidl::WireOptional<::test_union::wire::XUnionContainingEmptyStruct>;
 };
 
 template <>
@@ -674,16 +530,8 @@ struct NaturalTypeForWireType<::test_union::wire::StrictBoundedXUnion> {
   using type = ::test_union::StrictBoundedXUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::StrictBoundedXUnion>> {
-  using type = std::unique_ptr<::test_union::StrictBoundedXUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::StrictBoundedXUnion> {
   using type = ::test_union::wire::StrictBoundedXUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::StrictBoundedXUnion>> {
-  using type = ::fidl::WireOptional<::test_union::wire::StrictBoundedXUnion>;
 };
 
 template <>
@@ -703,16 +551,8 @@ struct NaturalTypeForWireType<::test_union::wire::ExplicitXUnion> {
   using type = ::test_union::ExplicitXUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::ExplicitXUnion>> {
-  using type = std::unique_ptr<::test_union::ExplicitXUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::ExplicitXUnion> {
   using type = ::test_union::wire::ExplicitXUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::ExplicitXUnion>> {
-  using type = ::fidl::WireOptional<::test_union::wire::ExplicitXUnion>;
 };
 
 template <>
@@ -732,16 +572,8 @@ struct NaturalTypeForWireType<::test_union::wire::UnionWithAttributes> {
   using type = ::test_union::UnionWithAttributes;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::UnionWithAttributes>> {
-  using type = std::unique_ptr<::test_union::UnionWithAttributes>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::UnionWithAttributes> {
   using type = ::test_union::wire::UnionWithAttributes;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::UnionWithAttributes>> {
-  using type = ::fidl::WireOptional<::test_union::wire::UnionWithAttributes>;
 };
 
 template <>
@@ -761,16 +593,8 @@ struct NaturalTypeForWireType<::test_union::wire::EmptyFlexibleUnion> {
   using type = ::test_union::EmptyFlexibleUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::EmptyFlexibleUnion>> {
-  using type = std::unique_ptr<::test_union::EmptyFlexibleUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::EmptyFlexibleUnion> {
   using type = ::test_union::wire::EmptyFlexibleUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::EmptyFlexibleUnion>> {
-  using type = ::fidl::WireOptional<::test_union::wire::EmptyFlexibleUnion>;
 };
 
 template <>
@@ -790,16 +614,8 @@ struct NaturalTypeForWireType<::test_union::wire::OnlyReservedFlexibleUnion> {
   using type = ::test_union::OnlyReservedFlexibleUnion;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_union::wire::OnlyReservedFlexibleUnion>> {
-  using type = std::unique_ptr<::test_union::OnlyReservedFlexibleUnion>;
-};
-template <>
 struct WireTypeForNaturalType<::test_union::OnlyReservedFlexibleUnion> {
   using type = ::test_union::wire::OnlyReservedFlexibleUnion;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_union::OnlyReservedFlexibleUnion>> {
-  using type = ::fidl::WireOptional<::test_union::wire::OnlyReservedFlexibleUnion>;
 };
 
 #ifdef __Fuchsia__

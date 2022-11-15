@@ -80,7 +80,7 @@ std::ostream& fidl::ostream::Formatter<::test_nullable::StructWithNullableUnion>
   os << "test_nullable::StructWithNullableUnion";
   os << "{ ";
   os << "val";
-  os << " = " << fidl::ostream::Formatted<::std::unique_ptr<::test_nullable::SimpleUnion>>(value.val()) << ", ";
+  os << " = " << fidl::ostream::Formatted<::fidl::Box<::test_nullable::SimpleUnion>>(value.val()) << ", ";
   os << "}";
   return os;
 }

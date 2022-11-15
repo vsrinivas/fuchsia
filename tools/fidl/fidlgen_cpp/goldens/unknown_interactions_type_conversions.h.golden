@@ -2327,16 +2327,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionResponse>;
 };
 
 
@@ -2361,16 +2353,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult>;
 };
 
 
@@ -2395,16 +2379,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult>;
 };
 
 
@@ -2429,16 +2405,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse>;
 };
 
 
@@ -2463,16 +2431,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResult>;
 };
 
 
@@ -2497,16 +2457,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResult>;
 };
 
 
@@ -2531,16 +2483,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult>;
 };
 
 
@@ -2565,16 +2509,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult>;
 };
 
 
@@ -2599,16 +2535,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse>;
 };
 
 
@@ -2633,16 +2561,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResult>;
 };
 
 
@@ -2667,16 +2587,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResult>;
 };
 
 
@@ -2701,16 +2613,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult>;
 };
 
 
@@ -2735,16 +2639,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult>;
 };
 
 
@@ -2769,16 +2665,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse>;
 };
 
 
@@ -2803,16 +2691,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult>;
 };
 
 
@@ -2837,16 +2717,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult>;
 };
 
 
@@ -2871,16 +2743,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest>;
 };
 
 
@@ -2905,16 +2769,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult>;
 };
 
 
@@ -2939,16 +2795,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrResult>;
 };
 
 
@@ -2973,16 +2821,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResponse>;
 };
 
 
@@ -3007,16 +2847,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResult>;
 };
 
 
@@ -3041,16 +2873,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResult>;
 };
 
 
@@ -3075,16 +2899,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest>;
 };
 
 
@@ -3109,16 +2925,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult>;
 };
 
 
@@ -3143,16 +2951,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrResult>;
 };
 
 
@@ -3177,16 +2977,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResponse>;
 };
 
 
@@ -3211,16 +3003,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResult>;
 };
 
 
@@ -3245,16 +3029,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResult>;
 };
 
 
@@ -3279,16 +3055,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse>;
 };
 
 
@@ -3313,16 +3081,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult>;
 };
 
 
@@ -3347,16 +3107,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult>;
 };
 
 
@@ -3381,16 +3133,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse>;
 };
 
 
@@ -3415,16 +3159,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult>;
 };
 
 
@@ -3449,16 +3185,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult>;
 };
 
 
@@ -3483,16 +3211,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest>;
 };
 
 
@@ -3517,16 +3237,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult>;
 };
 
 
@@ -3551,16 +3263,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult>;
 };
 
 
@@ -3585,16 +3289,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse>;
 };
 
 
@@ -3619,16 +3315,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResult>;
 };
 
 
@@ -3653,16 +3341,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResult>;
 };
 
 
@@ -3687,16 +3367,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest>;
 };
 
 
@@ -3721,16 +3393,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult>;
 };
 
 
@@ -3755,16 +3419,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult>;
 };
 
 
@@ -3789,16 +3445,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse>;
 };
 
 
@@ -3823,16 +3471,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult>;
 };
 
 
@@ -3857,16 +3497,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult>;
 };
 
 
@@ -3891,16 +3523,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse>;
 };
 
 
@@ -3925,16 +3549,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult>;
 };
 
 
@@ -3959,16 +3575,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult>;
 };
 
 
@@ -3993,16 +3601,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse>;
 };
 
 
@@ -4027,16 +3627,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult>;
 };
 
 
@@ -4061,16 +3653,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult>;
 };
 
 
@@ -4095,16 +3679,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest>;
 };
 
 
@@ -4129,16 +3705,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult>;
 };
 
 
@@ -4163,16 +3731,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult>;
 };
 
 
@@ -4197,16 +3757,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse>;
 };
 
 
@@ -4231,16 +3783,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResult>;
 };
 
 
@@ -4265,16 +3809,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResult>;
 };
 
 
@@ -4299,16 +3835,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse>;
 };
 
 
@@ -4333,16 +3861,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrResult>;
 };
 
 
@@ -4367,16 +3887,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult>;
 };
 
 
@@ -4401,16 +3913,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse>;
 };
 
 
@@ -4435,16 +3939,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult>;
 };
 
 
@@ -4469,16 +3965,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult>;
 };
 
 
@@ -4503,16 +3991,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult>;
 };
 
 
@@ -4537,16 +4017,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult>;
 };
 
 
@@ -4571,16 +4043,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse>;
 };
 
 
@@ -4605,16 +4069,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult>;
 };
 
 
@@ -4639,16 +4095,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult>;
 };
 
 
@@ -4673,16 +4121,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult>;
 };
 
 
@@ -4707,16 +4147,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult>;
 };
 
 
@@ -4741,16 +4173,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse>;
 };
 
 
@@ -4775,16 +4199,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult>;
 };
 
 
@@ -4809,16 +4225,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult>;
 };
 
 
@@ -4843,16 +4251,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse>;
 };
 
 
@@ -4877,16 +4277,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult>;
 };
 
 
@@ -4911,16 +4303,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult>;
 };
 
 
@@ -4945,16 +4329,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse>;
 };
 
 
@@ -4979,16 +4355,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult>;
 };
 
 
@@ -5013,16 +4381,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult>;
 };
 
 
@@ -5047,16 +4407,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse>;
 };
 
 
@@ -5081,16 +4433,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult>;
 };
 
 
@@ -5115,16 +4459,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult>;
 };
 
 
@@ -5149,16 +4485,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse>;
 };
 
 
@@ -5183,16 +4511,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult>;
 };
 
 
@@ -5217,16 +4537,8 @@ struct NaturalTypeForWireType<::test_unknowninteractions::wire::UnknownInteracti
   using type = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult;
 };
 template <>
-struct NaturalTypeForWireType<::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult>> {
-  using type = std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult>;
-};
-template <>
 struct WireTypeForNaturalType<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult> {
     using type = ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult;
-};
-template <>
-struct WireTypeForNaturalType<std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult>> {
-    using type = ::fidl::WireOptional<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult>;
 };
 
 

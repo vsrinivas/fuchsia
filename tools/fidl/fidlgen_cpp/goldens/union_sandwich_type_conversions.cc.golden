@@ -95,19 +95,6 @@ namespace internal {
   }
 }
 
-std::unique_ptr<::test_unionsandwich::UnionSize8Alignment4> WireNaturalConversionTraits<::fidl::WireOptional<::test_unionsandwich::wire::UnionSize8Alignment4>, std::unique_ptr<::test_unionsandwich::UnionSize8Alignment4>>::ToNatural(::fidl::WireOptional<::test_unionsandwich::wire::UnionSize8Alignment4> src) {
-  if (!src.has_value()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_unionsandwich::UnionSize8Alignment4>(WireNaturalConversionTraits<::test_unionsandwich::wire::UnionSize8Alignment4, ::test_unionsandwich::UnionSize8Alignment4>::ToNatural(std::move(src.value())));
-}
-::fidl::WireOptional<::test_unionsandwich::wire::UnionSize8Alignment4> WireNaturalConversionTraits<::fidl::WireOptional<::test_unionsandwich::wire::UnionSize8Alignment4>, std::unique_ptr<::test_unionsandwich::UnionSize8Alignment4>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_unionsandwich::UnionSize8Alignment4> src) {
-  if (!src) {
-    return ::fidl::WireOptional<::test_unionsandwich::wire::UnionSize8Alignment4>();
-  }
-  return WireNaturalConversionTraits<::test_unionsandwich::wire::UnionSize8Alignment4, ::test_unionsandwich::UnionSize8Alignment4>::ToWire(arena, std::move(*src));
-}
-
 ::test_unionsandwich::UnionSize12Alignment4 WireNaturalConversionTraits<::test_unionsandwich::wire::UnionSize12Alignment4, ::test_unionsandwich::UnionSize12Alignment4>::ToNatural(::test_unionsandwich::wire::UnionSize12Alignment4 src) {
   switch (src.Which()) {
     case ::test_unionsandwich::wire::UnionSize12Alignment4::Tag::kVariant:
@@ -123,19 +110,6 @@ std::unique_ptr<::test_unionsandwich::UnionSize8Alignment4> WireNaturalConversio
       return ::test_unionsandwich::wire::UnionSize12Alignment4::WithVariant(arena,
                                                                             WireNaturalConversionTraits<::fidl::Array<uint8_t, 6>, ::std::array<uint8_t, 6>>::ToWire(arena, std::move(src.variant().value())));
   }
-}
-
-std::unique_ptr<::test_unionsandwich::UnionSize12Alignment4> WireNaturalConversionTraits<::fidl::WireOptional<::test_unionsandwich::wire::UnionSize12Alignment4>, std::unique_ptr<::test_unionsandwich::UnionSize12Alignment4>>::ToNatural(::fidl::WireOptional<::test_unionsandwich::wire::UnionSize12Alignment4> src) {
-  if (!src.has_value()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_unionsandwich::UnionSize12Alignment4>(WireNaturalConversionTraits<::test_unionsandwich::wire::UnionSize12Alignment4, ::test_unionsandwich::UnionSize12Alignment4>::ToNatural(std::move(src.value())));
-}
-::fidl::WireOptional<::test_unionsandwich::wire::UnionSize12Alignment4> WireNaturalConversionTraits<::fidl::WireOptional<::test_unionsandwich::wire::UnionSize12Alignment4>, std::unique_ptr<::test_unionsandwich::UnionSize12Alignment4>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_unionsandwich::UnionSize12Alignment4> src) {
-  if (!src) {
-    return ::fidl::WireOptional<::test_unionsandwich::wire::UnionSize12Alignment4>();
-  }
-  return WireNaturalConversionTraits<::test_unionsandwich::wire::UnionSize12Alignment4, ::test_unionsandwich::UnionSize12Alignment4>::ToWire(arena, std::move(*src));
 }
 
 ::test_unionsandwich::UnionSize24Alignment8 WireNaturalConversionTraits<::test_unionsandwich::wire::UnionSize24Alignment8, ::test_unionsandwich::UnionSize24Alignment8>::ToNatural(::test_unionsandwich::wire::UnionSize24Alignment8 src) {
@@ -155,19 +129,6 @@ std::unique_ptr<::test_unionsandwich::UnionSize12Alignment4> WireNaturalConversi
   }
 }
 
-std::unique_ptr<::test_unionsandwich::UnionSize24Alignment8> WireNaturalConversionTraits<::fidl::WireOptional<::test_unionsandwich::wire::UnionSize24Alignment8>, std::unique_ptr<::test_unionsandwich::UnionSize24Alignment8>>::ToNatural(::fidl::WireOptional<::test_unionsandwich::wire::UnionSize24Alignment8> src) {
-  if (!src.has_value()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_unionsandwich::UnionSize24Alignment8>(WireNaturalConversionTraits<::test_unionsandwich::wire::UnionSize24Alignment8, ::test_unionsandwich::UnionSize24Alignment8>::ToNatural(std::move(src.value())));
-}
-::fidl::WireOptional<::test_unionsandwich::wire::UnionSize24Alignment8> WireNaturalConversionTraits<::fidl::WireOptional<::test_unionsandwich::wire::UnionSize24Alignment8>, std::unique_ptr<::test_unionsandwich::UnionSize24Alignment8>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_unionsandwich::UnionSize24Alignment8> src) {
-  if (!src) {
-    return ::fidl::WireOptional<::test_unionsandwich::wire::UnionSize24Alignment8>();
-  }
-  return WireNaturalConversionTraits<::test_unionsandwich::wire::UnionSize24Alignment8, ::test_unionsandwich::UnionSize24Alignment8>::ToWire(arena, std::move(*src));
-}
-
 ::test_unionsandwich::UnionSize36Alignment4 WireNaturalConversionTraits<::test_unionsandwich::wire::UnionSize36Alignment4, ::test_unionsandwich::UnionSize36Alignment4>::ToNatural(::test_unionsandwich::wire::UnionSize36Alignment4 src) {
   switch (src.Which()) {
     case ::test_unionsandwich::wire::UnionSize36Alignment4::Tag::kVariant:
@@ -183,19 +144,6 @@ std::unique_ptr<::test_unionsandwich::UnionSize24Alignment8> WireNaturalConversi
       return ::test_unionsandwich::wire::UnionSize36Alignment4::WithVariant(arena,
                                                                             WireNaturalConversionTraits<::fidl::Array<uint8_t, 32>, ::std::array<uint8_t, 32>>::ToWire(arena, std::move(src.variant().value())));
   }
-}
-
-std::unique_ptr<::test_unionsandwich::UnionSize36Alignment4> WireNaturalConversionTraits<::fidl::WireOptional<::test_unionsandwich::wire::UnionSize36Alignment4>, std::unique_ptr<::test_unionsandwich::UnionSize36Alignment4>>::ToNatural(::fidl::WireOptional<::test_unionsandwich::wire::UnionSize36Alignment4> src) {
-  if (!src.has_value()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_unionsandwich::UnionSize36Alignment4>(WireNaturalConversionTraits<::test_unionsandwich::wire::UnionSize36Alignment4, ::test_unionsandwich::UnionSize36Alignment4>::ToNatural(std::move(src.value())));
-}
-::fidl::WireOptional<::test_unionsandwich::wire::UnionSize36Alignment4> WireNaturalConversionTraits<::fidl::WireOptional<::test_unionsandwich::wire::UnionSize36Alignment4>, std::unique_ptr<::test_unionsandwich::UnionSize36Alignment4>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_unionsandwich::UnionSize36Alignment4> src) {
-  if (!src) {
-    return ::fidl::WireOptional<::test_unionsandwich::wire::UnionSize36Alignment4>();
-  }
-  return WireNaturalConversionTraits<::test_unionsandwich::wire::UnionSize36Alignment4, ::test_unionsandwich::UnionSize36Alignment4>::ToWire(arena, std::move(*src));
 }
 
 #ifdef __Fuchsia__
