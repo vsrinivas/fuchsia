@@ -61,10 +61,14 @@ class Envelope<T, std::enable_if_t<sizeof(T) <= FIDL_ENVELOPE_INLINING_SIZE_THRE
     flags_ |= FIDL_ENVELOPE_FLAGS_INLINING_MASK;
   }
   void clear_data() {
-    // Assign zero to all envelope fields, making this the zero envelope.
-    // T{} is guaranteed to have zeroed bytes.
-    // - primitive types - it is trivially zero.
-    // - handle types - initialized to ZX_INVALID_HANDLE.
+    // Reset the value to a default constructed state, and mark the
+    // envelope as absent.
+    //
+    // If |T| is a handle, this will close the handle if present.
+    //
+    // Note that the envelope does not necessarily become the zero envelope,
+    // because the byte representation of a default constructed |T| is not
+    // necessarily a sequence of zeros.
     inline_value_ = T{};
     num_handles_ = 0;
     flags_ = 0;
