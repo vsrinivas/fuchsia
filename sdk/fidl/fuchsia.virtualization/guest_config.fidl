@@ -19,34 +19,28 @@ type KernelType = strict enum {
     LINUX = 1;
 };
 
-/// Mode of the file backing a block device.
-type BlockMode = strict enum {
-    /// Reads and writes are allowed.
-    READ_WRITE = 0;
-    /// Only reads are allowed.
-    READ_ONLY = 1;
-    /// Writes are allowed, but are stored in memory, not to disk.
-    VOLATILE_WRITE = 2;
-};
-
-/// Data format of the file backing a block device.
-type BlockFormat = strict enum {
-    /// File IO. All reads and writes go directly to disk as a flat file.
-    FILE = 0;
-    /// QCOW image. All reads and writes go to a QCOW image.
-    QCOW = 1;
-    /// Block IO. All reads and writes go to a block server.
-    BLOCK = 2;
-};
-
 /// Properties describing a block device.
 type BlockSpec = resource struct {
     /// The ID used to identify the block device.
     id string:MAX_BLOCK_DEVICE_ID;
     /// The access mode for the block device.
-    mode BlockMode;
+    mode @generated_name("BlockMode") strict enum {
+        /// Reads and writes are allowed.
+        READ_WRITE = 0;
+        /// Only reads are allowed.
+        READ_ONLY = 1;
+        /// Writes are allowed, but are stored in memory, not to disk.
+        VOLATILE_WRITE = 2;
+    };
     /// The data format of the block device.
-    format BlockFormat;
+    format @generated_name("BlockFormat") strict enum {
+        /// File IO. All reads and writes go directly to disk as a flat file.
+        FILE = 0;
+        /// QCOW image. All reads and writes go to a QCOW image.
+        QCOW = 1;
+        /// Block IO. All reads and writes go to a block server.
+        BLOCK = 2;
+    };
     /// The client channel for the block device.
     client zx.handle:CHANNEL;
 };
