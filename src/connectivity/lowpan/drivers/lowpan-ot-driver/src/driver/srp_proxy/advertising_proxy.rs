@@ -4,6 +4,7 @@
 
 use super::*;
 use fidl::endpoints::create_endpoints;
+use fidl::endpoints::Proxy;
 use fidl_fuchsia_net_mdns::*;
 use fuchsia_async::Task;
 use fuchsia_component::client::connect_to_protocol;
@@ -37,6 +38,7 @@ struct AdvertisingProxyInner {
 pub struct AdvertisingProxyHost {
     services: HashMap<CString, AdvertisingProxyService>,
     service_publisher: ServiceInstancePublisherProxy,
+    addresses: Vec<std::net::Ipv6Addr>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -150,20 +152,69 @@ impl AdvertisingProxyInner {
     }
 
     /// Updates the mDNS service with the host and services from the SrpServerHost.
-    pub fn push_srp_host_changes(
+    pub fn push_srp_host_changes<'a>(
         &mut self,
-        instance: &ot::Instance,
-        srp_host: &ot::SrpServerHost,
+        instance: &'a ot::Instance,
+        mut srp_host: &'a ot::SrpServerHost,
     ) -> Result<(), anyhow::Error> {
         if srp_host.is_deleted() {
             // Delete the host.
-            info!(
+            debug!(
                 "No longer advertising host {:?} on {:?}",
                 srp_host.full_name_cstr(),
                 LOCAL_DOMAIN
             );
 
             self.hosts.remove(srp_host.full_name_cstr());
+            return Ok(());
+        }
+
+        // Cache the mesh local prefix for use in the closure below.
+        let mesh_local_prefix = *instance.get_mesh_local_prefix();
+
+        // Prepare the list of addresses associated with this host.
+        let addresses = srp_host
+            .addresses()
+            .iter()
+            .copied()
+            .filter(|x| {
+                !net_types::ip::Ipv6Addr::from_bytes(x.octets()).is_unicast_link_local()
+                    && !mesh_local_prefix.contains(x)
+            })
+            .collect::<Vec<_>>();
+
+        // If there is already a host, check to make sure the addresses match (<fxbug.dev/115170>)
+        // and that the service publisher FIDL is not closed.
+        if let Some(host) = self.hosts.get_mut(srp_host.full_name_cstr()) {
+            if host.addresses != addresses {
+                // Addresses do not match.
+                info!(
+                    "IP addresses for host [PII]({:?}) has changed. Was {:?}, now {:?}.",
+                    srp_host.full_name_cstr(),
+                    host.addresses,
+                    addresses
+                );
+                // Delete the host so we can re-create it below.
+                self.hosts.remove(srp_host.full_name_cstr());
+            } else if host.service_publisher.is_closed() {
+                // The service publisher was closed for some reason. We will need
+                // to re-open it before we can update any services.
+                warn!(
+                    "ServiceInstancePublisherProxy for host [PII]({:?}) was closed. Will restart it.",
+                    srp_host.full_name_cstr()
+                );
+                // Delete the host so we can re-create it below.
+                self.hosts.remove(srp_host.full_name_cstr());
+            }
+        }
+
+        // If there are no addresses that we can advertise, stop here. This should
+        // help prevent some spurious and confusing error logs.
+        if addresses.is_empty() {
+            info!(
+                "No suitable addresses for host [PII]({:?}). Skipping advertising it for now.",
+                srp_host.full_name_cstr()
+            );
             return Ok(());
         }
 
@@ -201,22 +252,16 @@ impl AdvertisingProxyInner {
             let (client, server) = create_endpoints::<ServiceInstancePublisherMarker>()
                 .context("Failed to create FIDL endpoints")?;
 
-            let mesh_local_prefix = *instance.get_mesh_local_prefix();
-
+            // This is copied just for use in error messages below.
             let local_name_copy = local_name.to_string();
-            let mut addrs = srp_host
-                .addresses()
+
+            // Prepare versions of the addresses for use in FIDL call.
+            let mut addrs = addresses
                 .iter()
-                .filter_map(|x| {
-                    if !net_types::ip::Ipv6Addr::from_bytes(x.octets()).is_unicast_link_local()
-                        && !mesh_local_prefix.contains(x)
-                    {
-                        Some(fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
-                            addr: x.octets(),
-                        }))
-                    } else {
-                        None
-                    }
+                .map(|x| {
+                    fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                        addr: x.octets(),
+                    })
                 })
                 .collect::<Vec<_>>();
 
@@ -250,8 +295,24 @@ impl AdvertisingProxyInner {
                 AdvertisingProxyHost {
                     services: Default::default(),
                     service_publisher: client.into_proxy()?,
+                    addresses,
                 },
             );
+
+            // If there are no services in this update, then grab the "real" `ot::SrpServerHost`,
+            // because this is probably a delta. Since we are perform the initial setup for this
+            // host, we cannot use a delta update.
+            if srp_host.services().count() == 0 {
+                for real_host in instance.srp_server_hosts() {
+                    if srp_host.full_name_cstr() == real_host.full_name_cstr() {
+                        info!("Using [PII]({:?}) instead of [PII]({:?}).", real_host, srp_host);
+
+                        srp_host = real_host;
+                        break;
+                    }
+                }
+            }
+
             self.hosts.get_mut(srp_host.full_name_cstr()).unwrap()
         };
 
