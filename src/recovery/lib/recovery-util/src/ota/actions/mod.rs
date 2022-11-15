@@ -5,4 +5,5 @@
 pub(crate) mod error;
 pub(crate) mod factory_reset;
 pub(crate) mod get_wifi_networks;
+pub(crate) mod set_sharing_consent;
 pub(crate) mod wifi_connect;

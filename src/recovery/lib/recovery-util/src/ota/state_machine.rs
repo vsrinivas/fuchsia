@@ -17,6 +17,7 @@ pub enum Operation {
     Reinstall,
 }
 
+pub(crate) type DataSharingConsent = bool;
 pub(crate) type Network = String;
 pub(crate) type Password = String;
 pub(crate) type NetworkInfos = Vec<NetworkInfo>;
@@ -55,6 +56,7 @@ pub enum Event {
     Error(ErrorMessage),
     WiFiConnected,
     Networks(NetworkInfos),
+    Privacy(DataSharingConsent),
     Progress(PercentProgress),
     Reinstall,
     SendReports(bool),
