@@ -51,7 +51,7 @@ class VmPageOrMarker {
     // used for internal metadata. This is declared here for convenience, and is asserted to be in
     // sync with the private kReferenceBits.
     static constexpr uint64_t kAlignBits = 4;
-    explicit ReferenceValue(uint64_t raw) : value_(raw) {
+    explicit constexpr ReferenceValue(uint64_t raw) : value_(raw) {
       DEBUG_ASSERT((value_ & BIT_MASK(kAlignBits)) == 0);
     }
     uint64_t value() const { return value_; }
@@ -127,6 +127,38 @@ class VmPageOrMarker {
     }
   }
 
+  // Changes the content from a reference to a page, preserving the split bits and returning the
+  // original reference.
+  [[nodiscard]] VmPageOrMarker::ReferenceValue SwapReferenceForPage(vm_page_t* p) {
+    DEBUG_ASSERT(p);
+    // Ensure the caller has correctly set the split bits in the page as this swap is not supposed
+    // to change any other information.
+    DEBUG_ASSERT(p->object.cow_left_split == PageOrRefLeftSplit());
+    DEBUG_ASSERT(p->object.cow_right_split == PageOrRefRightSplit());
+    VmPageOrMarker::ReferenceValue ref = ReleaseReference();
+    *this = VmPageOrMarker::Page(p);
+    return ref;
+  }
+  // Changes the content from a page to a reference, preserving the split bits and returning the
+  // original page.
+  [[nodiscard]] vm_page_t* SwapPageForReference(VmPageOrMarker::ReferenceValue ref) {
+    const bool left_split = PageOrRefLeftSplit();
+    const bool right_split = PageOrRefRightSplit();
+    vm_page_t* page = ReleasePage();
+    *this = VmPageOrMarker::Reference(ref, left_split, right_split);
+    return page;
+  }
+  // Changes the content from one reference to a different one, preserving the split bits an
+  // returning the original reference.
+  [[nodiscard]] VmPageOrMarker::ReferenceValue ChangeReferenceValue(
+      VmPageOrMarker::ReferenceValue ref) {
+    const bool left_split = PageOrRefLeftSplit();
+    const bool right_split = PageOrRefRightSplit();
+    const VmPageOrMarker::ReferenceValue old = ReleaseReference();
+    *this = VmPageOrMarker::Reference(ref, left_split, right_split);
+    return old;
+  }
+
   bool IsPage() const { return !IsEmpty() && (GetType() == kPageType); }
   bool IsMarker() const { return GetType() == kZeroMarkerType; }
   bool IsEmpty() const {
@@ -163,6 +195,12 @@ class VmPageOrMarker {
     return VmPageOrMarker{raw | kPageType};
   }
 
+  [[nodiscard]] static VmPageOrMarker Reference(ReferenceValue ref, bool left_split,
+                                                bool right_split) {
+    return VmPageOrMarker(ref.value() | (left_split ? kReferenceLeftSplit : 0) |
+                          (right_split ? kReferenceRightSplit : 0) | kReferenceType);
+  }
+
  private:
   explicit VmPageOrMarker(uint64_t raw) : raw_(raw) {}
 
@@ -189,14 +227,6 @@ class VmPageOrMarker {
   static constexpr uint64_t kReferenceRightSplit = 0b01 << kTypeBits;
 
   uint64_t GetType() const { return raw_ & BIT_MASK(kTypeBits); }
-
-  // TODO(fxb/60238): Make this public once tests are added and all TODO code paths for handling
-  // reference types are resolved.
-  [[nodiscard]] static VmPageOrMarker Reference(ReferenceValue ref, bool left_split,
-                                                bool right_split) {
-    return VmPageOrMarker(ref.value() | (left_split ? kReferenceLeftSplit : 0) |
-                          (right_split ? kReferenceRightSplit : 0) | kReferenceType);
-  }
 
   uint64_t Release() {
     const uint64_t p = raw_;
@@ -242,20 +272,23 @@ class VmPageOrMarkerRef {
     page_or_marker_->SetPageOrRefRightSplit(value);
   }
 
-  // TODO(fxb/60238): Add an equivalent SwapPageForReference method once tests are added and all
-  // code paths for handling reference types are resolved.
   // Changing the kind of content is an allowed mutation and this takes ownership of the provided
   // page and returns ownership of the previous reference.
   [[nodiscard]] VmPageOrMarker::ReferenceValue SwapReferenceForPage(vm_page_t* p) {
     DEBUG_ASSERT(page_or_marker_);
-    DEBUG_ASSERT(p);
-    // Ensure the caller has correctly set the split bits in the page as this swap is not supposed
-    // to change any other information.
-    DEBUG_ASSERT(p->object.cow_left_split == page_or_marker_->PageOrRefLeftSplit());
-    DEBUG_ASSERT(p->object.cow_right_split == page_or_marker_->PageOrRefRightSplit());
-    VmPageOrMarker::ReferenceValue ref = page_or_marker_->ReleaseReference();
-    *page_or_marker_ = VmPageOrMarker::Page(p);
-    return ref;
+    return page_or_marker_->SwapReferenceForPage(p);
+  }
+  // Similar to SwapReferenceForPage, but takes ownership of the ref and returns ownership of the
+  // previous page.
+  [[nodiscard]] vm_page_t* SwapPageForReference(VmPageOrMarker::ReferenceValue ref) {
+    DEBUG_ASSERT(page_or_marker_);
+    return page_or_marker_->SwapPageForReference(ref);
+  }
+  // Similar to SwapReferenceForPage, but changes one reference for another.
+  [[nodiscard]] VmPageOrMarker::ReferenceValue ChangeReferenceValue(
+      VmPageOrMarker::ReferenceValue ref) {
+    DEBUG_ASSERT(page_or_marker_);
+    return page_or_marker_->ChangeReferenceValue(ref);
   }
 
  private:

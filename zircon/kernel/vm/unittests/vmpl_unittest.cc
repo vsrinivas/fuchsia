@@ -38,6 +38,27 @@ bool AddMarker(VmPageList* pl, uint64_t offset) {
   *slot = VmPageOrMarker::Marker();
   return true;
 }
+
+bool AddReference(VmPageList* pl, VmPageOrMarker::ReferenceValue ref, uint64_t offset,
+                  bool left_split, bool right_split) {
+  if (!pl) {
+    return false;
+  }
+  VmPageOrMarker* slot = pl->LookupOrAllocate(offset);
+  if (!slot) {
+    return false;
+  }
+  if (!slot->IsEmpty()) {
+    return false;
+  }
+  *slot = VmPageOrMarker::Reference(ref, left_split, right_split);
+  return true;
+}
+
+constexpr uint64_t TestReference(uint64_t v) {
+  return v << VmPageOrMarker::ReferenceValue::kAlignBits;
+}
+
 }  // namespace
 
 // Basic test that checks adding/removing a page
@@ -84,6 +105,122 @@ static bool vmpl_basic_marker_test() {
 
   EXPECT_TRUE(pl.HasNoPageOrRef());
   EXPECT_TRUE(pl.IsEmpty());
+
+  END_TEST;
+}
+
+static bool vmpl_basic_reference_test() {
+  BEGIN_TEST;
+
+  VmPageList pl;
+
+  EXPECT_TRUE(pl.IsEmpty());
+  EXPECT_TRUE(pl.HasNoPageOrRef());
+
+  // The zero ref is valid.
+  const VmPageOrMarker::ReferenceValue ref0(0);
+  EXPECT_TRUE(AddReference(&pl, ref0, 0, false, false));
+
+  EXPECT_FALSE(pl.IsEmpty());
+  EXPECT_FALSE(pl.HasNoPageOrRef());
+
+  // A non-zero ref.
+  const VmPageOrMarker::ReferenceValue ref1(TestReference(1));
+  EXPECT_TRUE(AddReference(&pl, ref1, PAGE_SIZE, false, false));
+
+  VmPageOrMarker removed = pl.RemoveContent(0);
+  EXPECT_EQ(removed.ReleaseReference().value(), ref0.value());
+
+  EXPECT_FALSE(pl.IsEmpty());
+  EXPECT_FALSE(pl.HasNoPageOrRef());
+
+  removed = pl.RemoveContent(PAGE_SIZE);
+  EXPECT_EQ(removed.ReleaseReference().value(), ref1.value());
+
+  EXPECT_TRUE(pl.IsEmpty());
+  EXPECT_TRUE(pl.HasNoPageOrRef());
+
+  END_TEST;
+}
+
+static bool vmpl_content_split_bits_test() {
+  BEGIN_TEST;
+
+  VmPageList pl;
+
+  vm_page_t test_page;
+  test_page.object.cow_left_split = 0;
+  test_page.object.cow_right_split = 0;
+
+  const VmPageOrMarker::ReferenceValue test_ref(TestReference(1));
+
+  EXPECT_TRUE(AddPage(&pl, &test_page, 0));
+  EXPECT_TRUE(AddReference(&pl, test_ref, PAGE_SIZE, false, false));
+
+  VmPageOrMarkerRef page_entry = pl.LookupMutable(0);
+  VmPageOrMarkerRef ref_entry = pl.LookupMutable(PAGE_SIZE);
+  EXPECT_FALSE(page_entry->PageOrRefLeftSplit());
+  EXPECT_FALSE(page_entry->PageOrRefRightSplit());
+  EXPECT_FALSE(ref_entry->PageOrRefLeftSplit());
+  EXPECT_FALSE(ref_entry->PageOrRefRightSplit());
+
+  test_page.object.cow_left_split = 1;
+  EXPECT_TRUE(page_entry->PageOrRefLeftSplit());
+  EXPECT_FALSE(page_entry->PageOrRefRightSplit());
+
+  page_entry.SetPageOrRefLeftSplit(false);
+  EXPECT_EQ(test_page.object.cow_left_split, 0);
+  EXPECT_FALSE(page_entry->PageOrRefLeftSplit());
+  EXPECT_FALSE(page_entry->PageOrRefRightSplit());
+
+  ref_entry.SetPageOrRefRightSplit(true);
+  EXPECT_FALSE(ref_entry->PageOrRefLeftSplit());
+  EXPECT_TRUE(ref_entry->PageOrRefRightSplit());
+
+  // Remove and re-add the ref with different initial splits.
+  EXPECT_TRUE(
+      AddReference(&pl, pl.RemoveContent(PAGE_SIZE).ReleaseReference(), PAGE_SIZE, true, false));
+  EXPECT_TRUE(ref_entry->PageOrRefLeftSplit());
+  EXPECT_FALSE(ref_entry->PageOrRefRightSplit());
+
+  EXPECT_EQ(pl.RemoveContent(0).ReleasePage(), &test_page);
+  EXPECT_EQ(pl.RemoveContent(PAGE_SIZE).ReleaseReference().value(), test_ref.value());
+
+  END_TEST;
+}
+
+static bool vmpl_replace_preserves_split_bits() {
+  BEGIN_TEST;
+
+  VmPageList pl;
+
+  vm_page_t test_page;
+  test_page.object.cow_left_split = 0;
+  test_page.object.cow_right_split = 0;
+
+  const VmPageOrMarker::ReferenceValue test_ref(TestReference(1));
+
+  EXPECT_TRUE(AddPage(&pl, &test_page, 0));
+  VmPageOrMarkerRef entry = pl.LookupMutable(0);
+  test_page.object.cow_left_split = 1;
+
+  EXPECT_EQ(entry.SwapPageForReference(test_ref), &test_page);
+
+  EXPECT_TRUE(entry->PageOrRefLeftSplit());
+  EXPECT_FALSE(entry->PageOrRefRightSplit());
+  test_page.object.cow_left_split = 0;
+  EXPECT_TRUE(entry->PageOrRefLeftSplit());
+  EXPECT_FALSE(entry->PageOrRefRightSplit());
+
+  entry.SetPageOrRefRightSplit(true);
+  test_page.object.cow_left_split = 1;
+  test_page.object.cow_right_split = 1;
+
+  EXPECT_EQ(entry.SwapReferenceForPage(&test_page).value(), test_ref.value());
+  EXPECT_TRUE(entry->PageOrRefLeftSplit());
+  EXPECT_TRUE(entry->PageOrRefRightSplit());
+
+  EXPECT_EQ(pl.RemoveContent(0).ReleasePage(), &test_page);
 
   END_TEST;
 }
@@ -696,6 +833,9 @@ static bool vmpl_merge_onto_test() {
 UNITTEST_START_TESTCASE(vm_page_list_tests)
 VM_UNITTEST(vmpl_add_remove_page_test)
 VM_UNITTEST(vmpl_basic_marker_test)
+VM_UNITTEST(vmpl_basic_reference_test)
+VM_UNITTEST(vmpl_content_split_bits_test)
+VM_UNITTEST(vmpl_replace_preserves_split_bits)
 VM_UNITTEST(vmpl_free_pages_test)
 VM_UNITTEST(vmpl_free_pages_last_page_test)
 VM_UNITTEST(vmpl_near_last_offset_free)
