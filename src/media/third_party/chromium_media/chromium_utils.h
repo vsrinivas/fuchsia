@@ -24,6 +24,7 @@
 
 #define MEDIA_EXPORT
 #define MEDIA_GPU_EXPORT
+#define MEDIA_PARSERS_EXPORT
 
 #define DCHECK FX_DCHECK
 #define DCHECK_GE(a, b) FX_DCHECK((a) >= (b))
@@ -154,6 +155,80 @@ inline uint32_t HostToNet32(uint32_t x) {
 inline uint64_t HostToNet64(uint64_t x) {
   return __builtin_bswap64(x);
 }
+
+// base/big_endian.h
+// Fuchsia is little endian
+// (https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0030_fidl_is_little_endian)
+// so implementing a big endian reader will always require byte swaps.
+class BigEndianReader {
+ public:
+  BigEndianReader(const uint8_t* buf, size_t len)
+      : ptr_(buf), end_(ptr_ + len) {}
+  explicit BigEndianReader(base::span<const uint8_t> buf)
+      : ptr_(buf.data()), end_(buf.data() + buf.size()) {}
+
+  const uint8_t* ptr() const { return ptr_; }
+  size_t remaining() const { return static_cast<size_t>(end_ - ptr_); }
+
+  bool Skip(size_t len) {
+    if (len > remaining())
+      return false;
+    ptr_ += len;
+    return true;
+  }
+
+  bool ReadBytes(void* out, size_t len) {
+    if (len > remaining())
+      return false;
+    std::memcpy(out, ptr_, len);
+    ptr_ += len;
+    return true;
+  }
+
+  bool ReadU8(uint8_t* value) {
+    if (sizeof(uint8_t) > remaining()) {
+      return false;
+    }
+
+    *value = *reinterpret_cast<const uint8_t*>(ptr_);
+    ptr_ += sizeof(uint8_t);
+    return true;
+  }
+
+  bool ReadU16(uint16_t* value) {
+    if (sizeof(uint16_t) > remaining()) {
+      return false;
+    }
+
+    *value = __builtin_bswap16(*reinterpret_cast<const uint16_t*>(ptr_));
+    ptr_ += sizeof(uint16_t);
+    return true;
+  }
+
+  bool ReadU32(uint32_t* value) {
+    if (sizeof(uint32_t) > remaining()) {
+      return false;
+    }
+
+    *value = __builtin_bswap32(*reinterpret_cast<const uint32_t*>(ptr_));
+    ptr_ += sizeof(uint32_t);
+    return true;
+  }
+
+  bool ReadU64(uint64_t* value) {
+    if (sizeof(uint64_t) > remaining()) {
+      return false;
+    }
+
+    *value = __builtin_bswap64(*reinterpret_cast<const uint64_t*>(ptr_));
+    ptr_ += sizeof(uint64_t);
+    return true;
+  }
+
+ private:
+  const uint8_t* ptr_;
+  const uint8_t* end_;
+};
 
 // base/strings/stringprintf.h
 inline auto StringPrintf = fxl::StringPrintf;

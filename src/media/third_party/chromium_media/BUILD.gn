@@ -45,6 +45,8 @@ source_set("chromium_media") {
     "media/gpu/vp9_picture.h",
     "media/gpu/vp9_reference_frame_vector.cc",
     "media/gpu/vp9_reference_frame_vector.h",
+    "media/parsers/jpeg_parser.cc",
+    "media/parsers/jpeg_parser.h",
     "media/video/h264_bit_reader.cc",
     "media/video/h264_bit_reader.h",
     "media/video/h264_level_limits.cc",
