@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl::endpoints::Responder as _;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6;
 use fidl_fuchsia_net_name as fnet_name;
@@ -101,4 +102,37 @@ pub(super) async fn stop_client(
     dns::update_servers(lookup_admin, dns_servers, source, vec![])
         .await
         .context("error clearing DNS servers")
+}
+
+#[derive(Default)]
+pub(super) struct PrefixProviderHandler {
+    pub(super) prefix_control_request_stream: Option<fnet_dhcpv6::PrefixControlRequestStream>,
+    pub(super) watch_prefix_responder: Option<fnet_dhcpv6::PrefixControlWatchPrefixResponder>,
+}
+
+impl PrefixProviderHandler {
+    pub(super) fn on_prefix_control_client_close(&mut self) {
+        let Self { prefix_control_request_stream, watch_prefix_responder: _ } = self;
+        let _: fnet_dhcpv6::PrefixControlRequestStream = prefix_control_request_stream
+            .take()
+            .expect("no fuchsia.net.dhcpv6/PrefixControl request stream to remove");
+    }
+
+    pub(super) fn handle_dhcpv6_prefix_control_request(
+        &mut self,
+        req: fnet_dhcpv6::PrefixControlRequest,
+    ) -> Result<(), errors::Error> {
+        let Self { prefix_control_request_stream: _, watch_prefix_responder } = self;
+        let fnet_dhcpv6::PrefixControlRequest::WatchPrefix { responder } = req;
+        if let Some(responder) = watch_prefix_responder.take() {
+            self.on_prefix_control_client_close();
+            return responder
+                .control_handle()
+                .send_on_exit(fnet_dhcpv6::PrefixControlExitReason::DoubleWatch)
+                .context("send DoubleWatch OnExit reason")
+                .map_err(errors::Error::NonFatal);
+        }
+        *watch_prefix_responder = Some(responder);
+        Ok(())
+    }
 }

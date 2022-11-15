@@ -137,10 +137,13 @@ impl ManagementAgent {
     /// Gets the services exposed by this management agent.
     pub fn get_services(&self) -> &[&'static str] {
         match self {
-            Self::NetCfg(NetCfgVersion::Basic) => &[],
-            Self::NetCfg(NetCfgVersion::Advanced) => {
-                &[fnet_virtualization::ControlMarker::PROTOCOL_NAME]
+            Self::NetCfg(NetCfgVersion::Basic) => {
+                &[fnet_dhcpv6::PrefixProviderMarker::PROTOCOL_NAME]
             }
+            Self::NetCfg(NetCfgVersion::Advanced) => &[
+                fnet_dhcpv6::PrefixProviderMarker::PROTOCOL_NAME,
+                fnet_virtualization::ControlMarker::PROTOCOL_NAME,
+            ],
         }
     }
 }

@@ -12,6 +12,50 @@ using zx;
 /// [RFC 8415, Section 7.2](https://tools.ietf.org/html/rfc8415#section-7.2).
 const DEFAULT_CLIENT_PORT uint16 = 546;
 
+type Empty = struct {};
+
+/// An IPv6 prefix and its lifetimes.
+type Prefix = struct {
+    /// The IPv6 prefix.
+    ///
+    /// The host bits of the address must be all zeroes.
+    prefix fuchsia.net.Ipv6AddressWithPrefix;
+
+    /// The prefix lifetimes.
+    lifetimes struct {
+        /// The time after which the prefix will no longer be valid.
+        ///
+        /// Its value must be greater than 0. A value of
+        /// `ZX_TIME_INFINITE` indicates that the prefix will always
+        /// be valid. If the value indicates a time in the past,
+        /// the prefix is invalid and should not be used.
+        ///
+        /// As a `zx.time`, the value has
+        /// [monotonic clock semantics][monotonic], which implies
+        /// that it has no meaning outside of the host on which it
+        /// was generated and no meaning across host restarts.
+        ///
+        /// [monotonic]: https://fuchsia.dev/fuchsia-src/concepts/time/monotonic
+        valid_until zx.time;
+
+        /// The time after which the prefix will no longer be preferred.
+        ///
+        /// Its value must be greater than 0. A value of
+        /// `ZX_TIME_INFINITE` indicates that the prefix will always
+        /// be preferred. If the value indicates a time in the past,
+        /// the prefix should be considered deprecated. The value must not
+        /// refer to a time after [`valid_until`].
+        ///
+        /// As a `zx.time`, the value has
+        /// [monotonic clock semantics][monotonic],
+        /// which implies that it has no meaning outside of the host on
+        /// which it was generated and no meaning across host restarts.
+        ///
+        /// [monotonic]: https://fuchsia.dev/fuchsia-src/concepts/time/monotonic
+        preferred_until zx.time;
+    };
+};
+
 /// Provides a method to create new clients.
 @discoverable
 protocol ClientProvider {
@@ -148,4 +192,98 @@ protocol Client {
     ///     released, e.g. the client times out waiting for Reply to Release,
     ///     or the interface is down and sending Release fails.
     Shutdown() -> () error zx.status;
+};
+
+/// Provides IPv6 prefixes acquired via Prefix delegation.
+@discoverable
+protocol PrefixProvider {
+    /// Acquire an IPv6 prefix via Prefix Delegation.
+    ///
+    /// If this method is called with invalid parameters, a terminal event
+    /// containing a reason detailing why will be sent via
+    /// [`PrefixControl.OnExit`] and the server end of [`PrefixControl`]
+    /// will be closed.
+    ///
+    /// + request `config` prefix acquisition configuration.
+    /// + request `prefix` provides control over prefix acquisition.
+    AcquirePrefix(resource struct {
+        config @generated_name("AcquirePrefixConfig") table {
+            /// Optional. If specified, PD will only be performed on the
+            /// interface identified. If absent, the interface(s) to perform PD
+            /// on will be chosen by the server.
+            1: interface_id fuchsia.net.InterfaceId;
+            /// The preferred prefix length.
+            ///
+            /// Note that the server will make a best effort to return a prefix
+            /// of the preferred length, but may return a shorter one.
+            ///
+            /// Optional; if absent, interpreted as no preference for prefix
+            /// length.
+            ///
+            /// Must be in the range [0, 128].
+            2: preferred_prefix_len uint8;
+        };
+        prefix server_end:PrefixControl;
+    });
+};
+
+/// Provides control over prefix acquisition.
+///
+/// If the client end is closed, prefix acquisition will stop. This means that
+/// a best effort will be made to release leases back to the server, and no
+/// further attempt will be made to acquire any of the prefixes this protocol
+/// was configured to acquire.
+protocol PrefixControl {
+    /// Hanging get for the prefix and its lifetimes.
+    ///
+    /// The first call to this method is guaranteed to return
+    /// [`PrefixEvent.assigned`], and will occur when there is a prefix
+    /// to report. Subsequent calls will return immediately if there is a
+    /// change to report, or block until a change occurs.
+    ///
+    /// It is invalid to call this method while a previous call is pending.
+    /// Doing so will cause the server end of the protocol to be closed with
+    /// the terminal event [`PrefixControlExitReason.DOUBLE_WATCH`].
+    ///
+    /// - response `event` an optional prefix.
+    WatchPrefix() -> (struct {
+        event @generated_name("PrefixEvent") strict union {
+            /// No prefix is assigned.
+            ///
+            /// If a previously-assigned prefix was received, usage must stop
+            /// immediately.
+            1: unassigned Empty;
+            /// The assigned prefix and lifetimes.
+            ///
+            /// May receive consecutive updates with an assigned prefix -
+            /// callers must use the latest prefix subnet and drop the
+            /// older prefix if the prefix is different. If the prefix is
+            /// the same, the lifetimes must be updated to what is held in
+            /// the latest update.
+            2: assigned Prefix;
+        };
+    });
+
+    /// Terminal event yielded by the server before the server end is closed.
+    ///
+    /// - response `reason` the reason this prefix acquisition stopped.
+    -> OnExit(struct {
+        reason @generated_name("PrefixControlExitReason") enum {
+            /// The interface identified is invalid for acquiring a prefix on.
+            INVALID_INTERFACE = 1;
+            /// The preferred prefix length is invalid.
+            INVALID_PREFIX_LENGTH = 2;
+            // TODO(https://fxbug.dev/114132): Support multiple clients
+            // requesting prefixes.
+            /// An existing [`PrefixControl`] channel has already been
+            /// established to acquire a prefix.
+            ALREADY_ACQUIRING = 3;
+            /// The interface to acquire the prefix on was removed. Can only
+            /// be returned if a specific interface ID was named when
+            /// initializing the protocol.
+            INTERFACE_REMOVED = 4;
+            /// More than one concurrent call to a watch method was made.
+            DOUBLE_WATCH = 5;
+        };
+    });
 };

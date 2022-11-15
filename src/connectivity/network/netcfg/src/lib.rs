@@ -31,6 +31,7 @@ use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_interfaces_ext::{self as fnet_interfaces_ext, Update as _};
 use fidl_fuchsia_net_name as fnet_name;
 use fidl_fuchsia_net_stack as fnet_stack;
+use fidl_fuchsia_net_virtualization as fnet_virtualization;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async::DurationExt as _;
 use fuchsia_component::client::{clone_namespace_svc, new_protocol_connector_in_dir};
@@ -461,6 +462,8 @@ pub struct NetCfg<'a> {
     dns_servers: DnsServers,
 
     forwarded_device_classes: ForwardedDeviceClasses,
+
+    dhcpv6_prefix_provider_handler: dhcpv6::PrefixProviderHandler,
 }
 
 /// Returns a [`fnet_name::DnsServer_`] with a static source from a [`std::net::IpAddr`].
@@ -599,6 +602,8 @@ impl<'a> NetCfg<'a> {
             interface::FileBackedConfig::load(&PERSISTED_INTERFACE_CONFIG_FILEPATH)
                 .context("error loading persistent interface configurations")?;
 
+        let dhcpv6_prefix_provider_handler = dhcpv6::PrefixProviderHandler::default();
+
         Ok(NetCfg {
             stack,
             netstack,
@@ -617,6 +622,7 @@ impl<'a> NetCfg<'a> {
             interface_metrics,
             dns_servers: Default::default(),
             forwarded_device_classes,
+            dhcpv6_prefix_provider_handler,
         })
     }
 
@@ -780,16 +786,25 @@ impl<'a> NetCfg<'a> {
             "dns watchers should be empty"
         );
 
+        enum RequestStream {
+            Virtualization(fnet_virtualization::ControlRequestStream),
+            Dhcpv6PrefixProvider(fnet_dhcpv6::PrefixProviderRequestStream),
+        }
+
         // Serve fuchsia.net.virtualization/Control.
         let mut fs = ServiceFs::new_local();
         let _: &mut ServiceFsDir<'_, _> =
-            fs.dir("svc").add_fidl_service(virtualization::Event::ControlRequestStream);
+            fs.dir("svc").add_fidl_service(RequestStream::Virtualization);
+        let _: &mut ServiceFsDir<'_, _> =
+            fs.dir("svc").add_fidl_service(RequestStream::Dhcpv6PrefixProvider);
         let _: &mut ServiceFs<_> =
             fs.take_and_serve_directory_handle().context("take and serve directory handle")?;
+        let mut fs = fs.fuse();
+
+        let mut dhcpv6_prefix_provider_requests = futures::stream::SelectAll::new();
 
         // Maintain a queue of virtualization events to be dispatched to the virtualization handler.
         let mut virtualization_events = futures::stream::SelectAll::new();
-        virtualization_events.push(fs.boxed_local());
 
         // Lifecycle handle takes no args, must be set to zero.
         // See zircon/processargs.h.
@@ -817,12 +832,23 @@ impl<'a> NetCfg<'a> {
                     Result<Vec<fnet_name::DnsServer_>, anyhow::Error>,
                 )>,
             ),
+            RequestStream(Option<RequestStream>),
+            Dhcpv6PrefixProviderRequest(Result<fnet_dhcpv6::PrefixProviderRequest, fidl::Error>),
+            Dhcpv6PrefixControlRequest(
+                Option<Result<Option<fnet_dhcpv6::PrefixControlRequest>, fidl::Error>>,
+            ),
             VirtualizationEvent(virtualization::Event),
             LifecycleRequest(
                 Result<Option<fidl_fuchsia_process_lifecycle::LifecycleRequest>, fidl::Error>,
             ),
         }
         loop {
+            let mut dhcpv6_prefix_control_fut = futures::future::OptionFuture::from(
+                self.dhcpv6_prefix_provider_handler
+                    .prefix_control_request_stream
+                    .as_mut()
+                    .map(|s| s.try_next()),
+            );
             let event = futures::select! {
                 ethdev_res = ethdev_stream.try_next() => {
                     Event::EthernetDeviceResult(ethdev_res)
@@ -836,8 +862,17 @@ impl<'a> NetCfg<'a> {
                 dns_watchers_res = dns_watchers.next() => {
                     Event::DnsWatcherResult(dns_watchers_res)
                 }
-                event = virtualization_events.select_next_some() => {
-                    Event::VirtualizationEvent(event)
+                req_stream = fs.next() => {
+                    Event::RequestStream(req_stream)
+                }
+                dhcpv6_prefix_req = dhcpv6_prefix_provider_requests.select_next_some() => {
+                    Event::Dhcpv6PrefixProviderRequest(dhcpv6_prefix_req)
+                }
+                dhcpv6_prefix_control_req = dhcpv6_prefix_control_fut => {
+                    Event::Dhcpv6PrefixControlRequest(dhcpv6_prefix_control_req)
+                }
+                virt_event = virtualization_events.select_next_some() => {
+                    Event::VirtualizationEvent(virt_event)
                 }
                 req = lifecycle.try_next() => {
                     Event::LifecycleRequest(req)
@@ -911,6 +946,55 @@ impl<'a> NetCfg<'a> {
                             format!("error handling DNS servers update from {:?}", source)
                         })
                         .or_else(errors::Error::accept_non_fatal)?
+                }
+                Event::RequestStream(req_stream) => {
+                    match req_stream.context("ServiceFs ended unexpectedly")? {
+                        RequestStream::Virtualization(req_stream) => virtualization_handler
+                            .handle_event(
+                                virtualization::Event::ControlRequestStream(req_stream),
+                                &mut virtualization_events,
+                            )
+                            .await
+                            .context("handle virtualization event")
+                            .or_else(errors::Error::accept_non_fatal)?,
+                        RequestStream::Dhcpv6PrefixProvider(req_stream) => {
+                            dhcpv6_prefix_provider_requests.push(req_stream);
+                        }
+                    }
+                }
+                Event::Dhcpv6PrefixProviderRequest(res) => {
+                    match res {
+                        Ok(req) => {
+                            self.handle_dhcpv6_prefix_provider_request(req)
+                                .or_else(errors::Error::accept_non_fatal)?;
+                        }
+                        Err(e) => {
+                            error!("fuchsia.net.dhcpv6/PrefixProvider request error: {:?}", e)
+                        }
+                    };
+                }
+                Event::Dhcpv6PrefixControlRequest(req) => {
+                    let res = req.expect(
+                        "PrefixControl OptionFuture will only be selected if it is not None",
+                    );
+                    match res {
+                        Err(e) => {
+                            error!(
+                                "fuchsia.net.dhcpv6/PrefixControl request stream error: {:?}",
+                                e
+                            );
+                            self.dhcpv6_prefix_provider_handler.on_prefix_control_client_close();
+                        }
+                        Ok(None) => {
+                            info!("fuchsia.net.dhcpv6/PrefixControl closed by client");
+                            self.dhcpv6_prefix_provider_handler.on_prefix_control_client_close();
+                        }
+                        Ok(Some(req)) => {
+                            self.dhcpv6_prefix_provider_handler
+                                .handle_dhcpv6_prefix_control_request(req)
+                                .or_else(errors::Error::accept_non_fatal)?;
+                        }
+                    }
                 }
                 Event::VirtualizationEvent(event) => virtualization_handler
                     .handle_event(event, &mut virtualization_events)
@@ -1757,6 +1841,49 @@ impl<'a> NetCfg<'a> {
             .context("error setting DHCP AddressPool parameter")
             .map_err(errors::Error::NonFatal)
     }
+
+    fn handle_dhcpv6_prefix_provider_request(
+        &mut self,
+        req: fnet_dhcpv6::PrefixProviderRequest,
+    ) -> Result<(), errors::Error> {
+        let fnet_dhcpv6::PrefixProviderRequest::AcquirePrefix {
+            config: fnet_dhcpv6::AcquirePrefixConfig { interface_id, preferred_prefix_len, .. },
+            prefix,
+            control_handle: _,
+        } = req;
+
+        let (req_stream, control_handle) = prefix
+            .into_stream_and_control_handle()
+            .context("fuchsia.net.dhcpv6/PrefixControl server end to stream and control handle")
+            .map_err(errors::Error::NonFatal)?;
+
+        if self.dhcpv6_prefix_provider_handler.prefix_control_request_stream.is_some() {
+            return control_handle
+                .send_on_exit(fnet_dhcpv6::PrefixControlExitReason::AlreadyAcquiring)
+                .context("failed to send AlreadyAcquiring terminal event")
+                .map_err(errors::Error::NonFatal);
+        }
+
+        if let Some(interface_id) = interface_id {
+            if !self.interface_properties.contains_key(&interface_id) {
+                return control_handle
+                    .send_on_exit(fnet_dhcpv6::PrefixControlExitReason::InvalidInterface)
+                    .context("failed to send InvalidInterface terminal event")
+                    .map_err(errors::Error::NonFatal);
+            }
+        }
+        if let Some(preferred_prefix_len) = preferred_prefix_len {
+            if preferred_prefix_len > 128 {
+                return control_handle
+                    .send_on_exit(fnet_dhcpv6::PrefixControlExitReason::InvalidPrefixLength)
+                    .context("failed to send InvalidPrefixLength terminal event")
+                    .map_err(errors::Error::NonFatal);
+            }
+        }
+
+        self.dhcpv6_prefix_provider_handler.prefix_control_request_stream = Some(req_stream);
+        Ok(())
+    }
 }
 
 pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
@@ -2021,6 +2148,7 @@ mod tests {
                 interface_metrics: Default::default(),
                 dns_servers: Default::default(),
                 forwarded_device_classes: Default::default(),
+                dhcpv6_prefix_provider_handler: Default::default(),
             },
             ServerEnds {
                 lookup_admin: lookup_admin_server

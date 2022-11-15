@@ -10,6 +10,7 @@ use std::collections::HashMap;
 
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
+use fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6;
 use fidl_fuchsia_net_ext::IntoExt as _;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
@@ -19,9 +20,10 @@ use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
+use fidl::endpoints::Proxy as _;
 use futures::{
     future::{FutureExt as _, TryFutureExt as _},
-    stream::{self, StreamExt as _},
+    stream::{self, StreamExt as _, TryStreamExt as _},
 };
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
@@ -30,9 +32,11 @@ use netstack_testing_common::{
     realms::{
         KnownServiceProvider, Manager, ManagerConfig, Netstack2, TestRealmExt as _, TestSandboxExt,
     },
-    try_all, try_any, wait_for_component_stopped, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    try_all, try_any, wait_for_component_stopped, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
+    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
+use test_case::test_case;
 
 /// Test that NetCfg discovers a newly added device and it adds the device
 /// to the Netstack.
@@ -649,4 +653,188 @@ async fn test_forwarding<E: netemul::Endpoint, M: Manager>(name: &str) {
     // NetCfg is still in the process of configuring them after adding them to
     // the Netstack, which causes spurious errors.
     realm.shutdown().await.expect("failed to shutdown realm");
+}
+
+// TODO(https://fxbug.dev/114132): Remove this test when multiple clients
+// requesting prefixes is supported.
+#[variants_test]
+async fn test_prefix_provider_already_acquiring<M: Manager>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            name,
+            &[
+                KnownServiceProvider::Manager {
+                    agent: M::MANAGEMENT_AGENT,
+                    use_dhcp_server: false,
+                    config: ManagerConfig::Empty,
+                },
+                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
+            ],
+        )
+        .expect("create netstack realm");
+
+    let prefix_provider = realm
+        .connect_to_protocol::<fnet_dhcpv6::PrefixProviderMarker>()
+        .expect("connect to fuchsia.net.dhcpv6/PrefixProvider server");
+    {
+        // Acquire a prefix.
+        let (_prefix_control, server_end) =
+            fidl::endpoints::create_proxy::<fnet_dhcpv6::PrefixControlMarker>()
+                .expect("create fuchsia.net.dhcpv6/PrefixControl proxy and server end");
+        prefix_provider
+            .acquire_prefix(fnet_dhcpv6::AcquirePrefixConfig::EMPTY, server_end)
+            .expect("acquire prefix");
+
+        // Calling acquire_prefix a second time results in ALREADY_ACQUIRING.
+        {
+            let (prefix_control, server_end) =
+                fidl::endpoints::create_proxy::<fnet_dhcpv6::PrefixControlMarker>()
+                    .expect("create fuchsia.net.dhcpv6/PrefixControl proxy and server end");
+            prefix_provider
+                .acquire_prefix(fnet_dhcpv6::AcquirePrefixConfig::EMPTY, server_end)
+                .expect("acquire prefix");
+            let fnet_dhcpv6::PrefixControlEvent::OnExit { reason } = prefix_control
+                .take_event_stream()
+                .try_next()
+                .await
+                .expect("next PrefixControl event")
+                .expect("PrefixControl event stream ended");
+            assert_eq!(reason, fnet_dhcpv6::PrefixControlExitReason::AlreadyAcquiring);
+        }
+
+        // The PrefixControl channel is dropped here.
+    }
+
+    // Retry acquire_prefix in a loop (server may take some time to notice PrefixControl
+    // closure) and expect that it succeeds eventually.
+    loop {
+        let (prefix_control, server_end) =
+            fidl::endpoints::create_proxy::<fnet_dhcpv6::PrefixControlMarker>()
+                .expect("create fuchsia.net.dhcpv6/PrefixControl proxy and server end");
+        prefix_provider
+            .acquire_prefix(fnet_dhcpv6::AcquirePrefixConfig::EMPTY, server_end)
+            .expect("acquire prefix");
+        match prefix_control
+            .take_event_stream()
+            .next()
+            .map(Some)
+            .on_timeout(ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, || None)
+            .await
+        {
+            None => {
+                assert!(!prefix_control.is_closed());
+                break;
+            }
+            Some(item) => {
+                assert_matches::assert_matches!(
+                    item,
+                    Some(Ok(fnet_dhcpv6::PrefixControlEvent::OnExit {
+                        reason: fnet_dhcpv6::PrefixControlExitReason::AlreadyAcquiring,
+                    }))
+                );
+            }
+        }
+    }
+}
+
+#[variants_test]
+#[test_case(
+    fnet_dhcpv6::AcquirePrefixConfig {
+        interface_id: Some(42),
+        ..fnet_dhcpv6::AcquirePrefixConfig::EMPTY
+    },
+    fnet_dhcpv6::PrefixControlExitReason::InvalidInterface;
+    "interface not found"
+)]
+#[test_case(
+    fnet_dhcpv6::AcquirePrefixConfig {
+        preferred_prefix_len: Some(129),
+        ..fnet_dhcpv6::AcquirePrefixConfig::EMPTY
+    },
+    fnet_dhcpv6::PrefixControlExitReason::InvalidPrefixLength;
+    "invalid prefix length"
+)]
+async fn test_prefix_provider_config_error<M: Manager>(
+    name: &str,
+    config: fnet_dhcpv6::AcquirePrefixConfig,
+    want_reason: fnet_dhcpv6::PrefixControlExitReason,
+) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            name,
+            &[
+                KnownServiceProvider::Manager {
+                    agent: M::MANAGEMENT_AGENT,
+                    use_dhcp_server: false,
+                    config: ManagerConfig::Empty,
+                },
+                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
+            ],
+        )
+        .expect("create netstack realm");
+
+    let prefix_provider = realm
+        .connect_to_protocol::<fnet_dhcpv6::PrefixProviderMarker>()
+        .expect("connect to fuchsia.net.dhcpv6/PrefixProvider server");
+    let (prefix_control, server_end) =
+        fidl::endpoints::create_proxy::<fnet_dhcpv6::PrefixControlMarker>()
+            .expect("create fuchsia.net.dhcpv6/PrefixControl proxy and server end");
+    prefix_provider.acquire_prefix(config, server_end).expect("acquire prefix");
+    let fnet_dhcpv6::PrefixControlEvent::OnExit { reason } = prefix_control
+        .take_event_stream()
+        .try_next()
+        .await
+        .expect("next PrefixControl event")
+        .expect("PrefixControl event stream ended");
+    assert_eq!(reason, want_reason);
+}
+
+#[variants_test]
+async fn test_prefix_provider_double_watch<M: Manager>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            name,
+            &[
+                KnownServiceProvider::Manager {
+                    agent: M::MANAGEMENT_AGENT,
+                    use_dhcp_server: false,
+                    config: ManagerConfig::Empty,
+                },
+                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
+            ],
+        )
+        .expect("create netstack realm");
+
+    let prefix_provider = realm
+        .connect_to_protocol::<fnet_dhcpv6::PrefixProviderMarker>()
+        .expect("connect to fuchsia.net.dhcpv6/PrefixProvider server");
+    // Acquire a prefix.
+    let (prefix_control, server_end) =
+        fidl::endpoints::create_proxy::<fnet_dhcpv6::PrefixControlMarker>()
+            .expect("create fuchsia.net.dhcpv6/PrefixControl proxy and server end");
+    prefix_provider
+        .acquire_prefix(fnet_dhcpv6::AcquirePrefixConfig::EMPTY, server_end)
+        .expect("acquire prefix");
+
+    let (res1, res2) =
+        futures::future::join(prefix_control.watch_prefix(), prefix_control.watch_prefix()).await;
+    for res in [res1, res2] {
+        assert_matches::assert_matches!(res, Err(fidl::Error::ClientChannelClosed { status, .. }) => {
+            assert_eq!(status, zx::Status::PEER_CLOSED);
+        });
+    }
+    let fnet_dhcpv6::PrefixControlEvent::OnExit { reason } = prefix_control
+        .take_event_stream()
+        .try_next()
+        .await
+        .expect("next PrefixControl event")
+        .expect("PrefixControl event stream ended");
+    assert_eq!(reason, fnet_dhcpv6::PrefixControlExitReason::DoubleWatch);
+    assert!(prefix_control.is_closed());
 }

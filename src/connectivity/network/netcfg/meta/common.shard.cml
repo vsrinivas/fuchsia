@@ -7,6 +7,9 @@
         // Subscribe to component lifecycle events
         lifecycle: { stop_event: "notify" },
     },
+    capabilities: [
+        { protocol: "fuchsia.net.dhcpv6.PrefixProvider" },
+    ],
     use: [
         {
             protocol: [
@@ -41,6 +44,12 @@
             directory: "config-data",
             rights: [ "r*" ],
             path: "/config/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.net.dhcpv6.PrefixProvider",
+            from: "self",
         },
     ],
 }
