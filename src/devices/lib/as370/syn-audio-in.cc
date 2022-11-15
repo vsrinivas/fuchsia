@@ -71,17 +71,17 @@ void SynAudioInDevice::ProcessDma(uint32_t index) {
 
     // Check for usual case, wrap around, or no work to do.
     if (dhub_pos > dma_buffer_current_[index]) {
-      zxlogf(DEBUG,
+      zxlogf(TRACE,
              "audio: %u  usual  run %u  distance 0x%08X  dhub 0x%08X  curr 0x%08X  pdm 0x%08X\n",
              index, run_count, distance, dhub_pos, dma_buffer_current_[index], amount_pdm);
     } else if (dhub_pos < dma_buffer_current_[index]) {
       distance = dma_buffer_current_[index] - dhub_pos;
       amount_pdm = dma_buffer_size_[index] - distance;
-      zxlogf(DEBUG,
+      zxlogf(TRACE,
              "audio: %u  wrap   run %u  distance 0x%08X  dhub 0x%08X  curr 0x%08X  pdm 0x%08X\n",
              index, run_count, distance, dhub_pos, dma_buffer_current_[index], amount_pdm);
     } else {
-      zxlogf(DEBUG,
+      zxlogf(TRACE,
              "audio: %u  empty  run %u  distance 0x%08X  dhub 0x%08X  curr 0x%08X  pdm 0x%08X\n",
              index, run_count, distance, dhub_pos, dma_buffer_current_[index], amount_pdm);
       return;
@@ -118,7 +118,7 @@ void SynAudioInDevice::ProcessDma(uint32_t index) {
     // Either input channel (rising or falled edge PDM capture), unless it is only one channel.
     for (uint32_t i = 0; i < (kNumberOfChannels > 1 ? 2 : 1); ++i) {
       if (parameters[index][i].has_value()) {
-        zxlogf(DEBUG, "audio: %u  decoding from 0x%08X  amount 0x%08X  into 0x%08X", index,
+        zxlogf(TRACE, "audio: %u  decoding from 0x%08X  amount 0x%08X  into 0x%08X", index,
                dma_buffer_current_[index], amount_pdm, ring_buffer_current_);
         amount_pcm = cic_filter_->Filter(
             parameters[index][i]->filter_index,
@@ -149,8 +149,8 @@ void SynAudioInDevice::ProcessDma(uint32_t index) {
     dma_buffer_[index].op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, dma_buffer_current_[index],
                                 buffer_to_clean, nullptr, 0);
     auto after = zx::clock::get_monotonic();
-    zxlogf(DEBUG, "audio: %u  decoded 0x%X bytes in %lumsecs  into 0x%X bytes  distance 0x%X",
-           index, amount_pdm, (after - before).to_msecs(), amount_pcm, distance);
+    zxlogf(DEBUG, "audio: %u  decoded 0x%X bytes in %luusecs  into 0x%X bytes  distance 0x%X",
+           index, amount_pdm, (after - before).to_usecs(), amount_pcm, distance);
   }
 }
 
@@ -162,14 +162,14 @@ int SynAudioInDevice::Thread() {
       zxlogf(ERROR, "%s port wait failed: %d", __FILE__, status);
       return thrd_error;
     }
-    zxlogf(DEBUG, "audio: msg on port key %lu", packet.key);
+    zxlogf(TRACE, "audio: msg on port key %lu", packet.key);
     if (packet.key == kPortDmaNotification) {
       if (enabled_) {
         for (uint32_t i = 0; i < kNumberOfDmas; ++i) {
           ProcessDma(i);
         }
       } else {
-        zxlogf(DEBUG, "audio: DMA already stopped");
+        zxlogf(TRACE, "audio: DMA already stopped");
       }
     }
   }
@@ -186,7 +186,7 @@ zx_status_t SynAudioInDevice::Init() {
   auto notify_cb = [](void* ctx, dma_state_t state) -> void {
     SynAudioInDevice* thiz = static_cast<SynAudioInDevice*>(ctx);
     zx_port_packet packet = {kPortDmaNotification, ZX_PKT_TYPE_USER, ZX_OK, {}};
-    zxlogf(DEBUG, "audio: notification callback with state %d", static_cast<int>(state));
+    zxlogf(TRACE, "audio: notification callback with state %d", static_cast<int>(state));
     // No need to notify if we already stopped the DMA.
     if (thiz->enabled_) {
       auto status = thiz->port_.queue(&packet);

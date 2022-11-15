@@ -30,7 +30,10 @@ zx_library("as370") {
     "soc/as370/syn-audio-in.h",
     "soc/as370/syn-audio-out.h",
   ]
-  configs += [ "//build/config:all_source" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config:optimize_speed",  # For PDM SW decoding.
+  ]
   sources = [
     "audio-dsp.cc",
     "syn-audio-in.cc",
