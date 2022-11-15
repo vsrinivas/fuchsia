@@ -68,15 +68,20 @@ class SnapshotStoreTest : public UnitTestFixture {
   void SetUpSnapshotStore(StorageSize max_archives_size = StorageSize::Megabytes(1),
                           StorageSize max_tmp_size = StorageSize::Bytes(0),
                           StorageSize max_cache_size = StorageSize::Bytes(0)) {
-    snapshot_store_ = std::make_unique<SnapshotStore>(
-        &annotation_manager_, garbage_collected_snapshots_path_,
-        /*temp_root=*/
-        SnapshotPersistence::Root{files::JoinPath(tmp_dir_.path(), kSnapshotStoreTmpPath),
-                                  max_tmp_size},
-        /*persistent_root=*/
-        SnapshotPersistence::Root{files::JoinPath(tmp_dir_.path(), kSnapshotStoreCachePath),
-                                  max_cache_size},
-        max_archives_size);
+    const auto temp_root =
+        max_tmp_size > StorageSize::Bytes(0)
+            ? std::optional(SnapshotPersistence::Root{
+                  files::JoinPath(tmp_dir_.path(), kSnapshotStoreTmpPath), max_tmp_size})
+            : std::nullopt;
+    const auto persistent_root =
+        max_cache_size > StorageSize::Bytes(0)
+            ? std::optional(SnapshotPersistence::Root{
+                  files::JoinPath(tmp_dir_.path(), kSnapshotStoreCachePath), max_cache_size})
+            : std::nullopt;
+
+    snapshot_store_ =
+        std::make_unique<SnapshotStore>(&annotation_manager_, garbage_collected_snapshots_path_,
+                                        temp_root, persistent_root, max_archives_size);
   }
 
   fuchsia::feedback::Attachment GetDefaultAttachment() {

@@ -43,8 +43,8 @@ class ReportStore {
   ReportStore(LogTags* tags, std::shared_ptr<InfoContext> info_context,
               feedback::AnnotationManager* annotation_manager, const Root& temp_reports_root,
               const Root& persistent_reports_root,
-              const SnapshotPersistence::Root& temp_snapshots_root,
-              const SnapshotPersistence::Root& persistent_snapshots_root,
+              const std::optional<SnapshotPersistence::Root>& temp_snapshots_root,
+              const std::optional<SnapshotPersistence::Root>& persistent_snapshots_root,
               const std::string& garbage_collected_snapshots_path, StorageSize max_archives_size);
 
   // Adds a report to the store and returns the ReportIds of any report garbage collected in the

@@ -6,6 +6,7 @@
 
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 
@@ -27,16 +28,22 @@ ScopedTestReportStore::ScopedTestReportStore(feedback::AnnotationManager* annota
   files::CreateDirectory(tmp_snapshots_path_);
   files::CreateDirectory(cache_snapshots_path_);
 
+  const auto temp_snapshots_root =
+      max_snapshots_tmp_size > StorageSize::Bytes(0)
+          ? std::optional(SnapshotPersistence::Root{tmp_snapshots_path_, max_snapshots_tmp_size})
+          : std::nullopt;
+  const auto persistent_snapshots_root = max_snapshots_cache_size > StorageSize::Bytes(0)
+                                             ? std::optional(SnapshotPersistence::Root{
+                                                   cache_snapshots_path_, max_snapshots_cache_size})
+                                             : std::nullopt;
+
   report_store_ = std::make_unique<ReportStore>(
       &tags_, std::move(info_context), annotation_manager,
       /*temp_reports_root=*/
       crash_reports::ReportStore::Root{tmp_reports_path_, max_reports_tmp_size},
       /*persistent_reports_root=*/
       crash_reports::ReportStore::Root{cache_reports_path_, max_reports_cache_size},
-      /*temp_snapshots_root=*/
-      crash_reports::SnapshotPersistence::Root{tmp_snapshots_path_, max_snapshots_tmp_size},
-      /*persistent_snapshots_root=*/
-      crash_reports::SnapshotPersistence::Root{cache_snapshots_path_, max_snapshots_cache_size},
+      temp_snapshots_root, persistent_snapshots_root,
       files::JoinPath(temp_dir_.path(), kGarbageCollectedSnapshotsPath), max_archives_size);
 }
 

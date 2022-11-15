@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback/config.h"
+#include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/files/path.h"
 
 namespace forensics::feedback {
@@ -26,6 +27,8 @@ TEST_F(ProdConfigTest, DefaultBoard) {
 
   EXPECT_EQ(config->persisted_logs_num_files, 8u);
   EXPECT_EQ(config->persisted_logs_total_size, StorageSize::Kilobytes(512));
+  EXPECT_FALSE(config->snapshot_persistence_max_tmp_size.has_value());
+  EXPECT_FALSE(config->snapshot_persistence_max_cache_size.has_value());
 }
 
 }  // namespace

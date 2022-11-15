@@ -25,8 +25,9 @@ class SnapshotStore {
  public:
   SnapshotStore(feedback::AnnotationManager* annotation_manager,
                 std::string garbage_collected_snapshots_path,
-                const SnapshotPersistence::Root& temp_root,
-                const SnapshotPersistence::Root& persistent_root, StorageSize max_archives_size);
+                const std::optional<SnapshotPersistence::Root>& temp_root,
+                const std::optional<SnapshotPersistence::Root>& persistent_root,
+                StorageSize max_archives_size);
 
   // Stores the given data in memory for later retrieval.
   void AddSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Attachment archive);

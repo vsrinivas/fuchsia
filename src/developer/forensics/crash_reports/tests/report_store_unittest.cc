@@ -58,13 +58,9 @@ class ReportStoreTest : public UnitTestFixture {
  protected:
   std::string GetTmpReportsDir() { return files::JoinPath(tmp_dir_.path(), "reports"); }
   std::string GetCacheReportsDir() { return files::JoinPath(cache_dir_.path(), "reports"); }
-  std::string GetTmpSnapshotsDir() { return files::JoinPath(tmp_dir_.path(), "snapshots"); }
-  std::string GetCacheSnapshotsDir() { return files::JoinPath(cache_dir_.path(), "snapshots"); }
 
   void MakeNewStore(const StorageSize max_tmp_reports_size,
                     const StorageSize max_cache_reports_size = StorageSize::Bytes(0),
-                    const StorageSize max_tmp_snapshots_size = StorageSize::Bytes(0),
-                    const StorageSize max_cache_snapshots_size = StorageSize::Bytes(0),
                     const StorageSize max_archives_size = StorageSize::Megabytes(1)) {
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
@@ -75,10 +71,10 @@ class ReportStoreTest : public UnitTestFixture {
         /*persistent_reports_root=*/
         ReportStore::Root{GetCacheReportsDir(), max_cache_reports_size},
         /*temp_snapshots_root=*/
-        SnapshotPersistence::Root{GetTmpSnapshotsDir(), max_tmp_snapshots_size},
+        std::nullopt,
         /*persistent_snapshots_root=*/
-        SnapshotPersistence::Root{GetCacheSnapshotsDir(), max_cache_snapshots_size},
-        files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"), max_archives_size);
+        std::nullopt, files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"),
+        max_archives_size);
   }
 
   std::optional<ReportId> Add(const std::string& program_shortname,
@@ -599,10 +595,9 @@ TEST_F(ReportStoreTest, UsesTmpUntilPersistentReady) {
       /*persistent_reports_root=*/
       ReportStore::Root{cache_root, StorageSize::Bytes(expected_report_size)},
       /*temp_snapshots_root=*/
-      SnapshotPersistence::Root{GetTmpSnapshotsDir(), StorageSize::Bytes(0u)},
+      std::nullopt,
       /*persistent_snapshots_root=*/
-      SnapshotPersistence::Root{GetCacheSnapshotsDir(), StorageSize::Bytes(0u)},
-      files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"),
+      std::nullopt, files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"),
       StorageSize::Bytes(expected_report_size));
 
   std::map<std::string, std::string> annotations;

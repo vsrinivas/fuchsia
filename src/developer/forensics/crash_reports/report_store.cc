@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <set>
+#include <utility>
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/constants.h"
@@ -142,8 +143,8 @@ std::string ReadSnapshotUuid(const std::string& path) {
 ReportStore::ReportStore(LogTags* tags, std::shared_ptr<InfoContext> info,
                          feedback::AnnotationManager* annotation_manager,
                          const Root& temp_reports_root, const Root& persistent_reports_root,
-                         const SnapshotPersistence::Root& temp_snapshots_root,
-                         const SnapshotPersistence::Root& persistent_snapshots_root,
+                         const std::optional<SnapshotPersistence::Root>& temp_snapshots_root,
+                         const std::optional<SnapshotPersistence::Root>& persistent_snapshots_root,
                          const std::string& garbage_collected_snapshots_path,
                          StorageSize max_archives_size)
     : tmp_metadata_(temp_reports_root.dir, temp_reports_root.max_size),

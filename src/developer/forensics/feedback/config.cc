@@ -6,6 +6,9 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <optional>
+
+#include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/files/file.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/error/en.h"
@@ -24,11 +27,19 @@ constexpr char kBoardConfigSchema[] = R"({
        },
        "persisted_logs_total_size_kib": {
            "type": "number"
+       },
+       "snapshot_persistence_max_tmp_size_mib": {
+           "type": "number"
+       },
+       "snapshot_persistence_max_cache_size_mib": {
+           "type": "number"
        }
     },
     "required": [
        "persisted_logs_num_files",
-       "persisted_logs_total_size_kib"
+       "persisted_logs_total_size_kib",
+       "snapshot_persistence_max_tmp_size_mib",
+       "snapshot_persistence_max_cache_size_mib"
     ],
     "additionalProperties": false
 })";
@@ -78,6 +89,21 @@ std::optional<BoardConfig> ReadBoardConfig(const std::string& filepath) {
   } else {
     FX_LOGS(ERROR) << "Can't use non-positive size for system log persistence: " << total_size_kib;
     return std::nullopt;
+  }
+
+  if (const int64_t max_tmp_size_mib = config["snapshot_persistence_max_tmp_size_mib"].GetInt64();
+      max_tmp_size_mib > 0) {
+    device_config.snapshot_persistence_max_tmp_size = StorageSize::Megabytes(max_tmp_size_mib);
+  } else {
+    device_config.snapshot_persistence_max_tmp_size = std::nullopt;
+  }
+
+  if (const int64_t max_cache_size_mib =
+          config["snapshot_persistence_max_cache_size_mib"].GetInt64();
+      max_cache_size_mib > 0) {
+    device_config.snapshot_persistence_max_cache_size = StorageSize::Megabytes(max_cache_size_mib);
+  } else {
+    device_config.snapshot_persistence_max_cache_size = std::nullopt;
   }
 
   return device_config;

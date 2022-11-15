@@ -25,7 +25,8 @@ class SnapshotPersistence {
     StorageSize max_size;
   };
 
-  SnapshotPersistence(const Root& temp_root, const Root& persistent_root);
+  SnapshotPersistence(const std::optional<Root>& temp_root,
+                      const std::optional<Root>& persistent_root);
 
   // Adds a snapshot to persistence. If |only_consider_tmp| is true, only /tmp will be
   // considered as a possible storage location. Returns true if successful.
@@ -71,8 +72,11 @@ class SnapshotPersistence {
   // Returns true if another storage root can be used.
   bool HasFallbackRoot(const SnapshotPersistenceMetadata& root) const;
 
-  SnapshotPersistenceMetadata tmp_metadata_;
-  SnapshotPersistenceMetadata cache_metadata_;
+  // Returns true if storing snapshots in /tmp or /cache is enabled.
+  bool SnapshotPersistenceEnabled() const;
+
+  std::optional<SnapshotPersistenceMetadata> tmp_metadata_;
+  std::optional<SnapshotPersistenceMetadata> cache_metadata_;
 };
 
 }  // namespace forensics::crash_reports

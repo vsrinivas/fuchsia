@@ -30,6 +30,8 @@ class CrashReports {
   struct Options {
     crash_reports::Config config;
     StorageSize snapshot_store_max_archives_size;
+    std::optional<StorageSize> snapshot_persistence_max_tmp_size;
+    std::optional<StorageSize> snapshot_persistence_max_cache_size;
     zx::duration snapshot_collector_window_duration;
   };
 

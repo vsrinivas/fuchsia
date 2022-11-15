@@ -75,9 +75,15 @@ class SnapshotPersistenceTest : public UnitTestFixture {
 
   void MakeNewPersistence(const StorageSize max_tmp_size = StorageSize::Megabytes(1),
                           const StorageSize max_cache_size = StorageSize::Megabytes(1)) {
-    persistence_ = std::make_unique<SnapshotPersistence>(
-        SnapshotPersistence::Root{GetTmpDir(), max_tmp_size},
-        SnapshotPersistence::Root{GetCacheDir(), max_cache_size});
+    const auto temp_root = max_tmp_size > StorageSize::Bytes(0)
+                               ? std::optional(SnapshotPersistence::Root{GetTmpDir(), max_tmp_size})
+                               : std::nullopt;
+    const auto persistent_root =
+        max_cache_size > StorageSize::Bytes(0)
+            ? std::optional(SnapshotPersistence::Root{GetCacheDir(), max_cache_size})
+            : std::nullopt;
+
+    persistence_ = std::make_unique<SnapshotPersistence>(temp_root, persistent_root);
   }
 
   bool AddArchive(const SnapshotUuid& uuid, std::string archive_value) {

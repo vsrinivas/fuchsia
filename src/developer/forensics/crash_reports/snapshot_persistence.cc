@@ -4,8 +4,11 @@
 
 #include "src/developer/forensics/crash_reports/snapshot_persistence.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <optional>
 #include <utility>
+#include <vector>
 
 #include "src/developer/forensics/crash_reports/snapshot_persistence_metadata.h"
 #include "src/developer/forensics/utils/sized_data.h"
@@ -65,21 +68,37 @@ void RemoveEmptyDirectories(const std::string& root) {
 
 }  // namespace
 
-SnapshotPersistence::SnapshotPersistence(const Root& temp_root, const Root& persistent_root)
-    : tmp_metadata_(temp_root.dir, temp_root.max_size),
-      cache_metadata_(persistent_root.dir, persistent_root.max_size) {
-  // Clean up any empty directories in snapshot persistence. This may happen if the component stops
-  // running while it is deleting a snapshot.
-  RemoveEmptyDirectories(tmp_metadata_.RootDir());
-  RemoveEmptyDirectories(cache_metadata_.RootDir());
+SnapshotPersistence::SnapshotPersistence(const std::optional<Root>& temp_root,
+                                         const std::optional<Root>& persistent_root)
 
-  // |temp_root.dir| must be usable immediately.
-  FX_CHECK(tmp_metadata_.RecreateFromFilesystem());
-  cache_metadata_.RecreateFromFilesystem();
+{
+  if (temp_root.has_value()) {
+    tmp_metadata_ = SnapshotPersistenceMetadata(temp_root->dir, temp_root->max_size);
+
+    // Clean up any empty directories in tmp. This may happen if the component stops running while
+    // it is deleting a snapshot.
+    RemoveEmptyDirectories(tmp_metadata_->RootDir());
+
+    // |temp_root.dir| must be usable immediately.
+    FX_CHECK(tmp_metadata_->RecreateFromFilesystem());
+  }
+
+  if (persistent_root.has_value()) {
+    cache_metadata_ = SnapshotPersistenceMetadata(persistent_root->dir, persistent_root->max_size);
+
+    // Clean up any empty directories in cache. This may happen if the component stops running while
+    // it is deleting a snapshot.
+    RemoveEmptyDirectories(cache_metadata_->RootDir());
+    cache_metadata_->RecreateFromFilesystem();
+  }
 }
 
 bool SnapshotPersistence::Add(const SnapshotUuid& uuid, const ManagedSnapshot::Archive& archive,
                               StorageSize archive_size, const bool only_consider_tmp) {
+  if (!SnapshotPersistenceEnabled()) {
+    return false;
+  }
+
   SnapshotPersistenceMetadata* root_metadata = PickRootForStorage(archive_size, only_consider_tmp);
 
   if (root_metadata == nullptr) {
@@ -135,37 +154,40 @@ bool SnapshotPersistence::AddToRoot(const SnapshotUuid& uuid,
 }
 
 void SnapshotPersistence::MoveToTmp(const SnapshotUuid& uuid) {
+  FX_CHECK(SnapshotPersistenceEnabled()) << "Snapshot persistence not enabled";
   FX_CHECK(SnapshotLocation(uuid) == ItemLocation::kCache)
       << "MoveToTmp() will only move snapshots from /cache to /tmp";
 
   const auto snapshot = Get(uuid);
-  const StorageSize snapshot_size = cache_metadata_.SnapshotSize(uuid);
+  const StorageSize snapshot_size = cache_metadata_->SnapshotSize(uuid);
 
   // Delete copy of snapshot from /cache before adding to /tmp to avoid the possibility of having
   // the snapshot in multiple places if deletion from /cache were to fail.
-  if (!DeletePath(cache_metadata_.SnapshotDirectory(uuid))) {
-    FX_LOGS(ERROR) << "Failed to delete snapshot at " << cache_metadata_.SnapshotDirectory(uuid);
+  if (!DeletePath(cache_metadata_->SnapshotDirectory(uuid))) {
+    FX_LOGS(ERROR) << "Failed to delete snapshot at " << cache_metadata_->SnapshotDirectory(uuid);
     return;
   }
 
-  cache_metadata_.Delete(uuid);
+  cache_metadata_->Delete(uuid);
 
-  if (!tmp_metadata_.IsDirectoryUsable() || !SpaceAvailable(tmp_metadata_, snapshot_size) ||
-      !AddToRoot(uuid, *snapshot, snapshot_size, tmp_metadata_)) {
+  if (!tmp_metadata_.has_value() || !tmp_metadata_->IsDirectoryUsable() ||
+      !SpaceAvailable(*tmp_metadata_, snapshot_size) ||
+      !AddToRoot(uuid, *snapshot, snapshot_size, *tmp_metadata_)) {
     FX_LOGS(ERROR) << "Failed to move snapshot uuid '" << uuid << "' from /cache to /tmp";
   }
 }
 
 bool SnapshotPersistence::Contains(const SnapshotUuid& uuid) const {
-  return tmp_metadata_.Contains(uuid) || cache_metadata_.Contains(uuid);
+  return (tmp_metadata_.has_value() && tmp_metadata_->Contains(uuid)) ||
+         (cache_metadata_.has_value() && cache_metadata_->Contains(uuid));
 }
 
 std::optional<ItemLocation> SnapshotPersistence::SnapshotLocation(const SnapshotUuid& uuid) {
-  if (tmp_metadata_.Contains(uuid)) {
+  if (tmp_metadata_.has_value() && tmp_metadata_->Contains(uuid)) {
     return ItemLocation::kTmp;
   }
 
-  if (cache_metadata_.Contains(uuid)) {
+  if (cache_metadata_.has_value() && cache_metadata_->Contains(uuid)) {
     return ItemLocation::kCache;
   }
 
@@ -173,6 +195,7 @@ std::optional<ItemLocation> SnapshotPersistence::SnapshotLocation(const Snapshot
 }
 
 std::shared_ptr<const ManagedSnapshot::Archive> SnapshotPersistence::Get(const SnapshotUuid& uuid) {
+  FX_CHECK(SnapshotPersistenceEnabled()) << "Snapshot persistence not enabled";
   FX_CHECK(Contains(uuid)) << "Contains() should be called before any Get()";
 
   const auto& root_metadata = RootFor(uuid);
@@ -188,14 +211,21 @@ std::shared_ptr<const ManagedSnapshot::Archive> SnapshotPersistence::Get(const S
 }
 
 std::vector<SnapshotUuid> SnapshotPersistence::GetSnapshotUuids() const {
-  auto all_uuids = tmp_metadata_.SnapshotUuids();
-  const auto cache_uuids = cache_metadata_.SnapshotUuids();
-  all_uuids.insert(all_uuids.end(), cache_uuids.begin(), cache_uuids.end());
+  if (!SnapshotPersistenceEnabled()) {
+    return {};
+  }
 
+  auto all_uuids =
+      tmp_metadata_.has_value() ? tmp_metadata_->SnapshotUuids() : std::vector<SnapshotUuid>();
+  const auto cache_uuids =
+      cache_metadata_.has_value() ? cache_metadata_->SnapshotUuids() : std::vector<SnapshotUuid>();
+
+  all_uuids.insert(all_uuids.end(), cache_uuids.begin(), cache_uuids.end());
   return all_uuids;
 }
 
 bool SnapshotPersistence::Delete(const SnapshotUuid& uuid) {
+  FX_CHECK(SnapshotPersistenceEnabled()) << "Snapshot persistence not enabled";
   FX_CHECK(Contains(uuid)) << "Contains() should be called before any Delete()";
 
   auto& root_metadata = RootFor(uuid);
@@ -210,50 +240,63 @@ bool SnapshotPersistence::Delete(const SnapshotUuid& uuid) {
 }
 
 SnapshotPersistenceMetadata& SnapshotPersistence::RootFor(const SnapshotUuid& uuid) {
-  if (tmp_metadata_.Contains(uuid)) {
-    return tmp_metadata_;
+  FX_CHECK(SnapshotPersistenceEnabled()) << "Snapshot persistence not enabled";
+
+  if (tmp_metadata_.has_value() && tmp_metadata_->Contains(uuid)) {
+    return *tmp_metadata_;
   }
 
-  if (!cache_metadata_.Contains(uuid)) {
+  if (!cache_metadata_.has_value() || !cache_metadata_->Contains(uuid)) {
     FX_LOGS(FATAL) << "Unable to find root for uuid '" << uuid
                    << "', there's a logic bug somewhere";
   }
 
-  return cache_metadata_;
+  return *cache_metadata_;
 }
 
 SnapshotPersistenceMetadata* SnapshotPersistence::PickRootForStorage(StorageSize archive_size,
                                                                      const bool only_consider_tmp) {
+  FX_CHECK(SnapshotPersistenceEnabled()) << "Snapshot persistence not enabled";
+
   // Attempt to make |cache_metadata_| usable if it isn't already.
-  if (!cache_metadata_.IsDirectoryUsable()) {
-    cache_metadata_.RecreateFromFilesystem();
+  if (cache_metadata_.has_value() && !cache_metadata_->IsDirectoryUsable()) {
+    cache_metadata_->RecreateFromFilesystem();
   }
 
   // Only use a root if it's valid and there's enough space to put the archive there. Don't use
   // /cache if |only_consider_tmp| is true.
-  if (!only_consider_tmp && cache_metadata_.IsDirectoryUsable() &&
-      SpaceAvailable(cache_metadata_, archive_size)) {
-    return &cache_metadata_;
+  if (cache_metadata_.has_value() && !only_consider_tmp && cache_metadata_->IsDirectoryUsable() &&
+      SpaceAvailable(*cache_metadata_, archive_size)) {
+    return &cache_metadata_.value();
   }
 
-  if (tmp_metadata_.IsDirectoryUsable() && SpaceAvailable(tmp_metadata_, archive_size)) {
-    return &tmp_metadata_;
+  if (tmp_metadata_.has_value() && tmp_metadata_->IsDirectoryUsable() &&
+      SpaceAvailable(*tmp_metadata_, archive_size)) {
+    return &tmp_metadata_.value();
   }
 
   return nullptr;
 }
 
 bool SnapshotPersistence::HasFallbackRoot(const SnapshotPersistenceMetadata& root) const {
+  FX_CHECK(SnapshotPersistenceEnabled()) << "Snapshot persistence not enabled";
+
   // Only /cache can fallback.
-  return &root == &cache_metadata_;
+  return cache_metadata_.has_value() && &root == &cache_metadata_.value() &&
+         tmp_metadata_.has_value();
 }
 
 SnapshotPersistenceMetadata& SnapshotPersistence::FallbackRoot(
     const SnapshotPersistenceMetadata& root) {
+  FX_CHECK(SnapshotPersistenceEnabled()) << "Snapshot persistence not enabled";
   FX_CHECK(HasFallbackRoot(root));
 
   // Always fallback to /tmp.
-  return tmp_metadata_;
+  return *tmp_metadata_;
+}
+
+bool SnapshotPersistence::SnapshotPersistenceEnabled() const {
+  return tmp_metadata_.has_value() || cache_metadata_.has_value();
 }
 
 }  // namespace forensics::crash_reports

@@ -5,6 +5,7 @@
 #include "src/developer/forensics/crash_reports/snapshot_store.h"
 
 #include <fstream>
+#include <utility>
 
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/snapshot.h"
@@ -23,8 +24,8 @@ std::shared_ptr<T> MakeShared(T&& t) {
 
 SnapshotStore::SnapshotStore(feedback::AnnotationManager* annotation_manager,
                              std::string garbage_collected_snapshots_path,
-                             const SnapshotPersistence::Root& temp_root,
-                             const SnapshotPersistence::Root& persistent_root,
+                             const std::optional<SnapshotPersistence::Root>& temp_root,
+                             const std::optional<SnapshotPersistence::Root>& persistent_root,
                              StorageSize max_archives_size)
     : annotation_manager_(annotation_manager),
       garbage_collected_snapshots_path_(std::move(garbage_collected_snapshots_path)),

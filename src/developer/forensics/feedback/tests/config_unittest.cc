@@ -37,7 +37,9 @@ class ConfigTest : public testing::Test {
 
 TEST_F(ConfigTest, BoardConfigMissingPersistedLogsNumFiles) {
   const std::optional<BoardConfig> config = ParseBoardConfig(R"({
-  "persisted_logs_total_size_kib": 1
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
 })");
 
   EXPECT_FALSE(config.has_value());
@@ -45,7 +47,29 @@ TEST_F(ConfigTest, BoardConfigMissingPersistedLogsNumFiles) {
 
 TEST_F(ConfigTest, BoardConfigMissingPersistedLogsTotalSizeKib) {
   const std::optional<BoardConfig> config = ParseBoardConfig(R"({
-  "persisted_logs_num_files": 1
+  "persisted_logs_num_files": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
+})");
+
+  EXPECT_FALSE(config.has_value());
+}
+
+TEST_F(ConfigTest, BoardConfigMissingSnapshotPersistenceMaxTmpSizeMib) {
+  const std::optional<BoardConfig> config = ParseBoardConfig(R"({
+  "persisted_logs_num_files": 1,
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
+})");
+
+  EXPECT_FALSE(config.has_value());
+}
+
+TEST_F(ConfigTest, BoardConfigMissingSnapshotPersistenceMaxCacheSizeMib) {
+  const std::optional<BoardConfig> config = ParseBoardConfig(R"({
+  "persisted_logs_num_files": 1,
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1
 })");
 
   EXPECT_FALSE(config.has_value());
@@ -55,6 +79,8 @@ TEST_F(ConfigTest, BoardConfigSpuriousField) {
   const std::optional<BoardConfig> config = ParseBoardConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
   "spurious": ""
 })");
 
@@ -64,7 +90,9 @@ TEST_F(ConfigTest, BoardConfigSpuriousField) {
 TEST_F(ConfigTest, BoardConfigPersistedLogsNumFilesPositive) {
   const std::optional<BoardConfig> config = ParseBoardConfig(R"({
   "persisted_logs_num_files": 1,
-  "persisted_logs_total_size_kib": 1
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
 })");
 
   ASSERT_TRUE(config.has_value());
@@ -74,7 +102,9 @@ TEST_F(ConfigTest, BoardConfigPersistedLogsNumFilesPositive) {
 TEST_F(ConfigTest, BoardConfigPersistedLogsNumFilesZero) {
   const std::optional<BoardConfig> config = ParseBoardConfig(R"({
   "persisted_logs_num_files": 0,
-  "persisted_logs_total_size_kib": 1
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
 })");
 
   EXPECT_FALSE(config.has_value());
@@ -83,7 +113,9 @@ TEST_F(ConfigTest, BoardConfigPersistedLogsNumFilesZero) {
 TEST_F(ConfigTest, BoardConfigPersistedLogsNumFilesNegative) {
   const std::optional<BoardConfig> config = ParseBoardConfig(R"({
   "persisted_logs_num_files": -1,
-  "persisted_logs_total_size_kib": 1
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
 })");
 
   EXPECT_FALSE(config.has_value());
@@ -92,7 +124,9 @@ TEST_F(ConfigTest, BoardConfigPersistedLogsNumFilesNegative) {
 TEST_F(ConfigTest, BoardConfigPersistedLogsNumFilesNotNumber) {
   const std::optional<BoardConfig> config = ParseBoardConfig(R"({
   "persisted_logs_num_files": "",
-  "persisted_logs_total_size_kib": 1
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
 })");
 
   EXPECT_FALSE(config.has_value());
@@ -101,7 +135,9 @@ TEST_F(ConfigTest, BoardConfigPersistedLogsNumFilesNotNumber) {
 TEST_F(ConfigTest, BoardConfigPersistedLogsTotalSizeKibPositive) {
   const std::optional<BoardConfig> config = ParseBoardConfig(R"({
   "persisted_logs_num_files": 1,
-  "persisted_logs_total_size_kib": 1
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
 })");
 
   ASSERT_TRUE(config.has_value());
@@ -111,7 +147,9 @@ TEST_F(ConfigTest, BoardConfigPersistedLogsTotalSizeKibPositive) {
 TEST_F(ConfigTest, BoardConfigPersistedLogsTotalSizeKibZero) {
   const std::optional<BoardConfig> config = ParseBoardConfig(R"({
   "persisted_logs_num_files": 1,
-  "persisted_logs_total_size_kib": 0,
+  "persisted_logs_total_size_kib": 0,,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
 })");
 
   EXPECT_FALSE(config.has_value());
@@ -120,7 +158,9 @@ TEST_F(ConfigTest, BoardConfigPersistedLogsTotalSizeKibZero) {
 TEST_F(ConfigTest, BoardConfigPersistedLogsTotalSizeKibNegative) {
   const std::optional<BoardConfig> config = ParseBoardConfig(R"({
   "persisted_logs_num_files": 1,
-  "persisted_logs_total_size_kib": -1
+  "persisted_logs_total_size_kib": -1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
 })");
 
   EXPECT_FALSE(config.has_value());
@@ -129,15 +169,114 @@ TEST_F(ConfigTest, BoardConfigPersistedLogsTotalSizeKibNegative) {
 TEST_F(ConfigTest, BoardConfigPersistedLogsTotalSizeKibNotNumber) {
   const std::optional<BoardConfig> config = ParseBoardConfig(R"({
   "persisted_logs_num_files": 1,
-  "persisted_logs_total_size_kib": ""
+  "persisted_logs_total_size_kib": "",
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
 })");
 
   EXPECT_FALSE(config.has_value());
 }
+
+TEST_F(ConfigTest, BoardConfigSnapshotPersistenceMaxTmpSizeMibPositive) {
+  const std::optional<BoardConfig> config = ParseBoardConfig(R"({
+  "persisted_logs_num_files": 1,
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_EQ(config->snapshot_persistence_max_tmp_size, StorageSize::Megabytes(1));
+}
+
+TEST_F(ConfigTest, BoardConfigSnapshotPersistenceMaxTmpSizeMibZero) {
+  const std::optional<BoardConfig> config = ParseBoardConfig(R"({
+  "persisted_logs_num_files": 1,
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 0,
+  "snapshot_persistence_max_cache_size_mib": 1
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_FALSE(config->snapshot_persistence_max_tmp_size.has_value());
+}
+
+TEST_F(ConfigTest, BoardConfigSnapshotPersistenceMaxTmpSizeMibNegative) {
+  const std::optional<BoardConfig> config = ParseBoardConfig(R"({
+  "persisted_logs_num_files": 1,
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": -1,
+  "snapshot_persistence_max_cache_size_mib": 1
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_FALSE(config->snapshot_persistence_max_tmp_size.has_value());
+}
+
+TEST_F(ConfigTest, BoardConfigSnapshotPersistenceMaxTmpSizeMibNotNumber) {
+  const std::optional<BoardConfig> config = ParseBoardConfig(R"({
+  "persisted_logs_num_files": 1,
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": "",
+  "snapshot_persistence_max_cache_size_mib": 1
+})");
+
+  EXPECT_FALSE(config.has_value());
+}
+
+TEST_F(ConfigTest, BoardConfigSnapshotPersistenceMaxCacheSizeMibPositive) {
+  const std::optional<BoardConfig> config = ParseBoardConfig(R"({
+  "persisted_logs_num_files": 1,
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_EQ(config->snapshot_persistence_max_cache_size, StorageSize::Megabytes(1));
+}
+
+TEST_F(ConfigTest, BoardConfigSnapshotPersistenceMaxCacheSizeMibZero) {
+  const std::optional<BoardConfig> config = ParseBoardConfig(R"({
+  "persisted_logs_num_files": 1,
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 0
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_FALSE(config->snapshot_persistence_max_cache_size.has_value());
+}
+
+TEST_F(ConfigTest, BoardConfigSnapshotPersistenceMaxCacheSizeMibNegative) {
+  const std::optional<BoardConfig> config = ParseBoardConfig(R"({
+  "persisted_logs_num_files": 1,
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": -1
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_FALSE(config->snapshot_persistence_max_cache_size.has_value());
+}
+
+TEST_F(ConfigTest, BoardConfigSnapshotPersistenceMaxCacheSizeMibNotNumber) {
+  const std::optional<BoardConfig> config = ParseBoardConfig(R"({
+  "persisted_logs_num_files": 1,
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": ""
+})");
+
+  EXPECT_FALSE(config.has_value());
+}
+
 TEST_F(ConfigTest, BoardConfigUseOverrideConfig) {
   const std::string override_path = WriteConfig(R"({
   "persisted_logs_num_files": 1,
-  "persisted_logs_total_size_kib": 1
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
 })");
 
   const std::optional<BoardConfig> config = GetBoardConfig(override_path, "/bad/path");
@@ -145,12 +284,16 @@ TEST_F(ConfigTest, BoardConfigUseOverrideConfig) {
   ASSERT_TRUE(config.has_value());
   EXPECT_EQ(config->persisted_logs_num_files, 1u);
   EXPECT_EQ(config->persisted_logs_total_size, StorageSize::Kilobytes(1));
+  EXPECT_EQ(config->snapshot_persistence_max_tmp_size, StorageSize::Megabytes(1));
+  EXPECT_EQ(config->snapshot_persistence_max_cache_size, StorageSize::Megabytes(1));
 }
 
 TEST_F(ConfigTest, BoardConfigUseDefaultConfig) {
   const std::string default_path = WriteConfig(R"({
   "persisted_logs_num_files": 1,
-  "persisted_logs_total_size_kib": 1
+  "persisted_logs_total_size_kib": 1,
+  "snapshot_persistence_max_tmp_size_mib": 1,
+  "snapshot_persistence_max_cache_size_mib": 1
 })");
 
   const std::optional<BoardConfig> config = GetBoardConfig("/bad/path", default_path);
@@ -158,6 +301,8 @@ TEST_F(ConfigTest, BoardConfigUseDefaultConfig) {
   ASSERT_TRUE(config.has_value());
   EXPECT_EQ(config->persisted_logs_num_files, 1u);
   EXPECT_EQ(config->persisted_logs_total_size, StorageSize::Kilobytes(1));
+  EXPECT_EQ(config->snapshot_persistence_max_tmp_size, StorageSize::Megabytes(1));
+  EXPECT_EQ(config->snapshot_persistence_max_cache_size, StorageSize::Megabytes(1));
 }
 
 TEST_F(ConfigTest, BoardConfigMissingOverrideAndDefaultConfigs) {

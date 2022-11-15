@@ -1,4 +1,6 @@
 {
     "persisted_logs_num_files": 8,
-    "persisted_logs_total_size_kib": 512
+    "persisted_logs_total_size_kib": 512,
+    "snapshot_persistence_max_tmp_size_mib": -1,
+    "snapshot_persistence_max_cache_size_mib": -1
 }

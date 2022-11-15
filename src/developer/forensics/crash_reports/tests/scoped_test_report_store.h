@@ -16,13 +16,13 @@ namespace forensics::crash_reports {
 // Handles boilerplate code for setting up parameters needed by ReportStore.
 class ScopedTestReportStore {
  public:
-  ScopedTestReportStore(
-      feedback::AnnotationManager* annotation_manager, std::shared_ptr<InfoContext> info_context,
-      StorageSize max_reports_tmp_size = crash_reports::kReportStoreMaxTmpSize,
-      StorageSize max_reports_cache_size = crash_reports::kReportStoreMaxCacheSize,
-      StorageSize max_snapshots_tmp_size = crash_reports::kSnapshotStoreMaxTmpSize,
-      StorageSize max_snapshots_cache_size = crash_reports::kSnapshotStoreMaxCacheSize,
-      StorageSize max_archives_size = StorageSize::Megabytes(1));
+  ScopedTestReportStore(feedback::AnnotationManager* annotation_manager,
+                        std::shared_ptr<InfoContext> info_context,
+                        StorageSize max_reports_tmp_size = StorageSize::Megabytes(1),
+                        StorageSize max_reports_cache_size = StorageSize::Megabytes(1),
+                        StorageSize max_snapshots_tmp_size = StorageSize::Megabytes(1),
+                        StorageSize max_snapshots_cache_size = StorageSize::Megabytes(1),
+                        StorageSize max_archives_size = StorageSize::Megabytes(1));
   ReportStore& GetReportStore();
   const std::string& GetTmpReportsPath() const;
   const std::string& GetCacheReportsPath() const;

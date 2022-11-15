@@ -17,6 +17,8 @@ namespace forensics::feedback {
 struct BoardConfig {
   uint64_t persisted_logs_num_files;
   StorageSize persisted_logs_total_size;
+  std::optional<StorageSize> snapshot_persistence_max_tmp_size;
+  std::optional<StorageSize> snapshot_persistence_max_cache_size;
 };
 
 std::optional<BoardConfig> GetBoardConfig(
