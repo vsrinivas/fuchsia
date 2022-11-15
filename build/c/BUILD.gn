@@ -64,8 +64,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/connectivity/bluetooth/core/bt-host/transport:testing",
     "//src/connectivity/bluetooth/core/bt-host/transport:tests",
     "//src/connectivity/bluetooth/hci/passthrough:fuchsia_driver",
-    "//src/connectivity/bluetooth/hci/transport/uart:common",
-    "//src/connectivity/bluetooth/hci/transport/uart:tests_executable",
     "//src/connectivity/bluetooth/hci/vendor/atheros:_driver.shlib-used.fuchsia_driver",
     "//src/connectivity/bluetooth/hci/vendor/atheros:fuchsia_driver",
     "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom-driver",

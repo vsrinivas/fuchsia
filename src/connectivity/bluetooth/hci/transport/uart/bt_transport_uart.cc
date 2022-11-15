@@ -5,8 +5,8 @@
 #include "bt_transport_uart.h"
 
 #include <assert.h>
+#include <fidl/fuchsia.hardware.serial/cpp/wire.h>
 #include <fuchsia/hardware/bt/hci/c/banjo.h>
-#include <fuchsia/hardware/serial/c/fidl.h>
 #include <fuchsia/hardware/serialimpl/async/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -551,7 +551,7 @@ zx_status_t BtTransportUart::Bind() {
     return status;
   }
 
-  if (info.serial_class != fuchsia_hardware_serial_Class_BLUETOOTH_HCI) {
+  if (info.serial_class != static_cast<uint32_t>(fuchsia_hardware_serial::Class::kBluetoothHci)) {
     zxlogf(ERROR, "hci_bind: info.device_class != BLUETOOTH_HCI");
     return ZX_ERR_INTERNAL;
   }

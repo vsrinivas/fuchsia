@@ -4,7 +4,7 @@
 
 #include "bt_transport_uart.h"
 
-#include <fuchsia/hardware/serial/c/fidl.h>
+#include <fidl/fuchsia.hardware.serial/cpp/wire.h>
 #include <fuchsia/hardware/serialimpl/async/cpp/banjo.h>
 #include <lib/async/cpp/task.h>
 #include <zircon/device/bt-hci.h>
@@ -56,7 +56,7 @@ class FakeSerialDevice : public ddk::SerialImplAsyncProtocol<FakeSerialDevice> {
 
   // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
   zx_status_t SerialImplAsyncGetInfo(serial_port_info_t* out_info) {
-    out_info->serial_class = fuchsia_hardware_serial_Class_BLUETOOTH_HCI;
+    out_info->serial_class = static_cast<uint32_t>(fuchsia_hardware_serial::Class::kBluetoothHci);
     return ZX_OK;
   }
 
