@@ -202,13 +202,19 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
   FX_LOGS(INFO) << "Waiting for clock started signal.";
   auto fp =
       executor_.MakePromiseWaitHandle(zx::unowned_handle(zx_utc_reference_get()), ZX_CLOCK_STARTED)
-          .then([this](fpromise::result<zx_packet_signal_t, zx_status_t>& result) {
+          .then([weak_this = weak_factory_.GetWeakPtr()](
+                    fpromise::result<zx_packet_signal_t, zx_status_t>& result) {
+            if (!weak_this) {
+              return;
+            }
             if (result.is_error()) {
               FX_LOGS(ERROR) << "System clock failed to send start signal: "
                              << zx_status_get_string(result.take_error());
-            } else {
-              FX_LOGS(INFO) << "System clock has started.";
-              session_provider_->MarkClockAsStarted();
+              return;
+            }
+            FX_LOGS(INFO) << "System clock has started.";
+            if (weak_this->session_provider_) {
+              weak_this->session_provider_->MarkClockAsStarted();
             }
           });
   executor_.schedule_task(fpromise::pending_task(std::move(fp)));
