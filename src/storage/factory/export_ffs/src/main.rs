@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Error},
+    anyhow::{Context as _, Error},
     argh::FromArgs,
     export_ffs::export_directory,
-    fdio, fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl::endpoints::{ClientEnd, Proxy as _},
+    fidl_fuchsia_hardware_block::{BlockMarker, BlockProxy},
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
 };
 
 /// A command line tool for generating factoryfs partitions by flattening existing directory
@@ -24,28 +26,23 @@ struct Args {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let args: Args = argh::from_env();
+    let Args { directory, device } = argh::from_env();
 
     // open directory
-    let (dir_proxy_chan, dir_proxy_server_end) = zx::Channel::create()?;
-    fdio::open(
-        &args.directory,
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY,
-        dir_proxy_server_end,
-    )
-    .context(format!("failed to open '{}'", &args.directory))?;
-    let dir_proxy = fio::DirectoryProxy::new(fasync::Channel::from_channel(dir_proxy_chan)?);
+    let dir = fuchsia_fs::directory::open_in_namespace(&directory, fio::OpenFlags::RIGHT_READABLE)?;
 
     // open block device
-    let (device, device_server_end) = zx::Channel::create()?;
-    fdio::service_connect(&args.device, device_server_end)
-        .context(format!("failed to open block device '{}'", &args.device))?;
+    let proxy = fuchsia_component::client::connect_to_protocol_at_path::<BlockMarker>(&device)
+        .with_context(|| format!("failed to open {}", &device))?;
+    let channel = proxy
+        .into_channel()
+        .map_err(|_: BlockProxy| anyhow::anyhow!("failed to get block channel"))?;
+    let client_end = ClientEnd::<BlockMarker>::new(channel.into());
 
     // call the exporter
-    export_directory(&dir_proxy, device).await.context(format!(
-        "failed to export '{}' to block device '{}'",
-        &args.directory, &args.device
-    ))?;
+    let () = export_directory(&dir, client_end).await.with_context(|| {
+        format!("failed to export '{}' to block device '{}'", &directory, &device)
+    })?;
 
     Ok(())
 }

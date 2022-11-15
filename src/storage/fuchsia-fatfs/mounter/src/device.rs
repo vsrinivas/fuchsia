@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Error},
-    fidl::endpoints::Proxy,
-    fidl_fuchsia_hardware_block_partition::{Guid, PartitionProxy},
+    anyhow::{Context as _, Error},
+    fidl::endpoints::{ClientEnd, Proxy as _},
+    fidl_fuchsia_hardware_block::{BlockMarker, BlockProxy},
+    fidl_fuchsia_hardware_block_partition::{Guid, PartitionMarker},
     fidl_fuchsia_io as fio,
     fuchsia_fatfs::FatFs,
     fuchsia_zircon as zx,
     remote_block_device::RemoteBlockClientSync,
-    std::ops::Deref,
     tracing::info,
     vfs::execution_scope::ExecutionScope,
 };
@@ -28,24 +28,31 @@ pub struct FatDevice {
 impl FatDevice {
     /// Try and create a new FatDevice, searching for partitions in /dev/class/block.
     pub async fn new() -> Result<Option<Self>, Error> {
-        let (local, remote) = zx::Channel::create()?;
-        fdio::service_connect(BLOCK_DEVICE_DIR, remote)?;
-        Self::new_at(local).await
+        let dir = fuchsia_fs::directory::open_in_namespace(
+            BLOCK_DEVICE_DIR,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        )?;
+        Self::new_at(dir).await
     }
 
     /// Try and create a new FatDevice, searching for partitions in the given channel.
-    async fn new_at(dir: zx::Channel) -> Result<Option<Self>, Error> {
-        let dir_proxy = fio::DirectoryProxy::new(fidl::AsyncChannel::from_channel(dir)?);
-        let partition = match Self::find_fat_partition(&dir_proxy).await? {
+    async fn new_at(dir: fio::DirectoryProxy) -> Result<Option<Self>, Error> {
+        let partition = match Self::find_fat_partition(&dir).await? {
             Some(value) => value,
             None => return Ok(None),
         };
 
-        let dir = dir_proxy.into_channel().unwrap().into_zx_channel();
-        let (block_channel, remote) = zx::Channel::create()?;
-        fdio::service_connect_at(&dir, &partition, remote)?;
+        let proxy =
+            fuchsia_component::client::connect_to_named_protocol_at_dir_root::<BlockMarker>(
+                &dir, &partition,
+            )
+            .with_context(|| format!("failed to open {}", partition))?;
+        let channel = proxy
+            .into_channel()
+            .map_err(|_: BlockProxy| anyhow::anyhow!("failed to get block channel"))?;
+        let client_end = ClientEnd::<BlockMarker>::new(channel.into());
         let device =
-            Box::new(remote_block_device::Cache::new(RemoteBlockClientSync::new(block_channel)?)?);
+            Box::new(remote_block_device::Cache::new(RemoteBlockClientSync::new(client_end)?)?);
         // TODO(simonshields): if this fails, we could try looking for another partition.
         let fs = FatFs::new(device)?;
 
@@ -59,14 +66,11 @@ impl FatDevice {
     }
 
     /// Find a partition with the "Microsoft Basic Data" GUID, which may contain a FAT partition.
-    async fn find_fat_partition(dir_proxy: &fio::DirectoryProxy) -> Result<Option<String>, Error> {
-        let children = fuchsia_fs::directory::readdir(&dir_proxy).await?;
-        let (channel, remote) = zx::Channel::create()?;
-        dir_proxy
-            .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, fidl::endpoints::ServerEnd::new(remote))?;
+    async fn find_fat_partition(dir: &fio::DirectoryProxy) -> Result<Option<String>, Error> {
+        let children = fuchsia_fs::directory::readdir(dir).await?;
 
         for entry in children.iter() {
-            let guid = match Self::get_guid_at(&channel, &entry.name).await {
+            let guid = match Self::get_guid_at(dir, &entry.name).await {
                 Ok(Some(guid)) => guid,
                 Ok(None) => {
                     // If there's no guid, skip the device.
@@ -90,19 +94,21 @@ impl FatDevice {
     }
 
     /// Get the type GUID for the file with name |name| in |dir|.
-    async fn get_guid_at(dir: &zx::Channel, name: &str) -> Result<Option<Box<Guid>>, Error> {
-        let (local, remote) = zx::Channel::create().context("Creating channel")?;
-        fdio::service_connect_at(dir, name, remote)?;
-
-        let proxy = PartitionProxy::new(fidl::AsyncChannel::from_channel(local)?);
-
+    async fn get_guid_at(
+        dir: &fio::DirectoryProxy,
+        name: &str,
+    ) -> Result<Option<Box<Guid>>, Error> {
+        let proxy = fuchsia_component::client::connect_to_named_protocol_at_dir_root::<
+            PartitionMarker,
+        >(&dir, name)
+        .with_context(|| format!("failed to open {}", name))?;
         let (status, guid) = proxy.get_type_guid().await?;
-        zx::Status::ok(status).context("Getting GUID")?;
+        let () = zx::Status::ok(status).context("Getting GUID")?;
         Ok(guid)
     }
 }
 
-impl Deref for FatDevice {
+impl std::ops::Deref for FatDevice {
     type Target = FatFs;
 
     fn deref(&self) -> &Self::Target {
@@ -223,14 +229,16 @@ pub mod test {
         fs.serve_connection(remote).unwrap();
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
-        let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
-        fdio::open_at(
-            local.channel(),
+        let dir = local.into_proxy().expect("into proxy");
+
+        let dev_dir = fuchsia_fs::directory::open_directory(
+            &dir,
             "dev",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-            remote,
         )
-        .expect("Open OK");
+        .await
+        .expect("open directory");
+
         let result = FatDevice::get_guid_at(&dev_dir, "000").await.expect("get guid succeeds");
         assert_eq!(result.unwrap().value, MICROSOFT_BASIC_DATA_GUID);
     }
@@ -247,15 +255,16 @@ pub mod test {
         fs.serve_connection(remote).unwrap();
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
-        let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
-        fdio::open_at(
-            local.channel(),
+        let dir = local.into_proxy().expect("into proxy");
+
+        let dev_dir = fuchsia_fs::directory::open_directory(
+            &dir,
             "dev",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-            remote,
         )
-        .expect("Open OK");
-        let dev_dir = fio::DirectoryProxy::new(fidl::AsyncChannel::from_channel(dev_dir).unwrap());
+        .await
+        .expect("open directory");
+
         let result = FatDevice::find_fat_partition(&dev_dir).await;
         assert_eq!(result.expect("Find partition succeeds"), Some("002".to_owned()));
     }
@@ -272,15 +281,16 @@ pub mod test {
         fs.serve_connection(remote).unwrap();
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
-        let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
-        fdio::open_at(
-            local.channel(),
+        let dir = local.into_proxy().expect("into proxy");
+
+        let dev_dir = fuchsia_fs::directory::open_directory(
+            &dir,
             "dev",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-            remote,
         )
-        .expect("Open OK");
-        let dev_dir = fio::DirectoryProxy::new(fidl::AsyncChannel::from_channel(dev_dir).unwrap());
+        .await
+        .expect("open directory");
+
         let result = FatDevice::find_fat_partition(&dev_dir).await;
         assert_eq!(result.expect("Find partition succeeds"), None);
     }
@@ -298,19 +308,17 @@ pub mod test {
             .expect("Create ramdisk client succeeds")
     }
 
-    pub fn format(channel: zx::Channel) {
+    pub fn format(client_end: ClientEnd<BlockMarker>) {
         // Create a filesystem on the ramdisk.
-        let device = Box::new(
-            remote_block_device::Cache::new(RemoteBlockClientSync::new(channel).unwrap()).unwrap(),
-        );
+        let remote_block_client = RemoteBlockClientSync::new(client_end).unwrap();
+        let device = Box::new(remote_block_device::Cache::new(remote_block_client).unwrap());
         fatfs::format_volume(device, fatfs::FormatVolumeOptions::new())
             .expect("Format volume succeeds");
     }
 
-    pub fn setup_test_fs(channel: zx::Channel, name: &str) {
-        let device = Box::new(
-            remote_block_device::Cache::new(RemoteBlockClientSync::new(channel).unwrap()).unwrap(),
-        );
+    pub fn setup_test_fs(client_end: ClientEnd<BlockMarker>, name: &str) {
+        let remote_block_client = RemoteBlockClientSync::new(client_end).unwrap();
+        let device = Box::new(remote_block_device::Cache::new(remote_block_client).unwrap());
         let fs = fatfs::FileSystem::new(device, fatfs::FsOptions::new())
             .expect("Create filesystem succeeds");
 
@@ -325,16 +333,18 @@ pub mod test {
         fs.unmount().expect("Unmount succeeds");
     }
 
-    async fn open_root(dev: &FatDevice, channel: zx::Channel) {
+    fn open_root(dev: &FatDevice) -> fio::DirectoryProxy {
+        let (proxy, remote) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let root = dev.get_root().unwrap();
-        root.clone().open(
+        let () = root.clone().open(
             dev.scope.clone(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             0,
             Path::dot(),
-            fidl::endpoints::ServerEnd::new(channel),
+            remote.into_channel().into(),
         );
-        root.close().unwrap();
+        let () = root.close().unwrap();
+        proxy
     }
 
     #[fuchsia::test]
@@ -348,8 +358,7 @@ pub mod test {
         let dev =
             FatDevice::new().await.expect("Create fat device OK").expect("Found a fat device");
 
-        let (proxy, remote) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        open_root(&dev, remote.into_channel()).await;
+        let proxy = open_root(&dev);
 
         let mut children: Vec<_> = fuchsia_fs::directory::readdir(&proxy)
             .await
@@ -389,8 +398,7 @@ pub mod test {
         let dev =
             FatDevice::new().await.expect("Create fat device OK").expect("Found a fat device");
 
-        let (proxy, remote) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        open_root(&dev, remote.into_channel()).await;
+        let proxy = open_root(&dev);
 
         let mut children: Vec<_> = fuchsia_fs::directory::readdir(&proxy)
             .await

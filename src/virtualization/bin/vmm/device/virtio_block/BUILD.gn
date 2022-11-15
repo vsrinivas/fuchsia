@@ -30,6 +30,7 @@ rustc_binary("virtio_block_bin") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_rust",
     "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_rust",

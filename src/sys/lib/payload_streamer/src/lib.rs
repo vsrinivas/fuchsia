@@ -5,6 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     async_trait::async_trait,
+    fidl_fuchsia_hardware_block::BlockMarker,
     fidl_fuchsia_paver::{PayloadStreamRequest, PayloadStreamRequestStream, ReadInfo, ReadResult},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -174,9 +175,10 @@ const DEVICE_VMO_SIZE: usize = 8192 * 16;
 
 impl BlockDevicePayloadStreamer {
     pub async fn new(block_device_path: &str) -> Result<Self, Error> {
-        let (local, remote) = zx::Channel::create()?;
-        fdio::service_connect(block_device_path, remote)?;
-        let client = RemoteBlockClient::new(local).await?;
+        let proxy = fuchsia_component::client::connect_to_protocol_at_path::<BlockMarker>(
+            block_device_path,
+        )?;
+        let client = RemoteBlockClient::new(proxy).await?;
 
         let device_vmo = zx::Vmo::create(DEVICE_VMO_SIZE as u64)?;
         let device_vmo_id = client.attach_vmo(&device_vmo).await?;

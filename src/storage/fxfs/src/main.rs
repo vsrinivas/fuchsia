@@ -101,13 +101,16 @@ async fn main() -> Result<(), Error> {
             .await;
     }
 
-    let client = new_block_client(zx::Channel::from(
-        fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
-            HandleType::User0,
-            1,
-        ))
-        .ok_or(format_err!("Missing device handle"))?,
-    ))
+    let client = new_block_client(
+        zx::Channel::from(
+            fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
+                HandleType::User0,
+                1,
+            ))
+            .ok_or(format_err!("Missing device handle"))?,
+        )
+        .into(),
+    )
     .await?;
 
     match args {

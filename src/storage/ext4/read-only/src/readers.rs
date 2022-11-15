@@ -80,11 +80,7 @@ impl Reader for BlockDeviceReader {
 
 impl BlockDeviceReader {
     pub fn from_client_end(client_end: ClientEnd<BlockMarker>) -> Result<Self, Error> {
-        Ok(Self {
-            block_cache: Mutex::new(Cache::new(RemoteBlockClientSync::new(
-                client_end.into_channel(),
-            )?)?),
-        })
+        Ok(Self { block_cache: Mutex::new(Cache::new(RemoteBlockClientSync::new(client_end)?)?) })
     }
 }
 

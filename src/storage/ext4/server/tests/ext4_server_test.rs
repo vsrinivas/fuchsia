@@ -37,9 +37,9 @@ async fn make_ramdisk() -> (RamdiskClient, RemoteBlockClient) {
     .expect("/dev/sys/platform/00:00:2d/ramctl did not appear");
 
     let ramdisk = client.build().expect("RamdiskClientBuilder.build() failed");
-    let remote_block_device = RemoteBlockClient::new(ramdisk.open().expect("ramdisk.open failed"))
-        .await
-        .expect("new failed");
+    let client_end = ramdisk.open().expect("ramdisk.open failed");
+    let proxy = client_end.into_proxy().expect("into_proxy failed");
+    let remote_block_device = RemoteBlockClient::new(proxy).await.expect("new failed");
 
     assert_eq!(remote_block_device.block_size(), 1024);
     (ramdisk, remote_block_device)
