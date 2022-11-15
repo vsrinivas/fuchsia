@@ -6,7 +6,6 @@ use std::fmt::Debug;
 
 use suite_definition::TestParamsOptions;
 
-mod output_directory;
 mod suite_definition;
 
 use {
@@ -14,22 +13,17 @@ use {
     either::Either,
     errors::{ffx_bail, ffx_bail_with_code, ffx_error, ffx_error_with_code, FfxError},
     ffx_core::ffx_plugin,
-    ffx_test_args::{
-        DeleteResultCommand, ListCommand, ResultCommand, ResultSubCommand, RunCommand,
-        ShowResultCommand, TestCommand, TestSubCommand,
-    },
+    ffx_test_args::{ListCommand, RunCommand, TestCommand, TestSubCommand},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_remotecontrol as fremotecontrol,
     fidl_fuchsia_test_manager as ftest_manager,
     futures::FutureExt,
     lazy_static::lazy_static,
-    output_directory::{DirectoryError, DirectoryId, DirectoryManager},
     signal_hook::{
         consts::signal::{SIGINT, SIGTERM},
         iterator::Signals,
     },
     std::io::{stdout, Write},
-    std::path::PathBuf,
 };
 
 lazy_static! {
@@ -60,28 +54,7 @@ pub async fn test(
                 .map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
             get_tests(query_proxy, writer, list).await
         }
-        TestSubCommand::Result(result) => result_command(result, writer).await,
     }
-}
-
-async fn get_directory_manager(experiments: &Experiments) -> Result<DirectoryManager> {
-    if !experiments.managed_structured_output.enabled {
-        ffx_bail!(
-            "Managed structured output is experimental and is subject to breaking changes. \
-            To enable structured output run \
-            'ffx config set {} true'",
-            experiments.managed_structured_output.name
-        )
-    }
-    let output_path_config: PathBuf = match ffx_config::get("test.output_path").await? {
-        Some(output_path) => output_path,
-        None => ffx_bail!(
-            "Could not find the test output path configuration. Please run \
-            `ffx config set test.output_path \"<PATH>\" to configure the location."
-        ),
-    };
-    let save_count_config: usize = ffx_config::get("test.save_count").await?;
-    Ok(DirectoryManager::new(output_path_config, save_count_config)?)
 }
 
 struct Experiment {
@@ -90,8 +63,6 @@ struct Experiment {
 }
 
 struct Experiments {
-    managed_structured_output: Experiment,
-    result_command: Experiment,
     json_input: Experiment,
     parallel_execution: Experiment,
 }
@@ -109,11 +80,6 @@ impl Experiments {
 
     async fn from_env() -> Self {
         Self {
-            managed_structured_output: Self::get_experiment(
-                "test.experimental_managed_structured_output",
-            )
-            .await,
-            result_command: Self::get_experiment("test.experimental_result_command").await,
             json_input: Self::get_experiment("test.experimental_json_input").await,
             parallel_execution: Self::get_experiment("test.enable_experimental_parallel_execution")
                 .await,
@@ -123,7 +89,7 @@ impl Experiments {
 
 async fn run_test<W: 'static + Write + Send + Sync>(
     proxy: ftest_manager::RunBuilderProxy,
-    writer: W,
+    mut writer: W,
     cmd: RunCommand,
 ) -> Result<()> {
     let experiments = Experiments::from_env().await;
@@ -131,14 +97,15 @@ async fn run_test<W: 'static + Write + Send + Sync>(
     let min_log_severity = cmd.min_severity_logs;
 
     let output_directory = match (cmd.disable_output_directory, &cmd.output_directory) {
-        (true, _) => None, // user explicitly disabled output.
-        (false, Some(directory)) => Some(directory.clone().into()), // an override directory is specified.
-
-        // Default to a managed directory if enabled.
-        (false, None) if experiments.managed_structured_output.enabled => {
-            let mut directory_manager = get_directory_manager(&experiments).await?;
-            Some(directory_manager.new_directory()?)
+        (true, maybe_dir) => {
+            writeln!(
+                writer,
+                "WARN: --disable-output-directory is now a no-op and will soon be \
+                removed, please remove it from your invocation."
+            )?;
+            maybe_dir.clone().map(Into::into)
         }
+        (false, Some(directory)) => Some(directory.clone().into()), // an override directory is specified.
         (false, None) => None,
     };
     let output_directory_options = output_directory
@@ -322,177 +289,6 @@ async fn get_tests<W: Write>(
                 None => writeln!(writer, "<No name>")?,
             }
         }
-    }
-}
-
-async fn result_command<W: Write>(
-    ResultCommand { subcommand }: ResultCommand,
-    mut writer: W,
-) -> Result<()> {
-    let experiments = Experiments::from_env().await;
-    if !experiments.result_command.enabled {
-        ffx_bail!(
-            "The result subcommand is experimental and subject to breaking changes. \
-            To enable structured output run 'ffx config set {} true'
-        ",
-            experiments.result_command.name
-        )
-    }
-
-    match subcommand {
-        ResultSubCommand::Show(ShowResultCommand { directory, index, name }) => {
-            let directory_to_display = if let Some(directory_override) = directory {
-                Some(directory_override.into())
-            } else if let Some(specified_index) = index {
-                get_directory_manager(&experiments)
-                    .await?
-                    .get_by_id(DirectoryId::Index(specified_index))?
-            } else if let Some(specified_name) = name {
-                get_directory_manager(&experiments)
-                    .await?
-                    .get_by_id(DirectoryId::Name(specified_name))?
-            } else {
-                get_directory_manager(&experiments).await?.latest_directory()?
-            };
-            match directory_to_display {
-                Some(dir) => display_output_directory(dir, writer),
-                None => {
-                    writeln!(writer, "Directory not found")?;
-                    Ok(())
-                }
-            }
-        }
-        ResultSubCommand::List(_) => result_list_command(writer, &experiments).await,
-        ResultSubCommand::Delete(delete) => {
-            result_delete_command(delete, writer, &experiments).await
-        }
-        ResultSubCommand::Save(save) => {
-            get_directory_manager(&experiments).await?.save_directory(save.index, save.name)?;
-            Ok(())
-        }
-    }
-}
-
-async fn result_list_command<W: Write>(mut writer: W, experiments: &Experiments) -> Result<()> {
-    let entries = get_directory_manager(experiments).await?.entries_ordered()?;
-    let unsaved_entries = entries
-        .iter()
-        .filter_map(|(id, entry)| match id {
-            DirectoryId::Index(index) => Some((index, entry.timestamp)),
-            DirectoryId::Name(_) => None,
-        })
-        .collect::<Vec<_>>();
-    if unsaved_entries.len() > 0 {
-        writeln!(writer, "Found run results:")?;
-        for (id, maybe_timestamp) in unsaved_entries {
-            match maybe_timestamp {
-                Some(timestamp) => {
-                    let local_time: chrono::DateTime<chrono::Local> = timestamp.into();
-                    writeln!(writer, "{}: {}", id, local_time.to_rfc2822())?
-                }
-                None => writeln!(writer, "{}", id)?,
-            }
-        }
-    }
-
-    let saved_entries = entries
-        .iter()
-        .filter_map(|(id, entry)| match id {
-            DirectoryId::Index(_) => None,
-            DirectoryId::Name(name) => Some((name, entry.timestamp)),
-        })
-        .collect::<Vec<_>>();
-    if saved_entries.len() > 0 {
-        writeln!(writer, "Saved run results:")?;
-        for (name, maybe_timestamp) in saved_entries {
-            match maybe_timestamp {
-                Some(timestamp) => {
-                    let local_time: chrono::DateTime<chrono::Local> = timestamp.into();
-                    writeln!(writer, "{}: {}", name, local_time.to_rfc2822())?
-                }
-                None => writeln!(writer, "{}", name)?,
-            }
-        }
-    }
-    Ok(())
-}
-
-fn display_output_directory<W: Write>(path: PathBuf, mut writer: W) -> Result<()> {
-    let test_output_directory::TestRunResult { common: run_common, suites, .. } =
-        test_output_directory::TestRunResult::from_dir(&path)?;
-    let run_common = run_common.into_owned();
-
-    writeln!(writer, "Run result: {:?}", run_common.outcome)?;
-    let run_artifacts = run_common.artifact_dir.contents();
-    if run_artifacts.len() > 0 {
-        writeln!(
-            writer,
-            "Run artifacts: {}",
-            run_artifacts.iter().map(|path| path.to_string_lossy()).collect::<Vec<_>>().join(", ")
-        )?;
-    }
-
-    for suite in suites {
-        let test_output_directory::SuiteResult { common: suite_common, cases, .. } = suite;
-        let suite_common = suite_common.into_owned();
-        writeln!(writer, "Suite {} result: {:?}", suite_common.name, suite_common.outcome)?;
-        let artifacts = suite_common.artifact_dir.contents();
-        if artifacts.len() > 0 {
-            writeln!(
-                writer,
-                "\tArtifacts: {}",
-                artifacts.iter().map(|path| path.to_string_lossy()).collect::<Vec<_>>().join(", ")
-            )?;
-        }
-        for case in cases {
-            let case_common = case.common.into_owned();
-            writeln!(writer, "\tCase '{}' result: {:?}", case_common.name, case_common.outcome)?;
-            let artifacts = case_common.artifact_dir.contents();
-            if artifacts.len() > 0 {
-                writeln!(
-                    writer,
-                    "\tCase {} Artifacts: {}",
-                    case_common.name,
-                    artifacts
-                        .iter()
-                        .map(|path| path.to_string_lossy())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                )?;
-            }
-        }
-    }
-
-    Ok(())
-}
-
-async fn result_delete_command<W: Write>(
-    DeleteResultCommand { index, name }: DeleteResultCommand,
-    mut writer: W,
-    experiments: &Experiments,
-) -> Result<()> {
-    let id = match (index, name) {
-        (Some(_), Some(_)) => {
-            writeln!(writer, "Cannot specify both index and name.")?;
-            return Ok(());
-        }
-        (Some(index), None) => DirectoryId::Index(index),
-        (None, Some(name)) => DirectoryId::Name(name),
-        (None, None) => {
-            writeln!(writer, "No directory specified.")?;
-            return Ok(());
-        }
-    };
-    match get_directory_manager(experiments).await?.delete(id) {
-        Ok(()) => {
-            writeln!(writer, "Deleted a run result.")?;
-            Ok(())
-        }
-        Err(DirectoryError::IdNotFound(_)) => {
-            writeln!(writer, "Directory not found")?;
-            Ok(())
-        }
-        Err(e) => Err(e.into()),
     }
 }
 
