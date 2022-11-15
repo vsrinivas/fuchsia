@@ -30,8 +30,8 @@ void main() {
     await traceSession.start();
 
     await helper.runTestComponentWithNoResults(
-        packageName: 'fuchsia_microbenchmarks_perftestmode',
-        componentName: 'fuchsia_microbenchmarks_perftestmode.cm',
+        packageName: 'fuchsia_microbenchmarks',
+        componentName: 'fuchsia_microbenchmarks.cm',
         commandArgs: '-p --quiet'
             ' --runs 4 --enable-tracing --filter="^Null\$"');
 

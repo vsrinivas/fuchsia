@@ -44,8 +44,8 @@ void main() {
   test('fuchsia_microbenchmarks', () async {
     final helper = await PerfTestHelper.make();
     await helper.runTestComponent(
-        packageName: 'fuchsia_microbenchmarks_perftestmode',
-        componentName: 'fuchsia_microbenchmarks_perftestmode.cm',
+        packageName: 'fuchsia_microbenchmarks',
+        componentName: 'fuchsia_microbenchmarks.cm',
         commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}'
             ' --runs $iterationsPerTestPerProcess',
         processRuns: processRuns,
@@ -75,8 +75,8 @@ void main() {
       await traceSession.start();
 
       final resultsFile = await helper.runTestComponentReturningResultsFile(
-          packageName: 'fuchsia_microbenchmarks_perftestmode',
-          componentName: 'fuchsia_microbenchmarks_perftestmode.cm',
+          packageName: 'fuchsia_microbenchmarks',
+          componentName: 'fuchsia_microbenchmarks.cm',
           commandArgs: '-p --quiet'
               ' --out ${PerfTestHelper.componentOutputPath}'
               ' --runs $iterationsPerTestPerProcess'
@@ -130,8 +130,8 @@ void main() {
       await traceSession.start();
 
       final resultsFile = await helper.runTestComponentReturningResultsFile(
-          packageName: 'fuchsia_microbenchmarks_perftestmode',
-          componentName: 'fuchsia_microbenchmarks_perftestmode.cm',
+          packageName: 'fuchsia_microbenchmarks',
+          componentName: 'fuchsia_microbenchmarks.cm',
           commandArgs: '-p --quiet'
               ' --out ${PerfTestHelper.componentOutputPath}'
               ' --runs $iterationsPerTestPerProcess'

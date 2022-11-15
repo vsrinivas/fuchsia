@@ -139,57 +139,8 @@ fidl("fuchsia.zircon.benchmarks") {
   ]
 }
 
-# Installing this package causes fuchsia_microbenchmarks to be run in unit
-# test mode (fast mode) via runtests.
-#
-# This package requires fuchsia_microbenchmarks_perftestmode to also be
-# installed.
-#
-# This package's copy of fuchsia_microbenchmarks invokes both itself
-# (fuchsia_microbenchmarks) and no_op_executable as subprocesses, but it
-# does so via the redirector executables in /bin (via the shell-commands
-# package).  Those point to the copies of those executables in
-# fuchsia_microbenchmarks_perftestmode, which is why that package is
-# required.
-# TODO(https://fxbug.dev/103374): This is no longer true,
-# so these packages could be simplified and possibly merged.
-#
-# Since Fuchsia packages cannot declare dependencies on other packages, GN
-# targets that require fuchsia_microbenchmarks_unittestmode should depend
-# on the fuchsia_microbenchmarks group() instead.
-#
-# The reason for splitting fuchsia_microbenchmarks into two packages like
-# this is that we don't want to run fuchsia_microbenchmarks in unit test
-# mode on the terminal-x64-release builder that runs SL4F tests, for two
-# reasons:
-#
-#  1) The unit tests run on other builders, so it's unnecessary to run them
-#     a second time.
-#  2) Running unit tests on the terminal-x64-release builder currently does
-#     not work: It results in the creation of a shard to run tests under
-#     QEMU, but running Fuchsia on QEMU on that builder does not work
-#     (perhaps because of missing dependencies).
-fuchsia_unittest_package("fuchsia_microbenchmarks_unittestmode") {
+fuchsia_unittest_package("fuchsia_microbenchmarks") {
   package_name = "fuchsia_microbenchmarks"
-
-  manifest = "meta/fuchsia_microbenchmarks.cml"
-
-  deps = [
-    ":bin",
-    ":context_switch_overhead_helper",
-    ":get_info_helper",
-    ":no_op_executable",
-  ]
-}
-
-# This package contains the fuchsia_microbenchmarks executable and installs
-# a redirector executable for it in /bin (via the shell-commands package).
-# Installing this package allows fuchsia_microbenchmarks to be run by SL4F
-# tests as a performance test (i.e. outputting performance results data).
-# This package can be installed without installing the
-# fuchsia_microbenchmarks_unittestmode package.
-fuchsia_shell_package("fuchsia_microbenchmarks_perftestmode") {
-  testonly = true
 
   manifest = "meta/fuchsia_microbenchmarks.cml"
 
@@ -218,7 +169,7 @@ fuchsia_unittest_package("direct_mode_microbenchmarks") {
 }
 
 if (is_linux) {
-  host_test("fuchsia_microbenchmarks_host_unittestmode") {
+  host_test("fuchsia_microbenchmarks_host") {
     binary_path = "$root_out_dir/fuchsia_microbenchmarks"
     deps = [
       ":bin",
@@ -276,12 +227,9 @@ if (host_os == "linux" && target_cpu == "x64" && !is_asan) {
 # fuchsia_microbenchmarks in unit test mode.
 group("tests") {
   testonly = true
-  deps = [
-    ":fuchsia_microbenchmarks_perftestmode",
-    ":fuchsia_microbenchmarks_unittestmode",
-  ]
+  deps = [ ":fuchsia_microbenchmarks" ]
   if (host_os == "linux") {
-    deps += [ ":fuchsia_microbenchmarks_host_unittestmode($host_toolchain)" ]
+    deps += [ ":fuchsia_microbenchmarks_host($host_toolchain)" ]
   }
   if (target_cpu == "x64" && !is_asan) {
     deps += [ ":direct_mode_microbenchmarks" ]

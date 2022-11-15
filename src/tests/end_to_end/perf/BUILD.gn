@@ -251,7 +251,7 @@ group("package_deps") {
     "//src/media/audio/audio_core/shared/mixer/tools:audio_mixer_profiler",
     "//src/tests/benchmarks:kernel-boot-benchmarks",
     "//src/tests/benchmarks/fidl:benchmarks",
-    "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode",
+    "//src/tests/microbenchmarks:fuchsia_microbenchmarks",
 
     # Many tests use sl4f to communicate with the target.
     "//src/testing/sl4f",
