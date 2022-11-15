@@ -217,13 +217,12 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
 
 SerializeSendMsgMetaError serialize_send_msg_meta(fsocket::wire::SendMsgMeta& meta,
                                                   cpp20::span<uint8_t> out_buf) {
-  fidl::unstable::OwnedEncodedMessage<fsocket::wire::SendMsgMeta> encoded(
-      fidl::internal::WireFormatVersion::kV2, &meta);
-  if (!encoded.ok()) {
+  fidl::OwnedEncodeResult encoded = fidl::Encode(meta);
+  if (!encoded.message().ok()) {
     return SerializeSendMsgMetaErrorFailedToEncode;
   }
 
-  fidl::OutgoingMessage& outgoing_meta = encoded.GetOutgoingMessage();
+  fidl::OutgoingMessage& outgoing_meta = encoded.message();
   std::optional meta_size_validated = compute_and_validate_message_size(outgoing_meta);
   if (!meta_size_validated.has_value() ||
       !can_serialize_into(out_buf, meta_size_validated.value())) {
@@ -497,9 +496,8 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, Cons
 
   fsocket::wire::RecvMsgMeta fsocket_meta = meta_builder.Build();
 
-  fidl::unstable::OwnedEncodedMessage<fsocket::wire::RecvMsgMeta> encoded(
-      fidl::internal::WireFormatVersion::kV2, &fsocket_meta);
-  if (!encoded.ok()) {
+  fidl::OwnedEncodeResult encoded = fidl::Encode(fsocket_meta);
+  if (!encoded.message().ok()) {
     return SerializeRecvMsgMetaErrorFailedToEncode;
   }
 
@@ -509,7 +507,7 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, Cons
 
   cpp20::span<uint8_t> outbuf{out_buf.buf, out_buf.buf_size};
 
-  fidl::OutgoingMessage& outgoing_meta = encoded.GetOutgoingMessage();
+  fidl::OutgoingMessage& outgoing_meta = encoded.message();
   std::optional meta_size_validated = compute_and_validate_message_size(outgoing_meta);
   if (!meta_size_validated.has_value() ||
       !can_serialize_into(outbuf, meta_size_validated.value())) {
