@@ -340,6 +340,13 @@ group("gpt") {
   public_deps = [ ":gpt-v3_0_0" ]
 }
 
+import("//src/experiences/session_shells/gazelle/build/visibility.gni")
+
+group("gpu-allocator") {
+  public_deps = [ ":gpu-allocator-v0_19_1" ]
+  visibility = gpu_allocator_visibility
+}
+
 group("half") {
   public_deps = [ ":half-v1_6_0" ]
 }
@@ -1461,6 +1468,7 @@ rust_library("ash-v0_37_0+1_3_209") {
     "--edition=2018",
     "-Cmetadata=b07aaa2f97684336",
     "-Cextra-filename=-b07aaa2f97684336",
+    "--cfg=feature=\"debug\"",
     "--cfg=feature=\"linked\"",
   ]
 
@@ -4690,6 +4698,33 @@ rust_library("gpt-v3_0_0") {
     "--edition=2018",
     "-Cmetadata=ee8537fb7cdea5c1",
     "-Cextra-filename=-ee8537fb7cdea5c1",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("gpu-allocator-v0_19_1") {
+  crate_name = "gpu_allocator"
+  crate_root =
+      "//third_party/rust_crates/vendor/gpu-allocator-0.19.1/src/lib.rs"
+  output_name = "gpu_allocator-271f71d3a703900a"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":ash-v0_37_0+1_3_209" ]
+  deps += [ ":backtrace-v0_3_42" ]
+  deps += [ ":log-v0_4_11" ]
+  deps += [ ":thiserror-v1_0_23" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=271f71d3a703900a",
+    "-Cextra-filename=-271f71d3a703900a",
+    "--cfg=feature=\"ash\"",
+    "--cfg=feature=\"vulkan\"",
   ]
 
   visibility = [ ":*" ]

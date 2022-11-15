@@ -1,0 +1,12 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This build definition exists to restrict uses of certain build targets
+# to an allowlist defined here.
+
+# Allowlist of gpu-allocator crate. This crate usage is restricted to the
+# implementation of Gazelle shell only, until https://fxbug.dev/115129 is
+# fixed.
+
+gpu_allocator_visibility = [ "//src/experiences/session_shells/gazelle/*" ]

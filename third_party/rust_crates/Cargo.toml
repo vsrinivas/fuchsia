@@ -106,6 +106,7 @@ futures-util = "=0.3.19"
 getrandom = { features = ["js"] }
 glob = "0.3.0"
 gpt = "3.0.0"
+gpu-allocator = { version = "0.19.1", features = ["vulkan"], default-features = false }
 half = "1.6.0"
 handlebars = "4.3.5"
 heck = "0.3.1"
@@ -464,6 +465,11 @@ rustflags = [ "--cfg=relaxed_coherence" ]
 [gn.package.getrandom."0.2.2"]
 env_vars = [ "CARGO_PKG_NAME=getrandom", "CARGO_PKG_VERSION=0.2.2", "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/getrandom-0.2.2" ]
 rustflags = []
+
+[gn.package.gpu-allocator."0.19.1"]
+# TODO(http://fxb/115129): Blocked on fixes expected in PR:
+# https://github.com/Traverse-Research/gpu-allocator/pull/139
+group_visibility = { import = "//src/experiences/session_shells/gazelle/build/visibility.gni", variable = "gpu_allocator_visibility" }
 
 [gn.package.httparse."1.7.1"]
 rustflags = ["--cfg=httparse_simd"]

@@ -1336,6 +1336,7 @@ dependencies = [
  "getrandom",
  "glob",
  "gpt",
+ "gpu-allocator",
  "half",
  "handlebars",
  "heck 0.3.1",
@@ -1696,6 +1697,18 @@ dependencies = [
  "crc",
  "log",
  "uuid 0.8.2",
+]
+
+[[package]]
+name = "gpu-allocator"
+version = "0.19.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4faf2ac0387a5a316b5611eb35f1854849c98a8615cc4e76f48d1cf88890cbaa"
+dependencies = [
+ "ash",
+ "backtrace",
+ "log",
+ "thiserror",
 ]
 
 [[package]]
