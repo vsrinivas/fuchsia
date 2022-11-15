@@ -4,6 +4,7 @@
 
 use crate::ota::actions::error::ErrorAction;
 use crate::ota::actions::factory_reset::FactoryResetAction;
+use crate::ota::actions::wifi_connect::WifiConnectAction;
 use crate::ota::state_machine::{EventHandler, State, StateHandler};
 use std::sync::{Arc, Mutex};
 
@@ -28,6 +29,9 @@ impl StateHandler for Action {
         // There are six states that will need background actions
         // They will be added in future CLs
         match state {
+            State::Connecting(network, password) => {
+                WifiConnectAction::run(event_handler, network, password)
+            }
             State::FactoryReset => FactoryResetAction::run(event_handler),
             _ => ErrorAction::run(
                 event_handler,

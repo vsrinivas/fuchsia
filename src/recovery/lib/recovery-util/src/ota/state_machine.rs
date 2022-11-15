@@ -26,8 +26,8 @@ pub enum Operation {
     Reinstall,
 }
 
-type Network = String;
-type Password = String;
+pub(crate) type Network = String;
+pub(crate) type Password = String;
 type Text = String;
 type ErrorMessage = String;
 type PercentProgress = i32;

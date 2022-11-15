@@ -4,3 +4,4 @@
 
 pub mod error;
 pub mod factory_reset;
+pub(crate) mod wifi_connect;
