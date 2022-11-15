@@ -11,14 +11,12 @@ const NAME_LENGTH uint32 = 128;
 
 /// A Globally Unique IDentifier, which may be utilized to identify
 /// a partition.
-@for_deprecated_c_bindings
-type GUID = struct {
+type Guid = struct {
     value array<uint8, GUID_LENGTH>;
 };
 
 /// Partition describes a region of one or more block devices, labelled
 /// with distinguishing identifiers.
-@for_deprecated_c_bindings
 protocol Partition {
     compose block.Block;
 
@@ -26,14 +24,14 @@ protocol Partition {
     /// If the partition has no type GUID, ZX_ERR_NOT_SUPPORTED is returned.
     GetTypeGuid() -> (struct {
         status zx.status;
-        guid box<GUID>;
+        guid box<Guid>;
     });
 
     /// Gets the instance GUID of the partition (if one exists).
     /// If the partition has no instance GUID, ZX_ERR_NOT_SUPPORTED is returned.
     GetInstanceGuid() -> (struct {
         status zx.status;
-        guid box<GUID>;
+        guid box<Guid>;
     });
 
     /// Gets the name of the partition (if one exists).

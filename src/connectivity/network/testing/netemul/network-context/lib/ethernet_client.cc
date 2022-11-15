@@ -84,7 +84,7 @@ class FifoHolder {
       return;
     }
 
-    device->SetIOBuffer(
+    device->SetIoBuffer(
         std::move(buf_copy), [this, callback = std::move(callback)](zx_status_t status) {
           if (status != ZX_OK) {
             callback(status);

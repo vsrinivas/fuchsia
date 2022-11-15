@@ -20,8 +20,8 @@ type TestStatusInfo = struct {
 protocol TestDevice {
     /// Add Test Device with some powerargs
     AddDeviceWithPowerArgs(struct {
-        info vector<fuchsia.device.DevicePowerStateInfo>;
-        perf_state_info vector<fuchsia.device.DevicePerformanceStateInfo>;
+        info vector<fuchsia.device.DevicePowerStateInfo>:MAX;
+        perf_state_info vector<fuchsia.device.DevicePerformanceStateInfo>:MAX;
         make_visible bool;
     }) -> () error zx.status;
     /// Get current power state of the device

@@ -225,7 +225,7 @@ type CompositeDevice = struct {
     name string:DEVICE_NAME_MAX;
 };
 
-type DeviceType = resource union {
+type DeviceType = strict resource union {
     /// The device has no parent to communicate with and no driver to load.
     1: stub StubDevice;
 

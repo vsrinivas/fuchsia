@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/platform_version.gni")
 import("//build/fidl/fidl_ir.gni")
-import("//build/fidl/linting_exceptions.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
 import("//build/sdk/plasa/plasa_fragment_fidl.gni")
@@ -171,13 +170,6 @@ template("fidl_library") {
     outputs = [ lint_stamp_file ]
 
     should_lint = !defined(invoker.should_lint) || invoker.should_lint
-
-    # unlinted_libraries defined in linting_exceptions.gni
-    foreach(library, unlinted_libraries) {
-      if (library == library_name) {
-        should_lint = false
-      }
-    }
 
     full_label = get_label_info(":anything", "label_no_toolchain")
     in_vendor = string_replace(full_label, "//vendor", "") != full_label

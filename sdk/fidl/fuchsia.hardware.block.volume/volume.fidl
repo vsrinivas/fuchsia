@@ -62,8 +62,8 @@ protocol VolumeManager {
     /// `name` indicates the name of the new partition.
     AllocatePartition(struct {
         slice_count uint64;
-        type partition.GUID;
-        instance partition.GUID;
+        type partition.Guid;
+        instance partition.Guid;
         name string:partition.NAME_LENGTH;
         flags uint32;
     }) -> (struct {
@@ -92,8 +92,8 @@ protocol VolumeManager {
     /// This function may be useful for A/B updates within the FVM,
     /// since it will allow activating updated partitions.
     Activate(struct {
-        old_guid partition.GUID;
-        new_guid partition.GUID;
+        old_guid partition.Guid;
+        new_guid partition.Guid;
     }) -> (struct {
         status zx.status;
     });
@@ -108,7 +108,7 @@ protocol VolumeManager {
     /// Currently the partition limit is not persisted across reboots but this may change in the
     /// future.
     GetPartitionLimit(struct {
-        guid partition.GUID;
+        guid partition.Guid;
     }) -> (struct {
         status zx.status;
         slice_count uint64;
@@ -126,7 +126,7 @@ protocol VolumeManager {
     /// Currently the partition limit is not persisted across reboots but this may change in the
     /// future.
     SetPartitionLimit(struct {
-        guid partition.GUID;
+        guid partition.Guid;
         slice_count uint64;
     }) -> (struct {
         status zx.status;
@@ -136,7 +136,7 @@ protocol VolumeManager {
     /// in their topological path might *not* reflect the name change until the next time that the
     /// device is instantiated.
     SetPartitionName(struct {
-        guid partition.GUID;
+        guid partition.Guid;
         name string:<partition.NAME_LENGTH>;
     }) -> () error zx.status;
 };

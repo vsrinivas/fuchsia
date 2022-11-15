@@ -27,19 +27,18 @@ using RamdiskControllerDeviceType =
 
 class RamdiskController : public RamdiskControllerDeviceType {
  public:
-  RamdiskController(zx_device_t* parent) : RamdiskControllerDeviceType(parent) {}
+  explicit RamdiskController(zx_device_t* parent) : RamdiskControllerDeviceType(parent) {}
 
   // Device Protocol
   void DdkRelease() { delete this; }
 
  private:
   // FIDL Interface RamdiskController.
-  void Create(CreateRequestView request, CreateCompleter::Sync& completer);
-  void CreateFromVmo(CreateFromVmoRequestView request, CreateFromVmoCompleter::Sync& completer);
+  void Create(CreateRequestView request, CreateCompleter::Sync& completer) override;
+  void CreateFromVmo(CreateFromVmoRequestView request,
+                     CreateFromVmoCompleter::Sync& completer) override;
   void CreateFromVmoWithParams(CreateFromVmoWithParamsRequestView request,
-                               CreateFromVmoWithParamsCompleter::Sync& completer);
-  void CreateFromVmoWithBlockSize(CreateFromVmoWithBlockSizeRequestView request,
-                                  CreateFromVmoWithBlockSizeCompleter::Sync& completer);
+                               CreateFromVmoWithParamsCompleter::Sync& completer) override;
 
   // Other methods:
   // ConfigureDevice returns the name of the device if successful.
@@ -114,19 +113,6 @@ void RamdiskController::CreateFromVmo(CreateFromVmoRequestView request,
   completer.Reply(ZX_OK, fidl::StringView::FromExternal(name_or.value()));
 }
 
-void RamdiskController::CreateFromVmoWithBlockSize(
-    CreateFromVmoWithBlockSizeRequestView request,
-    CreateFromVmoWithBlockSizeCompleter::Sync& completer) {
-  auto name_or = CreateFromVmoWithParamsInternal(std::move(request->vmo), request->block_size,
-                                                 /*type_guid*/ nullptr);
-  if (name_or.is_error()) {
-    completer.Reply(name_or.status_value(), fidl::StringView());
-    return;
-  }
-
-  completer.Reply(ZX_OK, fidl::StringView::FromExternal(name_or.value()));
-}
-
 void RamdiskController::CreateFromVmoWithParams(CreateFromVmoWithParamsRequestView request,
                                                 CreateFromVmoWithParamsCompleter::Sync& completer) {
   auto name_or = CreateFromVmoWithParamsInternal(
@@ -144,13 +130,13 @@ zx::result<std::string> RamdiskController::ConfigureDevice(zx::vmo vmo, uint64_t
                                                            uint64_t block_count,
                                                            const uint8_t* type_guid) {
   std::unique_ptr<Ramdisk> ramdev;
-  zx_status_t status =
-      Ramdisk::Create(zxdev(), std::move(vmo), block_size, block_count, type_guid, &ramdev);
-  if (status != ZX_OK) {
+  if (zx_status_t status =
+          Ramdisk::Create(zxdev(), std::move(vmo), block_size, block_count, type_guid, &ramdev);
+      status != ZX_OK) {
     return zx::error(status);
   }
 
-  if ((status = ramdev->DdkAdd(ramdev->Name()) != ZX_OK)) {
+  if (zx_status_t status = ramdev->DdkAdd(ramdev->Name()); status != ZX_OK) {
     ramdev.release()->DdkRelease();
     return zx::error(status);
   }

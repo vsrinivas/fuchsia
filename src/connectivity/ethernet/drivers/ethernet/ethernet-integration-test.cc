@@ -366,7 +366,7 @@ class EthernetClient {
     }
 
     zx_handle_t bufh = buf_copy.release();
-    status = fuchsia_hardware_ethernet_DeviceSetIOBuffer(svc_.get(), bufh, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceSetIoBuffer(svc_.get(), bufh, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
       fprintf(stderr, "failed to set eth iobuf: %d, %d\n", status, call_status);
       return status == ZX_OK ? call_status : status;

@@ -88,7 +88,7 @@ protocol Device {
     });
 
     /// Set the IO Buffer that will provide the data buffers for tx and rx operations
-    SetIOBuffer(resource struct {
+    SetIoBuffer(resource struct {
         h zx.handle:VMO;
     }) -> (struct {
         status zx.status;

@@ -80,21 +80,19 @@ const GUID_LEN uint32 = 16;
 
 /// An array of bytes interpreted as a GUID. Wrapped in a struct to
 /// allow optional GUIDs.
-@for_deprecated_c_bindings
-type GUID = struct {
+type Guid = struct {
     value array<uint8, GUID_LEN>;
 };
 
 const MAX_NAME_LENGTH uint32 = 32;
 
-@for_deprecated_c_bindings
 protocol RamdiskController {
     /// Initializes a new Ramdisk instance with the provided block size and block count.
     /// Takes an optional `type_guid`, which may be queried from the ramdisk instance.
     Create(struct {
         block_size uint64;
         block_count uint64;
-        type_guid box<GUID>;
+        type_guid box<Guid>;
     }) -> (struct {
         s zx.status;
         name string:<MAX_NAME_LENGTH, optional>;
@@ -109,23 +107,12 @@ protocol RamdiskController {
         name string:<MAX_NAME_LENGTH, optional>;
     });
 
-    /// Same as `CreateFromVmo`, but with the given `block_size`. If `block_size` is zero,
-    /// `PAGE_SIZE` will be used as `block_size`.
-    @deprecated("replaced by fuchsia.hardware.ramdisk/RamdiskController.CreateFromVmoWithParams")
-    CreateFromVmoWithBlockSize(resource struct {
-        vmo zx.handle:VMO;
-        block_size uint64;
-    }) -> (struct {
-        s zx.status;
-        name string:<MAX_NAME_LENGTH, optional>;
-    });
-
     /// Same as CreateFromVmo, but with the given `block_size` and optional `type_guid`. If
     /// `block_size` is zero, `PAGE_SIZE` will be used as `block_size`.
     CreateFromVmoWithParams(resource struct {
         vmo zx.handle:VMO;
         block_size uint64;
-        type_guid box<GUID>;
+        type_guid box<Guid>;
     }) -> (struct {
         s zx.status;
         name string:<MAX_NAME_LENGTH, optional>;

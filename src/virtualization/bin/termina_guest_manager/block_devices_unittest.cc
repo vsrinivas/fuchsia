@@ -72,7 +72,7 @@ class BlockDevicesTest : public ::testing::Test {
     }
 
     zx_status_t guid_status;
-    std::unique_ptr<fuchsia::hardware::block::partition::GUID> guid;
+    std::unique_ptr<fuchsia::hardware::block::partition::Guid> guid;
     status = partition->GetTypeGuid(&guid_status, &guid);
     if (status != ZX_OK || guid_status != ZX_OK || !guid) {
       return zx::error(ZX_ERR_NOT_FOUND);

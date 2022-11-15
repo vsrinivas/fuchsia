@@ -50,7 +50,7 @@ type EthernetInfo = struct {
 type EthernetNetbuf = struct {
     /// Provided by the generic ethernet driver.
     @buffer
-    data vector<uint8>;
+    data vector<uint8>:MAX;
     /// Only used if ETHERNET_FEATURE_DMA is available.
     phys zx.paddr;
     reserved uint16;
@@ -67,7 +67,7 @@ protocol EthernetIfc {
 
     Recv(struct {
         @buffer
-        data vector<uint8>;
+        data vector<uint8>:MAX;
         flags uint32;
     }) -> ();
 };
@@ -166,7 +166,7 @@ protocol EthernetImpl {
         param uint32;
         value int32;
         @buffer
-        data vector<uint8>;
+        data vector<uint8>:MAX;
     }) -> (struct {
         s zx.status;
     });
