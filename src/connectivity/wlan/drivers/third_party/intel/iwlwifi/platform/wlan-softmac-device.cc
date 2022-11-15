@@ -243,17 +243,22 @@ void WlanSoftmacDevice::SetChannel(SetChannelRequestView request, fdf::Arena& ar
 void WlanSoftmacDevice::ConfigureBss(ConfigureBssRequestView request, fdf::Arena& arena,
                                      ConfigureBssCompleter::Sync& completer) {
   zx_status_t status = ZX_OK;
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRSYNTAX(mvmvif_);
+
+  // Unassoc if it was assocated.
   if (ap_mvm_sta_ != nullptr) {
     IWL_INFO(this, "AP sta already exist.  Unassociate it first.\n");
+
     if ((status = mac_unconfigure_bss(mvmvif_)) != ZX_OK) {
       IWL_ERR(this, "failed mac unconfigure bss: %s\n",
               zx_status_get_string(status));
       completer.buffer(arena).ReplyError(status);
       return;
     }
+    mvmvif_->bss_conf.assoc = false;
     ap_mvm_sta_.reset();
   }
-  CHECK_DELETE_IN_PROGRESS_WITH_ERRSYNTAX(mvmvif_);
+
   if ((status = mac_configure_bss(mvmvif_, &request->config)) != ZX_OK) {
     IWL_ERR(this, "failed mac configure bss: %s\n", zx_status_get_string(status));
     completer.buffer(arena).ReplyError(status);
