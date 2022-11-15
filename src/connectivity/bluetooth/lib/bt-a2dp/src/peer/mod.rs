@@ -77,6 +77,7 @@ struct StreamPermits {
     permits: Permits,
     open_streams: Arc<Mutex<HashMap<StreamEndpointId, Permit>>>,
     inner: Weak<Mutex<PeerInner>>,
+    peer_id: PeerId,
     sender: mpsc::UnboundedSender<BoxFuture<'static, StreamPermit>>,
 }
 
@@ -100,22 +101,33 @@ impl Drop for StreamPermit {
 impl StreamPermits {
     fn new(
         inner: Weak<Mutex<PeerInner>>,
+        peer_id: PeerId,
         permits: Permits,
     ) -> (Self, mpsc::UnboundedReceiver<BoxFuture<'static, StreamPermit>>) {
         let (sender, reservations_receiver) = futures::channel::mpsc::unbounded();
-        (Self { inner, permits, open_streams: Default::default(), sender }, reservations_receiver)
+        (
+            Self { inner, permits, peer_id, sender, open_streams: Default::default() },
+            reservations_receiver,
+        )
+    }
+
+    fn label_for(&self, local_id: &StreamEndpointId) -> String {
+        format!("{} {}", self.peer_id, local_id)
     }
 
     /// Get a permit to stream on the stream with id `local_id`.
     /// Returns Some() if there is a permit available.
     fn get(&self, local_id: StreamEndpointId) -> Option<StreamPermit> {
         let revoke_fn = self.make_revocation_fn(&local_id);
-        self.permits.get_revokable(revoke_fn).and_then(|permit| {
-            if let Some(_) = self.open_streams.lock().insert(local_id.clone(), permit) {
-                warn!("Started stream {:?} twice somehow, dropping the previous permit", local_id);
-            }
-            Some(StreamPermit { local_id, open_streams: self.open_streams.clone() })
-        })
+        let Some(permit) = self.permits.get_revokable(revoke_fn) else {
+            info!("No permits available: {:?}", self.permits);
+            return None;
+        };
+        permit.relabel(self.label_for(&local_id));
+        if let Some(_) = self.open_streams.lock().insert(local_id.clone(), permit) {
+            warn!("Started stream {:?} twice somehow, dropping the previous permit", local_id);
+        }
+        Some(StreamPermit { local_id, open_streams: self.open_streams.clone() })
     }
 
     /// Revokes a permit that was previously delivered, suspending the local stream and signaling
@@ -136,8 +148,10 @@ impl StreamPermits {
                 let reservation = self.permits.reserve_revokable(self_revoke_fn);
                 let local_id = local_id.clone();
                 let open_streams = self.open_streams.clone();
+                let label = self.label_for(&local_id);
                 async {
                     let permit = reservation.await;
+                    permit.relabel(label);
                     if open_streams.lock().insert(local_id.clone(), permit).is_some() {
                         warn!("Reservation replaces acquired permit for {}", local_id.clone());
                     }
@@ -145,7 +159,7 @@ impl StreamPermits {
                 }
             };
             if let Err(e) = self.sender.unbounded_send(restart_stream_available_fut.boxed()) {
-                warn!("Couldn't queue reservation to finish for local {}: {:?}", local_id, e);
+                warn!(%self.peer_id, %local_id, ?e, "Couldn't queue reservation to finish");
             }
         }
         self.open_streams.lock().remove(&local_id).expect("permit revoked but don't have it")
@@ -205,7 +219,8 @@ impl Peer {
     ) -> Self {
         let inner = Arc::new(Mutex::new(PeerInner::new(peer, id, streams, metrics.clone())));
         let reservations_receiver = if let Some(permits) = permits {
-            let (stream_permits, receiver) = StreamPermits::new(Arc::downgrade(&inner), permits);
+            let (stream_permits, receiver) =
+                StreamPermits::new(Arc::downgrade(&inner), id, permits);
             inner.lock().permits = Some(stream_permits);
             receiver
         } else {
@@ -763,7 +778,7 @@ impl PeerInner {
             None => Ok(None),
             Some(Some(permit)) => Ok(Some(permit)),
             Some(None) => {
-                info!("{}: No permit for starting stream, suspending..", self.peer_id);
+                info!(%self.peer_id, %local_id, "No permit for starting stream, suspending..");
                 Err(avdtp::Error::InvalidState)
             }
         }

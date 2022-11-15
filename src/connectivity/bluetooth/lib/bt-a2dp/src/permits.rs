@@ -2,9 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! A construct to confirm that only a limited number of tokens are allowed at the same time.
-//! Permits are granted either immediately, or can be retrieved via a future which will resolve
-//! to a valid permit once one becomes available.
+//! A collection which hands out Permits, of which a limited number of are allowed exist at once.
+//! Permits can be granted immediately, or can be reserved in first-come-first-serve order, with a
+//! Future which resolves to a Permit once one becomes available.
+//!
+//! Permits are released upon drop and will be automatically handed off to the next reservation or
+//! returned to the available pool if no one is waiting.
+//!
+//! Permits can be revokable by providing a function which will return a valid Permit when called.
+//! That function can also make a reservation for a future Permit if desired. (see examples in tests)
+//!
+//! A client can take a permit (revoking one if necessary), by using `Permits::take`.
+//! A client can also seize all permits, taking out all permits left unclaimed and revoking all
+//! revokable permits.
+//!
+//! Permits taken or seized are not revokable.
 
 use anyhow::{format_err, Error};
 use futures::{
@@ -25,25 +37,36 @@ use std::sync::{
 
 type BoxRevokeFn = Box<dyn FnOnce() -> Permit + Send>;
 
-struct RevokeFnHolder(Mutex<Option<BoxRevokeFn>>);
+struct RevokeFnHolder {
+    f: Mutex<Option<BoxRevokeFn>>,
+    label: Mutex<String>,
+}
 
 impl RevokeFnHolder {
-    // Makes a new non-revokable holder.
-    fn new() -> Arc<Self> {
-        Arc::new(Self(Mutex::new(None)))
+    fn new(f: Option<BoxRevokeFn>) -> Arc<Self> {
+        Arc::new(Self { f: Mutex::new(f), label: Mutex::new(String::default()) })
     }
 
     // Replaces the revokable function within, returning the previously stored fn, if there was one.
     fn replace(&self, f: BoxRevokeFn) -> Option<BoxRevokeFn> {
-        self.0.lock().replace(f)
+        self.f.lock().replace(f)
+    }
+
+    // Replaces the label
+    fn relabel(&self, label: String) {
+        *(self.label.lock()) = label;
+    }
+
+    fn label(&self) -> String {
+        self.label.lock().clone()
     }
 
     fn take(&self) -> Option<BoxRevokeFn> {
-        self.0.lock().take()
+        self.f.lock().take()
     }
 
     fn is_revokable(&self) -> bool {
-        self.0.lock().is_some()
+        self.f.lock().is_some()
     }
 
     fn extract(weak: &Weak<Self>) -> BoxRevokeFn {
@@ -53,7 +76,10 @@ impl RevokeFnHolder {
 
 impl std::fmt::Debug for RevokeFnHolder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RevokeFnHolder").field("present", &self.is_revokable()).finish()
+        f.debug_struct("RevokeFnHolder")
+            .field("revokable", &self.is_revokable())
+            .field("label", &self.label())
+            .finish()
     }
 }
 
@@ -65,67 +91,77 @@ struct PermitsInner {
     // The maximum number of permits allowed.
     limit: usize,
     // The current permits out. Permits are indexed by their key.
-    // If the permit is revokable, then Weak::upgrade() will return Some
+    // If the permit is out, then Weak::upgrade() will return Some.
     out: Slab<Weak<RevokeFnHolder>>,
     // A queue of oneshot senders who are waiting for permits.
     waiting: VecDeque<WaitingReservation>,
     // An ordered queue of indexes into `out` which are revokable.
     // If a permit index is listed here, the Weak at out.get(i) should be upgradable.
     revocations: VecDeque<usize>,
+    weak: Weak<Mutex<Self>>,
 }
 
 impl std::fmt::Debug for PermitsInner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let letter_outs: Vec<(usize, &str)> = self
-            .out
-            .iter()
-            .map(|(k, r)| (k, if r.upgrade().unwrap().is_revokable() { "R" } else { "I" }))
-            .collect();
-        f.debug_struct("PermitsInner")
-            .field("limit", &self.limit)
-            .field("waiting", &self.waiting.len())
-            .field("out", &letter_outs)
-            .finish()
+        let mut debug = f.debug_struct("PermitsInner");
+        let _ = debug.field("limit", &self.limit).field("waiting", &self.waiting.len());
+        for (k, holder) in &self.out {
+            let h = holder.upgrade().unwrap();
+            let holder_str = format!("{}: {}", if h.is_revokable() { "R" } else { "I" }, h.label());
+            let _ = debug.field(format!("permit{k}").as_str(), &holder_str);
+        }
+        debug.finish()
     }
 }
 
 impl PermitsInner {
-    fn new(limit: usize) -> Self {
-        Self {
-            limit,
-            out: Slab::with_capacity(limit),
-            waiting: VecDeque::new(),
-            revocations: VecDeque::new(),
-        }
+    fn new(limit: usize) -> Arc<Mutex<Self>> {
+        Arc::new_cyclic(|weak| {
+            Mutex::new(Self {
+                limit,
+                out: Slab::with_capacity(limit),
+                waiting: VecDeque::new(),
+                revocations: VecDeque::new(),
+                weak: weak.clone(),
+            })
+        })
     }
 
     // Try to reserve a key in the permits. If `revoke_fn` is Some then this permit is
-    // revokable. Returns the key associated with the permit.
-    fn try_get(&mut self, fn_holder: &Arc<RevokeFnHolder>) -> Result<usize, Error> {
+    // revokable. Returns the permit, or an Error if there are no permits available.
+    fn try_get(&mut self, revoke_fn: Option<BoxRevokeFn>) -> Result<Permit, Error> {
         if self.out.len() == self.out.capacity() {
             return Err(format_err!("No permits left"));
         }
-        let idx = self.out.insert(Arc::downgrade(fn_holder));
-        if fn_holder.is_revokable() {
-            self.revocations.push_back(idx);
+        let is_revokable = revoke_fn.is_some();
+        let fn_holder = RevokeFnHolder::new(revoke_fn);
+        let key = self.out.insert(Arc::downgrade(&fn_holder));
+        if is_revokable {
+            self.revocations.push_back(key);
         }
-        Ok(idx)
+        Ok(Permit {
+            inner: Some(self.weak.upgrade().unwrap()),
+            committed: Arc::new(AtomicBool::new(true)),
+            fn_holder,
+            key,
+        })
     }
 
     // Release a permit that is out. Permits call this function when they are dropped
     // to hand off their permit to the next waiting reservation.
-    // `inner` is a pointer to the shared mutex of this.
     // `key` is the key of the permit being released.
     //
     // Panics: if `key` is not currently out.
-    fn release(&mut self, inner: Arc<Mutex<Self>>, key: usize) {
-        // Not being revoked, so drop the revocation.
+    fn release(&mut self, key: usize) {
+        // Not revoked, so drop tracking a possible revocation.
         self.revocations.retain(|k| *k != key);
-        // Holder should be resolvable at this point, drop the revoke fn if it's present.
+        // Holder should be resolvable as it's held by the releasing Permit.
         let holder = self.out.get(key).expect("reservation present").upgrade().unwrap();
+        // Drop the revoke fn if it's present.
         drop(holder.take());
+        let this = self.weak.upgrade().unwrap();
         while let Some(sender) = self.waiting.pop_front() {
-            if let Ok(()) = Permit::handoff(sender, inner.clone(), holder.clone(), key) {
+            if let Ok(()) = Permit::handoff(sender, this.clone(), holder.clone(), key) {
                 return;
             }
         }
@@ -134,18 +170,14 @@ impl PermitsInner {
     }
 
     // Create a Reservation future that will complete with a Permit when one becomes available.
-    // `inner` should be a pointer to this.
-    // TODO(https://github.com/rust-lang/rust/issues/75861): When new_cyclic is stable, we can
-    // eliminate the inner and store a ref to ourselves.
-    fn reservation(inner: Arc<Mutex<Self>>, revoke_fn: Option<BoxRevokeFn>) -> Reservation {
+    fn reservation(&mut self, revoke_fn: Option<BoxRevokeFn>) -> Reservation {
         let (sender, receiver) = oneshot::channel();
-        let mut lock = inner.lock();
-        match Permit::try_issue_locked(&mut *lock, inner.clone(), None) {
-            // Unwrap is ok - a just created sender can always send.
+        // If we can get a permit immediately, send it right away.
+        match self.try_get(None).ok() {
             Some(permit) => sender.send(permit).ok().unwrap(),
-            None => lock.waiting.push_back(WaitingReservation { sender }),
+            None => self.waiting.push_back(WaitingReservation { sender }),
         }
-        Reservation { receiver, revoke_fn, inner: Arc::downgrade(&inner) }
+        Reservation { receiver, revoke_fn, inner: self.weak.clone() }
     }
 
     /// Make a previously unrevokable permit revokable by supplying a function to revoke it.
@@ -177,7 +209,9 @@ impl PermitsInner {
 pub struct Reservation {
     // Receiver for the Permit when it is granted.
     receiver: oneshot::Receiver<Permit>,
+    // The revocation function if this reservation will result in a revokable permit
     revoke_fn: Option<BoxRevokeFn>,
+    // Pointer to the shared permits if it still exists.
     inner: Weak<Mutex<PermitsInner>>,
 }
 
@@ -208,7 +242,7 @@ pub struct Permits {
 impl Permits {
     /// Make a new set of permits with `limit` maximum concurrent permits available.
     pub fn new(limit: usize) -> Self {
-        Self { inner: Arc::new(Mutex::new(PermitsInner::new(limit))), limit }
+        Self { inner: PermitsInner::new(limit), limit }
     }
 
     /// Returns the maximum number of permits allowed.
@@ -248,8 +282,9 @@ impl Permits {
         let mut bunch = Vec::new();
         let mut revoke_fns = {
             let mut lock = self.inner.lock();
+            // First get all the unclaimed permits.
             loop {
-                match Permit::try_issue_locked(&mut *lock, self.inner.clone(), None) {
+                match lock.try_get(None).ok() {
                     Some(permit) => bunch.push(permit),
                     None => break,
                 }
@@ -266,7 +301,7 @@ impl Permits {
     /// Returns a future that resolves to a permit
     /// Reservations are first-come-first-serve, but permits that are revoked ignore reservations.
     pub fn reserve(&self) -> Reservation {
-        PermitsInner::reservation(self.inner.clone(), None)
+        self.inner.lock().reservation(None)
     }
 
     /// Reserve a spot in line to receive a permit once one becomes available.
@@ -277,43 +312,29 @@ impl Permits {
         &self,
         revoked_fn: impl FnOnce() -> Permit + 'static + Send,
     ) -> Reservation {
-        PermitsInner::reservation(self.inner.clone(), Some(Box::new(revoked_fn)))
+        self.inner.lock().reservation(Some(Box::new(revoked_fn)))
     }
 }
 
 #[derive(Debug)]
 pub struct Permit {
+    // The shared permits
     inner: Option<Arc<Mutex<PermitsInner>>>,
     committed: Arc<AtomicBool>,
-    _fn_holder: Arc<RevokeFnHolder>,
+    fn_holder: Arc<RevokeFnHolder>,
     key: usize,
 }
 
 impl Permit {
+    /// Relabels this permit, making it easier to track in Debug
+    pub fn relabel(&self, new_label: String) {
+        self.fn_holder.relabel(new_label);
+    }
+
     /// Issues a permit using the given `inner`. Returns none if there are no permits available or
     /// in the case of lock contention.
     fn try_issue(inner: Arc<Mutex<PermitsInner>>, revoke_fn: Option<BoxRevokeFn>) -> Option<Self> {
-        let mut lock = inner.lock();
-        Self::try_issue_locked(&mut *lock, inner.clone(), revoke_fn)
-    }
-
-    // Tries to issue a permit given a PermitsInner.
-    // Used to issue permits in succession without unlocking the PermitsInner.
-    fn try_issue_locked(
-        inner: &mut PermitsInner,
-        ptr: Arc<Mutex<PermitsInner>>,
-        revoke_fn: Option<BoxRevokeFn>,
-    ) -> Option<Self> {
-        let fn_holder = RevokeFnHolder::new();
-        if let Some(f) = revoke_fn {
-            let _ = fn_holder.replace(f);
-        }
-        inner.try_get(&fn_holder).ok().map(|key| Self {
-            inner: Some(ptr),
-            _fn_holder: fn_holder,
-            committed: Arc::new(AtomicBool::new(true)),
-            key,
-        })
+        inner.lock().try_get(revoke_fn).ok()
     }
 
     // Tries to hand off a permit to a reservation. This creates a new Permit and makes sure it
@@ -327,7 +348,7 @@ impl Permit {
     ) -> Result<(), Error> {
         let committed = Arc::new(AtomicBool::new(false));
         let commit_clone = committed.clone();
-        let potential = Self { inner: Some(inner), committed, key, _fn_holder: fn_holder };
+        let potential = Self { inner: Some(inner), committed, key, fn_holder };
         match waiting.sender.send(potential) {
             Ok(()) => {
                 commit_clone.store(true, Ordering::Relaxed);
@@ -346,8 +367,7 @@ impl Drop for Permit {
         };
         let committed = self.committed.load(Ordering::Relaxed);
         if committed {
-            let clone = inner.clone();
-            inner.lock().release(clone, self.key);
+            inner.lock().release(self.key);
         }
     }
 }
