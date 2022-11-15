@@ -1,0 +1,100 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/distribution_manifest.gni")
+
+# Generate a manifest providing all of the .fidl.json files exported by the
+# core SDK and any other FIDL files.
+#
+# Example:
+# ```
+# distribution_fidl_json("fidl_json") {
+#   fidl_list_depfile = "//sdk:all_fidl_sdk_json"
+#   fidl_deps = [
+#     "//sdk/fidl/fuchsia.power.battery",
+#     "//sdk/fidl/fuchsia.hardware.gpio",
+#     "//vendor/google/sdk/fidl/google.factory",
+#   ]
+# }
+# ```
+#
+# Parameters
+#
+#   fidl_lists (optional)
+#     The list of FIDL JSON list files. The FIDL JSON files listed in the
+#     list files will be collected.
+#     Type: list
+#
+#   fidl_deps (optional)
+#     The list of FIDL targets to be supported. The fidl.json files of
+#     the FIDL APIs on the list will be collected.
+#     Type: list
+#
+#   testonly
+#   data_deps
+#   deps
+#   fidl_toolchain
+template("distribution_fidl_json") {
+  action("gen_fidl_json_${target_name}") {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "data_deps",
+                             "deps",
+                             "fidl_lists",
+                             "fidl_deps",
+                           ])
+    script = "//src/developer/shell/generate_fidl_json.py"
+    inputs = []
+    generated_output = "$target_gen_dir/gen_fidl_json_${target_name}.manifest"
+    outputs = [ "$generated_output" ]
+    depfile = "$target_gen_dir/${target_name}_fidl_json.d"
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ "//third_party/quickjs:qjs($host_toolchain)" ]
+
+    args = [
+      "--out-file",
+      rebase_path("$generated_output", root_build_dir),
+      "--dep-file",
+      rebase_path(depfile, root_build_dir),
+    ]
+
+    if (defined(fidl_lists)) {
+      foreach(fidl_list, fidl_lists) {
+        inputs += [ "$fidl_list" ]
+        args += [ "@" + rebase_path("$fidl_list", root_build_dir) ]
+      }
+    }
+
+    if (defined(fidl_deps)) {
+      forward_variables_from(invoker, [ "fidl_toolchain" ])
+      foreach(fidl_dep, fidl_deps) {
+        deps += [ "${fidl_dep}($fidl_toolchain)" ]
+        fidl_name = get_label_info(fidl_dep, "name")
+        fidl_dir = get_label_info(fidl_dep, "dir")
+        fidl_ir_target =
+            "${fidl_dir}:${fidl_name}_compile_fidlc($fidl_toolchain)"
+        fidl_ir_json = get_label_info(fidl_ir_target, "target_gen_dir") +
+                       "/${fidl_name}.fidl.json"
+        inputs += [ "$fidl_ir_json" ]
+        args += [ rebase_path(fidl_ir_json, root_build_dir) ]
+      }
+    }
+
+    metadata = {
+      # Don't pick up resources from SDK deps
+      distribution_entries_barrier = []
+    }
+  }
+
+  distribution_entries_file("${target_name}") {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [ ":gen_fidl_json_${target_name}" ]
+    file = get_target_outputs(deps[0])
+    file = file[0]
+  }
+}

@@ -3,58 +3,22 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/dist/distribution_manifest.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/test.gni")
+import("./generate_fidl_json.gni")
 
-# Generate a manifest providing all of the .fidl.json files exported by the
-# core SDK (and any other FIDL files we might want).
-action("generate_fidl_json") {
-  script = "generate_fidl_json.py"
-  generated_output = "$target_gen_dir/sdk_fidl_json.manifest"
-  inputs = [ "$root_gen_dir/sdk/core.fidl_json.txt" ]
-  outputs = [ "$generated_output" ]
-  depfile = "$target_gen_dir/$target_name.d"
-  testonly = true
-  deps = [
-    "//sdk:core",
-    "//sdk:core_fidl_json",
-    "//sdk/fidl/fuchsia.boot($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.device.manager($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.kernel($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.power.battery($fidl_toolchain)",
-    "//third_party/quickjs:qjs($host_toolchain)",
-  ]
-  args = [
-    "--out-file",
-    rebase_path("$generated_output", root_build_dir),
-    "--dep-file",
-    rebase_path(depfile, root_build_dir),
-    "@" + rebase_path("$root_gen_dir/sdk/core.fidl_json.txt", root_build_dir),
-    rebase_path(
-        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.device.manager/fuchsia.device.manager.fidl.json",
-        root_build_dir),
-    rebase_path(
-        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.power.battery/fuchsia.power.battery.fidl.json",
-        root_build_dir),
-    rebase_path(
-        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.kernel/fuchsia.kernel.fidl.json",
-        root_build_dir),
-    rebase_path(
-        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.boot/fuchsia.boot.fidl.json",
-        root_build_dir),
-  ]
-  metadata = {
-    # Don't pick up resources from SDK deps
-    distribution_entries_barrier = []
-  }
+distribution_fidl_json("fidl_json_sdk") {
+  fidl_lists = [ "$root_build_dir/all_fidl_sdk_json.txt" ]
+  deps = [ "//sdk:all_fidl_sdk_json" ]
 }
 
-distribution_entries_file("fidl_json") {
-  testonly = true
-  deps = [ ":generate_fidl_json" ]
-  file = get_target_outputs(deps[0])
-  file = file[0]
+distribution_fidl_json("fidl_json_additional") {
+  fidl_deps = [
+    "//sdk/fidl/fuchsia.boot",
+    "//sdk/fidl/fuchsia.device.manager",
+    "//sdk/fidl/fuchsia.hardware.gpio",
+    "//sdk/fidl/fuchsia.power.battery",
+  ]
 }
 
 fuchsia_test_component("josh-tests-component") {
@@ -66,7 +30,8 @@ fuchsia_test_component("josh-tests-component") {
 fuchsia_test_package("josh-tests") {
   test_components = [ ":josh-tests-component" ]
   deps = [
-    ":fidl_json",
+    ":fidl_json_additional",
+    ":fidl_json_sdk",
     "josh/lib:js_libs",
     "//src/developer/shell/josh:bin",
     "//src/developer/shell/josh/lib:spawn_child_test_util",
@@ -93,10 +58,9 @@ group("tests") {
 
 # "josh" is Javascript Object SHell.
 fuchsia_shell_package("josh") {
-  # TODO(jeremymanson): This is only testonly because sdk:core is.  We should undo that.
-  testonly = true
   deps = [
-    ":fidl_json",
+    ":fidl_json_additional",
+    ":fidl_json_sdk",
     "josh/lib:js_libs",
     "//src/developer/shell/josh:bin",
   ]
