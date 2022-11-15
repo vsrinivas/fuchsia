@@ -112,7 +112,10 @@ pub struct MountState {
 /// of a mount in the group are also added to the group. A mount created in any mount in a peer
 /// group will be automatically propagated (recreated) in every other mount in the group.
 #[derive(Default)]
-struct PeerGroup(RwLock<PeerGroupState>);
+struct PeerGroup {
+    id: u64,
+    state: RwLock<PeerGroupState>,
+}
 #[derive(Default)]
 struct PeerGroupState {
     mounts: HashSet<WeakKey<Mount>>,
@@ -124,7 +127,8 @@ pub enum WhatToMount {
     Bind(NamespaceNode),
 }
 
-static NEXT_MOUNT_ID: AtomicU64 = AtomicU64::new(0);
+static NEXT_MOUNT_ID: AtomicU64 = AtomicU64::new(1);
+static NEXT_PEER_GROUP_ID: AtomicU64 = AtomicU64::new(1);
 
 impl Mount {
     fn new(what: WhatToMount, flags: MountFlags) -> MountHandle {
@@ -295,7 +299,7 @@ impl MountState {
         old_group.remove(old_mount);
         if let Some(upstream) = self.take_from_upstream() {
             let next_mount =
-                old_group.0.read().mounts.iter().next().map(|w| w.0.upgrade().unwrap());
+                old_group.state.read().mounts.iter().next().map(|w| w.0.upgrade().unwrap());
             if let Some(next_mount) = next_mount {
                 // TODO(fxbug.dev/114002): Fix the lock ordering here. We've locked next_mount
                 // while self is locked, and since the propagation tree and mount tree are
@@ -304,6 +308,10 @@ impl MountState {
             }
         }
         Some(old_group)
+    }
+
+    fn upstream(&self) -> Option<Arc<PeerGroup>> {
+        self.upstream_.as_ref().and_then(|g| g.0.upgrade())
     }
 
     fn take_from_upstream(&mut self) -> Option<Arc<PeerGroup>> {
@@ -388,23 +396,26 @@ impl MountState<Base = Mount> {
 
 impl PeerGroup {
     fn new() -> Arc<Self> {
-        Default::default()
+        Arc::new(Self {
+            id: NEXT_PEER_GROUP_ID.fetch_add(1, Ordering::Relaxed),
+            state: Default::default(),
+        })
     }
 
     fn add(&self, mount: &Arc<Mount>) {
-        self.0.write().mounts.insert(WeakKey::from(mount));
+        self.state.write().mounts.insert(WeakKey::from(mount));
     }
 
     fn remove(&self, mount: PtrKey<Mount>) {
-        self.0.write().mounts.remove(&mount);
+        self.state.write().mounts.remove(&mount);
     }
 
     fn add_downstream(&self, mount: &Arc<Mount>) {
-        self.0.write().downstream.insert(WeakKey::from(mount));
+        self.state.write().downstream.insert(WeakKey::from(mount));
     }
 
     fn remove_downstream(&self, mount: PtrKey<Mount>) {
-        self.0.write().downstream.remove(&mount);
+        self.state.write().downstream.remove(&mount);
     }
 
     fn copy_propagation_targets(&self) -> Vec<MountHandle> {
@@ -415,7 +426,7 @@ impl PeerGroup {
 
     fn collect_propagation_targets(&self, buf: &mut Vec<MountHandle>) {
         let downstream_mounts: Vec<_> = {
-            let state = self.0.read();
+            let state = self.state.read();
             buf.extend(state.mounts.iter().filter_map(|m| m.0.upgrade()));
             state.downstream.iter().filter_map(|m| m.0.upgrade()).collect()
         };
@@ -523,7 +534,7 @@ impl FileOps for ProcMountinfoFile {
                     mount: mount.origin_mount.clone(),
                     entry: Arc::clone(&mount.root),
                 };
-                writeln!(
+                write!(
                     sink,
                     "{} {} {} {} {}",
                     mount.id,
@@ -532,6 +543,13 @@ impl FileOps for ProcMountinfoFile {
                     String::from_utf8_lossy(&origin.path()),
                     String::from_utf8_lossy(&mountpoint.path())
                 )?;
+                if let Some(peer_group) = mount.read().peer_group() {
+                    write!(sink, " shared:{}", peer_group.id)?;
+                }
+                if let Some(upstream) = mount.read().upstream() {
+                    write!(sink, " master:{}", upstream.id)?;
+                }
+                writeln!(sink)?;
                 Ok(())
             })?;
             Ok(None)
