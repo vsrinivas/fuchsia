@@ -15,87 +15,81 @@ namespace {
 TEST(DisplayPllControl1Test, PllUsesHdmiConfigurationMode) {
   auto dpll_control1 = tgl_registers::DisplayPllControl1::Get().FromValue(0);
 
-  dpll_control1.set_reg_value(0).set_pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_1,
-                                                                      true);
+  dpll_control1.set_reg_value(0).set_pll_uses_hdmi_configuration_mode(PllId::DPLL_1, true);
   EXPECT_EQ(true, dpll_control1.pll1_uses_hdmi_configuration_mode());
-  EXPECT_EQ(true, dpll_control1.pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_1));
+  EXPECT_EQ(true, dpll_control1.pll_uses_hdmi_configuration_mode(PllId::DPLL_1));
 
-  dpll_control1.set_reg_value(0).set_pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_2,
-                                                                      true);
+  dpll_control1.set_reg_value(0).set_pll_uses_hdmi_configuration_mode(PllId::DPLL_2, true);
   EXPECT_EQ(true, dpll_control1.pll2_uses_hdmi_configuration_mode());
-  EXPECT_EQ(true, dpll_control1.pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_2));
+  EXPECT_EQ(true, dpll_control1.pll_uses_hdmi_configuration_mode(PllId::DPLL_2));
 
-  dpll_control1.set_reg_value(0).set_pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_3,
-                                                                      true);
+  dpll_control1.set_reg_value(0).set_pll_uses_hdmi_configuration_mode(PllId::DPLL_3, true);
   EXPECT_EQ(true, dpll_control1.pll3_uses_hdmi_configuration_mode());
-  EXPECT_EQ(true, dpll_control1.pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_3));
+  EXPECT_EQ(true, dpll_control1.pll_uses_hdmi_configuration_mode(PllId::DPLL_3));
 
   dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_1, false);
+      .set_pll_uses_hdmi_configuration_mode(PllId::DPLL_1, false);
   EXPECT_EQ(false, dpll_control1.pll1_uses_hdmi_configuration_mode());
-  EXPECT_EQ(false, dpll_control1.pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_1));
+  EXPECT_EQ(false, dpll_control1.pll_uses_hdmi_configuration_mode(PllId::DPLL_1));
 
   dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_2, false);
+      .set_pll_uses_hdmi_configuration_mode(PllId::DPLL_2, false);
   EXPECT_EQ(false, dpll_control1.pll2_uses_hdmi_configuration_mode());
-  EXPECT_EQ(false, dpll_control1.pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_2));
+  EXPECT_EQ(false, dpll_control1.pll_uses_hdmi_configuration_mode(PllId::DPLL_2));
 
   dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_3, false);
+      .set_pll_uses_hdmi_configuration_mode(PllId::DPLL_3, false);
   EXPECT_EQ(false, dpll_control1.pll3_uses_hdmi_configuration_mode());
-  EXPECT_EQ(false, dpll_control1.pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_3));
+  EXPECT_EQ(false, dpll_control1.pll_uses_hdmi_configuration_mode(PllId::DPLL_3));
 }
 
 TEST(DisplayPllControl1Test, PllUsesHdmiConfigurationModeForDpll0) {
   auto dpll_control1 = tgl_registers::DisplayPllControl1::Get().FromValue(0);
 
   dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_0, false);
+      .set_pll_uses_hdmi_configuration_mode(PllId::DPLL_0, false);
   EXPECT_EQ(0xffff'ffff, dpll_control1.reg_value());
-  EXPECT_EQ(false, dpll_control1.pll_uses_hdmi_configuration_mode(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(false, dpll_control1.pll_uses_hdmi_configuration_mode(PllId::DPLL_0));
 }
 
 TEST(DisplayPllControl1Test, PllSpreadSpectrumClockingEnabled) {
   auto dpll_control1 = tgl_registers::DisplayPllControl1::Get().FromValue(0);
 
-  dpll_control1.set_reg_value(0).set_pll_spread_spectrum_clocking_enabled(
-      tgl_registers::Dpll::DPLL_1, true);
+  dpll_control1.set_reg_value(0).set_pll_spread_spectrum_clocking_enabled(PllId::DPLL_1, true);
   EXPECT_EQ(true, dpll_control1.pll1_spread_spectrum_clocking_enabled());
-  EXPECT_EQ(true, dpll_control1.pll_spread_spectrum_clocking_enabled(tgl_registers::Dpll::DPLL_1));
+  EXPECT_EQ(true, dpll_control1.pll_spread_spectrum_clocking_enabled(PllId::DPLL_1));
 
-  dpll_control1.set_reg_value(0).set_pll_spread_spectrum_clocking_enabled(
-      tgl_registers::Dpll::DPLL_2, true);
+  dpll_control1.set_reg_value(0).set_pll_spread_spectrum_clocking_enabled(PllId::DPLL_2, true);
   EXPECT_EQ(true, dpll_control1.pll2_spread_spectrum_clocking_enabled());
-  EXPECT_EQ(true, dpll_control1.pll_spread_spectrum_clocking_enabled(tgl_registers::Dpll::DPLL_2));
+  EXPECT_EQ(true, dpll_control1.pll_spread_spectrum_clocking_enabled(PllId::DPLL_2));
 
-  dpll_control1.set_reg_value(0).set_pll_spread_spectrum_clocking_enabled(
-      tgl_registers::Dpll::DPLL_3, true);
+  dpll_control1.set_reg_value(0).set_pll_spread_spectrum_clocking_enabled(PllId::DPLL_3, true);
   EXPECT_EQ(true, dpll_control1.pll3_spread_spectrum_clocking_enabled());
-  EXPECT_EQ(true, dpll_control1.pll_spread_spectrum_clocking_enabled(tgl_registers::Dpll::DPLL_3));
+  EXPECT_EQ(true, dpll_control1.pll_spread_spectrum_clocking_enabled(PllId::DPLL_3));
 
   dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_spread_spectrum_clocking_enabled(tgl_registers::Dpll::DPLL_1, false);
+      .set_pll_spread_spectrum_clocking_enabled(PllId::DPLL_1, false);
   EXPECT_EQ(false, dpll_control1.pll1_spread_spectrum_clocking_enabled());
-  EXPECT_EQ(false, dpll_control1.pll_spread_spectrum_clocking_enabled(tgl_registers::Dpll::DPLL_1));
+  EXPECT_EQ(false, dpll_control1.pll_spread_spectrum_clocking_enabled(PllId::DPLL_1));
 
   dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_spread_spectrum_clocking_enabled(tgl_registers::Dpll::DPLL_2, false);
+      .set_pll_spread_spectrum_clocking_enabled(PllId::DPLL_2, false);
   EXPECT_EQ(false, dpll_control1.pll2_spread_spectrum_clocking_enabled());
-  EXPECT_EQ(false, dpll_control1.pll_spread_spectrum_clocking_enabled(tgl_registers::Dpll::DPLL_2));
+  EXPECT_EQ(false, dpll_control1.pll_spread_spectrum_clocking_enabled(PllId::DPLL_2));
 
   dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_spread_spectrum_clocking_enabled(tgl_registers::Dpll::DPLL_3, false);
+      .set_pll_spread_spectrum_clocking_enabled(PllId::DPLL_3, false);
   EXPECT_EQ(false, dpll_control1.pll3_spread_spectrum_clocking_enabled());
-  EXPECT_EQ(false, dpll_control1.pll_spread_spectrum_clocking_enabled(tgl_registers::Dpll::DPLL_3));
+  EXPECT_EQ(false, dpll_control1.pll_spread_spectrum_clocking_enabled(PllId::DPLL_3));
 }
 
 TEST(DisplayPllControl1Test, PllSpreadSpectrumClockingEnabledForDpll0) {
   auto dpll_control1 = tgl_registers::DisplayPllControl1::Get().FromValue(0);
 
   dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_spread_spectrum_clocking_enabled(tgl_registers::Dpll::DPLL_0, false);
+      .set_pll_spread_spectrum_clocking_enabled(PllId::DPLL_0, false);
   EXPECT_EQ(0xffff'ffff, dpll_control1.reg_value());
-  EXPECT_EQ(false, dpll_control1.pll_spread_spectrum_clocking_enabled(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(false, dpll_control1.pll_spread_spectrum_clocking_enabled(PllId::DPLL_0));
 }
 
 TEST(DisplayPllControl1Test, PllDisplayPortDdiFrequencyMhzFieldMapping) {
@@ -104,56 +98,52 @@ TEST(DisplayPllControl1Test, PllDisplayPortDdiFrequencyMhzFieldMapping) {
   // The test uses k2160Mhz because the bit pattern (0b101) requires 0->1
   // transitions on both edges of the bit field.
 
-  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0,
-                                                                        2'160);
+  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_0, 2'160);
   EXPECT_EQ(tgl_registers::DisplayPllControl1::DisplayPortDdiFrequencySelect::k2160Mhz,
             dpll_control1.pll0_display_port_ddi_frequency_select());
-  EXPECT_EQ(2'160, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(2'160, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_0));
 
-  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_1,
-                                                                        2'160);
+  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_1, 2'160);
   EXPECT_EQ(tgl_registers::DisplayPllControl1::DisplayPortDdiFrequencySelect::k2160Mhz,
             dpll_control1.pll1_display_port_ddi_frequency_select());
-  EXPECT_EQ(2'160, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_1));
+  EXPECT_EQ(2'160, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_1));
 
-  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_2,
-                                                                        2'160);
+  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_2, 2'160);
   EXPECT_EQ(tgl_registers::DisplayPllControl1::DisplayPortDdiFrequencySelect::k2160Mhz,
             dpll_control1.pll2_display_port_ddi_frequency_select());
-  EXPECT_EQ(2'160, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_2));
+  EXPECT_EQ(2'160, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_2));
 
-  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_3,
-                                                                        2'160);
+  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_3, 2'160);
   EXPECT_EQ(tgl_registers::DisplayPllControl1::DisplayPortDdiFrequencySelect::k2160Mhz,
             dpll_control1.pll3_display_port_ddi_frequency_select());
-  EXPECT_EQ(2'160, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_3));
+  EXPECT_EQ(2'160, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_3));
 
   // The test uses k810Mhz because the bit pattern (0b010) requires 1->0
   // transitions on both edges of the bit field.
 
   dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0, 810);
+      .set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_0, 810);
   EXPECT_EQ(tgl_registers::DisplayPllControl1::DisplayPortDdiFrequencySelect::k810Mhz,
             dpll_control1.pll0_display_port_ddi_frequency_select());
-  EXPECT_EQ(810, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(810, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_0));
 
   dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_1, 810);
+      .set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_1, 810);
   EXPECT_EQ(tgl_registers::DisplayPllControl1::DisplayPortDdiFrequencySelect::k810Mhz,
             dpll_control1.pll1_display_port_ddi_frequency_select());
-  EXPECT_EQ(810, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_1));
+  EXPECT_EQ(810, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_1));
 
   dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_2, 810);
+      .set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_2, 810);
   EXPECT_EQ(tgl_registers::DisplayPllControl1::DisplayPortDdiFrequencySelect::k810Mhz,
             dpll_control1.pll2_display_port_ddi_frequency_select());
-  EXPECT_EQ(810, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_2));
+  EXPECT_EQ(810, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_2));
 
   dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_3, 810);
+      .set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_3, 810);
   EXPECT_EQ(tgl_registers::DisplayPllControl1::DisplayPortDdiFrequencySelect::k810Mhz,
             dpll_control1.pll3_display_port_ddi_frequency_select());
-  EXPECT_EQ(810, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_3));
+  EXPECT_EQ(810, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_3));
 }
 
 TEST(DisplayPllControl1Test, PllDisplayPortDdiFrequencyMhzValueMapping) {
@@ -163,35 +153,29 @@ TEST(DisplayPllControl1Test, PllDisplayPortDdiFrequencyMhzValueMapping) {
   // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 528-529
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 526-527
 
-  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0,
-                                                                        2'700);
+  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_0, 2'700);
   EXPECT_EQ(0b000, static_cast<int>(dpll_control1.pll0_display_port_ddi_frequency_select()));
-  EXPECT_EQ(2'700, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(2'700, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_0));
 
-  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0,
-                                                                        1'350);
+  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_0, 1'350);
   EXPECT_EQ(0b001, static_cast<int>(dpll_control1.pll0_display_port_ddi_frequency_select()));
-  EXPECT_EQ(1'350, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(1'350, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_0));
 
-  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0,
-                                                                        810);
+  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_0, 810);
   EXPECT_EQ(0b010, static_cast<int>(dpll_control1.pll0_display_port_ddi_frequency_select()));
-  EXPECT_EQ(810, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(810, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_0));
 
-  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0,
-                                                                        1'620);
+  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_0, 1'620);
   EXPECT_EQ(0b011, static_cast<int>(dpll_control1.pll0_display_port_ddi_frequency_select()));
-  EXPECT_EQ(1'620, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(1'620, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_0));
 
-  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0,
-                                                                        1'080);
+  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_0, 1'080);
   EXPECT_EQ(0b100, static_cast<int>(dpll_control1.pll0_display_port_ddi_frequency_select()));
-  EXPECT_EQ(1'080, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(1'080, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_0));
 
-  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0,
-                                                                        2'160);
+  dpll_control1.set_reg_value(0).set_pll_display_port_ddi_frequency_mhz(PllId::DPLL_0, 2'160);
   EXPECT_EQ(0b101, static_cast<int>(dpll_control1.pll0_display_port_ddi_frequency_select()));
-  EXPECT_EQ(2'160, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(2'160, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_0));
 }
 
 TEST(DisplayPllControl1Test, PllDisplayPortDdiFrequencyMhzInvalid) {
@@ -199,51 +183,47 @@ TEST(DisplayPllControl1Test, PllDisplayPortDdiFrequencyMhzInvalid) {
 
   dpll_control1.set_reg_value(0).set_pll0_display_port_ddi_frequency_select(
       static_cast<tgl_registers::DisplayPllControl1::DisplayPortDdiFrequencySelect>(0b110));
-  EXPECT_EQ(0, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(0, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_0));
 
   dpll_control1.set_reg_value(0).set_pll0_display_port_ddi_frequency_select(
       static_cast<tgl_registers::DisplayPllControl1::DisplayPortDdiFrequencySelect>(0b111));
-  EXPECT_EQ(0, dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(0, dpll_control1.pll_display_port_ddi_frequency_mhz(PllId::DPLL_0));
 }
 
 TEST(DisplayPllControl1Test, PllProgrammingEnabled) {
   auto dpll_control1 = tgl_registers::DisplayPllControl1::Get().FromValue(0);
 
-  dpll_control1.set_reg_value(0).set_pll_programming_enabled(tgl_registers::Dpll::DPLL_0, true);
+  dpll_control1.set_reg_value(0).set_pll_programming_enabled(PllId::DPLL_0, true);
   EXPECT_EQ(true, dpll_control1.pll0_programming_enabled());
-  EXPECT_EQ(true, dpll_control1.pll_programming_enabled(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(true, dpll_control1.pll_programming_enabled(PllId::DPLL_0));
 
-  dpll_control1.set_reg_value(0).set_pll_programming_enabled(tgl_registers::Dpll::DPLL_1, true);
+  dpll_control1.set_reg_value(0).set_pll_programming_enabled(PllId::DPLL_1, true);
   EXPECT_EQ(true, dpll_control1.pll1_programming_enabled());
-  EXPECT_EQ(true, dpll_control1.pll_programming_enabled(tgl_registers::Dpll::DPLL_1));
+  EXPECT_EQ(true, dpll_control1.pll_programming_enabled(PllId::DPLL_1));
 
-  dpll_control1.set_reg_value(0).set_pll_programming_enabled(tgl_registers::Dpll::DPLL_2, true);
+  dpll_control1.set_reg_value(0).set_pll_programming_enabled(PllId::DPLL_2, true);
   EXPECT_EQ(true, dpll_control1.pll2_programming_enabled());
-  EXPECT_EQ(true, dpll_control1.pll_programming_enabled(tgl_registers::Dpll::DPLL_2));
+  EXPECT_EQ(true, dpll_control1.pll_programming_enabled(PllId::DPLL_2));
 
-  dpll_control1.set_reg_value(0).set_pll_programming_enabled(tgl_registers::Dpll::DPLL_3, true);
+  dpll_control1.set_reg_value(0).set_pll_programming_enabled(PllId::DPLL_3, true);
   EXPECT_EQ(true, dpll_control1.pll3_programming_enabled());
-  EXPECT_EQ(true, dpll_control1.pll_programming_enabled(tgl_registers::Dpll::DPLL_3));
+  EXPECT_EQ(true, dpll_control1.pll_programming_enabled(PllId::DPLL_3));
 
-  dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_programming_enabled(tgl_registers::Dpll::DPLL_0, false);
+  dpll_control1.set_reg_value(0xffff'ffff).set_pll_programming_enabled(PllId::DPLL_0, false);
   EXPECT_EQ(false, dpll_control1.pll0_programming_enabled());
-  EXPECT_EQ(false, dpll_control1.pll_programming_enabled(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(false, dpll_control1.pll_programming_enabled(PllId::DPLL_0));
 
-  dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_programming_enabled(tgl_registers::Dpll::DPLL_1, false);
+  dpll_control1.set_reg_value(0xffff'ffff).set_pll_programming_enabled(PllId::DPLL_1, false);
   EXPECT_EQ(false, dpll_control1.pll1_programming_enabled());
-  EXPECT_EQ(false, dpll_control1.pll_programming_enabled(tgl_registers::Dpll::DPLL_1));
+  EXPECT_EQ(false, dpll_control1.pll_programming_enabled(PllId::DPLL_1));
 
-  dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_programming_enabled(tgl_registers::Dpll::DPLL_2, false);
+  dpll_control1.set_reg_value(0xffff'ffff).set_pll_programming_enabled(PllId::DPLL_2, false);
   EXPECT_EQ(false, dpll_control1.pll2_programming_enabled());
-  EXPECT_EQ(false, dpll_control1.pll_programming_enabled(tgl_registers::Dpll::DPLL_2));
+  EXPECT_EQ(false, dpll_control1.pll_programming_enabled(PllId::DPLL_2));
 
-  dpll_control1.set_reg_value(0xffff'ffff)
-      .set_pll_programming_enabled(tgl_registers::Dpll::DPLL_3, false);
+  dpll_control1.set_reg_value(0xffff'ffff).set_pll_programming_enabled(PllId::DPLL_3, false);
   EXPECT_EQ(false, dpll_control1.pll3_programming_enabled());
-  EXPECT_EQ(false, dpll_control1.pll_programming_enabled(tgl_registers::Dpll::DPLL_3));
+  EXPECT_EQ(false, dpll_control1.pll_programming_enabled(PllId::DPLL_3));
 }
 
 TEST(DisplayPllDdiMapKabyLakeTest, DdiClockDisabled) {
@@ -296,71 +276,59 @@ TEST(DisplayPllDdiMapKabyLakeTest, DdiClockDisplayPll) {
   // The test uses DPLL3 because the bit pattern (0b11) requires 0->1
   // transitions on both edges of the bit field.
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_A,
-                                                          tgl_registers::Dpll::DPLL_3);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_A, PllId::DPLL_3);
   EXPECT_EQ(3u, dpll_ddi_map.ddi_a_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_A));
+  EXPECT_EQ(PllId::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_A));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_B,
-                                                          tgl_registers::Dpll::DPLL_3);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_B, PllId::DPLL_3);
   EXPECT_EQ(3u, dpll_ddi_map.ddi_b_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_B));
+  EXPECT_EQ(PllId::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_B));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_C,
-                                                          tgl_registers::Dpll::DPLL_3);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_C, PllId::DPLL_3);
   EXPECT_EQ(3u, dpll_ddi_map.ddi_c_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_C));
+  EXPECT_EQ(PllId::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_C));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_D,
-                                                          tgl_registers::Dpll::DPLL_3);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_D, PllId::DPLL_3);
   EXPECT_EQ(3u, dpll_ddi_map.ddi_d_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_D));
+  EXPECT_EQ(PllId::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_D));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_E,
-                                                          tgl_registers::Dpll::DPLL_3);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_E, PllId::DPLL_3);
   EXPECT_EQ(3u, dpll_ddi_map.ddi_e_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_E));
+  EXPECT_EQ(PllId::DPLL_3, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_E));
 
   // The test uses DPLL0 because the bit pattern (0b00) requires 1->0
   // transitions on both edges of the bit field.
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(DdiId::DDI_A, tgl_registers::Dpll::DPLL_0);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_display_pll(DdiId::DDI_A, PllId::DPLL_0);
   EXPECT_EQ(0u, dpll_ddi_map.ddi_a_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_A));
+  EXPECT_EQ(PllId::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_A));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(DdiId::DDI_B, tgl_registers::Dpll::DPLL_0);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_display_pll(DdiId::DDI_B, PllId::DPLL_0);
   EXPECT_EQ(0u, dpll_ddi_map.ddi_b_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_B));
+  EXPECT_EQ(PllId::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_B));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(DdiId::DDI_C, tgl_registers::Dpll::DPLL_0);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_display_pll(DdiId::DDI_C, PllId::DPLL_0);
   EXPECT_EQ(0u, dpll_ddi_map.ddi_c_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_C));
+  EXPECT_EQ(PllId::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_C));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(DdiId::DDI_D, tgl_registers::Dpll::DPLL_0);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_display_pll(DdiId::DDI_D, PllId::DPLL_0);
   EXPECT_EQ(0u, dpll_ddi_map.ddi_d_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_D));
+  EXPECT_EQ(PllId::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_D));
 
-  dpll_ddi_map.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(DdiId::DDI_E, tgl_registers::Dpll::DPLL_0);
+  dpll_ddi_map.set_reg_value(0xffff'ffff).set_ddi_clock_display_pll(DdiId::DDI_E, PllId::DPLL_0);
   EXPECT_EQ(0u, dpll_ddi_map.ddi_e_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_E));
+  EXPECT_EQ(PllId::DPLL_0, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_E));
 
   // The test covers the bit patterns for DPLL1-2 to catches any renumbering of
   // the DPLL constants.
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_A,
-                                                          tgl_registers::Dpll::DPLL_1);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_A, PllId::DPLL_1);
   EXPECT_EQ(1u, dpll_ddi_map.ddi_a_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_1, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_A));
+  EXPECT_EQ(PllId::DPLL_1, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_A));
 
-  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_A,
-                                                          tgl_registers::Dpll::DPLL_2);
+  dpll_ddi_map.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_A, PllId::DPLL_2);
   EXPECT_EQ(2u, dpll_ddi_map.ddi_a_clock_display_pll_index());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_2, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_A));
+  EXPECT_EQ(PllId::DPLL_2, dpll_ddi_map.ddi_clock_display_pll(DdiId::DDI_A));
 }
 
 TEST(DisplayPllDdiMapKabyLakeTest, DdiClockProgrammingEnabled) {
@@ -409,8 +377,7 @@ TEST(DisplayPllDdiMapKabyLakeTest, DdiClockProgrammingEnabled) {
 
 TEST(DisplayPllDcoFrequencyKabyLakeTest, DcoFrequencyMultiplier) {
   auto dpll1_cfgcr1 =
-      tgl_registers::DisplayPllDcoFrequencyKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoFrequencyKabyLake::GetForDpll(PllId::DPLL_1).FromValue(0);
 
   dpll1_cfgcr1.set_reg_value(0).set_dco_frequency_multiplier(1);
   EXPECT_EQ(0u, dpll1_cfgcr1.dco_frequency_multiplier_integer());
@@ -453,8 +420,7 @@ TEST(DisplayPllDcoFrequencyKabyLakeTest, DcoFrequencyMultiplier) {
 
 TEST(DisplayPllDcoFrequencyKabyLakeTest, DcoFrequencyKhz) {
   auto dpll1_cfgcr1 =
-      tgl_registers::DisplayPllDcoFrequencyKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoFrequencyKabyLake::GetForDpll(PllId::DPLL_1).FromValue(0);
 
   // Values from IHD-OS-KBL-Vol 12-1.17 section "Example of DVI on DDIB using
   // 113.309 MHz symbol "clock", pages 136-137.
@@ -483,25 +449,21 @@ TEST(DisplayPllDcoFrequencyKabyLakeTest, GetForDpll) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 523
 
   auto dpll1_cfgcr1 =
-      tgl_registers::DisplayPllDcoFrequencyKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoFrequencyKabyLake::GetForDpll(PllId::DPLL_1).FromValue(0);
   EXPECT_EQ(0x6c040u, dpll1_cfgcr1.reg_addr());
 
   auto dpll2_cfgcr1 =
-      tgl_registers::DisplayPllDcoFrequencyKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_2)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoFrequencyKabyLake::GetForDpll(PllId::DPLL_2).FromValue(0);
   EXPECT_EQ(0x6c048u, dpll2_cfgcr1.reg_addr());
 
   auto dpll3_cfgcr1 =
-      tgl_registers::DisplayPllDcoFrequencyKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_3)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoFrequencyKabyLake::GetForDpll(PllId::DPLL_3).FromValue(0);
   EXPECT_EQ(0x6c050u, dpll3_cfgcr1.reg_addr());
 }
 
 TEST(DisplayPllDcoDividersKabyLakeTest, QP1Divider) {
   auto dpll1_cfgcr2 =
-      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(PllId::DPLL_1).FromValue(0);
 
   dpll1_cfgcr2.set_reg_value(0).set_q_p1_divider(7);
   EXPECT_EQ(7u, dpll1_cfgcr2.q_p1_divider_select());
@@ -525,8 +487,7 @@ TEST(DisplayPllDcoDividersKabyLakeTest, KP2Divider) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 525
 
   auto dpll1_cfgcr2 =
-      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(PllId::DPLL_1).FromValue(0);
 
   dpll1_cfgcr2.set_reg_value(0).set_k_p2_divider(5);
   EXPECT_EQ(0b00u, static_cast<unsigned>(dpll1_cfgcr2.k_p2_divider_select()));
@@ -551,8 +512,7 @@ TEST(DisplayPllDcoDividersKabyLakeTest, PP0Divider) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 525
 
   auto dpll1_cfgcr2 =
-      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(PllId::DPLL_1).FromValue(0);
 
   dpll1_cfgcr2.set_reg_value(0).set_p_p0_divider(1);
   EXPECT_EQ(0b000u, static_cast<unsigned>(dpll1_cfgcr2.p_p0_divider_select()));
@@ -573,8 +533,7 @@ TEST(DisplayPllDcoDividersKabyLakeTest, PP0Divider) {
 
 TEST(DisplayPllDcoDividersKabyLakeTest, PDividerInvalid) {
   auto dpll1_cfgcr2 =
-      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(PllId::DPLL_1).FromValue(0);
 
   dpll1_cfgcr2.set_reg_value(0).set_p_p0_divider_select(
       static_cast<tgl_registers::DisplayPllDcoDividersKabyLake::PP0DividerSelect>(0b011));
@@ -599,8 +558,7 @@ TEST(DisplayPllDcoDividersKabyLakeTest, CenterFrequencyMhz) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 525
 
   auto dpll1_cfgcr2 =
-      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(PllId::DPLL_1).FromValue(0);
 
   dpll1_cfgcr2.set_reg_value(0).set_center_frequency_mhz(9'600);
   EXPECT_EQ(0b00u, static_cast<unsigned>(dpll1_cfgcr2.center_frequency_select()));
@@ -621,25 +579,21 @@ TEST(DisplayPllDcoDividersKabyLakeTest, GetForDpll) {
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 523
 
   auto dpll1_cfgcr2 =
-      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(PllId::DPLL_1).FromValue(0);
   EXPECT_EQ(0x6c044u, dpll1_cfgcr2.reg_addr());
 
   auto dpll2_cfgcr2 =
-      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_2)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(PllId::DPLL_2).FromValue(0);
   EXPECT_EQ(0x6c04cu, dpll2_cfgcr2.reg_addr());
 
   auto dpll3_cfgcr2 =
-      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(tgl_registers::Dpll::DPLL_3)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(PllId::DPLL_3).FromValue(0);
   EXPECT_EQ(0x6c054u, dpll3_cfgcr2.reg_addr());
 }
 
 TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyMultiplier) {
   auto dpll0_cfgcr0 =
-      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(PllId::DPLL_0).FromValue(0);
 
   const bool no_tiger_lake_38mhz_workaround = false;
   dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(1, no_tiger_lake_38mhz_workaround);
@@ -693,8 +647,7 @@ TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyMultiplier) {
 
 TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyMultiplierTigerLake38MhzWorkaround) {
   auto dpll0_cfgcr0 =
-      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(PllId::DPLL_0).FromValue(0);
 
   // The DPLL converts 38.4 MHz to 19.2 MHz internally, presumably by doubling
   // the divider. On Tiger Lake display engines, this conversion appears to be
@@ -729,8 +682,7 @@ TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyMultiplierTigerLake38MhzWo
 
 TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyKhz) {
   auto dpll0_cfgcr0 =
-      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(PllId::DPLL_0).FromValue(0);
 
   // Values from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "Example of DVI on DDIB
   // using 113.309 MHz symbol clock and reference 24 MHz", page 182.
@@ -751,8 +703,7 @@ TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyKhz) {
 
 TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyKhzDisplayPortTable) {
   auto dpll0_cfgcr0 =
-      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(PllId::DPLL_0).FromValue(0);
   const bool no_tiger_lake_38mhz_workaround = false;
 
   // Test cases from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "DisplayPort Mode PLL
@@ -852,18 +803,15 @@ TEST(DisplayPllDcoFrequencyTigerLakeTest, GetForDpll) {
   // page 650.
 
   auto dpll0_cfgcr0 =
-      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(PllId::DPLL_0).FromValue(0);
   EXPECT_EQ(0x164284u, dpll0_cfgcr0.reg_addr());
 
   auto dpll1_cfgcr0 =
-      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(PllId::DPLL_1).FromValue(0);
   EXPECT_EQ(0x16428cu, dpll1_cfgcr0.reg_addr());
 
   auto tbtpll_cfgcr0 =
-      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_2)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(PllId::DPLL_2).FromValue(0);
   EXPECT_EQ(0x16429cu, tbtpll_cfgcr0.reg_addr());
 
   // TODO(fxbug.dev/110351): Add a test for DPLL 4, when we support it. The MMIO
@@ -872,8 +820,7 @@ TEST(DisplayPllDcoFrequencyTigerLakeTest, GetForDpll) {
 
 TEST(DisplayPllDcoDividersTigerLakeTest, QP1Divider) {
   auto dpll0_cfgcr1 =
-      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(PllId::DPLL_0).FromValue(0);
 
   dpll0_cfgcr1.set_reg_value(0).set_q_p1_divider(7);
   EXPECT_EQ(7u, dpll0_cfgcr1.q_p1_divider_select());
@@ -895,8 +842,7 @@ TEST(DisplayPllDcoDividersTigerLakeTest, KP2Divider) {
   // The cases come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 652.
 
   auto dpll0_cfgcr1 =
-      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(PllId::DPLL_0).FromValue(0);
 
   dpll0_cfgcr1.set_reg_value(0).set_k_p2_divider(1);
   EXPECT_EQ(0b001u, static_cast<unsigned>(dpll0_cfgcr1.k_p2_divider_select()));
@@ -913,8 +859,7 @@ TEST(DisplayPllDcoDividersTigerLakeTest, KP2Divider) {
 
 TEST(DisplayPllDcoDividersTigerLakeTest, KP2DividerInvalid) {
   auto dpll0_cfgcr1 =
-      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(PllId::DPLL_0).FromValue(0);
 
   dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider_select(
       static_cast<tgl_registers::DisplayPllDcoDividersTigerLake::PP0DividerSelect>(0b000));
@@ -941,8 +886,7 @@ TEST(DisplayPllDcoDividersTigerLakeTest, PP0Divider) {
   // The cases come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 652.
 
   auto dpll0_cfgcr1 =
-      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(PllId::DPLL_0).FromValue(0);
 
   dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider(2);
   EXPECT_EQ(0b0001u, static_cast<unsigned>(dpll0_cfgcr1.p_p0_divider_select()));
@@ -963,8 +907,7 @@ TEST(DisplayPllDcoDividersTigerLakeTest, PP0Divider) {
 
 TEST(DisplayPllDcoDividersTigerLakeTest, PP0DividerInvalid) {
   auto dpll0_cfgcr1 =
-      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(PllId::DPLL_0).FromValue(0);
 
   dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider_select(
       static_cast<tgl_registers::DisplayPllDcoDividersTigerLake::PP0DividerSelect>(0b0000));
@@ -988,18 +931,15 @@ TEST(DisplayPllDcoDividersTigerLakeTest, GetForDpll) {
   // page 651.
 
   auto dpll0_cfgcr1 =
-      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(PllId::DPLL_0).FromValue(0);
   EXPECT_EQ(0x164288u, dpll0_cfgcr1.reg_addr());
 
   auto dpll1_cfgcr1 =
-      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(PllId::DPLL_1).FromValue(0);
   EXPECT_EQ(0x164290u, dpll1_cfgcr1.reg_addr());
 
   auto tbtpll_cfgcr1 =
-      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_2)
-          .FromValue(0);
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(PllId::DPLL_2).FromValue(0);
   EXPECT_EQ(0x1642a0u, tbtpll_cfgcr1.reg_addr());
 
   // TODO(fxbug.dev/110351): Add a test for DPLL 4, when we support it. The MMIO
@@ -1009,8 +949,7 @@ TEST(DisplayPllDcoDividersTigerLakeTest, GetForDpll) {
 TEST(DisplayPllDividerTest, TrueLockCriteriaCycles) {
   // The test cases come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 653.
 
-  auto dpll0_div0 =
-      tgl_registers::DisplayPllDivider::GetForDpll(tgl_registers::Dpll::DPLL_0).FromValue(0);
+  auto dpll0_div0 = tgl_registers::DisplayPllDivider::GetForDpll(PllId::DPLL_0).FromValue(0);
 
   dpll0_div0.set_reg_value(0).set_true_lock_criteria_cycles(16);
   EXPECT_EQ(0b00u, dpll0_div0.true_lock_criteria_select());
@@ -1032,8 +971,7 @@ TEST(DisplayPllDividerTest, TrueLockCriteriaCycles) {
 TEST(DisplayPllDividerTest, EarlyLockCriteriaCycles) {
   // The test cases come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 653.
 
-  auto dpll0_div0 =
-      tgl_registers::DisplayPllDivider::GetForDpll(tgl_registers::Dpll::DPLL_0).FromValue(0);
+  auto dpll0_div0 = tgl_registers::DisplayPllDivider::GetForDpll(PllId::DPLL_0).FromValue(0);
 
   dpll0_div0.set_reg_value(0).set_early_lock_criteria_cycles(16);
   EXPECT_EQ(0b00u, dpll0_div0.early_lock_criteria_select());
@@ -1056,8 +994,7 @@ TEST(DisplayPllDividerTest, AutomaticFrequencyCalibrationStartPoint) {
   // The test cases come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 pages
   // 653-654.
 
-  auto dpll0_div0 =
-      tgl_registers::DisplayPllDivider::GetForDpll(tgl_registers::Dpll::DPLL_0).FromValue(0);
+  auto dpll0_div0 = tgl_registers::DisplayPllDivider::GetForDpll(PllId::DPLL_0).FromValue(0);
 
   dpll0_div0.set_reg_value(0).set_automatic_frequency_calibration_start_point(511);
   EXPECT_EQ(0b000u, dpll0_div0.automatic_frequency_calibration_start_point_select());
@@ -1092,12 +1029,10 @@ TEST(DisplayPllDividerTest, GetForDpll) {
   // The register MMIO addresses come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1
   // page 653.
 
-  auto dpll0_div0 =
-      tgl_registers::DisplayPllDivider::GetForDpll(tgl_registers::Dpll::DPLL_0).FromValue(0);
+  auto dpll0_div0 = tgl_registers::DisplayPllDivider::GetForDpll(PllId::DPLL_0).FromValue(0);
   EXPECT_EQ(0x164b00u, dpll0_div0.reg_addr());
 
-  auto dpll1_div0 =
-      tgl_registers::DisplayPllDivider::GetForDpll(tgl_registers::Dpll::DPLL_1).FromValue(0);
+  auto dpll1_div0 = tgl_registers::DisplayPllDivider::GetForDpll(PllId::DPLL_1).FromValue(0);
   EXPECT_EQ(0x164c00u, dpll1_div0.reg_addr());
 
   // TODO(fxbug.dev/110351): Add a test for DPLL 4, when we support it. The MMIO
@@ -1109,13 +1044,11 @@ TEST(DisplayPllSpreadSpectrumClockingTest, GetForDpll) {
   // page 658.
 
   auto dpll0_ssc =
-      tgl_registers::DisplayPllSpreadSpectrumClocking::GetForDpll(tgl_registers::Dpll::DPLL_0)
-          .FromValue(0);
+      tgl_registers::DisplayPllSpreadSpectrumClocking::GetForDpll(PllId::DPLL_0).FromValue(0);
   EXPECT_EQ(0x164b10u, dpll0_ssc.reg_addr());
 
   auto dpll1_ssc =
-      tgl_registers::DisplayPllSpreadSpectrumClocking::GetForDpll(tgl_registers::Dpll::DPLL_1)
-          .FromValue(0);
+      tgl_registers::DisplayPllSpreadSpectrumClocking::GetForDpll(PllId::DPLL_1).FromValue(0);
   EXPECT_EQ(0x164c10u, dpll1_ssc.reg_addr());
 
   // TODO(fxbug.dev/110351): Add a test for DPLL 4, when we support it. The MMIO
@@ -1128,23 +1061,19 @@ TEST(PllEnableTest, GetForSkylakeDpll) {
   // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 1121, 1122
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 1110, 1111
 
-  auto lcpll1_ctl =
-      tgl_registers::PllEnable::GetForSkylakeDpll(tgl_registers::Dpll::DPLL_0).FromValue(0);
+  auto lcpll1_ctl = tgl_registers::PllEnable::GetForSkylakeDpll(PllId::DPLL_0).FromValue(0);
   EXPECT_EQ(0x46010u, lcpll1_ctl.reg_addr());
 
-  auto lcpll2_ctl =
-      tgl_registers::PllEnable::GetForSkylakeDpll(tgl_registers::Dpll::DPLL_1).FromValue(0);
+  auto lcpll2_ctl = tgl_registers::PllEnable::GetForSkylakeDpll(PllId::DPLL_1).FromValue(0);
   EXPECT_EQ(0x46014u, lcpll2_ctl.reg_addr());
 
   // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 pages 1349-1350
   // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 pages 1321-1322
 
-  auto wrpll1_ctl =
-      tgl_registers::PllEnable::GetForSkylakeDpll(tgl_registers::Dpll::DPLL_2).FromValue(0);
+  auto wrpll1_ctl = tgl_registers::PllEnable::GetForSkylakeDpll(PllId::DPLL_2).FromValue(0);
   EXPECT_EQ(0x46040u, wrpll1_ctl.reg_addr());
 
-  auto wrpll2_ctl =
-      tgl_registers::PllEnable::GetForSkylakeDpll(tgl_registers::Dpll::DPLL_3).FromValue(0);
+  auto wrpll2_ctl = tgl_registers::PllEnable::GetForSkylakeDpll(PllId::DPLL_3).FromValue(0);
   EXPECT_EQ(0x46060u, wrpll2_ctl.reg_addr());
 }
 
@@ -1153,43 +1082,34 @@ TEST(PllEnableTest, GetForTigerLakeDpll) {
   //
   // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 pages 655-656
 
-  auto dpll0_enable =
-      tgl_registers::PllEnable::GetForTigerLakeDpll(tgl_registers::Dpll::DPLL_0).FromValue(0);
+  auto dpll0_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(PllId::DPLL_0).FromValue(0);
   EXPECT_EQ(0x46010u, dpll0_enable.reg_addr());
 
-  auto dpll1_enable =
-      tgl_registers::PllEnable::GetForTigerLakeDpll(tgl_registers::Dpll::DPLL_1).FromValue(0);
+  auto dpll1_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(PllId::DPLL_1).FromValue(0);
   EXPECT_EQ(0x46014u, dpll1_enable.reg_addr());
 
   // TODO(fxbug.dev/110351): Add a test for DPLL 4, when we support it. The MMIO
   // address is 0x46018.
 
-  auto tbt_pll_enable =
-      tgl_registers::PllEnable::GetForTigerLakeDpll(tgl_registers::Dpll::DPLL_2).FromValue(0);
+  auto tbt_pll_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(PllId::DPLL_2).FromValue(0);
   EXPECT_EQ(0x46020u, tbt_pll_enable.reg_addr());
 
-  auto mgpll1_enable =
-      tgl_registers::PllEnable::GetForTigerLakeDpll(tgl_registers::Dpll::DPLL_TC_1).FromValue(0);
+  auto mgpll1_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(PllId::DPLL_TC_1).FromValue(0);
   EXPECT_EQ(0x46030u, mgpll1_enable.reg_addr());
 
-  auto mgpll2_enable =
-      tgl_registers::PllEnable::GetForTigerLakeDpll(tgl_registers::Dpll::DPLL_TC_2).FromValue(0);
+  auto mgpll2_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(PllId::DPLL_TC_2).FromValue(0);
   EXPECT_EQ(0x46034u, mgpll2_enable.reg_addr());
 
-  auto mgpll3_enable =
-      tgl_registers::PllEnable::GetForTigerLakeDpll(tgl_registers::Dpll::DPLL_TC_3).FromValue(0);
+  auto mgpll3_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(PllId::DPLL_TC_3).FromValue(0);
   EXPECT_EQ(0x46038u, mgpll3_enable.reg_addr());
 
-  auto mgpll4_enable =
-      tgl_registers::PllEnable::GetForTigerLakeDpll(tgl_registers::Dpll::DPLL_TC_4).FromValue(0);
+  auto mgpll4_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(PllId::DPLL_TC_4).FromValue(0);
   EXPECT_EQ(0x4603cu, mgpll4_enable.reg_addr());
 
-  auto mgpll5_enable =
-      tgl_registers::PllEnable::GetForTigerLakeDpll(tgl_registers::Dpll::DPLL_TC_5).FromValue(0);
+  auto mgpll5_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(PllId::DPLL_TC_5).FromValue(0);
   EXPECT_EQ(0x46040u, mgpll5_enable.reg_addr());
 
-  auto mgpll6_enable =
-      tgl_registers::PllEnable::GetForTigerLakeDpll(tgl_registers::Dpll::DPLL_TC_6).FromValue(0);
+  auto mgpll6_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(PllId::DPLL_TC_6).FromValue(0);
   EXPECT_EQ(0x46044u, mgpll6_enable.reg_addr());
 }
 
@@ -1197,32 +1117,32 @@ TEST(DisplayPllStatusTest, PllLocked) {
   auto dpll_status = tgl_registers::DisplayPllStatus::Get().FromValue(0);
 
   dpll_status.set_reg_value(0).set_pll0_locked(true);
-  EXPECT_EQ(true, dpll_status.pll_locked(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(true, dpll_status.pll_locked(PllId::DPLL_0));
 
   dpll_status.set_reg_value(0).set_pll1_locked(true);
-  EXPECT_EQ(true, dpll_status.pll_locked(tgl_registers::Dpll::DPLL_1));
+  EXPECT_EQ(true, dpll_status.pll_locked(PllId::DPLL_1));
 
   dpll_status.set_reg_value(0).set_pll2_locked(true);
-  EXPECT_EQ(true, dpll_status.pll_locked(tgl_registers::Dpll::DPLL_2));
+  EXPECT_EQ(true, dpll_status.pll_locked(PllId::DPLL_2));
 
   dpll_status.set_reg_value(0).set_pll3_locked(true);
-  EXPECT_EQ(true, dpll_status.pll_locked(tgl_registers::Dpll::DPLL_3));
+  EXPECT_EQ(true, dpll_status.pll_locked(PllId::DPLL_3));
 }
 
 TEST(DisplayPllStatusTest, PllSemDone) {
   auto dpll_status = tgl_registers::DisplayPllStatus::Get().FromValue(0);
 
   dpll_status.set_reg_value(0).set_pll0_sem_done(true);
-  EXPECT_EQ(true, dpll_status.pll_sem_done(tgl_registers::Dpll::DPLL_0));
+  EXPECT_EQ(true, dpll_status.pll_sem_done(PllId::DPLL_0));
 
   dpll_status.set_reg_value(0).set_pll1_sem_done(true);
-  EXPECT_EQ(true, dpll_status.pll_sem_done(tgl_registers::Dpll::DPLL_1));
+  EXPECT_EQ(true, dpll_status.pll_sem_done(PllId::DPLL_1));
 
   dpll_status.set_reg_value(0).set_pll2_sem_done(true);
-  EXPECT_EQ(true, dpll_status.pll_sem_done(tgl_registers::Dpll::DPLL_2));
+  EXPECT_EQ(true, dpll_status.pll_sem_done(PllId::DPLL_2));
 
   dpll_status.set_reg_value(0).set_pll3_sem_done(true);
-  EXPECT_EQ(true, dpll_status.pll_sem_done(tgl_registers::Dpll::DPLL_3));
+  EXPECT_EQ(true, dpll_status.pll_sem_done(PllId::DPLL_3));
 }
 
 }  // namespace

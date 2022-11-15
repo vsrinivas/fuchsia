@@ -274,44 +274,41 @@ TEST(DdiClockConfigTest, DdiClockDisplayPll) {
   // on both edges of the bit field. However, that pattern is invalid, so we'll
   // just use DPLL1 (0b01).
 
-  ddi_clock_config.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_A,
-                                                              tgl_registers::Dpll::DPLL_1);
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_A, PllId::DPLL_1);
   EXPECT_EQ(tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect::kDisplayPll1,
             ddi_clock_config.ddi_a_clock_display_pll_select());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_1, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_A));
+  EXPECT_EQ(PllId::DPLL_1, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_A));
 
-  ddi_clock_config.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_B,
-                                                              tgl_registers::Dpll::DPLL_1);
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_B, PllId::DPLL_1);
   EXPECT_EQ(tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect::kDisplayPll1,
             ddi_clock_config.ddi_b_clock_display_pll_select());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_1, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_B));
+  EXPECT_EQ(PllId::DPLL_1, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_B));
 
-  ddi_clock_config.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_C,
-                                                              tgl_registers::Dpll::DPLL_1);
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_display_pll(DdiId::DDI_C, PllId::DPLL_1);
   EXPECT_EQ(tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect::kDisplayPll1,
             ddi_clock_config.ddi_c_clock_display_pll_select());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_1, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_C));
+  EXPECT_EQ(PllId::DPLL_1, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_C));
 
   // The test uses DPLL0 because the bit pattern (0b00) requires 1->0
   // transitions on both edges of the bit field.
 
   ddi_clock_config.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(DdiId::DDI_A, tgl_registers::Dpll::DPLL_0);
+      .set_ddi_clock_display_pll(DdiId::DDI_A, PllId::DPLL_0);
   EXPECT_EQ(tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect::kDisplayPll0,
             ddi_clock_config.ddi_a_clock_display_pll_select());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_A));
+  EXPECT_EQ(PllId::DPLL_0, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_A));
 
   ddi_clock_config.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(DdiId::DDI_B, tgl_registers::Dpll::DPLL_0);
+      .set_ddi_clock_display_pll(DdiId::DDI_B, PllId::DPLL_0);
   EXPECT_EQ(tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect::kDisplayPll0,
             ddi_clock_config.ddi_b_clock_display_pll_select());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_B));
+  EXPECT_EQ(PllId::DPLL_0, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_B));
 
   ddi_clock_config.set_reg_value(0xffff'ffff)
-      .set_ddi_clock_display_pll(DdiId::DDI_C, tgl_registers::Dpll::DPLL_0);
+      .set_ddi_clock_display_pll(DdiId::DDI_C, PllId::DPLL_0);
   EXPECT_EQ(tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect::kDisplayPll0,
             ddi_clock_config.ddi_c_clock_display_pll_select());
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_0, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_C));
+  EXPECT_EQ(PllId::DPLL_0, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_C));
 
   // TODO(fxbug.dev/110351): Add one test for DPLL4, when we support it.
 }
@@ -321,8 +318,7 @@ TEST(DdiClockConfigTest, DdiClockDisplayPllInvalid) {
 
   ddi_clock_config.set_reg_value(0).set_ddi_a_clock_display_pll_select(
       static_cast<tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect>(0b11));
-  EXPECT_EQ(tgl_registers::Dpll::DPLL_INVALID,
-            ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_A));
+  EXPECT_EQ(PllId::DPLL_INVALID, ddi_clock_config.ddi_clock_display_pll(DdiId::DDI_A));
 }
 
 TEST(DpTransportControlTest, GetForKabyLakeDdi) {

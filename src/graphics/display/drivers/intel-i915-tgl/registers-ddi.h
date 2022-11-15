@@ -812,7 +812,7 @@ class DdiClockConfig : public hwreg::RegisterBase<DdiClockConfig, uint32_t> {
   // The DPLL (Display PLL) used as a clock source for a DDI.
   //
   // Returns DPLL_INVALID if the field is set to an undocumented value.
-  Dpll ddi_clock_display_pll(i915_tgl::DdiId ddi_id) const {
+  i915_tgl::PllId ddi_clock_display_pll(i915_tgl::DdiId ddi_id) const {
     ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
     ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_C);
 
@@ -823,33 +823,34 @@ class DdiClockConfig : public hwreg::RegisterBase<DdiClockConfig, uint32_t> {
 
     switch (dpll_select) {
       case DdiClockDisplayPllSelect::kDisplayPll0:
-        return Dpll::DPLL_0;
+        return i915_tgl::PllId::DPLL_0;
       case DdiClockDisplayPllSelect::kDisplayPll1:
-        return Dpll::DPLL_1;
+        return i915_tgl::PllId::DPLL_1;
       case DdiClockDisplayPllSelect::kDisplayPll4:
         // TODO(fxbug.dev/110351): Add support for DPLL4.
         break;
     }
-    return Dpll::DPLL_INVALID;  // The field is set to an undocumented value.
+    // The field is set to an undocumented value.
+    return i915_tgl::PllId::DPLL_INVALID;
   }
 
   // See `ddi_clock_display_pll()` for details.
-  DdiClockConfig& set_ddi_clock_display_pll(i915_tgl::DdiId ddi_id, Dpll display_pll) {
+  DdiClockConfig& set_ddi_clock_display_pll(i915_tgl::DdiId ddi_id, i915_tgl::PllId pll_id) {
     ZX_ASSERT(ddi_id >= i915_tgl::DdiId::DDI_A);
     ZX_ASSERT(ddi_id <= i915_tgl::DdiId::DDI_C);
 
     DdiClockDisplayPllSelect dpll_select;
-    switch (display_pll) {
-      case Dpll::DPLL_0:
+    switch (pll_id) {
+      case i915_tgl::PllId::DPLL_0:
         dpll_select = DdiClockDisplayPllSelect::kDisplayPll0;
         break;
-      case Dpll::DPLL_1:
+      case i915_tgl::PllId::DPLL_1:
         dpll_select = DdiClockDisplayPllSelect::kDisplayPll1;
         break;
 
       // TODO(fxbug.dev/110351): Add support for DPLL4.
       default:
-        ZX_DEBUG_ASSERT_MSG(false, "Invalid Display PLL: %d", display_pll);
+        ZX_DEBUG_ASSERT_MSG(false, "Unsupported DDI PLL: %d", pll_id);
         dpll_select = DdiClockDisplayPllSelect::kDisplayPll0;
     }
 

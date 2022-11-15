@@ -134,11 +134,7 @@ constexpr cpp20::span<const PipeId> PipeIds() {
   }
 }
 
-}  // namespace i915_tgl
-
-namespace tgl_registers {
-
-enum Dpll {
+enum PllId {
   DPLL_INVALID = -1,
   DPLL_0 = 0,
   DPLL_1,
@@ -155,7 +151,7 @@ enum Dpll {
 
 namespace internal {
 
-constexpr std::array kDpllsKabyLake = {
+constexpr std::array kPllIdsKabyLake = {
     DPLL_0,
     DPLL_1,
     DPLL_2,
@@ -163,24 +159,24 @@ constexpr std::array kDpllsKabyLake = {
 };
 
 // TODO(fxbug.dev/110351): Add support for DPLL4.
-constexpr std::array kDpllsTigerLake = {
+constexpr std::array kPllIdsTigerLake = {
     DPLL_0, DPLL_1, DPLL_2, DPLL_TC_1, DPLL_TC_2, DPLL_TC_3, DPLL_TC_4, DPLL_TC_5, DPLL_TC_6,
 };
 
 }  // namespace internal
 
-template <Platform P>
-constexpr cpp20::span<const Dpll> Dplls() {
+template <tgl_registers::Platform P>
+constexpr cpp20::span<const PllId> PllIds() {
   switch (P) {
-    case Platform::kSkylake:
-    case Platform::kKabyLake:
-    case Platform::kTestDevice:
-      return internal::kDpllsKabyLake;
-    case Platform::kTigerLake:
-      return internal::kDpllsTigerLake;
+    case tgl_registers::Platform::kSkylake:
+    case tgl_registers::Platform::kKabyLake:
+    case tgl_registers::Platform::kTestDevice:
+      return internal::kPllIdsKabyLake;
+    case tgl_registers::Platform::kTigerLake:
+      return internal::kPllIdsTigerLake;
   }
 }
 
-}  // namespace tgl_registers
+}  // namespace i915_tgl
 
 #endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_HARDWARE_COMMON_H_

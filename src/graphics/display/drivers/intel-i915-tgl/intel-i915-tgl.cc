@@ -346,10 +346,10 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     // Enable CDCLK PLL to 337.5mhz if the BIOS didn't already enable it. If it needs to be
     // something special (i.e. for eDP), assume that the BIOS already enabled it.
     auto lcpll1_control =
-        tgl_registers::PllEnable::GetForSkylakeDpll(tgl_registers::DPLL_0).ReadFrom(mmio_space());
+        tgl_registers::PllEnable::GetForSkylakeDpll(PllId::DPLL_0).ReadFrom(mmio_space());
     if (!lcpll1_control.pll_enabled()) {
       // Configure DPLL0 frequency before enabling it.
-      const auto dpll = tgl_registers::Dpll::DPLL_0;
+      const auto dpll = PllId::DPLL_0;
       auto dpll_control1 = tgl_registers::DisplayPllControl1::Get().ReadFrom(mmio_space());
       dpll_control1.set_pll_uses_hdmi_configuration_mode(dpll, false)
           .set_pll_spread_spectrum_clocking_enabled(dpll, false)

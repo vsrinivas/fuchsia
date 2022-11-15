@@ -93,7 +93,7 @@ class DisplayPll {
   bool Disable();
 
   const std::string& name() const { return name_; }
-  tgl_registers::Dpll dpll() const { return dpll_; }
+  PllId pll_id() const { return pll_id_; }
 
   // The configuration that the PLL is locked to.
   //
@@ -101,7 +101,7 @@ class DisplayPll {
   const DdiPllConfig& config() const { return config_; }
 
  protected:
-  explicit DisplayPll(tgl_registers::Dpll dpll);
+  explicit DisplayPll(PllId pll_id);
 
   // Same API as `Enable()`.
   //
@@ -119,7 +119,7 @@ class DisplayPll {
   void set_config(const DdiPllConfig& config) { config_ = config; }
 
  private:
-  tgl_registers::Dpll dpll_;
+  PllId pll_id_;
   std::string name_;
 
   DdiPllConfig config_ = {};
@@ -198,7 +198,7 @@ class DisplayPllManager {
   //
   // Implementations perform the register-level configuration, while assuming
   // that logging and state updating are taken care of.
-  virtual bool SetDdiClockSource(DdiId ddi_id, tgl_registers::Dpll pll) = 0;
+  virtual bool SetDdiClockSource(DdiId ddi_id, PllId pll_id) = 0;
 
   // Resets the DDI's clock source so it doesn't use any PLL.
   //
@@ -225,7 +225,7 @@ class DisplayPllManager {
   // that logging and state updating are taken care of.
   virtual DisplayPll* FindPllFor(DdiId ddi_id, bool is_edp, const DdiPllConfig& desired_config) = 0;
 
-  std::unordered_map<tgl_registers::Dpll, std::unique_ptr<DisplayPll>> plls_;
+  std::unordered_map<PllId, std::unique_ptr<DisplayPll>> plls_;
   std::unordered_map<DisplayPll*, size_t> ref_count_;
   std::unordered_map<DdiId, DisplayPll*> ddi_to_dpll_;
 };
@@ -237,7 +237,7 @@ class DisplayPllManager {
 // also used to drive the CDCLK (core display clock).
 class DpllSkylake : public DisplayPll {
  public:
-  DpllSkylake(fdf::MmioBuffer* mmio_space, tgl_registers::Dpll dpll);
+  DpllSkylake(fdf::MmioBuffer* mmio_space, PllId pll_id);
   ~DpllSkylake() override = default;
 
  protected:
@@ -262,7 +262,7 @@ class DpllManagerSkylake : public DisplayPllManager {
 
  private:
   // DisplayPllManager overrides:
-  bool SetDdiClockSource(DdiId ddi_id, tgl_registers::Dpll pll) final;
+  bool SetDdiClockSource(DdiId ddi_id, PllId pll_id) final;
   bool ResetDdiClockSource(DdiId ddi_id) final;
   DisplayPll* FindPllFor(DdiId ddi_id, bool is_edp, const DdiPllConfig& desired_config) final;
 
@@ -276,7 +276,7 @@ class DpllManagerSkylake : public DisplayPllManager {
 // characteristics.
 class DisplayPllTigerLake : public DisplayPll {
  public:
-  DisplayPllTigerLake(fdf::MmioBuffer* mmio_space, tgl_registers::Dpll dpll);
+  DisplayPllTigerLake(fdf::MmioBuffer* mmio_space, PllId pll_id);
   ~DisplayPllTigerLake() override = default;
 
  protected:
@@ -293,7 +293,7 @@ class DisplayPllTigerLake : public DisplayPll {
 // Each TC (Type-C) DDI has a dedicated PLL tied to it.
 class DekelPllTigerLake : public DisplayPll {
  public:
-  DekelPllTigerLake(fdf::MmioBuffer* mmio_space, tgl_registers::Dpll dpll);
+  DekelPllTigerLake(fdf::MmioBuffer* mmio_space, PllId pll_id);
   ~DekelPllTigerLake() override = default;
 
   // Returns DDI enum of the DDI tied to current Dekel PLL.
@@ -324,7 +324,7 @@ class DpllManagerTigerLake : public DisplayPllManager {
   DdiPllConfig LoadStateForTypeCDdi(DdiId ddi_id);
 
   // DisplayPllManager overrides:
-  bool SetDdiClockSource(DdiId ddi_id, tgl_registers::Dpll pll) final;
+  bool SetDdiClockSource(DdiId ddi_id, PllId pll_id) final;
   bool ResetDdiClockSource(DdiId ddi_id) final;
   DisplayPll* FindPllFor(DdiId ddi_id, bool is_edp, const DdiPllConfig& desired_config) final;
 

@@ -33,8 +33,7 @@ TEST(CreateDpllFrequencyDividerConfigKabyLakeTest, AllDivisors) {
     // The helpers below ZX_DEBUG_ASSERT() on incorrect divider values. The
     // assignments are on separate lines to facilitate debugging.
     auto dpll_config2 =
-        tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(tgl_registers::DPLL_1)
-            .FromValue(0);
+        tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(PllId::DPLL_1).FromValue(0);
     dpll_config2.set_p_p0_divider(static_cast<uint8_t>(divider_config.p0_p_divider));
     dpll_config2.set_q_p1_divider(static_cast<uint8_t>(divider_config.p1_q_divider));
     dpll_config2.set_k_p2_divider(static_cast<uint8_t>(divider_config.p2_k_divider));
@@ -86,8 +85,7 @@ TEST(CreateDpllFrequencyDividerConfigTigerLakeTest, AllDivisors) {
     // The helpers below ZX_DEBUG_ASSERT() on incorrect divider values. The
     // assignments are on separate lines to facilitate debugging.
     auto pll_dco_dividers =
-        tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::DPLL_0)
-            .FromValue(0);
+        tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(PllId::DPLL_0).FromValue(0);
     pll_dco_dividers.set_p_p0_divider(static_cast<uint8_t>(divider_config.p0_p_divider));
     pll_dco_dividers.set_q_p1_divider(static_cast<uint8_t>(divider_config.p1_q_divider));
     pll_dco_dividers.set_k_p2_divider(static_cast<uint8_t>(divider_config.p2_k_divider));

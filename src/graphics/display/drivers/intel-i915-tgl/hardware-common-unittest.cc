@@ -19,10 +19,10 @@ TEST(HardwareCommonTest, Skylake) {
   EXPECT_THAT(ddis, testing::Contains(DdiId::DDI_E).Times(1));
   EXPECT_THAT(ddis, testing::Not(testing::Contains(DdiId::DDI_TC_6)));
 
-  auto dplls = tgl_registers::Dplls<tgl_registers::Platform::kSkylake>();
+  auto dplls = PllIds<tgl_registers::Platform::kSkylake>();
   EXPECT_EQ(dplls.size(), 4u);
-  EXPECT_THAT(dplls, testing::Contains(tgl_registers::DPLL_0).Times(1));
-  EXPECT_THAT(dplls, testing::Contains(tgl_registers::DPLL_3).Times(1));
+  EXPECT_THAT(dplls, testing::Contains(PllId::DPLL_0).Times(1));
+  EXPECT_THAT(dplls, testing::Contains(PllId::DPLL_3).Times(1));
 
   auto pipes = PipeIds<tgl_registers::Platform::kSkylake>();
   EXPECT_EQ(pipes.size(), 3u);
@@ -45,10 +45,10 @@ TEST(HardwareCommonTest, KabyLake) {
   EXPECT_THAT(ddis, testing::Contains(DdiId::DDI_E).Times(1));
   EXPECT_THAT(ddis, testing::Not(testing::Contains(DdiId::DDI_TC_6)));
 
-  auto dplls = tgl_registers::Dplls<tgl_registers::Platform::kKabyLake>();
+  auto dplls = PllIds<tgl_registers::Platform::kKabyLake>();
   EXPECT_EQ(dplls.size(), 4u);
-  EXPECT_THAT(dplls, testing::Contains(tgl_registers::DPLL_0).Times(1));
-  EXPECT_THAT(dplls, testing::Contains(tgl_registers::DPLL_3).Times(1));
+  EXPECT_THAT(dplls, testing::Contains(PllId::DPLL_0).Times(1));
+  EXPECT_THAT(dplls, testing::Contains(PllId::DPLL_3).Times(1));
 
   auto pipes = PipeIds<tgl_registers::Platform::kKabyLake>();
   EXPECT_EQ(pipes.size(), 3u);

@@ -38,7 +38,7 @@ constexpr uint32_t kMmioSize = 0xd0000;
 
 class TestDpll : public DisplayPll {
  public:
-  explicit TestDpll(tgl_registers::Dpll dpll) : DisplayPll(dpll) {}
+  explicit TestDpll(PllId pll_id) : DisplayPll(pll_id) {}
   ~TestDpll() override = default;
 
   bool DoEnable(const DdiPllConfig& pll_config) final {
@@ -73,10 +73,9 @@ class TestDpllManager : public DisplayPllManager {
   }
 
  private:
-  constexpr static auto kDplls = {tgl_registers::Dpll::DPLL_0, tgl_registers::Dpll::DPLL_1,
-                                  tgl_registers::Dpll::DPLL_2};
+  constexpr static auto kDplls = {PllId::DPLL_0, PllId::DPLL_1, PllId::DPLL_2};
 
-  bool SetDdiClockSource(DdiId ddi_id, tgl_registers::Dpll pll) final { return true; }
+  bool SetDdiClockSource(DdiId ddi_id, PllId pll_id) final { return true; }
   bool ResetDdiClockSource(DdiId ddi_id) final { return true; }
 
   DisplayPll* FindPllFor(DdiId ddi_id, bool is_edp, const DdiPllConfig& desired_config) final {
