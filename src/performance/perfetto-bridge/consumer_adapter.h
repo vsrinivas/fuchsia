@@ -37,14 +37,23 @@ class ConsumerAdapter : public perfetto::Consumer {
   // Finite state machine states.
   // State transition rules are applied in ChangeState().
   enum class State {
-    INACTIVE,                  // No active trace.
-    ACTIVE,                    // Tracing active; waiting for scheduled call to ReadBuffers().
-    READING,                   // Scheduled ReadBuffers() called.
-    READING_PENDING_SHUTDOWN,  // Shutdown called mid-read. Allows read to finish before Flushing.
-    SHUTDOWN_FLUSH,            // Flush() called.
-    SHUTDOWN_DISABLED,         // DisableTracing() called.
-    SHUTDOWN_READING,          // Final ReadBuffers() called.
-    SHUTDOWN_STATS,            // GetTraceStats() called.
+    INACTIVE,  // Tracing inactive.
+
+    // Active tracing states.
+    ACTIVE,   // Tracing active; scheduled stats-checking task pending.
+    STATS,    // Periodic buffer utilization check before READING.
+              // Changes to ACTIVE if there is sufficient space in the buffer.
+    READING,  // Reading consumer buffer once STATS threshold is hit.
+              // Changes to ACTIVE on read completion.
+
+    // Shutdown states, run in-order in response to the Fuchsia TRACE_STOPPING event.
+    READING_PENDING_SHUTDOWN,  // If shutdown is called mid-read, defers shutdown until reading
+                               // has finished. Changes to SHUTDOWN_FLUSH on read completion.
+    SHUTDOWN_FLUSH,            // Flush() called on shutdown.
+    SHUTDOWN_DISABLED,         // DisableTracing() called after flush completion.
+    SHUTDOWN_READING,          // ReadBuffers() called after tracing has stopped.
+    SHUTDOWN_STATS,            // GetTraceStats() called for end-of-session diagnostics logging.
+                               // Changes to INACTIVE when complete.
   };
   void ChangeState(State new_state);
   State GetState();
@@ -58,12 +67,14 @@ class ConsumerAdapter : public perfetto::Consumer {
   // Called in response to the Fuchsia TRACE_STOPPING event.
   void CallPerfettoDisableTracing();
 
-  void SchedulePerfettoReadBuffers();
+  void ShutdownTracing();
+
+  void SchedulePerfettoGetStats();
   void CallPerfettoReadBuffers(bool on_shutdown);
   void OnPerfettoReadBuffersComplete();
 
   void CallPerfettoFlush();
-  void CallPerfettoGetTraceStats();
+  void CallPerfettoGetTraceStats(bool on_shutdown);
 
   // perfetto::Consumer implementation.
   void OnConnect() override;

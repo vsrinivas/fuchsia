@@ -30,14 +30,39 @@ namespace {
 // The size of the consumer buffer.
 constexpr size_t kConsumerBufferSizeKb = 20ul * 1024ul;  // 20MB.
 
-// The time to wait between consumer buffer reads, in milliseconds.
-constexpr int kConsumerReadIntervalMs = 2000;
+// The delay between buffer utilization checks.
+constexpr int kConsumerStatsPollIntervalMs = 500;
+
+// Sets the amount of buffer usage that will cause the buffer to be read mid-trace.
+constexpr float kConsumerUtilizationReadThreshold = 0.6f;
 
 // Interval for recreating interned string data, in milliseconds.
 // Used for stream recovery in the event of data loss.
 constexpr uint32_t kIncrementalStateClearMs = 4000;
 
 constexpr char kBlobName[] = "perfetto-bridge";
+
+void LogTraceStats(const perfetto::TraceStats& stats) {
+  const auto& buffer_stats = stats.buffer_stats().front();
+  FX_LOGS(INFO) << fxl::StringPrintf(
+      "Trace stats: "
+      "producers_connected: %u , "
+      "data_sources_registered: %u , "
+      "tracing_sessions: %u",
+      stats.producers_connected(), stats.data_sources_registered(), stats.tracing_sessions());
+  FX_LOGS(INFO) << fxl::StringPrintf(
+      "Consumer buffer stats :"
+      "consumer bytes_written: %lu, "
+      "consumer bytes_read: %lu, "
+      "consumer bytes_overwritten (lost): %lu, ",
+      buffer_stats.bytes_written(), buffer_stats.bytes_read(), buffer_stats.bytes_overwritten());
+  if (buffer_stats.bytes_overwritten() > 0) {
+    // If too much data was lost, then the consumer buffer should be enlarged
+    // and/or the drain interval shortened.
+    FX_LOGS(WARNING) << "Perfetto consumer buffer overrun detected.";
+  }
+}
+
 }  // namespace
 
 // Prolongs the lifetime of a trace session when set.
@@ -85,13 +110,18 @@ void ConsumerAdapter::ChangeState(State new_state) {
       valid_transition = old_state == State::SHUTDOWN_STATS;
       break;
     case State::ACTIVE:
-      valid_transition = old_state == State::INACTIVE || old_state == State::READING;
+      valid_transition =
+          old_state == State::INACTIVE || old_state == State::STATS || old_state == State::READING;
       break;
-    case State::READING:
+    case State::STATS:
       valid_transition = old_state == State::ACTIVE;
       break;
+    case State::READING:
+      valid_transition = old_state == State::STATS;
+      break;
     case State::SHUTDOWN_FLUSH:
-      valid_transition = old_state == State::ACTIVE || old_state == State::READING_PENDING_SHUTDOWN;
+      valid_transition = old_state == State::ACTIVE ||
+                         old_state == State::READING_PENDING_SHUTDOWN || old_state == State::STATS;
       break;
     case State::READING_PENDING_SHUTDOWN:
       valid_transition = old_state == State::READING;
@@ -193,7 +223,7 @@ void ConsumerAdapter::OnStartTracing() {
   scoped_prolonged_trace_ = std::make_unique<ScopedProlongedTraceContext>();
 
   ChangeState(State::ACTIVE);
-  SchedulePerfettoReadBuffers();
+  SchedulePerfettoGetStats();
 }
 
 void ConsumerAdapter::CallPerfettoDisableTracing() {
@@ -203,14 +233,16 @@ void ConsumerAdapter::CallPerfettoDisableTracing() {
   consumer_endpoint_->DisableTracing();
 }
 
-void ConsumerAdapter::SchedulePerfettoReadBuffers() {
+void ConsumerAdapter::SchedulePerfettoGetStats() {
+  FX_DCHECK(GetState() == State::ACTIVE);
+
   perfetto_task_runner_->PostDelayedTask(
       [this]() {
         if (GetState() == State::ACTIVE) {
-          CallPerfettoReadBuffers(false /* shutdown */);
+          CallPerfettoGetTraceStats(false /* on_shutdown */);
         }
       },
-      kConsumerReadIntervalMs);
+      kConsumerStatsPollIntervalMs);
 }
 
 void ConsumerAdapter::CallPerfettoReadBuffers(bool on_shutdown) {
@@ -236,9 +268,9 @@ void ConsumerAdapter::OnPerfettoReadBuffersComplete() {
 
   if (GetState() == State::READING) {
     ChangeState(State::ACTIVE);
-    SchedulePerfettoReadBuffers();
+    SchedulePerfettoGetStats();
   } else if (GetState() == State::SHUTDOWN_READING) {
-    CallPerfettoGetTraceStats();
+    CallPerfettoGetTraceStats(true);
   } else if (GetState() == State::READING_PENDING_SHUTDOWN) {
     CallPerfettoFlush();
   }
@@ -254,8 +286,8 @@ void ConsumerAdapter::CallPerfettoFlush() {
   });
 }
 
-void ConsumerAdapter::CallPerfettoGetTraceStats() {
-  ChangeState(State::SHUTDOWN_STATS);
+void ConsumerAdapter::CallPerfettoGetTraceStats(bool on_shutdown) {
+  ChangeState(on_shutdown ? State::SHUTDOWN_STATS : State::STATS);
   consumer_endpoint_->GetTraceStats();
 }
 
@@ -270,37 +302,36 @@ void ConsumerAdapter::OnTracingDisabled(const std::string& error) {
 }
 
 void ConsumerAdapter::OnTraceStats(bool success, const perfetto::TraceStats& stats) {
-  ChangeState(State::INACTIVE);
+  if (GetState() == State::STATS) {
+    const auto& buffer_stats = stats.buffer_stats().front();
+    const size_t buffer_used = buffer_stats.bytes_written() -
+                               (buffer_stats.bytes_read() + buffer_stats.bytes_overwritten());
+    const float utilization =
+        static_cast<float>(buffer_used) / static_cast<float>(buffer_stats.buffer_size());
 
+    if (utilization >= kConsumerUtilizationReadThreshold) {
+      CallPerfettoReadBuffers(false /* shutdown */);
+    } else {
+      ChangeState(State::ACTIVE);
+      SchedulePerfettoGetStats();
+    }
+  } else if (GetState() == State::SHUTDOWN_STATS) {
+    ChangeState(State::INACTIVE);
+
+    if (success) {
+      LogTraceStats(stats);
+    }
+
+    ShutdownTracing();
+  }
+}
+
+void ConsumerAdapter::ShutdownTracing() {
   consumer_endpoint_.reset();
   FX_DCHECK(scoped_prolonged_trace_);
   scoped_prolonged_trace_.reset();
   if (blob_write_context_) {
     trace_release_context(blob_write_context_);
-  }
-
-  if (!success) {
-    FX_LOGS(WARNING) << "Error requesting trace stats from Perfetto.";
-    return;
-  }
-
-  const auto& buffer_stats = stats.buffer_stats().front();
-  FX_LOGS(INFO) << fxl::StringPrintf(
-      "Trace stats: "
-      "producers_connected: %u , "
-      "data_sources_registered: %u , "
-      "tracing_sessions: %u",
-      stats.producers_connected(), stats.data_sources_registered(), stats.tracing_sessions());
-  FX_LOGS(INFO) << fxl::StringPrintf(
-      "Consumer buffer stats :"
-      "consumer bytes_written: %lu, "
-      "consumer bytes_read: %lu, "
-      "consumer bytes_overwritten (lost): %lu, ",
-      buffer_stats.bytes_written(), buffer_stats.bytes_read(), buffer_stats.bytes_overwritten());
-  if (buffer_stats.bytes_overwritten() > 0) {
-    // If too much data was lost, then the consumer buffer should be enlarged
-    // and/or the drain interval shortened.
-    FX_LOGS(WARNING) << "Perfetto consumer buffer overrun detected.";
   }
 }
 
