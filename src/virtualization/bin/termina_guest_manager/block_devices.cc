@@ -40,8 +40,7 @@ using ManagerHandle = fidl::InterfaceHandle<fuchsia::hardware::block::volume::Vo
 
 // Information about a disk image.
 struct DiskImage {
-  const char* path;                             // Path to the file containing the image
-  fuchsia::virtualization::BlockFormat format;  // Format of the disk image
+  const char* path;  // Path to the file containing the image
   bool read_only;
   bool create_file;
 };
@@ -55,20 +54,17 @@ constexpr bool kForceVolatileWrites = false;
 constexpr DiskImage kBlockFileStatefulImage = DiskImage{
     // NOTE: This assumes the /data directory is using Fxfs
     .path = "/data/fxfs_virtualization_guest_image",
-    .format = fuchsia::virtualization::BlockFormat::BLOCK,
     .read_only = false,
     .create_file = true,
 };
 constexpr DiskImage kFileStatefulImage = DiskImage{
     .path = "/data/fxfs_virtualization_guest_image",
-    .format = fuchsia::virtualization::BlockFormat::FILE,
     .read_only = false,
     .create_file = true,
 };
 
 constexpr DiskImage kExtrasImage = DiskImage{
     .path = "/pkg/data/termina_extras.img",
-    .format = fuchsia::virtualization::BlockFormat::FILE,
     .read_only = true,
     .create_file = false,
 };
@@ -239,8 +235,8 @@ zx::result<fuchsia::io::FileHandle> GetPartition(const DiskImage& image) {
 }
 
 // Opens the given disk image.
-zx::result<fuchsia::io::FileHandle> GetFxfsPartition(const DiskImage& image,
-                                                     const size_t image_size_bytes) {
+zx::result<fidl::InterfaceHandle<fuchsia::hardware::block::Block>> GetFxfsPartition(
+    const DiskImage& image, const size_t image_size_bytes) {
   TRACE_DURATION("linux_runner", "GetFxfsPartition");
 
   // First, use regular file operations to make a huge file at image.path
@@ -310,7 +306,7 @@ zx::result<fuchsia::io::FileHandle> GetFxfsPartition(const DiskImage& image,
     return zx::error(device_open_result.status());
   }
 
-  return zx::ok(fuchsia::io::FileHandle(device_client.TakeChannel()));
+  return zx::ok(fuchsia::hardware::block::BlockHandle(device_client.TakeChannel()));
 }
 
 }  // namespace
@@ -334,18 +330,17 @@ fit::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlo
     if (handle.is_error()) {
       return fit::error("Failed to open or create stateful Fxfs file / block device");
     }
-    stateful_spec.client = handle->TakeChannel();
     stateful_spec.mode = fuchsia::virtualization::BlockMode::READ_WRITE;
-    stateful_spec.format = fuchsia::virtualization::BlockFormat::BLOCK;
+    stateful_spec.format.set_block(std::move(handle.value()));
   } else if (structured_config.stateful_partition_type() == "fvm") {
     // FVM
     auto handle = FindOrAllocatePartition(kBlockPath, stateful_image_size_bytes, min_size);
     if (handle.is_error()) {
       return fit::error("Failed to find or allocate a partition");
     }
-    stateful_spec.client = handle->TakeChannel();
     stateful_spec.mode = fuchsia::virtualization::BlockMode::READ_WRITE;
-    stateful_spec.format = fuchsia::virtualization::BlockFormat::BLOCK;
+    stateful_spec.format.set_block(
+        fidl::InterfaceHandle<fuchsia::hardware::block::Block>(handle.value().TakeChannel()));
   } else if (structured_config.stateful_partition_type() == "file") {
     // Simple files.
     auto handle = GetPartition(kFileStatefulImage);
@@ -360,9 +355,8 @@ fit::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlo
       return fit::error("Failed resize stateful file");
     }
 
-    stateful_spec.client = ptr.Unbind().TakeChannel();
     stateful_spec.mode = fuchsia::virtualization::BlockMode::READ_WRITE;
-    stateful_spec.format = fuchsia::virtualization::BlockFormat::FILE;
+    stateful_spec.format.set_file(ptr.Unbind());
   }
   if (kForceVolatileWrites) {
     stateful_spec.mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE;
@@ -375,8 +369,7 @@ fit::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlo
     devices.push_back({
         .id = "extras",
         .mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
-        .format = kExtrasImage.format,
-        .client = extras->TakeChannel(),
+        .format = fuchsia::virtualization::BlockFormat::WithFile(std::move(extras.value())),
     });
   }
 

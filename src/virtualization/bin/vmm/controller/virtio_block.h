@@ -22,9 +22,8 @@ class VirtioBlock
   VirtioBlock(const PhysMem& phys_mem, fuchsia::virtualization::BlockMode mode,
               fuchsia::virtualization::BlockFormat format);
 
-  zx_status_t Start(const zx::guest& guest, const std::string& id, zx::channel client,
-                    ::sys::ComponentContext* context, async_dispatcher_t* dispatcher,
-                    size_t component_name_suffix);
+  zx_status_t Start(const zx::guest& guest, const std::string& id, sys::ComponentContext* context,
+                    async_dispatcher_t* dispatcher, size_t component_name_suffix);
 
  private:
   fuchsia::virtualization::BlockMode mode_;

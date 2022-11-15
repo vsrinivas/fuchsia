@@ -189,15 +189,15 @@ fit::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContext
 
   // Create a new VirtioBlock device for each device requested.
   for (auto& block_device : *cfg.mutable_block_devices()) {
-    auto block =
-        std::make_unique<VirtioBlock>(guest_->phys_mem(), block_device.mode, block_device.format);
+    auto block = std::make_unique<VirtioBlock>(guest_->phys_mem(), block_device.mode,
+                                               std::move(block_device.format));
     status = pci_bus_->Connect(block->pci_device(), dispatcher);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect block device";
       return fit::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = block->Start(guest_->object(), block_device.id, std::move(block_device.client),
-                          context, dispatcher, block_devices_.size());
+    status =
+        block->Start(guest_->object(), block_device.id, context, dispatcher, block_devices_.size());
 
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start block device";

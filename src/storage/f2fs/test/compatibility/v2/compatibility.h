@@ -219,11 +219,12 @@ class F2fsDebianGuest : public DebianEnclosedGuest {
     if (status != ZX_OK) {
       return status;
     }
-    block_specs.emplace_back(
-        fuchsia::virtualization::BlockSpec{.id = test_device_id,
-                                           .mode = fuchsia::virtualization::BlockMode::READ_WRITE,
-                                           .format = fuchsia::virtualization::BlockFormat::FILE,
-                                           .client = std::move(channel)});
+    block_specs.emplace_back(fuchsia::virtualization::BlockSpec{
+        .id = test_device_id,
+        .mode = fuchsia::virtualization::BlockMode::READ_WRITE,
+        .format = fuchsia::virtualization::BlockFormat::WithFile(
+            fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel))),
+    });
     cfg->set_block_devices(std::move(block_specs));
 
     linux_operator_ = std::make_unique<LinuxOperator>(linux_device_path_, this);

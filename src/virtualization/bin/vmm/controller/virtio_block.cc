@@ -20,7 +20,7 @@ uint32_t read_only(fuchsia::virtualization::BlockMode mode) {
   return mode == fuchsia::virtualization::BlockMode::READ_ONLY ? VIRTIO_BLK_F_RO : 0;
 }
 
-uint32_t discardable(fuchsia::virtualization::BlockFormat format) {
+uint32_t discardable(fuchsia::virtualization::BlockFormat& format) {
   // TODO(fxbug.dev/90622): Enable discard support if BLOCK is the format used.
   return 0;
 }
@@ -39,9 +39,9 @@ VirtioBlock::VirtioBlock(const PhysMem& phys_mem, fuchsia::virtualization::Block
           fit::bind_member(this, &VirtioBlock::ConfigureQueue),
           fit::bind_member(this, &VirtioBlock::Ready)),
       mode_(mode),
-      format_(format) {}
+      format_(std::move(format)) {}
 
-zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id, zx::channel client,
+zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
                                ::sys::ComponentContext* context, async_dispatcher_t* dispatcher,
                                size_t component_name_suffix) {
   std::string component_name = fxl::StringPrintf("virtio_block_%zu", component_name_suffix);
@@ -65,8 +65,7 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id, zx
                          {
                              .id = id,
                              .mode = mode_,
-                             .format = format_,
-                             .client = std::move(client),
+                             .format = std::move(format_),
                          },
                          &capacity, &block_size);
   if (status != ZX_OK) {

@@ -314,17 +314,16 @@ TEST_F(GuestManagerTest, GuestInitiatedCleanShutdown) {
 TEST_F(GuestManagerTest, LaunchAndApplyUserGuestConfig) {
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
 
-  zx::channel channel1, channel2;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &channel1, &channel2));
+  fidl::InterfaceHandle<fuchsia::io::File> file;
+  fidl::InterfaceRequest request = file.NewRequest();
 
   fuchsia::virtualization::GuestConfig user_guest_config;
   user_guest_config.mutable_cmdline_add()->emplace_back("extra_cmd_line_arg=0");
 
   user_guest_config.mutable_block_devices()->push_back({
-      "lessthan20charid",
-      fuchsia::virtualization::BlockMode::READ_ONLY,
-      fuchsia::virtualization::BlockFormat::FILE,
-      std::move(channel2),
+      .id = "lessthan20charid",
+      .mode = fuchsia::virtualization::BlockMode::READ_ONLY,
+      .format = fuchsia::virtualization::BlockFormat::WithFile(std::move(file)),
   });
   fuchsia::virtualization::GuestPtr guest;
   bool launch_callback_called = false;
@@ -339,11 +338,11 @@ TEST_F(GuestManagerTest, LaunchAndApplyUserGuestConfig) {
   const GuestConfig config = fake_guest_lifecycle_->take_guest_config();
   const fuchsia::virtualization::BlockSpec& spec0 = config.block_devices()[0];
   ASSERT_EQ("data", spec0.id);
-  ASSERT_EQ(fuchsia::virtualization::BlockFormat::FILE, spec0.format);
+  ASSERT_TRUE(spec0.format.is_file()) << spec0.format.Which();
 
   const fuchsia::virtualization::BlockSpec& spec1 = config.block_devices()[1];
   ASSERT_EQ("lessthan20charid", spec1.id);
-  ASSERT_EQ(fuchsia::virtualization::BlockFormat::FILE, spec1.format);
+  ASSERT_TRUE(spec1.format.is_file()) << spec1.format.Which();
 
   ASSERT_EQ(2u, config.block_devices().size());
 

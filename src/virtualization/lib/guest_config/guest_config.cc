@@ -66,11 +66,34 @@ zx_status_t parse(const OpenAt& open_at, const std::string& name, const std::str
     } else if (token == "volatile") {
       out->mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE;
     } else if (token == "file") {
-      out->format = fuchsia::virtualization::BlockFormat::FILE;
+      if (!out->format.has_invalid_tag()) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      fidl::InterfaceHandle<fuchsia::io::File> file;
+      if (zx_status_t status = open_at(path, file.NewRequest()); status != ZX_OK) {
+        return status;
+      }
+      out->format.set_file(std::move(file));
     } else if (token == "qcow") {
-      out->format = fuchsia::virtualization::BlockFormat::QCOW;
+      if (!out->format.has_invalid_tag()) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      fidl::InterfaceHandle<fuchsia::io::File> file;
+      if (zx_status_t status = open_at(path, file.NewRequest()); status != ZX_OK) {
+        return status;
+      }
+      out->format.set_qcow(file.TakeChannel());
     } else if (token == "block") {
-      out->format = fuchsia::virtualization::BlockFormat::BLOCK;
+      if (!out->format.has_invalid_tag()) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      fidl::InterfaceHandle<fuchsia::hardware::block::Block> block;
+      if (zx_status_t status = open_at(
+              path, fidl::InterfaceRequest<fuchsia::io::File>(block.NewRequest().TakeChannel()));
+          status != ZX_OK) {
+        return status;
+      }
+      out->format.set_block(std::move(block));
     } else {
       // Set the last MAX_BLOCK_DEVICE_ID characters of token as the ID.
       size_t pos = token.size() > fuchsia::virtualization::MAX_BLOCK_DEVICE_ID
@@ -83,12 +106,14 @@ zx_status_t parse(const OpenAt& open_at, const std::string& name, const std::str
   if (path.empty()) {
     return ZX_ERR_INVALID_ARGS;
   }
-  zx::channel server;
-  zx_status_t status = zx::channel::create(0, &out->client, &server);
-  if (status != ZX_OK) {
-    return status;
+  if (out->format.has_invalid_tag()) {
+    fidl::InterfaceHandle<fuchsia::io::File> file;
+    if (zx_status_t status = open_at(path, file.NewRequest()); status != ZX_OK) {
+      return status;
+    }
+    out->format.set_file(std::move(file));
   }
-  return open_at(path, fidl::InterfaceRequest<fuchsia::io::File>(std::move(server)));
+  return ZX_OK;
 }
 
 zx_status_t parse(const std::string& name, const std::string& value, uint64_t* out) {

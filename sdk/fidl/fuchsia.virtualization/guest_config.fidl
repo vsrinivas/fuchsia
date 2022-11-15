@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.virtualization;
 
+using fuchsia.hardware.block;
 using fuchsia.hardware.ethernet;
 using fuchsia.io;
 using fuchsia.wayland;
@@ -33,16 +34,14 @@ type BlockSpec = resource struct {
         VOLATILE_WRITE = 2;
     };
     /// The data format of the block device.
-    format @generated_name("BlockFormat") strict enum {
+    format @generated_name("BlockFormat") strict resource union {
         /// File IO. All reads and writes go directly to disk as a flat file.
-        FILE = 0;
+        1: file client_end:fuchsia.io.File;
         /// QCOW image. All reads and writes go to a QCOW image.
-        QCOW = 1;
+        2: qcow zx.handle:CHANNEL;
         /// Block IO. All reads and writes go to a block server.
-        BLOCK = 2;
+        3: block client_end:fuchsia.hardware.block.Block;
     };
-    /// The client channel for the block device.
-    client zx.handle:CHANNEL;
 };
 
 /// Properites describing a network device.

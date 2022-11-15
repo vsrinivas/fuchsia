@@ -664,10 +664,10 @@ zx_status_t TerminaEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) 
       return status;
     }
     launch_info->config.mutable_block_devices()->push_back({
-        "vm_extras",
-        fuchsia::virtualization::BlockMode::READ_ONLY,
-        fuchsia::virtualization::BlockFormat::FILE,
-        std::move(client),
+        .id = "vm_extras",
+        .mode = fuchsia::virtualization::BlockMode::READ_ONLY,
+        .format = fuchsia::virtualization::BlockFormat::WithFile(
+            fidl::InterfaceHandle<fuchsia::io::File>(std::move(client))),
     });
   }
   // Add the block device that contains the test binaries.
@@ -682,10 +682,10 @@ zx_status_t TerminaEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) 
       return status;
     }
     launch_info->config.mutable_block_devices()->push_back({
-        "linux_tests",
-        fuchsia::virtualization::BlockMode::READ_ONLY,
-        fuchsia::virtualization::BlockFormat::FILE,
-        std::move(client),
+        .id = "linux_tests",
+        .mode = fuchsia::virtualization::BlockMode::READ_ONLY,
+        .format = fuchsia::virtualization::BlockFormat::WithFile(
+            fidl::InterfaceHandle<fuchsia::io::File>(std::move(client))),
     });
   }
   {
@@ -700,10 +700,10 @@ zx_status_t TerminaEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) 
       return status;
     }
     launch_info->config.mutable_block_devices()->push_back({
-        "extras",
-        fuchsia::virtualization::BlockMode::READ_ONLY,
-        fuchsia::virtualization::BlockFormat::FILE,
-        std::move(client),
+        .id = "extras",
+        .mode = fuchsia::virtualization::BlockMode::READ_ONLY,
+        .format = fuchsia::virtualization::BlockFormat::WithFile(
+            fidl::InterfaceHandle<fuchsia::io::File>(std::move(client))),
     });
   }
 

@@ -75,12 +75,12 @@ TEST_F(GuestConfigTest, BlockSpecJson) {
   const fuchsia::virtualization::BlockSpec& spec0 = config_.block_devices()[0];
   ASSERT_EQ("/pkg/data/foo", spec0.id);
   ASSERT_EQ(fuchsia::virtualization::BlockMode::READ_ONLY, spec0.mode);
-  ASSERT_EQ(fuchsia::virtualization::BlockFormat::FILE, spec0.format);
+  ASSERT_TRUE(spec0.format.is_file()) << spec0.format.Which();
 
   const fuchsia::virtualization::BlockSpec& spec1 = config_.block_devices()[1];
   ASSERT_EQ("/dev/class/block/001", spec1.id);
   ASSERT_EQ(fuchsia::virtualization::BlockMode::READ_WRITE, spec1.mode);
-  ASSERT_EQ(fuchsia::virtualization::BlockFormat::FILE, spec1.format);
+  ASSERT_TRUE(spec1.format.is_file()) << spec1.format.Which();
 
   EXPECT_THAT(paths_, testing::ElementsAre("/pkg/data/foo", "/dev/class/block/001"));
 }

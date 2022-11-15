@@ -85,8 +85,8 @@ static zx_status_t write_qcow_file(int fd) {
   }
 
   // Initialize empty L2 tables.
-  for (size_t i = 0; i < std::size(kL2TableClusterOffsets); ++i) {
-    write_success = write_at(fd, kZeroCluster, sizeof(kZeroCluster), kL2TableClusterOffsets[i]);
+  for (unsigned long kL2TableClusterOffset : kL2TableClusterOffsets) {
+    write_success = write_at(fd, kZeroCluster, sizeof(kZeroCluster), kL2TableClusterOffset);
     if (!write_success) {
       return ZX_ERR_IO;
     }
@@ -112,9 +112,14 @@ static zx_status_t write_qcow_file(int fd) {
   return ZX_OK;
 }
 
+enum class Format {
+  kFile,
+  kQcow,
+};
+
 struct TestDevice {
   std::string id;
-  fuchsia::virtualization::BlockFormat format;
+  Format format;
   fuchsia::virtualization::BlockMode mode;
   uint8_t pci_bus;
   uint8_t pci_device;
@@ -129,26 +134,37 @@ static zx_status_t create_test_device(TestDevice* test_device,
     return ZX_ERR_IO;
   }
 
-  zx_status_t status = ZX_ERR_BAD_STATE;
-  if (test_device->format == fuchsia::virtualization::BlockFormat::FILE) {
-    status = write_raw_file(fd.get());
-  } else if (test_device->format == fuchsia::virtualization::BlockFormat::QCOW) {
-    status = write_qcow_file(fd.get());
-  }
-  if (status != ZX_OK) {
-    return status;
+  switch (test_device->format) {
+    case Format::kFile:
+      if (zx_status_t status = write_raw_file(fd.get()); status != ZX_OK) {
+        return status;
+      }
+      break;
+    case Format::kQcow:
+      if (zx_status_t status = write_qcow_file(fd.get()); status != ZX_OK) {
+        return status;
+      }
+      break;
   }
 
   zx::channel channel;
-  status = fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
+  zx_status_t status = fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
 
+  switch (test_device->format) {
+    case Format::kFile:
+      block_spec->format = fuchsia::virtualization::BlockFormat::WithFile(
+          fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)));
+      break;
+    case Format::kQcow:
+      block_spec->format = fuchsia::virtualization::BlockFormat::WithQcow(std::move(channel));
+      break;
+  }
+
   block_spec->id = test_device->id;
-  block_spec->format = test_device->format;
   block_spec->mode = test_device->mode;
-  block_spec->client = std::move(channel);
 
   return ZX_OK;
 }
@@ -160,35 +176,35 @@ class VirtioBlockTestGuest {
 
     test_devices_.push_back({
         .id = "raw_read_write",
-        .format = fuchsia::virtualization::BlockFormat::FILE,
+        .format = Format::kFile,
         .mode = fuchsia::virtualization::BlockMode::READ_WRITE,
         .pci_bus = 0,
         .pci_device = device_count++,
     });
     test_devices_.push_back({
         .id = "raw_read_only",
-        .format = fuchsia::virtualization::BlockFormat::FILE,
+        .format = Format::kFile,
         .mode = fuchsia::virtualization::BlockMode::READ_ONLY,
         .pci_bus = 0,
         .pci_device = device_count++,
     });
     test_devices_.push_back({
         .id = "raw_volatile_write",
-        .format = fuchsia::virtualization::BlockFormat::FILE,
+        .format = Format::kFile,
         .mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
         .pci_bus = 0,
         .pci_device = device_count++,
     });
     test_devices_.push_back({
         .id = "qcow_read_only",
-        .format = fuchsia::virtualization::BlockFormat::QCOW,
+        .format = Format::kQcow,
         .mode = fuchsia::virtualization::BlockMode::READ_ONLY,
         .pci_bus = 0,
         .pci_device = device_count++,
     });
     test_devices_.push_back({
         .id = "qcow_volatile_write",
-        .format = fuchsia::virtualization::BlockFormat::QCOW,
+        .format = Format::kQcow,
         .mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
         .pci_bus = 0,
         .pci_device = device_count++,
@@ -279,13 +295,11 @@ TYPED_TEST(VirtioBlockGuestTest, CheckSize) {
     FX_LOGS(INFO) << "Device: " << device.id;
     size_t expected_size = 0;
     switch (device.format) {
-      case fuchsia::virtualization::BlockFormat::FILE:
+      case Format::kFile:
         expected_size = kVirtioBlockCount;
         break;
-      case fuchsia::virtualization::BlockFormat::QCOW:
+      case Format::kQcow:
         expected_size = kVirtioQcowBlockCount;
-        break;
-      default:
         break;
     }
     ASSERT_GT(expected_size, 0u);
@@ -307,7 +321,7 @@ TYPED_TEST(VirtioBlockGuestTest, CheckSize) {
 
 TYPED_TEST(VirtioBlockGuestTest, ReadRaw) {
   for (const auto& device : this->TestDevices()) {
-    if (device.format != fuchsia::virtualization::BlockFormat::FILE) {
+    if (device.format != Format::kFile) {
       continue;
     }
     FX_LOGS(INFO) << "Device: " << device.id;
@@ -339,7 +353,7 @@ TYPED_TEST(VirtioBlockGuestTest, ReadRaw) {
 
 TYPED_TEST(VirtioBlockGuestTest, WriteRaw) {
   for (const auto& device : this->TestDevices()) {
-    if (device.format != fuchsia::virtualization::BlockFormat::FILE) {
+    if (device.format != Format::kFile) {
       continue;
     }
     FX_LOGS(INFO) << "Device: " << device.id;
@@ -411,8 +425,8 @@ TYPED_TEST(VirtioBlockGuestTest, WriteRaw) {
       // Check the value when read from the host file.
       ASSERT_EQ(pread(fd.get(), &data, kBlockSectorSize, offset * kBlockSectorSize),
                 static_cast<ssize_t>(kBlockSectorSize));
-      for (off_t i = 0; i != kBlockSectorSize; ++i) {
-        EXPECT_EQ(data[i], expected_host_read);
+      for (unsigned char i : data) {
+        EXPECT_EQ(i, expected_host_read);
       }
     }
   }
@@ -420,7 +434,7 @@ TYPED_TEST(VirtioBlockGuestTest, WriteRaw) {
 
 TYPED_TEST(VirtioBlockGuestTest, ReadMappedCluster) {
   for (const auto& device : this->TestDevices()) {
-    if (device.format != fuchsia::virtualization::BlockFormat::QCOW) {
+    if (device.format != Format::kQcow) {
       continue;
     }
     FX_LOGS(INFO) << "Device: " << device.id;
@@ -445,7 +459,7 @@ TYPED_TEST(VirtioBlockGuestTest, ReadMappedCluster) {
 
 TYPED_TEST(VirtioBlockGuestTest, ReadUnmappedCluster) {
   for (const auto& device : this->TestDevices()) {
-    if (device.format != fuchsia::virtualization::BlockFormat::QCOW) {
+    if (device.format != Format::kQcow) {
       continue;
     }
     FX_LOGS(INFO) << "Device: " << device.id;
@@ -469,7 +483,7 @@ TYPED_TEST(VirtioBlockGuestTest, ReadUnmappedCluster) {
 
 TYPED_TEST(VirtioBlockGuestTest, WriteQcow) {
   for (const auto& device : this->TestDevices()) {
-    if (device.format != fuchsia::virtualization::BlockFormat::QCOW) {
+    if (device.format != Format::kQcow) {
       continue;
     }
     FX_LOGS(INFO) << "Device: " << device.id;

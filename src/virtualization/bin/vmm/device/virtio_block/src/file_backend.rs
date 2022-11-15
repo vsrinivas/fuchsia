@@ -9,7 +9,7 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::{FileMarker, FileProxy, MAX_BUF},
-    fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
+    fuchsia_zircon_status as zx_status,
     futures::future::try_join_all,
     virtio_device::mem::DeviceRange,
 };
@@ -28,11 +28,9 @@ pub struct FileBackend {
 }
 
 impl FileBackend {
-    pub fn new(channel: zx::Channel) -> Result<Self, Error> {
-        Ok(Self {
-            file: ClientEnd::<FileMarker>::new(channel).into_proxy()?,
-            semaphore: Semaphore::new(MAX_INFLIGHT_REQUESTS),
-        })
+    pub fn new(file: ClientEnd<FileMarker>) -> Result<Self, Error> {
+        let file = file.into_proxy()?;
+        Ok(Self { file, semaphore: Semaphore::new(MAX_INFLIGHT_REQUESTS) })
     }
 
     /// Reads a single DeviceRange from the file.

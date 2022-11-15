@@ -26,7 +26,6 @@ use {
     fidl_fuchsia_virtualization::{BlockFormat, BlockMode, BlockSpec},
     fidl_fuchsia_virtualization_hardware::VirtioBlockRequestStream,
     fuchsia_component::server,
-    fuchsia_zircon as zx,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     virtio_device::chain::ReadableChain,
 };
@@ -34,12 +33,11 @@ use {
 async fn create_backend(
     format: BlockFormat,
     mode: BlockMode,
-    channel: zx::Channel,
 ) -> Result<Box<dyn BlockBackend>, anyhow::Error> {
     let backend: Box<dyn BlockBackend> = match format {
-        BlockFormat::File => Box::new(FileBackend::new(channel)?),
-        BlockFormat::Block => Box::new(RemoteBackend::new(channel).await?),
-        BlockFormat::Qcow => {
+        BlockFormat::File(file) => Box::new(FileBackend::new(file)?),
+        BlockFormat::Block(block) => Box::new(RemoteBackend::new(block.into_channel()).await?),
+        BlockFormat::Qcow(channel) => {
             if let BlockMode::ReadWrite = mode {
                 return Err(anyhow!("Writes to QCOW files is not supported"));
             } else {
@@ -60,7 +58,7 @@ async fn run_virtio_block(
     mut virtio_block_fidl: VirtioBlockRequestStream,
 ) -> Result<(), anyhow::Error> {
     // Receive start info as first message.
-    let (start_info, BlockSpec { id, mode, format, client }, responder) = virtio_block_fidl
+    let (start_info, BlockSpec { id, mode, format }, responder) = virtio_block_fidl
         .try_next()
         .await?
         .ok_or(anyhow!("Failed to read fidl message from the channel."))?
@@ -70,7 +68,7 @@ async fn run_virtio_block(
     // Prepare the device builder
     let (device_builder, guest_mem) = machina_virtio_device::from_start_info(start_info)?;
 
-    let backend = create_backend(format, mode, client).await?;
+    let backend = create_backend(format, mode).await?;
     let block_device = BlockDevice::new(id, mode.into(), backend).await?;
     responder.send(
         block_device.attrs().capacity.to_bytes().unwrap(),

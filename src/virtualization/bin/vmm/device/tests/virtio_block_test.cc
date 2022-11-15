@@ -110,8 +110,8 @@ class VirtioBlockTest : public TestWithDevice,
                            {
                                .id = kVirtioBlockId,
                                .mode = options.block_mode,
-                               .format = fuchsia::virtualization::BlockFormat::FILE,
-                               .client = std::move(client),
+                               .format = fuchsia::virtualization::BlockFormat::WithFile(
+                                   fidl::InterfaceHandle<fuchsia::io::File>(std::move(client))),
                            },
                            &capacity, &block_size);
     ASSERT_EQ(ZX_OK, status);
