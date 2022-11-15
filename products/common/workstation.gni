@@ -33,8 +33,8 @@ legacy_base_package_labels += [
   "//src/sys/activity",
   "//src/ui:ui_packages",
   "//src/ui/bin/brightness_manager",
-  "//src/ui/bin/input-pipeline:default-config-pkg",
   "//src/ui/bin/screensaver",
+  "//src/ui/bin/sensor-config:empty-sensor-config-pkg",
   "//third_party/openssh-portable:openssh-tools",
 ]
 

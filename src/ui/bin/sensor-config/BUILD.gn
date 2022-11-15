@@ -1,0 +1,19 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+# A non-executable component that provides no configurations
+# to sensors used in the input-pipeline library.
+fuchsia_component("sensor-config-component") {
+  component_name = "sensor-config"
+  manifest = "meta/sensor-config.cml"
+}
+
+# Define a configuration data package which routes the
+# /sensor-config/ directory with no data.
+fuchsia_package("empty-sensor-config-pkg") {
+  package_name = "sensor-config"
+  deps = [ ":sensor-config-component" ]
+}
