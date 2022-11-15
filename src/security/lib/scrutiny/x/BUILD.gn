@@ -29,9 +29,10 @@ if (is_host) {
       "src/system.rs",
     ]
 
-    deps = [
+    deps = [ "//src/sys/pkg/lib/fuchsia-merkle" ]
+    test_deps = [
       "//src/lib/fuchsia",
-      "//src/sys/pkg/lib/fuchsia-merkle",
+      "//third_party/rust_crates:maplit",
       "//third_party/rust_crates:thiserror",
     ]
   }
