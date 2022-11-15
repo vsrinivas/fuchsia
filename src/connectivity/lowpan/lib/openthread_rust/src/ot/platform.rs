@@ -9,13 +9,14 @@ use std::task::Context;
 pub trait Platform {
     /// Asynchronously process platform implementation tasks.
     ///
+    /// # Safety
+    ///
     /// This method is unsafe because it MUST ONLY be called from the
     /// same thread that the OpenThread instance is being used on.
     ///
     /// You should never need to call this directly.
-    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99067)
     unsafe fn process_poll(
-        self: &mut Self,
+        &mut self,
         instance: &crate::ot::Instance,
         cx: &mut Context<'_>,
     ) -> Result<(), Error>;
@@ -27,7 +28,7 @@ pub struct NullPlatform;
 
 impl Platform for NullPlatform {
     unsafe fn process_poll(
-        self: &mut Self,
+        &mut self,
         _instance: &crate::ot::Instance,
         _cx: &mut Context<'_>,
     ) -> Result<(), Error> {
