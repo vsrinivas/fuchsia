@@ -4,6 +4,7 @@
 
 use {
     argh::FromArgs,
+    donut_lib,
     ffx_core::ffx_command,
     ffx_wlan_common::{
         self,
@@ -178,26 +179,44 @@ pub struct Restore {
 pub struct RemoveNetwork {
     #[argh(option, default = "String::from(\"\")", description = "WLAN network name")]
     pub ssid: String,
-    #[argh(
-        option,
-        default = "SecurityType::None",
-        description = "one of None, WEP, WPA, WPA2, WPA3"
-    )]
-    pub security_type: SecurityType,
-    #[argh(option, default = "CredentialType::None", description = "one of None, PSK, Password")]
-    pub credential_type: CredentialType,
-    #[argh(option, default = "String::from(\"\")", description = "WLAN Password or PSK")]
-    pub credential: String,
+    #[argh(option, description = "one of None, WEP, WPA, WPA2, WPA3")]
+    pub security_type: Option<SecurityType>,
+    #[argh(option, description = "one of None, PSK, Password")]
+    pub credential_type: Option<CredentialType>,
+    #[argh(option, description = "WLAN Password or PSK")]
+    pub credential: Option<String>,
 }
 
-impl From<RemoveNetwork> for wlan_policy::NetworkConfig {
+/// A conversion function is provided to get donut lib type args since it is the easiest way to
+/// keep the logic for constructing the credential in one place and reuse it here.
+impl From<RemoveNetwork> for donut_lib::opts::RemoveArgs {
     fn from(arg: RemoveNetwork) -> Self {
-        ffx_wlan_common::args::config_from_args(
-            arg.ssid,
-            arg.security_type,
-            arg.credential_type,
-            arg.credential,
-        )
+        Self {
+            ssid: arg.ssid,
+            security_type: arg.security_type.map(|s| donut_security_from_security(s)),
+            credential_type: arg.credential_type.map(|c| donut_credential_from_credential(c)),
+            credential: arg.credential,
+        }
+    }
+}
+
+fn donut_security_from_security(security_type: SecurityType) -> donut_lib::opts::SecurityTypeArg {
+    match security_type {
+        SecurityType::None => donut_lib::opts::SecurityTypeArg::None,
+        SecurityType::Wep => donut_lib::opts::SecurityTypeArg::Wep,
+        SecurityType::Wpa => donut_lib::opts::SecurityTypeArg::Wpa,
+        SecurityType::Wpa3 => donut_lib::opts::SecurityTypeArg::Wpa2,
+        SecurityType::Wpa2 => donut_lib::opts::SecurityTypeArg::Wpa3,
+    }
+}
+
+fn donut_credential_from_credential(
+    credential_type: CredentialType,
+) -> donut_lib::opts::CredentialTypeArg {
+    match credential_type {
+        CredentialType::None => donut_lib::opts::CredentialTypeArg::None,
+        CredentialType::Psk => donut_lib::opts::CredentialTypeArg::Psk,
+        CredentialType::Password => donut_lib::opts::CredentialTypeArg::Password,
     }
 }
 

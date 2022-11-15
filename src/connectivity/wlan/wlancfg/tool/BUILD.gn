@@ -7,10 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 group("donut-tests") {
   testonly = true
-  deps = [
-    "cli:donut-arg-tests",
-    "policy:donut-lib-tests",
-  ]
+  deps = [ "policy:donut-lib-tests" ]
 }
 
 fuchsia_shell_package("donut") {

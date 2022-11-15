@@ -47,12 +47,20 @@ pub async fn handle_client_command(
         arg_types::ClientSubCommand::Listen(arg_types::Listen {}) => {
             donut_lib::handle_listen(listener_stream).await
         }
-        arg_types::ClientSubCommand::RemoveNetwork(config) => {
-            let network_config = wlan_policy::NetworkConfig::from(config);
-            donut_lib::handle_remove_network(client_controller, network_config).await
+        arg_types::ClientSubCommand::RemoveNetwork(remove_args) => {
+            let donut_args = donut_lib::opts::RemoveArgs::from(remove_args);
+            let security = donut_args.parse_security();
+            let credential = donut_args.try_parse_credential()?;
+            donut_lib::handle_remove_network(
+                client_controller,
+                donut_args.ssid.into_bytes(),
+                security,
+                credential,
+            )
+            .await
         }
-        arg_types::ClientSubCommand::SaveNetwork(config) => {
-            let network_config = wlan_policy::NetworkConfig::from(config);
+        arg_types::ClientSubCommand::SaveNetwork(config_args) => {
+            let network_config = wlan_policy::NetworkConfig::from(config_args);
             donut_lib::handle_save_network(client_controller, network_config).await
         }
         arg_types::ClientSubCommand::Scan(arg_types::Scan {}) => {

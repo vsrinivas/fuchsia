@@ -12,9 +12,6 @@ use {
     structopt::StructOpt,
 };
 
-mod opts;
-use crate::opts::*;
-
 /// Communicates with the client policy provider to get the components required to get a client
 /// controller.
 pub async fn get_client_controller(
@@ -77,15 +74,15 @@ pub fn get_deprecated_configurator() -> Result<wlan_deprecated::DeprecatedConfig
 }
 
 fn main() -> Result<(), Error> {
-    let opt = Opt::from_args();
+    let opt = opts::Opt::from_args();
 
     let mut exec = fasync::LocalExecutor::new().context("error creating event loop")?;
 
     let fut = async {
         match opt {
-            Opt::Client(cmd) => do_policy_client_cmd(cmd).await,
-            Opt::AccessPoint(cmd) => do_policy_ap_cmd(cmd).await,
-            Opt::Deprecated(cmd) => do_deprecated_cmd(cmd).await,
+            opts::Opt::Client(cmd) => do_policy_client_cmd(cmd).await,
+            opts::Opt::AccessPoint(cmd) => do_policy_ap_cmd(cmd).await,
+            opts::Opt::Deprecated(cmd) => do_deprecated_cmd(cmd).await,
         }
     };
     exec.run_singlethreaded(fut)
@@ -108,10 +105,17 @@ async fn do_policy_client_cmd(cmd: opts::PolicyClientCmd) -> Result<(), Error> {
             let update_stream = get_listener_stream()?;
             handle_listen(update_stream).await?;
         }
-        opts::PolicyClientCmd::RemoveNetwork(network_config) => {
+        opts::PolicyClientCmd::RemoveNetwork(remove_args) => {
             let (client_controller, _) = get_client_controller().await?;
-            let network_config = wlan_policy::NetworkConfig::from(network_config);
-            handle_remove_network(client_controller, network_config).await?;
+            let security = remove_args.parse_security();
+            let credential = remove_args.try_parse_credential()?;
+            handle_remove_network(
+                client_controller,
+                remove_args.ssid.into_bytes(),
+                security,
+                credential,
+            )
+            .await?;
         }
         opts::PolicyClientCmd::SaveNetwork(network_config) => {
             let (client_controller, _) = get_client_controller().await?;

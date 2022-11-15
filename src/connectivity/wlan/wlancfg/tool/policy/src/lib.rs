@@ -11,6 +11,7 @@ use {
     futures::{future::BoxFuture, TryStreamExt},
 };
 
+pub mod opts;
 pub mod serialize;
 
 // String formatting, printing, and general boilerplate helpers.
@@ -356,18 +357,130 @@ pub async fn handle_listen(
     Ok(())
 }
 
-/// Communicates with the client policy layer to remove a network.
+/// Communicates with the client policy layer to remove a network. This will also get the list of
+/// saved networks before and after to indicate whether anything was removed, since there is no
+/// error if the specified network was never saved.
 pub async fn handle_remove_network(
     client_controller: wlan_policy::ClientControllerProxy,
-    config: wlan_policy::NetworkConfig,
+    ssid: Vec<u8>,
+    security_type: Option<wlan_policy::SecurityType>,
+    credential: Option<wlan_policy::Credential>,
 ) -> Result<(), Error> {
-    let id = config.id.clone();
-    let (ssid, _) = extract_network_id(id).expect("Failed to convert network ssid.");
+    let networks_before = handle_get_saved_networks(&client_controller).await.map_err(|e| {
+        format_err!(
+            "The network was not removed because an error occurred getting the list of networks \
+                before removing the requested network: {}",
+            e,
+        )
+    })?;
+
+    // If there is a provided security type and credential, use it to construct the config.
+    // Otherwise get saved networks and find one matching the provided arguments.
+    let config = if security_type.is_some() && credential.is_some() {
+        wlan_policy::NetworkConfig {
+            id: Some(wlan_policy::NetworkIdentifier {
+                ssid: ssid.clone(),
+                type_: security_type.unwrap(),
+            }),
+            credential: credential.clone(),
+            ..wlan_policy::NetworkConfig::EMPTY
+        }
+    } else {
+        // Reuse the saved networks, but don't check for errors until using the data because it
+        // isn't necessary in the case where the exact arguments are provided. The data is needed
+        // below but the error cannot be cloned so the error is manually checked here.
+        let mut matching_networks = networks_before
+            .iter()
+            .filter(|c| config_matches(c, &ssid, &security_type, &credential))
+            .cloned()
+            .collect::<Vec<_>>();
+
+        // If there is one matching saved network, specify this network to remove.
+        if matching_networks.len() == 1 {
+            matching_networks.pop().unwrap()
+        } else if matching_networks.is_empty() {
+            return Err(format_err!("Failed to find a saved network with the provided arguments. Please check that the arguments are correct if there should be one saved."));
+        // If there are more than one matching network, do not assume which one to use and
+        // ask the caller to specify.
+        } else {
+            return Err(format_err!(
+                "Multiple saved networks were found matching the provided \
+                arguments, please specify SSID, security, and credential that matches only one \
+                saved network."
+            ));
+        }
+    };
+
     run_proxy_command(Box::pin(client_controller.remove_network(config)))
         .await?
         .map_err(|e| format_err!("failed to remove network with {:?}", e))?;
-    println!("Successfully removed network '{}'", ssid);
+
+    let networks_after = match handle_get_saved_networks(&client_controller).await {
+        Ok(networks) => networks,
+        Err(e) => {
+            println!(
+                "The network provided may or may not have been removed. An error occurred \
+                    getting the list of networks after removing: {}",
+                e
+            );
+            return Ok(());
+        }
+    };
+
+    // Check that there is no matching network after removing it. There should only have been one
+    // config matching the args since if there were multiple, this function would have quit early.
+    if networks_after.iter().any(|c| config_matches(c, &ssid, &security_type, &credential)) {
+        return Err(format_err!(
+            "The network may not have been removed. A network matching the \
+            provided arguments was found after attempting to remove the network."
+        ));
+    }
+
+    // Check whether anything was removed.
+    if networks_before.len() == networks_after.len() {
+        println!(
+            "The number of saved networks is the same after removing the specified network. \
+                  Please check that the arguments provided are correct and whether the intended \
+                  network is saved."
+        );
+    } else {
+        println!("Successfully removed network '{}'", std::str::from_utf8(&ssid).unwrap());
+    }
     Ok(())
+}
+
+/// Check whether a config matches the provided SSID and optionally security or credential if
+/// provided.
+fn config_matches(
+    config: &wlan_policy::NetworkConfig,
+    ssid: &Vec<u8>,
+    security_type: &Option<wlan_policy::SecurityType>,
+    credential: &Option<wlan_policy::Credential>,
+) -> bool {
+    let config_id = match &config.id {
+        Some(id) => id,
+        None => {
+            return false;
+        }
+    };
+
+    if config_id.ssid != *ssid {
+        return false;
+    }
+
+    // Only check security and credential if not None.
+    if let Some(security) = *security_type {
+        if config_id.type_ != security {
+            return false;
+        }
+    }
+    if credential.is_some() {
+        if config.credential != *credential {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 /// Communicates with the client policy layer to save a network configuration.
@@ -590,10 +703,12 @@ mod tests {
         fuchsia_zircon_status as zx_status,
         futures::{stream::StreamExt, task::Poll},
         pin_utils::pin_mut,
+        test_case::test_case,
         wlan_common::assert_variant,
     };
 
     static TEST_SSID: &str = "test_ssid";
+    static TEST_PASSWORD: &str = "test_password";
 
     struct ClientTestValues {
         client_proxy: wlan_policy::ClientControllerProxy,
@@ -686,9 +801,10 @@ mod tests {
     }
 
     /// Allows callers to send a response to SaveNetwork and RemoveNetwork calls.
+    #[track_caller]
     fn send_network_config_response(
         exec: &mut TestExecutor,
-        mut server: wlan_policy::ClientControllerRequestStream,
+        server: &mut wlan_policy::ClientControllerRequestStream,
         success: bool,
     ) {
         let poll = exec.run_until_stalled(&mut server.next());
@@ -788,9 +904,13 @@ mod tests {
     fn create_network_config(ssid: &str) -> fidl_fuchsia_wlan_policy::NetworkConfig {
         wlan_policy::NetworkConfig {
             id: Some(create_network_id(ssid)),
-            credential: None,
+            credential: Some(create_password(TEST_PASSWORD)),
             ..wlan_policy::NetworkConfig::EMPTY
         }
+    }
+
+    fn create_password(val: &str) -> fidl_fuchsia_wlan_policy::Credential {
+        wlan_policy::Credential::Password(val.as_bytes().to_vec())
     }
 
     /// Creates a NetworkConfig for use in tests.
@@ -863,6 +983,7 @@ mod tests {
 
     /// Responds to a GetSavedNetworks request and provide an iterator for sending back saved
     /// networks.
+    #[track_caller]
     fn get_saved_networks_iterator(
         exec: &mut TestExecutor,
         server: &mut wlan_policy::ClientControllerRequestStream,
@@ -994,7 +1115,7 @@ mod tests {
     #[fuchsia::test]
     fn test_save_network_pass() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
-        let test_values = client_test_setup();
+        let mut test_values = client_test_setup();
         let config = create_network_config(TEST_SSID);
         let fut = handle_save_network(test_values.client_proxy, config);
         pin_mut!(fut);
@@ -1003,7 +1124,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // Drop the remote channel indicating success
-        send_network_config_response(&mut exec, test_values.client_stream, true);
+        send_network_config_response(&mut exec, &mut test_values.client_stream, true);
 
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
     }
@@ -1012,7 +1133,7 @@ mod tests {
     #[fuchsia::test]
     fn test_save_network_fail() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
-        let test_values = client_test_setup();
+        let mut test_values = client_test_setup();
         let config = create_network_config(TEST_SSID);
         let fut = handle_save_network(test_values.client_proxy, config);
         pin_mut!(fut);
@@ -1021,7 +1142,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // Send back an error
-        send_network_config_response(&mut exec, test_values.client_stream, false);
+        send_network_config_response(&mut exec, &mut test_values.client_stream, false);
 
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
     }
@@ -1030,36 +1151,285 @@ mod tests {
     #[fuchsia::test]
     fn test_remove_network_pass() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
-        let test_values = client_test_setup();
-        let config = create_network_config(TEST_SSID);
-        let fut = handle_remove_network(test_values.client_proxy, config);
+        let mut test_values = client_test_setup();
+        let security = Some(wlan_policy::SecurityType::Wpa2);
+        let credential = Some(create_password(TEST_PASSWORD));
+        let fut =
+            handle_remove_network(test_values.client_proxy, TEST_SSID.into(), security, credential);
         pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Respond to the get saved networks request for checking whether anything will be removed
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![create_network_config(TEST_SSID)]);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
 
         // Wait for the fidl request to go out to remove a network
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // Drop the remote channel indicating success
-        send_network_config_response(&mut exec, test_values.client_stream, true);
+        send_network_config_response(&mut exec, &mut test_values.client_stream, true);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Respond to the get saved networks request for checking whether anything was removed
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
 
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+    }
+
+    /// Tests the case where a network config can be successfully removed when only the SSID of the
+    /// network is provided as an argument. The saved network to remove is found by getting saved
+    /// networks.
+    #[fuchsia::test]
+    fn test_remove_network_ssid_only_pass() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = client_test_setup();
+
+        // Request to remove a network by only specifying the SSID of the saved network.
+        let security = None;
+        let credential = None;
+        let fut =
+            handle_remove_network(test_values.client_proxy, TEST_SSID.into(), security, credential);
+        pin_mut!(fut);
+
+        // Wait for the request to get saved networks
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back a network matching the SSID requested.
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![create_network_config(TEST_SSID)]);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
+
+        // Wait for the fidl request to go out to remove a network
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Drop the remote channel indicating success
+        send_network_config_response(&mut exec, &mut test_values.client_stream, true);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Respond to the get saved networks request for checking whether anything was removed
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+    }
+
+    /// Test the case where a network config is removed successfully when only the SSID and
+    /// credential are provided as arguments. The security type to use is determined by getting
+    /// saved networks and finding a matching config.
+    #[fuchsia::test]
+    fn test_remove_network_unspecified_security_pass() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = client_test_setup();
+
+        // Request to remove a network by only specifying the SSID of the saved network.
+        let security = None;
+        let credential = Some(create_password(TEST_PASSWORD));
+        let fut =
+            handle_remove_network(test_values.client_proxy, TEST_SSID.into(), security, credential);
+        pin_mut!(fut);
+
+        // Wait for the request to get saved networks
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back a network matching the SSID requested.
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![create_network_config(TEST_SSID)]);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
+
+        // Wait for the fidl request to go out to remove a network
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Drop the remote channel indicating success
+        send_network_config_response(&mut exec, &mut test_values.client_stream, true);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Respond to the get saved networks request for checking whether anything was removed
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+    }
+
+    /// Test the case where a network config is removed successfully when only the SSID and
+    /// security type are provided as arguments. The credential to use is determined by getting
+    /// saved networks and finding a matching config.
+    #[fuchsia::test]
+    fn test_remove_network_no_credential_pass() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = client_test_setup();
+
+        // Request to remove a network by only specifying the SSID of the saved network.
+        let security = Some(wlan_policy::SecurityType::Wpa2);
+        let credential = None;
+        let fut =
+            handle_remove_network(test_values.client_proxy, TEST_SSID.into(), security, credential);
+        pin_mut!(fut);
+
+        // Wait for the request to get saved networks
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back a network matching the SSID requested.
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![create_network_config(TEST_SSID)]);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
+
+        // Wait for the fidl request to go out to remove a network
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Drop the remote channel indicating success
+        send_network_config_response(&mut exec, &mut test_values.client_stream, true);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Respond to the get saved networks request for checking whether anything was removed
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+    }
+
+    /// Tests the case where removing a network config by specifying an SSID fails because there is
+    /// no matching config.
+    #[fuchsia::test]
+    fn test_remove_network_ssid_only_no_match_fails() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = client_test_setup();
+
+        // Request to remove a network by only specifying the SSID of the saved network.
+        let security = None;
+        let credential = None;
+        let fut =
+            handle_remove_network(test_values.client_proxy, TEST_SSID.into(), security, credential);
+        pin_mut!(fut);
+
+        // Wait for the request to get saved networks
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Send back a network that doesn't match the specified network.
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(
+            &mut exec,
+            &mut iterator,
+            vec![create_network_config("some-other-ssid")],
+        );
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
+
+        // Since there is no matching network to remove, an error should be returned.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
     }
 
     /// Tests the case where network removal fails.
     #[fuchsia::test]
     fn test_remove_network_fail() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
-        let test_values = client_test_setup();
-        let config = create_network_config(TEST_SSID);
-        let fut = handle_remove_network(test_values.client_proxy, config);
+        let mut test_values = client_test_setup();
+        let security = Some(wlan_policy::SecurityType::Wpa2);
+        let credential = Some(create_password(TEST_PASSWORD));
+        let fut =
+            handle_remove_network(test_values.client_proxy, TEST_SSID.into(), security, credential);
         pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Respond to the get saved networks request for checking whether anything will be removed
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![create_network_config(TEST_SSID)]);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
 
         // Wait for the fidl request to go out to remove a network
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // Send back an error
-        send_network_config_response(&mut exec, test_values.client_stream, false);
+        send_network_config_response(&mut exec, &mut test_values.client_stream, false);
 
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+    }
+
+    /// Tests the case where network removal returns no error but the network is still present.
+    #[fuchsia::test]
+    fn test_remove_network_not_removed_fails() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = client_test_setup();
+        let security = Some(wlan_policy::SecurityType::Wpa2);
+        let credential = Some(create_password(TEST_PASSWORD));
+        let fut =
+            handle_remove_network(test_values.client_proxy, TEST_SSID.into(), security, credential);
+        pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Respond to the get saved networks request for checking whether anything will be removed
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![create_network_config(TEST_SSID)]);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
+
+        // Wait for the fidl request to go out to remove a network
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Drop the remote channel indicating success
+        send_network_config_response(&mut exec, &mut test_values.client_stream, true);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        // Respond to the get saved networks request for checking whether anything was removed with
+        // the network that should have been removed.
+        let mut iterator = get_saved_networks_iterator(&mut exec, &mut test_values.client_stream);
+        send_saved_networks(&mut exec, &mut iterator, vec![create_network_config(TEST_SSID)]);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        send_saved_networks(&mut exec, &mut iterator, vec![]);
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+    }
+
+    /// Tests the config_matches function which compares a config against optional arguments if
+    /// argument is provided. Test various combinations of present and non-present dimensions.
+    /// test variants are compared against the default config from create_config.
+    #[test_case(
+        TEST_SSID,
+        Some(wlan_policy::SecurityType::Wpa2),
+        Some(create_password(TEST_PASSWORD)),
+        true
+    )]
+    #[test_case(TEST_SSID, Some(wlan_policy::SecurityType::Wpa2), None, true)]
+    #[test_case(TEST_SSID, None, Some(create_password(TEST_PASSWORD)), true)]
+    #[test_case(TEST_SSID, None, None, true)]
+    #[test_case(
+        TEST_SSID,
+        Some(wlan_policy::SecurityType::Wpa2),
+        Some(create_password("otherpassword")),
+        false
+    )]
+    #[test_case(TEST_SSID, None, Some(create_password("otherpassword")), false)]
+    #[test_case(
+        TEST_SSID,
+        Some(wlan_policy::SecurityType::Wpa3),
+        Some(create_password(TEST_PASSWORD)),
+        false
+    )]
+    #[test_case(TEST_SSID, Some(wlan_policy::SecurityType::Wpa3), None, false)]
+    #[test_case(
+        "otherssid",
+        Some(wlan_policy::SecurityType::Wpa3),
+        Some(create_password(TEST_PASSWORD)),
+        false
+    )]
+    #[test_case("otherssid", None, None, false)]
+    #[fuchsia::test]
+    fn test_config_matches_config(
+        ssid: &str,
+        security: Option<wlan_policy::SecurityType>,
+        credential: Option<wlan_policy::Credential>,
+        expected_result: bool,
+    ) {
+        let ssid = ssid.as_bytes().to_vec();
+        let config = create_network_config(TEST_SSID);
+        let result = config_matches(&config, &ssid, &security, &credential);
+        assert_eq!(result, expected_result);
     }
 
     /// Tests the case where the client successfully connects.

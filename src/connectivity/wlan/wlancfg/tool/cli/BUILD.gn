@@ -11,7 +11,6 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_rust",
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
     "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration_rust",
     "//src/connectivity/wlan/wlancfg/tool/policy:donut-lib",
@@ -19,28 +18,10 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:clap",
-    "//third_party/rust_crates:eui48",
-    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:structopt",
   ]
 
-  test_deps = [ "//src/lib/fuchsia" ]
-
-  sources = [
-    "src/main.rs",
-    "src/opts.rs",
-  ]
+  sources = [ "src/main.rs" ]
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
-}
-
-fuchsia_unittest_package("donut-arg-tests") {
-  deps = [ ":bin_test" ]
-
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
 }
