@@ -351,6 +351,18 @@ protocol FeatureSupport {
     }) error zx.status;
 };
 
+type LegacyPrivacySupport = struct {
+    wep_supported bool;
+    wpa1_supported bool;
+};
+
+protocol UsmeBootstrap {
+    Start(resource struct {
+        generic_sme_server server_end:GenericSme;
+        legacy_privacy_support LegacyPrivacySupport;
+    });
+};
+
 // High level SME info independent of the current MAC role.
 type GenericSmeQuery = struct {
     role fuchsia.wlan.common.WlanMacRole;
