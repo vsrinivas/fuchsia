@@ -641,10 +641,8 @@
 //
 // TTCK (64-BIT COMPARE) -- DEFAULT
 //
-// NOTE(allanmac): Forthcoming changes will increase the TTCK keyval to 96 bits.
-//
 // TODO(fxbug.dev/112827): The TTSB encoding should encode TTP values between
-// -1073741824 to 1073741823 (signed 31 bit integer).
+// -1073741824 to 1073741823 (signed 31 bit integer). LAYER bits rise to 19.
 //
 //  0                                                  63
 //  | PAYLOAD/TTSB/TTPB_ID | PREFIX | LAYER |  X  |  Y  |

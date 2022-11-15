@@ -98,7 +98,7 @@ union spinel_vk_header_target
 static spinel_vk_target_t *
 spinel_vk_load_target(char const * filename)
 {
-  FILE * file = fopen(filename, "r");
+  FILE * file = fopen(filename, "rb");
 
   if (file == NULL)
     {
