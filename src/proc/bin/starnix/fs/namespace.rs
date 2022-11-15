@@ -97,7 +97,12 @@ pub struct MountState {
     // mounting filesystem B on /foo will create the mount as a child of the A mount, attached to
     // A's root, instead of the root mount.
     submounts: HashMap<ArcKey<DirEntry>, MountHandle>,
-    peer_group: Option<Arc<PeerGroup>>,
+
+    /// The membership of this node in its peer group. Do not access directly. Instead use
+    /// peer_group(), take_from_peer_group(), and set_peer_group().
+    // TODO(tbodt): Refactor the links into, some kind of extra struct or something? This is hard
+    // because setting this field requires the Arc<Mount>.
+    peer_group_: Option<(Arc<PeerGroup>, PtrKey<Mount>)>,
 }
 
 /// A group of mounts. Setting MS_SHARED on a mount puts it in its own peer group. Any bind mounts
@@ -179,7 +184,7 @@ impl Mount {
         // Update: Also necessary to make a copy to prevent excess replication, see the comment on
         // the following Mount::new call.
         let peers =
-            self.state.read().peer_group.as_ref().map(|g| g.copy_peers()).unwrap_or_default();
+            self.state.read().peer_group().as_ref().map(|g| g.copy_peers()).unwrap_or_default();
 
         // Create the mount after copying the peer groups, because in the case of creating a bind
         // mount inside itself, the new mount would get added to our peer group during the
@@ -233,10 +238,9 @@ impl Mount {
         }
 
         // Put the clone in the same peer group
-        let peer_group = self.state.read().peer_group.clone();
+        let peer_group = self.state.read().peer_group().map(Arc::clone);
         if let Some(peer_group) = peer_group {
-            peer_group.add(&clone);
-            clone.write().peer_group = Some(peer_group);
+            clone.write().set_peer_group(peer_group);
         }
 
         clone
@@ -269,6 +273,21 @@ impl Mount {
     state_accessor!(Mount, state);
 }
 
+impl MountState {
+    /// Return this mount's current peer group.
+    fn peer_group(&self) -> Option<&Arc<PeerGroup>> {
+        let (ref group, _) = self.peer_group_.as_ref()?;
+        Some(group)
+    }
+
+    /// Remove this mount from its peer group and return the peer group.
+    fn take_from_peer_group(&mut self) -> Option<Arc<PeerGroup>> {
+        let (old_group, old_mount) = self.peer_group_.take()?;
+        old_group.remove(old_mount);
+        Some(old_group)
+    }
+}
+
 #[apply(state_implementation!)]
 impl MountState<Base = Mount> {
     /// Add a child mount *without propagating it to the peer group*. For internal use only.
@@ -298,9 +317,17 @@ impl MountState<Base = Mount> {
         }
     }
 
+    /// Set this mount's peer group.
+    fn set_peer_group(&mut self, group: Arc<PeerGroup>) -> Option<Arc<PeerGroup>> {
+        let old_group = self.take_from_peer_group();
+        group.add(self.base);
+        self.peer_group_ = Some((group, Arc::as_ptr(self.base).into()));
+        old_group
+    }
+
     /// Is the mount in a peer group? Corresponds to MS_SHARED.
     pub fn is_shared(&self) -> bool {
-        self.peer_group.is_some()
+        self.peer_group().is_some()
     }
 
     /// Put the mount in a peer group. Implements MS_SHARED.
@@ -308,16 +335,12 @@ impl MountState<Base = Mount> {
         if self.is_shared() {
             return;
         }
-        let peer_group = PeerGroup::new();
-        peer_group.add(self.base);
-        self.peer_group = Some(peer_group);
+        self.set_peer_group(PeerGroup::new());
     }
 
-    /// Take the mount out of its peer group. Implements MS_PRIVATE
+    /// Take the mount out of its peer group. Implements MS_PRIVATE.
     pub fn make_private(&mut self) {
-        if let Some(peer_group) = self.peer_group.take() {
-            peer_group.remove(&**self.base);
-        }
+        self.take_from_peer_group();
     }
 }
 
@@ -330,8 +353,8 @@ impl PeerGroup {
         self.mounts.write().insert(WeakKey::from(mount));
     }
 
-    fn remove(&self, mount: impl std::borrow::Borrow<Mount>) {
-        self.mounts.write().remove(&(mount.borrow() as *const Mount));
+    fn remove(&self, mount: PtrKey<Mount>) {
+        self.mounts.write().remove(&mount);
     }
 
     fn copy_peers(&self) -> Vec<MountHandle> {
@@ -345,9 +368,7 @@ impl Drop for Mount {
         if let Some((_mount, node)) = &state.mountpoint {
             node.unregister_mount()
         }
-        if let Some(peer_group) = &mut state.peer_group {
-            peer_group.remove(&*self);
-        }
+        state.take_from_peer_group();
     }
 }
 

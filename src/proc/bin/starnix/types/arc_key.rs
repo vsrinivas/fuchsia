@@ -4,6 +4,8 @@
 
 use ref_cast::RefCast;
 use std::borrow::Borrow;
+use std::hash::{Hash, Hasher};
+use std::ops::Deref;
 use std::sync::{Arc, Weak};
 
 /// A wrapper around Arc with Hash implemented based on Arc::as_ptr.
@@ -16,8 +18,8 @@ impl<T> PartialEq for ArcKey<T> {
     }
 }
 impl<T> Eq for ArcKey<T> {}
-impl<T> std::hash::Hash for ArcKey<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+impl<T> Hash for ArcKey<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         Arc::as_ptr(&self.0).hash(state);
     }
 }
@@ -26,7 +28,7 @@ impl<T> Clone for ArcKey<T> {
         Self(Arc::clone(&self.0))
     }
 }
-impl<T> std::ops::Deref for ArcKey<T> {
+impl<T> Deref for ArcKey<T> {
     type Target = Arc<T>;
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -40,10 +42,10 @@ impl<T: std::fmt::Debug> std::fmt::Debug for ArcKey<T> {
 }
 
 /// A wrapper around Weak with Hash implemented based on Weak::as_ptr.
-pub struct WeakKey<T>(pub Weak<T>, *const T);
+pub struct WeakKey<T>(pub Weak<T>, PtrKey<T>);
 impl<T> WeakKey<T> {
     pub fn from(arc: &Arc<T>) -> Self {
-        Self(Arc::downgrade(arc), Arc::as_ptr(arc))
+        Self(Arc::downgrade(arc), Arc::as_ptr(arc).into())
     }
 }
 impl<T> PartialEq for WeakKey<T> {
@@ -52,15 +54,33 @@ impl<T> PartialEq for WeakKey<T> {
     }
 }
 impl<T> Eq for WeakKey<T> {}
-impl<T> std::hash::Hash for WeakKey<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+impl<T> Hash for WeakKey<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         Weak::as_ptr(&self.0).hash(state);
     }
 }
-impl<T> Borrow<*const T> for WeakKey<T> {
-    fn borrow(&self) -> &*const T {
+impl<T> Borrow<PtrKey<T>> for WeakKey<T> {
+    fn borrow(&self) -> &PtrKey<T> {
         &self.1
     }
 }
-unsafe impl<T> Sync for WeakKey<T> {}
-unsafe impl<T> Send for WeakKey<T> {}
+
+pub struct PtrKey<T>(*const T);
+impl<T> From<*const T> for PtrKey<T> {
+    fn from(ptr: *const T) -> Self {
+        Self(ptr)
+    }
+}
+impl<T> PartialEq for PtrKey<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+impl<T> Eq for PtrKey<T> {}
+impl<T> Hash for PtrKey<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state)
+    }
+}
+unsafe impl<T> Sync for PtrKey<T> {}
+unsafe impl<T> Send for PtrKey<T> {}
