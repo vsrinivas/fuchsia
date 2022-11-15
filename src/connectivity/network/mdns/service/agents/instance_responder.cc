@@ -103,7 +103,7 @@ void InstanceResponder::Quit() {
 }
 
 void InstanceResponder::OnLocalHostAddressesChanged() {
-  if (from_proxy() || !port_.is_valid()) {
+  if (from_proxy() || !instance_ready_) {
     return;
   }
 
@@ -299,9 +299,8 @@ void InstanceResponder::SendPublication(const Mdns::Publication& publication,
   bool changed = false;
 
   if (port_ != publication.port_) {
-    changed = true;
     port_ = publication.port_;
-    UpdateInstanceAddresses();
+    changed = true;
   }
 
   if (instance_.text_ != publication.text_) {
@@ -319,9 +318,11 @@ void InstanceResponder::SendPublication(const Mdns::Publication& publication,
     changed = true;
   }
 
-  if (!changed) {
+  if (instance_ready_ && !changed) {
     return;
   }
+
+  UpdateInstanceAddresses();
 
   if (instance_ready_) {
     ChangeLocalServiceInstance(instance_, from_proxy());
@@ -359,10 +360,6 @@ void InstanceResponder::IdleCheck(const std::string& subtype) {
 }
 
 void InstanceResponder::UpdateInstanceAddresses() {
-  if (!port_.is_valid()) {
-    return;
-  }
-
   instance_.addresses_.clear();
 
   if (!addresses_.empty()) {

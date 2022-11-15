@@ -95,9 +95,11 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
   // Expects that the agent has called |AddLocalServiceInstance|.
   void ExpectAddLocalServiceInstanceCall(const ServiceInstance& instance, bool from_proxy) {
     EXPECT_TRUE(add_local_service_instance_called_);
-    EXPECT_EQ(instance, add_local_service_instance_instance_);
-    EXPECT_EQ(from_proxy, add_local_service_instance_from_proxy_);
-    add_local_service_instance_called_ = false;
+    if (add_local_service_instance_called_) {
+      EXPECT_EQ(instance, add_local_service_instance_instance_);
+      EXPECT_EQ(from_proxy, add_local_service_instance_from_proxy_);
+      add_local_service_instance_called_ = false;
+    }
   }
 
   // Expects that the agent has not called |ChangeLocalServiceInstance|.
