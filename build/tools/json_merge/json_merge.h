@@ -14,11 +14,16 @@ struct input_file {
   std::unique_ptr<std::istream> contents;
 };
 
+struct MergeConfig {
+  bool relaxed_input = false;
+  bool deep_merge = false;
+  bool minify = false;
+};
+
 // Merge one or more JSON documents.
 // Returns zero if successful.
-// On non-zero return value, writes human-readable errors to |errors|.
-// If |minify| then output merged JSON will be minified.
-int JSONMerge(const std::vector<struct input_file>& inputs,
-              std::ostream& output, std::ostream& errors, bool minify);
+// On non-zero return value, writes human-readable errors to `errors`.
+int JSONMerge(const std::vector<struct input_file>& inputs, std::ostream& output,
+              std::ostream& errors, const MergeConfig& config);
 
 #endif  // BUILD_TOOLS_JSON_MERGE_JSON_MERGE_H_

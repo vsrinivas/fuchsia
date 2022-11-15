@@ -17,6 +17,16 @@ import("//build/compiled_action.gni")
 #   sources (required)
 #     [files list] One or more JSON files to merge.
 #
+#   relaxed_input (optional)
+#     [boolean] Enables relaxed input parsing.
+#     When enabled, allows comments and trailing commas in the input files.
+#     Comments and trailing commas are removed in the output.
+#
+#   deep_merge (optional)
+#     [boolean] Whether to merge nested objects.
+#     Enables merging of nested objects. By default only top-level object is
+#     merged.
+#
 #   minify (optional)
 #     [boolean] Whether to minify the result.
 #     Minified JSON is functionally equivalent but less readable to humans.
@@ -39,6 +49,8 @@ template("json_merge") {
                              "sources",
                              "testonly",
                              "visibility",
+                             "relaxed_input",
+                             "deep_merge",
                              "minify",
                              "metadata",
                            ])
@@ -59,8 +71,14 @@ template("json_merge") {
       "--output",
       rebase_path(merged_output, root_build_dir),
     ]
+    if (defined(deep_merge) && deep_merge) {
+      args += [ "--deep" ]
+    }
     if (defined(minify) && minify) {
       args += [ "--minify" ]
+    }
+    if (defined(relaxed_input) && relaxed_input) {
+      args += [ "--relaxed" ]
     }
   }
 }

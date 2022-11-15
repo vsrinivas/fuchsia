@@ -37,17 +37,16 @@ int main(int argc, char** argv) {
   std::vector<input_file> inputs;
   std::ofstream output_file;
   auto output_buf = std::cout.rdbuf();
-  bool minify = false;
+  MergeConfig config;
 
   static struct option long_options[] = {
-      {"input", required_argument, 0, 'i'},
-      {"output", required_argument, 0, 'o'},
-      {"minify", no_argument, 0, 'm'},
-      {"help", no_argument, 0, 'h'},
+      {"input", required_argument, 0, 'i'}, {"output", required_argument, 0, 'o'},
+      {"relaxed", no_argument, 0, 'r'},     {"deep", no_argument, 0, 'd'},
+      {"minify", no_argument, 0, 'm'},      {"help", no_argument, 0, 'h'},
   };
 
   int opt;
-  while ((opt = getopt_long(argc, argv, "iomh", long_options, nullptr)) != -1) {
+  while ((opt = getopt_long(argc, argv, "iordmh", long_options, nullptr)) != -1) {
     switch (opt) {
       case 'i': {
         auto input = std::make_unique<std::ifstream>(optarg);
@@ -68,8 +67,16 @@ int main(int argc, char** argv) {
         output_buf = output_file.rdbuf();
         break;
 
+      case 'r':
+        config.relaxed_input = true;
+        break;
+
+      case 'd':
+        config.deep_merge = true;
+        break;
+
       case 'm':
-        minify = true;
+        config.minify = true;
         break;
 
       case 'h':
@@ -79,5 +86,5 @@ int main(int argc, char** argv) {
   }
 
   std::ostream output(output_buf);
-  return JSONMerge(inputs, output, std::cerr, minify);
+  return JSONMerge(inputs, output, std::cerr, config);
 }
