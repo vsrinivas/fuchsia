@@ -8,7 +8,7 @@
 
 #include <hwreg/bitfields.h>
 
-#include "src/devices/block/drivers/nvme-cpp/commands.h"
+#include "src/devices/block/drivers/nvme/commands.h"
 
 namespace nvme {
 
@@ -153,10 +153,14 @@ struct IdentifyController {
   // 0xc00
   uint8_t vendor_data[1024];
 
+  DEF_SUBFIELD(sqes, 7, 4, sqes_max_log2);
   DEF_SUBFIELD(sqes, 3, 0, sqes_min_log2);
+  DEF_SUBFIELD(cqes, 7, 4, cqes_max_log2);
   DEF_SUBFIELD(cqes, 3, 0, cqes_min_log2);
 
+  size_t maximum_sq_entry_size() const { return 1 << sqes_max_log2(); }
   size_t minimum_sq_entry_size() const { return 1 << sqes_min_log2(); }
+  size_t maximum_cq_entry_size() const { return 1 << cqes_max_log2(); }
   size_t minimum_cq_entry_size() const { return 1 << cqes_min_log2(); }
 };
 static_assert(sizeof(IdentifyController) == 0x1000);

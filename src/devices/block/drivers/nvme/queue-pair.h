@@ -14,6 +14,7 @@
 #include <memory>
 #include <vector>
 
+#include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
 #include "src/devices/block/drivers/nvme/commands.h"
@@ -29,7 +30,6 @@ struct TransactionData {
   void ClearExceptPrp() {
     io_cmd = nullptr;
     pmt.reset();
-    buffer = {};
     active = false;
   }
 
@@ -37,8 +37,6 @@ struct TransactionData {
   IoCommand* io_cmd;
   // Used to pin the pages relevant to this transaction.
   zx::pmt pmt;
-  // Data buffer, provided by the user.
-  ddk::IoBuffer buffer;
   // Described by NVM Express Base Specification 2.0 Section 4.1.1, "Physical Region Page Entry and
   // List"
   ddk::IoBuffer prp_buffer;
@@ -56,10 +54,9 @@ class QueuePair {
   // Limits the PRP buffer size to a single page.
   static constexpr size_t kMaxTransferPages = 256;
 
-  static zx::result<std::unique_ptr<QueuePair>> Create(zx::unowned_bti bti, size_t queue_id,
+  static zx::result<std::unique_ptr<QueuePair>> Create(zx::unowned_bti bti, uint16_t queue_id,
                                                        size_t max_entries, CapabilityReg& reg,
-                                                       fdf::MmioBuffer& mmio,
-                                                       bool prealloc_prp = false);
+                                                       fdf::MmioBuffer& mmio, bool prealloc_prp);
 
   // Prefer |QueuePair::Create|.
   QueuePair(Queue completion, Queue submission, zx::unowned_bti bti, fdf::MmioBuffer& mmio,
@@ -84,11 +81,12 @@ class QueuePair {
 
   // Check the completion queue for any new completed elements. Should be called from an async task
   // posted by the interrupt handler.
-  zx_status_t CheckForNewCompletion(IoCommand** io_cmd, bool* has_error_code);
+  zx_status_t CheckForNewCompletion(Completion** completion, IoCommand** io_cmd = nullptr);
   void RingCompletionDb();
 
-  zx::result<> Submit(Submission& submission, std::optional<zx::unowned_vmo> data,
-                      zx_off_t vmo_offset, size_t bytes, IoCommand* io_cmd) {
+  // When submitting an admin command, io_cmd need not be supplied.
+  zx_status_t Submit(Submission& submission, std::optional<zx::unowned_vmo> data,
+                     zx_off_t vmo_offset, size_t bytes, IoCommand* io_cmd = nullptr) {
     return Submit(cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(&submission), sizeof(submission)),
                   std::move(data), vmo_offset, bytes, io_cmd);
   }
@@ -97,13 +95,13 @@ class QueuePair {
   friend class QueuePairTest;
 
   // Raw implementation of submit that operates on a byte span rather than a submission.
-  zx::result<> Submit(cpp20::span<uint8_t> submission, std::optional<zx::unowned_vmo> data,
-                      zx_off_t vmo_offset, size_t bytes, IoCommand* io_cmd);
+  zx_status_t Submit(cpp20::span<uint8_t> submission, std::optional<zx::unowned_vmo> data,
+                     zx_off_t vmo_offset, size_t bytes, IoCommand* io_cmd);
 
   // TODO(fxbug.dev/102133): Use this if setting up PRP lists that span more than one page. See
   // QueuePair::kMaxTransferPages.
   // Puts a PRP list in |buf| containing the given addresses.
-  zx::result<> PreparePrpList(ddk::IoBuffer& buf, cpp20::span<const zx_paddr_t> pages);
+  zx_status_t PreparePrpList(ddk::IoBuffer& buf, cpp20::span<const zx_paddr_t> pages);
 
   // System parameters.
   const uint64_t kPageSize;

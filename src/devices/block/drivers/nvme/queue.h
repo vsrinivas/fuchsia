@@ -19,7 +19,7 @@ namespace nvme {
 // The queue will always fit in one page.
 class Queue {
  public:
-  static zx::result<Queue> Create(zx::unowned_bti bti, size_t queue_id, size_t max_entries,
+  static zx::result<Queue> Create(zx::unowned_bti bti, uint16_t queue_id, size_t max_entries,
                                   size_t entry_size) {
     Queue ret(entry_size, queue_id);
     auto status = ret.Init(std::move(bti), max_entries);
@@ -50,18 +50,20 @@ class Queue {
   // Return the index of the next item in the queue.
   size_t NextIndex() const { return next_index_; }
 
+  uint16_t id() const { return queue_id_; }
+
   // For unit tests only.
   void* head() const { return io_.virt(); }
 
  private:
-  explicit Queue(size_t entry_size, size_t queue_id)
+  explicit Queue(size_t entry_size, uint16_t queue_id)
       : entry_size_(entry_size), queue_id_(queue_id) {}
   zx::result<> Init(zx::unowned_bti bti, size_t max_entries);
 
   ddk::IoBuffer io_;
   size_t entry_size_;
   size_t entry_count_;
-  __UNUSED size_t queue_id_;
+  uint16_t queue_id_;
 
   size_t next_index_ = 0;
 };

@@ -80,7 +80,7 @@ class QueuePairTest : public zxtest::Test {
 };
 
 TEST_F(QueuePairTest, TestSubmit) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, /*prealloc_prp=*/false);
   ASSERT_OK(pair.status_value());
 
   sync_completion_t rang;
@@ -97,18 +97,18 @@ TEST_F(QueuePairTest, TestSubmit) {
   };
 
   Submission s(0x9f);
-  ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0, nullptr).status_value());
+  ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0));
 
   sync_completion_wait(&rang, ZX_TIME_INFINITE);
 
   rang = {};
   s.set_opcode(0x9f);
-  ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0, nullptr).status_value());
+  ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0));
   sync_completion_wait(&rang, ZX_TIME_INFINITE);
 }
 
 TEST_F(QueuePairTest, TestCheckCompletionsNothingReady) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, /*prealloc_prp=*/false);
   ASSERT_OK(pair.status_value());
   Completion* completions = static_cast<Completion*>(pair->completion().head());
   memset(completions, 0, sizeof(*completions));
@@ -117,13 +117,12 @@ TEST_F(QueuePairTest, TestCheckCompletionsNothingReady) {
     ASSERT_FALSE(true, "Doorbell should not have been rung");
   };
 
-  IoCommand* io_cmd;
-  bool has_error_code;
-  ASSERT_EQ(pair->CheckForNewCompletion(&io_cmd, &has_error_code), ZX_ERR_SHOULD_WAIT);
+  Completion* completion = nullptr;
+  ASSERT_EQ(pair->CheckForNewCompletion(&completion), ZX_ERR_SHOULD_WAIT);
 }
 
 TEST_F(QueuePairTest, TestCheckCompletionsOneReady) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, /*prealloc_prp=*/false);
   ASSERT_OK(pair.status_value());
 
   doorbell_ring_ = [](bool is_completion, size_t queue_id, uint16_t new_value) {
@@ -132,7 +131,7 @@ TEST_F(QueuePairTest, TestCheckCompletionsOneReady) {
     ASSERT_EQ(1, new_value);
   };
   Submission s(0);
-  ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0, nullptr));
+  ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0));
 
   Completion* completions = static_cast<Completion*>(pair->completion().head());
   memset(completions, 0, sizeof(*completions) * pair->completion().entry_count());
@@ -146,16 +145,15 @@ TEST_F(QueuePairTest, TestCheckCompletionsOneReady) {
     ASSERT_EQ(1, new_value);
   };
 
-  IoCommand* io_cmd;
-  bool has_error_code;
-  ASSERT_EQ(pair->CheckForNewCompletion(&io_cmd, &has_error_code), ZX_OK);
-  ASSERT_EQ(nullptr, io_cmd);
-  ASSERT_FALSE(has_error_code);
+  Completion* completion = nullptr;
+  ASSERT_EQ(pair->CheckForNewCompletion(&completion), ZX_OK);
+  ASSERT_TRUE(completion->status_code_type() == StatusCodeType::kGeneric &&
+              completion->status_code() == 0);
   pair->RingCompletionDb();
 }
 
 TEST_F(QueuePairTest, TestCheckCompletionsMultipleReady) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, /*prealloc_prp=*/false);
   ASSERT_OK(pair.status_value());
 
   uint16_t expected_doorbell = 1;
@@ -166,8 +164,8 @@ TEST_F(QueuePairTest, TestCheckCompletionsMultipleReady) {
     expected_doorbell++;
   };
   Submission s(0);
-  { ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0, nullptr)); }
-  { ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0, nullptr)); }
+  { ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0)); }
+  { ASSERT_OK(pair->Submit(s, std::nullopt, 0, 0)); }
 
   Completion* completions = static_cast<Completion*>(pair->completion().head());
   memset(completions, 0, sizeof(*completions) * pair->completion().entry_count());
@@ -185,19 +183,18 @@ TEST_F(QueuePairTest, TestCheckCompletionsMultipleReady) {
     ASSERT_EQ(2, new_value);
   };
 
-  IoCommand* io_cmd;
-  bool has_error_code;
-  ASSERT_EQ(pair->CheckForNewCompletion(&io_cmd, &has_error_code), ZX_OK);
-  ASSERT_EQ(nullptr, io_cmd);
-  ASSERT_FALSE(has_error_code);
-  ASSERT_EQ(pair->CheckForNewCompletion(&io_cmd, &has_error_code), ZX_OK);
-  ASSERT_EQ(nullptr, io_cmd);
-  ASSERT_FALSE(has_error_code);
+  Completion* completion = nullptr;
+  ASSERT_EQ(pair->CheckForNewCompletion(&completion), ZX_OK);
+  ASSERT_TRUE(completion->status_code_type() == StatusCodeType::kGeneric &&
+              completion->status_code() == 0);
+  ASSERT_EQ(pair->CheckForNewCompletion(&completion), ZX_OK);
+  ASSERT_TRUE(completion->status_code_type() == StatusCodeType::kGeneric &&
+              completion->status_code() == 0);
   pair->RingCompletionDb();
 }
 
 TEST_F(QueuePairTest, TestSubmitWithDataOnePage) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, /*prealloc_prp=*/false);
   ASSERT_OK(pair.status_value());
 
   doorbell_ring_ = [](bool is_completion, size_t queue_id, uint16_t new_value) {
@@ -208,7 +205,7 @@ TEST_F(QueuePairTest, TestSubmitWithDataOnePage) {
   zx::vmo data_vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &data_vmo));
   Submission s(0xa9);
-  { ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, zx_system_get_page_size(), nullptr)); }
+  { ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, zx_system_get_page_size())); }
 
   Submission* submitted = static_cast<Submission*>(pair->submission().head());
   ASSERT_EQ(0, submitted->data_transfer_mode());
@@ -217,13 +214,12 @@ TEST_F(QueuePairTest, TestSubmitWithDataOnePage) {
   ASSERT_EQ(FAKE_BTI_PHYS_ADDR, submitted->data_pointer[0]);
   ASSERT_EQ(0, submitted->data_pointer[1]);
   TransactionData& txn_data = txn(pair.value().get(), 0);
-  ASSERT_TRUE(txn_data.buffer.is_valid());
   ASSERT_FALSE(txn_data.prp_buffer.is_valid());
   ASSERT_TRUE(txn_data.active);
 }
 
 TEST_F(QueuePairTest, TestSubmitWithDataTwoPages) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, /*prealloc_prp=*/false);
   ASSERT_OK(pair.status_value());
 
   doorbell_ring_ = [](bool is_completion, size_t queue_id, uint16_t new_value) {
@@ -234,7 +230,7 @@ TEST_F(QueuePairTest, TestSubmitWithDataTwoPages) {
   zx::vmo data_vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &data_vmo));
   Submission s(0xa9);
-  { ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, zx_system_get_page_size(), nullptr)); }
+  { ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, zx_system_get_page_size())); }
 
   Submission* submitted = static_cast<Submission*>(pair->submission().head());
   ASSERT_EQ(0, submitted->data_transfer_mode());
@@ -243,14 +239,13 @@ TEST_F(QueuePairTest, TestSubmitWithDataTwoPages) {
   ASSERT_EQ(FAKE_BTI_PHYS_ADDR, submitted->data_pointer[0]);
   ASSERT_EQ(0, submitted->data_pointer[1]);
   TransactionData& txn_data = txn(pair.value().get(), 0);
-  ASSERT_TRUE(txn_data.buffer.is_valid());
   ASSERT_FALSE(txn_data.prp_buffer.is_valid());
   ASSERT_TRUE(txn_data.active);
 }
 
 // Not using QueuePair::PreparePrpList() for now. See QueuePair::kMaxTransferPages.
 TEST_F(QueuePairTest, DISABLED_TestSubmitWithDataManyPages) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, /*prealloc_prp=*/false);
   ASSERT_OK(pair.status_value());
 
   doorbell_ring_ = [](bool is_completion, size_t queue_id, uint16_t new_value) {
@@ -262,10 +257,7 @@ TEST_F(QueuePairTest, DISABLED_TestSubmitWithDataManyPages) {
   constexpr size_t kNumPages = 4;
   ASSERT_OK(zx::vmo::create(kNumPages * zx_system_get_page_size(), 0, &data_vmo));
   Submission s(0xa9);
-  {
-    ASSERT_OK(
-        pair->Submit(s, data_vmo.borrow(), 0, kNumPages * zx_system_get_page_size(), nullptr));
-  }
+  { ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, kNumPages * zx_system_get_page_size())); }
 
   Submission* submitted = static_cast<Submission*>(pair->submission().head());
   ASSERT_EQ(0, submitted->data_transfer_mode());
@@ -274,7 +266,6 @@ TEST_F(QueuePairTest, DISABLED_TestSubmitWithDataManyPages) {
   ASSERT_EQ(FAKE_BTI_PHYS_ADDR, submitted->data_pointer[0]);
   ASSERT_EQ(FAKE_BTI_PHYS_ADDR, submitted->data_pointer[1]);
   TransactionData& txn_data = txn(pair.value().get(), 0);
-  ASSERT_TRUE(txn_data.buffer.is_valid());
   ASSERT_TRUE(txn_data.prp_buffer.is_valid());
   ASSERT_TRUE(txn_data.active);
   uint64_t* prps = static_cast<uint64_t*>(txn_data.prp_buffer.virt());
@@ -286,7 +277,7 @@ TEST_F(QueuePairTest, DISABLED_TestSubmitWithDataManyPages) {
 
 // Not using QueuePair::PreparePrpList() for now. See QueuePair::kMaxTransferPages.
 TEST_F(QueuePairTest, DISABLED_TestSubmitWithMultiPagePrp) {
-  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_);
+  auto pair = QueuePair::Create(fake_bti_.borrow(), 0, 100, caps_, mmio_, /*prealloc_prp=*/false);
   ASSERT_OK(pair.status_value());
 
   doorbell_ring_ = [](bool is_completion, size_t queue_id, uint16_t new_value) {
@@ -299,10 +290,7 @@ TEST_F(QueuePairTest, DISABLED_TestSubmitWithMultiPagePrp) {
   const size_t kNumAddresses = addr_per_page + 10;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size() * kNumAddresses, 0, &data_vmo));
   Submission s(0xa9);
-  {
-    ASSERT_OK(
-        pair->Submit(s, data_vmo.borrow(), 0, zx_system_get_page_size() * kNumAddresses, nullptr));
-  }
+  { ASSERT_OK(pair->Submit(s, data_vmo.borrow(), 0, zx_system_get_page_size() * kNumAddresses)); }
 
   Submission* submitted = static_cast<Submission*>(pair->submission().head());
   ASSERT_EQ(0, submitted->data_transfer_mode());
@@ -311,7 +299,6 @@ TEST_F(QueuePairTest, DISABLED_TestSubmitWithMultiPagePrp) {
   ASSERT_EQ(FAKE_BTI_PHYS_ADDR, submitted->data_pointer[0]);
   ASSERT_EQ(FAKE_BTI_PHYS_ADDR, submitted->data_pointer[1]);
   TransactionData& txn_data = txn(pair.value().get(), 0);
-  ASSERT_TRUE(txn_data.buffer.is_valid());
   ASSERT_TRUE(txn_data.prp_buffer.is_valid());
   ASSERT_TRUE(txn_data.active);
   uint64_t* prps = static_cast<uint64_t*>(txn_data.prp_buffer.virt());

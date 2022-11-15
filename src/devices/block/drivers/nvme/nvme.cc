@@ -14,6 +14,7 @@
 #include <lib/ddk/io-buffer.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/fit/defer.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/mmio/mmio-buffer.h>
 #include <lib/sync/completion.h>
 #include <limits.h>
@@ -30,11 +31,17 @@
 #include <fbl/mutex.h>
 
 #include "nvme-hw.h"
+#include "src/devices/block/drivers/nvme/commands/features.h"
+#include "src/devices/block/drivers/nvme/commands/identify.h"
 #include "src/devices/block/drivers/nvme/commands/nvme-io.h"
+#include "src/devices/block/drivers/nvme/commands/queue.h"
 #include "src/devices/block/drivers/nvme/nvme_bind.h"
 #include "src/devices/block/drivers/nvme/registers.h"
 
 namespace nvme {
+
+// c.f. NVMe Base Specification 2.0, section 3.1.3.8 "AQA - Admin Queue Attributes"
+constexpr size_t kAdminQueueMaxEntries = 4096;
 
 #define COMMAND_FLAG_FAILED 1
 
@@ -47,15 +54,6 @@ struct IoCommand {
   uint8_t opcode;
   uint8_t flags;
 };
-
-// Limit maximum transfer size to 1MB which fits comfortably
-// within our single scatter gather page per QueuePair setup
-#define MAX_XFER (QueuePair::kMaxTransferPages * zx_system_get_page_size())
-
-// Maximum submission and completion queue item counts, for
-// queues that are a single page in size.
-#define SQMAX(PageSize) ((PageSize) / sizeof(nvme_cmd_t))
-#define CQMAX(PageSize) ((PageSize) / sizeof(nvme_cpl_t))
 
 // global driver state bits
 #define FLAG_IRQ_THREAD_STARTED 0x0001
@@ -84,86 +82,31 @@ struct nvme_device_t {
   // it has work to do.
   sync_completion_t io_signal;
 
-  uint32_t max_xfer;
+  uint32_t max_transfer_blocks;
   block_info_t info;
-
-  // admin queue doorbell registers
-  MMIO_PTR void* io_admin_sq_tail_db;
-  MMIO_PTR void* io_admin_cq_head_db;
-
-  // admin queues and state
-  nvme_cpl_t* admin_cq;
-  nvme_cmd_t* admin_sq;
-  uint16_t admin_cq_head;
-  uint16_t admin_cq_toggle;
-  uint16_t admin_sq_tail;
-  uint16_t admin_sq_head;
 
   // context for admin transactions
   // presently we serialize these under the admin_lock
   fbl::Mutex admin_lock;
   sync_completion_t admin_signal;
-  nvme_cpl_t admin_result;
-
-  // source of physical pages for queues and admin commands
-  io_buffer_t iob;
+  Completion admin_result;
 };
-
-// Takes the log2 of a page size to turn it into a shift.
-static inline size_t PageShift(size_t page_size) {
-  return (sizeof(int) * 8) - __builtin_clz((int)page_size) - 1;
-}
-
-static zx_status_t nvme_admin_cq_get(nvme_device_t* nvme, nvme_cpl_t* cpl) {
-  if ((readw(&nvme->admin_cq[nvme->admin_cq_head].status) & 1) != nvme->admin_cq_toggle) {
-    return ZX_ERR_SHOULD_WAIT;
-  }
-  *cpl = nvme->admin_cq[nvme->admin_cq_head];
-
-  // advance the head pointer, wrapping and inverting toggle at max
-  uint16_t next = (nvme->admin_cq_head + 1) & (CQMAX(zx_system_get_page_size()) - 1);
-  if ((nvme->admin_cq_head = next) == 0) {
-    nvme->admin_cq_toggle ^= 1;
-  }
-
-  // note the new sq head reported by hw
-  nvme->admin_sq_head = cpl->sq_head;
-
-  // ring the doorbell
-  MmioWrite32(next, static_cast<MMIO_PTR uint32_t*>(nvme->io_admin_cq_head_db));
-  return ZX_OK;
-}
-
-static zx_status_t nvme_admin_sq_put(nvme_device_t* nvme, nvme_cmd_t* cmd) {
-  uint16_t next = (nvme->admin_sq_tail + 1) & (SQMAX(zx_system_get_page_size()) - 1);
-
-  // if head+1 == tail: queue is full
-  if (next == nvme->admin_sq_head) {
-    return ZX_ERR_SHOULD_WAIT;
-  }
-
-  nvme->admin_sq[nvme->admin_sq_tail] = *cmd;
-  nvme->admin_sq_tail = next;
-
-  // ring the doorbell
-  MmioWrite32(next, static_cast<MMIO_PTR uint32_t*>(nvme->io_admin_sq_tail_db));
-  return ZX_OK;
-}
 
 int Nvme::IrqLoop() {
   nvme_device_t* nvme = nvme_;
 
   for (;;) {
-    zx_status_t status;
-    if ((status = zx_interrupt_wait(irqh_, NULL)) != ZX_OK) {
+    zx_status_t status = zx_interrupt_wait(irqh_, NULL);
+    if (status != ZX_OK) {
       zxlogf(ERROR, "irq wait failed: %s", zx_status_get_string(status));
       break;
     }
 
-    nvme_cpl_t cpl;
-    if (nvme_admin_cq_get(nvme, &cpl) == ZX_OK) {
-      nvme->admin_result = cpl;
+    Completion* admin_completion;
+    if (admin_queue_->CheckForNewCompletion(&admin_completion) != ZX_ERR_SHOULD_WAIT) {
+      nvme->admin_result = *admin_completion;
       sync_completion_signal(&nvme->admin_signal);
+      admin_queue_->RingCompletionDb();
     }
 
     sync_completion_signal(&nvme->io_signal);
@@ -171,27 +114,43 @@ int Nvme::IrqLoop() {
   return 0;
 }
 
-static zx_status_t nvme_admin_txn(nvme_device_t* nvme, nvme_cmd_t* cmd, nvme_cpl_t* cpl) {
+zx_status_t Nvme::DoAdminCommandSync(Submission& submission,
+                                     std::optional<zx::unowned_vmo> admin_data) {
+  nvme_device_t* nvme = nvme_;
+
   zx_status_t status;
   fbl::AutoLock lock(&nvme->admin_lock);
   sync_completion_reset(&nvme->admin_signal);
-  if ((status = nvme_admin_sq_put(nvme, cmd)) != ZX_OK) {
-    return status;
+
+  uint64_t data_size = 0;
+  if (admin_data.has_value()) {
+    status = admin_data.value()->get_size(&data_size);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to get size of vmo: %s", zx_status_get_string(status));
+      return status;
+    }
   }
-  if ((status = sync_completion_wait(&nvme->admin_signal, ZX_SEC(1))) != ZX_OK) {
-    zxlogf(ERROR, "admin txn: %s", zx_status_get_string(status));
+  status = admin_queue_->Submit(submission, admin_data, 0, data_size, nullptr);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to submit admin command: %s", zx_status_get_string(status));
     return status;
   }
 
-  unsigned code = NVME_CPL_STATUS_CODE(nvme->admin_result.status);
-  if (code != 0) {
-    zxlogf(ERROR, "admin txn: nvm error %03x", code);
-    status = ZX_ERR_IO;
+  status = sync_completion_wait(&nvme->admin_signal, ZX_SEC(1));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Timed out waiting for admin command: %s", zx_status_get_string(status));
+    return status;
   }
-  if (cpl != NULL) {
-    *cpl = nvme->admin_result;
+
+  if (nvme->admin_result.status_code_type() == StatusCodeType::kGeneric &&
+      nvme->admin_result.status_code() == 0) {
+    zxlogf(TRACE, "Completed admin command OK.");
+  } else {
+    zxlogf(ERROR, "Completed admin command ERROR: status type=%01x, status=%02x",
+           nvme->admin_result.status_code_type(), nvme->admin_result.status_code());
+    return ZX_ERR_IO;
   }
-  return status;
+  return ZX_OK;
 }
 
 static inline void IoCommandComplete(IoCommand* io_cmd, zx_status_t status) {
@@ -203,8 +162,8 @@ bool Nvme::SubmitAllTxnsForIoCommand(IoCommand* io_cmd) {
 
   for (;;) {
     uint32_t blocks = io_cmd->op.rw.length;
-    if (blocks > nvme->max_xfer) {
-      blocks = nvme->max_xfer;
+    if (blocks > nvme->max_transfer_blocks) {
+      blocks = nvme->max_transfer_blocks;
     }
 
     // Total transfer size in bytes
@@ -215,16 +174,16 @@ bool Nvme::SubmitAllTxnsForIoCommand(IoCommand* io_cmd) {
     ZX_ASSERT(blocks - 1 <= UINT16_MAX);
     submission.set_start_lba(io_cmd->op.rw.offset_dev).set_block_count(blocks - 1);
 
-    zx::result<> status = io_queue_->Submit(submission, zx::unowned_vmo(io_cmd->op.rw.vmo),
-                                            io_cmd->op.rw.offset_vmo, bytes, io_cmd);
-    if (status.is_error()) {
-      if (status.status_value() == ZX_ERR_SHOULD_WAIT) {
+    zx_status_t status = io_queue_->Submit(submission, zx::unowned_vmo(io_cmd->op.rw.vmo),
+                                           io_cmd->op.rw.offset_vmo, bytes, io_cmd);
+    if (status != ZX_OK) {
+      if (status == ZX_ERR_SHOULD_WAIT) {
         // We can't proceed if there is no available space in the submission queue, and we tell the
         // caller to retain the command (false).
         return false;
       } else {
         zxlogf(ERROR, "Failed to submit transaction (command %p): %s", io_cmd,
-               status.status_string());
+               zx_status_get_string(status));
         break;
       }
     }
@@ -290,10 +249,9 @@ void Nvme::ProcessIoCompletions() {
   nvme_device_t* nvme = nvme_;
 
   bool ring_doorbell = false;
+  Completion* completion = nullptr;
   IoCommand* io_cmd = nullptr;
-  bool has_error_code = true;
-
-  while (io_queue_->CheckForNewCompletion(&io_cmd, &has_error_code) != ZX_ERR_SHOULD_WAIT) {
+  while (io_queue_->CheckForNewCompletion(&completion, &io_cmd) != ZX_ERR_SHOULD_WAIT) {
     ring_doorbell = true;
 
     if (io_cmd == nullptr) {
@@ -301,10 +259,15 @@ void Nvme::ProcessIoCompletions() {
       continue;
     }
 
-    if (has_error_code) {
+    if (completion->status_code_type() == StatusCodeType::kGeneric &&
+        completion->status_code() == 0) {
+      zxlogf(TRACE, "Completed transaction #%u command %p OK.", completion->command_id(), io_cmd);
+    } else {
+      zxlogf(ERROR, "Completed transaction #%u command %p ERROR: status type=%01x, status=%02x",
+             completion->command_id(), io_cmd, completion->status_code_type(),
+             completion->status_code());
       io_cmd->flags |= COMMAND_FLAG_FAILED;
-      // discard any remaining bytes -- no reason to keep creating
-      // further txns once one has failed
+      // Discard any remaining bytes -- no reason to keep creating further txns once one has failed.
       io_cmd->op.rw.length = 0;
     }
 
@@ -442,53 +405,36 @@ void Nvme::DdkRelease() {
     }
   }
 
-  io_buffer_release(&nvme->iob);
   free(nvme);
 }
 
-static void infostring(const char* prefix, uint8_t* str, size_t len) {
-  char tmp[len + 1];
-  size_t i;
-  for (i = 0; i < len; i++) {
-    uint8_t c = str[i];
-    if (c == 0) {
-      break;
-    }
-    if ((c < ' ') || (c > 127)) {
-      c = ' ';
-    }
-    tmp[i] = c;
-  }
-  tmp[i] = 0;
-  while (i > 0) {
-    i--;
-    if (tmp[i] == ' ') {
-      tmp[i] = 0;
-    } else {
-      break;
-    }
-  }
-  zxlogf(INFO, "%s'%s'", prefix, tmp);
-}
-
-// Convenience accessors for BAR0 registers
-#define MmioVaddr static_cast<MMIO_PTR uint8_t*>(mmio_->get())
-#define rd64(r) MmioRead64(reinterpret_cast<MMIO_PTR uint64_t*>(MmioVaddr + NVME_REG_##r))
-#define wr32(v, r) MmioWrite32(v, reinterpret_cast<MMIO_PTR uint32_t*>(MmioVaddr + NVME_REG_##r))
-#define wr64(v, r) MmioWrite64(v, reinterpret_cast<MMIO_PTR uint64_t*>(MmioVaddr + NVME_REG_##r))
-
-// dedicated pages from the page pool
-#define IDX_ADMIN_SQ 0
-#define IDX_ADMIN_CQ 1
-#define IDX_SCRATCH 2
-#define IO_PAGE_COUNT 3  // this must always be last
-
 #define WAIT_MS 5000
 
-void Nvme::DdkInit(ddk::InitTxn txn) {
-  nvme_device_t* nvme = nvme_;
+static zx_status_t CheckMinMaxSize(const std::string& name, size_t our_size, size_t min_size,
+                                   size_t max_size) {
+  if (our_size < min_size) {
+    zxlogf(ERROR, "%s size is too small (ours: %zu, min: %zu).", name.c_str(), our_size, min_size);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (our_size > max_size) {
+    zxlogf(ERROR, "%s size is too large (ours: %zu, max: %zu).", name.c_str(), our_size, max_size);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ZX_OK;
+}
 
-  auto cleanup = fit::defer([] { zxlogf(ERROR, "init failed"); });
+void Nvme::DdkInit(ddk::InitTxn txn) {
+  // The drive initialization has numerous error conditions. Wrap the initialization here to ensure
+  // we always call txn.Reply() in any outcome.
+  zx_status_t status = Init();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Driver initialization failed: %s", zx_status_get_string(status));
+  }
+  txn.Reply(status);
+}
+
+zx_status_t Nvme::Init() {
+  nvme_device_t* nvme = nvme_;
 
   caps_ = CapabilityReg::Get().ReadFrom(mmio_.get());
   version_ = VersionReg::Get().ReadFrom(mmio_.get());
@@ -512,26 +458,10 @@ void Nvme::DdkInit(ddk::InitTxn txn) {
   zxlogf(DEBUG, "Maximum queue entries supported (MQES): %u", caps_.max_queue_entries());
 
   const size_t kPageSize = zx_system_get_page_size();
-  if (kPageSize < caps_.memory_page_size_min_bytes()) {
-    zxlogf(ERROR, "Page size is too small (ours: 0x%zd, min: 0x%d).", kPageSize,
-           caps_.memory_page_size_min_bytes());
-    txn.Reply(ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-  if (kPageSize > caps_.memory_page_size_max_bytes()) {
-    zxlogf(ERROR, "Page size is too large (ours: 0x%zd, max: 0x%d).", kPageSize,
-           caps_.memory_page_size_max_bytes());
-    txn.Reply(ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-
-  // Allocate pages for the admin queue and scratch.
-  // TODO: these should all be RO to hardware apart from the scratch io page(s)
-  if (io_buffer_init(&nvme->iob, bti_.get(), kPageSize * IO_PAGE_COUNT, IO_BUFFER_RW) ||
-      io_buffer_physmap(&nvme->iob)) {
-    zxlogf(ERROR, "could not allocate io buffers");
-    txn.Reply(ZX_ERR_NO_MEMORY);
-    return;
+  zx_status_t status = CheckMinMaxSize("System page", kPageSize, caps_.memory_page_size_min_bytes(),
+                                       caps_.memory_page_size_max_bytes());
+  if (status != ZX_OK) {
+    return status;
   }
 
   if (ControllerStatusReg::Get().ReadFrom(&*mmio_).ready()) {
@@ -542,18 +472,37 @@ void Nvme::DdkInit(ddk::InitTxn txn) {
     while (ControllerStatusReg::Get().ReadFrom(&*mmio_).ready()) {
       if (--ms_remain == 0) {
         zxlogf(ERROR, "Controller reset timed out.");
-        txn.Reply(ZX_ERR_TIMED_OUT);
-        return;
+        return ZX_ERR_TIMED_OUT;
       }
       zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
     }
     zxlogf(DEBUG, "Controller has been reset (took %u ms).", WAIT_MS - ms_remain);
   }
 
-  // configure admin submission and completion queues
-  wr64(nvme->iob.phys_list[IDX_ADMIN_SQ], ASQ);
-  wr64(nvme->iob.phys_list[IDX_ADMIN_CQ], ACQ);
-  wr32(NVME_AQA_ASQS(SQMAX(kPageSize) - 1) | NVME_AQA_ACQS(CQMAX(kPageSize) - 1), AQA);
+  // Set up admin submission and completion queues.
+  auto admin_queue = QueuePair::Create(bti_.borrow(), 0, kAdminQueueMaxEntries, caps_, *mmio_,
+                                       /*prealloc_prp=*/false);
+  if (admin_queue.is_error()) {
+    zxlogf(ERROR, "Failed to set up admin queue: %s", admin_queue.status_string());
+    return admin_queue.status_value();
+  }
+  admin_queue_ = std::move(*admin_queue);
+
+  // Configure the admin queue.
+  AdminQueueAttributesReg::Get()
+      .ReadFrom(&*mmio_)
+      .set_completion_queue_size(admin_queue_->completion().entry_count() - 1)
+      .set_submission_queue_size(admin_queue_->submission().entry_count() - 1)
+      .WriteTo(&*mmio_);
+
+  AdminQueueAddressReg::CompletionQueue()
+      .ReadFrom(&*mmio_)
+      .set_addr(admin_queue_->completion().GetDeviceAddress())
+      .WriteTo(&*mmio_);
+  AdminQueueAddressReg::SubmissionQueue()
+      .ReadFrom(&*mmio_)
+      .set_addr(admin_queue_->submission().GetDeviceAddress())
+      .WriteTo(&*mmio_);
 
   zxlogf(DEBUG, "Enabling controller.");
   ControllerConfigReg::Get()
@@ -577,256 +526,242 @@ void Nvme::DdkInit(ddk::InitTxn txn) {
   while (!(ControllerStatusReg::Get().ReadFrom(&*mmio_).ready())) {
     if (--ms_remain == 0) {
       zxlogf(ERROR, "Timed out waiting for controller to leave reset.");
-      txn.Reply(ZX_ERR_TIMED_OUT);
-      return;
+      return ZX_ERR_TIMED_OUT;
     }
     zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
   }
   zxlogf(DEBUG, "Controller enabled (took %u ms).", WAIT_MS - ms_remain);
-
-  // registers and buffers for admin queues
-  uint64_t cap = rd64(CAP);
-  nvme->io_admin_sq_tail_db =
-      static_cast<MMIO_PTR uint8_t*>(mmio_->get()) + NVME_REG_SQnTDBL(0, cap);
-  nvme->io_admin_cq_head_db =
-      static_cast<MMIO_PTR uint8_t*>(mmio_->get()) + NVME_REG_CQnHDBL(0, cap);
-
-  nvme->admin_sq = reinterpret_cast<nvme_cmd_t*>(static_cast<uint8_t*>(nvme->iob.virt) +
-                                                 kPageSize * IDX_ADMIN_SQ);
-  nvme->admin_sq_head = 0;
-  nvme->admin_sq_tail = 0;
-
-  nvme->admin_cq = reinterpret_cast<nvme_cpl_t*>(static_cast<uint8_t*>(nvme->iob.virt) +
-                                                 kPageSize * IDX_ADMIN_CQ);
-  nvme->admin_cq_head = 0;
-  nvme->admin_cq_toggle = 1;
 
   // Set up IO submission and completion queues.
   auto io_queue = QueuePair::Create(bti_.borrow(), 1, caps_.max_queue_entries(), caps_, *mmio_,
                                     /*prealloc_prp=*/true);
   if (io_queue.is_error()) {
     zxlogf(ERROR, "Failed to set up io queue: %s", io_queue.status_string());
-    txn.Reply(io_queue.error_value());
-    return;
+    return io_queue.status_value();
   }
   io_queue_ = std::move(*io_queue);
-
-  // scratch page for admin ops
-  void* scratch = static_cast<uint8_t*>(nvme->iob.virt) + kPageSize * IDX_SCRATCH;
+  zxlogf(DEBUG, "Using IO submission queue size of %lu, IO completion queue size of %lu.",
+         io_queue_->submission().entry_count(), io_queue_->completion().entry_count());
 
   int thrd_status = thrd_create_with_name(&irq_thread_, IrqThread, this, "nvme-irq-thread");
   if (thrd_status) {
     zxlogf(ERROR, " cannot create irq thread: %d", thrd_status);
-    txn.Reply(ZX_ERR_INTERNAL);
-    return;
+    return ZX_ERR_INTERNAL;
   }
   nvme->flags |= FLAG_IRQ_THREAD_STARTED;
 
   thrd_status = thrd_create_with_name(&io_thread_, IoThread, this, "nvme-io-thread");
   if (thrd_status) {
     zxlogf(ERROR, " cannot create io thread: %d", thrd_status);
-    txn.Reply(ZX_ERR_INTERNAL);
-    return;
+    return ZX_ERR_INTERNAL;
   }
   nvme->flags |= FLAG_IO_THREAD_STARTED;
 
-  nvme_cmd_t cmd;
-
-  // identify device
-  cmd.cmd = NVME_CMD_CID(0) | NVME_CMD_PRP | NVME_CMD_NORMAL | NVME_CMD_OPC(NVME_ADMIN_OP_IDENTIFY);
-  cmd.nsid = 0;
-  cmd.reserved = 0;
-  cmd.mptr = 0;
-  cmd.dptr.prp[0] = nvme->iob.phys_list[IDX_SCRATCH];
-  cmd.dptr.prp[1] = 0;
-  cmd.u.raw[0] = 1;  // CNS 01
-
-  zx_status_t status = nvme_admin_txn(nvme, &cmd, NULL);
+  zx::vmo admin_data;
+  status = zx::vmo::create(kPageSize, 0, &admin_data);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "device identify op failed: %s", zx_status_get_string(status));
-    txn.Reply(ZX_ERR_INTERNAL);
-    return;
+    zxlogf(ERROR, "Failed to create vmo: %s", zx_status_get_string(status));
+    return status;
   }
 
-  nvme_identify_t* ci = static_cast<nvme_identify_t*>(scratch);
-  infostring("model:         ", ci->MN, sizeof(ci->MN));
-  infostring("serial number: ", ci->SN, sizeof(ci->SN));
-  infostring("firmware:      ", ci->FR, sizeof(ci->FR));
-
-  if ((ci->SQES & 0xF) != NVME_CMD_SHIFT) {
-    zxlogf(ERROR, "SQES minimum is not %ub", NVME_CMD_SIZE);
-    txn.Reply(ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-  if ((ci->CQES & 0xF) != NVME_CPL_SHIFT) {
-    zxlogf(ERROR, "CQES minimum is not %ub", NVME_CPL_SIZE);
-    txn.Reply(ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-  zxlogf(DEBUG, "max outstanding commands: %u", ci->MAXCMD);
-
-  uint32_t nscount = ci->NN;
-  zxlogf(DEBUG, "max namespaces: %u", nscount);
-  zxlogf(DEBUG, "scatter gather lists (SGL): %c %08x", (ci->SGLS & 3) ? 'Y' : 'N', ci->SGLS);
-
-  // Maximum transfer is in units of 2^n * PAGESIZE, n == 0 means "infinite"
-  nvme->max_xfer = 0xFFFFFFFF;
-  if ((ci->MDTS != 0) && (ci->MDTS < (31 - PageShift(kPageSize)))) {
-    nvme->max_xfer = (1 << ci->MDTS) * kPageSize;
+  fzl::VmoMapper mapper;
+  status = mapper.Map(admin_data);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to map vmo: %s", zx_status_get_string(status));
+    return status;
   }
 
-  zxlogf(DEBUG, "max data transfer: %u bytes", nvme->max_xfer);
-  zxlogf(DEBUG, "sanitize caps: %u", ci->SANICAP & 3);
+  IdentifySubmission identify_controller;
+  identify_controller.set_structure(IdentifySubmission::IdentifyCns::kIdentifyController);
+  status = DoAdminCommandSync(identify_controller, admin_data.borrow());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to identify controller: %s", zx_status_get_string(status));
+    return status;
+  }
 
-  zxlogf(DEBUG, "abort command limit (ACL): %u", ci->ACL + 1);
-  zxlogf(DEBUG, "asynch event req limit (AERL): %u", ci->AERL + 1);
-  zxlogf(DEBUG, "firmware: slots: %u reset: %c slot1ro: %c", (ci->FRMW >> 1) & 3,
-         (ci->FRMW & (1 << 4)) ? 'N' : 'Y', (ci->FRMW & 1) ? 'Y' : 'N');
-  zxlogf(DEBUG, "host buffer: min/preferred: %u/%u pages", ci->HMMIN, ci->HMPRE);
-  zxlogf(DEBUG, "capacity: total/unalloc: %zu/%zu", ci->TNVMCAP_LO, ci->UNVMCAP_LO);
+  auto identify = static_cast<IdentifyController*>(mapper.start());
+  zxlogf(INFO, "Model number:  '%s'",
+         std::string(identify->model_number, sizeof(identify->model_number)).c_str());
+  zxlogf(INFO, "Serial number: '%s'",
+         std::string(identify->serial_number, sizeof(identify->serial_number)).c_str());
+  zxlogf(INFO, "Firmware rev.: '%s'",
+         std::string(identify->firmware_rev, sizeof(identify->firmware_rev)).c_str());
 
-  if (ci->VWC & 1) {
+  status = CheckMinMaxSize("Submission queue entry", sizeof(Submission),
+                           identify->minimum_sq_entry_size(), identify->maximum_sq_entry_size());
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = CheckMinMaxSize("Completion queue entry", sizeof(Completion),
+                           identify->minimum_cq_entry_size(), identify->maximum_cq_entry_size());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zxlogf(DEBUG, "Maximum outstanding commands: %u", identify->max_cmd);
+  zxlogf(DEBUG, "Number of namespaces: %u", identify->num_namespaces);
+  if (identify->max_allowed_namespaces != 0) {
+    zxlogf(DEBUG, "Maximum number of allowed namespaces: %u", identify->max_allowed_namespaces);
+  }
+  zxlogf(DEBUG, "SGL support: %c (0x%08x)", (identify->sgl_support & 3) ? 'Y' : 'N',
+         identify->sgl_support);
+  uint32_t max_data_transfer_bytes = 0;
+  if (identify->max_data_transfer != 0) {
+    max_data_transfer_bytes =
+        caps_.memory_page_size_min_bytes() * (1 << identify->max_data_transfer);
+    zxlogf(DEBUG, "Maximum data transfer size: %u bytes", max_data_transfer_bytes);
+  }
+
+  zxlogf(DEBUG, "sanitize caps: %u", identify->sanicap & 3);
+  zxlogf(DEBUG, "abort command limit (ACL): %u", identify->acl + 1);
+  zxlogf(DEBUG, "asynch event req limit (AERL): %u", identify->aerl + 1);
+  zxlogf(DEBUG, "firmware: slots: %u reset: %c slot1ro: %c", (identify->frmw >> 1) & 3,
+         (identify->frmw & (1 << 4)) ? 'N' : 'Y', (identify->frmw & 1) ? 'Y' : 'N');
+  zxlogf(DEBUG, "host buffer: min/preferred: %u/%u pages", identify->hmmin, identify->hmpre);
+  zxlogf(DEBUG, "capacity: total/unalloc: %zu/%zu", identify->tnvmcap[0], identify->unvmcap[0]);
+
+  if (identify->vwc & 1) {
     nvme->flags |= FLAG_HAS_VWC;
   }
-  uint32_t awun = ci->AWUN + 1;
-  uint32_t awupf = ci->AWUPF + 1;
+  uint32_t awun = identify->atomic_write_unit_normal + 1;
+  uint32_t awupf = identify->atomic_write_unit_power_fail + 1;
   zxlogf(DEBUG, "volatile write cache (VWC): %s", nvme->flags & FLAG_HAS_VWC ? "Y" : "N");
   zxlogf(DEBUG, "atomic write unit (AWUN)/(AWUPF): %u/%u blks", awun, awupf);
 
 #define FEATURE(a, b)  \
-  if (ci->a & a##_##b) \
+  if (identify->a & b) \
   zxlogf(DEBUG, "feature: %s", #b)
-  FEATURE(OACS, DOORBELL_BUFFER_CONFIG);
-  FEATURE(OACS, VIRTUALIZATION_MANAGEMENT);
-  FEATURE(OACS, NVME_MI_SEND_RECV);
-  FEATURE(OACS, DIRECTIVE_SEND_RECV);
-  FEATURE(OACS, DEVICE_SELF_TEST);
-  FEATURE(OACS, NAMESPACE_MANAGEMENT);
-  FEATURE(OACS, FIRMWARE_DOWNLOAD_COMMIT);
-  FEATURE(OACS, FORMAT_NVM);
-  FEATURE(OACS, SECURITY_SEND_RECV);
-  FEATURE(ONCS, TIMESTAMP);
-  FEATURE(ONCS, RESERVATIONS);
-  FEATURE(ONCS, SAVE_SELECT_NONZERO);
-  FEATURE(ONCS, WRITE_UNCORRECTABLE);
-  FEATURE(ONCS, COMPARE);
+  FEATURE(oacs, OACS_DOORBELL_BUFFER_CONFIG);
+  FEATURE(oacs, OACS_VIRTUALIZATION_MANAGEMENT);
+  FEATURE(oacs, OACS_NVME_MI_SEND_RECV);
+  FEATURE(oacs, OACS_DIRECTIVE_SEND_RECV);
+  FEATURE(oacs, OACS_DEVICE_SELF_TEST);
+  FEATURE(oacs, OACS_NAMESPACE_MANAGEMENT);
+  FEATURE(oacs, OACS_FIRMWARE_DOWNLOAD_COMMIT);
+  FEATURE(oacs, OACS_FORMAT_NVM);
+  FEATURE(oacs, OACS_SECURITY_SEND_RECV);
+  FEATURE(oncs, ONCS_TIMESTAMP);
+  FEATURE(oncs, ONCS_RESERVATIONS);
+  FEATURE(oncs, ONCS_SAVE_SELECT_NONZERO);
+  FEATURE(oncs, ONCS_WRITE_UNCORRECTABLE);
+  FEATURE(oncs, ONCS_COMPARE);
 
-  // set feature (number of queues) to 1 iosq and 1 iocq
-  memset(&cmd, 0, sizeof(cmd));
-  cmd.cmd =
-      NVME_CMD_CID(0) | NVME_CMD_PRP | NVME_CMD_NORMAL | NVME_CMD_OPC(NVME_ADMIN_OP_SET_FEATURE);
-  cmd.u.raw[0] = NVME_FEATURE_NUMBER_OF_QUEUES;
-  cmd.u.raw[1] = 0;
-
-  nvme_cpl_t cpl;
-  if (nvme_admin_txn(nvme, &cmd, &cpl) != ZX_OK) {
-    zxlogf(ERROR, "set feature (number queues) op failed");
-    txn.Reply(ZX_ERR_INTERNAL);
-    return;
+  // Set feature (number of queues) to 1 IO submission queue and 1 IO completion queue.
+  SetIoQueueCountSubmission set_queue_count;
+  set_queue_count.set_num_submission_queues(1).set_num_completion_queues(1);
+  status = DoAdminCommandSync(set_queue_count);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to set feature (number of queues): %s", zx_status_get_string(status));
+    return status;
   }
-  zxlogf(DEBUG, "cpl.cmd %08x", cpl.cmd);
-
-  zxlogf(INFO, "Using IO submission queue size of %lu, IO completion queue size of %lu.",
-         io_queue_->submission().entry_count(), io_queue_->completion().entry_count());
-
-  // create the IO completion queue
-  memset(&cmd, 0, sizeof(cmd));
-  cmd.cmd =
-      NVME_CMD_CID(0) | NVME_CMD_PRP | NVME_CMD_NORMAL | NVME_CMD_OPC(NVME_ADMIN_OP_CREATE_IOCQ);
-  cmd.dptr.prp[0] = io_queue_->completion().GetDeviceAddress();
-  cmd.u.raw[0] = ((io_queue_->completion().entry_count() - 1) << 16) | 1;  // queue size, queue id
-  cmd.u.raw[1] = (0 << 16) | 2 | 1;  // irq vector, irq enable, phys contig
-
-  if (nvme_admin_txn(nvme, &cmd, NULL) != ZX_OK) {
-    zxlogf(ERROR, "completion queue creation op failed");
-    txn.Reply(ZX_ERR_INTERNAL);
-    return;
+  auto result = static_cast<SetIoQueueCountCompletion*>(&nvme->admin_result);
+  if (result->num_submission_queues() < 1) {
+    zxlogf(ERROR, "Unexpected IO submission queue count: %u", result->num_submission_queues());
+    return ZX_ERR_IO;
+  }
+  if (result->num_completion_queues() < 1) {
+    zxlogf(ERROR, "Unexpected IO completion queue count: %u", result->num_completion_queues());
+    return ZX_ERR_IO;
   }
 
-  // create the IO submit queue
-  memset(&cmd, 0, sizeof(cmd));
-  cmd.cmd =
-      NVME_CMD_CID(0) | NVME_CMD_PRP | NVME_CMD_NORMAL | NVME_CMD_OPC(NVME_ADMIN_OP_CREATE_IOSQ);
-  cmd.dptr.prp[0] = io_queue_->submission().GetDeviceAddress();
-  cmd.u.raw[0] = ((io_queue_->submission().entry_count() - 1) << 16) | 1;  // queue size, queue id
-  cmd.u.raw[1] = (1 << 16) | 0 | 1;  // cqid, qprio, phys contig
-
-  if (nvme_admin_txn(nvme, &cmd, NULL) != ZX_OK) {
-    zxlogf(ERROR, "submit queue creation op failed");
-    txn.Reply(ZX_ERR_INTERNAL);
-    return;
+  // Create IO completion queue.
+  CreateIoCompletionQueueSubmission create_iocq;
+  create_iocq.set_queue_id(io_queue_->completion().id())
+      .set_queue_size(io_queue_->completion().entry_count() - 1)
+      .set_contiguous(true)
+      .set_interrupt_en(true)
+      .set_interrupt_vector(0);
+  create_iocq.data_pointer[0] = io_queue_->completion().GetDeviceAddress();
+  status = DoAdminCommandSync(create_iocq);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to create IO completion queue: %s", zx_status_get_string(status));
+    return status;
   }
 
-  // identify namespace 1
-  memset(&cmd, 0, sizeof(cmd));
-  cmd.cmd = NVME_CMD_CID(0) | NVME_CMD_PRP | NVME_CMD_NORMAL | NVME_CMD_OPC(NVME_ADMIN_OP_IDENTIFY);
-  cmd.nsid = 1;
-  cmd.dptr.prp[0] = nvme->iob.phys_list[IDX_SCRATCH];
-
-  if (nvme_admin_txn(nvme, &cmd, NULL) != ZX_OK) {
-    zxlogf(ERROR, "namespace identify op failed");
-    txn.Reply(ZX_ERR_INTERNAL);
-    return;
+  // Create IO submission queue.
+  CreateIoSubmissionQueueSubmission create_iosq;
+  create_iosq.set_queue_id(io_queue_->submission().id())
+      .set_queue_size(io_queue_->submission().entry_count() - 1)
+      .set_completion_queue_id(io_queue_->completion().id())
+      .set_contiguous(true);
+  create_iosq.data_pointer[0] = io_queue_->submission().GetDeviceAddress();
+  status = DoAdminCommandSync(create_iosq);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to create IO submission queue: %s", zx_status_get_string(status));
+    return status;
   }
 
-  nvme_identify_ns_t* ni = static_cast<nvme_identify_ns_t*>(scratch);
+  // Identify namespace 1.
+  IdentifySubmission identify_ns;
+  identify_ns.namespace_id = 1;
+  identify_ns.set_structure(IdentifySubmission::IdentifyCns::kIdentifyNamespace);
+  status = DoAdminCommandSync(identify_ns, admin_data.borrow());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to identify namespace 1: %s", zx_status_get_string(status));
+    return status;
+  }
 
-  uint32_t nawun = (ni->NSFEAT & NSFEAT_LOCAL_ATOMIC_SIZES) ? (ni->NAWUN + 1U) : awun;
-  uint32_t nawupf = (ni->NSFEAT & NSFEAT_LOCAL_ATOMIC_SIZES) ? (ni->NAWUPF + 1U) : awupf;
+  auto ns = static_cast<IdentifyNvmeNamespace*>(mapper.start());
+
+  uint32_t nawun = (ns->ns_feat & NSFEAT_LOCAL_ATOMIC_SIZES) ? (ns->n_aw_un + 1U) : awun;
+  uint32_t nawupf = (ns->ns_feat & NSFEAT_LOCAL_ATOMIC_SIZES) ? (ns->n_aw_u_pf + 1U) : awupf;
   zxlogf(DEBUG, "ns: atomic write unit (AWUN)/(AWUPF): %u/%u blks", nawun, nawupf);
-  zxlogf(DEBUG, "ns: NABSN/NABO/NABSPF/NOIOB: %u/%u/%u/%u", ni->NABSN, ni->NABO, ni->NABSPF,
-         ni->NOIOB);
+  zxlogf(DEBUG, "ns: NABSN/NABO/NABSPF/NOIOB: %u/%u/%u/%u", ns->n_abs_n, ns->n_ab_o, ns->n_abs_pf,
+         ns->n_oio_b);
 
   // table of block formats
   for (unsigned i = 0; i < 16; i++) {
-    if (ni->LBAF[i]) {
-      zxlogf(DEBUG, "ns: LBA FMT %02d: RP=%u LBADS=2^%ub MS=%ub", i, NVME_LBAFMT_RP(ni->LBAF[i]),
-             NVME_LBAFMT_LBADS(ni->LBAF[i]), NVME_LBAFMT_MS(ni->LBAF[i]));
+    if (ns->lba_formats[i].value) {
+      zxlogf(DEBUG, "ns: LBA FMT %02d: RP=%u LBADS=2^%ub MS=%ub", i,
+             ns->lba_formats[i].relative_performance(), ns->lba_formats[i].lba_data_size_log2(),
+             ns->lba_formats[i].metadata_size_bytes());
     }
   }
 
-  zxlogf(DEBUG, "ns: LBA FMT #%u active", ni->FLBAS & 0xF);
-  zxlogf(DEBUG, "ns: data protection: caps/set: 0x%02x/%u", ni->DPC & 0x3F, ni->DPS & 3);
+  zxlogf(DEBUG, "ns: LBA FMT #%u active", ns->f_lba_s & 0xF);
+  zxlogf(DEBUG, "ns: data protection: caps/set: 0x%02x/%u", ns->dpc & 0x3F, ns->dps & 3);
 
-  uint32_t fmt = ni->LBAF[ni->FLBAS & 0xF];
+  auto fmt = ns->lba_formats[ns->f_lba_s & 0xF];
 
-  zxlogf(DEBUG, "ns: size/cap/util: %zu/%zu/%zu blks", ni->NSSZ, ni->NCAP, ni->NUSE);
+  zxlogf(DEBUG, "ns: size/cap/util: %zu/%zu/%zu blks", ns->n_sze, ns->n_cap, ns->n_use);
 
-  nvme->info.block_count = ni->NSSZ;
-  nvme->info.block_size = 1 << NVME_LBAFMT_LBADS(fmt);
+  nvme->info.block_count = ns->n_sze;
+  nvme->info.block_size = 1 << fmt.lba_data_size_log2();
+  // TODO(fxbug.dev/102133): Explore the option of bounding this and relying on the block driver to
+  // break up large IOs.
   nvme->info.max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED;
 
-  if (NVME_LBAFMT_MS(fmt)) {
+  if (fmt.metadata_size_bytes()) {
     zxlogf(ERROR, "cannot handle LBA format with metadata");
-    txn.Reply(ZX_ERR_NOT_SUPPORTED);
-    return;
+    return ZX_ERR_NOT_SUPPORTED;
   }
+  // The NVMe spec only mentions a lower bound. The upper bound may be a false requirement.
   if ((nvme->info.block_size < 512) || (nvme->info.block_size > 32768)) {
     zxlogf(ERROR, "cannot handle LBA size of %u", nvme->info.block_size);
-    txn.Reply(ZX_ERR_NOT_SUPPORTED);
-    return;
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   // NVME r/w commands operate in block units, maximum of 64K:
-  uint32_t max_bytes_per_cmd = nvme->info.block_size * 65536;
-
-  if (nvme->max_xfer > max_bytes_per_cmd) {
-    nvme->max_xfer = max_bytes_per_cmd;
+  const uint32_t max_bytes_per_cmd = nvme->info.block_size * 65536;
+  if (max_data_transfer_bytes == 0) {
+    max_data_transfer_bytes = max_bytes_per_cmd;
+  } else {
+    max_data_transfer_bytes = std::min(max_data_transfer_bytes, max_bytes_per_cmd);
   }
 
-  // The device may allow transfers larger than we are prepared
-  // to handle.  Clip to our limit.
-  if (nvme->max_xfer > MAX_XFER) {
-    nvme->max_xfer = MAX_XFER;
+  // Limit maximum transfer size to 1MB which fits comfortably within our single PRP page per
+  // QueuePair setup.
+  const uint32_t prp_restricted_transfer_bytes = QueuePair::kMaxTransferPages * kPageSize;
+  if (max_data_transfer_bytes > prp_restricted_transfer_bytes) {
+    max_data_transfer_bytes = prp_restricted_transfer_bytes;
   }
 
   // convert to block units
-  nvme->max_xfer /= nvme->info.block_size;
-  zxlogf(DEBUG, "max transfer per r/w op: %u blocks (%u bytes)", nvme->max_xfer,
-         nvme->max_xfer * nvme->info.block_size);
+  nvme->max_transfer_blocks = max_data_transfer_bytes / nvme->info.block_size;
+  zxlogf(DEBUG, "max transfer per r/w op: %u blocks (%u bytes)", nvme->max_transfer_blocks,
+         nvme->max_transfer_blocks * nvme->info.block_size);
 
-  cleanup.cancel();
-  txn.Reply(ZX_OK);
+  return ZX_OK;
 }
 
 zx_status_t Nvme::AddDevice(zx_device_t* dev) {
@@ -840,8 +775,8 @@ zx_status_t Nvme::AddDevice(zx_device_t* dev) {
 
   auto cleanup = fit::defer([&] { DdkRelease(); });
 
-  zx_status_t status = ZX_OK;
-  if ((status = device_get_fragment_protocol(dev, "pci", ZX_PROTOCOL_PCI, &pci_)) != ZX_OK) {
+  zx_status_t status = device_get_fragment_protocol(dev, "pci", ZX_PROTOCOL_PCI, &pci_);
+  if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to find PCI fragment: %s", zx_status_get_string(status));
     return ZX_ERR_NOT_SUPPORTED;
   }

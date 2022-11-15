@@ -42,6 +42,13 @@ class Nvme : public DeviceType, public ddk::BlockImplProtocol<Nvme, ddk::base_pr
   int IoLoop();
   int IrqLoop();
 
+  // Main driver initialization.
+  zx_status_t Init();
+
+  // Perform an admin command synchronously (i.e., blocks for the command to complete or timeout).
+  zx_status_t DoAdminCommandSync(Submission& submission,
+                                 std::optional<zx::unowned_vmo> admin_data = std::nullopt);
+
   // Attempt to submit NVMe transactions for an IoCommand. Returns false if this could not be
   // completed due to temporary lack of resources, or true if either it succeeded or errored out.
   bool SubmitAllTxnsForIoCommand(IoCommand* io_cmd);
@@ -60,6 +67,9 @@ class Nvme : public DeviceType, public ddk::BlockImplProtocol<Nvme, ddk::base_pr
   zx::bti bti_;
   CapabilityReg caps_;
   VersionReg version_;
+
+  // Admin submission and completion queues.
+  std::unique_ptr<QueuePair> admin_queue_;
 
   // IO submission and completion queues.
   std::unique_ptr<QueuePair> io_queue_;
