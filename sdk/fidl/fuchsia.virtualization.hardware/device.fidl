@@ -99,10 +99,7 @@ protocol VirtioBlock {
     /// Start the block device.
     Start(resource struct {
         start_info StartInfo;
-        id string:fuchsia.virtualization.MAX_BLOCK_DEVICE_ID;
-        mode fuchsia.virtualization.BlockMode;
-        format fuchsia.virtualization.BlockFormat;
-        client zx.handle:CHANNEL;
+        spec fuchsia.virtualization.BlockSpec;
     }) -> (struct {
         capacity uint64;
         block_size uint32;

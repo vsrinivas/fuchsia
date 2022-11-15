@@ -106,9 +106,14 @@ class VirtioBlockTest : public TestWithDevice,
     status = MakeStartInfo(request_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
 
-    status = block_->Start(std::move(start_info), kVirtioBlockId, options.block_mode,
-                           fuchsia::virtualization::BlockFormat::FILE, std::move(client), &capacity,
-                           &block_size);
+    status = block_->Start(std::move(start_info),
+                           {
+                               .id = kVirtioBlockId,
+                               .mode = options.block_mode,
+                               .format = fuchsia::virtualization::BlockFormat::FILE,
+                               .client = std::move(client),
+                           },
+                           &capacity, &block_size);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(kBlockSectorSize * kNumSectors, capacity);
 

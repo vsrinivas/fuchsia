@@ -23,7 +23,7 @@ use {
     crate::remote_backend::RemoteBackend,
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_virtualization::{BlockFormat, BlockMode},
+    fidl_fuchsia_virtualization::{BlockFormat, BlockMode, BlockSpec},
     fidl_fuchsia_virtualization_hardware::VirtioBlockRequestStream,
     fuchsia_component::server,
     fuchsia_zircon as zx,
@@ -60,7 +60,7 @@ async fn run_virtio_block(
     mut virtio_block_fidl: VirtioBlockRequestStream,
 ) -> Result<(), anyhow::Error> {
     // Receive start info as first message.
-    let (start_info, id, mode, format, client, responder) = virtio_block_fidl
+    let (start_info, BlockSpec { id, mode, format, client }, responder) = virtio_block_fidl
         .try_next()
         .await?
         .ok_or(anyhow!("Failed to read fidl message from the channel."))?

@@ -61,8 +61,14 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id, zx
   }
   uint64_t capacity;
   uint32_t block_size;
-  status = block_->Start(std::move(start_info), id, mode_, format_, std::move(client), &capacity,
-                         &block_size);
+  status = block_->Start(std::move(start_info),
+                         {
+                             .id = id,
+                             .mode = mode_,
+                             .format = format_,
+                             .client = std::move(client),
+                         },
+                         &capacity, &block_size);
   if (status != ZX_OK) {
     return status;
   }
