@@ -1186,6 +1186,38 @@ async fn tcp_socket_shutdown_listener<I: net_types::ip::Ip + TestIpExt, E: netem
 }
 
 #[variants_test]
+async fn tcpv4_tcpv6_listeners_coexist<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let net = sandbox.create_network("net").await.expect("failed to create network");
+
+    let host =
+        sandbox.create_netstack_realm::<Netstack3, _>(name).expect("failed to create server realm");
+    let interface = host
+        .join_network::<E, _>(&net, "server-ep")
+        .await
+        .expect("failed to join network in realm");
+    interface
+        .add_address_and_subnet_route(Ipv4::SERVER_SUBNET)
+        .await
+        .expect("failed to add v4 addr");
+    interface
+        .add_address_and_subnet_route(Ipv6::SERVER_SUBNET)
+        .await
+        .expect("failed to add v6 addr");
+
+    let fnet_ext::IpAddress(v4_addr) = Ipv4::SERVER_SUBNET.addr.into();
+    let fnet_ext::IpAddress(v6_addr) = Ipv6::SERVER_SUBNET.addr.into();
+    let v4_addr = std::net::SocketAddr::new(v4_addr, 8080);
+    let v6_addr = std::net::SocketAddr::new(v6_addr, 8080);
+    let _listener_v4 = fasync::net::TcpListener::listen_in_realm(&host, v4_addr)
+        .await
+        .expect("failed to create v4 socket");
+    let _listener_v6 = fasync::net::TcpListener::listen_in_realm(&host, v6_addr)
+        .await
+        .expect("failed to create v6 socket");
+}
+
+#[variants_test]
 async fn test_tcp_socket<N: Netstack, E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let net = sandbox.create_network("net").await.expect("failed to create network");

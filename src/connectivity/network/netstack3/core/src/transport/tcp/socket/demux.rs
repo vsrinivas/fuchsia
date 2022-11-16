@@ -10,7 +10,10 @@ use assert_matches::assert_matches;
 use core::{convert::TryFrom, num::NonZeroU16};
 use log::trace;
 
-use net_types::{ip::IpAddress, SpecifiedAddr};
+use net_types::{
+    ip::{IpAddress, IpVersionMarker},
+    SpecifiedAddr,
+};
 use packet::{Buf, BufferMut, Nested, Serializer as _};
 use packet_formats::{
     ip::IpProto,
@@ -140,7 +143,7 @@ where
                         // connection from the socketmap.
                         if *defunct && matches!(state, State::Closed(_)) {
                             assert_matches!(sockets.socketmap.conns_mut().remove(&conn_id), Some(_));
-                            let _: Option<_> = ctx.cancel_timer(TimerId(conn_id, I::VERSION));
+                            let _: Option<_> = ctx.cancel_timer(TimerId::new::<I>(conn_id));
                             return true;
                         }
 
@@ -266,6 +269,7 @@ where
                                     Connection {
                                         acceptor: Some(Acceptor::Pending(ListenerId(
                                             listener_id.into(),
+                                            IpVersionMarker::default(),
                                         ))),
                                         state,
                                         ip_sock: ip_sock.clone(),
@@ -279,7 +283,7 @@ where
                             assert_eq!(
                                 ctx.schedule_timer_instant(
                                     poll_send_at,
-                                    TimerId(conn_id, I::VERSION),
+                                    TimerId::new::<I>(conn_id),
                                 ),
                                 None
                             );
@@ -299,8 +303,8 @@ where
                                     // This conversion is fine because
                                     // `conn_id` is newly created; No one
                                     // should have called close on it.
-                                    let MaybeClosedConnectionId(id) = conn_id;
-                                    listener.pending.push(ConnectionId(id));
+                                    let MaybeClosedConnectionId(id, marker) = conn_id;
+                                    listener.pending.push(ConnectionId(id, marker));
                                 }
                             }
                         }

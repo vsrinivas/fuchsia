@@ -128,7 +128,11 @@ impl TcpNonSyncContext for FakeNonSyncCtx {
 
     type ProvidedBuffers = ();
 
-    fn on_new_connection(&mut self, _listener: crate::transport::tcp::socket::ListenerId) {}
+    fn on_new_connection<I: Ip>(
+        &mut self,
+        _listener: crate::transport::tcp::socket::ListenerId<I>,
+    ) {
+    }
 
     fn new_passive_open_buffers(
         buffer_sizes: BufferSizes,

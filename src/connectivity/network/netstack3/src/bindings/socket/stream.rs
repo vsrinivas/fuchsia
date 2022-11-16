@@ -26,7 +26,7 @@ use fuchsia_zircon::{self as zx, Peered as _};
 use futures::StreamExt as _;
 use log::error;
 use net_types::{
-    ip::{IpAddress, IpVersionMarker, Ipv4, Ipv6},
+    ip::{IpAddress, IpVersion, IpVersionMarker, Ipv4, Ipv6},
     SpecifiedAddr, ZonedAddr,
 };
 
@@ -36,6 +36,7 @@ use crate::bindings::{
     LockableContext,
 };
 
+use net_types::ip::Ip;
 use netstack3_core::{
     ip::IpExt,
     transport::tcp::{
@@ -55,11 +56,11 @@ use netstack3_core::{
 };
 
 #[derive(Debug)]
-enum SocketId {
-    Unbound(UnboundId, LocalZirconSocketAndNotifier),
-    Bound(BoundId, LocalZirconSocketAndNotifier),
-    Connection(ConnectionId),
-    Listener(ListenerId),
+enum SocketId<I: Ip> {
+    Unbound(UnboundId<I>, LocalZirconSocketAndNotifier),
+    Bound(BoundId<I>, LocalZirconSocketAndNotifier),
+    Connection(ConnectionId<I>),
+    Listener(ListenerId<I>),
 }
 
 pub(crate) trait SocketWorkerDispatcher:
@@ -72,23 +73,33 @@ pub(crate) trait SocketWorkerDispatcher:
     ///
     /// # Panics
     /// Panics if `id` is already registered.
-    fn register_listener(&mut self, id: ListenerId, socket: zx::Socket);
+    fn register_listener<I: Ip>(&mut self, id: ListenerId<I>, socket: zx::Socket);
     /// Unregisters an existing listener when it is about to be closed.
     ///
     /// Returns the zircon socket that used to be registered.
     ///
     /// # Panics
     /// Panics if `id` is non-existent.
-    fn unregister_listener(&mut self, id: ListenerId) -> zx::Socket;
+    fn unregister_listener<I: Ip>(&mut self, id: ListenerId<I>) -> zx::Socket;
 }
 
 impl SocketWorkerDispatcher for crate::bindings::BindingsNonSyncCtxImpl {
-    fn register_listener(&mut self, id: ListenerId, socket: zx::Socket) {
-        assert_matches!(self.tcp_listeners.insert(id.into(), socket), None);
+    fn register_listener<I: Ip>(&mut self, id: ListenerId<I>, socket: zx::Socket) {
+        match I::VERSION {
+            IpVersion::V4 => assert_matches!(self.tcp_v4_listeners.insert(id.into(), socket), None),
+            IpVersion::V6 => assert_matches!(self.tcp_v6_listeners.insert(id.into(), socket), None),
+        }
     }
 
-    fn unregister_listener(&mut self, id: ListenerId) -> zx::Socket {
-        self.tcp_listeners.remove(id.into()).expect("invalid ListenerId")
+    fn unregister_listener<I: Ip>(&mut self, id: ListenerId<I>) -> zx::Socket {
+        match I::VERSION {
+            IpVersion::V4 => {
+                self.tcp_v4_listeners.remove(id.into()).expect("invalid v4 ListenerId")
+            }
+            IpVersion::V6 => {
+                self.tcp_v6_listeners.remove(id.into()).expect("invalid v6 ListenerId")
+            }
+        }
     }
 }
 
@@ -139,10 +150,12 @@ impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
     type ReturnedBuffers = PeerZirconSocketAndWatcher;
     type ProvidedBuffers = LocalZirconSocketAndNotifier;
 
-    fn on_new_connection(&mut self, listener: ListenerId) {
-        self.tcp_listeners
-            .get(listener.into())
-            .expect("invalid listener")
+    fn on_new_connection<I: Ip>(&mut self, listener: ListenerId<I>) {
+        let socket = match I::VERSION {
+            IpVersion::V4 => self.tcp_v4_listeners.get(listener.into()).expect("invalid listener"),
+            IpVersion::V6 => self.tcp_v6_listeners.get(listener.into()).expect("invalid listener"),
+        };
+        socket
             .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_INCOMING)
             .expect("failed to signal that the new connection is available");
     }
@@ -333,14 +346,14 @@ impl SendBuffer for SendBufferWithZirconSocket {
 }
 
 struct SocketWorker<I: IpExt, C> {
-    id: SocketId,
+    id: SocketId<I>,
     ctx: C,
     peer: zx::Socket,
     _marker: IpVersionMarker<I>,
 }
 
 impl<I: IpExt, C> SocketWorker<I, C> {
-    fn new(id: SocketId, ctx: C, peer: zx::Socket) -> Self {
+    fn new(id: SocketId<I>, ctx: C, peer: zx::Socket) -> Self {
         Self { id, ctx, peer, _marker: Default::default() }
     }
 }
@@ -426,7 +439,7 @@ fn spawn_send_task<I: IpExt, C>(
     ctx: C,
     socket: Arc<zx::Socket>,
     watcher: NeedsDataWatcher,
-    id: ConnectionId,
+    id: ConnectionId<I>,
 ) where
     C: LockableContext,
     C: Clone + Send + Sync + 'static,

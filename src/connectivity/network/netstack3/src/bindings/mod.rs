@@ -134,7 +134,8 @@ pub(crate) struct BindingsNonSyncCtxImpl {
     devices: Devices<DeviceId<StackTime>>,
     icmp_echo_sockets: IcmpEchoSockets,
     udp_sockets: UdpSockets,
-    tcp_listeners: IdMap<zx::Socket>,
+    tcp_v4_listeners: IdMap<zx::Socket>,
+    tcp_v6_listeners: IdMap<zx::Socket>,
 }
 
 impl AsRef<timers::TimerDispatcher<TimerId<StackTime>>> for BindingsNonSyncCtxImpl {
@@ -930,7 +931,8 @@ impl NetstackSeed {
                 devices: _,
                 icmp_echo_sockets: _,
                 udp_sockets: _,
-                tcp_listeners: _,
+                tcp_v4_listeners: _,
+                tcp_v6_listeners: _,
             } = non_sync_ctx;
             timers.spawn(netstack.clone());
 

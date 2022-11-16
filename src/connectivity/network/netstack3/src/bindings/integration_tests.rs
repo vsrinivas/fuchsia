@@ -16,7 +16,7 @@ use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul_network as net;
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
-use net_types::ip::{Ip as _, Ipv4, Ipv6, Subnet};
+use net_types::ip::{Ip, Ipv4, Ipv6, Subnet};
 use net_types::{
     ip::{AddrSubnetEither, Ipv4Addr},
     SpecifiedAddr,
@@ -149,11 +149,11 @@ where
 }
 
 impl stream::SocketWorkerDispatcher for TestNonSyncCtx {
-    fn register_listener(&mut self, id: ListenerId, socket: fuchsia_zircon::Socket) {
+    fn register_listener<I: Ip>(&mut self, id: ListenerId<I>, socket: fuchsia_zircon::Socket) {
         self.ctx.register_listener(id, socket)
     }
 
-    fn unregister_listener(&mut self, id: ListenerId) -> fuchsia_zircon::Socket {
+    fn unregister_listener<I: Ip>(&mut self, id: ListenerId<I>) -> fuchsia_zircon::Socket {
         self.ctx.unregister_listener(id)
     }
 }
@@ -190,7 +190,7 @@ impl TcpNonSyncContext for TestNonSyncCtx {
     type ReturnedBuffers = stream::PeerZirconSocketAndWatcher;
     type ProvidedBuffers = stream::LocalZirconSocketAndNotifier;
 
-    fn on_new_connection(&mut self, _listener: ListenerId) {}
+    fn on_new_connection<I: Ip>(&mut self, _listener: ListenerId<I>) {}
 
     fn new_passive_open_buffers(
         buffer_sizes: BufferSizes,
