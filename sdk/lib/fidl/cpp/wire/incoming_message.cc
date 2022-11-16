@@ -52,7 +52,7 @@ EncodedMessage::EncodedMessage(const internal::TransportVTable* transport_vtable
                                fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual)
     : transport_vtable_(transport_vtable),
       message_(fidl_incoming_msg_t{
-          .bytes = bytes.begin(),
+          .bytes = bytes.data(),
           .handles = handles,
           .handle_metadata = handle_metadata,
           .num_bytes = static_cast<uint32_t>(bytes.size()),
@@ -74,7 +74,7 @@ IncomingHeaderAndMessage::~IncomingHeaderAndMessage() = default;
 fidl_incoming_msg_t IncomingHeaderAndMessage::ReleaseToEncodedCMessage() && {
   ZX_DEBUG_ASSERT(status() == ZX_OK);
   fidl_incoming_msg_t msg = std::move(body_).ReleaseToEncodedCMessage();
-  msg.bytes = bytes_.begin();
+  msg.bytes = bytes_.data();
   msg.num_bytes = static_cast<uint32_t>(bytes_.size());
   return msg;
 }

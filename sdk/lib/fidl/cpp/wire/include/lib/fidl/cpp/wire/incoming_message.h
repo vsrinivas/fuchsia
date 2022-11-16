@@ -266,7 +266,7 @@ class IncomingHeaderAndMessage : public ::fidl::Status {
     return fit::nullable<fidl_epitaph_t*>{};
   }
 
-  uint8_t* bytes() const { return bytes_.begin(); }
+  uint8_t* bytes() const { return bytes_.data(); }
   uint32_t byte_actual() const { return static_cast<uint32_t>(bytes_.size()); }
 
   fidl_handle_t* handles() const { return body_.handles(); }
