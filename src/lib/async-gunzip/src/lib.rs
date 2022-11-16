@@ -46,15 +46,9 @@ where
 {
     let output = decode_with_stats(compressed_input);
 
-    output.filter_map(|i| async move {
-        match i {
-            Ok((bytes, _)) => match bytes.len() {
-                // Skip the final empty chunk, which only exists to emit stats for the gzip footer.
-                0 => None,
-                _ => Some(Ok(bytes)),
-            },
-            Err(x) => Some(Err(x)),
-        }
+    output.map(|i| match i {
+        Ok((bytes, _)) => Ok(bytes),
+        Err(x) => Err(x),
     })
 }
 
@@ -62,8 +56,7 @@ where
 ///
 /// This API returns a tuple of decompressed bytes and a struct containing
 /// statistics related to input size, time spent reading input, and time
-/// spent decompressing it. The final element always contains an empty set
-/// of bytes and stats associated with fetching the gzip trailer.
+/// spent decompressing it.
 pub fn decode_with_stats<B, E>(
     compressed_input: impl Stream<Item = Result<B, E>>,
 ) -> impl FusedStream<Item = Result<(Bytes, ChunkStats), Error<E>>>
@@ -248,16 +241,34 @@ mod tests {
         assert!(matches!(result, Err(Error::Decode(DecodeError::Deflate(..)))));
     }
 
-    /// Test behavior of the decoder wrapper, the stream does not end with empty bytes.
+    /// Test that [`decode_with_stats`] returns a list of stats with a cumulative time value
+    /// that is non-zero.
     #[test]
-    fn test_decode_last_element() {
+    fn test_decode_with_stats_time() {
         let input_stream = mock_input_stream(&random_looking_bytes(100), 20);
 
-        let output_stream = decode(input_stream).map(Result::unwrap);
+        let output_stream = decode_with_stats(input_stream).map(Result::unwrap);
         pin_mut!(output_stream);
-        let output_chunks = executor::block_on_stream(output_stream);
-        let last_chunk = output_chunks.last().unwrap();
+        let result = executor::block_on_stream(output_stream).map(|(_, stats)| stats);
 
-        assert_ne!(last_chunk.len(), 0);
+        let cumulative_decode_time =
+            result.fold(Duration::default(), |accumulator, val| accumulator + val.decode_time());
+
+        assert!(cumulative_decode_time.as_nanos() > 0);
+    }
+
+    /// Test that [`decode_with_stats`] returns a list of stats with a cumulative bytes read value
+    /// that is non-zero.
+    #[test]
+    fn test_decode_with_stats_bytes() {
+        let input_stream = mock_input_stream(&random_looking_bytes(100), 20);
+
+        let output_stream = decode_with_stats(input_stream).map(Result::unwrap);
+        pin_mut!(output_stream);
+        let result = executor::block_on_stream(output_stream).map(|(_, stats)| stats);
+
+        let bytes_read = result.fold(0usize, |accumulator, val| accumulator + val.bytes_read());
+
+        assert!(bytes_read > 0);
     }
 }

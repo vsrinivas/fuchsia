@@ -19,7 +19,7 @@ use miniz_oxide::inflate::stream as mz_stream;
 use miniz_oxide::inflate::stream::InflateState;
 use miniz_oxide::{DataFormat, MZFlush, MZStatus};
 use pin_project::pin_project;
-use std::{io, pin::Pin, result, time::Duration, time::Instant};
+use std::{io, pin::Pin, result, time::Instant};
 
 mod flags;
 
@@ -61,11 +61,14 @@ impl<R: AsyncBufRead> Decoder<R> {
         let flags = this.as_mut().read_required_headers(&mut stats).await?;
         this.as_mut().discard_optional_headers(flags, &mut stats).await?;
 
-        this.as_mut().decode_deflate_body(&mut stats, &mut out).await?;
+        let final_bytes = match this.as_mut().decode_deflate_body(&mut stats, &mut out).await {
+            Ok(bytes) => bytes,
+            Err(e) => return Err(e),
+        };
 
         this.as_mut().read_and_validate_footer(&mut stats).await?;
 
-        out.yield_((Bytes::new(), stats)).await;
+        out.yield_((final_bytes, stats)).await;
 
         if this.project().input.fill_buf().await?.is_empty() {
             Ok(())
@@ -80,7 +83,6 @@ impl<R: AsyncBufRead> Decoder<R> {
 
     async fn read_required_headers(self: Pin<&mut Self>, stats: &mut ChunkStats) -> Result<Flags> {
         let mut this = self.project();
-        let header_start = Instant::now();
 
         let mut header = [0; 10];
         stats.add_bytes_read(header.len());
@@ -108,8 +110,6 @@ impl<R: AsyncBufRead> Decoder<R> {
         let _xflags = header[8]; // May be used to indicate the level of compression performed.
         let _os = header[9]; // The operating system / file system on which the compression took place.
 
-        let header_end = Instant::now();
-        stats.add_decode_time(header_end - header_start);
         Ok(flags)
     }
 
@@ -118,8 +118,6 @@ impl<R: AsyncBufRead> Decoder<R> {
         flags: Flags,
         stats: &mut ChunkStats,
     ) -> Result<()> {
-        let header_start = Instant::now();
-
         if flags.contains(Flags::EXTRA) {
             let mut buf = vec![0; self.as_mut().read_u16_le(stats).await? as usize];
             self.as_mut().project().input.read_exact(&mut buf).await?;
@@ -146,9 +144,6 @@ impl<R: AsyncBufRead> Decoder<R> {
         // it's hinted that the contents is probably text.
         let _is_text = flags.contains(Flags::TEXT);
 
-        let header_end = Instant::now();
-        stats.add_decode_time(header_end - header_start);
-
         Ok(())
     }
 
@@ -159,13 +154,9 @@ impl<R: AsyncBufRead> Decoder<R> {
         mut self: Pin<&mut Self>,
         stats: &mut ChunkStats,
     ) -> Result<()> {
-        let footer_start = Instant::now();
-
         let _crc = self.as_mut().read_u32_le(stats).await?;
         let _uncompressed_size_mod_32 = self.read_u32_le(stats).await?;
 
-        let footer_end = Instant::now();
-        stats.add_decode_time(footer_end - footer_start);
         Ok(())
     }
 
@@ -179,7 +170,7 @@ impl<R: AsyncBufRead> Decoder<R> {
         self: Pin<&mut Self>,
         stats: &mut ChunkStats,
         out: &mut Yield<(Bytes, ChunkStats)>,
-    ) -> Result<()> {
+    ) -> Result<Bytes> {
         let mut this = self.project();
 
         let mut mz_state = InflateState::new_boxed(DataFormat::Raw);
@@ -192,11 +183,9 @@ impl<R: AsyncBufRead> Decoder<R> {
             // to inflating
             // Ensure more input is available. Note the deflate body is followed by a gzip
             // footer, so the stream should never dry up at this stage.
-            let read_start = Instant::now();
             let input_buf = this.input.fill_buf().await?;
 
-            let read_end = Instant::now();
-            stats.add_decode_time(read_end - read_start);
+            let decompress_start = Instant::now();
             let info = mz_stream::inflate(
                 &mut mz_state,
                 &input_buf,
@@ -204,8 +193,10 @@ impl<R: AsyncBufRead> Decoder<R> {
                 MZFlush::None,
             );
             let decompress_end = Instant::now();
-            stats.add_decode_time(decompress_end - read_end);
+            stats.add_decode_time(decompress_end - decompress_start);
 
+            // Since fill_buf with await will always result in new data, we will always have enough
+            // input to inflate.
             let status = info.status.map_err(DecodeError::from)?;
             stats.add_bytes_read(info.bytes_consumed);
             this.input.consume_unpin(info.bytes_consumed);
@@ -226,12 +217,10 @@ impl<R: AsyncBufRead> Decoder<R> {
                 MZStatus::StreamEnd => {
                     // Return a partial chunk with the rest of the output data.
                     if output_len != 0 {
-                        let output_chunk = Bytes::copy_from_slice(&output_buf[..output_len]);
-                        out.yield_((output_chunk, stats.clone())).await;
-                        stats.clear();
+                        return Ok(Bytes::copy_from_slice(&output_buf[..output_len]));
                     }
 
-                    return Ok(());
+                    return Ok(Bytes::new());
                 }
                 // gzip doesn't support preset dictionaries, so this status will never be returned.
                 MZStatus::NeedDict => unreachable!("miniz_oxide never returns NeedDict"),
@@ -268,6 +257,7 @@ mod tests {
     use futures::executor;
     use futures::executor::LocalPool;
     use futures::task::SpawnExt;
+    use std::time::Duration;
 
     /// Test chunking behavior of the decoder:
     /// * Push input chunks one-at-a-time by hand.
@@ -325,10 +315,6 @@ mod tests {
 
         // Close the input stream.
         drop(in_tx);
-
-        // An extra output chunk should be provided for the last ChunkStats.
-        decoder_pool.run_until_stalled();
-        assert_matches!(out_rx.try_next(), Ok(Some((bytes::Bytes { .. }, ChunkStats { .. }))));
 
         // The output stream should close and `out_tx` should be dropped.
         decoder_pool.run_until_stalled();
