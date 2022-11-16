@@ -1875,7 +1875,7 @@ type MyStruct = struct {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
-TEST(AttributesTests, BadReferencesNonexistentConstWithSchema) {
+TEST(AttributesTests, BadReferencesNonexistentConstWithSingleArgSchema) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1885,6 +1885,20 @@ type MyStruct = struct {};
 )FIDL");
   library.AddAttributeSchema("foo").AddArg(
       "value", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
+}
+
+TEST(AttributesTests, BadReferencesNonexistentConstWithMultipleArgSchema) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(nonexistent)
+type MyStruct = struct {};
+
+)FIDL");
+  library.AddAttributeSchema("foo")
+      .AddArg("first", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool))
+      .AddArg("second", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
@@ -1905,7 +1919,7 @@ const BAD bool = "not a bool";
   EXPECT_ERR(library.errors()[2], fidl::ErrCouldNotResolveAttributeArg);
 }
 
-TEST(AttributesTests, BadReferencesInvalidConstWithSchema) {
+TEST(AttributesTests, BadReferencesInvalidConstWithSingleArgSchema) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1922,6 +1936,26 @@ const BAD bool = "not a bool";
   EXPECT_ERR(library.errors()[0], fidl::ErrTypeCannotBeConvertedToType);
   EXPECT_ERR(library.errors()[1], fidl::ErrCannotResolveConstantValue);
   EXPECT_ERR(library.errors()[2], fidl::ErrCouldNotResolveAttributeArg);
+}
+
+TEST(AttributesTests, BadReferencesInvalidConstWithMultipleArgSchema) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(BAD)
+type MyStruct = struct {};
+
+const BAD bool = "not a bool";
+
+)FIDL");
+  library.AddAttributeSchema("foo")
+      .AddArg("first", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool))
+      .AddArg("second", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
+  ASSERT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 3);
+  EXPECT_ERR(library.errors()[0], fidl::ErrTypeCannotBeConvertedToType);
+  EXPECT_ERR(library.errors()[1], fidl::ErrCannotResolveConstantValue);
+  EXPECT_ERR(library.errors()[2], fidl::ErrAttributeArgNotNamed);
 }
 
 TEST(AttributesTests, BadSelfReferenceWithoutSchemaBool) {

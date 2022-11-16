@@ -179,7 +179,7 @@ void AttributeSchema::ResolveArgs(CompileStep* step, Attribute* attribute) const
       return;
     }
     if (arg_schemas_.size() > 1) {
-      step->Fail(ErrAttributeArgNotNamed, attribute->span, anon_arg->value.get());
+      step->Fail(ErrAttributeArgNotNamed, attribute->span, anon_arg->value->span.data());
       return;
     }
     anon_arg->name = step->generated_source_file()->AddLine(arg_schemas_.begin()->first);
