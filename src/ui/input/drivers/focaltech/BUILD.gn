@@ -13,11 +13,7 @@ driver_bind_rules("focaltech_touch_bind") {
   header_output = "focaltech_touch_bind.h"
   bind_output = "focaltech.bindbc"
   tests = "bind_tests.json"
-  disable_fragment_gen = true
-  deps = [
-    "//src/devices/bind/fuchsia.gpio",
-    "//src/devices/bind/fuchsia.i2c",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 group("tests") {
