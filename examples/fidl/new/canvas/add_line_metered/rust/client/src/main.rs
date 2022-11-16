@@ -63,13 +63,13 @@ async fn main() -> Result<(), Error> {
         // above as arguments.
         println!("AddLine request sent: {:?}", &mut line);
 
-        // [START now_has_response]
+        // [START diff_1]
         // By awaiting on the reply, we prevent the client from sending another request before the
         // server is ready to handle, thereby syncing the flow rate between the two parties over
         // this method.
         instance.add_line(&mut line).await.context("Error sending request")?;
         println!("AddLine response received");
-        // [END now_has_response]
+        // [END diff_1]
     }
 
     // TODO(fxbug.dev/76579): We need to sleep here to make sure all logs get drained. Once the

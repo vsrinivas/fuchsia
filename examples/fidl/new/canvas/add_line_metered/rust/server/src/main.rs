@@ -104,7 +104,7 @@ async fn run_server(stream: InstanceRequestStream) -> Result<(), Error> {
         stream.map(|result| result.context("failed request")).try_for_each(|request| async move {
             // Match based on the method being invoked.
             match request {
-                // [START now_has_response]
+                // [START diff_1]
                 InstanceRequest::AddLine { line, responder } => {
                     println!("AddLine request received: {:?}", line);
                     state_ref.lock().unwrap().add_line(line);
@@ -117,7 +117,7 @@ async fn run_server(stream: InstanceRequestStream) -> Result<(), Error> {
                     responder.send().context("Error responding")?;
                     println!("AddLine response sent");
                 } //
-                  // [END now_has_response]
+                  // [END diff_1]
             }
             Ok(())
         });

@@ -100,7 +100,7 @@ int main(int argc, const char** argv) {
     FX_LOGS(INFO) << "AddLine request sent: [Point { x: " << line[1].x << ", y: " << line[1].y
                   << " }, Point { x: " << line[0].x << ", y: " << line[0].y << " }]";
 
-    // [START now_has_response]
+    // [START diff_1]
     client->AddLine(line).ThenExactlyOnce(
         [&](fidl::WireUnownedResult<examples_canvas_addlinemetered::Instance::AddLine>& result) {
           // Check if the FIDL call succeeded or not.
@@ -120,7 +120,7 @@ int main(int argc, const char** argv) {
     // Run the loop until the callback is resolved, at which point we can continue from here.
     loop.Run();
     loop.ResetQuit();
-    // [END now_has_response]
+    // [END diff_1]
   }
 
   // TODO(fxbug.dev/76579): We need to sleep here to make sure all logs get drained. Once the
