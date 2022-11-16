@@ -141,8 +141,7 @@ async fn run_test<W: 'static + Write + Send + Sync>(
         accumulate_debug_data: false, // ffx never accumulates.
         log_protocol: None,
     };
-    let test_definitions =
-        test_params_from_args(cmd, std::io::stdin, experiments.json_input.enabled)?;
+    let test_definitions = test_params_from_args(cmd, experiments.json_input.enabled)?;
 
     let (cancel_sender, cancel_receiver) = futures::channel::oneshot::channel::<()>();
     let mut signals = Signals::new(&[SIGINT, SIGTERM]).unwrap();
@@ -192,15 +191,10 @@ async fn run_test<W: 'static + Write + Send + Sync>(
 /// Generate TestParams from |cmd|.
 /// |stdin_handle_fn| is a function that generates a handle to stdin and is a parameter to enable
 /// testing.
-fn test_params_from_args<F, R>(
+fn test_params_from_args(
     cmd: RunCommand,
-    stdin_handle_fn: F,
     json_input_experiment_enabled: bool,
-) -> Result<impl ExactSizeIterator<Item = run_test_suite_lib::TestParams> + Debug, FfxError>
-where
-    F: Fn() -> R,
-    R: std::io::Read,
-{
+) -> Result<impl ExactSizeIterator<Item = run_test_suite_lib::TestParams> + Debug, FfxError> {
     match &cmd.test_file {
         Some(_) if !json_input_experiment_enabled => {
             return Err(ffx_error!(
@@ -212,13 +206,6 @@ where
         Some(filename) => {
             if !cmd.test_args.is_empty() {
                 return Err(ffx_error!("Tests may not be specified in both args and by file"));
-            }
-            if filename == "-" {
-                suite_definition::test_params_from_reader(
-                    stdin_handle_fn(),
-                    TestParamsOptions { ignore_test_without_known_execution: false },
-                )
-                .map_err(|e| ffx_error!("Failed to read test definitions: {:?}", e))
             } else {
                 let file = std::fs::File::open(filename)
                     .map_err(|e| ffx_error!("Failed to open file {}: {:?}", filename, e))?;
@@ -344,8 +331,6 @@ mod test {
             }
         ]}))
         .expect("serialize json");
-        static ref VALID_STDIN_INPUT: Vec<u8> =
-            VALID_INPUT_FORMAT.replace("{}", "stdin").into_bytes();
         static ref VALID_FILE_INPUT: Vec<u8> =
             VALID_INPUT_FORMAT.replace("{}", "file").into_bytes();
         static ref INVALID_INPUT: Vec<u8> = vec![1u8; 64];
@@ -457,64 +442,6 @@ mod test {
                 RunCommand {
                     timeout: None,
                     test_args: vec![],
-                    test_file: Some("-".to_string()),
-                    test_filter: vec![],
-                    run_disabled: false,
-                    filter_ansi: false,
-                    parallel: None,
-                    count: None,
-                    min_severity_logs: None,
-                    show_full_moniker_in_logs: false,
-                    max_severity_logs: None,
-                    output_directory: None,
-                    disable_output_directory: false,
-                    continue_on_timeout: false,
-                    stop_after_failures: None,
-                    experimental_parallel_execution: None,
-                },
-                vec![
-                    run_test_suite_lib::TestParams {
-                        test_url: "stdin-test-url-1".to_string(),
-                        timeout_seconds: None,
-                        test_filters: None,
-                        also_run_disabled_tests: false,
-                        show_full_moniker: false,
-                        max_severity_logs: None,
-                        parallel: None,
-                        test_args: vec![],
-                        tags: vec![],
-                    },
-                    run_test_suite_lib::TestParams {
-                        test_url: "stdin-test-url-2".to_string(),
-                        timeout_seconds: Some(NonZeroU32::new(60).unwrap()),
-                        test_filters: None,
-                        show_full_moniker: false,
-                        also_run_disabled_tests: false,
-                        max_severity_logs: None,
-                        parallel: None,
-                        test_args: vec![],
-                        tags: vec![],
-                    },
-                    run_test_suite_lib::TestParams {
-                        test_url: "stdin-test-url-3".to_string(),
-                        timeout_seconds: None,
-                        test_filters: Some(vec!["Unit".to_string()]),
-                        also_run_disabled_tests: true,
-                        max_severity_logs: Some(diagnostics_data::Severity::Info),
-                        show_full_moniker: false,
-                        parallel: Some(4),
-                        test_args: vec!["--flag".to_string()],
-                        tags: vec![TestTag {
-                            key: "hermetic".to_string(),
-                            value: "true".to_string(),
-                        }],
-                    },
-                ],
-            ),
-            (
-                RunCommand {
-                    timeout: None,
-                    test_args: vec![],
                     test_file: Some(
                         dir.path().join("test_defs.json").to_str().unwrap().to_string(),
                     ),
@@ -574,11 +501,7 @@ mod test {
         ];
 
         for (run_command, expected_test_params) in cases.into_iter() {
-            let result = test_params_from_args(
-                run_command.clone(),
-                || std::io::Cursor::new(&*VALID_STDIN_INPUT),
-                true,
-            );
+            let result = test_params_from_args(run_command.clone(), true);
             assert!(
                 result.is_ok(),
                 "Error getting test params from {:?}: {:?}",
@@ -614,7 +537,6 @@ mod test {
                 stop_after_failures: None,
                 experimental_parallel_execution: None,
             },
-            || std::io::Cursor::new(&*VALID_STDIN_INPUT),
             true,
         )
         .expect("should succeed");
@@ -699,11 +621,7 @@ mod test {
         ];
 
         for (case_name, invalid_run_command) in cases.into_iter() {
-            let result = test_params_from_args(
-                invalid_run_command,
-                || std::io::Cursor::new(&*VALID_STDIN_INPUT),
-                true,
-            );
+            let result = test_params_from_args(invalid_run_command, true);
             assert!(
                 result.is_err(),
                 "Getting test params for case '{}' unexpectedly succeeded",

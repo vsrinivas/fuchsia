@@ -68,8 +68,7 @@ pub struct RunCommand {
     // TODO(satsukiu): once stable, document the format
     /// read test url and options from the specified file instead of from the
     /// command line.
-    /// Stdin may be specified by passing `--test-file -`.
-    /// May not be used in conjunction with `test_args`, `--test-file`,
+    /// May not be used in conjunction with `test_args`, `--count`,
     /// `--test-filter`, `--run-disabled`, `--parallel`, `--max-severity-logs`
     /// This option is currently unstable and the format of the file is subject
     /// to change. Using this option requires setting the
