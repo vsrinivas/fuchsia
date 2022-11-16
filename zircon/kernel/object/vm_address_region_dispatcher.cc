@@ -165,27 +165,34 @@ zx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, fbl::RefPtr<VmObj
                                            fbl::RefPtr<VmMapping>* out) {
   canary_.Assert();
 
-  if (!is_valid_mapping_protection(flags))
+  if (!is_valid_mapping_protection(flags)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   // Split flags into vmar_flags and arch_mmu_flags
   uint32_t vmar_flags = 0;
   uint arch_mmu_flags = base_arch_mmu_flags_;
   uint8_t alignment = 0;
   zx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags, &alignment);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   if (vmar_flags & VMAR_FLAG_REQUIRE_NON_RESIZABLE) {
     vmar_flags &= ~VMAR_FLAG_REQUIRE_NON_RESIZABLE;
-    if (vmo->is_resizable())
+    if (vmo->is_resizable()) {
       return ZX_ERR_NOT_SUPPORTED;
+    }
   }
+
   if (vmar_flags & VMAR_FLAG_ALLOW_FAULTS) {
     vmar_flags &= ~VMAR_FLAG_ALLOW_FAULTS;
   } else {
-    // TODO(stevensd): Add checks once all clients (resizable and pager-backed VMOs) start using the
-    // VMAR_FLAG_ALLOW_FAULTS flag.
+    // TODO(fxbug.dev/34483): Add additional checks once all clients (resizable and pager-backed
+    // VMOs) start using the VMAR_FLAG_ALLOW_FAULTS flag.
+    if (vmo->is_discardable()) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
   }
 
   fbl::RefPtr<VmMapping> result(nullptr);
