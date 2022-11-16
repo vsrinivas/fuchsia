@@ -49,6 +49,9 @@ struct ImageMetadata {
   // The blend mode to use when compositing this image.
   fuchsia::ui::composition::BlendMode blend_mode = fuchsia::ui::composition::BlendMode::SRC;
 
+  // The flip/reflection mode to use for this particular image.
+  fuchsia::ui::composition::ImageFlip flip = fuchsia::ui::composition::ImageFlip::NONE;
+
   bool operator==(const ImageMetadata& meta) const {
     return (collection_id == meta.collection_id && vmo_index == meta.vmo_index &&
             width == meta.width && height == meta.height && blend_mode == meta.blend_mode &&

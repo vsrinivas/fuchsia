@@ -1094,10 +1094,14 @@ void Flatland::SetImageFlip(ContentId image_id, fuchsia::ui::composition::ImageF
     return;
   }
 
-  // TODO(fxbug.dev/76313): Add implementation for Flatland image flip.
-  error_reporter_->ERROR() << "SetImageFlip not yet implemeneted.";
-  ReportBadOperationError();
-  return;
+  auto image_kv = image_metadatas_.find(content_kv->second);
+  if (image_kv == image_metadatas_.end()) {
+    error_reporter_->ERROR() << "SetImageFlip called on non-image content.";
+    ReportBadOperationError();
+    return;
+  }
+
+  image_kv->second.flip = flip;
 }
 
 void Flatland::CreateFilledRect(ContentId rect_id) {

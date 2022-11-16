@@ -23,16 +23,18 @@ namespace test {
 
 namespace {
 
+using fuchsia::ui::composition::ImageFlip;
 using fuchsia::ui::composition::Orientation;
 
 constexpr int kImageWidth = 1000;
-constexpr int kImageHeight = 1000;
+constexpr int kImageHeight = 500;
 
 // Helper function to generate an ImageRect from a glm::mat3 for tests that are strictly testing the
 // conversion math.
-ImageRect GetImageRectForMatrix(const glm::mat3& matrix) {
+ImageRect GetImageRectForMatrix(const glm::mat3& matrix, ImageFlip image_flip = ImageFlip::NONE) {
   // Compute the global rectangle vector and return the first entry.
-  allocation::ImageMetadata image = {.width = kImageWidth, .height = kImageHeight};
+  allocation::ImageMetadata image = {
+      .width = kImageWidth, .height = kImageHeight, .flip = image_flip};
   const auto rectangles = ComputeGlobalRectangles(
       {matrix}, {ImageSampleRegion{0, 0, kImageWidth, kImageHeight}}, {kUnclippedRegion}, {image});
   EXPECT_EQ(rectangles.size(), 1ul);
@@ -41,9 +43,11 @@ ImageRect GetImageRectForMatrix(const glm::mat3& matrix) {
 
 // Helper function to generate an ImageRect from a glm::mat3 for tests that are strictly testing the
 // conversion math.
-ImageRect GetImageRectForMatrixAndClip(const glm::mat3& matrix, const TransformClipRegion& clip) {
+ImageRect GetImageRectForMatrixAndClip(const glm::mat3& matrix, const TransformClipRegion& clip,
+                                       ImageFlip image_flip = ImageFlip::NONE) {
   // Compute the global rectangle vector and return the first entry.
-  allocation::ImageMetadata image = {.width = kImageWidth, .height = kImageHeight};
+  allocation::ImageMetadata image = {
+      .width = kImageWidth, .height = kImageHeight, .flip = image_flip};
   const auto rectangles = ComputeGlobalRectangles(
       {matrix}, {ImageSampleRegion{0, 0, kImageWidth, kImageHeight}}, {clip}, {image});
   EXPECT_EQ(rectangles.size(), 1ul);
@@ -194,7 +198,7 @@ TEST(ImageRectTest, ParentCompletelyBiggerThanChildClipTest) {
 
   const ImageRect expected_rectangle(
       glm::vec2(0, 0), extent,
-      {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageHeight, kImageHeight),
+      {glm::ivec2(0, 0), glm::ivec2(kImageWidth, 0), glm::ivec2(kImageWidth, kImageHeight),
        glm::ivec2(0, kImageHeight)},
       Orientation::CCW_0_DEGREES);
 
@@ -212,7 +216,7 @@ TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipTest) {
 
   const ImageRect expected_rectangle(
       glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
-      {glm::vec2(200, 333), glm::vec2(550, 333), glm::vec2(550, 778), glm::vec2(200, 778)},
+      {glm::vec2(200, 167), glm::vec2(550, 167), glm::vec2(550, 389), glm::vec2(200, 389)},
       Orientation::CCW_0_DEGREES);
 
   const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
@@ -238,7 +242,7 @@ TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipRotatedBy90Test) {
   // linearly interpolated horizontally.
   const ImageRect expected_rectangle(
       glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
-      {glm::vec2(300, 222), glm::vec2(700, 222), glm::vec2(700, 611), glm::vec2(300, 611)},
+      {glm::vec2(300, 111), glm::vec2(700, 111), glm::vec2(700, 306), glm::vec2(300, 306)},
       Orientation::CCW_90_DEGREES);
 
   const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
@@ -263,7 +267,7 @@ TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipRotatedBy180Test) {
   // it would instead be equal to 0.8.
   const ImageRect expected_rectangle(
       glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
-      {glm::vec2(450, 222), glm::vec2(800, 222), glm::vec2(800, 667), glm::vec2(450, 667)},
+      {glm::vec2(450, 111), glm::vec2(800, 111), glm::vec2(800, 333), glm::vec2(450, 333)},
       Orientation::CCW_180_DEGREES);
 
   const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
@@ -289,7 +293,7 @@ TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipRotatedBy270Test) {
   // interpolated vertically and the v coordinate is now linearly interpolated horizontally.
   const ImageRect expected_rectangle(
       glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
-      {glm::vec2(300, 389), glm::vec2(700, 389), glm::vec2(700, 778), glm::vec2(300, 778)},
+      {glm::vec2(300, 194), glm::vec2(700, 194), glm::vec2(700, 389), glm::vec2(300, 389)},
       Orientation::CCW_270_DEGREES);
 
   const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
@@ -326,7 +330,7 @@ TEST(ImageRectTest, RectangleAndClipPartialOverlap) {
 
   const ImageRect expected_rectangle(
       glm::vec2(20, 30), glm::vec2(70, 40),
-      {glm::vec2(0, 0), glm::vec2(700, 0), glm::vec2(700, 800), glm::vec2(0, 800)},
+      {glm::vec2(0, 0), glm::vec2(700, 0), glm::vec2(700, 400), glm::vec2(0, 400)},
       Orientation::CCW_0_DEGREES);
 
   const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
@@ -381,6 +385,326 @@ TEST(ImageRectTest, ScaleAndRotate270DegreesTest) {
       Orientation::CCW_270_DEGREES);
 
   const auto rectangle = GetImageRectForMatrix(matrix);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+TEST(ImageRectTest, ScaleAndFlipHorizontal) {
+  const glm::vec2 extent(100.f, 50.f);
+  glm::mat3 matrix = glm::scale(glm::mat3(), extent);
+
+  const ImageRect expected_rectangle(
+      glm::vec2(0.f, 0.f), glm::vec2(100.f, 50.f),
+      {glm::vec2(0, 0), glm::vec2(kImageWidth, 0), glm::vec2(kImageWidth, kImageHeight),
+       glm::vec2(0, kImageHeight)},
+      Orientation::CCW_0_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrix(matrix, ImageFlip::LEFT_RIGHT);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+TEST(ImageRectTest, ScaleRotate90DegreesAndFlipHorizontal) {
+  const glm::vec2 extent(100.f, 50.f);
+  glm::mat3 matrix = glm::rotate(
+      glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90_DEGREES));
+  matrix = glm::scale(matrix, extent);
+
+  const ImageRect expected_rectangle(
+      glm::vec2(0.f, -100.f), glm::vec2(50.f, 100.f),
+      {glm::vec2(0, 0), glm::vec2(kImageWidth, 0), glm::vec2(kImageWidth, kImageHeight),
+       glm::vec2(0, kImageHeight)},
+      Orientation::CCW_90_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrix(matrix, ImageFlip::LEFT_RIGHT);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+TEST(ImageRectTest, ScaleRotate180DegreesAndFlipHorizontal) {
+  const glm::vec2 extent(100.f, 50.f);
+  glm::mat3 matrix = glm::rotate(
+      glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180_DEGREES));
+  matrix = glm::scale(matrix, extent);
+
+  const ImageRect expected_rectangle(
+      glm::vec2(-100.f, -50.f), glm::vec2(100.f, 50.f),
+      {glm::vec2(0, 0), glm::vec2(kImageWidth, 0), glm::vec2(kImageWidth, kImageHeight),
+       glm::vec2(0, kImageHeight)},
+      Orientation::CCW_180_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrix(matrix, ImageFlip::LEFT_RIGHT);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+TEST(ImageRectTest, ScaleRotate270DegreesAndFlipHorizontal) {
+  const glm::vec2 extent(100.f, 50.f);
+  glm::mat3 matrix = glm::rotate(
+      glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270_DEGREES));
+  matrix = glm::scale(matrix, extent);
+
+  const ImageRect expected_rectangle(
+      glm::vec2(-50.f, 0.f), glm::vec2(50.f, 100.f),
+      {glm::vec2(0, 0), glm::vec2(kImageWidth, 0), glm::vec2(kImageWidth, kImageHeight),
+       glm::vec2(0, kImageHeight)},
+      Orientation::CCW_270_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrix(matrix, ImageFlip::LEFT_RIGHT);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+TEST(ImageRectTest, ScaleAndFlipVertical) {
+  const glm::vec2 extent(100.f, 50.f);
+  glm::mat3 matrix = glm::scale(glm::mat3(), extent);
+
+  const ImageRect expected_rectangle(
+      glm::vec2(0.f, 0.f), glm::vec2(100.f, 50.f),
+      {glm::vec2(0, 0), glm::vec2(kImageWidth, 0), glm::vec2(kImageWidth, kImageHeight),
+       glm::vec2(0, kImageHeight)},
+      Orientation::CCW_0_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrix(matrix, ImageFlip::UP_DOWN);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+TEST(ImageRectTest, ScaleRotate90DegreesAndFlipVertical) {
+  const glm::vec2 extent(100.f, 50.f);
+  glm::mat3 matrix = glm::rotate(
+      glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90_DEGREES));
+  matrix = glm::scale(matrix, extent);
+
+  const ImageRect expected_rectangle(
+      glm::vec2(0.f, -100.f), glm::vec2(50.f, 100.f),
+      {glm::vec2(0, 0), glm::vec2(kImageWidth, 0), glm::vec2(kImageWidth, kImageHeight),
+       glm::vec2(0, kImageHeight)},
+      Orientation::CCW_90_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrix(matrix, ImageFlip::UP_DOWN);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+TEST(ImageRectTest, ScaleRotate180DegreesAndFlipVertical) {
+  const glm::vec2 extent(100.f, 50.f);
+  glm::mat3 matrix = glm::rotate(
+      glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180_DEGREES));
+  matrix = glm::scale(matrix, extent);
+
+  const ImageRect expected_rectangle(
+      glm::vec2(-100.f, -50.f), glm::vec2(100.f, 50.f),
+      {glm::vec2(0, 0), glm::vec2(kImageWidth, 0), glm::vec2(kImageWidth, kImageHeight),
+       glm::vec2(0, kImageHeight)},
+      Orientation::CCW_180_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrix(matrix, ImageFlip::UP_DOWN);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+TEST(ImageRectTest, ScaleRotate270DegreesAndFlipVertical) {
+  const glm::vec2 extent(100.f, 50.f);
+  glm::mat3 matrix = glm::rotate(
+      glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270_DEGREES));
+  matrix = glm::scale(matrix, extent);
+
+  const ImageRect expected_rectangle(
+      glm::vec2(-50.f, 0.f), glm::vec2(50.f, 100.f),
+      {glm::vec2(0, 0), glm::vec2(kImageWidth, 0), glm::vec2(kImageWidth, kImageHeight),
+       glm::vec2(0, kImageHeight)},
+      Orientation::CCW_270_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrix(matrix, ImageFlip::UP_DOWN);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// NOTE: This test is the same as |ChildCompletelyBiggerThanParentClipTest|, except that the image
+// is flipped before clipping - this is reflected in the x-coordinate UVs
+// i.e. 200 --> kImageWidth - 200 = 800.
+TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipFlipLeftRightTest) {
+  const glm::vec2 extent(100.f, 90.f);
+  auto matrix = glm::scale(glm::mat3(), extent);
+
+  TransformClipRegion clip = {20, 30, 35, 40};
+
+  const ImageRect expected_rectangle(
+      glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+      {glm::vec2(450, 167), glm::vec2(800, 167), glm::vec2(800, 389), glm::vec2(450, 389)},
+      Orientation::CCW_0_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip, ImageFlip::LEFT_RIGHT);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// NOTE: This test is the same as |ChildCompletelyBiggerThanParentClipRotatedBy90Test|, except that
+// the image is flipped before rotating/clipping - this is reflected in the x-coordinate UVs
+// i.e. 300 --> kImageWidth - 300 = 700.
+TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipFlipLeftRightRotatedBy90Test) {
+  const glm::vec2 extent(100.f, 90.f);
+  // Since rotation occurs around the top-left corner, translate the rectangle so that it has the
+  // same origin after rotation.
+  glm::mat3 matrix = glm::translate(glm::mat3(), {0, extent.x});
+  matrix =
+      glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90_DEGREES));
+  matrix = glm::scale(matrix, extent);
+
+  // Note that this clip region is specified in global space and will not be modified by the matrix.
+  TransformClipRegion clip = {20, 30, 35, 40};
+
+  // The rectangle is rotated by 90 such that, prior to clipping, it has a new extent of (90, 100).
+  // The texel u-coordinate is now linearly interpolated vertically and the v-coordinate is now
+  // linearly interpolated horizontally.
+  const ImageRect expected_rectangle(
+      glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+      {glm::vec2(300, 111), glm::vec2(700, 111), glm::vec2(700, 306), glm::vec2(300, 306)},
+      Orientation::CCW_90_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip, ImageFlip::LEFT_RIGHT);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// NOTE: This test is the same as |ChildCompletelyBiggerThanParentClipRotatedBy180Test|, except that
+// the image is flipped before rotating/clipping - this is reflected in the x-coordinate UVs
+// i.e. 450 --> kImageWidth - 450 = 550.
+TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipFlipLeftRightRotatedBy180Test) {
+  const glm::vec2 extent(100.f, 90.f);
+  // Since rotation occurs around the top-left corner, translate the rectangle so that it has the
+  // same origin after rotation.
+  glm::mat3 matrix = glm::translate(glm::mat3(), {extent.x, extent.y});
+  matrix =
+      glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180_DEGREES));
+  matrix = glm::scale(matrix, extent);
+
+  // Note that this clip region is specified in global space and will not be modified by the matrix.
+  TransformClipRegion clip = {20, 30, 35, 40};
+
+  // After clipping, the UV coordinates are reversed. I.e. if the coordinate was initially 0.2, then
+  // it would instead be equal to 0.8.
+  const ImageRect expected_rectangle(
+      glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+      {glm::vec2(200, 111), glm::vec2(550, 111), glm::vec2(550, 333), glm::vec2(200, 333)},
+      Orientation::CCW_180_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip, ImageFlip::LEFT_RIGHT);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// NOTE: This test is the same as |ChildCompletelyBiggerThanParentClipRotatedBy270Test|, except that
+// the image is flipped before rotating/clipping - this is reflected in the x-coordinate UVs
+// i.e. 300 --> kImageWidth - 300 = 700.
+TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipFlipLeftRightRotatedBy270Test) {
+  const glm::vec2 extent(100.f, 90.f);
+  // Since rotation occurs around the top-left corner, translate the rectangle so that it has the
+  // same origin after rotation.
+  glm::mat3 matrix = glm::translate(glm::mat3(), {extent.y, 0});
+  matrix =
+      glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270_DEGREES));
+  matrix = glm::scale(matrix, extent);
+
+  // Note that this clip region is specified in global space and will not be modified by the matrix.
+  TransformClipRegion clip = {20, 30, 35, 40};
+
+  // The rectangle was rotated by 90, such that, prior to clipping, it has a new_extent of (90, 100)
+  // and reordered_uvs of [(0, 1), (0, 0), (1, 0), (1, 1)]. The u-coordinate is now linearly
+  // interpolated vertically and the v coordinate is now linearly interpolated horizontally.
+  const ImageRect expected_rectangle(
+      glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+      {glm::vec2(300, 194), glm::vec2(700, 194), glm::vec2(700, 389), glm::vec2(300, 389)},
+      Orientation::CCW_270_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// NOTE: This test is the same as |ChildCompletelyBiggerThanParentClipTest|, except that the image
+// is flipped before clipping - this is reflected in the y-coordinate UVs:
+// i.e. 167 --> kImageHeight - 167 = 333.
+TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipFlipUpDownTest) {
+  const glm::vec2 extent(100.f, 90.f);
+  auto matrix = glm::scale(glm::mat3(), extent);
+
+  TransformClipRegion clip = {20, 30, 35, 40};
+
+  const ImageRect expected_rectangle(
+      glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+      {glm::vec2(200, 111), glm::vec2(550, 111), glm::vec2(550, 333), glm::vec2(200, 333)},
+      Orientation::CCW_0_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip, ImageFlip::UP_DOWN);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// NOTE: This test is the same as |ChildCompletelyBiggerThanParentClipRotatedBy90Test|, except that
+// the image is flipped before rotating/clipping - this is reflected in the y-coordinate UVs
+//  i.e. 111 --> kImageHeight - 111 = 389.
+TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipFlipUpDownRotatedBy90Test) {
+  const glm::vec2 extent(100.f, 90.f);
+  // Since rotation occurs around the top-left corner, translate the rectangle so that it has the
+  // same origin after rotation.
+  glm::mat3 matrix = glm::translate(glm::mat3(), {0, extent.x});
+  matrix =
+      glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90_DEGREES));
+  matrix = glm::scale(matrix, extent);
+
+  // Note that this clip region is specified in global space and will not be modified by the matrix.
+  TransformClipRegion clip = {20, 30, 35, 40};
+
+  // The rectangle is rotated by 90 such that, prior to clipping, it has a new extent of (90, 100).
+  // The texel u-coordinate is now linearly interpolated vertically and the y-coordinate is now
+  // linearly interpolated horizontally.
+  const ImageRect expected_rectangle(
+      glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+      {glm::vec2(300, 194), glm::vec2(700, 194), glm::vec2(700, 389), glm::vec2(300, 389)},
+      Orientation::CCW_90_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip, ImageFlip::UP_DOWN);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// NOTE: This test is the same as |ChildCompletelyBiggerThanParentClipRotatedBy180Test|, except that
+// the image is flipped before rotating/clipping - this is reflected in the y-coordinate UVs
+// i.e. 111 --> kImageHeight - 111 = 389.
+TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipFlipUpDownRotatedBy180Test) {
+  const glm::vec2 extent(100.f, 90.f);
+  // Since rotation occurs around the top-left corner, translate the rectangle so that it has the
+  // same origin after rotation.
+  glm::mat3 matrix = glm::translate(glm::mat3(), {extent.x, extent.y});
+  matrix =
+      glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180_DEGREES));
+  matrix = glm::scale(matrix, extent);
+
+  // Note that this clip region is specified in global space and will not be modified by the matrix.
+  TransformClipRegion clip = {20, 30, 35, 40};
+
+  // After clipping, the UV coordinates are reversed. I.e. if the coordinate was initially 0.2, then
+  // it would instead be equal to 0.8.
+  const ImageRect expected_rectangle(
+      glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+      {glm::vec2(450, 167), glm::vec2(800, 167), glm::vec2(800, 389), glm::vec2(450, 389)},
+      Orientation::CCW_180_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip, ImageFlip::UP_DOWN);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// NOTE: This test is the same as |ChildCompletelyBiggerThanParentClipRotatedBy270Test|, except that
+// the image is flipped before rotating/clipping - this is reflected in the y-coordinate UVs
+// i.e. 194 --> kImageHeight - 194 = 306.
+TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipFlipUpDownRotatedBy270Test) {
+  const glm::vec2 extent(100.f, 90.f);
+  // Since rotation occurs around the top-left corner, translate the rectangle so that it has the
+  // same origin after rotation.
+  glm::mat3 matrix = glm::translate(glm::mat3(), {extent.y, 0});
+  matrix =
+      glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270_DEGREES));
+  matrix = glm::scale(matrix, extent);
+
+  // Note that this clip region is specified in global space and will not be modified by the matrix.
+  TransformClipRegion clip = {20, 30, 35, 40};
+
+  // The rectangle was rotated by 90, such that, prior to clipping, it has a new_extent of (90, 100)
+  // and reordered_uvs of [(0, 1), (0, 0), (1, 0), (1, 1)]. The u-coordinate is now linearly
+  // interpolated vertically and the v coordinate is now linearly interpolated horizontally.
+  const ImageRect expected_rectangle(
+      glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+      {glm::vec2(300, 111), glm::vec2(700, 111), glm::vec2(700, 306), glm::vec2(300, 306)},
+      Orientation::CCW_270_DEGREES);
+
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip, ImageFlip::UP_DOWN);
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 

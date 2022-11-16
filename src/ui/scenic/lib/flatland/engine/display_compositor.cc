@@ -100,21 +100,6 @@ fuchsia::hardware::display::AlphaMode GetAlphaMode(
   return alpha_mode;
 }
 
-// Converts a flatland Orientation to the appropriate hardware display transform enum.
-fhd_Transform GetDisplayTransform(Orientation orientation) {
-  switch (orientation) {
-    case Orientation::CCW_0_DEGREES:
-      return fhd_Transform::IDENTITY;
-    case Orientation::CCW_90_DEGREES:
-      return fhd_Transform::ROT_90;
-    case Orientation::CCW_180_DEGREES:
-      return fhd_Transform::ROT_180;
-    case Orientation::CCW_270_DEGREES:
-      return fhd_Transform::ROT_270;
-  }
-  FX_NOTREACHED();
-}
-
 }  // anonymous namespace
 
 DisplayCompositor::DisplayCompositor(
@@ -510,7 +495,7 @@ void DisplayCompositor::ApplyLayerColor(uint64_t layer_id, ImageRect rectangle,
 
   auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
 
-  fhd_Transform transform = GetDisplayTransform(rectangle.orientation);
+  fhd_Transform transform = GetDisplayTransformFromOrientationAndFlip(rectangle.orientation, image.flip);
 
   (*display_controller_.get())->SetLayerPrimaryPosition(layer_id, transform, src, dst);
   auto alpha_mode = GetAlphaMode(image.blend_mode);
@@ -523,7 +508,8 @@ void DisplayCompositor::ApplyLayerImage(uint64_t layer_id, ImageRect rectangle,
                                         scenic_impl::DisplayEventId wait_id,
                                         scenic_impl::DisplayEventId signal_id) {
   auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
-  fhd_Transform transform = GetDisplayTransform(rectangle.orientation);
+  fhd_Transform transform =
+      GetDisplayTransformFromOrientationAndFlip(rectangle.orientation, image.flip);
 
   std::unique_lock<std::mutex> lock(lock_);
 

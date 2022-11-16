@@ -1300,5 +1300,179 @@ VK_TEST_P(DisplayCompositorParameterizedTest, MultipleParentPixelTest) {
   });
 }
 
+// Pixeltest for ensuring rotation and flipping are applied correctly.
+//
+// This test creates a 2x2 texture, with the top-left pixel colored blue and the rest of the pixels
+// colored white.
+//
+// B W ----------
+// W W ----------
+// --------------
+// --------------
+//
+// This image is flipped up-down and rotated 180 degrees CCW and translated to reposition to
+// display. The resulting display image should be:
+//
+// W B ----------
+// W W ----------
+// --------------
+// --------------
+//
+VK_TEST_P(DisplayCompositorParameterizedTest, ImageFlipRotate180DegreesPixelTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  auto display = display_manager_->default_display();
+  auto display_controller = display_manager_->default_display_controller();
+
+  // Use the VK renderer here so we can make use of software rendering.
+  auto [escher, renderer] = NewVkRenderer();
+  auto display_compositor = std::make_shared<flatland::DisplayCompositor>(
+      dispatcher(), display_manager_->default_display_controller(), renderer,
+      utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"),
+      BufferCollectionImportMode::RendererOnly);
+
+  const uint64_t kTextureCollectionId = allocation::GenerateUniqueBufferCollectionId();
+  const uint64_t kCaptureCollectionId = allocation::GenerateUniqueBufferCollectionId();
+
+  // Set up buffer collection and image for display_controller capture.
+  uint64_t capture_image_id;
+  fuchsia::sysmem::BufferCollectionInfo_2 capture_info;
+  auto capture_collection_result =
+      SetupCapture(kCaptureCollectionId, GetParam(), &capture_info, &capture_image_id);
+  if (capture_collection_result.is_error() &&
+      capture_collection_result.error() == ZX_ERR_NOT_SUPPORTED) {
+    GTEST_SKIP();
+  }
+
+  EXPECT_TRUE(capture_collection_result.is_ok());
+  auto capture_collection = std::move(capture_collection_result.value());
+
+  // Setup the collection for the textures. Since we're rendering in software, we don't have to
+  // deal with display limitations.
+  const uint32_t kTextureWidth = 2, kTextureHeight = 2;
+  fuchsia::sysmem::BufferCollectionInfo_2 texture_collection_info;
+
+  // Create the texture's metadata.
+  ImageMetadata image_metadata = {.collection_id = kTextureCollectionId,
+                                  .identifier = allocation::GenerateUniqueImageId(),
+                                  .vmo_index = 0,
+                                  .width = kTextureWidth,
+                                  .height = kTextureHeight,
+                                  .flip = fuchsia::ui::composition::ImageFlip::UP_DOWN};
+
+  auto texture_collection =
+      SetupClientTextures(display_compositor.get(), kTextureCollectionId, GetParam(), 60, 40,
+                          /*num_vmos*/ 1, &texture_collection_info);
+
+  switch (GetParam()) {
+    case fuchsia::sysmem::PixelFormatType::BGRA32: {
+      MapHostPointer(
+          texture_collection_info, /*vmo_index*/ 0, [](uint8_t* vmo_host, uint32_t num_bytes) {
+            const uint8_t kBlueBgraValues[] = {255U, 0U, 0U, 255U};
+            const uint8_t kWhiteBgraValues[] = {255U, 255U, 255U, 255U};
+
+            for (uint32_t p = 0; p < num_bytes; ++p) {
+              // Make the first pixel blue, and the rest white.
+              const uint8_t* cols = (p < 4) ? kBlueBgraValues : kWhiteBgraValues;
+              vmo_host[p] = cols[p % 4];
+            }
+
+            // Flush the cache after writing to host VMO.
+            EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, num_bytes,
+                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+          });
+
+      break;
+    }
+    default:
+      FX_NOTREACHED();
+  }
+
+  auto result =
+      display_compositor->ImportBufferImage(image_metadata, BufferCollectionUsage::kClientImage);
+  EXPECT_TRUE(result);
+
+  auto session = CreateSession();
+  const TransformHandle root_handle = session.graph().CreateTransform();
+  const TransformHandle parent_handle = session.graph().CreateTransform();
+
+  session.graph().AddChild(root_handle, parent_handle);
+
+  fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
+  DisplayInfo display_info{
+      .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
+      .formats = {kPixelFormat}};
+  display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 2, &render_target_info);
+
+  // Setup the uberstruct data.
+  auto uberstruct = session.CreateUberStructWithCurrentTopology(root_handle);
+  {
+    uberstruct->images[parent_handle] = image_metadata;
+
+    // The first parent will have (1,1) scale and no translation.
+    glm::mat3 matrix = glm::mat3();
+    matrix = glm::translate(matrix, glm::vec2(2, 2));
+    matrix = glm::rotate(matrix, glm::pi<float>());
+    matrix = glm::scale(matrix, glm::vec2(2, 2));
+    uberstruct->local_matrices[parent_handle] = matrix;
+    uberstruct->local_image_sample_regions[parent_handle] = {
+        0.f, 0.f, static_cast<float>(kTextureWidth), static_cast<float>(kTextureHeight)};
+    session.PushUberStruct(std::move(uberstruct));
+  }
+
+  // Now we can finally render.
+  display_compositor->RenderFrame(
+      1, zx::time(1),
+      GenerateDisplayListForTest(
+          {{display->display_id(), std::make_pair(display_info, root_handle)}}),
+      {}, [](const scheduling::FrameRenderer::Timestamps&) {});
+  renderer->WaitIdle();
+
+  // Make sure the render target has the same data as what's being put on the display.
+  MapHostPointer(render_target_info, /*vmo_index*/ 0, [&](uint8_t* vmo_host, uint32_t num_bytes) {
+    // Grab the capture vmo data.
+    std::vector<uint8_t> read_values;
+    CaptureDisplayOutput(capture_info, capture_image_id, &read_values);
+
+    // Compare the capture vmo data to the values we are expecting.
+    bool images_are_same = CaptureCompare(read_values.data(), vmo_host, read_values.size(),
+                                          display->height_in_px(), display->width_in_px());
+    EXPECT_TRUE(images_are_same);
+
+    // There should be a total of 3 white pixels and 1 blue pixel.
+    uint32_t num_white = 0, num_blue = 0;
+    uint32_t num_pixels = num_bytes / 4;
+    const uint32_t kWhiteColor = 0xFFFFFFFF;
+    const uint32_t kBlueColor = 0xFF0000FF;
+    for (uint32_t i = 0; i < num_pixels; i += 4) {
+      // |vmo_host| has BGRA sequence in pixel values.
+      auto a = vmo_host[i];
+      auto b = vmo_host[i + 1];
+      auto c = vmo_host[i + 2];
+      auto d = vmo_host[i + 3];
+      uint32_t val = (a << 24) | (b << 16) | (c << 8) | d;
+      if (val == kWhiteColor) {
+        num_white++;
+      } else if (val == kBlueColor) {
+        num_blue++;
+      }
+    }
+    EXPECT_EQ(num_white, 3U);
+    EXPECT_EQ(num_blue, 1U);
+
+    auto get_pixel = [&display](uint8_t* vmo_host, uint32_t x, uint32_t y) -> uint32_t {
+      uint32_t index = y * display->width_in_px() * 4 + x * 4;
+      auto a = vmo_host[index];
+      auto b = vmo_host[index + 1];
+      auto c = vmo_host[index + 2];
+      auto d = vmo_host[index + 3];
+      return (a << 24) | (b << 16) | (c << 8) | d;
+    };
+
+    // Expect the top-right corner of the rect to be blue.
+    EXPECT_EQ(get_pixel(vmo_host, 0, 0), kWhiteColor);
+    EXPECT_EQ(get_pixel(vmo_host, 1, 0), kBlueColor);
+  });
+}
+
 }  // namespace test
 }  // namespace flatland

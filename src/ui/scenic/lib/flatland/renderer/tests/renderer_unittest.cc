@@ -21,6 +21,7 @@
 #include "gmock/gmock.h"
 #include "src/ui/scenic/lib/screen_capture/screen_capture.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
+#include "zircon/system/ulib/fbl/include/fbl/algorithm.h"
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
@@ -29,6 +30,7 @@ namespace flatland {
 
 using allocation::BufferCollectionUsage;
 using allocation::ImageMetadata;
+using fuchsia::ui::composition::ImageFlip;
 using fuchsia::ui::composition::Orientation;
 
 // TODO(fxbug.dev/52632): Move common functions to testing::WithParamInterface instead of function
@@ -68,6 +70,17 @@ glm::ivec4 GetPixel(uint8_t* vmo_host, uint32_t width, uint32_t x, uint32_t y) {
   uint32_t b = vmo_host[y * width * 4 + x * 4 + 2];
   uint32_t a = vmo_host[y * width * 4 + x * 4 + 3];
   return glm::ivec4(r, g, b, a);
+}
+
+inline uint32_t GetPixelsPerRow(const fuchsia::sysmem::SingleBufferSettings& settings,
+                                uint32_t bytes_per_pixel, uint32_t image_width) {
+  uint32_t bytes_per_row_divisor = settings.image_format_constraints.bytes_per_row_divisor;
+  uint32_t min_bytes_per_row = settings.image_format_constraints.min_bytes_per_row;
+  uint32_t bytes_per_row = fbl::round_up(std::max(image_width * bytes_per_pixel, min_bytes_per_row),
+                                         bytes_per_row_divisor);
+  uint32_t pixels_per_row = bytes_per_row / bytes_per_pixel;
+
+  return pixels_per_row;
 }
 
 // When checking the output of a render target, we want to make sure that non only
@@ -1175,6 +1188,364 @@ VK_TEST_F(VulkanRendererTest, RotationRenderTest) {
         EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 4, 25), red);
         EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 3, 26), red);
         EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 4, 26), red);
+
+        // Make sure the remaining pixels are black.
+        CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight,
+                           kRenderableWidth * kRenderableHeight);
+      });
+}
+
+// This test actually renders a rectangle using the VKRenderer. We create a single rectangle,
+// with a half-red, half-green texture (with red first). We translate it and flip the texture on the
+// left-right axis. The render target is 32x16 and the rectangle is 6x2. So in the end the result
+// should look like this (note that green is now first):
+//
+// ----------------
+// ----------------
+// ----------------
+// ------GGGRRR----
+// ------GGGRRR----
+// ----------------
+// ----------------
+// ----------------
+//
+// It then renders the renderable more one more time, rotating it 90* clockwise. This results in the
+// following image:
+//
+// ----------------
+// ----------------
+// -------GG-------
+// -------GG-------
+// -------GG-------
+// -------RR-------
+// -------RR-------
+// -------RR-------
+// ----------------
+// ----------------
+//
+VK_TEST_F(VulkanRendererTest, FlipLeftRightAndRotate90RenderTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
+  VkRenderer renderer(unique_escher->GetWeakPtr());
+
+  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr;
+  auto collection_id =
+      SetupBufferCollection(1, 60, 40, BufferCollectionUsage::kClientImage, &renderer,
+                            sysmem_allocator_.get(), &client_collection_info, collection_ptr);
+
+  // Setup the render target collection.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr target_ptr;
+  auto target_id = SetupBufferCollection(2, 60, 40, BufferCollectionUsage::kRenderTarget, &renderer,
+                                         sysmem_allocator_.get(), &client_target_info, target_ptr);
+
+  const uint32_t kTargetWidth = 32;
+  const uint32_t kTargetHeight = 16;
+
+  const uint32_t kTargetWidthFlipped = kTargetHeight;
+  const uint32_t kTargetHeightFlipped = kTargetWidth;
+
+  // Create the render_target image metadata.
+  ImageMetadata render_target = {.collection_id = target_id,
+                                 .identifier = allocation::GenerateUniqueImageId(),
+                                 .vmo_index = 0,
+                                 .width = kTargetWidth,
+                                 .height = kTargetHeight};
+
+  // Create another render target with dimensions flipped.
+  ImageMetadata render_target_flipped = {.collection_id = target_id,
+                                         .identifier = allocation::GenerateUniqueImageId(),
+                                         .vmo_index = 1,
+                                         .width = kTargetWidthFlipped,
+                                         .height = kTargetHeightFlipped};
+
+  // The texture width and height, also used for unnormalized texture coordinates.
+  const float w = 2;
+  const float h = 1;
+
+  // Create the image meta data for the renderable.
+  ImageMetadata renderable_texture = {.collection_id = collection_id,
+                                      .identifier = allocation::GenerateUniqueImageId(),
+                                      .vmo_index = 0,
+                                      .width = static_cast<uint32_t>(w),
+                                      .height = static_cast<uint32_t>(h),
+                                      .flip = ImageFlip::LEFT_RIGHT};
+
+  auto import_res = renderer.ImportBufferImage(render_target, BufferCollectionUsage::kRenderTarget);
+  EXPECT_TRUE(import_res);
+  import_res =
+      renderer.ImportBufferImage(render_target_flipped, BufferCollectionUsage::kRenderTarget);
+  EXPECT_TRUE(import_res);
+
+  import_res = renderer.ImportBufferImage(renderable_texture, BufferCollectionUsage::kClientImage);
+  EXPECT_TRUE(import_res);
+
+  // Create a renderable where the upper-left hand corner should be at position (5,3)
+  // with a width/height of (6,2).
+  const uint32_t kRenderableWidth = 6;
+  const uint32_t kRenderableHeight = 2;
+  ImageRect renderable(glm::vec2(5, 3), glm::vec2(kRenderableWidth, kRenderableHeight),
+                       {glm::vec2(0, 0), glm::vec2(w, 0), glm::vec2(w, h), glm::vec2(0, h)},
+                       Orientation::CCW_0_DEGREES);
+
+  // Have the client write pixel values to the renderable's texture.
+  MapHostPointer(client_collection_info, renderable_texture.vmo_index,
+                 [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+                   // The texture only has 2 pixels, so it needs 8 write values for 4 channels. We
+                   // set the first pixel to red and the second pixel to green.
+                   const uint8_t kNumWrites = 8;
+                   const uint8_t kWriteValues[] = {/*red*/ 255U, 0,    0, 255U,
+                                                   /*green*/ 0,  255U, 0, 255U};
+                   memcpy(vmo_host, kWriteValues, sizeof(kWriteValues));
+
+                   // Flush the cache after writing to host VMO.
+                   EXPECT_EQ(ZX_OK,
+                             zx_cache_flush(vmo_host, kNumWrites,
+                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+                 });
+
+  // Render the renderable to the render target.
+  renderer.Render(render_target, {renderable}, {renderable_texture});
+  renderer.WaitIdle();
+
+  // Get a raw pointer from the client collection's vmo that represents the render target
+  // and read its values. This should show that the renderable was rendered to the center
+  // of the render target, with its associated texture.
+  MapHostPointer(client_target_info, render_target.vmo_index,
+                 [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+                   // Flush the cache before reading back target image.
+                   EXPECT_EQ(ZX_OK,
+                             zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
+                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+
+                   // Make sure the pixels are in the right order.
+                   const auto red = glm::ivec4(255, 0, 0, 255);
+                   const auto green = glm::ivec4(0, 255, 0, 255);
+
+                   // Greens (left)
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 5, 3), green);
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 5, 4), green);
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 3), green);
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 4), green);
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 3), green);
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 4), green);
+
+                   // Reds (right)
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 3), red);
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 4), red);
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 3), red);
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 4), red);
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 10, 3), red);
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 10, 4), red);
+
+                   // Make sure the remaining pixels are black.
+                   CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight,
+                                      kRenderableWidth * kRenderableHeight);
+                 });
+
+  // Now let's update the renderable so it is rotated 90 deg.
+  auto renderables_90deg = screen_capture::ScreenCapture::RotateRenderables(
+      {renderable}, fuchsia::ui::composition::Rotation::CW_90_DEGREES, kTargetWidthFlipped,
+      kTargetHeightFlipped);
+  // Render the renderable to the render target.
+  renderer.Render(render_target_flipped, std::move(renderables_90deg), {renderable_texture});
+  renderer.WaitIdle();
+
+  // Get a raw pointer from the client collection's vmo that represents the render target
+  // and read its values. This should show that the renderable was rendered to the center
+  // of the render target, with its associated texture.
+  MapHostPointer(
+      client_target_info, render_target_flipped.vmo_index,
+      [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+        // Flush the cache before reading back target image.
+        EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kTargetWidthFlipped * kTargetHeightFlipped * 4,
+                                        ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+
+        // Make sure the pixels are in the right order.
+        const auto red = glm::ivec4(255, 0, 0, 255);
+        const auto green = glm::ivec4(0, 255, 0, 255);
+
+        // Greens (top)
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 11, 5), green);
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 12, 5), green);
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 11, 6), green);
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 12, 6), green);
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 11, 7), green);
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 12, 7), green);
+
+        // Reds (bottom)
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 11, 8), red);
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 12, 8), red);
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 11, 9), red);
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 12, 9), red);
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 11, 10), red);
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 12, 10), red);
+
+        // Make sure the remaining pixels are black.
+
+        CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight,
+                           kRenderableWidth * kRenderableHeight);
+      });
+}
+
+// This test actually renders a rectangle using the VKRenderer. We create a single rectangle,
+// with a half-red, half-green texture (with red on top). We translate it and flip the texture on
+// the up-down axis. The render target is 32x16 and the rectangle is 1x2. So in the end the result
+// should look like this (note that green is now first):
+//
+// G---------
+// R---------
+// ----------
+//
+// It then renders the renderable more one more time, rotating it 90* clockwise. This results in the
+// following image:
+//
+// --------RG
+// ----------
+// ----------
+//
+VK_TEST_F(VulkanRendererTest, FlipUpDownAndRotate90RenderTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
+  VkRenderer renderer(unique_escher->GetWeakPtr());
+
+  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr;
+  auto collection_id =
+      SetupBufferCollection(1, 60, 40, BufferCollectionUsage::kClientImage, &renderer,
+                            sysmem_allocator_.get(), &client_collection_info, collection_ptr);
+
+  // Setup the render target collection.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr target_ptr;
+  auto target_id = SetupBufferCollection(2, 60, 40, BufferCollectionUsage::kRenderTarget, &renderer,
+                                         sysmem_allocator_.get(), &client_target_info, target_ptr);
+
+  const uint32_t kTargetWidth = 32;
+  const uint32_t kTargetHeight = 16;
+
+  const uint32_t kTargetWidthFlipped = kTargetHeight;
+  const uint32_t kTargetHeightFlipped = kTargetWidth;
+
+  // Create the render_target image metadata.
+  ImageMetadata render_target = {.collection_id = target_id,
+                                 .identifier = allocation::GenerateUniqueImageId(),
+                                 .vmo_index = 0,
+                                 .width = kTargetWidth,
+                                 .height = kTargetHeight};
+
+  // Create another render target with dimensions flipped.
+  ImageMetadata render_target_flipped = {.collection_id = target_id,
+                                         .identifier = allocation::GenerateUniqueImageId(),
+                                         .vmo_index = 1,
+                                         .width = kTargetWidthFlipped,
+                                         .height = kTargetHeightFlipped};
+
+  // The texture width and height, also used for unnormalized texture coordinates.
+  const float w = 1;
+  const float h = 2;
+
+  // Create the image meta data for the renderable.
+  ImageMetadata renderable_texture = {.collection_id = collection_id,
+                                      .identifier = allocation::GenerateUniqueImageId(),
+                                      .vmo_index = 0,
+                                      .width = static_cast<uint32_t>(w),
+                                      .height = static_cast<uint32_t>(h),
+                                      .flip = ImageFlip::UP_DOWN};
+
+  auto import_res = renderer.ImportBufferImage(render_target, BufferCollectionUsage::kRenderTarget);
+  EXPECT_TRUE(import_res);
+  import_res =
+      renderer.ImportBufferImage(render_target_flipped, BufferCollectionUsage::kRenderTarget);
+  EXPECT_TRUE(import_res);
+
+  import_res = renderer.ImportBufferImage(renderable_texture, BufferCollectionUsage::kClientImage);
+  EXPECT_TRUE(import_res);
+
+  // Create a renderable where the upper-left hand corner should be at position (0, 0)
+  // with a width/height of (2,6).
+  const uint32_t kRenderableWidth = 1;
+  const uint32_t kRenderableHeight = 2;
+  ImageRect renderable(glm::vec2(0, 0), glm::vec2(kRenderableWidth, kRenderableHeight),
+                       {glm::vec2(0, 0), glm::vec2(w, 0), glm::vec2(w, h), glm::vec2(0, h)},
+                       Orientation::CCW_0_DEGREES);
+
+  // Have the client write pixel values to the renderable's texture.
+  MapHostPointer(
+      client_collection_info, renderable_texture.vmo_index,
+      [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+        uint32_t pixels_per_row = GetPixelsPerRow(client_collection_info.settings, 4U, 1U);
+
+        const uint8_t kNumWrites = (pixels_per_row * 4) + 4;
+
+        const uint8_t kWriteRed[] = {/*red*/ 255U, 0, 0, 255U};
+        const uint8_t kWriteGreen[] = {/*green*/ 0, 255U, 0, 255U};
+
+        memcpy(vmo_host, kWriteRed, sizeof(kWriteRed));
+        memcpy(&vmo_host[pixels_per_row * 4], kWriteGreen, sizeof(kWriteGreen));
+
+        // Flush the cache after writing to host VMO.
+        EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kNumWrites,
+                                        ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+      });
+
+  // Render the renderable to the render target.
+  renderer.Render(render_target, {renderable}, {renderable_texture});
+  renderer.WaitIdle();
+
+  // Get a raw pointer from the client collection's vmo that represents the render target
+  // and read its values. This should show that the renderable was rendered to the center
+  // of the render target, with its associated texture.
+  MapHostPointer(client_target_info, render_target.vmo_index,
+                 [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+                   // Flush the cache before reading back target image.
+                   EXPECT_EQ(ZX_OK,
+                             zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
+                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+
+                   // Make sure the pixels are in the right order.
+                   const auto red = glm::ivec4(255, 0, 0, 255);
+                   const auto green = glm::ivec4(0, 255, 0, 255);
+
+                   // Green is now on top after the texture is flipped up-down.
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 0, 0), green);
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 0, 1), red);
+
+                   // Make sure the remaining pixels are black.
+                   CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight,
+                                      kRenderableWidth * kRenderableHeight);
+                 });
+
+  // Now let's update the renderable so it is rotated 90 deg.
+  auto renderables_90deg = screen_capture::ScreenCapture::RotateRenderables(
+      {renderable}, fuchsia::ui::composition::Rotation::CW_90_DEGREES, kTargetWidthFlipped,
+      kTargetHeightFlipped);
+  // Render the renderable to the render target.
+  renderer.Render(render_target_flipped, std::move(renderables_90deg), {renderable_texture});
+  renderer.WaitIdle();
+
+  // Get a raw pointer from the client collection's vmo that represents the render target
+  // and read its values. This should show that the renderable was rendered to the center
+  // of the render target, with its associated texture.
+  MapHostPointer(
+      client_target_info, render_target_flipped.vmo_index,
+      [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+        // Flush the cache before reading back target image.
+        EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kTargetWidthFlipped * kTargetHeightFlipped * 4,
+                                        ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+
+        // Make sure the pixels are in the right order.
+        const auto red = glm::ivec4(255, 0, 0, 255);
+        const auto green = glm::ivec4(0, 255, 0, 255);
+
+        // Green is on the right, as rotation is applied after flip.
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 15, 0), green);
+        EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 14, 0), red);
 
         // Make sure the remaining pixels are black.
         CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight,

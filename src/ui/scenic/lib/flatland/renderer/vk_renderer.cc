@@ -32,6 +32,7 @@
 namespace {
 
 using allocation::BufferCollectionUsage;
+using fuchsia::ui::composition::ImageFlip;
 
 // Highest priority format first.
 const std::vector<vk::Format> kPreferredImageFormats = {
@@ -101,12 +102,35 @@ static std::vector<escher::Rectangle2D> GetNormalizedUvRects(
     float h = image.height;
     FX_DCHECK(w >= 0.f && h >= 0.f);
 
-    // Reorder and normalize the texel UVs. Normalization is based on the width and height of the
-    // image that is sampled from. Reordering is based on orientation. The texel UVs are listed
-    // in clockwise-order starting at the top-left corner of the texture. They need to be reordered
-    // so that they are listed in clockwise-order and the UV that maps to the top-left corner of the
-    // escher::Rectangle2D is listed first. For instance, if the rectangle is rotated 90_CCW, the
-    // first texel UV of the ImageRect, at index 0, is at index 3 in the escher::Rectangle2D.
+    // First, reorder the UVs based on whether the image was flipped.
+    std::array<uint32_t, 4> flip_indices;
+    switch (image.flip) {
+      case ImageFlip::NONE:
+        flip_indices = {0, 1, 2, 3};
+        break;
+      case ImageFlip::LEFT_RIGHT:
+        // The indices are sorted in a clockwise order starting at the top-left, and the left
+        // indices must be swapped with the right.
+        flip_indices = {1, 0, 3, 2};
+        break;
+      case ImageFlip::UP_DOWN:
+        // The indices are sorted in a clockwise order starting at the top-left, and the top indices
+        // must be swapped with the bottom.
+        flip_indices = {3, 2, 1, 0};
+        break;
+    }
+    std::array<glm::ivec2, 4> flipped_uvs;
+    for (unsigned int i = 0; i < texel_uvs.size(); i++) {
+      flipped_uvs[i] = texel_uvs[flip_indices[i]];
+    }
+
+    // Reorder based on rotation and normalize the texel UVs. Normalization is based on the width
+    // and height of the image that is sampled from. Reordering is based on orientation. The texel
+    // UVs are listed in clockwise-order starting at the top-left corner of the texture. They need
+    // to be reordered so that they are listed in clockwise-order and the UV that maps to the
+    // top-left corner of the escher::Rectangle2D is listed first. For instance, if the rectangle is
+    // rotated 90_CCW, the first texel UV of the ImageRect, at index 0, is at index 3 in the
+    // escher::Rectangle2D.
     std::array<glm::vec2, 4> normalized_uvs;
     // |fuchsia::ui::composition::Orientation| is an enum value in the range [1, 4].
     int starting_index = static_cast<int>(orientation) - 1;
@@ -114,7 +138,7 @@ static std::vector<escher::Rectangle2D> GetNormalizedUvRects(
       const int index = (starting_index + j) % 4;
       // Clamp values to ensure they are normalized to the range [0, 1].
       normalized_uvs[j] =
-          glm::vec2(clamp(texel_uvs[index].x, 0, w) / w, clamp(texel_uvs[index].y, 0, h) / h);
+          glm::vec2(clamp(flipped_uvs[index].x, 0, w) / w, clamp(flipped_uvs[index].y, 0, h) / h);
     }
 
     normalized_rects.push_back({rect.origin, rect.extent, normalized_uvs});

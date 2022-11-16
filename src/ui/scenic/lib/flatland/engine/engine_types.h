@@ -77,6 +77,12 @@ BufferCollectionImportMode StringToBufferCollectionImportMode(const std::string&
 
 const char* StringFromBufferCollectionImportMode(BufferCollectionImportMode mode);
 
+// Converts a flatland |Orientation| and |ImageFlip| value to the appropriate hardware display
+// transform enum.
+fuchsia::hardware::display::Transform GetDisplayTransformFromOrientationAndFlip(
+    fuchsia::ui::composition::Orientation orientation,
+    fuchsia::ui::composition::ImageFlip image_flip);
+
 }  // namespace flatland
 
 #endif  // SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_TYPES_H_

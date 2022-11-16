@@ -16,12 +16,13 @@
 
 namespace flatland {
 
-using fuchsia::ui::composition::Orientation;
-
 const ImageSampleRegion kInvalidSampleRegion = {-1.f, -1.f, -1.f - 1.f};
 const TransformClipRegion kUnclippedRegion = {-INT_MAX / 2, -INT_MAX / 2, INT_MAX, INT_MAX};
 
 namespace {
+
+using fuchsia::ui::composition::ImageFlip;
+using fuchsia::ui::composition::Orientation;
 
 bool Overlap(const TransformClipRegion& clip, const glm::vec2& origin, const glm::vec2& extent) {
   if (clip.x == kUnclippedRegion.x && clip.y == kUnclippedRegion.y &&
@@ -124,7 +125,7 @@ fuchsia::math::RectF MatrixMultiplyRectF(const glm::mat3& matrix, fuchsia::math:
 }
 
 ImageRect CreateImageRect(const glm::mat3& matrix, const TransformClipRegion& clip,
-                          const std::array<glm::ivec2, 4>& texel_uvs) {
+                          const std::array<glm::ivec2, 4>& texel_uvs, ImageFlip image_flip) {
   // The local space of the renderable has its top-left origin point at (0,0) and grows
   // downward and to the right, so that the bottom-right point is at (1,1). We apply
   // the matrix to the four points that represent this unit square to get the points in
@@ -139,7 +140,6 @@ ImageRect CreateImageRect(const glm::mat3& matrix, const TransformClipRegion& cl
                                                                   glm::vec3(0, 1, 1),
                                                               });
 
-  std::array<glm::vec2, 4> reordered_uvs;
   // Will equal the index of the vert located at the origin in the reordered verts.
   int vert_index = 0;
   bool vert_index_set = false;
@@ -206,28 +206,60 @@ ImageRect CreateImageRect(const glm::mat3& matrix, const TransformClipRegion& cl
   const auto rotated_u = vert_index % 2;
   const auto rotated_v = (vert_index + 1) % 2;
 
-  std::array<glm::ivec2, 4> uvs;
-
   const uint32_t idx = vert_index;
   const uint32_t idx_1 = (vert_index + 1) % 4;
   const uint32_t idx_2 = (vert_index + 2) % 4;
   const uint32_t idx_3 = (vert_index + 3) % 4;
 
+  // If the image is flipped, perform the flip first on the UVs so that the image is clipped
+  // correctly. We also store the indices so that we can reorder the indices again later.
+  std::array<glm::ivec2, 4> flipped_uvs;
+  std::array<int, 4> flip_idx;
+  switch (image_flip) {
+    case ImageFlip::NONE:
+      flip_idx = {0, 1, 2, 3};
+      flipped_uvs = {texel_uvs[0], texel_uvs[1], texel_uvs[2], texel_uvs[3]};
+      break;
+    case ImageFlip::LEFT_RIGHT:
+      flip_idx = {1, 0, 3, 2};
+      flipped_uvs = {texel_uvs[1], texel_uvs[0], texel_uvs[3], texel_uvs[2]};
+      break;
+    case ImageFlip::UP_DOWN:
+      flip_idx = {3, 2, 1, 0};
+      flipped_uvs = {texel_uvs[3], texel_uvs[2], texel_uvs[1], texel_uvs[0]};
+      break;
+  }
+
+  std::array<glm::ivec2, 4> clipped_uvs;
   // Top Left (of texture).
-  uvs[idx][rotated_u] = rlerp(texel_uvs[idx][rotated_u], texel_uvs[idx_1][rotated_u], x_lerp);
-  uvs[idx][rotated_v] = rlerp(texel_uvs[idx][rotated_v], texel_uvs[idx_3][rotated_v], y_lerp);
+  clipped_uvs[idx][rotated_u] =
+      rlerp(flipped_uvs[idx][rotated_u], flipped_uvs[idx_1][rotated_u], x_lerp);
+  clipped_uvs[idx][rotated_v] =
+      rlerp(flipped_uvs[idx][rotated_v], flipped_uvs[idx_3][rotated_v], y_lerp);
 
   // Top Right (of texture).
-  uvs[idx_1][rotated_u] = rlerp(texel_uvs[idx][rotated_u], texel_uvs[idx_1][rotated_u], w_lerp);
-  uvs[idx_1][rotated_v] = rlerp(texel_uvs[idx_1][rotated_v], texel_uvs[idx_2][rotated_v], y_lerp);
+  clipped_uvs[idx_1][rotated_u] =
+      rlerp(flipped_uvs[idx][rotated_u], flipped_uvs[idx_1][rotated_u], w_lerp);
+  clipped_uvs[idx_1][rotated_v] =
+      rlerp(flipped_uvs[idx_1][rotated_v], flipped_uvs[idx_2][rotated_v], y_lerp);
 
   // Bottom Right (of texture).
-  uvs[idx_2][rotated_u] = rlerp(texel_uvs[idx_3][rotated_u], texel_uvs[idx_2][rotated_u], w_lerp);
-  uvs[idx_2][rotated_v] = rlerp(texel_uvs[idx_1][rotated_v], texel_uvs[idx_2][rotated_v], h_lerp);
+  clipped_uvs[idx_2][rotated_u] =
+      rlerp(flipped_uvs[idx_3][rotated_u], flipped_uvs[idx_2][rotated_u], w_lerp);
+  clipped_uvs[idx_2][rotated_v] =
+      rlerp(flipped_uvs[idx_1][rotated_v], flipped_uvs[idx_2][rotated_v], h_lerp);
 
   // Bottom Left (of texture).
-  uvs[idx_3][rotated_u] = rlerp(texel_uvs[idx_3][rotated_u], texel_uvs[idx_2][rotated_u], x_lerp);
-  uvs[idx_3][rotated_v] = rlerp(texel_uvs[idx][rotated_v], texel_uvs[idx_3][rotated_v], h_lerp);
+  clipped_uvs[idx_3][rotated_u] =
+      rlerp(flipped_uvs[idx_3][rotated_u], flipped_uvs[idx_2][rotated_u], x_lerp);
+  clipped_uvs[idx_3][rotated_v] =
+      rlerp(flipped_uvs[idx][rotated_v], flipped_uvs[idx_3][rotated_v], h_lerp);
+
+  // Flip UVs back.
+  std::array<glm::ivec2, 4> uvs;
+  for (uint32_t i = 0; i < uvs.size(); i++) {
+    uvs[i] = clipped_uvs[flip_idx[i]];
+  }
 
   // This construction will CHECK if the extent is negative.
   return ImageRect(clipped_origin, clipped_extent, std::move(uvs), orientation);
@@ -441,7 +473,7 @@ GlobalRectangleVector ComputeGlobalRectangles(
         glm::ivec2(sample.x + sample.width, sample.y + sample.height),
         glm::ivec2(sample.x, sample.y + sample.height)};
 
-    rectangles.emplace_back(CreateImageRect(matrix, clip, unclipped_texel_uvs));
+    rectangles.emplace_back(CreateImageRect(matrix, clip, unclipped_texel_uvs, image.flip));
   }
 
   return rectangles;

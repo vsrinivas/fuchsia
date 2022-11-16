@@ -4,6 +4,13 @@
 
 #include "src/ui/scenic/lib/flatland/engine/engine_types.h"
 
+namespace {
+
+using fuchsia::ui::composition::ImageFlip;
+using fuchsia::ui::composition::Orientation;
+using fhd_Transform = fuchsia::hardware::display::Transform;
+
+}  // namespace
 namespace flatland {
 
 DisplaySrcDstFrames DisplaySrcDstFrames::New(ImageRect rectangle, allocation::ImageMetadata image) {
@@ -44,6 +51,65 @@ const char* StringFromBufferCollectionImportMode(BufferCollectionImportMode mode
     case BufferCollectionImportMode::RendererOnly:
       return "renderer_only";
   }
+}
+
+fuchsia::hardware::display::Transform GetDisplayTransformFromOrientationAndFlip(
+    Orientation orientation, ImageFlip image_flip) {
+  // For flatland, image flips occur before any parent Transform geometric attributes (such as
+  // rotation). However, for the display controller, the reflection specified in the Transform is
+  // applied after rotation. The flatland transformations must be converted to the equivalent
+  // display controller transform.
+  switch (orientation) {
+    case Orientation::CCW_0_DEGREES:
+      switch (image_flip) {
+        case ImageFlip::NONE:
+          return fhd_Transform::IDENTITY;
+        case ImageFlip::LEFT_RIGHT:
+          return fhd_Transform::REFLECT_Y;
+        case ImageFlip::UP_DOWN:
+          return fhd_Transform::REFLECT_X;
+      }
+
+    case Orientation::CCW_90_DEGREES:
+      switch (image_flip) {
+        case ImageFlip::NONE:
+          return fhd_Transform::ROT_90;
+        case ImageFlip::LEFT_RIGHT:
+          // Left-right flip + 90Ccw is equivalent to 90Ccw + up-down flip.
+          return fhd_Transform::ROT_90_REFLECT_X;
+        case ImageFlip::UP_DOWN:
+          // Up-down flip + 90Ccw is equivalent to 90Ccw + left-right flip.
+          return fhd_Transform::ROT_90_REFLECT_Y;
+      }
+
+    case Orientation::CCW_180_DEGREES:
+      switch (image_flip) {
+        case ImageFlip::NONE:
+          return fhd_Transform::ROT_180;
+        case ImageFlip::LEFT_RIGHT:
+          // Left-right flip + 180 degree rotation is equivalent to up-down flip.
+          return fhd_Transform::REFLECT_X;
+        case ImageFlip::UP_DOWN:
+          // Up-down flip + 180 degree rotation is equivalent to left-right flip.
+          return fhd_Transform::REFLECT_Y;
+      }
+
+    case Orientation::CCW_270_DEGREES:
+      switch (image_flip) {
+        case ImageFlip::NONE:
+          return fhd_Transform::ROT_270;
+        case ImageFlip::LEFT_RIGHT:
+          // Left-right flip + 270Ccw is equivalent to 270Ccw + up-down flip, which in turn is
+          // equivalent to 90Ccw + left-right flip.
+          return fhd_Transform::ROT_90_REFLECT_Y;
+        case ImageFlip::UP_DOWN:
+          // Up-down flip + 270Ccw is equivalent to 270Ccw + left-right flip, which in turn is
+          // equivalent to 90Ccw + up-down flip.
+          return fhd_Transform::ROT_90_REFLECT_X;
+      }
+  }
+
+  FX_NOTREACHED();
 }
 
 }  // namespace flatland
