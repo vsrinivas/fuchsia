@@ -30,9 +30,8 @@ zx::result<bool> VmoNode::CreateAndLockVmo(pgoff_t offset) {
         status != ZX_OK) {
       return zx::error(status);
     }
-    if (zx_status_t status =
-            zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALLOW_FAULTS, 0,
-                                       vmo_, 0, vmo_size, &address_);
+    if (zx_status_t status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_,
+                                                        0, vmo_size, &address_);
         status != ZX_OK) {
       vmo_.reset();
       return zx::error(status);
