@@ -681,6 +681,9 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
   static constexpr fuchsia_wlan_common::wire::WlanChannel kChannel = {
       .primary = 11, .cbw = fuchsia_wlan_common::ChannelBandwidth::kCbw20};
 
+  static constexpr fuchsia_wlan_common::wire::WlanChannel kChannel2 = {
+      .primary = 161, .cbw = fuchsia_wlan_common::ChannelBandwidth::kCbw80};
+
   static constexpr fuchsia_wlan_internal::wire::BssConfig kBssConfig = {
       .bssid =
           {
@@ -827,6 +830,25 @@ TEST_F(MacInterfaceTest, TestSetChannelWithUnsupportedRole) {
 
   mvmvif_->mac_role = WLAN_MAC_ROLE_AP;
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, SetChannel(&kChannel));
+}
+
+// Call SetChannel() twice to simulate a channel switch announcement.
+TEST_F(MacInterfaceTest, DuplicateSetChannel) {
+  ASSERT_OK(SetChannel(&kChannel));
+  ASSERT_OK(ConfigureBss(&kBssConfig));
+  struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
+  struct iwl_mvm_phy_ctxt* phy_ctxt = mvmvif_->phy_ctxt;
+  ASSERT_NE(nullptr, phy_ctxt);
+  ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
+
+  // Call SetChannel() again. This should return the same phy context.
+  // The BSS info should be the same (because we only change the channel).
+  ASSERT_OK(SetChannel(&kChannel2));
+  struct iwl_mvm_phy_ctxt* new_phy_ctxt = mvmvif_->phy_ctxt;
+  ASSERT_NE(nullptr, new_phy_ctxt);
+  ASSERT_EQ(phy_ctxt, new_phy_ctxt);
+  struct iwl_mvm_sta* new_mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
+  ASSERT_EQ(new_mvm_sta, mvm_sta);
 }
 
 // Test ConfigureBss()
