@@ -45,8 +45,20 @@ done < "${PATH_TO_SYSCALLS_DIR}/${TEST_UTILS_FILENAMES}"
 # Move License file.
 cp "${PATH_TO_TMP}/${LICENSE_FILENAME}" "${PATH_TO_SYSCALLS_DIR}/${LICENSE_FILENAME}"
 
+# Save a list of commits being imported.
+TEST_SRC_PATHS=$(awk "{print \"${PATH_TO_TEST_SRCS}/\" \$0}" < ${PATH_TO_SYSCALLS_DIR}/${TEST_SRC_FILENAMES})
+TEST_UTILS_PATHS=$(awk "{print \"${PATH_TO_TEST_UTILS}/\" \$0}" < ${PATH_TO_SYSCALLS_DIR}/${TEST_UTILS_FILENAMES})
+
+LAST_IMPORTED_COMMIT=$(cat "${PATH_TO_SYSCALLS_DIR}/${COMMIT_HASH_FILENAME}")
+IMPORTED=$(git -C "${PATH_TO_TMP}" log --format="+ %C(auto) %h %s" ${LAST_IMPORTED_COMMIT}..HEAD -- ${TEST_SRC_PATHS} ${TEST_UTILS_PATHS})
+
 # Store the hash of the latest commit.
 git -C "${PATH_TO_TMP}" rev-parse HEAD > "${PATH_TO_SYSCALLS_DIR}/${COMMIT_HASH_FILENAME}"
 
 # Clean up gVisor.
 rm -rf "${PATH_TO_TMP}"
+
+# Print out the imported commits.
+echo "Imported changes from the following commits:"
+echo ""
+echo "$IMPORTED"
