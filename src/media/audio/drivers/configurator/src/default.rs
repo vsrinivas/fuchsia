@@ -1486,11 +1486,11 @@ mod tests {
                         ..PlugState::EMPTY
                     })?;
                 }
-                CodecRequest::SignalProcessingConnect { protocol, control_handle: _ } => {
+                CodecRequest::SignalProcessingConnect { protocol, control_handle } => {
                     if with_signal {
                         self.signal_stream = Some(protocol.into_stream()?);
                     } else {
-                        let _ = protocol.close_with_epitaph(zx::Status::NOT_SUPPORTED);
+                        control_handle.shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
                     }
                 }
 

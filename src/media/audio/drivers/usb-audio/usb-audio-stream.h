@@ -126,7 +126,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
     void GetHealthState(GetHealthStateCompleter::Sync& completer) override { completer.Reply({}); }
     void SignalProcessingConnect(SignalProcessingConnectRequestView request,
                                  SignalProcessingConnectCompleter::Sync& completer) override {
-      completer.Close(ZX_ERR_NOT_SUPPORTED);
+      request->protocol.Close(ZX_ERR_NOT_SUPPORTED);
     }
     void GetSupportedFormats(GetSupportedFormatsCompleter::Sync& completer) override {
       stream_.GetSupportedFormats(completer);

@@ -9,8 +9,10 @@ protocol Connector {
     /// Connect to a `SignalProcessing` protocol.
     /// Multiple connections may be supported, if a new connection request is not supported, i.e.
     /// the maximum number of connections have already been created, for instance one, then the
-    /// channel will be closed with an ZX_ERR_ALREADY_BOUND epitaph.
-    /// If signal processing is not supported at all, then the channel will be closed with a
+    /// `protocol` channel (not the channel upon which `SignalProcessingConnect` is being called)
+    /// will be closed with an ZX_ERR_ALREADY_BOUND epitaph.
+    /// If signal processing is not supported at all, then the `protocol` channel (again, not the
+    /// channel upon which `SignalProcessingConnect` is being called) will be closed with a
     /// ZX_ERR_NOT_SUPPORTED epitaph.
     /// This method is named `SignalProcessingConnect` instead of `Connect` because this protocol
     /// is intended to be composed, and hence the more verbose name allows differentiation and
