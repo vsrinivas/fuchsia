@@ -1267,7 +1267,7 @@ impl Journal {
 
     async fn flush(&self, offset: u64, mut buf: Buffer<'_>) -> Result<(), Error> {
         let len = buf.len() as u64;
-        self.handle.get().unwrap().overwrite(offset, buf.as_mut()).await?;
+        self.handle.get().unwrap().overwrite(offset, buf.as_mut(), false).await?;
         let mut inner = self.inner.lock().unwrap();
         if let Some(waker) = inner.sync_waker.take() {
             waker.wake();

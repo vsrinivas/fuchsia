@@ -7,7 +7,7 @@ use {
         async_enter,
         filesystem::SyncOptions,
         log::*,
-        object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
+        object_handle::{ObjectHandle, ReadObjectHandle},
         object_store::{StoreObjectHandle, Timestamp},
         platform::fuchsia::{
             directory::FxDirectory,
@@ -223,7 +223,7 @@ impl FxFile {
         let _ = self
             .handle
             .uncached_handle()
-            .write_or_append(Some(offset), buf.as_ref())
+            .overwrite(offset, buf.as_mut(), true)
             .await
             .map_err(map_to_status)?;
         self.has_written.store(true, Ordering::Relaxed);
@@ -243,6 +243,10 @@ impl FxFile {
             .map_err(map_to_status)?;
         buffer.copy_from_slice(buf.as_slice());
         Ok(bytes_read as u64)
+    }
+
+    pub async fn get_size_uncached(&self) -> u64 {
+        self.handle.uncached_handle().get_size()
     }
 }
 

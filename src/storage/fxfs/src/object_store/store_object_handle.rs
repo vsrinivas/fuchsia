@@ -555,76 +555,206 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         self.update_allocated_size(transaction, allocated, deallocated).await
     }
 
-    // All the extents for the range must have been preallocated using preallocate_range or from
-    // existing writes.
-    // `buf` is mutable as an optimization, since the write may require encryption, we can encrypt
-    // the buffer in-place rather than copying to another buffer if the write is already aligned.
+    // If allow_allocations is false, then all the extents for the range must have been
+    // preallocated using preallocate_range or from existing writes.
+    //
+    // `buf` is mutable as an optimization, since the write may require encryption, we can
+    // encrypt the buffer in-place rather than copying to another buffer if the write is
+    // already aligned.
+    //
+    // Note: in the event of power failure during an overwrite() call, it is possible that
+    // old data (which hasn't been overwritten with new bytes yet) may be exposed to the user.
+    // Since the old data should be encrypted, it is probably safe to expose, although not ideal.
     pub async fn overwrite(
         &self,
         mut offset: u64,
         mut buf: MutableBufferRef<'_>,
+        allow_allocations: bool,
     ) -> Result<(), Error> {
-        let tree = &self.store().tree;
-        let layer_set = tree.layer_set();
-        let mut merger = layer_set.merger();
-        let mut iter = merger
-            .seek(Bound::Included(&ObjectKey::attribute(
-                self.object_id,
-                self.attribute_id,
-                AttributeKey::Extent(ExtentKey::search_key_from_offset(offset)),
-            )))
-            .await?;
-        let block_size = self.block_size();
-        loop {
-            let (device_offset, bytes_to_write) = match iter.get() {
-                Some(ItemRef {
-                    key:
-                        ObjectKey {
-                            object_id,
-                            data:
-                                ObjectKeyData::Attribute(
-                                    attribute_id,
-                                    AttributeKey::Extent(ExtentKey { range }),
+        assert_eq!((buf.len() as u32) % self.store().device.block_size(), 0);
+        let end = offset + buf.len() as u64;
+
+        // The transaction only ends up being used if allow_allocations is true
+        let mut transaction =
+            if allow_allocations { Some(self.new_transaction().await?) } else { None };
+
+        // We build up a list of writes to perform later
+        let writes = FuturesUnordered::new();
+
+        // We create a new scope here, so that the merger iterator will get dropped before we try to
+        // commit our transaction. Otherwise the transaction commit would block.
+        {
+            let store = self.store();
+            let store_object_id = store.store_object_id;
+            let allocator = store.allocator();
+            let tree = &store.tree;
+            let layer_set = tree.layer_set();
+            let mut merger = layer_set.merger();
+            let mut iter = merger
+                .seek(Bound::Included(&ObjectKey::attribute(
+                    self.object_id,
+                    self.attribute_id,
+                    AttributeKey::Extent(ExtentKey::search_key_from_offset(offset)),
+                )))
+                .await?;
+            let block_size = self.block_size();
+
+            loop {
+                let (device_offset, bytes_to_write, should_advance) = match iter.get() {
+                    Some(ItemRef {
+                        key:
+                            ObjectKey {
+                                object_id,
+                                data:
+                                    ObjectKeyData::Attribute(
+                                        attribute_id,
+                                        AttributeKey::Extent(ExtentKey { range }),
+                                    ),
+                            },
+                        value,
+                        ..
+                    }) if *object_id == self.object_id
+                        && *attribute_id == self.attribute_id
+                        && range.start <= offset =>
+                    {
+                        match value {
+                            ObjectValue::Extent(ExtentValue::Some {
+                                device_offset,
+                                checksums,
+                                ..
+                            }) => {
+                                match checksums {
+                                    Checksums::None => {
+                                        ensure!(
+                                            range.is_aligned(block_size)
+                                                && device_offset % block_size == 0,
+                                            FxfsError::Inconsistent
+                                        );
+                                        let offset_within_extent = offset - range.start;
+                                        let remaining_length_of_extent = (range
+                                            .end
+                                            .checked_sub(offset)
+                                            .ok_or(FxfsError::Inconsistent)?)
+                                            as usize;
+                                        // Yields (device_offset, bytes_to_write, should_advance)
+                                        (
+                                            device_offset + offset_within_extent,
+                                            min(buf.len(), remaining_length_of_extent),
+                                            true,
+                                        )
+                                    }
+                                    _ => {
+                                        // TODO(https://fxbug.dev/114786): Maybe we should create
+                                        // a new extent without checksums?
+                                        bail!(
+                                            "extent from ({},{}) which overlaps offset \
+                                                {} has checksums, overwrite is not supported",
+                                            range.start,
+                                            range.end,
+                                            offset
+                                        )
+                                    }
+                                }
+                            }
+                            _ => {
+                                bail!(
+                                    "overwrite failed: extent overlapping offset {} has \
+                                      unexpected ObjectValue",
+                                    offset
+                                )
+                            }
+                        }
+                    }
+                    maybe_item_ref => {
+                        if let Some(transaction) = transaction.as_mut() {
+                            assert_eq!(allow_allocations, true);
+                            assert_eq!(offset % self.block_size(), 0);
+
+                            // We are going to make a new extent, but let's check if there is an
+                            // extent after us. If there is an extent after us, then we don't want
+                            // our new extent to bump into it...
+                            let mut bytes_to_allocate =
+                                round_up(buf.len() as u64, self.block_size())
+                                    .ok_or(FxfsError::TooBig)?;
+                            if let Some(ItemRef {
+                                key:
+                                    ObjectKey {
+                                        object_id,
+                                        data:
+                                            ObjectKeyData::Attribute(
+                                                attribute_id,
+                                                AttributeKey::Extent(ExtentKey { range }),
+                                            ),
+                                    },
+                                ..
+                            }) = maybe_item_ref
+                            {
+                                if *object_id == self.object_id
+                                    && *attribute_id == self.attribute_id
+                                    && offset < range.start
+                                {
+                                    let bytes_until_next_extent = range.start - offset;
+                                    bytes_to_allocate =
+                                        min(bytes_to_allocate, bytes_until_next_extent);
+                                }
+                            }
+
+                            let device_range = allocator
+                                .allocate(transaction, store_object_id, bytes_to_allocate)
+                                .await?;
+                            let device_range_len = device_range.end - device_range.start;
+                            transaction.add(
+                                store_object_id,
+                                Mutation::insert_object(
+                                    ObjectKey::extent(
+                                        self.object_id,
+                                        self.attribute_id,
+                                        offset..offset + device_range_len,
+                                    ),
+                                    ObjectValue::Extent(ExtentValue::new(device_range.start)),
                                 ),
-                        },
-                    value:
-                        ObjectValue::Extent(ExtentValue::Some {
-                            device_offset,
-                            checksums: Checksums::None,
-                            ..
-                        }),
-                    ..
-                }) if *object_id == self.object_id
-                    && *attribute_id == self.attribute_id
-                    && range.start <= offset =>
-                {
-                    ensure!(
-                        range.is_aligned(block_size) && device_offset % block_size == 0,
-                        FxfsError::Inconsistent
-                    );
-                    let offset_within_extent = offset - range.start;
-                    let remaining_length_of_extent =
-                        (range.end.checked_sub(offset).ok_or(FxfsError::Inconsistent)?) as usize;
-                    (
-                        device_offset + offset_within_extent,
-                        min(buf.len(), remaining_length_of_extent),
-                    )
+                            );
+
+                            self.update_allocated_size(transaction, device_range_len, 0).await?;
+
+                            // Yields (device_offset, bytes_to_write, should_advance)
+                            (device_range.start, min(buf.len(), device_range_len as usize), false)
+                        } else {
+                            bail!(
+                                "no extent overlapping offset {}, \
+                                and new allocations are not allowed",
+                                offset
+                            )
+                        }
+                    }
+                };
+                let (current_buf, remaining_buf) = buf.split_at_mut(bytes_to_write);
+                writes.push(self.write_at(offset, current_buf, device_offset, false));
+                if remaining_buf.len() == 0 {
+                    break;
+                } else {
+                    buf = remaining_buf;
+                    offset += bytes_to_write as u64;
+                    if should_advance {
+                        iter.advance().await?;
+                    }
                 }
-                _ => bail!(
-                    "extent overlapping offset {} is either not allocated or has checksums",
-                    offset
-                ),
-            };
-            let (current_buf, remaining_buf) = buf.split_at_mut(bytes_to_write);
-            self.write_at(offset, current_buf, device_offset, false).await?;
-            if remaining_buf.len() == 0 {
-                break;
-            } else {
-                buf = remaining_buf;
-                offset += bytes_to_write as u64;
-                iter.advance().await?;
             }
         }
+
+        // The checksums are being ignored here, but we don't need to know them
+        writes.try_collect::<Vec<Checksums>>().await?;
+
+        if let Some(mut transaction) = transaction {
+            assert_eq!(allow_allocations, true);
+            if !transaction.is_empty() {
+                if end > self.get_size() {
+                    self.grow(&mut transaction, self.get_size(), end).await?;
+                }
+                transaction.commit().await?;
+            }
+        }
+
         Ok(())
     }
 
@@ -1381,8 +1511,8 @@ mod tests {
             object_store::{
                 allocator::Allocator,
                 directory::replace_child,
-                object_record::Timestamp,
-                transaction::{Options, TransactionHandler},
+                object_record::{ObjectKey, ObjectValue, Timestamp},
+                transaction::{Mutation, Options, TransactionHandler},
                 volume::root_volume,
                 Directory, HandleOptions, ObjectStore, StoreObjectHandle,
                 TRANSACTION_MUTATION_THRESHOLD,
@@ -1409,6 +1539,7 @@ mod tests {
     const TEST_DATA: &[u8] = b"hello";
     const TEST_OBJECT_SIZE: u64 = 5678;
     const TEST_OBJECT_ALLOCATED_SIZE: u64 = 4096;
+    const TEST_OBJECT_NAME: &str = "foo";
 
     async fn test_filesystem() -> OpenFxFilesystem {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
@@ -1417,20 +1548,31 @@ mod tests {
 
     async fn test_filesystem_and_object_with_key(
         crypt: Option<&dyn Crypt>,
+        write_object_test_data: bool,
     ) -> (OpenFxFilesystem, StoreObjectHandle<ObjectStore>) {
         let fs = test_filesystem().await;
         let store = fs.root_store();
         let object;
+
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
+
         object =
             ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), crypt)
                 .await
                 .expect("create_object failed");
-        {
+
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+        root_directory
+            .add_child_file(&mut transaction, TEST_OBJECT_NAME, &object)
+            .await
+            .expect("add_child_file failed");
+
+        if write_object_test_data {
             let align = TEST_DATA_OFFSET as usize % TEST_DEVICE_BLOCK_SIZE as usize;
             let mut buf = object.allocate_buffer(align + TEST_DATA.len());
             buf.as_mut_slice()[align..].copy_from_slice(TEST_DATA);
@@ -1445,7 +1587,12 @@ mod tests {
     }
 
     async fn test_filesystem_and_object() -> (OpenFxFilesystem, StoreObjectHandle<ObjectStore>) {
-        test_filesystem_and_object_with_key(Some(&InsecureCrypt::new())).await
+        test_filesystem_and_object_with_key(Some(&InsecureCrypt::new()), true).await
+    }
+
+    async fn test_filesystem_and_empty_object() -> (OpenFxFilesystem, StoreObjectHandle<ObjectStore>)
+    {
+        test_filesystem_and_object_with_key(Some(&InsecureCrypt::new()), false).await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1690,7 +1837,7 @@ mod tests {
             .expect("write failed");
         buf.as_mut_slice().fill(95);
         let offset = round_up(TEST_OBJECT_SIZE, fs.block_size()).unwrap();
-        object.overwrite(offset, buf.as_mut()).await.expect("write failed");
+        object.overwrite(offset, buf.as_mut(), false).await.expect("write failed");
 
         // Make sure there were no more allocations.
         assert_eq!(allocator.get_allocated_bytes(), allocated_after);
@@ -1708,7 +1855,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_preallocate_range() {
-        let (fs, object) = test_filesystem_and_object_with_key(None).await;
+        let (fs, object) = test_filesystem_and_object_with_key(None, true).await;
         test_preallocate_common(&fs, object).await;
         fs.close().await.expect("Close failed");
     }
@@ -1717,7 +1864,7 @@ mod tests {
     // different layers.
     #[fasync::run_singlethreaded(test)]
     async fn test_preallocate_suceeds_when_extents_are_in_different_layers() {
-        let (fs, object) = test_filesystem_and_object_with_key(None).await;
+        let (fs, object) = test_filesystem_and_object_with_key(None, true).await;
         object.owner().flush().await.expect("flush failed");
         test_preallocate_common(&fs, object).await;
         fs.close().await.expect("Close failed");
@@ -1725,7 +1872,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_already_preallocated() {
-        let (fs, object) = test_filesystem_and_object_with_key(None).await;
+        let (fs, object) = test_filesystem_and_object_with_key(None, true).await;
         let allocator = fs.allocator();
         let allocated_before = allocator.get_allocated_bytes();
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
@@ -1741,21 +1888,324 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_overwrite_fails_if_not_preallocated() {
-        let (fs, object) = test_filesystem_and_object().await;
+    async fn test_overwrite_when_preallocated_at_start_of_file() {
+        // The standard test data we put in the test object would cause an extent with checksums
+        // to be created, which overwrite() doesn't support. So we create an empty object instead.
+        let (fs, object) = test_filesystem_and_empty_object().await;
 
         let object = ObjectStore::open_object(
             &object.owner,
             object.object_id(),
             HandleOptions::default(),
-            Some(&InsecureCrypt::new()),
+            None,
         )
         .await
         .expect("open_object failed");
-        let mut buf = object.allocate_buffer(2048);
-        buf.as_mut_slice().fill(95);
-        let offset = round_up(TEST_OBJECT_SIZE, fs.block_size()).unwrap();
-        object.overwrite(offset, buf.as_mut()).await.expect_err("write succeeded");
+
+        assert_eq!(fs.block_size(), 4096);
+
+        let mut write_buf = object.allocate_buffer(4096);
+        write_buf.as_mut_slice().fill(95);
+
+        // First try to overwrite without allowing allocations
+        // We expect this to fail, since nothing is allocated yet
+        object.overwrite(0, write_buf.as_mut(), false).await.expect_err("overwrite succeeded");
+
+        // Now preallocate some space (exactly one block)
+        let mut transaction = object.new_transaction().await.expect("new_transaction failed");
+        object
+            .preallocate_range(&mut transaction, 0..4096 as u64)
+            .await
+            .expect("preallocate_range failed");
+        transaction.commit().await.expect("commit failed");
+
+        // Now try the same overwrite command as before, it should work this time,
+        // even with allocations disabled...
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(0, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[0; 4096]);
+        }
+        object.overwrite(0, write_buf.as_mut(), false).await.expect("overwrite failed");
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(0, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[95; 4096]);
+        }
+
+        // Now try to overwrite at offset 4096. We expect this to fail, since we only preallocated
+        // one block earlier at offset 0
+        object.overwrite(4096, write_buf.as_mut(), false).await.expect_err("overwrite succeeded");
+
+        // We can't assert anything about the existing bytes, because they haven't been allocated
+        // yet and they could contain any values
+        object.overwrite(4096, write_buf.as_mut(), true).await.expect("overwrite failed");
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(4096, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[95; 4096]);
+        }
+
+        // Check that the overwrites haven't messed up the filesystem state
+        let fsck_options = FsckOptions {
+            fail_on_warning: true,
+            no_lock: true,
+            on_error: Box::new(|err| println!("fsck error: {:?}", err)),
+            ..Default::default()
+        };
+        fsck_with_options(fs.clone(), &fsck_options).await.expect("fsck failed");
+
+        fs.close().await.expect("Close failed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_overwrite_large_buffer_and_file_with_many_holes() {
+        // The standard test data we put in the test object would cause an extent with checksums
+        // to be created, which overwrite() doesn't support. So we create an empty object instead.
+        let (fs, object) = test_filesystem_and_empty_object().await;
+
+        let object = ObjectStore::open_object(
+            &object.owner,
+            object.object_id(),
+            HandleOptions::default(),
+            None,
+        )
+        .await
+        .expect("open_object failed");
+
+        assert_eq!(fs.block_size(), 4096);
+        assert_eq!(object.get_size(), TEST_OBJECT_SIZE);
+
+        // Let's create some non-holes
+        let mut transaction = object.new_transaction().await.expect("new_transaction failed");
+        object
+            .preallocate_range(&mut transaction, 4096..8192 as u64)
+            .await
+            .expect("preallocate_range failed");
+        object
+            .preallocate_range(&mut transaction, 16384..32768 as u64)
+            .await
+            .expect("preallocate_range failed");
+        object
+            .preallocate_range(&mut transaction, 65536..131072 as u64)
+            .await
+            .expect("preallocate_range failed");
+        object
+            .preallocate_range(&mut transaction, 262144..524288 as u64)
+            .await
+            .expect("preallocate_range failed");
+        transaction.commit().await.expect("commit failed");
+
+        assert_eq!(object.get_size(), 524288);
+
+        let mut write_buf = object.allocate_buffer(4096);
+        write_buf.as_mut_slice().fill(95);
+
+        // We shouldn't be able to overwrite in the holes if new allocations aren't enabled
+        object.overwrite(0, write_buf.as_mut(), false).await.expect_err("overwrite succeeded");
+        object.overwrite(8192, write_buf.as_mut(), false).await.expect_err("overwrite succeeded");
+        object.overwrite(32768, write_buf.as_mut(), false).await.expect_err("overwrite succeeded");
+        object.overwrite(131072, write_buf.as_mut(), false).await.expect_err("overwrite succeeded");
+
+        // But we should be able to overwrite in the prealloc'd areas without needing allocations
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(4096, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[0; 4096]);
+        }
+        object.overwrite(4096, write_buf.as_mut(), false).await.expect("overwrite failed");
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(4096, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[95; 4096]);
+        }
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(16384, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[0; 4096]);
+        }
+        object.overwrite(16384, write_buf.as_mut(), false).await.expect("overwrite failed");
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(16384, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[95; 4096]);
+        }
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(65536, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[0; 4096]);
+        }
+        object.overwrite(65536, write_buf.as_mut(), false).await.expect("overwrite failed");
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(65536, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[95; 4096]);
+        }
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(262144, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[0; 4096]);
+        }
+        object.overwrite(262144, write_buf.as_mut(), false).await.expect("overwrite failed");
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(262144, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[95; 4096]);
+        }
+
+        // Now let's try to do a huge overwrite, that spans over many holes and non-holes
+        let mut huge_write_buf = object.allocate_buffer(524288);
+        huge_write_buf.as_mut_slice().fill(96);
+
+        // With allocations disabled, the big overwrite should fail...
+        object.overwrite(0, huge_write_buf.as_mut(), false).await.expect_err("overwrite succeeded");
+        // ... but it should work when allocations are enabled
+        object.overwrite(0, huge_write_buf.as_mut(), true).await.expect("overwrite failed");
+        {
+            let mut read_buf = object.allocate_buffer(524288);
+            object.read(0, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[96; 524288]);
+        }
+
+        // Check that the overwrites haven't messed up the filesystem state
+        let fsck_options = FsckOptions {
+            fail_on_warning: true,
+            no_lock: true,
+            on_error: Box::new(|err| println!("fsck error: {:?}", err)),
+            ..Default::default()
+        };
+        fsck_with_options(fs.clone(), &fsck_options).await.expect("fsck failed");
+
+        fs.close().await.expect("Close failed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_overwrite_when_unallocated_at_start_of_file() {
+        // The standard test data we put in the test object would cause an extent with checksums
+        // to be created, which overwrite() doesn't support. So we create an empty object instead.
+        let (fs, object) = test_filesystem_and_empty_object().await;
+
+        let object = ObjectStore::open_object(
+            &object.owner,
+            object.object_id(),
+            HandleOptions::default(),
+            None,
+        )
+        .await
+        .expect("open_object failed");
+
+        assert_eq!(fs.block_size(), 4096);
+
+        let mut write_buf = object.allocate_buffer(4096);
+        write_buf.as_mut_slice().fill(95);
+
+        // First try to overwrite without allowing allocations
+        // We expect this to fail, since nothing is allocated yet
+        object.overwrite(0, write_buf.as_mut(), false).await.expect_err("overwrite succeeded");
+
+        // Now try the same overwrite command as before, but allow allocations
+        object.overwrite(0, write_buf.as_mut(), true).await.expect("overwrite failed");
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(0, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[95; 4096]);
+        }
+
+        // Now try to overwrite at the next block. This should fail if allocations are disabled
+        object.overwrite(4096, write_buf.as_mut(), false).await.expect_err("overwrite succeeded");
+
+        // ... but it should work if allocations are enabled
+        object.overwrite(4096, write_buf.as_mut(), true).await.expect("overwrite failed");
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(4096, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[95; 4096]);
+        }
+
+        // Check that the overwrites haven't messed up the filesystem state
+        let fsck_options = FsckOptions {
+            fail_on_warning: true,
+            no_lock: true,
+            on_error: Box::new(|err| println!("fsck error: {:?}", err)),
+            ..Default::default()
+        };
+        fsck_with_options(fs.clone(), &fsck_options).await.expect("fsck failed");
+
+        fs.close().await.expect("Close failed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_overwrite_can_extend_a_file() {
+        // The standard test data we put in the test object would cause an extent with checksums
+        // to be created, which overwrite() doesn't support. So we create an empty object instead.
+        let (fs, object) = test_filesystem_and_empty_object().await;
+
+        let object = ObjectStore::open_object(
+            &object.owner,
+            object.object_id(),
+            HandleOptions::default(),
+            None,
+        )
+        .await
+        .expect("open_object failed");
+
+        assert_eq!(fs.block_size(), 4096);
+        assert_eq!(object.get_size(), TEST_OBJECT_SIZE);
+
+        let mut write_buf = object.allocate_buffer(4096);
+        write_buf.as_mut_slice().fill(95);
+
+        // Let's try to fill up the last block, and increase the filesize in doing so
+        let last_block_offset = round_down(TEST_OBJECT_SIZE, 4096 as u32);
+
+        // Expected to fail with allocations disabled
+        object
+            .overwrite(last_block_offset, write_buf.as_mut(), false)
+            .await
+            .expect_err("overwrite succeeded");
+        // ... but expected to succeed with allocations enabled
+        object
+            .overwrite(last_block_offset, write_buf.as_mut(), true)
+            .await
+            .expect("overwrite failed");
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(last_block_offset, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[95; 4096]);
+        }
+
+        assert_eq!(object.get_size(), 8192);
+
+        // Let's try to write at the next block, too
+        let next_block_offset = round_up(TEST_OBJECT_SIZE, 4096 as u32).unwrap();
+
+        // Expected to fail with allocations disabled
+        object
+            .overwrite(next_block_offset, write_buf.as_mut(), false)
+            .await
+            .expect_err("overwrite succeeded");
+        // ... but expected to succeed with allocations enabled
+        object
+            .overwrite(next_block_offset, write_buf.as_mut(), true)
+            .await
+            .expect("overwrite failed");
+        {
+            let mut read_buf = object.allocate_buffer(4096);
+            object.read(next_block_offset, read_buf.as_mut()).await.expect("read failed");
+            assert_eq!(&read_buf.as_slice(), &[95; 4096]);
+        }
+
+        assert_eq!(object.get_size(), 12288);
+
+        // Check that the overwrites haven't messed up the filesystem state
+        let fsck_options = FsckOptions {
+            fail_on_warning: true,
+            no_lock: true,
+            on_error: Box::new(|err| println!("fsck error: {:?}", err)),
+            ..Default::default()
+        };
+        fsck_with_options(fs.clone(), &fsck_options).await.expect("fsck failed");
+
         fs.close().await.expect("Close failed");
     }
 
@@ -2107,6 +2557,26 @@ mod tests {
 
         assert_eq!(allocated_before - allocator.get_allocated_bytes(), fs.block_size() as u64);
 
+        // We need to remove the directory entry, too, otherwise fsck will complain
+        {
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            let root_directory = Directory::open(&store, store.root_directory_object_id())
+                .await
+                .expect("open failed");
+            transaction.add(
+                store.store_object_id(),
+                Mutation::replace_or_insert_object(
+                    ObjectKey::child(root_directory.object_id(), TEST_OBJECT_NAME),
+                    ObjectValue::None,
+                ),
+            );
+            transaction.commit().await.expect("commit failed");
+        }
+
         fsck_with_options(
             fs.clone(),
             &FsckOptions {
@@ -2217,7 +2687,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocated_size() {
-        let (fs, object) = test_filesystem_and_object_with_key(None).await;
+        let (fs, object) = test_filesystem_and_object_with_key(None, true).await;
 
         let before = object.get_properties().await.expect("get_properties failed").allocated_size;
         let mut buf = object.allocate_buffer(5);

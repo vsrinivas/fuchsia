@@ -156,6 +156,24 @@ impl<S: HandleOwner> Directory<S> {
         Ok(handle)
     }
 
+    pub async fn add_child_file<'a>(
+        &self,
+        transaction: &mut Transaction<'a>,
+        name: &str,
+        handle: &StoreObjectHandle<S>,
+    ) -> Result<(), Error> {
+        ensure!(!self.is_deleted(), FxfsError::Deleted);
+        transaction.add(
+            self.store().store_object_id(),
+            Mutation::replace_or_insert_object(
+                ObjectKey::child(self.object_id, name),
+                ObjectValue::child(handle.object_id(), ObjectDescriptor::File),
+            ),
+        );
+        self.update_attributes(transaction, None, Some(Timestamp::now()), |_| {}).await?;
+        Ok(())
+    }
+
     pub async fn create_child_file<'a>(
         &self,
         transaction: &mut Transaction<'a>,
@@ -165,14 +183,7 @@ impl<S: HandleOwner> Directory<S> {
         let handle =
             ObjectStore::create_object(&self.owner, transaction, HandleOptions::default(), None)
                 .await?;
-        transaction.add(
-            self.store().store_object_id(),
-            Mutation::replace_or_insert_object(
-                ObjectKey::child(self.object_id, name),
-                ObjectValue::child(handle.object_id(), ObjectDescriptor::File),
-            ),
-        );
-        self.update_attributes(transaction, None, Some(Timestamp::now()), |_| {}).await?;
+        self.add_child_file(transaction, name, &handle).await?;
         Ok(handle)
     }
 

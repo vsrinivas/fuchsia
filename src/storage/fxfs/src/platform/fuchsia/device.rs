@@ -293,27 +293,6 @@ impl BlockServer {
         });
     }
 
-    async fn get_allocated_bytes(&self) -> Result<(u64, u64), zx::Status> {
-        let mut allocated_bytes = 0;
-        let mut unallocated_bytes = 0;
-        let mut offset = 0;
-
-        loop {
-            let (allocated, count) = self.file.is_allocated(offset).await?;
-            if count == 0 {
-                break;
-            } else {
-                offset += count;
-                if allocated {
-                    allocated_bytes += count;
-                } else {
-                    unallocated_bytes += count;
-                }
-            }
-        }
-        Ok((allocated_bytes, unallocated_bytes))
-    }
-
     async fn handle_request(&self, request: VolumeAndNodeRequest) -> Result<(), Error> {
         match request {
             VolumeAndNodeRequest::GetInfo { responder } => {
@@ -430,8 +409,11 @@ impl BlockServer {
             }
             // TODO(fxbug.dev/89873): need to check if this returns the right information.
             VolumeAndNodeRequest::GetVolumeInfo { responder } => {
-                match self.get_allocated_bytes().await {
-                    Ok((allocated_bytes, unallocated_bytes)) => {
+                match self.file.get_attrs().await {
+                    Ok(attr) => {
+                        let allocated_bytes = attr.storage_size;
+                        let unallocated_bytes =
+                            self.file.get_size_uncached().await - allocated_bytes;
                         let allocated_slices =
                             round_up(allocated_bytes, DEVICE_VOLUME_SLICE_SIZE).unwrap();
                         let unallocated_bytes =
@@ -877,16 +859,15 @@ mod tests {
                 // Read back an extra block either side
                 let mut read_buf = vec![0u8; len + 2 * remote_block_device.block_size() as usize];
                 remote_block_device
-                    .read_at(
-                        read_buf.as_mut_slice().into(),
-                        offset as u64 - remote_block_device.block_size() as u64,
-                    )
+                    .read_at(read_buf.as_mut_slice().into(), 0)
                     .await
                     .expect("read_at failed");
 
                 // We expect the extra block on the LHS of the read_buf to be 0
                 assert_eq!(&read_buf[..offset], &vec![0; offset][..]);
+
                 assert_eq!(&read_buf[offset..offset + len], &write_buf);
+
                 // We expect the extra block on the RHS of the read_buf to be 0
                 assert_eq!(
                     &read_buf[offset + len..],
