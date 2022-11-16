@@ -84,7 +84,7 @@ struct UnknownMethodHandlerEntry {
 
   // Function which handles unknown interactions.
   void (*dispatch)(void* interface, uint64_t method_ordinal,
-                   ::fidl::UnknownMethodType unknown_interaction_type, ::fidl::Transaction* txn);
+                   ::fidl::UnknownMethodType unknown_method_type, ::fidl::Transaction* txn);
 
   // Function which sends replies to two-way unknown methods for this protocol's
   // transport.

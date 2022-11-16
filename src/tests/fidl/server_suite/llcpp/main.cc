@@ -230,7 +230,7 @@ class OpenTargetServer : public fidl::WireServer<fidl_serversuite::OpenTarget> {
   void handle_unknown_method(fidl::UnknownMethodMetadata<fidl_serversuite::OpenTarget> metadata,
                              fidl::UnknownMethodCompleter::Sync& completer) override {
     fidl_serversuite::wire::UnknownMethodType method_type;
-    switch (metadata.unknown_interaction_type) {
+    switch (metadata.unknown_method_type) {
       case fidl::UnknownMethodType::kOneWay:
         method_type = fidl_serversuite::wire::UnknownMethodType::kOneWay;
         break;

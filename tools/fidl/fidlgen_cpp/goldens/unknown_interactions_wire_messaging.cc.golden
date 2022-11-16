@@ -2081,13 +2081,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       }
       default:
         auto* hdr = msg.header();
-        ::fidl::UnknownMethodType unknown_interaction_type =
+        ::fidl::UnknownMethodType unknown_method_type =
             ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
         bool is_flexible_interaction = ::fidl::IsFlexibleInteraction(hdr);
         auto ordinal = hdr->ordinal;
         std::move(msg).CloseHandles();
         if (is_flexible_interaction &&
-            ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsProtocol::kOpenness, unknown_interaction_type)) {
+            ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsProtocol::kOpenness, unknown_method_type)) {
           if (event_handler()) {
             ::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsProtocol> metadata {
               .method_ordinal = ordinal,
@@ -2385,13 +2385,13 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 const ::fidl::internal::UnknownMethodHandlerEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::unknown_method_handler_entry_ = {
   .openness = ::fidl::internal::Openness::kOpen,
   .dispatch = [](void* interface, uint64_t method_ordinal,
-      ::fidl::UnknownMethodType unknown_interaction_type, ::fidl::Transaction* txn) {
+      ::fidl::UnknownMethodType unknown_method_type, ::fidl::Transaction* txn) {
     ::fidl::UnknownMethodCompleter::Sync completer(txn);
     static_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->handle_unknown_method(
         ::fidl::UnknownMethodMetadata<::test_unknowninteractions::UnknownInteractionsProtocol> {
           .method_ordinal = method_ordinal,
           
-          .unknown_interaction_type = unknown_interaction_type,
+          .unknown_method_type = unknown_method_type,
           
       }, completer);
   },
@@ -5813,13 +5813,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       }
       default:
         auto* hdr = msg.header();
-        ::fidl::UnknownMethodType unknown_interaction_type =
+        ::fidl::UnknownMethodType unknown_method_type =
             ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
         bool is_flexible_interaction = ::fidl::IsFlexibleInteraction(hdr);
         auto ordinal = hdr->ordinal;
         std::move(msg).CloseHandles();
         if (is_flexible_interaction &&
-            ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsAjarProtocol::kOpenness, unknown_interaction_type)) {
+            ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsAjarProtocol::kOpenness, unknown_method_type)) {
           if (event_handler()) {
             ::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsAjarProtocol> metadata {
               .method_ordinal = ordinal,
@@ -5997,7 +5997,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 const ::fidl::internal::UnknownMethodHandlerEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::unknown_method_handler_entry_ = {
   .openness = ::fidl::internal::Openness::kAjar,
   .dispatch = [](void* interface, uint64_t method_ordinal,
-      ::fidl::UnknownMethodType unknown_interaction_type, ::fidl::Transaction* txn) {
+      ::fidl::UnknownMethodType unknown_method_type, ::fidl::Transaction* txn) {
     ::fidl::UnknownMethodCompleter::Sync completer(txn);
     static_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->handle_unknown_method(
         ::fidl::UnknownMethodMetadata<::test_unknowninteractions::UnknownInteractionsAjarProtocol> {

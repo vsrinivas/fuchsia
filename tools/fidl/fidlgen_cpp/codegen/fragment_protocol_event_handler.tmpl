@@ -113,7 +113,7 @@ class {{ .WireEventDispatcher }} final :
       default:
         {{- if .HandlesOneWayUnknownInteractions }}
         auto* hdr = msg.header();
-        ::fidl::UnknownMethodType unknown_interaction_type =
+        ::fidl::UnknownMethodType unknown_method_type =
             ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
         bool is_flexible_interaction = ::fidl::IsFlexibleInteraction(hdr);
         auto ordinal = hdr->ordinal;
@@ -122,7 +122,7 @@ class {{ .WireEventDispatcher }} final :
         std::move(msg).CloseHandles();
         {{- if .HandlesOneWayUnknownInteractions }}
         if (is_flexible_interaction &&
-            ::fidl::internal::CanHandleEvent({{ . }}::kOpenness, unknown_interaction_type)) {
+            ::fidl::internal::CanHandleEvent({{ . }}::kOpenness, unknown_method_type)) {
           if (event_handler()) {
             {{ .UnknownEventMetadata }} metadata {
               .method_ordinal = ordinal,
@@ -250,7 +250,7 @@ class {{ .NaturalEventDispatcher }} final :
       default:
         {{- if .HandlesOneWayUnknownInteractions }}
         auto* hdr = msg.header();
-        ::fidl::UnknownMethodType unknown_interaction_type =
+        ::fidl::UnknownMethodType unknown_method_type =
             ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
         bool is_flexible_interaction = ::fidl::IsFlexibleInteraction(hdr);
         auto ordinal = hdr->ordinal;
@@ -259,7 +259,7 @@ class {{ .NaturalEventDispatcher }} final :
         std::move(msg).CloseHandles();
         {{- if .HandlesOneWayUnknownInteractions }}
         if (is_flexible_interaction &&
-            ::fidl::internal::CanHandleEvent({{ . }}::kOpenness, unknown_interaction_type)) {
+            ::fidl::internal::CanHandleEvent({{ . }}::kOpenness, unknown_method_type)) {
           if (event_handler()) {
             {{ .UnknownEventMetadata }} metadata {
               .method_ordinal = ordinal,

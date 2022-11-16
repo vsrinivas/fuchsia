@@ -27,7 +27,7 @@ struct UnknownMethodMetadata<
   uint64_t method_ordinal;
   // Whether the method that was called was a one-way method or a two-way
   // method.
-  UnknownMethodType unknown_interaction_type;
+  UnknownMethodType unknown_method_type;
 };
 
 // Unknown interaction metadata for ajar protocols.

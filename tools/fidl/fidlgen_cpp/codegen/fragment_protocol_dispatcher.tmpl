@@ -79,13 +79,13 @@ const ::fidl::internal::MethodEntry* {{ .WireServerDispatcher.NoLeading }}::entr
 const ::fidl::internal::UnknownMethodHandlerEntry {{ .WireServerDispatcher.NoLeading }}::unknown_method_handler_entry_ = {
   .openness = {{ .OpennessValue }},
   .dispatch = [](void* interface, uint64_t method_ordinal,
-      ::fidl::UnknownMethodType unknown_interaction_type, ::fidl::Transaction* txn) {
+      ::fidl::UnknownMethodType unknown_method_type, ::fidl::Transaction* txn) {
     ::fidl::UnknownMethodCompleter::Sync completer(txn);
     static_cast<{{ .WireServer }}*>(interface)->handle_unknown_method(
         {{ .UnknownMethodMetadata }} {
           .method_ordinal = method_ordinal,
           {{ if .HandlesTwoWayUnknownInteractions }}
-          .unknown_interaction_type = unknown_interaction_type,
+          .unknown_method_type = unknown_method_type,
           {{ end }}
       }, completer);
   },
@@ -182,13 +182,13 @@ const ::fidl::internal::MethodEntry* {{ .NaturalServerDispatcher.NoLeading }}::e
 const ::fidl::internal::UnknownMethodHandlerEntry {{ .NaturalServerDispatcher.NoLeading }}::unknown_method_handler_entry_ = {
   .openness = {{ .OpennessValue }},
   .dispatch = [](void* interface, uint64_t method_ordinal,
-      ::fidl::UnknownMethodType unknown_interaction_type, ::fidl::Transaction* txn) {
+      ::fidl::UnknownMethodType unknown_method_type, ::fidl::Transaction* txn) {
     ::fidl::UnknownMethodCompleter::Sync completer(txn);
     static_cast<{{ .NaturalServer }}*>(interface)->handle_unknown_method(
         {{ .UnknownMethodMetadata }} {
           .method_ordinal = method_ordinal,
           {{ if .HandlesTwoWayUnknownInteractions }}
-          .unknown_interaction_type = unknown_interaction_type,
+          .unknown_method_type = unknown_method_type,
           {{ end }}
       }, completer);
   },
