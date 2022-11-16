@@ -895,12 +895,14 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
   status = usb_function_alloc_interface(&cdc->function, &descriptors.comm_intf.b_interface_number);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: usb_function_alloc_interface failed", __func__);
-    goto fail;
+    usb_cdc_release(cdc.get());
+    return status;
   }
   status = usb_function_alloc_interface(&cdc->function, &descriptors.cdc_intf_0.b_interface_number);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: usb_function_alloc_interface failed", __func__);
-    goto fail;
+    usb_cdc_release(cdc.get());
+    return status;
   }
   descriptors.cdc_intf_1.b_interface_number = descriptors.cdc_intf_0.b_interface_number;
   descriptors.cdc_union.bControlInterface = descriptors.comm_intf.b_interface_number;
@@ -909,17 +911,20 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
   status = usb_function_alloc_ep(&cdc->function, USB_DIR_OUT, &cdc->bulk_out_addr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: usb_function_alloc_ep failed", __func__);
-    goto fail;
+    usb_cdc_release(cdc.get());
+    return status;
   }
   status = usb_function_alloc_ep(&cdc->function, USB_DIR_IN, &cdc->bulk_in_addr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: usb_function_alloc_ep failed", __func__);
-    goto fail;
+    usb_cdc_release(cdc.get());
+    return status;
   }
   status = usb_function_alloc_ep(&cdc->function, USB_DIR_IN, &cdc->intr_addr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: usb_function_alloc_ep failed", __func__);
-    goto fail;
+    usb_cdc_release(cdc.get());
+    return status;
   }
 
   descriptors.bulk_out_ep.b_endpoint_address = cdc->bulk_out_addr;
@@ -928,7 +933,8 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
 
   status = cdc_generate_mac_address(parent, cdc.get());
   if (status != ZX_OK) {
-    goto fail;
+    usb_cdc_release(cdc.get());
+    return status;
   }
 
   // allocate bulk out usb requests
@@ -937,7 +943,8 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     status =
         instrumented_request_alloc(cdc.get(), &req, BULK_REQ_SIZE, cdc->bulk_out_addr, req_size);
     if (status != ZX_OK) {
-      goto fail;
+      usb_cdc_release(cdc.get());
+      return status;
     }
     status = usb_req_list_add_head(&cdc->bulk_out_reqs_, req, cdc->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
@@ -947,7 +954,8 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     status =
         instrumented_request_alloc(cdc.get(), &req, BULK_REQ_SIZE, cdc->bulk_in_addr, req_size);
     if (status != ZX_OK) {
-      goto fail;
+      usb_cdc_release(cdc.get());
+      return status;
     }
 
     // As per the CDC-ECM spec, we need to send a zero-length packet to signify the end of
@@ -962,7 +970,8 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
   for (int i = 0; i < INTR_COUNT; i++) {
     status = instrumented_request_alloc(cdc.get(), &req, INTR_MAX_PACKET, cdc->intr_addr, req_size);
     if (status != ZX_OK) {
-      goto fail;
+      usb_cdc_release(cdc.get());
+      return status;
     }
 
     status = usb_req_list_add_head(&cdc->intr_reqs_, req, cdc->parent_req_size);
@@ -979,7 +988,8 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
   status = device_add(parent, &args, &cdc->zxdev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: add_device failed %d", __func__, status);
-    goto fail;
+    usb_cdc_release(cdc.get());
+    return status;
   }
   usb_function_set_interface(&cdc->function, cdc.get(), &device_ops);
   {
@@ -987,10 +997,6 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     __UNUSED auto released = cdc.release();
   }
   return ZX_OK;
-
-fail:
-  usb_cdc_release(cdc.get());
-  return status;
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
