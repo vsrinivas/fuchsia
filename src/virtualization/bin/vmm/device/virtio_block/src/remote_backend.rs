@@ -6,7 +6,7 @@ use {
     crate::backend::{BlockBackend, DeviceAttrs, Request, Sector},
     anyhow::{anyhow, Error},
     async_trait::async_trait,
-    fidl_fuchsia_hardware_block::BlockMarker,
+    fuchsia_zircon as zx,
     futures::future::try_join_all,
     remote_block_device::{BlockClient, BufferSlice, MutableBufferSlice, RemoteBlockClient},
     virtio_device::mem::DeviceRange,
@@ -30,10 +30,8 @@ pub struct RemoteBackend {
 }
 
 impl RemoteBackend {
-    pub async fn new(client_end: fidl::endpoints::ClientEnd<BlockMarker>) -> Result<Self, Error> {
-        let proxy = client_end.into_proxy()?;
-        let block_client = RemoteBlockClient::new(proxy).await?;
-        Ok(Self { block_client })
+    pub async fn new(channel: zx::Channel) -> Result<Self, Error> {
+        Ok(Self { block_client: RemoteBlockClient::new(channel).await? })
     }
 
     async fn read_range<'a, 'b>(&self, offset: u64, range: DeviceRange<'a>) -> Result<(), Error> {
@@ -128,8 +126,7 @@ mod tests {
         super::*,
         crate::backend_test::{BackendController, BackendTest},
         anyhow::Error,
-        fuchsia_zircon as zx,
-        fuchsia_zircon::HandleBased as _,
+        fuchsia_zircon::HandleBased,
     };
 
     struct RemoteBackendController {

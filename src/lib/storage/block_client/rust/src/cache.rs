@@ -298,7 +298,7 @@ mod tests {
         super::{Cache, Stats},
         crate::RemoteBlockClientSync,
         ramdevice_client::RamdiskClient,
-        std::io::{Read as _, Seek as _, SeekFrom, Write as _},
+        std::io::{Read, Seek, SeekFrom, Write},
     };
 
     const RAMDISK_BLOCK_SIZE: u64 = 1024;
@@ -313,9 +313,9 @@ mod tests {
         .expect("ramctl did not appear");
         let ramdisk = RamdiskClient::create(RAMDISK_BLOCK_SIZE, RAMDISK_BLOCK_COUNT)
             .expect("RamdiskClient::create failed");
-        let client_end = ramdisk.open().expect("ramdisk.open failed");
         let remote_block_device =
-            RemoteBlockClientSync::new(client_end).expect("RemoteBlockClientSync::new failed");
+            RemoteBlockClientSync::new(ramdisk.open().expect("ramdisk.open failed"))
+                .expect("RemoteBlockClientSync::new failed");
         (ramdisk, remote_block_device)
     }
 
@@ -407,10 +407,11 @@ mod tests {
         assert_eq!(cache.stats(), &Stats { read_count: 2, write_count: 0, cache_hits: 0 });
 
         drop(cache);
-        let client_end = ramdisk.open().expect("ramdisk.open failed");
-        let remote_block_device =
-            RemoteBlockClientSync::new(client_end).expect("RemoteBlockClientSync::new failed");
-        let mut cache = Cache::new(remote_block_device).expect("Cache::new failed");
+        let mut cache = Cache::new(
+            RemoteBlockClientSync::new(ramdisk.open().expect("ramdisk.open failed"))
+                .expect("RemoteBlockClientSync::new failed"),
+        )
+        .expect("Cache::new failed");
 
         let mut buf = [0; DATA_LEN + 2]; // Read an extra byte at the start and at the end.
         cache.read_at(&mut buf, OFFSET - 1).expect("cache.read_at failed");
@@ -517,9 +518,9 @@ mod tests {
         .expect("ramctl did not appear");
         let ramdisk =
             RamdiskClient::create(super::BLOCK_SIZE * 2, 10).expect("RamdiskClient::create failed");
-        let client_end = ramdisk.open().expect("ramdisk.open failed");
         let remote_block_device =
-            RemoteBlockClientSync::new(client_end).expect("RemoteBlockClientSync::new failed");
+            RemoteBlockClientSync::new(ramdisk.open().expect("ramdisk.open failed"))
+                .expect("RemoteBlockClientSync::new failed");
         Cache::new(remote_block_device).err().expect("Cache::new succeeded");
     }
 }

@@ -11,10 +11,12 @@ use {
         HandleBased,
     },
     fidl_fuchsia_device::ControllerMarker,
+    fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_hardware_block_encrypted::{DeviceManagerMarker, DeviceManagerProxy},
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_hardware_block_volume::VolumeManagerMarker,
     fidl_fuchsia_io as fio,
+    fuchsia_async::{self as fasync},
     fuchsia_component_test::RealmInstance,
     fuchsia_driver_test as _,
     fuchsia_zircon::{sys::zx_status_t, Status},
@@ -113,12 +115,10 @@ pub async fn setup_ramdisk(
     }
 
     // Open ramdisk device again as fidl_fuchsia_device::ControllerProxy
-    //
-    // TODO(https://fxbug.dev/112484): this relies on multiplexing.
-    let client_end = ramdisk.open().expect("Could not re-open ramdisk");
-    let client_end = fidl::endpoints::ClientEnd::<ControllerMarker>::new(client_end.into_channel());
-    let controller =
-        client_end.into_proxy().expect("Could not convert ramdisk channel to async channel");
+    let ramdisk_chan = ramdisk.open().expect("Could not re-open ramdisk");
+    let controller_chan = fasync::Channel::from_channel(ramdisk_chan)
+        .expect("Could not convert ramdisk channel to async channel");
+    let controller = ControllerProxy::from_channel(controller_chan);
 
     // Bind FVM to that ramdisk
     bind_fvm(&controller).await.expect("Could not bind FVM");

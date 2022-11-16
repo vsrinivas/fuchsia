@@ -258,7 +258,6 @@ fshost_integration_test(
   source_root = "tests/fshost_recovery_wipe_storage_integration_test.rs"
   sources = [ "tests/fshost_recovery_wipe_storage_integration_test.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/fs_management/rust:fs_management",
@@ -273,7 +272,6 @@ fshost_integration_test(
   source_root = "tests/fshost_recovery_wipe_storage_integration_test.rs"
   sources = [ "tests/fshost_recovery_wipe_storage_integration_test.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/fs_management/rust:fs_management",

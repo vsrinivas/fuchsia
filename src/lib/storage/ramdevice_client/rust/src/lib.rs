@@ -42,9 +42,9 @@ mod ramdevice_sys;
 
 use {
     anyhow::Error,
-    fidl_fuchsia_hardware_block as fhardware_block, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     std::{ffi, fs, os::unix::io::AsRawFd as _, ptr},
-    zx::HandleBased as _,
+    zx::HandleBased,
 };
 enum DevRoot {
     Provided(fs::File),
@@ -226,9 +226,7 @@ impl RamdiskClient {
     }
 
     /// Get an open channel to the underlying ramdevice.
-    pub fn open(
-        &self,
-    ) -> Result<fidl::endpoints::ClientEnd<fhardware_block::BlockMarker>, zx::Status> {
+    pub fn open(&self) -> Result<zx::Channel, zx::Status> {
         let Self { ramdisk } = self;
         let handle = unsafe { ramdevice_sys::ramdisk_get_block_interface(*ramdisk) };
         // TODO(https://fxbug.dev/89811): Remove this when we're not restricted
@@ -245,7 +243,7 @@ impl RamdiskClient {
             zx::sys::ZX_HANDLE_INVALID => Err(zx::Status::NOT_SUPPORTED),
             handle => {
                 let handle = unsafe { zx::Handle::from_raw(handle) };
-                Ok(zx::Channel::from(handle).into())
+                Ok(zx::Channel::from(handle))
             }
         }
     }
@@ -352,7 +350,7 @@ mod tests {
         wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
             .expect("ramctl did not appear");
         let ramdisk = RamdiskClient::create(512, 2048).unwrap();
-        let _: fidl::endpoints::ClientEnd<fhardware_block::BlockMarker> = ramdisk.open().unwrap();
+        let _: zx::Channel = ramdisk.open().unwrap();
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
 
@@ -361,14 +359,12 @@ mod tests {
         wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
             .expect("ramctl did not appear");
         let ramdisk = RamdiskClient::create(512, 2048).unwrap();
-        let client_end = ramdisk.open().unwrap();
+        let device = ramdisk.open().unwrap();
 
-        // Ask it to describe itself using the Node interface.
-        //
-        // TODO(https://fxbug.dev/112484): this relies on multiplexing.
-        let client_end =
-            fidl::endpoints::ClientEnd::<fio::NodeMarker>::new(client_end.into_channel());
-        let proxy = client_end.into_proxy().unwrap();
+        // ask it to describe itself using the Node interface
+        let fasync_channel =
+            fasync::Channel::from_channel(device).expect("failed to convert to fasync channel");
+        let proxy = fio::NodeProxy::new(fasync_channel);
         let protocol = proxy.query().await.expect("failed to get node info");
         assert_eq!(protocol, fio::FILE_PROTOCOL_NAME.as_bytes());
 

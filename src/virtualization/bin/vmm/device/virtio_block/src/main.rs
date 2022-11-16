@@ -36,7 +36,7 @@ async fn create_backend(
 ) -> Result<Box<dyn BlockBackend>, anyhow::Error> {
     let backend: Box<dyn BlockBackend> = match format {
         BlockFormat::File(file) => Box::new(FileBackend::new(file)?),
-        BlockFormat::Block(block) => Box::new(RemoteBackend::new(block).await?),
+        BlockFormat::Block(block) => Box::new(RemoteBackend::new(block.into_channel()).await?),
         BlockFormat::Qcow(channel) => {
             if let BlockMode::ReadWrite = mode {
                 return Err(anyhow!("Writes to QCOW files is not supported"));

@@ -272,9 +272,7 @@ impl RamdiskBuilder {
         )
         .context("/dev/sys/platform/00:00:2d/ramctl did not appear")?;
         let client = client.build()?;
-        let block = client.open()?;
-        let client_end = ClientEnd::<fio::NodeMarker>::new(block.into_channel());
-        let proxy = client_end.into_proxy()?;
+        let proxy = fio::NodeProxy::new(fuchsia_async::Channel::from_channel(client.open()?)?);
         Ok(Ramdisk { proxy, client })
     }
 

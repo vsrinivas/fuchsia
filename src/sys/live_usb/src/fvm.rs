@@ -5,7 +5,7 @@
 use {
     crate::gpt,
     anyhow::{Context, Error},
-    fidl_fuchsia_device::ControllerMarker,
+    fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_fshost::{BlockWatcherMarker, BlockWatcherProxy},
     fidl_fuchsia_hardware_block_partition::PartitionMarker,
     fuchsia_zircon as zx,
@@ -110,12 +110,12 @@ impl FvmRamdisk {
     /// and leaving the ramdisk to run once the application has quit.
     pub async fn pave_fvm(mut self) -> Result<(), Error> {
         info!("connecting to the paver");
-        let client_end = self.ramdisk.open().context("Opening ramdisk")?;
+        let channel = self.ramdisk.open().context("Opening ramdisk")?;
         let paver =
             fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_paver::PaverMarker>()?;
         let (data_sink, remote) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_paver::DynamicDataSinkMarker>()?;
-        let () = paver.use_block_device(client_end, remote)?;
+        paver.use_block_device(fidl::endpoints::ClientEnd::new(channel), remote)?;
 
         // Set up a PayloadStream to serve the data sink.
         let streamer: Box<dyn PayloadStreamer> =
@@ -156,11 +156,8 @@ impl FvmRamdisk {
 
     /// Explicitly binds the GPT driver to the given ramdisk.
     async fn rebind_gpt_driver(&self) -> Result<(), Error> {
-        let client_end = self.ramdisk.open()?;
-        // TODO(https://fxbug.dev/112484): this relies on multiplexing.
-        let client_end =
-            fidl::endpoints::ClientEnd::<ControllerMarker>::new(client_end.into_channel());
-        let controller = client_end.into_proxy()?;
+        let channel = self.ramdisk.open()?;
+        let controller = ControllerProxy::new(fidl::AsyncChannel::from_channel(channel)?);
         controller.rebind("gpt.so").await?.map_err(zx::Status::from_raw)?;
         Ok(())
     }
