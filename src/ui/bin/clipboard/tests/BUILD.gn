@@ -29,7 +29,7 @@ rustc_test("clipboard-tests-bin") {
     "//src/lib/fuchsia-component-test",
     "//src/lib/ui/fuchsia-scenic:fuchsia-scenic",
     "//src/ui/bin/clipboard:test_helpers",
-    "//src/ui/lib/focus_chain_provider:lib",
+    "//src/ui/lib/focus_chain_provider:lib_without_includes",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
@@ -41,9 +41,6 @@ rustc_test("clipboard-tests-bin") {
 
 fuchsia_test_component("clipboard-tests-comp") {
   manifest = "meta/clipboard-tests.cml"
-
-  # focus_chain_provider's expected includes should not be checked in a test
-  check_includes = false
   deps = [ ":clipboard-tests-bin" ]
 }
 

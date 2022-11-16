@@ -12,12 +12,19 @@ group("focus_chain_provider") {
   deps = [ ":tests" ]
 }
 
+# Private target containing just the library, without required CML includes.
+#
+# If using this library in production, use ":lib_with_includes".
+#
+# If using this library for tests, or as a dependency for another library
+# that might not use `focus_chain_provider` in all configurations, use
+# ":lib_without_includes".
 rustc_library("lib") {
   name = "focus_chain_provider"
+  visibility = [ ":*" ]
   with_unit_tests = true
   edition = "2021"
   deps = [
-    ":lib_includes",
     "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_rust",
     "//src/lib/async-utils",
     "//src/lib/fuchsia-async",
@@ -36,6 +43,22 @@ rustc_library("lib") {
     "src/instance_counter.rs",
     "src/lib.rs",
   ]
+}
+
+# The focus_chain_provider library, with required CML includes. Use this target
+# in production.
+group("lib_with_includes") {
+  public_deps = [
+    ":lib",
+    ":lib_includes",
+  ]
+}
+
+# The focus_chain_provider library, without enforcement of CML includes. Useful
+# for test components and for cases where the library must be present but a
+# `FocusChainProvider` is not actually exposed.
+group("lib_without_includes") {
+  public_deps = [ ":lib" ]
 }
 
 expect_includes("lib_includes") {
