@@ -10,7 +10,7 @@ namespace {
 using FileCompatibilityTest = GuestTest<F2fsDebianGuest>;
 
 TEST_F(FileCompatibilityTest, WriteVerifyLinuxToFuchsia) {
-  // TODO: larger filesize for slow test
+  // TODO(fxbug.dev/115142): larger filesize for slow test
   constexpr uint32_t kVerifyPatternSize = 256 * 1024;  // 256 KB
   constexpr uint32_t num_blocks = kVerifyPatternSize / kBlockSize;
   const std::string filename = "alpha";
@@ -66,7 +66,7 @@ TEST_F(FileCompatibilityTest, WriteVerifyLinuxToFuchsia) {
 }
 
 TEST_F(FileCompatibilityTest, WriteVerifyFuchsiaToLinux) {
-  // TODO: larger filesize for slow test
+  // TODO(fxbug.dev/115142): larger filesize for slow test
   constexpr uint32_t kVerifyPatternSize = 256 * 1024;  // 256 KB
   constexpr uint32_t num_blocks = kVerifyPatternSize / kBlockSize;
   const std::string filename = "alpha";
