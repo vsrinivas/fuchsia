@@ -446,11 +446,11 @@ TEST_F(RealmBuilderTest, ComponentCanStopAndBeRestarted) {
   // (fxbug.dev/111225).
 
   got_response = false;
-  while (!got_response) {
+  got_peer_closed = false;
+  while (!got_response && !got_peer_closed) {
     FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: resetting the flags to call again";
     started = false;
     destructed = false;
-    got_peer_closed = false;
 
     // The component destructed, but it will start up again when another request
     // is made.
