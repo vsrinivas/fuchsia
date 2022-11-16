@@ -9,7 +9,6 @@ group("tests") {
     "display:inject_service_test",
     "display:test",
     "focus_chain_provider:tests",
-    "input-device-constants:tests",
     "input_pipeline:tests",
     "input_report_reader/tests",
     "key_util:test",

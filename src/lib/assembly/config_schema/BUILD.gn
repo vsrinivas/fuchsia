@@ -15,7 +15,6 @@ rustc_library("config_schema") {
     "//src/lib/assembly/fvm",
     "//src/lib/assembly/package_utils",
     "//src/lib/assembly/util",
-    "//src/ui/lib/input-device-constants:lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:camino",
     "//third_party/rust_crates:serde",

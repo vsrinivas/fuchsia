@@ -6,7 +6,6 @@ use crate as image_assembly_config;
 use crate::FileEntry;
 use assembly_package_utils::{PackageInternalPathBuf, PackageManifestPathBuf, SourcePathBuf};
 use camino::Utf8PathBuf;
-use input_device_constants::InputDeviceType as PlatformInputDeviceType;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -147,7 +146,6 @@ pub struct PlatformInputConfig {
     pub supported_input_devices: Vec<InputDeviceType>,
 }
 
-// LINT.IfChange
 /// Options for input devices that may be supported.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
@@ -158,21 +156,6 @@ pub enum InputDeviceType {
     Mouse,
     Touchscreen,
 }
-
-// This impl verifies that the platform and assembly enums are kept in sync.
-impl From<InputDeviceType> for PlatformInputDeviceType {
-    fn from(src: InputDeviceType) -> PlatformInputDeviceType {
-        match src {
-            InputDeviceType::Button => PlatformInputDeviceType::ConsumerControls,
-            InputDeviceType::Keyboard => PlatformInputDeviceType::Keyboard,
-            InputDeviceType::LightSensor => PlatformInputDeviceType::LightSensor,
-            InputDeviceType::Mouse => PlatformInputDeviceType::Mouse,
-            InputDeviceType::Touchscreen => PlatformInputDeviceType::Touch,
-        }
-    }
-}
-
-// LINT.ThenChange(/src/ui/lib/input-device-constants/src/lib.rs)
 
 /// Options for features that may either be forced on, forced off, or allowed
 /// to be either on or off. Features default to disabled.
