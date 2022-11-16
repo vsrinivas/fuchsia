@@ -472,9 +472,6 @@ func (n *ndpDispatcher) handleEvent(event ndpEvent) {
 				return false
 			case *stack.DADAborted:
 				_ = syslog.WarnTf(ndpSyslogTagName, "DAD for %s on nicID (%d) aborted", event.addr, event.nicID)
-				// Do not trigger on DAD complete because DAD was actually aborted.
-				// The link online change handler will update the address assignment
-				// state accordingly.
 				return false
 			case *stack.DADDupAddrDetected:
 				_ = syslog.WarnTf(ndpSyslogTagName, "DAD found %s holding %s on nicID (%d)", result.HolderLinkAddress, event.addr, event.nicID)
