@@ -24,6 +24,7 @@ namespace fpbus = fuchsia_hardware_platform_bus;
 #define GPIO_VOL_UP_L           A5_GPIOD(2)
 #define GPIO_MIC_MUTE           A5_GPIOD(3)
 #define GPIO_SNS_SPI1_PD0N      A5_GPIOD(4)
+#define GPIO_UWB_SOC_INT        A5_GPIOD(14)
 #define GPIO_VOL_DN_L           A5_GPIOD(15)
 
 // GPIO T Bank

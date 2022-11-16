@@ -1,0 +1,21 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite sr1xx;
+
+using fuchsia.amlogic.platform.a5;
+using fuchsia.gpio;
+using fuchsia.nxp.platform;
+using fuchsia.spi;
+
+primary node "spi" {
+  fuchsia.BIND_PROTOCOL == fuchsia.spi.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.nxp.platform.BIND_PLATFORM_DEV_VID.NXP;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.nxp.platform.BIND_PLATFORM_DEV_DID.SR1XX;
+}
+
+node "gpio-int" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.a5.GPIOD_PIN_ID.PIN_14; // UWB_SOC_INT
+}

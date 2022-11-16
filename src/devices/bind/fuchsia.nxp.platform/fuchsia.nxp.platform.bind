@@ -13,6 +13,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_PID {
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  SR1XX = 0x06,
   RTC_PCF8563 = 0x05,
   WIFI = 1,
 };

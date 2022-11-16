@@ -70,9 +70,8 @@ static constexpr spi_channel_t spi_1_channels[] = {
     {
         .bus_id = BUCKEYE_SPICC1,
         .cs = 0,  // index into matching chip-select map
-        .vid = 0,
-        .pid = 0,
-        .did = 0,
+        .vid = PDEV_VID_NXP,
+        .did = PDEV_DID_SR1XX,
     },
 };
 

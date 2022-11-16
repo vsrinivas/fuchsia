@@ -194,6 +194,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_IMX_SDHCI          0x03
 #define PDEV_DID_IMX_I2C            0x04
 #define PDEV_DID_PCF8563_RTC        0x05
+#define PDEV_DID_SR1XX              0x06
 
 // REALTEK
 #define PDEV_VID_REALTEK            0x0B

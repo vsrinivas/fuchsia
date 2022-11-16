@@ -94,7 +94,7 @@ static const gpio_pin_t gpio_pins[] = {
     DECL_GPIO_PIN(GPIO_MIC_MUTE),        DECL_GPIO_PIN(GPIO_VOL_UP_L),
     DECL_GPIO_PIN(GPIO_VOL_DN_L),        DECL_GPIO_PIN(GPIO_UNKNOWN_SPI_SS0),
     DECL_GPIO_PIN(GPIO_SNS_SPI1_PD0N),   DECL_GPIO_PIN(GPIO_RF_SPI_RESETN),
-    DECL_GPIO_PIN(GPIO_AMP_EN),
+    DECL_GPIO_PIN(GPIO_AMP_EN),          DECL_GPIO_PIN(GPIO_UWB_SOC_INT),
 };
 
 static const std::vector<fpbus::Metadata> gpio_metadata{

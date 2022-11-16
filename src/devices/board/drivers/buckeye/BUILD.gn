@@ -35,6 +35,18 @@ driver_bind_rules("buckeye-sdio-bind") {
   ]
 }
 
+driver_bind_rules("buckeye-uwb-bind") {
+  rules = "bind/buckeye-uwb.bind"
+  header_output = "buckeye-uwb-bind.h"
+  bind_output = "buckeye-uwb-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.nxp.platform",
+    "//src/devices/bind/fuchsia.spi",
+  ]
+}
+
 driver_bind_rules("pwm_init_bind") {
   rules = "bind/pwm_init.bind"
   header_output = "pwm_init_bind.h"
@@ -222,6 +234,7 @@ fuchsia_driver("buckeye-driver") {
     "buckeye-tee.cc",
     "buckeye-thermal.cc",
     "buckeye-usb.cc",
+    "buckeye-uwb.cc",
     "buckeye.cc",
   ]
   deps = [
@@ -235,6 +248,7 @@ fuchsia_driver("buckeye-driver") {
     ":buckeye-power-regulator-bind_header",
     ":buckeye-sdio-bind_header",
     ":buckeye-tee-bind_header",
+    ":buckeye-uwb-bind_header",
     ":pwm_init_bind_header",
     ":spi_0_bind_header",
     ":spi_1_bind_header",
