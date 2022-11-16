@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import(
-    "//build/fuzzing/v2/internal/fuchsia_library_fuzzer_component_metadata.gni")
-import("//build/fuzzing/v2/internal/library_fuzzer.gni")
+import("//build/fuzzing/internal/fuchsia_library_fuzzer_component_metadata.gni")
+import("//build/fuzzing/internal/library_fuzzer.gni")
 
 # Creates a fuzzer binary.
 #

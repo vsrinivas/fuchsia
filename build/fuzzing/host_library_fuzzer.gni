@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fuzzing/v2/internal/library_fuzzer.gni")
+import("//build/fuzzing/internal/library_fuzzer.gni")
 import("//build/host.gni")
 import("//build/testing/host_test.gni")
 import("//build/testing/host_test_data.gni")
