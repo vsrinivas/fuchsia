@@ -153,10 +153,28 @@ struct IdentifyController {
   // 0xc00
   uint8_t vendor_data[1024];
 
+  DEF_SUBBIT(oacs, 8, doorbell_buffer_config);
+  DEF_SUBBIT(oacs, 7, virtualization_management);
+  DEF_SUBBIT(oacs, 6, nvme_mi_send_recv);
+  DEF_SUBBIT(oacs, 5, directive_send_recv);
+  DEF_SUBBIT(oacs, 4, device_self_test);
+  DEF_SUBBIT(oacs, 3, namespace_management);
+  DEF_SUBBIT(oacs, 2, firmware_download_commit);
+  DEF_SUBBIT(oacs, 1, format_nvm);
+  DEF_SUBBIT(oacs, 0, security_send_recv);
+
   DEF_SUBFIELD(sqes, 7, 4, sqes_max_log2);
   DEF_SUBFIELD(sqes, 3, 0, sqes_min_log2);
   DEF_SUBFIELD(cqes, 7, 4, cqes_max_log2);
   DEF_SUBFIELD(cqes, 3, 0, cqes_min_log2);
+
+  DEF_SUBBIT(oncs, 6, timestamp);
+  DEF_SUBBIT(oncs, 5, reservations);
+  DEF_SUBBIT(oncs, 4, save_select_nonzero);
+  DEF_SUBBIT(oncs, 3, write_zeroes);
+  DEF_SUBBIT(oncs, 2, dataset_management);
+  DEF_SUBBIT(oncs, 1, write_uncorrectable);
+  DEF_SUBBIT(oncs, 0, compare);
 
   size_t maximum_sq_entry_size() const { return 1 << sqes_max_log2(); }
   size_t minimum_sq_entry_size() const { return 1 << sqes_min_log2(); }

@@ -50,6 +50,7 @@ fuchsia_driver("nvme-driver") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

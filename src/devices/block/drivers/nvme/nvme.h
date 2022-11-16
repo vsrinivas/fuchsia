@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio-buffer.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddktl/device.h>
 
@@ -58,9 +59,6 @@ class Nvme : public DeviceType, public ddk::BlockImplProtocol<Nvme, ddk::base_pr
   // Process pending IO completions. Called in the IoLoop().
   void ProcessIoCompletions();
 
-  // TODO(fxbug.dev/102133): Extract variables from this struct as class members.
-  nvme_device_t* nvme_;
-
   pci_protocol_t pci_;
   std::unique_ptr<fdf::MmioBuffer> mmio_;
   zx_handle_t irqh_;
@@ -68,15 +66,37 @@ class Nvme : public DeviceType, public ddk::BlockImplProtocol<Nvme, ddk::base_pr
   CapabilityReg caps_;
   VersionReg version_;
 
+  fbl::Mutex commands_lock_;
+  // The pending list consists of commands that have been received via BlockImplQueue() and are
+  // waiting for IO to start. The exception is the head of the pending list which may be partially
+  // started, waiting for more txn slots to become available.
+  list_node_t pending_commands_ TA_GUARDED(commands_lock_);  // Inbound commands to process.
+  // The active list consists of commands where all txns have been created and we're waiting for
+  // them to complete or error out.
+  list_node_t active_commands_ TA_GUARDED(commands_lock_);  // Commands in flight.
+
   // Admin submission and completion queues.
   std::unique_ptr<QueuePair> admin_queue_;
+  fbl::Mutex admin_lock_;  // Used to serialize admin transactions.
+  sync_completion_t admin_signal_;
+  Completion admin_result_;
 
   // IO submission and completion queues.
   std::unique_ptr<QueuePair> io_queue_;
+  // Notifies IoThread() that it has work to do. Signaled from BlockImplQueue() or IrqThread().
+  sync_completion_t io_signal_;
 
   // Interrupt and IO threads.
   thrd_t irq_thread_;
   thrd_t io_thread_;
+  bool irq_thread_started_ = false;
+  bool io_thread_started_ = false;
+
+  bool volatile_write_cache_ = false;
+  bool driver_shutdown_ = false;
+
+  block_info_t block_info_;
+  uint32_t max_transfer_blocks_;
 };
 
 }  // namespace nvme
