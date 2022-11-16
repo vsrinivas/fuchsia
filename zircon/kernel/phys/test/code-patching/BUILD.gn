@@ -63,10 +63,10 @@ source_set("test-api") {
   ]
 }
 
-zbi_executable("zbi-code-patching-test.executable") {
+zbi_executable("zbi-self-code-patching-test.executable") {
   testonly = true
 
-  sources = [ "test.cc" ]
+  sources = [ "self-code-patching-test.cc" ]
 
   deps = [
     ":add-one",
@@ -91,12 +91,13 @@ zbi_executable("zbi-code-patching-test.executable") {
 code_patches("code-patches") {
   testonly = true
 
-  deps = [ ":zbi-code-patching-test.executable" ]
+  deps = [ ":zbi-self-code-patching-test.executable" ]
 }
 
 # We use a kernel package to transport code-patches.bin and the patch
 # alternatives, as that is how they will be transported in production.
 kernel_package("code-patches-test") {
+  visibility = [ ":*" ]
   testonly = true
 
   deps = [
@@ -106,11 +107,11 @@ kernel_package("code-patches-test") {
   ]
 }
 
-zbi_test("zbi-code-patching-test") {
+zbi_test("zbi-self-code-patching-test") {
   args = []
   deps = [
     ":code-patches-test",
-    ":zbi-code-patching-test.executable",
+    ":zbi-self-code-patching-test.executable",
   ]
 
   # TODO(mcgrathr): enable on hardware too
@@ -195,7 +196,7 @@ group("code-patching") {
   testonly = true
 
   deps = [
-    ":zbi-code-patching-test",
     ":zbi-elf-code-patching-test",
+    ":zbi-self-code-patching-test",
   ]
 }

@@ -4,8 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "test.h"
-
 #include <lib/code-patching/code-patching.h>
 #include <lib/memalloc/range.h>
 #include <lib/zbitl/error-stdio.h>
