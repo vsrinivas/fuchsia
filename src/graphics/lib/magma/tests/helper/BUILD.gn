@@ -36,7 +36,7 @@ source_set("test_device_helper") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/lib/component/incoming/cpp",
     "//sdk/lib/fdio",
-    "//src/graphics/lib/magma/include:magma",
+    "//src/graphics/lib/magma/src/libmagma",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",
   ]

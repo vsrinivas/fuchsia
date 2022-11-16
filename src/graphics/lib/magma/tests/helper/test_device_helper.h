@@ -109,7 +109,37 @@ class TestDeviceBase {
   }
 
   zx::unowned_channel channel() { return zx::unowned_channel(device_controller_.channel()); }
+
   magma_device_t device() const { return device_; }
+
+  uint32_t GetDeviceId() const {
+    uint64_t value;
+    magma_status_t status = magma_query(device_, MAGMA_QUERY_DEVICE_ID, nullptr, &value);
+    if (status != MAGMA_STATUS_OK)
+      return 0;
+    return static_cast<uint32_t>(value);
+  }
+
+  uint32_t GetVendorId() const {
+    uint64_t value;
+    magma_status_t status = magma_query(device_, MAGMA_QUERY_VENDOR_ID, nullptr, &value);
+    if (status != MAGMA_STATUS_OK)
+      return 0;
+    return static_cast<uint32_t>(value);
+  }
+
+  bool IsIntelGen12() {
+    if (GetVendorId() != 0x8086)
+      return false;
+
+    switch (GetDeviceId()) {
+      case 0x9A40:
+      case 0x9A49:
+        return true;
+    }
+    return false;
+  }
+
   ~TestDeviceBase() {
     if (device_)
       magma_device_release(device_);

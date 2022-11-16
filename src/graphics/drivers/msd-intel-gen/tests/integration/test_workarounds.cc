@@ -184,4 +184,9 @@ class TestConnection : public magma::TestDeviceBase {
 // TODO(fxbug.dev/81460) - enable
 TEST(Workarounds, DISABLED_Register0x7004) { TestConnection().CheckWorkarounds(0x7004, 0x29c2); }
 
-TEST(Workarounds, Register0x7300) { TestConnection().CheckWorkarounds(0x7300, 0x810); }
+TEST(Workarounds, Register0x7300) {
+  auto helper = magma::TestDeviceBase(0x8086);
+  if (helper.IsIntelGen12())
+    GTEST_SKIP();
+  TestConnection().CheckWorkarounds(0x7300, 0x810);
+}
