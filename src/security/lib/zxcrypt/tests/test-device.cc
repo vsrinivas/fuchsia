@@ -384,26 +384,27 @@ void TestDevice::Connect() {
     block_count_ = response.info->block_count;
   }
 
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();
+  ASSERT_OK(endpoints);
+  auto& [client, server] = endpoints.value();
+  ASSERT_OK(fidl::WireCall(zxcrypt_block())->OpenSession(std::move(server)));
+
   {
-    fidl::WireResult result = fidl::WireCall(zxcrypt_block())->GetFifo();
+    const fidl::WireResult result = fidl::WireCall(client)->GetFifo();
     ASSERT_OK(result.status());
-    auto& response = result.value();
-    ASSERT_OK(response.status);
-    client_ = std::make_unique<block_client::Client>(std::move(response.fifo));
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    client_ = std::make_unique<block_client::Client>(std::move(client),
+                                                     std::move(response.value()->fifo));
   }
 
   req_.group = 0;
 
   // Create the vmo and get a transferable handle to give to the block server
   ASSERT_OK(zx::vmo::create(size(), 0, &vmo_));
-  zx::vmo xfer_vmo;
-  ASSERT_OK(vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo));
-
-  const fidl::WireResult result = fidl::WireCall(zxcrypt_block())->AttachVmo(std::move(xfer_vmo));
-  ASSERT_OK(result.status());
-  const auto& response = result.value();
-  ASSERT_OK(response.status);
-  req_.vmoid = response.vmoid.get()->id;
+  zx::result vmoid = client_->RegisterVmo(vmo_);
+  ASSERT_OK(vmoid);
+  req_.vmoid = vmoid.value().TakeId();
 }
 
 void TestDevice::Disconnect() {
@@ -417,15 +418,6 @@ void TestDevice::Disconnect() {
   }
 
   if (client_) {
-    const fidl::WireResult result = fidl::WireCall(zxcrypt_block())->CloseFifo();
-    // VolumeTest.TestShredThroughDriver{Fvm,Raw} produce ZX_ERR_PEER_CLOSED here for reasons I
-    // don't understand. This error was previously entirely unchecked, so it must not be very
-    // important.
-    if (!result.is_peer_closed()) {
-      ASSERT_OK(result.status());
-      const auto& response = result.value();
-      ASSERT_OK(response.status);
-    }
     memset(&req_, 0, sizeof(req_));
     client_ = nullptr;
   }

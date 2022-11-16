@@ -21,44 +21,43 @@ TEST(ManagerTest, StartServer) {
   StubBlockDevice blkdev;
   ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
-  zx::fifo fifo;
-  ASSERT_OK(manager.StartServer(nullptr, &client, &fifo));
-  ASSERT_OK(manager.CloseFifoServer());
+  ASSERT_OK(manager.StartServer(nullptr, &client));
+  manager.CloseFifoServer();
 }
 
 TEST(ManagerTest, AttachVmo) {
   StubBlockDevice blkdev;
   ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
-  zx::fifo fifo;
-  ASSERT_OK(manager.StartServer(nullptr, &client, &fifo));
+  ASSERT_OK(manager.StartServer(nullptr, &client));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(8192, 0, &vmo));
 
-  vmoid_t vmoid;
-  ASSERT_OK(manager.AttachVmo(std::move(vmo), &vmoid));
+  zx::result vmoid = manager.AttachVmo(std::move(vmo));
+  ASSERT_OK(vmoid);
 
-  ASSERT_OK(manager.CloseFifoServer());
+  manager.CloseFifoServer();
 }
 
 TEST(ManagerTest, CloseVMO) {
   StubBlockDevice blkdev;
   ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
-  zx::fifo fifo;
-  ASSERT_OK(manager.StartServer(nullptr, &client, &fifo));
+  ASSERT_OK(manager.StartServer(nullptr, &client));
+  zx::result fifo = manager.GetFifo();
+  ASSERT_OK(fifo);
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(8192, 0, &vmo));
-  vmoid_t vmoid;
-  ASSERT_OK(manager.AttachVmo(std::move(vmo), &vmoid));
+  zx::result vmoid = manager.AttachVmo(std::move(vmo));
+  ASSERT_OK(vmoid);
 
   // Request close VMO.
   block_fifo_request_t req = {
       .opcode = BLOCK_OP_CLOSE_VMO,
       .reqid = 0x100,
       .group = 0,
-      .vmoid = vmoid,
+      .vmoid = vmoid.value(),
       .length = 0,
       .vmo_offset = 0,
       .dev_offset = 0,
@@ -66,21 +65,21 @@ TEST(ManagerTest, CloseVMO) {
 
   // Write request.
   size_t actual_count = 0;
-  ASSERT_OK(fifo.write(sizeof(req), &req, 1, &actual_count));
+  ASSERT_OK(fifo.value().write(sizeof(req), &req, 1, &actual_count));
   ASSERT_EQ(actual_count, 1);
 
   // Wait for response.
   zx_signals_t observed;
-  ASSERT_OK(fifo.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), &observed));
+  ASSERT_OK(fifo.value().wait_one(ZX_FIFO_READABLE, zx::time::infinite(), &observed));
 
   block_fifo_response_t res;
-  ASSERT_OK(fifo.read(sizeof(res), &res, 1, &actual_count));
+  ASSERT_OK(fifo.value().read(sizeof(res), &res, 1, &actual_count));
   ASSERT_EQ(actual_count, 1);
   ASSERT_OK(res.status);
   ASSERT_EQ(req.reqid, res.reqid);
   ASSERT_EQ(res.count, 1);
 
-  ASSERT_OK(manager.CloseFifoServer());
+  manager.CloseFifoServer();
 }
 
 zx_status_t FillVMO(const zx::vmo& vmo, size_t size) {
@@ -102,23 +101,24 @@ TEST(ManagerTest, ReadSingleTest) {
   StubBlockDevice blkdev;
   ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
-  zx::fifo fifo;
-  ASSERT_OK(manager.StartServer(nullptr, &client, &fifo));
+  ASSERT_OK(manager.StartServer(nullptr, &client));
+  zx::result fifo = manager.GetFifo();
+  ASSERT_OK(fifo);
 
   const size_t vmo_size = 8192;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(vmo_size, 0, &vmo));
   ASSERT_OK(FillVMO(vmo, vmo_size));
 
-  vmoid_t vmoid;
-  ASSERT_OK(manager.AttachVmo(std::move(vmo), &vmoid));
+  zx::result vmoid = manager.AttachVmo(std::move(vmo));
+  ASSERT_OK(vmoid);
 
   // Request close VMO.
   block_fifo_request_t req = {
       .opcode = BLOCK_OP_READ,
       .reqid = 0x100,
       .group = 0,
-      .vmoid = vmoid,
+      .vmoid = vmoid.value(),
       .length = 1,
       .vmo_offset = 0,
       .dev_offset = 0,
@@ -126,21 +126,21 @@ TEST(ManagerTest, ReadSingleTest) {
 
   // Write request.
   size_t actual_count = 0;
-  ASSERT_OK(fifo.write(sizeof(req), &req, 1, &actual_count));
+  ASSERT_OK(fifo.value().write(sizeof(req), &req, 1, &actual_count));
   ASSERT_EQ(actual_count, 1);
 
   // Wait for response.
   zx_signals_t observed;
-  ASSERT_OK(zx_object_wait_one(fifo.get(), ZX_FIFO_READABLE, ZX_TIME_INFINITE, &observed));
+  ASSERT_OK(zx_object_wait_one(fifo.value().get(), ZX_FIFO_READABLE, ZX_TIME_INFINITE, &observed));
 
   block_fifo_response_t res;
-  ASSERT_OK(fifo.read(sizeof(res), &res, 1, &actual_count));
+  ASSERT_OK(fifo.value().read(sizeof(res), &res, 1, &actual_count));
   ASSERT_EQ(actual_count, 1);
   ASSERT_OK(res.status);
   ASSERT_EQ(req.reqid, res.reqid);
   ASSERT_EQ(res.count, 1);
 
-  ASSERT_OK(manager.CloseFifoServer());
+  manager.CloseFifoServer();
 }
 
 TEST(ManagerTest, ReadManyBlocksHasOneResponse) {
@@ -151,23 +151,24 @@ TEST(ManagerTest, ReadManyBlocksHasOneResponse) {
   blkdev.SetInfo(&block_info);
   ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
-  zx::fifo fifo;
-  ASSERT_OK(manager.StartServer(nullptr, &client, &fifo));
+  ASSERT_OK(manager.StartServer(nullptr, &client));
+  zx::result fifo = manager.GetFifo();
+  ASSERT_OK(fifo);
 
   const size_t vmo_size = 8192;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(vmo_size, 0, &vmo));
   ASSERT_OK(FillVMO(vmo, vmo_size));
 
-  vmoid_t vmoid;
-  ASSERT_OK(manager.AttachVmo(std::move(vmo), &vmoid));
+  zx::result vmoid = manager.AttachVmo(std::move(vmo));
+  ASSERT_OK(vmoid);
 
   block_fifo_request_t reqs[2] = {
       {
           .opcode = BLOCK_OP_READ,
           .reqid = 0x100,
           .group = 0,
-          .vmoid = vmoid,
+          .vmoid = vmoid.value(),
           .length = 4,
           .vmo_offset = 0,
           .dev_offset = 0,
@@ -176,7 +177,7 @@ TEST(ManagerTest, ReadManyBlocksHasOneResponse) {
           .opcode = BLOCK_OP_READ,
           .reqid = 0x101,
           .group = 0,
-          .vmoid = vmoid,
+          .vmoid = vmoid.value(),
           .length = 1,
           .vmo_offset = 0,
           .dev_offset = 0,
@@ -185,30 +186,30 @@ TEST(ManagerTest, ReadManyBlocksHasOneResponse) {
 
   // Write requests.
   size_t actual_count = 0;
-  ASSERT_OK(fifo.write(sizeof(reqs[0]), reqs, 2, &actual_count));
+  ASSERT_OK(fifo.value().write(sizeof(reqs[0]), reqs, 2, &actual_count));
   ASSERT_EQ(actual_count, 2);
 
   // Wait for first response.
   zx_signals_t observed;
-  ASSERT_OK(zx_object_wait_one(fifo.get(), ZX_FIFO_READABLE, ZX_TIME_INFINITE, &observed));
+  ASSERT_OK(zx_object_wait_one(fifo.value().get(), ZX_FIFO_READABLE, ZX_TIME_INFINITE, &observed));
 
   block_fifo_response_t res;
-  ASSERT_OK(fifo.read(sizeof(res), &res, 1, &actual_count));
+  ASSERT_OK(fifo.value().read(sizeof(res), &res, 1, &actual_count));
   ASSERT_EQ(actual_count, 1);
   ASSERT_OK(res.status);
   ASSERT_EQ(reqs[0].reqid, res.reqid);
   ASSERT_EQ(res.count, 1);
 
   // Wait for second response.
-  ASSERT_OK(zx_object_wait_one(fifo.get(), ZX_FIFO_READABLE, ZX_TIME_INFINITE, &observed));
+  ASSERT_OK(zx_object_wait_one(fifo.value().get(), ZX_FIFO_READABLE, ZX_TIME_INFINITE, &observed));
 
-  ASSERT_OK(fifo.read(sizeof(res), &res, 1, &actual_count));
+  ASSERT_OK(fifo.value().read(sizeof(res), &res, 1, &actual_count));
   ASSERT_EQ(actual_count, 1);
   ASSERT_OK(res.status);
   ASSERT_EQ(reqs[1].reqid, res.reqid);
   ASSERT_EQ(res.count, 1);
 
-  ASSERT_OK(manager.CloseFifoServer());
+  manager.CloseFifoServer();
 }
 
 TEST(ManagerTest, TestLargeGroupedTransaction) {
@@ -219,23 +220,24 @@ TEST(ManagerTest, TestLargeGroupedTransaction) {
   blkdev.SetInfo(&block_info);
   ddk::BlockProtocolClient client(blkdev.proto());
   Manager manager;
-  zx::fifo fifo;
-  ASSERT_OK(manager.StartServer(nullptr, &client, &fifo));
+  ASSERT_OK(manager.StartServer(nullptr, &client));
+  zx::result fifo = manager.GetFifo();
+  ASSERT_OK(fifo);
 
   const size_t vmo_size = 8192;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(vmo_size, 0, &vmo));
   ASSERT_OK(FillVMO(vmo, vmo_size));
 
-  vmoid_t vmoid;
-  ASSERT_OK(manager.AttachVmo(std::move(vmo), &vmoid));
+  zx::result vmoid = manager.AttachVmo(std::move(vmo));
+  ASSERT_OK(vmoid);
 
   block_fifo_request_t reqs[2] = {
       {
           .opcode = BLOCK_OP_READ | BLOCK_GROUP_ITEM,
           .reqid = 0x101,
           .group = 0,
-          .vmoid = vmoid,
+          .vmoid = vmoid.value(),
           .length = 4,
           .vmo_offset = 0,
           .dev_offset = 0,
@@ -244,7 +246,7 @@ TEST(ManagerTest, TestLargeGroupedTransaction) {
           .opcode = BLOCK_OP_READ | BLOCK_GROUP_ITEM | BLOCK_GROUP_LAST,
           .reqid = 0x101,
           .group = 0,
-          .vmoid = vmoid,
+          .vmoid = vmoid.value(),
           .length = 1,
           .vmo_offset = 0,
           .dev_offset = 0,
@@ -253,15 +255,15 @@ TEST(ManagerTest, TestLargeGroupedTransaction) {
 
   // Write requests.
   size_t actual_count = 0;
-  ASSERT_OK(fifo.write(sizeof(reqs[0]), reqs, 2, &actual_count));
+  ASSERT_OK(fifo.value().write(sizeof(reqs[0]), reqs, 2, &actual_count));
   ASSERT_EQ(actual_count, 2);
 
   // Wait for first response.
   zx_signals_t observed;
-  ASSERT_OK(zx_object_wait_one(fifo.get(), ZX_FIFO_READABLE, ZX_TIME_INFINITE, &observed));
+  ASSERT_OK(zx_object_wait_one(fifo.value().get(), ZX_FIFO_READABLE, ZX_TIME_INFINITE, &observed));
 
   block_fifo_response_t res;
-  ASSERT_OK(fifo.read(sizeof(res), &res, 1, &actual_count));
+  ASSERT_OK(fifo.value().read(sizeof(res), &res, 1, &actual_count));
   ASSERT_EQ(actual_count, 1);
   ASSERT_OK(res.status);
   ASSERT_EQ(reqs[0].reqid, res.reqid);

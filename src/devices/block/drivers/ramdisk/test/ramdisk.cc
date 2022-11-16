@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <climits>
@@ -191,6 +192,32 @@ TEST(RamdiskTests, RamdiskTestSimple) {
   ASSERT_EQ(memcmp(out.data(), buf.data(), out.size()), 0);
 }
 
+zx::result<std::unique_ptr<block_client::Client>> CreateSession(
+    fidl::UnownedClientEnd<fuchsia_hardware_block::Block> block) {
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  auto& [session, server] = endpoints.value();
+
+  const fidl::WireResult result = fidl::WireCall(block)->OpenSession(std::move(server));
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+
+  const fidl::WireResult fifo_result = fidl::WireCall(session)->GetFifo();
+  if (!fifo_result.ok()) {
+    return zx::error(fifo_result.status());
+  }
+  const fit::result fifo_response = fifo_result.value();
+  if (fifo_response.is_error()) {
+    return zx::error(fifo_response.error_value());
+  }
+
+  return zx::ok(
+      std::make_unique<block_client::Client>(std::move(session), std::move(fifo_response->fifo)));
+}
+
 TEST(RamdiskTests, RamdiskStatsTest) {
   constexpr size_t kBlockSize = 512;
   constexpr size_t kBlockCount = 512;
@@ -200,12 +227,9 @@ TEST(RamdiskTests, RamdiskStatsTest) {
 
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
-  ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
-
-  block_client::Client client(std::move(fifo_response.fifo));
+  zx::result client_ptr = CreateSession(block_interface);
+  ASSERT_TRUE(client_ptr.is_ok()) << client_ptr.status_string();
+  block_client::Client& client = *client_ptr.value();
 
   groupid_t group = 0;
 
@@ -219,13 +243,9 @@ TEST(RamdiskTests, RamdiskStatsTest) {
   ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK);
 
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
-  zx::vmo xfer_vmo;
-  ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-  const fidl::WireResult attach_vmo_result =
-      fidl::WireCall(block_interface)->AttachVmo(std::move(xfer_vmo));
-  ASSERT_TRUE(attach_vmo_result.ok()) << attach_vmo_result.FormatDescription();
-  const fidl::WireResponse attach_vmo_response = attach_vmo_result.value();
-  ASSERT_EQ(attach_vmo_response.status, ZX_OK);
+  zx::result vmoid_result = client.RegisterVmo(vmo);
+  ASSERT_TRUE(vmoid_result.is_ok()) << vmoid_result.status_string();
+  vmoid_t vmoid = vmoid_result.value().TakeId();
 
   const fidl::WireResult clear_stats_result = fidl::WireCall(block_interface)->GetStats(true);
   ASSERT_TRUE(clear_stats_result.ok()) << clear_stats_result.FormatDescription();
@@ -234,34 +254,40 @@ TEST(RamdiskTests, RamdiskStatsTest) {
 
   // Batch write the VMO to the ramdisk
   // Split it into two requests, spread across the disk
-  block_fifo_request_t requests[4];
-  requests[0].group = group;
-  requests[0].vmoid = attach_vmo_response.vmoid->id;
-  requests[0].opcode = BLOCKIO_WRITE;
-  requests[0].length = 1;
-  requests[0].vmo_offset = 0;
-  requests[0].dev_offset = 0;
-
-  requests[1].group = group;
-  requests[1].vmoid = attach_vmo_response.vmoid->id;
-  requests[1].opcode = BLOCKIO_READ;
-  requests[1].length = 1;
-  requests[1].vmo_offset = 1;
-  requests[1].dev_offset = 100;
-
-  requests[2].group = group;
-  requests[2].vmoid = attach_vmo_response.vmoid->id;
-  requests[2].opcode = BLOCKIO_FLUSH;
-  requests[2].length = 0;
-  requests[2].vmo_offset = 0;
-  requests[2].dev_offset = 0;
-
-  requests[3].group = group;
-  requests[3].vmoid = attach_vmo_response.vmoid->id;
-  requests[3].opcode = BLOCKIO_WRITE;
-  requests[3].length = 1;
-  requests[3].vmo_offset = 0;
-  requests[3].dev_offset = 0;
+  block_fifo_request_t requests[] = {
+      {
+          .opcode = BLOCKIO_WRITE,
+          .group = group,
+          .vmoid = vmoid,
+          .length = 1,
+          .vmo_offset = 0,
+          .dev_offset = 0,
+      },
+      {
+          .opcode = BLOCKIO_READ,
+          .group = group,
+          .vmoid = vmoid,
+          .length = 1,
+          .vmo_offset = 1,
+          .dev_offset = 100,
+      },
+      {
+          .opcode = BLOCKIO_FLUSH,
+          .group = group,
+          .vmoid = vmoid,
+          .length = 0,
+          .vmo_offset = 0,
+          .dev_offset = 0,
+      },
+      {
+          .opcode = BLOCKIO_WRITE,
+          .group = group,
+          .vmoid = vmoid,
+          .length = 1,
+          .vmo_offset = 0,
+          .dev_offset = 0,
+      },
+  };
 
   ASSERT_EQ(client.Transaction(requests, std::size(requests)), ZX_OK);
 
@@ -285,12 +311,6 @@ TEST(RamdiskTests, RamdiskStatsTest) {
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
   ASSERT_EQ(client.Transaction(requests, 1), ZX_OK);
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-  }
 }
 
 TEST(RamdiskTests, RamdiskGrowTestDimensionsChange) {
@@ -676,17 +696,21 @@ TEST(RamdiskTests, RamdiskTestFifoNoOp) {
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
   auto open_and_close_fifo = [block_interface]() {
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();
+    ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
+    auto& [session, server] = endpoints.value();
+
     {
-      const fidl::WireResult result = fidl::WireCall(block_interface)->GetFifo();
+      const fidl::WireResult result =
+          fidl::WireCall(block_interface)->OpenSession(std::move(server));
       ASSERT_TRUE(result.ok()) << result.FormatDescription();
-      const auto& response = result.value();
-      ASSERT_EQ(response.status, ZX_OK);
     }
+
     {
-      const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
+      const fidl::WireResult result = fidl::WireCall(session)->Close();
       ASSERT_TRUE(result.ok()) << result.FormatDescription();
-      const fidl::WireResponse response = result.value();
-      ASSERT_EQ(response.status, ZX_OK);
+      const fit::result response = result.value();
+      ASSERT_TRUE(response.is_ok()) << zx_status_get_string(response.error_value());
     }
   };
 
@@ -703,12 +727,9 @@ TEST(RamdiskTests, RamdiskTestFifoBasic) {
 
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
-  ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
-
-  block_client::Client client(std::move(fifo_response.fifo));
+  zx::result client_ptr = CreateSession(block_interface);
+  ASSERT_TRUE(client_ptr.is_ok()) << client_ptr.status_string();
+  block_client::Client& client = *client_ptr.value();
 
   groupid_t group = 0;
 
@@ -724,28 +745,30 @@ TEST(RamdiskTests, RamdiskTestFifoBasic) {
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
   zx::vmo xfer_vmo;
   ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-  const fidl::WireResult attach_vmo_result =
-      fidl::WireCall(block_interface)->AttachVmo(std::move(xfer_vmo));
-  ASSERT_TRUE(attach_vmo_result.ok()) << attach_vmo_result.FormatDescription();
-  const fidl::WireResponse attach_vmo_response = attach_vmo_result.value();
-  ASSERT_EQ(attach_vmo_response.status, ZX_OK);
+  zx::result vmoid_result = client.RegisterVmo(vmo);
+  ASSERT_TRUE(vmoid_result.is_ok()) << vmoid_result.status_string();
+  vmoid_t vmoid = vmoid_result.value().TakeId();
 
   // Batch write the VMO to the ramdisk
   // Split it into two requests, spread across the disk
-  block_fifo_request_t requests[2];
-  requests[0].group = group;
-  requests[0].vmoid = attach_vmo_response.vmoid->id;
-  requests[0].opcode = BLOCKIO_WRITE;
-  requests[0].length = 1;
-  requests[0].vmo_offset = 0;
-  requests[0].dev_offset = 0;
-
-  requests[1].group = group;
-  requests[1].vmoid = attach_vmo_response.vmoid->id;
-  requests[1].opcode = BLOCKIO_WRITE;
-  requests[1].length = 2;
-  requests[1].vmo_offset = 1;
-  requests[1].dev_offset = 100;
+  block_fifo_request_t requests[] = {
+      {
+          .opcode = BLOCKIO_WRITE,
+          .group = group,
+          .vmoid = vmoid,
+          .length = 1,
+          .vmo_offset = 0,
+          .dev_offset = 0,
+      },
+      {
+          .opcode = BLOCKIO_WRITE,
+          .group = group,
+          .vmoid = vmoid,
+          .length = 2,
+          .vmo_offset = 1,
+          .dev_offset = 100,
+      },
+  };
 
   ASSERT_EQ(client.Transaction(requests, std::size(requests)), ZX_OK);
 
@@ -762,12 +785,6 @@ TEST(RamdiskTests, RamdiskTestFifoBasic) {
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
   ASSERT_EQ(client.Transaction(requests, 1), ZX_OK);
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-  }
 }
 
 TEST(RamdiskTests, RamdiskTestFifoNoGroup) {
@@ -777,11 +794,18 @@ TEST(RamdiskTests, RamdiskTestFifoNoGroup) {
 
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();
+  ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
+  auto& [session, server] = endpoints.value();
+
+  const fidl::WireResult result = fidl::WireCall(block_interface)->OpenSession(std::move(server));
+  ASSERT_TRUE(result.ok()) << result.FormatDescription();
+
+  const fidl::WireResult fifo_result = fidl::WireCall(session)->GetFifo();
   ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
-  fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo(std::move(fifo_response.fifo));
+  const fit::result fifo_response = fifo_result.value();
+  ASSERT_TRUE(fifo_response.is_ok()) << zx_status_get_string(fifo_response.error_value());
+  fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo(std::move(fifo_response->fifo));
 
   // Create an arbitrary VMO, fill it with some stuff
   uint64_t vmo_size = zx_system_get_page_size() * 3;
@@ -796,23 +820,24 @@ TEST(RamdiskTests, RamdiskTestFifoNoGroup) {
   zx::vmo xfer_vmo;
   ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
   const fidl::WireResult attach_vmo_result =
-      fidl::WireCall(block_interface)->AttachVmo(std::move(xfer_vmo));
+      fidl::WireCall(session)->AttachVmo(std::move(xfer_vmo));
   ASSERT_TRUE(attach_vmo_result.ok()) << attach_vmo_result.FormatDescription();
-  const fidl::WireResponse attach_vmo_response = attach_vmo_result.value();
-  ASSERT_EQ(attach_vmo_response.status, ZX_OK);
+  const fit::result attach_vmo_response = attach_vmo_result.value();
+  ASSERT_TRUE(attach_vmo_response.is_ok())
+      << zx_status_get_string(attach_vmo_response.error_value());
 
   // Batch write the VMO to the ramdisk
   // Split it into two requests, spread across the disk
   block_fifo_request_t requests[2];
   requests[0].reqid = 0;
-  requests[0].vmoid = attach_vmo_response.vmoid->id;
+  requests[0].vmoid = attach_vmo_response.value()->vmoid.id;
   requests[0].opcode = BLOCKIO_WRITE;
   requests[0].length = 1;
   requests[0].vmo_offset = 0;
   requests[0].dev_offset = 0;
 
   requests[1].reqid = 1;
-  requests[1].vmoid = attach_vmo_response.vmoid->id;
+  requests[1].vmoid = attach_vmo_response.value()->vmoid.id;
   requests[1].opcode = BLOCKIO_WRITE;
   requests[1].length = 2;
   requests[1].vmo_offset = 1;
@@ -857,12 +882,6 @@ TEST(RamdiskTests, RamdiskTestFifoNoGroup) {
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
   ASSERT_EQ(fifo.write(requests, 1, nullptr), ZX_OK);
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-  }
 }
 
 using TestVmoObject = struct {
@@ -873,21 +892,16 @@ using TestVmoObject = struct {
 };
 
 // Creates a VMO, fills it with data, and gives it to the block device.
-void CreateVmoHelper(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> block_interface,
-                     TestVmoObject& obj, size_t kBlockSize) {
+void CreateVmoHelper(block_client::Client& client, TestVmoObject& obj, size_t kBlockSize) {
   obj.vmo_size = kBlockSize + (rand() % 5) * kBlockSize;
   ASSERT_EQ(zx::vmo::create(obj.vmo_size, 0, &obj.vmo), ZX_OK) << "Failed to create vmo";
   obj.buf.reset(new uint8_t[obj.vmo_size]);
   fill_random(obj.buf.get(), obj.vmo_size);
   ASSERT_EQ(obj.vmo.write(obj.buf.get(), 0, obj.vmo_size), ZX_OK) << "Failed to write to vmo";
 
-  zx::vmo xfer_vmo;
-  ASSERT_EQ(obj.vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-  const fidl::WireResult result = fidl::WireCall(block_interface)->AttachVmo(std::move(xfer_vmo));
-  ASSERT_TRUE(result.ok()) << result.FormatDescription();
-  const fidl::WireResponse response = result.value();
-  ASSERT_EQ(response.status, ZX_OK);
-  obj.vmoid = *response.vmoid;
+  zx::result vmoid = client.RegisterVmo(obj.vmo);
+  ASSERT_TRUE(vmoid.is_ok()) << vmoid.status_string();
+  obj.vmoid.id = vmoid.value().TakeId();
 }
 
 // Write all vmos in a striped pattern on disk.
@@ -956,19 +970,16 @@ TEST(RamdiskTests, RamdiskTestFifoMultipleVmo) {
 
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
-  ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
-
-  block_client::Client client(std::move(fifo_response.fifo));
+  zx::result client_ptr = CreateSession(block_interface);
+  ASSERT_TRUE(client_ptr.is_ok()) << client_ptr.status_string();
+  block_client::Client& client = *client_ptr.value();
 
   groupid_t group = 0;
 
   // Create multiple VMOs
   std::vector<TestVmoObject> objs(10);
   for (auto& obj : objs) {
-    ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_interface, obj, kBlockSize));
+    ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client, obj, kBlockSize));
   }
 
   for (size_t i = 0; i < objs.size(); i++) {
@@ -984,12 +995,6 @@ TEST(RamdiskTests, RamdiskTestFifoMultipleVmo) {
   for (const auto& obj : objs) {
     ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(client, obj, group));
   }
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-  }
 }
 
 TEST(RamdiskTests, RamdiskTestFifoMultipleVmoMultithreaded) {
@@ -1000,12 +1005,9 @@ TEST(RamdiskTests, RamdiskTestFifoMultipleVmoMultithreaded) {
 
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
-  ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
-
-  block_client::Client client(std::move(fifo_response.fifo));
+  zx::result client_ptr = CreateSession(block_interface);
+  ASSERT_TRUE(client_ptr.is_ok()) << client_ptr.status_string();
+  block_client::Client& client = *client_ptr.value();
 
   // Create multiple VMOs
   constexpr size_t kNumThreads = MAX_TXN_GROUP_COUNT;
@@ -1016,7 +1018,7 @@ TEST(RamdiskTests, RamdiskTestFifoMultipleVmoMultithreaded) {
     // Capture i by value to get the updated version each loop iteration.
     threads.emplace_back([&, i]() {
       groupid_t group = static_cast<groupid_t>(i);
-      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_interface, objs[i], kBlockSize));
+      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client, objs[i], kBlockSize));
       ASSERT_NO_FATAL_FAILURE(
           WriteStripedVmoHelper(client, objs[i], i, objs.size(), group, kBlockSize));
       ASSERT_NO_FATAL_FAILURE(
@@ -1025,14 +1027,8 @@ TEST(RamdiskTests, RamdiskTestFifoMultipleVmoMultithreaded) {
     });
   }
 
-  for (auto& thread : threads)
+  for (auto& thread : threads) {
     thread.join();
-
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
   }
 }
 
@@ -1046,16 +1042,13 @@ TEST(RamdiskTests, RamdiskTestFifoLargeOpsCount) {
   // Create a connection to the ramdisk
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
-  ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
-
-  block_client::Client client(std::move(fifo_response.fifo));
+  zx::result client_ptr = CreateSession(block_interface);
+  ASSERT_TRUE(client_ptr.is_ok()) << client_ptr.status_string();
+  block_client::Client& client = *client_ptr.value();
 
   // Create a vmo
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_interface, obj, kBlockSize));
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client, obj, kBlockSize));
 
   for (size_t num_ops = 1; num_ops <= 32; num_ops++) {
     groupid_t group = 0;
@@ -1073,12 +1066,6 @@ TEST(RamdiskTests, RamdiskTestFifoLargeOpsCount) {
 
     ASSERT_EQ(client.Transaction(requests.data(), requests.size()), ZX_OK);
   }
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-  }
 }
 
 TEST(RamdiskTests, RamdiskTestFifoLargeOpsCountShutdown) {
@@ -1090,14 +1077,33 @@ TEST(RamdiskTests, RamdiskTestFifoLargeOpsCountShutdown) {
   // Create a connection to the ramdisk
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();
+  ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
+  auto& [session, server] = endpoints.value();
+
+  const fidl::WireResult result = fidl::WireCall(block_interface)->OpenSession(std::move(server));
+  ASSERT_TRUE(result.ok()) << result.FormatDescription();
+
+  // Get the FIFO twice since the client doesn't expose it after construction.
+  zx::fifo fifo;
+  {
+    const fidl::WireResult fifo_result = fidl::WireCall(session)->GetFifo();
+    ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
+    const fit::result fifo_response = fifo_result.value();
+    ASSERT_TRUE(fifo_response.is_ok()) << zx_status_get_string(fifo_response.error_value());
+    fifo = std::move(fifo_response.value()->fifo);
+  }
+
+  const fidl::WireResult fifo_result = fidl::WireCall(session)->GetFifo();
   ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
+  const fit::result fifo_response = fifo_result.value();
+  ASSERT_TRUE(fifo_response.is_ok()) << zx_status_get_string(fifo_response.error_value());
+
+  block_client::Client client(std::move(session), std::move(fifo_response.value()->fifo));
 
   // Create a vmo
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_interface, obj, kBlockSize));
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client, obj, kBlockSize));
 
   const size_t kNumOps = BLOCK_FIFO_MAX_DEPTH;
   groupid_t group = 0;
@@ -1125,16 +1131,9 @@ TEST(RamdiskTests, RamdiskTestFifoLargeOpsCountShutdown) {
   // version of the server; as a consequence, it is preserved
   // to help detect regressions.
   size_t actual;
-  ASSERT_EQ(fifo_response.fifo.write(sizeof(block_fifo_request_t), requests.data(), requests.size(),
-                                     &actual),
+  ASSERT_EQ(fifo.write(sizeof(block_fifo_request_t), requests.data(), requests.size(), &actual),
             ZX_OK);
   usleep(100);
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-  }
 }
 
 TEST(RamdiskTests, RamdiskTestFifoIntermediateOpFailure) {
@@ -1146,12 +1145,9 @@ TEST(RamdiskTests, RamdiskTestFifoIntermediateOpFailure) {
   // Create a connection to the ramdisk
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
-  ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
-
-  block_client::Client client(std::move(fifo_response.fifo));
+  zx::result client_ptr = CreateSession(block_interface);
+  ASSERT_TRUE(client_ptr.is_ok()) << client_ptr.status_string();
+  block_client::Client& client = *client_ptr.value();
 
   groupid_t group = 0;
 
@@ -1160,7 +1156,7 @@ TEST(RamdiskTests, RamdiskTestFifoIntermediateOpFailure) {
 
   // Create a vmo
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_interface, obj, kBufferSize));
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client, obj, kBufferSize));
 
   // Store the original value of the VMO
   std::unique_ptr<uint8_t[]> originalbuf;
@@ -1214,12 +1210,6 @@ TEST(RamdiskTests, RamdiskTestFifoIntermediateOpFailure) {
       ASSERT_EQ(tmpbuf[i], 0);
     }
   }
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-  }
 }
 
 TEST(RamdiskTests, RamdiskTestFifoBadClientVmoid) {
@@ -1232,18 +1222,15 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientVmoid) {
   // Create a connection to the ramdisk
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
-  ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
-
-  block_client::Client client(std::move(fifo_response.fifo));
+  zx::result client_ptr = CreateSession(block_interface);
+  ASSERT_TRUE(client_ptr.is_ok()) << client_ptr.status_string();
+  block_client::Client& client = *client_ptr.value();
 
   groupid_t group = 0;
 
   // Create a vmo
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_interface, obj, kBlockSize));
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client, obj, kBlockSize));
 
   // Bad request: Writing to the wrong vmoid
   block_fifo_request_t request;
@@ -1254,12 +1241,6 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientVmoid) {
   request.vmo_offset = 0;
   request.dev_offset = 0;
   ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_IO) << "Expected IO error with bad vmoid";
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-  }
 }
 
 TEST(RamdiskTests, RamdiskTestFifoBadClientUnalignedRequest) {
@@ -1272,12 +1253,9 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientUnalignedRequest) {
   // Create a connection to the ramdisk
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
-  ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
-
-  block_client::Client client(std::move(fifo_response.fifo));
+  zx::result client_ptr = CreateSession(block_interface);
+  ASSERT_TRUE(client_ptr.is_ok()) << client_ptr.status_string();
+  block_client::Client& client = *client_ptr.value();
 
   groupid_t group = 0;
 
@@ -1285,7 +1263,7 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientUnalignedRequest) {
   // be reading "kBlockSize" bytes from an offset below, and we want it
   // to fit within the bounds of the VMO.
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_interface, obj, kBlockSize * 2));
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client, obj, kBlockSize * 2));
 
   block_fifo_request_t request;
   request.group = group;
@@ -1297,12 +1275,6 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientUnalignedRequest) {
   request.vmo_offset = 0;
   request.dev_offset = 0;
   ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_INVALID_ARGS);
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-  }
 }
 
 TEST(RamdiskTests, RamdiskTestFifoBadClientOverflow) {
@@ -1316,12 +1288,9 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientOverflow) {
   // Create a connection to the ramdisk
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
-  ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
-
-  block_client::Client client(std::move(fifo_response.fifo));
+  zx::result client_ptr = CreateSession(block_interface);
+  ASSERT_TRUE(client_ptr.is_ok()) << client_ptr.status_string();
+  block_client::Client& client = *client_ptr.value();
 
   groupid_t group = 0;
 
@@ -1329,7 +1298,7 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientOverflow) {
   // be reading "kBlockSize" bytes from an offset below, and we want it
   // to fit within the bounds of the VMO.
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_interface, obj, kBlockSize * 2));
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client, obj, kBlockSize * 2));
 
   block_fifo_request_t request;
   request.group = group;
@@ -1365,12 +1334,6 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientOverflow) {
   request.vmo_offset = 0;
   request.dev_offset = std::numeric_limits<uint64_t>::max();
   ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-  }
 }
 
 TEST(RamdiskTests, RamdiskTestFifoBadClientBadVmo) {
@@ -1383,12 +1346,9 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientBadVmo) {
   // Create a connection to the ramdisk
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
-  ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
-
-  block_client::Client client(std::move(fifo_response.fifo));
+  zx::result client_ptr = CreateSession(block_interface);
+  ASSERT_TRUE(client_ptr.is_ok()) << client_ptr.status_string();
+  block_client::Client& client = *client_ptr.value();
 
   groupid_t group = 0;
 
@@ -1400,35 +1360,25 @@ TEST(RamdiskTests, RamdiskTestFifoBadClientBadVmo) {
   fill_random(obj.buf.get(), obj.vmo_size);
   ASSERT_EQ(obj.vmo.write(obj.buf.get(), 0, obj.vmo_size), ZX_OK) << "Failed to write to vmo";
 
-  zx::vmo xfer_vmo;
-  ASSERT_EQ(obj.vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-  const fidl::WireResult attach_vmo_result =
-      fidl::WireCall(block_interface)->AttachVmo(std::move(xfer_vmo));
-  ASSERT_TRUE(attach_vmo_result.ok()) << attach_vmo_result.FormatDescription();
-  const fidl::WireResponse attach_vmo_response = attach_vmo_result.value();
-  ASSERT_EQ(attach_vmo_response.status, ZX_OK);
-  obj.vmoid = *attach_vmo_response.vmoid;
+  zx::result vmoid = client.RegisterVmo(obj.vmo);
+  ASSERT_TRUE(vmoid.is_ok()) << vmoid.status_string();
+  obj.vmoid.id = vmoid.value().TakeId();
 
   // Send a request to write to write 2 blocks -- even though that's larger than the VMO
-  block_fifo_request_t request;
-  request.group = group;
-  request.vmoid = obj.vmoid.id;
-  request.opcode = BLOCKIO_WRITE;
-  request.length = 2;
-  request.vmo_offset = 0;
-  request.dev_offset = 0;
+  block_fifo_request_t request = {
+      .opcode = BLOCKIO_WRITE,
+      .group = group,
+      .vmoid = obj.vmoid.id,
+      .length = 2,
+      .vmo_offset = 0,
+      .dev_offset = 0,
+  };
   ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
   // Do the same thing, but for reading
   request.opcode = BLOCKIO_READ;
   ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
   request.length = 2;
   ASSERT_EQ(client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-  }
 }
 
 TEST(RamdiskTests, RamdiskTestFifoSleepUnavailable) {
@@ -1438,12 +1388,9 @@ TEST(RamdiskTests, RamdiskTestFifoSleepUnavailable) {
 
   fidl::UnownedClientEnd block_interface = ramdisk->block_interface();
 
-  fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
-  ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-  auto& fifo_response = fifo_result.value();
-  ASSERT_EQ(fifo_response.status, ZX_OK);
-
-  block_client::Client client(std::move(fifo_response.fifo));
+  zx::result client_ptr = CreateSession(block_interface);
+  ASSERT_TRUE(client_ptr.is_ok()) << client_ptr.status_string();
+  block_client::Client& client = *client_ptr.value();
 
   groupid_t group = 0;
 
@@ -1457,13 +1404,9 @@ TEST(RamdiskTests, RamdiskTestFifoSleepUnavailable) {
   ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK);
 
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
-  zx::vmo xfer_vmo;
-  ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-  const fidl::WireResult attach_vmo_result =
-      fidl::WireCall(block_interface)->AttachVmo(std::move(xfer_vmo));
-  ASSERT_TRUE(attach_vmo_result.ok()) << attach_vmo_result.FormatDescription();
-  const fidl::WireResponse attach_vmo_response = attach_vmo_result.value();
-  ASSERT_EQ(attach_vmo_response.status, ZX_OK);
+  zx::result vmoid_result = client.RegisterVmo(vmo);
+  ASSERT_TRUE(vmoid_result.is_ok()) << vmoid_result.status_string();
+  vmoid_t vmoid = vmoid_result.value().TakeId();
 
   // Put the ramdisk to sleep after 1 block (complete transaction).
   uint64_t one = 1;
@@ -1471,20 +1414,24 @@ TEST(RamdiskTests, RamdiskTestFifoSleepUnavailable) {
 
   // Batch write the VMO to the ramdisk
   // Split it into two requests, spread across the disk
-  block_fifo_request_t requests[2];
-  requests[0].group = group;
-  requests[0].vmoid = attach_vmo_response.vmoid->id;
-  requests[0].opcode = BLOCKIO_WRITE;
-  requests[0].length = 1;
-  requests[0].vmo_offset = 0;
-  requests[0].dev_offset = 0;
-
-  requests[1].group = group;
-  requests[1].vmoid = attach_vmo_response.vmoid->id;
-  requests[1].opcode = BLOCKIO_WRITE;
-  requests[1].length = 2;
-  requests[1].vmo_offset = 1;
-  requests[1].dev_offset = 100;
+  block_fifo_request_t requests[] = {
+      {
+          .opcode = BLOCKIO_WRITE,
+          .group = group,
+          .vmoid = vmoid,
+          .length = 1,
+          .vmo_offset = 0,
+          .dev_offset = 0,
+      },
+      {
+          .opcode = BLOCKIO_WRITE,
+          .group = group,
+          .vmoid = vmoid,
+          .length = 2,
+          .vmo_offset = 1,
+          .dev_offset = 100,
+      },
+  };
 
   // Send enough requests for the ramdisk to fall asleep before completing.
   // Other callers (e.g. block_watcher) may also send requests without affecting this test.
@@ -1541,12 +1488,6 @@ TEST(RamdiskTests, RamdiskTestFifoSleepUnavailable) {
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
   ASSERT_EQ(client.Transaction(requests, 1), ZX_OK);
-  {
-    const fidl::WireResult result = fidl::WireCall(block_interface)->CloseFifo();
-    ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-  }
 }
 
 // This thread and its arguments can be used to wake a ramdisk that sleeps with deferred writes.
@@ -1609,11 +1550,9 @@ class RamdiskTestWithClient : public testing::Test {
 
     fidl::UnownedClientEnd block_interface = ramdisk_->block_interface();
 
-    fidl::WireResult fifo_result = fidl::WireCall(block_interface)->GetFifo();
-    ASSERT_TRUE(fifo_result.ok()) << fifo_result.FormatDescription();
-    auto& fifo_response = fifo_result.value();
-    ASSERT_EQ(fifo_response.status, ZX_OK);
-    client_ = std::make_unique<block_client::Client>(std::move(fifo_response.fifo));
+    zx::result client_ptr = CreateSession(block_interface);
+    ASSERT_TRUE(client_ptr.is_ok()) << client_ptr.status_string();
+    client_ = std::move(client_ptr.value());
 
     // Create an arbitrary VMO, fill it with some stuff.
     ASSERT_EQ(ZX_OK,
@@ -1625,14 +1564,9 @@ class RamdiskTestWithClient : public testing::Test {
     ASSERT_EQ(vmo_.write(buf_.get(), 0, vmo_size_), ZX_OK);
 
     // Send a handle to the vmo to the block device, get a vmoid which identifies it
-    zx::vmo xfer_vmo;
-    ASSERT_EQ(vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-    const fidl::WireResult attach_vmo_result =
-        fidl::WireCall(block_interface)->AttachVmo(std::move(xfer_vmo));
-    ASSERT_TRUE(attach_vmo_result.ok()) << attach_vmo_result.FormatDescription();
-    const fidl::WireResponse attach_vmo_response = attach_vmo_result.value();
-    ASSERT_EQ(attach_vmo_response.status, ZX_OK);
-    vmoid_ = *attach_vmo_response.vmoid;
+    zx::result vmoid = client_->RegisterVmo(vmo_);
+    ASSERT_TRUE(vmoid.is_ok()) << vmoid.status_string();
+    vmoid_.id = vmoid.value().TakeId();
   }
 
   RamdiskTestWithClient() : vmo_size_(zx_system_get_page_size() * 16) {}

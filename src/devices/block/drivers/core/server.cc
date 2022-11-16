@@ -13,6 +13,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -104,15 +105,15 @@ void Server::FinishTransaction(zx_status_t status, reqid_t reqid, groupid_t grou
 zx_status_t Server::Read(block_fifo_request_t* requests, size_t* count) {
   // Keep trying to read messages from the fifo until we have a reason to
   // terminate
-  zx_status_t status;
   while (true) {
-    status = fifo_.read(requests, BLOCK_FIFO_MAX_DEPTH, count);
+    zx_status_t status = fifo_.read(requests, BLOCK_FIFO_MAX_DEPTH, count);
     zx_signals_t signals;
     zx_signals_t seen;
     switch (status) {
       case ZX_ERR_SHOULD_WAIT:
         signals = ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED | kSignalFifoTerminate;
-        if ((status = fifo_.wait_one(signals, zx::time::infinite(), &seen)) != ZX_OK) {
+        if (zx_status_t status = fifo_.wait_one(signals, zx::time::infinite(), &seen);
+            status != ZX_OK) {
           return status;
         }
         if ((seen & ZX_FIFO_PEER_CLOSED) || (seen & kSignalFifoTerminate)) {
@@ -128,41 +129,35 @@ zx_status_t Server::Read(block_fifo_request_t* requests, size_t* count) {
   }
 }
 
-zx_status_t Server::FindVmoIdLocked(vmoid_t* out) {
+zx::result<vmoid_t> Server::FindVmoIdLocked() {
   for (vmoid_t i = last_id_; i < std::numeric_limits<vmoid_t>::max(); i++) {
     if (!tree_.find(i).IsValid()) {
-      *out = i;
       last_id_ = static_cast<vmoid_t>(i + 1);
-      return ZX_OK;
+      return zx::ok(i);
     }
   }
   for (vmoid_t i = BLOCK_VMOID_INVALID + 1; i < last_id_; i++) {
     if (!tree_.find(i).IsValid()) {
-      *out = i;
       last_id_ = static_cast<vmoid_t>(i + 1);
-      return ZX_OK;
+      return zx::ok(i);
     }
   }
   zxlogf(WARNING, "FindVmoId: No vmoids available");
-  return ZX_ERR_NO_RESOURCES;
+  return zx::error(ZX_ERR_NO_RESOURCES);
 }
 
-zx_status_t Server::AttachVmo(zx::vmo vmo, vmoid_t* out) {
-  zx_status_t status;
-  vmoid_t id;
+zx::result<vmoid_t> Server::AttachVmo(zx::vmo vmo) {
   fbl::AutoLock server_lock(&server_lock_);
-  if ((status = FindVmoIdLocked(&id)) != ZX_OK) {
-    return status;
+  zx::result vmoid = FindVmoIdLocked();
+  if (vmoid.is_ok()) {
+    fbl::AllocChecker ac;
+    fbl::RefPtr<IoBuffer> ibuf = fbl::AdoptRef(new (&ac) IoBuffer(std::move(vmo), vmoid.value()));
+    if (!ac.check()) {
+      return zx::error(ZX_ERR_NO_MEMORY);
+    }
+    tree_.insert(std::move(ibuf));
   }
-
-  fbl::AllocChecker ac;
-  fbl::RefPtr<IoBuffer> ibuf = fbl::AdoptRef(new (&ac) IoBuffer(std::move(vmo), id));
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  tree_.insert(std::move(ibuf));
-  *out = id;
-  return ZX_OK;
+  return vmoid;
 }
 
 void Server::TxnEnd() {
@@ -174,30 +169,20 @@ void Server::TxnEnd() {
   }
 }
 
-zx_status_t Server::Create(ddk::BlockProtocolClient* bp,
-                           fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
-                           std::unique_ptr<Server>* out) {
+zx_status_t Server::Create(ddk::BlockProtocolClient* bp, std::unique_ptr<Server>* out) {
   fbl::AllocChecker ac;
   std::unique_ptr<Server> bs(new (&ac) Server(bp));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t status;
-  if ((status = fzl::create_fifo(BLOCK_FIFO_MAX_DEPTH, 0, fifo_out, &bs->fifo_)) != ZX_OK) {
+  if (zx_status_t status = fzl::create_fifo(BLOCK_FIFO_MAX_DEPTH, 0, &bs->fifo_peer_, &bs->fifo_);
+      status != ZX_OK) {
     return status;
   }
 
   for (size_t i = 0; i < std::size(bs->groups_); i++) {
     bs->groups_[i] = std::make_unique<MessageGroup>(*bs, static_cast<groupid_t>(i));
-  }
-
-  // Notably, drop ZX_RIGHT_SIGNAL_PEER, since we use bs->fifo for thread
-  // signalling internally within the block server.
-  zx_rights_t rights =
-      ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_WAIT;
-  if ((status = fifo_out->replace(rights, fifo_out)) != ZX_OK) {
-    return status;
   }
 
   bp->Query(&bs->info_, &bs->block_op_size_);
@@ -206,6 +191,16 @@ zx_status_t Server::Create(ddk::BlockProtocolClient* bp,
 
   *out = std::move(bs);
   return ZX_OK;
+}
+
+zx::result<zx::fifo> Server::GetFifo() {
+  // Notably, drop ZX_RIGHT_SIGNAL_PEER, since we use bs->fifo for thread
+  // signalling internally within the block server.
+  zx_rights_t rights =
+      ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_WAIT;
+  zx::fifo fifo;
+  zx_status_t status = fifo_peer_.get().duplicate(rights, &fifo);
+  return zx::make_result(status, std::move(fifo));
 }
 
 zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
@@ -419,11 +414,10 @@ void Server::ProcessRequest(block_fifo_request_t* request) {
 }
 
 zx_status_t Server::Serve() {
-  zx_status_t status;
   block_fifo_request_t requests[BLOCK_FIFO_MAX_DEPTH];
   size_t count;
   while (true) {
-    if ((status = Read(requests, &count)) != ZX_OK) {
+    if (zx_status_t status = Read(requests, &count); status != ZX_OK) {
       return status;
     }
 
@@ -445,9 +439,9 @@ zx_status_t Server::Serve() {
         }
 
         // Enqueue the message against the transaction group.
-        status = groups_[group]->ExpectResponses(1, 1,
-                                                 wants_reply ? std::optional{reqid} : std::nullopt);
-        if (status != ZX_OK) {
+        if (zx_status_t status = groups_[group]->ExpectResponses(
+                1, 1, wants_reply ? std::optional{reqid} : std::nullopt);
+            status != ZX_OK) {
           // This can happen if an earlier request that has been submitted has already failed.
           FinishTransaction(status, reqid, group);
           continue;

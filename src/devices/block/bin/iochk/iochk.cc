@@ -193,33 +193,21 @@ class BlockChecker : public Checker {
                                 block_client::Client& client, std::unique_ptr<Checker>* checker) {
     fzl::OwnedVmoMapper mapping;
     if (zx_status_t status = mapping.CreateAndMap(block_size, ""); status != ZX_OK) {
-      printf("Failled to CreateAndMap Vmo: %s\n", zx_status_get_string(status));
+      printf("Failed to CreateAndMap Vmo: %s\n", zx_status_get_string(status));
       return status;
     }
 
-    zx::vmo dup;
-    if (zx_status_t status = mapping.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
-      printf("cannot duplicate handle: %s\n", zx_status_get_string(status));
-      return status;
-    }
-
-    const fidl::WireResult result =
-        fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())
-            ->AttachVmo(std::move(dup));
-    if (!result.ok()) {
-      printf("cannot attach vmo for init: %s\n", result.FormatDescription().c_str());
-      return result.status();
-    }
-    const fidl::WireResponse response = result.value();
-    if (zx_status_t status = response.status; status != ZX_OK) {
-      printf("cannot attach vmo for init: %s\n", zx_status_get_string(status));
-      return status;
+    zx::result vmoid = client.RegisterVmo(mapping.vmo());
+    if (vmoid.is_error()) {
+      printf("Failed to RegisterVmo: %s\n", vmoid.status_string());
+      return vmoid.error_value();
     }
 
     groupid_t group = next_txid_.fetch_add(1);
     ZX_ASSERT(group < MAX_TXN_GROUP_COUNT);
 
-    checker->reset(new BlockChecker(std::move(mapping), info, client, response.vmoid->id, group));
+    checker->reset(
+        new BlockChecker(std::move(mapping), info, client, std::move(vmoid.value()), group));
     return ZX_OK;
   }
 
@@ -281,12 +269,12 @@ class BlockChecker : public Checker {
 
  private:
   BlockChecker(fzl::OwnedVmoMapper mapper, fuchsia_hardware_block::wire::BlockInfo info,
-               block_client::Client& client, vmoid_t vmoid, groupid_t group)
+               block_client::Client& client, storage::Vmoid vmoid, groupid_t group)
       : Checker(mapper.start()),
         mapper_(std::move(mapper)),
         info_(info),
         client_(client),
-        vmoid_(vmoid),
+        vmoid_(vmoid.TakeId()),
         group_(group) {}
   ~BlockChecker() override = default;
 
@@ -682,19 +670,34 @@ int iochk(int argc, char** argv) {
       return -1;
     }
 
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();
+    if (endpoints.is_error()) {
+      fprintf(stderr, "error: cannot create endpoints for device: %s\n", endpoints.status_string());
+      return endpoints.status_value();
+    }
+    auto& [client, server] = endpoints.value();
+    if (fidl::WireResult result =
+            fidl::WireCall(ctx.caller.borrow_as<fuchsia_hardware_block::Block>())
+                ->OpenSession(std::move(server));
+        !result.ok()) {
+      fprintf(stderr, "error: cannot open session for device: %s\n",
+              result.FormatDescription().c_str());
+      return result.status();
+    }
+
     {
-      fidl::WireResult result =
-          fidl::WireCall(ctx.caller.borrow_as<fuchsia_hardware_block::Block>())->GetFifo();
+      const fidl::WireResult result = fidl::WireCall(client)->GetFifo();
       if (!result.ok()) {
         printf("cannot get fifo for device: %s\n", result.FormatDescription().c_str());
         return -1;
       }
-      auto& response = result.value();
-      if (zx_status_t status = response.status; status != ZX_OK) {
-        printf("cannot get fifo for device: %s\n", zx_status_get_string(status));
+      const fit::result response = result.value();
+      if (response.is_error()) {
+        printf("cannot get fifo for device: %s\n", zx_status_get_string(response.error_value()));
         return -1;
       }
-      ctx.block.client = std::make_unique<block_client::Client>(std::move(response.fifo));
+      ctx.block.client = std::make_unique<block_client::Client>(std::move(client),
+                                                                std::move(response.value()->fifo));
     }
 
     BlockChecker::ResetAtomic();

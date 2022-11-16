@@ -14,7 +14,26 @@
 
 namespace block_client {
 
-Client::Client(zx::fifo fifo) : fifo_(std::move(fifo)) {}
+Client::Client(fidl::ClientEnd<fuchsia_hardware_block::Session> session, zx::fifo fifo)
+    : session_(std::move(session)), fifo_(std::move(fifo)) {}
+
+Client::~Client() { __UNUSED fidl::WireResult result = fidl::WireCall(session_)->Close(); }
+
+zx::result<storage::Vmoid> Client::RegisterVmo(const zx::vmo& vmo) {
+  zx::vmo dup;
+  if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
+    return zx::error(status);
+  }
+  const fidl::WireResult result = fidl::WireCall(session_)->AttachVmo(std::move(dup));
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  fit::result response = result.value();
+  if (response.is_error()) {
+    return response.take_error();
+  }
+  return zx::ok(storage::Vmoid(response->vmoid.id));
+}
 
 zx_status_t Client::Transaction(block_fifo_request_t* requests, size_t count) {
   if (count == 0)

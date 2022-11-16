@@ -39,18 +39,14 @@ bool Manager::IsFifoServerRunning() {
   return false;
 }
 
-zx_status_t Manager::StartServer(zx_device_t* device, ddk::BlockProtocolClient* protocol,
-                                 zx::fifo* out_fifo) {
+zx_status_t Manager::StartServer(zx_device_t* device, ddk::BlockProtocolClient* protocol) {
   if (IsFifoServerRunning()) {
     return ZX_ERR_ALREADY_BOUND;
   }
   ZX_DEBUG_ASSERT(server_ == nullptr);
-  std::unique_ptr<Server> server;
-  fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo;
-  if (zx_status_t status = Server::Create(protocol, &fifo, &server); status != ZX_OK) {
+  if (zx_status_t status = Server::Create(protocol, &server_); status != ZX_OK) {
     return status;
   }
-  server_ = std::move(server);
   SetState(ThreadState::Running);
   if (thrd_create_with_name(&thread_, &RunServer, this, "block_server") != thrd_success) {
     FreeServer();
@@ -94,11 +90,10 @@ zx_status_t Manager::StartServer(zx_device_t* device, ddk::BlockProtocolClient* 
     }
   }();
 
-  *out_fifo = zx::fifo(fifo.release());
   return ZX_OK;
 }
 
-zx_status_t Manager::CloseFifoServer() {
+void Manager::CloseFifoServer() {
   switch (GetState()) {
     case ThreadState::Running:
       server_->Shutdown();
@@ -111,14 +106,44 @@ zx_status_t Manager::CloseFifoServer() {
     case ThreadState::None:
       break;
   }
-  return ZX_OK;
 }
 
-zx_status_t Manager::AttachVmo(zx::vmo vmo, vmoid_t* out_vmoid) {
+zx::result<zx::fifo> Manager::GetFifo() {
   if (server_ == nullptr) {
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
-  return server_->AttachVmo(std::move(vmo), out_vmoid);
+  return server_->GetFifo();
+}
+
+zx::result<vmoid_t> Manager::AttachVmo(zx::vmo vmo) {
+  if (server_ == nullptr) {
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+  return server_->AttachVmo(std::move(vmo));
+}
+
+void Manager::GetFifo(GetFifoCompleter::Sync& completer) {
+  zx::result fifo = GetFifo();
+  if (fifo.is_error()) {
+    return completer.ReplyError(fifo.error_value());
+  }
+  completer.ReplySuccess(std::move(fifo.value()));
+}
+
+void Manager::AttachVmo(AttachVmoRequestView request, AttachVmoCompleter::Sync& completer) {
+  zx::result vmoid = AttachVmo(std::move(request->vmo));
+  if (vmoid.is_error()) {
+    return completer.ReplyError(vmoid.error_value());
+  }
+  completer.ReplySuccess({
+      .id = vmoid.value(),
+  });
+}
+
+void Manager::Close(CloseCompleter::Sync& completer) {
+  CloseFifoServer();
+  completer.ReplySuccess();
+  completer.Close(ZX_OK);
 }
 
 void Manager::JoinServer() {

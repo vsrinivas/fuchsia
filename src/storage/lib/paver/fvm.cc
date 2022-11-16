@@ -113,41 +113,7 @@ fvm::ExtentDescriptor GetExtent(fvm::PartitionDescriptor* pd, size_t extent) {
   return descriptor;
 }
 
-// Registers a FIFO
-zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vmoid_t* out_vmoid,
-                                std::unique_ptr<block_client::Client>* out_client) {
-  fdio_cpp::UnownedFdioCaller caller(fd.get());
-
-  auto result = fidl::WireCall(caller.borrow_as<block::Block>())->GetFifo();
-  if (!result.ok()) {
-    return result.status();
-  }
-  auto& response = result.value();
-  if (response.status != ZX_OK) {
-    return response.status;
-  }
-
-  zx::vmo dup;
-  if (vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
-    ERROR("Couldn't duplicate buffer vmo\n");
-    return ZX_ERR_IO;
-  }
-
-  auto result2 = fidl::WireCall(caller.borrow_as<block::Block>())->AttachVmo(std::move(dup));
-  if (result2.status() != ZX_OK) {
-    return result2.status();
-  }
-  const auto& response2 = result2.value();
-  if (response2.status != ZX_OK) {
-    return response2.status;
-  }
-
-  *out_vmoid = response2.vmoid->id;
-  *out_client = std::make_unique<block_client::Client>(std::move(response.fifo));
-  return ZX_OK;
-}
-
-zx_status_t FlushClient(block_client::Client* client) {
+zx_status_t FlushClient(block_client::Client& client) {
   block_fifo_request_t request;
   request.group = 0;
   request.vmoid = block::wire::kVmoidInvalid;
@@ -156,7 +122,7 @@ zx_status_t FlushClient(block_client::Client* client) {
   request.vmo_offset = 0;
   request.dev_offset = 0;
 
-  return client->Transaction(&request, 1);
+  return client.Transaction(&request, 1);
 }
 
 // Stream an FVM partition to disk.
@@ -747,16 +713,10 @@ zx::result<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
 
   // Now that all partitions are preallocated, begin streaming data to them.
   for (size_t p = 0; p < parts.size(); p++) {
-    vmoid_t vmoid;
-    std::unique_ptr<block_client::Client> client;
-    auto status = zx::make_result(RegisterFastBlockIo(parts[p].new_part, vmo, &vmoid, &client));
-    if (status.is_error()) {
-      ERROR("Failed to register fast block IO\n");
-      return status.take_error();
-    }
-
     fdio_cpp::UnownedFdioCaller partition_connection(parts[p].new_part.get());
-    auto result = fidl::WireCall(partition_connection.borrow_as<block::Block>())->GetInfo();
+    fidl::UnownedClientEnd device = partition_connection.borrow_as<block::Block>();
+
+    const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
     if (!result.ok()) {
       ERROR("Couldn't get partition block info: %s\n", zx_status_get_string(result.status()));
       return zx::error(result.status());
@@ -767,22 +727,44 @@ zx::result<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
       return zx::error(response.status);
     }
 
-    size_t block_size = response.info->block_size;
+    zx::result endpoints = fidl::CreateEndpoints<block::Session>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
+    }
+    auto& [session, server] = endpoints.value();
+    if (fidl::WireResult result = fidl::WireCall(device)->OpenSession(std::move(server));
+        !result.ok()) {
+      return zx::error(result.status());
+    }
+    const fidl::WireResult fifo_result = fidl::WireCall(session)->GetFifo();
+    if (!fifo_result.ok()) {
+      return zx::error(fifo_result.status());
+    }
+    const fit::result fifo_response = fifo_result.value();
+    if (fifo_response.is_error()) {
+      return zx::error(fifo_response.error_value());
+    }
+    block_client::Client client(std::move(session), std::move(fifo_response.value()->fifo));
+    zx::result vmoid = client.RegisterVmo(vmo);
+    if (vmoid.is_error()) {
+      return vmoid.take_error();
+    }
 
-    block_fifo_request_t request;
-    request.group = 0;
-    request.vmoid = vmoid;
-    request.opcode = BLOCKIO_WRITE;
+    block_fifo_request_t request = {
+        .opcode = BLOCKIO_WRITE,
+        .group = 0,
+        .vmoid = vmoid->TakeId(),
+    };
 
     LOG("Streaming partition %zu\n", p);
-    status = zx::make_result(
-        StreamFvmPartition(reader.get(), &parts[p], mapping, *client, block_size, &request));
+    status = zx::make_result(StreamFvmPartition(reader.get(), &parts[p], mapping, client,
+                                                response.info->block_size, &request));
     LOG("Done streaming partition %zu\n", p);
     if (status.is_error()) {
       ERROR("Failed to stream partition status=%d\n", status.error_value());
       return status.take_error();
     }
-    if (status = zx::make_result(FlushClient(client.get())); status.is_error()) {
+    if (status = zx::make_result(FlushClient(client)); status.is_error()) {
       ERROR("Failed to flush client\n");
       return status.take_error();
     }

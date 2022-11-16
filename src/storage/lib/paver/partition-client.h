@@ -72,8 +72,6 @@ class BlockPartitionClient final : public BlockDevicePartitionClient {
       : BlockPartitionClient(
             fidl::ClientEnd<fuchsia_hardware_block::Block>(partition.TakeChannel())) {}
 
-  ~BlockPartitionClient();
-
   zx::result<size_t> GetBlockSize() final;
   zx::result<size_t> GetPartitionSize() final;
   zx::result<> Read(const zx::vmo& vmo, size_t size) final;
@@ -92,10 +90,9 @@ class BlockPartitionClient final : public BlockDevicePartitionClient {
   BlockPartitionClient& operator=(BlockPartitionClient&&) = delete;
 
  private:
-  zx::result<vmoid_t> Setup(const zx::vmo& vmo);
+  zx::result<storage::Vmoid> Setup(const zx::vmo& vmo);
   zx::result<> RegisterFastBlockIo();
-  zx::result<vmoid_t> RegisterVmo(const zx::vmo& vmo);
-  zx::result<> ReadBlockInfo();
+  zx::result<std::reference_wrapper<fuchsia_hardware_block::wire::BlockInfo>> ReadBlockInfo();
 
   fidl::WireSyncClient<fuchsia_hardware_block::Block> partition_;
   std::unique_ptr<block_client::Client> client_;

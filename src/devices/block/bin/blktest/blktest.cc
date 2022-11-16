@@ -125,18 +125,12 @@ TEST(BlkdevTests, blkdev_test_fifo_no_op) {
   fidl::ClientEnd<fuchsia_hardware_block::Block> client;
   ASSERT_NO_FATAL_FAILURE(get_testdev(&blk_size, &blk_count, &client));
 
-  {
-    const fidl::WireResult result = fidl::WireCall(client)->GetFifo();
-    ASSERT_OK(result.status());
-    const auto& response = result.value();
-    ASSERT_OK(response.status);
-  }
-  {
-    const fidl::WireResult result = fidl::WireCall(client)->CloseFifo();
-    ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-  }
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();
+  ASSERT_OK(endpoints);
+  auto& [session, server] = endpoints.value();
+
+  const fidl::WireResult result = fidl::WireCall(client)->OpenSession(std::move(server));
+  ASSERT_OK(result.status());
 }
 
 static void fill_random(uint8_t* buf, uint64_t size) {
@@ -145,16 +139,41 @@ static void fill_random(uint8_t* buf, uint64_t size) {
   }
 }
 
+zx::result<std::unique_ptr<block_client::Client>> CreateSession(
+    fidl::UnownedClientEnd<fuchsia_hardware_block::Block> block) {
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  auto& [session, server] = endpoints.value();
+
+  const fidl::WireResult result = fidl::WireCall(block)->OpenSession(std::move(server));
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+
+  const fidl::WireResult fifo_result = fidl::WireCall(session)->GetFifo();
+  if (!fifo_result.ok()) {
+    return zx::error(fifo_result.status());
+  }
+  const fit::result fifo_response = fifo_result.value();
+  if (fifo_response.is_error()) {
+    return zx::error(fifo_response.error_value());
+  }
+
+  return zx::ok(
+      std::make_unique<block_client::Client>(std::move(session), std::move(fifo_response->fifo)));
+}
+
 TEST(BlkdevTests, blkdev_test_fifo_basic) {
   uint64_t blk_size, blk_count;
   // Set up the initial handshake connection with the blkdev
   fidl::ClientEnd<fuchsia_hardware_block::Block> client;
   ASSERT_NO_FATAL_FAILURE(get_testdev(&blk_size, &blk_count, &client));
 
-  fidl::WireResult fifo_result = fidl::WireCall(client)->GetFifo();
-  ASSERT_OK(fifo_result.status());
-  auto& fifo_response = fifo_result.value();
-  ASSERT_OK(fifo_response.status);
+  zx::result block_client_ptr = CreateSession(client);
+  ASSERT_OK(block_client_ptr);
+  block_client::Client& block_client = *block_client_ptr.value();
 
   groupid_t group = 0;
 
@@ -168,31 +187,31 @@ TEST(BlkdevTests, blkdev_test_fifo_basic) {
   ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK);
 
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
-  zx::vmo xfer_vmo;
-  ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo));
-  const fidl::WireResult attach_vmo_result = fidl::WireCall(client)->AttachVmo(std::move(xfer_vmo));
-  ASSERT_OK(attach_vmo_result.status());
-  const fidl::WireResponse attach_vmo_response = attach_vmo_result.value();
-  ASSERT_OK(attach_vmo_response.status);
+  zx::result vmoid_result = block_client.RegisterVmo(vmo);
+  ASSERT_OK(vmoid_result);
+  vmoid_t vmoid = vmoid_result.value().TakeId();
 
   // Batch write the VMO to the blkdev
   // Split it into two requests, spread across the disk
-  block_fifo_request_t requests[2];
-  requests[0].group = group;
-  requests[0].vmoid = attach_vmo_response.vmoid->id;
-  requests[0].opcode = BLOCKIO_WRITE;
-  requests[0].length = 1;
-  requests[0].vmo_offset = 0;
-  requests[0].dev_offset = 0;
+  block_fifo_request_t requests[] = {
+      {
+          .opcode = BLOCKIO_WRITE,
+          .group = group,
+          .vmoid = vmoid,
+          .length = 1,
+          .vmo_offset = 0,
+          .dev_offset = 0,
+      },
+      {
+          .opcode = BLOCKIO_WRITE,
+          .group = group,
+          .vmoid = vmoid,
+          .length = 2,
+          .vmo_offset = 1,
+          .dev_offset = 100,
+      },
+  };
 
-  requests[1].group = group;
-  requests[1].vmoid = attach_vmo_response.vmoid->id;
-  requests[1].opcode = BLOCKIO_WRITE;
-  requests[1].length = 2;
-  requests[1].vmo_offset = 1;
-  requests[1].dev_offset = 100;
-
-  block_client::Client block_client(std::move(fifo_response.fifo));
   ASSERT_EQ(block_client.Transaction(requests, std::size(requests)), ZX_OK);
 
   // Empty the vmo, then read the info we just wrote to the disk
@@ -208,25 +227,20 @@ TEST(BlkdevTests, blkdev_test_fifo_basic) {
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
   ASSERT_EQ(block_client.Transaction(requests, 1), ZX_OK);
-
-  {
-    const fidl::WireResult result = fidl::WireCall(client)->CloseFifo();
-    ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-  }
 }
 
+// TODO(https://fxbug.dev/44600): enable.
+//
+// This test has been disabled since its introduction in 4ef35f3b8366d64cccb0fe6e240fb101238d7dfb.
 TEST(BlkdevTests, DISABLED_blkdev_test_fifo_whole_disk) {
   uint64_t blk_size, blk_count;
   // Set up the initial handshake connection with the blkdev
   fidl::ClientEnd<fuchsia_hardware_block::Block> client;
   ASSERT_NO_FATAL_FAILURE(get_testdev(&blk_size, &blk_count, &client));
 
-  fidl::WireResult fifo_result = fidl::WireCall(client)->GetFifo();
-  ASSERT_OK(fifo_result.status());
-  auto& fifo_response = fifo_result.value();
-  ASSERT_OK(fifo_response.status);
+  zx::result block_client_ptr = CreateSession(client);
+  ASSERT_OK(block_client_ptr);
+  block_client::Client& block_client = *block_client_ptr.value();
 
   groupid_t group = 0;
 
@@ -240,23 +254,19 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_whole_disk) {
   ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK);
 
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
-  zx::vmo xfer_vmo;
-  ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-  const fidl::WireResult attach_vmo_result = fidl::WireCall(client)->AttachVmo(std::move(xfer_vmo));
-  ASSERT_OK(attach_vmo_result.status());
-  const fidl::WireResponse attach_vmo_response = attach_vmo_result.value();
-  ASSERT_OK(attach_vmo_response.status);
+  zx::result vmoid_result = block_client.RegisterVmo(vmo);
+  ASSERT_OK(vmoid_result);
+  vmoid_t vmoid = vmoid_result.value().TakeId();
 
   // Batch write the VMO to the blkdev
-  block_fifo_request_t request;
-  request.group = group;
-  request.vmoid = attach_vmo_response.vmoid->id;
-  request.opcode = BLOCKIO_WRITE;
-  request.length = static_cast<uint32_t>(blk_count);
-  request.vmo_offset = 0;
-  request.dev_offset = 0;
-
-  block_client::Client block_client(std::move(fifo_response.fifo));
+  block_fifo_request_t request = {
+      .opcode = BLOCKIO_WRITE,
+      .group = group,
+      .vmoid = vmoid,
+      .length = static_cast<uint32_t>(blk_count),
+      .vmo_offset = 0,
+      .dev_offset = 0,
+  };
   ASSERT_EQ(block_client.Transaction(&request, 1), ZX_OK);
 
   // Empty the vmo, then read the info we just wrote to the disk
@@ -271,13 +281,6 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_whole_disk) {
   // Close the current vmo
   request.opcode = BLOCKIO_CLOSE_VMO;
   ASSERT_EQ(block_client.Transaction(&request, 1), ZX_OK);
-
-  {
-    const fidl::WireResult result = fidl::WireCall(client)->CloseFifo();
-    ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-  }
 }
 
 struct TestVmoObject {
@@ -288,21 +291,16 @@ struct TestVmoObject {
 };
 
 // Creates a VMO, fills it with data, and gives it to the block device.
-void CreateVmoHelper(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
-                     TestVmoObject& obj, size_t kBlockSize) {
+void CreateVmoHelper(block_client::Client& block_client, TestVmoObject& obj, size_t kBlockSize) {
   obj.vmo_size = kBlockSize + (rand() % 5) * kBlockSize;
   ASSERT_EQ(zx::vmo::create(obj.vmo_size, 0, &obj.vmo), ZX_OK, "Failed to create vmo");
   obj.buf.reset(new uint8_t[obj.vmo_size]);
   fill_random(obj.buf.get(), obj.vmo_size);
   ASSERT_EQ(obj.vmo.write(obj.buf.get(), 0, obj.vmo_size), ZX_OK, "Failed to write to vmo");
 
-  zx::vmo xfer_vmo;
-  ASSERT_EQ(obj.vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-  const fidl::WireResult result = fidl::WireCall(device)->AttachVmo(std::move(xfer_vmo));
-  ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  obj.vmoid = *response.vmoid;
+  zx::result vmoid = block_client.RegisterVmo(obj.vmo);
+  ASSERT_OK(vmoid);
+  obj.vmoid.id = vmoid.value().TakeId();
 }
 
 // Write all vmos in a striped pattern on disk.
@@ -371,19 +369,16 @@ TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo) {
   fidl::ClientEnd<fuchsia_hardware_block::Block> client;
   ASSERT_NO_FATAL_FAILURE(get_testdev(&blk_size, &blk_count, &client));
 
-  fidl::WireResult result = fidl::WireCall(client)->GetFifo();
-  ASSERT_OK(result.status());
-  auto& response = result.value();
-  ASSERT_OK(response.status);
+  zx::result block_client_ptr = CreateSession(client);
+  ASSERT_OK(block_client_ptr);
+  block_client::Client& block_client = *block_client_ptr.value();
 
   groupid_t group = 0;
-
-  block_client::Client block_client(std::move(response.fifo));
 
   // Create multiple VMOs
   std::vector<TestVmoObject> objs(10);
   for (auto& obj : objs) {
-    ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client.borrow(), obj, blk_size));
+    ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_client, obj, blk_size));
   }
 
   for (size_t i = 0; i < objs.size(); i++) {
@@ -399,13 +394,6 @@ TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo) {
   for (auto& obj : objs) {
     ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(block_client, obj, group));
   }
-
-  {
-    const fidl::WireResult result = fidl::WireCall(client)->CloseFifo();
-    ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-  }
 }
 
 TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo_multithreaded) {
@@ -414,12 +402,9 @@ TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo_multithreaded) {
   fidl::ClientEnd<fuchsia_hardware_block::Block> client;
   ASSERT_NO_FATAL_FAILURE(get_testdev(&kBlockSize, &blk_count, &client));
 
-  fidl::WireResult result = fidl::WireCall(client)->GetFifo();
-  ASSERT_OK(result.status());
-  auto& response = result.value();
-  ASSERT_OK(response.status);
-
-  block_client::Client block_client(std::move(response.fifo));
+  zx::result block_client_ptr = CreateSession(client);
+  ASSERT_OK(block_client_ptr);
+  block_client::Client& block_client = *block_client_ptr.value();
 
   // Create multiple VMOs
   constexpr size_t kNumThreads = MAX_TXN_GROUP_COUNT;
@@ -430,7 +415,7 @@ TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo_multithreaded) {
     // Capture i by value to get the updated version each loop iteration.
     threads.emplace_back([&, i]() {
       groupid_t group = static_cast<groupid_t>(i);
-      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client.borrow(), objs[i], kBlockSize));
+      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_client, objs[i], kBlockSize));
       ASSERT_NO_FATAL_FAILURE(
           WriteStripedVmoHelper(block_client, objs[i], i, objs.size(), group, kBlockSize));
       ASSERT_NO_FATAL_FAILURE(
@@ -439,19 +424,14 @@ TEST(BlkdevTests, blkdev_test_fifo_multiple_vmo_multithreaded) {
     });
   }
 
-  for (auto& thread : threads)
+  for (auto& thread : threads) {
     thread.join();
-
-  {
-    const fidl::WireResult result = fidl::WireCall(client)->CloseFifo();
-    ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
   }
 }
 
 // TODO(smklein): Test ops across different vmos
-// Disabled due to issue 44600.
+//
+// TODO(https://fxbug.dev/44600): Re-enable.
 TEST(BlkdevTests, DISABLED_blkdev_test_fifo_unclean_shutdown) {
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
@@ -461,16 +441,13 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_unclean_shutdown) {
   std::vector<TestVmoObject> objs(10);
   groupid_t group = 0;
   {
-    fidl::WireResult result = fidl::WireCall(client)->GetFifo();
-    ASSERT_OK(result.status());
-    auto& response = result.value();
-    ASSERT_OK(response.status);
-
-    block_client::Client block_client(std::move(response.fifo));
+    zx::result block_client_ptr = CreateSession(client);
+    ASSERT_OK(block_client_ptr);
+    block_client::Client& block_client = *block_client_ptr.value();
 
     // Create multiple VMOs
     for (auto& obj : objs) {
-      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client.borrow(), obj, kBlockSize));
+      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_client, obj, kBlockSize));
     }
   }
 
@@ -479,15 +456,12 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_unclean_shutdown) {
 
   // The block server should still be functioning. We should be able to re-bind to it
   {
-    fidl::WireResult result = fidl::WireCall(client)->GetFifo();
-    ASSERT_OK(result.status());
-    auto& response = result.value();
-    ASSERT_OK(response.status);
-
-    block_client::Client block_client(std::move(response.fifo));
+    zx::result block_client_ptr = CreateSession(client);
+    ASSERT_OK(block_client_ptr);
+    block_client::Client& block_client = *block_client_ptr.value();
 
     for (auto& obj : objs) {
-      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client.borrow(), obj, kBlockSize));
+      ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_client, obj, kBlockSize));
     }
     for (size_t i = 0; i < objs.size(); i++) {
       ASSERT_NO_FATAL_FAILURE(
@@ -501,12 +475,6 @@ TEST(BlkdevTests, DISABLED_blkdev_test_fifo_unclean_shutdown) {
       ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(block_client, obj, group));
     }
   }
-  {
-    const fidl::WireResult result = fidl::WireCall(client)->CloseFifo();
-    ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-  }
 }
 
 TEST(BlkdevTests, blkdev_test_fifo_bad_client_vmoid) {
@@ -516,17 +484,15 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_vmoid) {
   fidl::ClientEnd<fuchsia_hardware_block::Block> client;
   ASSERT_NO_FATAL_FAILURE(get_testdev(&kBlockSize, &blk_count, &client));
 
-  fidl::WireResult result = fidl::WireCall(client)->GetFifo();
-  ASSERT_OK(result.status());
-  auto& response = result.value();
-  ASSERT_OK(response.status);
+  zx::result block_client_ptr = CreateSession(client);
+  ASSERT_OK(block_client_ptr);
+  block_client::Client& block_client = *block_client_ptr.value();
 
-  block_client::Client block_client(std::move(response.fifo));
   groupid_t group = 0;
 
   // Create a vmo
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client.borrow(), obj, kBlockSize));
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_client, obj, kBlockSize));
 
   // Bad request: Writing to the wrong vmoid
   block_fifo_request_t request;
@@ -537,13 +503,6 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_vmoid) {
   request.vmo_offset = 0;
   request.dev_offset = 0;
   ASSERT_EQ(block_client.Transaction(&request, 1), ZX_ERR_IO, "Expected IO error with bad vmoid");
-
-  {
-    const fidl::WireResult result = fidl::WireCall(client)->CloseFifo();
-    ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-  }
 }
 
 TEST(BlkdevTests, blkdev_test_fifo_bad_client_unaligned_request) {
@@ -553,19 +512,17 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_unaligned_request) {
   fidl::ClientEnd<fuchsia_hardware_block::Block> client;
   ASSERT_NO_FATAL_FAILURE(get_testdev(&kBlockSize, &blk_count, &client));
 
-  fidl::WireResult result = fidl::WireCall(client)->GetFifo();
-  ASSERT_OK(result.status());
-  auto& response = result.value();
-  ASSERT_OK(response.status);
+  zx::result block_client_ptr = CreateSession(client);
+  ASSERT_OK(block_client_ptr);
+  block_client::Client& block_client = *block_client_ptr.value();
 
-  block_client::Client block_client(std::move(response.fifo));
   groupid_t group = 0;
 
   // Create a vmo of at least size "kBlockSize * 2", since we'll
   // be reading "kBlockSize" bytes from an offset below, and we want it
   // to fit within the bounds of the VMO.
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client.borrow(), obj, kBlockSize * 2));
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_client, obj, kBlockSize * 2));
 
   block_fifo_request_t request;
   request.group = group;
@@ -577,13 +534,6 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_unaligned_request) {
   request.vmo_offset = 0;
   request.dev_offset = 0;
   ASSERT_EQ(block_client.Transaction(&request, 1), ZX_ERR_INVALID_ARGS, "");
-
-  {
-    const fidl::WireResult result = fidl::WireCall(client)->CloseFifo();
-    ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-  }
 }
 
 TEST(BlkdevTests, blkdev_test_fifo_bad_client_overflow) {
@@ -593,19 +543,17 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_overflow) {
   fidl::ClientEnd<fuchsia_hardware_block::Block> client;
   ASSERT_NO_FATAL_FAILURE(get_testdev(&kBlockSize, &blk_count, &client));
 
-  fidl::WireResult result = fidl::WireCall(client)->GetFifo();
-  ASSERT_OK(result.status());
-  auto& response = result.value();
-  ASSERT_OK(response.status);
+  zx::result block_client_ptr = CreateSession(client);
+  ASSERT_OK(block_client_ptr);
+  block_client::Client& block_client = *block_client_ptr.value();
 
-  block_client::Client block_client(std::move(response.fifo));
   groupid_t group = 0;
 
   // Create a vmo of at least size "kBlockSize * 2", since we'll
   // be reading "kBlockSize" bytes from an offset below, and we want it
   // to fit within the bounds of the VMO.
   TestVmoObject obj;
-  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(client.borrow(), obj, kBlockSize * 2));
+  ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(block_client, obj, kBlockSize * 2));
 
   block_fifo_request_t request;
   request.group = group;
@@ -641,13 +589,6 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_overflow) {
   request.vmo_offset = 0;
   request.dev_offset = std::numeric_limits<uint64_t>::max();
   ASSERT_EQ(block_client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
-
-  {
-    const fidl::WireResult result = fidl::WireCall(client)->CloseFifo();
-    ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-  }
 }
 
 TEST(BlkdevTests, blkdev_test_fifo_bad_client_bad_vmo) {
@@ -657,12 +598,10 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_bad_vmo) {
   fidl::ClientEnd<fuchsia_hardware_block::Block> client;
   ASSERT_NO_FATAL_FAILURE(get_testdev(&kBlockSize, &blk_count, &client));
 
-  fidl::WireResult result = fidl::WireCall(client)->GetFifo();
-  ASSERT_OK(result.status());
-  auto& response = result.value();
-  ASSERT_OK(response.status);
+  zx::result block_client_ptr = CreateSession(client);
+  ASSERT_OK(block_client_ptr);
+  block_client::Client& block_client = *block_client_ptr.value();
 
-  block_client::Client block_client(std::move(response.fifo));
   groupid_t group = 0;
 
   // Create a vmo of one block.
@@ -676,13 +615,9 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_bad_vmo) {
   ASSERT_EQ(obj.vmo.write(obj.buf.get(), 0, obj.vmo_size), ZX_OK, "Failed to write to vmo");
 
   {
-    zx::vmo xfer_vmo;
-    ASSERT_EQ(obj.vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-    const fidl::WireResult result = fidl::WireCall(client)->AttachVmo(std::move(xfer_vmo));
-    ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    obj.vmoid = *response.vmoid;
+    zx::result vmoid = block_client.RegisterVmo(obj.vmo);
+    ASSERT_OK(vmoid);
+    obj.vmoid.id = vmoid.value().TakeId();
   }
 
   // Send a request to write to write multiple blocks -- enough that
@@ -701,13 +636,6 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_bad_vmo) {
   // Do the same thing, but for reading
   request.opcode = BLOCKIO_READ;
   ASSERT_EQ(block_client.Transaction(&request, 1), ZX_ERR_OUT_OF_RANGE);
-
-  {
-    const fidl::WireResult result = fidl::WireCall(client)->CloseFifo();
-    ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-  }
 }
 
 }  // namespace tests

@@ -4,8 +4,9 @@
 library fuchsia.hardware.block;
 
 using fuchsia.io;
-using zx;
 using fuchsia.storage.metrics as storage_metrics;
+using fuchsia.unknown;
+using zx;
 
 /// The maximum value for a transfer size, identifying that there
 /// effectively exists no maximum for a single operation.
@@ -14,6 +15,37 @@ const MAX_TRANSFER_UNBOUNDED uint32 = 0xFFFFFFFF;
 /// Value reserved for "invalid" VmoId. Will never be allocated by the server,
 /// and may be utilized as a local value for an unallocated ID.
 const VMOID_INVALID uint16 = 0;
+
+/// Represents a session with a block device.
+///
+/// This protocol encodes the underlying object's lifetime in both directions; the underlying object
+/// is alive iff both ends of the protocol are open. That is:
+///
+/// - Closing the client end causes the object to be destroyed.
+/// - Observing a closure of the server end indicates the object no longer exists.
+///
+/// The object can be destroyed synchronously using [`fuchsia.unknown/Closeable.Close`].
+protocol Session {
+    compose fuchsia.unknown.Closeable;
+
+    /// Returns a handle to the client end of the FIFO.
+    GetFifo() -> (resource struct {
+        fifo zx.handle:<FIFO>;
+    }) error zx.status;
+
+    /// Attaches a VMO to the session.
+    ///
+    /// Returns an identifer that can be used to refer to the VMO.
+    AttachVmo(resource struct {
+        vmo zx.handle:VMO;
+    }) -> (struct {
+        // TODO(https://fxbug.dev/103484): consider removing the outer struct when the issue is
+        // resolved.
+        vmoid @generated_name("VmoId") struct {
+            id uint16;
+        };
+    }) error zx.status;
+};
 
 /// Defines access to a device which is accessible in block-granularity chunks
 /// for reading and writing.
@@ -75,39 +107,9 @@ protocol Block {
         }>;
     });
 
-    /// Sets up a FIFO-based server on the block device; acquire the handle to it.
-    @transitional
-    GetFifo() -> (resource struct {
-        status zx.status;
-        fifo zx.handle:<FIFO, optional>;
-    });
-
-    /// Attaches a VMO to the currently running FIFO server.
-    ///
-    /// Returns an identifer that can be used to refer to the VMO.
-    @transitional
-    AttachVmo(resource struct {
-        vmo zx.handle:VMO;
-    }) -> (struct {
-        status zx.status;
-        vmoid box<@generated_name("VmoId") struct {
-            id uint16;
-        }>;
-    });
-
-    /// Shuts down the fifo server, waiting for it to be ready to be started again.
-    ///
-    /// When this method returns, a client may safely invoke GetFifo to acquire
-    /// a new connection to the block server, without being told that a server
-    /// is already serving requests on a different fifo.
-    ///
-    /// If, instead of invoking "CloseFifo", a client merely closes their fifo,
-    /// the server automatically cleans up all resources anyway. In this case,
-    /// however, the client will have no guarantee that the next invocation of
-    /// "GetFifo" will return a connection successfully.
-    @transitional
-    CloseFifo() -> (struct {
-        status zx.status;
+    /// Opens a new FIFO-based session on the block device.
+    OpenSession(resource struct {
+        session server_end:Session;
     });
 
     /// Rebinds the block device (if supported).
@@ -126,7 +128,6 @@ protocol Block {
     /// This method is provided for backward compatibility, and is not intended for new code.
     /// New code should use the FIFO interface along with the client libraries to
     /// read and write from block devices.
-    @transitional
     ReadBlocks(resource struct {
         vmo zx.handle:VMO;
         length uint64;
@@ -144,7 +145,6 @@ protocol Block {
     /// This method is provided for backward compatibility, and is not intended for new code.
     /// New code should use the FIFO interface along with the client libraries to
     /// read and write from block devices.
-    @transitional
     WriteBlocks(resource struct {
         vmo zx.handle:VMO;
         length uint64;
