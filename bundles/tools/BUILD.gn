@@ -11,6 +11,7 @@ group("tools") {
     "//bundles/packages/prod:cmdutils",
     "//bundles/packages/prod:debug_agent",
     "//bundles/packages/prod:far",
+    "//bundles/packages/prod:run",
     "//bundles/packages/prod:tracing",
     "//src/camera:tools",
     "//src/connectivity:tools",
