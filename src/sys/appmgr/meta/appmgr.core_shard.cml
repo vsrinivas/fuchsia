@@ -82,9 +82,5 @@
             ],
             from: "#appmgr",
         },
-        {
-            directory: "hub-legacy",
-            from: "#appmgr",
-        },
     ],
 }

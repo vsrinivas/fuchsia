@@ -16,12 +16,6 @@
         lifecycle: { stop_event: "notify" },
     },
     capabilities: [
-        {
-            directory: "hub-legacy",
-            rights: [ "rw*" ],
-            path: "/hub",
-        },
-
         // These protocols exposed by appmgr are implemented by appmgr.
         {
             protocol: "fuchsia.appmgr.Startup",
@@ -120,10 +114,7 @@
     ],
     expose: [
         {
-            directory: [
-                "hub-legacy",
-                "svc_from_sys",
-            ],
+            directory: "svc_from_sys",
             from: "self",
         },
         {
