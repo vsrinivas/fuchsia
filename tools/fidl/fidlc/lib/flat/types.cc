@@ -269,8 +269,9 @@ bool TransportSideType::ApplyConstraints(TypeResolver* resolver, const TypeConst
     if (!resolver->ResolveConstraintAs(
             constraints.items[0].get(),
             {TypeResolver::ConstraintKind::kProtocol, TypeResolver::ConstraintKind::kNullability},
-            /* resource_decl */ nullptr, &resolved))
-      return resolver->Fail(ErrUnexpectedConstraint, constraint_span, layout.resolved().name());
+            /* resource_decl */ nullptr, &resolved)) {
+      return resolver->Fail(ErrMustBeAProtocol, constraint_span, layout.resolved().name());
+    }
     switch (resolved.kind) {
       case TypeResolver::ConstraintKind::kProtocol:
         out_params->protocol_decl = resolved.value.protocol_decl;

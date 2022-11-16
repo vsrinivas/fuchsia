@@ -677,29 +677,37 @@ protocol YearningForSimplicity {
 }
 
 TEST(ProtocolTests, BadRequestMustBeProtocol) {
-  // TODO(fxbug.dev/75112): currently need to specify second constraint to get
-  // the more specific error
+  TestLibrary library;
+  library.AddFile("bad/fi-0157.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeAProtocol);
+}
+
+TEST(ProtocolTests, BadRequestMustBeProtocolWithOptional) {
   TestLibrary library(R"FIDL(
 library example;
 
-type S = struct {};
-protocol P {
-    Method(struct { r server_end:<S, optional>; });
-};
+type MyStruct = struct {};
+alias ServerEnd = server_end:<MyStruct, optional>;
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeAProtocol);
 }
 
 TEST(ProtocolTests, BadRequestMustBeParameterized) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0168.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrProtocolConstraintRequired);
+  EXPECT_EQ(library.errors()[0]->span.data(), "server_end");
+}
+
+TEST(ProtocolTests, BadRequestMustContainProtocol) {
   TestLibrary library(R"FIDL(
 library example;
 
-protocol P {
-    Method(struct { r server_end; });
+protocol MyProtocol {
+    MyMethod(resource struct { server server_end; });
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrProtocolConstraintRequired);
-  EXPECT_EQ(library.errors()[0]->span.data(), "server_end");
 }
 
 TEST(ProtocolTests, BadRequestCannotHaveSize) {

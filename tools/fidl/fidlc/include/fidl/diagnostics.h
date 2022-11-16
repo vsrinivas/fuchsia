@@ -372,7 +372,7 @@ constexpr UndocumentedErrorDef<155, const flat::AttributeArg *, std::string_view
         "the argument {}={} conflicts with {}={} at {}; a child element "
         "cannot be {} {} its parent element is {}");
 constexpr UndocumentedErrorDef<156, flat::Name> ErrCannotBeOptional("{} cannot be optional");
-constexpr UndocumentedErrorDef<157, flat::Name> ErrMustBeAProtocol("{} must be a protocol");
+constexpr ErrorDef<157, flat::Name> ErrMustBeAProtocol("{} must be a protocol");
 constexpr ErrorDef<158, flat::Name> ErrCannotBoundTwice("{} cannot bound twice");
 constexpr UndocumentedErrorDef<159, flat::Name> ErrStructCannotBeOptional(
     "structs can no longer be marked optional; please use the new syntax, "
@@ -391,7 +391,7 @@ constexpr UndocumentedErrorDef<165> ErrExpectedType("expected type but got a lit
 constexpr UndocumentedErrorDef<166, flat::Name> ErrUnexpectedConstraint(
     "{} failed to resolve constraint");
 constexpr ErrorDef<167, flat::Name> ErrCannotConstrainTwice("{} cannot add additional constraint");
-constexpr UndocumentedErrorDef<168, flat::Name> ErrProtocolConstraintRequired(
+constexpr ErrorDef<168, flat::Name> ErrProtocolConstraintRequired(
     "{} requires a protocol as its first constraint");
 // The same error as ErrCannotBeOptional, but with a more specific message since the
 // optionality of boxes may be confusing
