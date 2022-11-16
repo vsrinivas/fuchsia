@@ -198,6 +198,12 @@ impl CancelableTask {
         Self { cancelation_tx, inner: task }
     }
 
+    /// Detach this task so it continues running independently in the background. The task will
+    /// no longer be cancelable.
+    pub fn detach(self) {
+        self.inner.detach();
+    }
+
     /// Submit a cancelation request and wait for the task to end.
     pub async fn cancel(self) {
         // If the send fails, the watcher has already ended so there's no need to worry about the

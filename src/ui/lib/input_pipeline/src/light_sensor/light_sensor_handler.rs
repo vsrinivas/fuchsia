@@ -309,8 +309,9 @@ where
                 .context("updating active setting")?;
         }
 
-        // TODO(fxbug.dev/110275) Use calibrated rgbc in SI units once all clients are using lux and cct.
-        let rgbc = uncalibrated_rgbc.map(|c| c as f32);
+        // TODO(fxbug.dev/110275) Use normalized/calibrated rgbc in SI units once all clients are
+        // using lux and cct.
+        let rgbc = reading.map(|c| c as f32);
         Ok(LightReading { rgbc, lux, cct })
     }
 }

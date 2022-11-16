@@ -197,6 +197,7 @@ class UITestRealm {
   void ConfigureClientSubrealm();
   void ConfigureAccessibility();
   void RouteConfigData();
+  void ConfigureSceneOwner();
   void ConfigureSceneProvider();
   void ConfigureActivityService();
 

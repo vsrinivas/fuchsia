@@ -16,5 +16,21 @@
             from: "#root_presenter",
             to: "#a11y_manager",
         },
+        {
+            protocol: [
+                "fuchsia.factory.MiscFactoryStoreProvider",
+                "fuchsia.settings.Light",
+                "fuchsia.ui.brightness.Control",
+            ],
+            from: "parent",
+            to: [ "#input_pipeline" ],
+            availability: "same_as_target",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.lightsensor.Sensor",
+            from: "#input_pipeline",
+        },
     ],
 }

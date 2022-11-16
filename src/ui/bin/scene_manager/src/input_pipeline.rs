@@ -3,17 +3,29 @@
 // found in the LICENSE file.
 
 use {
-    ::input_pipeline::{text_settings_handler::TextSettingsHandler, CursorMessage},
+    ::input_pipeline::{
+        light_sensor::{
+            Calibration as LightSensorCalibration, Configuration as LightSensorConfiguration,
+            FactoryFileLoader,
+        },
+        light_sensor_handler::make_light_sensor_handler_and_spawn_led_watcher,
+        text_settings_handler::TextSettingsHandler,
+        CursorMessage,
+    },
     anyhow::{Context, Error},
+    fidl_fuchsia_factory::MiscFactoryStoreProviderMarker,
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
+    fidl_fuchsia_lightsensor::SensorRequestStream as LightSensorRequestStream,
     fidl_fuchsia_recovery_policy::DeviceRequestStream,
     fidl_fuchsia_recovery_ui::FactoryResetCountdownRequestStream,
     fidl_fuchsia_settings as fsettings,
+    fidl_fuchsia_ui_brightness::ControlMarker as BrightnessControlMarker,
     fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fidl_fuchsia_ui_pointerinjector_configuration::SetupProxy,
     fidl_fuchsia_ui_policy::DeviceListenerRegistryRequestStream,
     fidl_fuchsia_ui_shortcut as ui_shortcut,
     focus_chain_provider::FocusChainProviderPublisher,
+    fsettings::LightMarker,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect as inspect, fuchsia_zircon as zx,
@@ -27,6 +39,7 @@ use {
         input_device,
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline, InputPipelineAssembly},
         keyboard_handler, keymap_handler,
+        light_sensor_handler::CalibratedLightSensorHandler,
         media_buttons_handler::MediaButtonsHandler,
         mouse_injector_handler::MouseInjectorHandler,
         shortcut_handler::ShortcutHandler,
@@ -49,8 +62,11 @@ use {
 ///   `InputConfig` messages.
 /// - `input_device_registry_request_stream_receiver`: A receiving end of a MPSC channel for
 ///   `InputDeviceRegistry` messages.
+/// - `light_sensor_request_stream_receiver`: A receiving end of an MPSC channel for
+///   `Sensor` messages.
 /// - `node`: The inspect node to insert individual inspect handler nodes into.
 /// - `focus_chain_publisher`: Forwards focus chain changes to downstream watchers.
+/// - `light_sensor_configuration`: An optional configuration used for light sensor requests.
 pub async fn handle_input(
     // If this is false, it means we're using the legacy Scenic Gfx API, instead of the
     // new Flatland API.
@@ -61,6 +77,9 @@ pub async fn handle_input(
     >,
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
+    >,
+    light_sensor_request_stream_receiver: Option<
+        futures::channel::mpsc::UnboundedReceiver<LightSensorRequestStream>,
     >,
     media_buttons_listener_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         DeviceListenerRegistryRequestStream,
@@ -76,17 +95,46 @@ pub async fn handle_input(
     display_ownership_event: zx::Event,
     focus_chain_publisher: FocusChainProviderPublisher,
     supported_input_devices: Vec<String>,
+    light_sensor_configuration: Option<LightSensorConfiguration>,
 ) -> Result<InputPipeline, Error> {
     let factory_reset_handler = FactoryResetHandler::new();
     let media_buttons_handler = MediaButtonsHandler::new();
 
-    // TODO(fxbug.dev/100664): Enable LightSensor when it's implemented.
-    let supported_input_devices: Vec<input_device::InputDeviceType> =
-        input_device::InputDeviceType::list_from_structured_config_list(&supported_input_devices)
-            .into_iter()
-            .filter(|d| d != &input_device::InputDeviceType::LightSensor)
-            .collect();
+    let supported_input_devices =
+        input_device::InputDeviceType::list_from_structured_config_list(&supported_input_devices);
 
+    let light_sensor_handler = if let Some(light_sensor_configuration) = light_sensor_configuration
+    {
+        if supported_input_devices.contains(&input_device::InputDeviceType::LightSensor) {
+            let light_proxy = connect_to_protocol::<LightMarker>()
+                .context("unable to connnect to light proxy for light sensor")?;
+            let brightness_proxy = connect_to_protocol::<BrightnessControlMarker>()
+                .context("unable to connnect to brightness control proxy for light sensor")?;
+            let factory_store_proxy = connect_to_protocol::<MiscFactoryStoreProviderMarker>()
+                .context("unable to connect to factory proxy for light sensor")?;
+            let factory_file_loader = FactoryFileLoader::new(factory_store_proxy)
+                .context("unable to connect to factory file loader for light sensor")?;
+            let calibration = LightSensorCalibration::new(
+                light_sensor_configuration.calibration,
+                factory_file_loader,
+            )
+            .await?;
+            let (handler, task) = make_light_sensor_handler_and_spawn_led_watcher(
+                light_proxy,
+                brightness_proxy,
+                calibration,
+                light_sensor_configuration.sensor,
+            )
+            .await
+            .context("unable to create light sensor handler")?;
+            task.detach();
+            Some(handler)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
     let input_pipeline = InputPipeline::new(
         supported_input_devices.clone(),
         build_input_pipeline_assembly(
@@ -97,12 +145,23 @@ pub async fn handle_input(
             display_ownership_event,
             factory_reset_handler.clone(),
             media_buttons_handler.clone(),
+            light_sensor_handler.clone(),
             HashSet::from_iter(supported_input_devices.iter()),
             focus_chain_publisher,
         )
         .await,
     )
     .context("Failed to create InputPipeline.")?;
+
+    if let (Some(light_sensor_handler), Some(light_sensor_request_stream_receiver)) =
+        (light_sensor_handler, light_sensor_request_stream_receiver)
+    {
+        let light_sensor_fut = handle_light_sensor_request_stream(
+            light_sensor_request_stream_receiver,
+            light_sensor_handler,
+        );
+        fasync::Task::local(light_sensor_fut).detach();
+    }
 
     let input_device_registry_fut = handle_input_device_registry_request_streams(
         input_device_registry_request_stream_receiver,
@@ -213,6 +272,7 @@ async fn build_input_pipeline_assembly(
     display_ownership_event: zx::Event,
     factory_reset_handler: Rc<FactoryResetHandler>,
     media_buttons_handler: Rc<MediaButtonsHandler>,
+    light_sensor_handler: Option<Rc<CalibratedLightSensorHandler>>,
     supported_input_devices: HashSet<&input_device::InputDeviceType>,
     focus_chain_publisher: FocusChainProviderPublisher,
 ) -> InputPipelineAssembly {
@@ -258,6 +318,12 @@ async fn build_input_pipeline_assembly(
             // Add factory reset handler before media buttons handler.
             assembly = assembly.add_handler(factory_reset_handler);
             assembly = assembly.add_handler(media_buttons_handler);
+        }
+        if supported_input_devices.contains(&input_device::InputDeviceType::LightSensor) {
+            if let Some(light_sensor_handler) = light_sensor_handler {
+                info!("Registering light sensor-related input handlers.");
+                assembly = assembly.add_handler(light_sensor_handler);
+            }
         }
 
         if supported_input_devices.contains(&input_device::InputDeviceType::Mouse) {
@@ -499,6 +565,24 @@ pub async fn handle_factory_reset_countdown_request_stream(
                 Ok(()) => (),
                 Err(e) => {
                     warn!("failure while serving FactoryResetCountdown: {}", e);
+                }
+            }
+        })
+        .detach();
+    }
+}
+
+pub async fn handle_light_sensor_request_stream(
+    mut stream_receiver: futures::channel::mpsc::UnboundedReceiver<LightSensorRequestStream>,
+    light_sensor_handler: Rc<CalibratedLightSensorHandler>,
+) {
+    while let Some(stream) = stream_receiver.next().await {
+        let light_sensor_handler = light_sensor_handler.clone();
+        fasync::Task::local(async move {
+            match light_sensor_handler.handle_light_sensor_request_stream(stream).await {
+                Ok(()) => (),
+                Err(e) => {
+                    warn!("failure while serving fuchsia.lightsensor.Sensor: {e}");
                 }
             }
         })

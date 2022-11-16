@@ -416,6 +416,29 @@ void UITestRealm::RouteConfigData() {
   }
 }
 
+void UITestRealm::ConfigureSceneOwner() {
+  if (!(config_.scene_owner)) {
+    return;
+  }
+
+  std::string config_parent;
+  if (config_.use_input) {
+    config_parent = InputOwnerName(config_);
+  } else if (*config_.scene_owner == UITestRealm::SceneOwnerType::SCENE_MANAGER) {
+    config_parent = kSceneManagerName;
+  } else {
+    return;
+  }
+
+  auto input_config_directory_contents = component_testing::DirectoryContents();
+  std::vector<Ref> targets;
+
+  targets.push_back(ChildRef{config_parent});
+  input_config_directory_contents.AddFile("empty.json", "");
+  realm_builder_.RouteReadOnlyDirectory("sensor-config", std::move(targets),
+                                        std::move(input_config_directory_contents));
+}
+
 void UITestRealm::ConfigureSceneProvider() {
   // The scene provider component will only be present in the test realm if the
   // client specifies a scene owner.
@@ -456,6 +479,10 @@ void UITestRealm::Build() {
   // Route config data directories to appropriate recipients (currently, scenic,
   // scene manager, and root presenter are the only use cases for config files.
   RouteConfigData();
+
+  // Route input pipeline config data directories to input manager (either
+  // input-pipeline or scene-manager).
+  ConfigureSceneOwner();
 
   // This step needs to come after ConfigureAccessibility(), because the a11y
   // manager component needs to be added to the realm first.

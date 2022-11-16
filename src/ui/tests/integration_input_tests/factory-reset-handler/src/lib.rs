@@ -88,6 +88,13 @@ async fn assemble_realm(
     )
     .await;
 
+    b.route_read_only_directory(
+        String::from("sensor-config"),
+        &input_owner,
+        DirectoryContents::new().add_file("empty.json", ""),
+    )
+    .await;
+
     // Create the test realm.
     b.build_with_name(test_name).await.expect("Failed to create realm")
 }

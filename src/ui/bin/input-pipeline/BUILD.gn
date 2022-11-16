@@ -8,7 +8,6 @@ import("//build/rust/rustc_binary.gni")
 group("input-pipeline") {
   testonly = true
   deps = [
-    ":default-config-pkg",
     ":pkg",
     ":tests",
   ]
@@ -26,11 +25,15 @@ rustc_binary("input-pipeline-bin") {
 
   deps = [
     ":input_config_lib",
+    "//sdk/fidl/fuchsia.factory:fuchsia.factory_rust",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection_rust",
     "//sdk/fidl/fuchsia.input.interaction:fuchsia.input.interaction_rust",
     "//sdk/fidl/fuchsia.input.interaction.observation:fuchsia.input.interaction.observation_rust",
+    "//sdk/fidl/fuchsia.lightsensor:fuchsia.lightsensor_rust",
     "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy_rust",
     "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
+    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness_rust",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_rust",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
@@ -43,6 +46,7 @@ rustc_binary("input-pipeline-bin") {
     "//src/ui/lib/input_pipeline",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:serde_json",
   ]
 
   sources = [ "src/main.rs" ]
@@ -94,28 +98,4 @@ fuchsia_structured_config_values("config_for_test") {
   values = {
     idle_threshold_minutes = 15
   }
-}
-
-# Define an empty config as the default for the
-# light sensor configuration.
-resource("default-input-pipeline-config") {
-  outputs = [ "data/config/empty.json" ]
-  sources = [ "empty.json" ]
-}
-
-# A non-executable component that provides configuration files to input-pipeline.
-fuchsia_component("product-config-component") {
-  component_name = "input-pipeline-product-config"
-  manifest = "meta/input-pipeline-product-config.cml"
-}
-
-# Define a configuration data package which routes the
-# /input-config/ directory to input-pipeline for
-# light sensor configuration.
-fuchsia_package("default-config-pkg") {
-  package_name = "input-pipeline-product-config"
-  deps = [
-    ":default-input-pipeline-config",
-    ":product-config-component",
-  ]
 }

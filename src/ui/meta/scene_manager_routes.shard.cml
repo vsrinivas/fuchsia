@@ -29,8 +29,18 @@
             name: "scene_manager",
             url: "fuchsia-pkg://fuchsia.com/scene_manager#meta/scene_manager.cm",
         },
+        {
+            name: "sensor-config",
+            url: "fuchsia-pkg://fuchsia.com/sensor-config#meta/sensor-config.cm",
+        },
     ],
     offer: [
+        {
+            directory: "sensor-config",
+            from: "#sensor-config",
+            to: [ "#scene_manager" ],
+            rights: [ "r*" ],
+        },
         {
             directory: "config-data",
             from: "parent",
