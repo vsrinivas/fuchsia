@@ -9,7 +9,9 @@
 
 #include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
+#include "src/ui/scenic/lib/flatland/buffers/util.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
+#include "zircon/system/ulib/fbl/include/fbl/algorithm.h"
 
 using allocation::Allocator;
 using fuchsia::ui::composition::FrameInfo;
@@ -21,6 +23,7 @@ using screen_capture::ScreenCapture;
 namespace {
 
 constexpr uint32_t kBufferIndex = 0;
+constexpr auto kBytesPerPixel = 4;
 
 }  // namespace
 
@@ -184,13 +187,48 @@ void FlatlandScreenshot::HandleFrameRender() {
 
   fuchsia::ui::composition::ScreenshotTakeResponse response;
 
+  // Copy ScreenCapture output for inspection. Note that the stride of the buffer may be different
+  // than the width of the image, if the width of the image is not a multiple of 64.
+  //
+  // For instance, is the original image were 1024x600, the new width is 600. 600*4=2400 bytes,
+  // which is not a multiple of 64. The next multiple would be 2432, which would mean the buffer
+  // is actually a 608x1024 "pixel" buffer, since 2432/4=608. We must account for that 8 byte
+  // padding when copying the bytes over to be inspected.
   FX_CHECK(ZX_OK == buffer_collection_info_.buffers[kBufferIndex].vmo.op_range(
                         ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, 0,
                         buffer_collection_info_.settings.buffer_settings.size_bytes, nullptr, 0));
+
+  const uint32_t pixels_per_row =
+      utils::GetPixelsPerRow(buffer_collection_info_.settings, kBytesPerPixel, display_size_.width);
+  uint32_t bytes_per_row = pixels_per_row * kBytesPerPixel;
+  uint32_t valid_bytes_per_row = display_size_.width * kBytesPerPixel;
+
   zx::vmo response_vmo;
-  zx_status_t status = buffer_collection_info_.buffers[kBufferIndex].vmo.duplicate(
-      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_GET_PROPERTY, &response_vmo);
-  FX_DCHECK(status == ZX_OK);
+  if (bytes_per_row == valid_bytes_per_row) {
+    zx_status_t status = buffer_collection_info_.buffers[kBufferIndex].vmo.duplicate(
+        ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_GET_PROPERTY, &response_vmo);
+    FX_DCHECK(status == ZX_OK);
+  } else {
+    const auto response_vmo_size = display_size_.width * display_size_.height * kBytesPerPixel;
+    FX_CHECK(ZX_OK == zx::vmo::create(response_vmo_size, 0, &response_vmo));
+    uint8_t* response_vmo_base;
+    FX_CHECK(ZX_OK == zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0,
+                                                 response_vmo, 0, response_vmo_size,
+                                                 reinterpret_cast<uintptr_t*>(&response_vmo_base)));
+    flatland::MapHostPointer(
+        buffer_collection_info_, kBufferIndex,
+        [&response_vmo_base, bytes_per_row, display_size = display_size_, valid_bytes_per_row,
+         response_vmo_size](uint8_t* vmo_host, uint32_t num_bytes) {
+          for (size_t i = 0; i < display_size.height; ++i) {
+            FX_DCHECK(i * display_size.width * kBytesPerPixel < response_vmo_size);
+            memcpy(&response_vmo_base[i * display_size.width * kBytesPerPixel],
+                   &vmo_host[i * bytes_per_row], valid_bytes_per_row);
+          }
+        });
+
+    FX_CHECK(ZX_OK == zx_cache_flush(response_vmo_base, response_vmo_size,
+                                     ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+  }
 
   response.set_vmo(std::move(response_vmo));
   response.set_size({display_size_.width, display_size_.height});

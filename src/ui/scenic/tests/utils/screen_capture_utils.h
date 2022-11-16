@@ -41,9 +41,6 @@ void GenerateImageForFlatlandInstance(uint32_t buffer_collection_index,
                                       SizeU size, Vec translation, uint32_t image_id,
                                       uint32_t transform_id);
 
-uint32_t GetPixelsPerRow(const fuchsia::sysmem::SingleBufferSettings& settings,
-                         uint32_t bytes_per_pixel, uint32_t image_width);
-
 void WriteToSysmemBuffer(const std::vector<uint8_t>& write_values,
                          fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info,
                          uint32_t buffer_collection_idx, uint32_t kBytesPerPixel,

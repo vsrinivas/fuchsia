@@ -89,6 +89,8 @@ std::string GetArrayString(const std::string& name, const std::array<float, Dim>
 
 float GetOrientationAngle(fuchsia::ui::composition::Orientation orientation);
 
+uint32_t GetPixelsPerRow(const fuchsia::sysmem::SingleBufferSettings& settings,
+                         uint32_t bytes_per_pixel, uint32_t image_width);
 }  // namespace utils
 
 #endif  // SRC_UI_SCENIC_LIB_UTILS_HELPERS_H_

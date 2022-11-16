@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "zircon/system/ulib/fbl/include/fbl/algorithm.h"
 
 #include <glm/gtc/constants.hpp>
 
@@ -200,6 +201,17 @@ float GetOrientationAngle(fuchsia::ui::composition::Orientation orientation) {
     case Orientation::CCW_270_DEGREES:
       return -glm::three_over_two_pi<float>();
   }
+}
+
+uint32_t GetPixelsPerRow(const fuchsia::sysmem::SingleBufferSettings& settings,
+                         uint32_t bytes_per_pixel, uint32_t image_width) {
+  uint32_t bytes_per_row_divisor = settings.image_format_constraints.bytes_per_row_divisor;
+  uint32_t min_bytes_per_row = settings.image_format_constraints.min_bytes_per_row;
+  uint32_t bytes_per_row = fbl::round_up(std::max(image_width * bytes_per_pixel, min_bytes_per_row),
+                                         bytes_per_row_divisor);
+  uint32_t pixels_per_row = bytes_per_row / bytes_per_pixel;
+
+  return pixels_per_row;
 }
 
 }  // namespace utils

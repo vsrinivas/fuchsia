@@ -53,17 +53,6 @@ void GenerateImageForFlatlandInstance(uint32_t buffer_collection_index,
   flatland->AddChild(parent_transform, kTransform);
 }
 
-inline uint32_t GetPixelsPerRow(const fuchsia::sysmem::SingleBufferSettings& settings,
-                                uint32_t bytes_per_pixel, uint32_t image_width) {
-  uint32_t bytes_per_row_divisor = settings.image_format_constraints.bytes_per_row_divisor;
-  uint32_t min_bytes_per_row = settings.image_format_constraints.min_bytes_per_row;
-  uint32_t bytes_per_row = fbl::round_up(std::max(image_width * bytes_per_pixel, min_bytes_per_row),
-                                         bytes_per_row_divisor);
-  uint32_t pixels_per_row = bytes_per_row / bytes_per_pixel;
-
-  return pixels_per_row;
-}
-
 // This method writes to a sysmem buffer, taking into account any potential stride width
 // differences. The method also flushes the cache if the buffer is in RAM domain.
 void WriteToSysmemBuffer(const std::vector<uint8_t>& write_values,
@@ -71,7 +60,7 @@ void WriteToSysmemBuffer(const std::vector<uint8_t>& write_values,
                          uint32_t buffer_collection_idx, uint32_t kBytesPerPixel,
                          uint32_t image_width, uint32_t image_height) {
   uint32_t pixels_per_row =
-      GetPixelsPerRow(buffer_collection_info.settings, kBytesPerPixel, image_width);
+      utils::GetPixelsPerRow(buffer_collection_info.settings, kBytesPerPixel, image_width);
 
   MapHostPointer(buffer_collection_info, buffer_collection_idx,
                  [&write_values, pixels_per_row, kBytesPerPixel, image_width, image_height](
@@ -157,7 +146,7 @@ std::vector<uint8_t> ExtractScreenCapture(
                        buffer_collection_info.settings.buffer_settings.size_bytes, nullptr, 0));
 
   uint32_t pixels_per_row =
-      GetPixelsPerRow(buffer_collection_info.settings, kBytesPerPixel, render_target_width);
+      utils::GetPixelsPerRow(buffer_collection_info.settings, kBytesPerPixel, render_target_width);
   std::vector<uint8_t> read_values;
   read_values.resize(static_cast<size_t>(render_target_width) * render_target_height *
                      kBytesPerPixel);
