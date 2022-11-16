@@ -488,8 +488,8 @@ void lockup_primary_init() {
   HeartbeatLockupChecker::InitStaticParams();
 
   dprintf(INFO,
-          "lockup_detector: heartbeats %s, period is %" PRId64 " ms, threshold is %" PRId64
-          " ms, fatal threshold is %" PRId64 " ms, dump diagnostics timeout is %" PRIu64 " ms\n",
+          "lockup_detector: heartbeats %s, period %" PRId64 " ms, threshold %" PRId64
+          " ms, fatal threshold %" PRId64 " ms, diags dump timeout %" PRIu64 " ms\n",
           (HeartbeatLockupChecker::period() > 0) ? "enabled" : "disabled",
           HeartbeatLockupChecker::period() / ZX_MSEC(1),
           HeartbeatLockupChecker::threshold() / ZX_MSEC(1),
@@ -509,8 +509,8 @@ void lockup_primary_init() {
       if (CriticalSectionLockupChecker::IsEnabled()) {
         dprintf(
             INFO,
-            "lockup_detector: critical section threshold is %" PRId64
-            " ms, fatal threshold is %" PRId64 " ms\n",
+            "lockup_detector: critical section threshold %" PRId64
+            " ms, fatal threshold %" PRId64 " ms\n",
             TicksToDuration(CriticalSectionLockupChecker::threshold_ticks()) / ZX_MSEC(1),
             TicksToDuration(CriticalSectionLockupChecker::fatal_threshold_ticks()) / ZX_MSEC(1));
       } else {
