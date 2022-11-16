@@ -409,7 +409,7 @@ func copyImagesToDir(ctx context.Context, dir string, preservePath bool, imgs ..
 	// Copy each in a goroutine for efficiency's sake.
 	eg, ctx := errgroup.WithContext(ctx)
 	for _, img := range imgs {
-		if img.Reader != nil {
+		if img != nil {
 			img := img
 			eg.Go(func() error {
 				base := img.Name

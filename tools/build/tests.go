@@ -110,22 +110,11 @@ func (env Environment) TargetsEmulator() bool {
 	return env.Dimensions.DeviceType == "QEMU" || env.Dimensions.DeviceType == "AEMU"
 }
 
-// ImageOverrides is a map of image type to image metadata as defined in images.json.
-type ImageOverrides map[ImageOverrideType]ImageOverrideMetadata
-
-// ImageOverrideType represents image types supported for overriding.
-type ImageOverrideType string
-
-const (
-	ZbiImage    ImageOverrideType = "zbi_image"
-	VbmetaImage ImageOverrideType = "vbmeta_image"
-	QemuKernel  ImageOverrideType = "qemu_kernel"
-)
-
-// ImageOverrideMetadata contains metadata to identify an Image to override with.
-type ImageOverrideMetadata struct {
-	Name  string `json:"name,omitempty"`
-	Label string `json:"label,omitempty"`
+// ImageOverrides gives images by label that should override the default images.
+type ImageOverrides struct {
+	ZBI        string `json:"zbi,omitempty"`
+	VBMeta     string `json:"vbmeta,omitempty"`
+	QEMUKernel string `json:"qemu_kernel,omitempty"`
 }
 
 // DimensionSet encapsulates the Swarming dimensions a test wishes to target.
