@@ -219,6 +219,7 @@ metrics_registry("testapp_metrics_registry") {
 executable("cobalt_app_unittests") {
   testonly = true
   sources = [
+    "aggregate_and_upload_impl_test.cc",
     "cobalt_app_test.cc",
     "cobalt_controller_impl_test.cc",
     "configuration_data_test.cc",
