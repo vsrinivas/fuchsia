@@ -76,11 +76,11 @@ Client and server implementations can then be written in any supported language:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3 id="canvas-add_line_metered-cpp_natural-client">Client</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/cpp_natural/TODO.md" region_tag="todo" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/cpp_natural/client/main.cc" highlight="now_has_response" %}</pre>
         </section>
         <section>
           <h3 id="canvas-add_line_metered-cpp_natural-server">Server</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/cpp_natural/TODO.md" region_tag="todo" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/cpp_natural/server/main.cc" highlight="now_has_response" %}</pre>
         </section>
       </devsite-selector>
     </section>
