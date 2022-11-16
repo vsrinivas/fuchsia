@@ -320,7 +320,7 @@ constexpr ErrorDef<133, std::string_view, const flat::Attribute *> ErrAttributeA
     "please use a literal instead");
 constexpr RetiredDef<134, const flat::Attribute *> ErrAttributeConstraintNotSatisfied(
     "declaration did not satisfy constraint of attribute '{}'");
-constexpr UndocumentedErrorDef<135, std::string_view> ErrInvalidDiscoverableName(
+constexpr ErrorDef<135, std::string_view> ErrInvalidDiscoverableName(
     "invalid @discoverable name '{}'; must follow the format 'the.library.name.TheProtocolName'");
 constexpr ErrorDef<136, flat::Name> ErrTableCannotBeSimple(
     "union '{}' is not a simple type, so it cannot be used in "

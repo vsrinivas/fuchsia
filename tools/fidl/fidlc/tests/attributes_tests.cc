@@ -2131,4 +2131,9 @@ protocol Foo {};
   }
 }
 
+TEST(AttributesTests, BadDiscoverableInvalidNameErrCat) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0135.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidDiscoverableName);
+}
 }  // namespace

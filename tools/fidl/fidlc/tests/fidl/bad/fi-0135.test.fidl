@@ -1,0 +1,11 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.bad.fi0135;
+
+@discoverable("test.bad.fi0135/Parser")
+protocol Parser {
+    Tokenize() -> (struct {
+        tokens vector<string>;
+    });
+};
