@@ -4,19 +4,23 @@
 
 #![allow(dead_code)]
 use {
-    crate::scrypt::ScryptError,
+    crate::{
+        scrypt::ScryptError,
+        state::{PasswordError, State, StateMachine},
+    },
     anyhow::{anyhow, Error},
     async_trait::async_trait,
     async_utils::hanging_get::server::{HangingGet, Publisher},
     fidl::endpoints::ControlHandle,
     fidl_fuchsia_identity_authentication::{
-        PasswordError, PasswordInteractionRequest, PasswordInteractionRequestStream,
-        PasswordInteractionWatchStateResponder, PasswordInteractionWatchStateResponse,
+        PasswordInteractionRequest, PasswordInteractionRequestStream,
+        PasswordInteractionWatchStateResponder,
     },
+    fuchsia_async::Task,
     fuchsia_zircon as zx,
-    futures::StreamExt,
+    futures::{channel::mpsc, StreamExt},
     std::{cell::RefCell, rc::Rc},
-    tracing::warn,
+    tracing::{error, warn},
 };
 
 /// A trait for types that can determine whether a supplied password is either
@@ -34,31 +38,29 @@ pub enum ValidationError {
     PasswordError(PasswordError),
 }
 
-type NotifyFn = Box<
-    dyn Fn(&PasswordInteractionWatchStateResponse, PasswordInteractionWatchStateResponder) -> bool,
->;
+type NotifyFn = Box<dyn Fn(&State, PasswordInteractionWatchStateResponder) -> bool>;
 
-type PasswordInteractionStateHangingGet = HangingGet<
-    PasswordInteractionWatchStateResponse,
-    PasswordInteractionWatchStateResponder,
-    NotifyFn,
->;
+type PasswordInteractionStateHangingGet =
+    HangingGet<State, PasswordInteractionWatchStateResponder, NotifyFn>;
 
-type PasswordInteractionStatePublisher = Publisher<
-    PasswordInteractionWatchStateResponse,
-    PasswordInteractionWatchStateResponder,
-    NotifyFn,
->;
+type PasswordInteractionStatePublisher =
+    Publisher<State, PasswordInteractionWatchStateResponder, NotifyFn>;
 
-/// Tracks the state of PasswordInteraction events.
+// The buffer parameter used when creating the change notification channel. Since we have one
+// sender the actual channel capacity is one larger than this number.
+const CHANNEL_SIZE: usize = 2;
+
+/// A struct to handle interactive password interaction over a request stream, using the supplied
+/// validator to validate passwords.
 pub struct PasswordInteractionHandler<V, T>
 where
     V: Validator<T>,
 {
     hanging_get: RefCell<PasswordInteractionStateHangingGet>,
     stream: RefCell<PasswordInteractionRequestStream>,
-    publisher: RefCell<Option<PasswordInteractionStatePublisher>>,
+    state_machine: Rc<StateMachine>,
     validator: V,
+    publish_task: Task<()>,
     _phantom: std::marker::PhantomData<T>,
 }
 
@@ -66,28 +68,53 @@ impl<V, T> PasswordInteractionHandler<V, T>
 where
     V: Validator<T>,
 {
-    pub fn new(stream: PasswordInteractionRequestStream, validator: V) -> Self {
-        let hanging_get = PasswordInteractionHandler::<V, T>::init_hanging_get(
-            PasswordInteractionWatchStateResponse::Waiting(vec![]),
-        );
+    pub async fn new(stream: PasswordInteractionRequestStream, validator: V) -> Self {
+        let (sender, mut receiver) = mpsc::channel(CHANNEL_SIZE);
+        let state_machine = Rc::new(StateMachine::new(sender));
+        let hanging_get = PasswordInteractionHandler::<V, T>::hanging_get(&state_machine).await;
+
+        // Create an async task that publishes to the hanging get each time the state machine
+        // notifies us of an update to the state.
+        let publisher = hanging_get.new_publisher();
+        let publish_task = Task::local(async move {
+            while let Some(state) = receiver.next().await {
+                publisher.set(state);
+            }
+            // We don't expect the state machine to ever close its channel so log if that happens.
+            error!("State machine mpsc channel was closed");
+        });
 
         Self {
             hanging_get: RefCell::new(hanging_get),
             stream: RefCell::new(stream),
-            publisher: RefCell::new(None),
+            state_machine,
             validator,
+            publish_task,
             _phantom: std::marker::PhantomData,
         }
     }
 
-    fn init_hanging_get(
-        initial_state: PasswordInteractionWatchStateResponse,
-    ) -> PasswordInteractionStateHangingGet {
-        let notify_fn: NotifyFn = Box::new(|state, responder| {
-            if responder.send(&mut state.to_owned()).is_err() {
-                tracing::warn!("Failed to send password interaction state");
+    /// Creates a new `PasswordInteractionStateHangingGet` that begins with the current state of the
+    /// supplied state machine and notifies that state machine on sending an error state to a FIDL
+    /// observer. This relies on the fact that interaction state is local to a single FIDL client
+    /// and therefore there cannot be multiple hanging get observers monitoring the same state.
+    async fn hanging_get(state_machine: &Rc<StateMachine>) -> PasswordInteractionStateHangingGet {
+        let initial_state = state_machine.get().await;
+        let state_machine_for_notify = Rc::clone(state_machine);
+        let notify_fn: NotifyFn = Box::new(move |state, responder| {
+            let sending_error_state = state.is_error();
+            if let Err(err) = responder.send(&mut (*state).into()) {
+                warn!("Failed to send password interaction state: {:?}", err);
+                return false;
             }
-
+            if sending_error_state {
+                // The act of successfully delivering an error to the client is what moves us out of
+                // the error state.
+                let state_machine_for_task = Rc::clone(&state_machine_for_notify);
+                Task::local(async move { state_machine_for_task.leave_error().await }).detach();
+            }
+            // Clear the dirty bit on the hanging get observer so long as we successfully sent a
+            // response.
             true
         });
 
@@ -103,43 +130,40 @@ where
             while let Some(request) = self.stream.borrow_mut().next().await {
                 match request {
                     Ok(PasswordInteractionRequest::SetPassword { password, control_handle }) => {
-                        //  TODO(fxb/108842): Check that the state is waiting::set_password before calling validate.
-                        match self.validator.validate(&password).await {
-                            Ok(res) => {
-                                control_handle.shutdown_with_epitaph(zx::Status::OK);
-                                return Ok(res);
+                        match self.state_machine.get().await {
+                            State::WaitingForPassword => {
+                                match self.validator.validate(&password).await {
+                                    Ok(res) => {
+                                        // When authentication is successfully completed, close the
+                                        // channel and return a response on the parent channel.
+                                        control_handle.shutdown_with_epitaph(zx::Status::OK);
+                                        return Ok(res);
+                                    }
+                                    Err(ValidationError::PasswordError(e)) => {
+                                        warn!("Password was not valid: {:?}", e);
+                                        self.state_machine.set_error(e).await;
+                                    }
+                                    Err(ValidationError::InternalScryptError(e)) => {
+                                        warn!("Responded with internal error: {:?}", e);
+                                        control_handle.shutdown_with_epitaph(zx::Status::INTERNAL);
+                                        return Err(anyhow!(
+                                            "Internal error while attempting to validate"
+                                        ));
+                                    }
+                                }
                             }
-                            Err(ValidationError::PasswordError(e)) => {
-                                let state_publisher = self.hanging_get.borrow().new_publisher();
-                                state_publisher
-                                    .set(PasswordInteractionWatchStateResponse::Error(e));
-                                *self.publisher.borrow_mut() = Some(state_publisher);
-                            }
-                            Err(ValidationError::InternalScryptError(e)) => {
-                                warn!("Responded with internal error: {:?}", e);
-                                control_handle.shutdown_with_epitaph(zx::Status::INTERNAL);
-                                return Err(anyhow!("Internal error while attempting to validate"));
+                            state => {
+                                warn!("Cannot call set_password while in state: {:?}", state);
+                                self.state_machine
+                                    .set_error(PasswordError::NotWaitingForPassword)
+                                    .await;
                             }
                         }
                     }
                     Ok(PasswordInteractionRequest::WatchState { responder }) => {
                         subscriber.register(responder)?;
-                        if let Some(publisher) = &*self.publisher.borrow_mut() {
-                            // TODO(fxb/108842): Actually implement the state machine instead of using
-                            // Waiting(vec![]) for the initial state.
-                            publisher.update(move |state| {
-                                if *state == PasswordInteractionWatchStateResponse::Waiting(vec![])
-                                {
-                                    false
-                                } else {
-                                    *state = PasswordInteractionWatchStateResponse::Waiting(vec![]);
-                                    true
-                                }
-                            });
-                        }
                     }
                     Err(e) => {
-                        warn!("Responded with fidl error: {}", e);
                         return Err(anyhow!("Error reading PasswordInteractionRequest: {}", e));
                     }
                 }
@@ -151,17 +175,24 @@ where
 
 #[cfg(test)]
 mod tests {
-
     use {
         super::*,
         assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_identity_authentication::{
-            PasswordInteractionMarker, PasswordInteractionProxy,
+            self as fauth, PasswordCondition, PasswordInteractionMarker, PasswordInteractionProxy,
+            PasswordInteractionWatchStateResponse as WatchStateResponse,
         },
-        fuchsia_async::Task,
+        fuchsia_async::Timer,
+        lazy_static::lazy_static,
         scrypt::errors::InvalidParams,
+        std::time::Duration,
     };
+
+    lazy_static! {
+        static ref WAITING_FOR_PASSWORD: WatchStateResponse =
+            WatchStateResponse::Waiting(vec![PasswordCondition::SetPassword(fauth::Empty)]);
+    }
 
     struct TestValidateSuccess {}
 
@@ -177,7 +208,7 @@ mod tests {
     #[async_trait]
     impl Validator<()> for TestValidatePasswordError {
         async fn validate(&self, _password: &str) -> Result<(), ValidationError> {
-            Err(ValidationError::PasswordError(PasswordError::TooShort(6)))
+            Err(ValidationError::PasswordError(PasswordError::TooShort(10)))
         }
     }
 
@@ -198,7 +229,7 @@ mod tests {
         let password_interaction_handler = PasswordInteractionHandler::new(stream, validate);
 
         Task::local(async move {
-            if Rc::new(password_interaction_handler)
+            if Rc::new(password_interaction_handler.await)
                 .handle_password_interaction_request_stream()
                 .await
                 .is_err()
@@ -216,7 +247,7 @@ mod tests {
         let proxy = make_proxy(validate);
 
         let state = proxy.watch_state().await.expect("Failed to get interaction state");
-        assert_eq!(state, PasswordInteractionWatchStateResponse::Waiting(vec![]));
+        assert_eq!(state, *WAITING_FOR_PASSWORD);
     }
 
     #[fuchsia::test]
@@ -225,7 +256,7 @@ mod tests {
         let password_proxy = make_proxy(validate);
         // The initial state should be Waiting.
         let state = password_proxy.watch_state().await.expect("Failed to get interaction state");
-        assert_eq!(state, PasswordInteractionWatchStateResponse::Waiting(vec![]));
+        assert_eq!(state, *WAITING_FOR_PASSWORD);
 
         // Send a SetPassword event and verify that channel closes on success.
         let _ = password_proxy.set_password("password").unwrap();
@@ -242,12 +273,12 @@ mod tests {
 
         // The initial state should be Waiting.
         let state = password_proxy.watch_state().await.expect("Failed to get interaction state");
-        assert_eq!(state, PasswordInteractionWatchStateResponse::Waiting(vec![]));
+        assert_eq!(state, *WAITING_FOR_PASSWORD);
 
         // Send a SetPassword event and verify that state is Error.
         let _ = password_proxy.set_password("password").unwrap();
         let state = password_proxy.watch_state().await.expect("Failed to get interaction state");
-        assert_eq!(state, PasswordInteractionWatchStateResponse::Error(PasswordError::TooShort(6)));
+        assert_eq!(state, WatchStateResponse::Error(PasswordError::TooShort(10).into()));
     }
 
     #[fuchsia::test]
@@ -255,14 +286,16 @@ mod tests {
         let validate = TestValidatePasswordError {};
         let password_proxy = make_proxy(validate);
 
-        // Send a SetPassword event and verify that state is Error.
+        // Send a SetPassword event (which the validator will not accept), insert a short delay to
+        // allow async processing, then verify a new WatchState returns Error.
         let _ = password_proxy.set_password("password").unwrap();
+        Timer::new(Duration::from_millis(10)).await;
         let state = password_proxy.watch_state().await.expect("Failed to get interaction state");
-        assert_eq!(state, PasswordInteractionWatchStateResponse::Error(PasswordError::TooShort(6)));
+        assert_eq!(state, WatchStateResponse::Error(PasswordError::TooShort(10).into()));
 
         // Check that the state has been reset to Waiting on following call to WatchState.
         let state = password_proxy.watch_state().await.expect("Failed to get interaction state");
-        assert_eq!(state, PasswordInteractionWatchStateResponse::Waiting(vec![]));
+        assert_eq!(state, *WAITING_FOR_PASSWORD);
     }
 
     #[fuchsia::test]

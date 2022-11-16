@@ -3,61 +3,46 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_identity_authentication as fidl, fuchsia_zircon::Time, futures::lock::Mutex,
-    std::cell::RefCell,
+    fidl_fuchsia_identity_authentication as fidl, fuchsia_zircon::Time, futures::channel::mpsc,
+    futures::lock::Mutex, std::cell::RefCell, tracing::warn,
 };
 
-type ChangeFn = Box<dyn Fn(&State)>;
-
-#[allow(dead_code)]
 /// A state machine that tracks the current state of the interaction between a client attempting to
-/// enroll or authenticate and the password authenticator. The state machine will optionally call a
-/// function with the current state each time that state changes.
+/// enroll or authenticate and the password authenticator. The state machine will publish the
+/// current state using the supplied `mspc::Sender` each time state is updated.
 pub(crate) struct StateMachine {
     /// The current state.
     current_state: Mutex<State>,
-    /// The function to call on state change.
-    on_change: RefCell<Option<ChangeFn>>,
+    /// A `Sender` to publish state updates.
+    sender: RefCell<mpsc::Sender<State>>,
 }
 
 impl StateMachine {
     /// Constructs a new state machine beginning in the default state.
-    #[allow(dead_code)]
-    pub fn new() -> Self {
+    pub fn new(sender: mpsc::Sender<State>) -> Self {
         StateMachine {
             current_state: Mutex::new(State::WaitingForPassword),
-            on_change: RefCell::new(None),
+            sender: RefCell::new(sender),
         }
     }
 
-    /// Registers a function to be called every time the state is changed.
-    #[allow(dead_code)]
-    pub fn register_change_function(&self, on_change: Box<dyn Fn(&State)>) {
-        self.on_change.replace(Some(on_change));
-    }
-
     /// Returns the current state.
-    #[allow(dead_code)]
     pub async fn get(&self) -> State {
         *self.current_state.lock().await
     }
 
-    /// Moves from any state to the `Error` state with the supplied `PasswordError`, calling the
-    /// `on_change` function if one exists.
-    #[allow(dead_code)]
+    /// Moves from any state to the `Error` state with the supplied `PasswordError`.
     pub async fn set_error(&self, error: PasswordError) {
         let new_state = State::Error { error_type: error };
         let mut current_state_lock = self.current_state.lock().await;
         *current_state_lock = new_state;
-        if let Some(on_change) = &*self.on_change.borrow() {
-            (on_change)(&current_state_lock);
-        }
+        if let Err(err) = self.sender.borrow_mut().try_send(*current_state_lock) {
+            warn!("Error sending set_error state: {:?}", err);
+        };
     }
 
-    /// If the current state is `Error` then move to the next state indicated by the error, calling
-    /// the `on_change` function if one exists. If the current state is not `Error` this function
-    /// has no effect.
-    #[allow(dead_code)]
+    /// If the current state is `Error` then move to the next state indicated by the error.
+    /// If the current state is not `Error` this function has no effect.
     pub async fn leave_error(&self) {
         let mut current_state_lock = self.current_state.lock().await;
         if let State::Error { error_type } = &*current_state_lock {
@@ -71,15 +56,14 @@ impl StateMachine {
                 // All other errors only describe a problem with a previously supplied password.
                 // Once the error is no longer relevant, move back to waiting for another password.
                 *current_state_lock = State::WaitingForPassword;
-                if let Some(on_change) = &*self.on_change.borrow() {
-                    (on_change)(&current_state_lock);
-                }
+                if let Err(err) = self.sender.borrow_mut().try_send(*current_state_lock) {
+                    warn!("Error sending leave_error state: {:?}", err);
+                };
             }
         }
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 /// The set of states that interaction between a client attempting to enroll or authenticate and the
 /// password authenticator may be in. These states reflects the state password authenticator returns
@@ -87,6 +71,7 @@ impl StateMachine {
 /// see sdk/fidl/fuchsia.identity.authentication/mechanisms.fidl for further information.
 pub(crate) enum State {
     /// Client must wait before another attempt.
+    #[allow(dead_code)]
     WaitingForTime { time: Time },
     /// All preconditions are met.
     WaitingForPassword,
@@ -96,7 +81,6 @@ pub(crate) enum State {
 
 impl State {
     /// Convenience function that returns true iff the state is an error.
-    #[allow(dead_code)]
     pub fn is_error(&self) -> bool {
         matches!(self, State::Error { .. })
     }
@@ -123,7 +107,6 @@ impl From<State> for fidl::PasswordInteractionWatchStateResponse {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 /// The set of errors that may be encountered during a password interaction.
 pub enum PasswordError {
@@ -152,40 +135,25 @@ impl From<PasswordError> for fidl::PasswordError {
 
 #[cfg(test)]
 mod test {
-    use {super::*, assert_matches::assert_matches, std::rc::Rc};
+    use {super::*, assert_matches::assert_matches, futures::StreamExt};
     const TEST_MINIMUM_LENGTH: u8 = 6;
+
+    /// Constructs a `StateMachine` for testing returning a tuple of the state machine and
+    /// a `Receiver` that receivers
+    fn make_state_machine() -> (StateMachine, mpsc::Receiver<State>) {
+        let (sender, receiver) = mpsc::channel(2);
+        (StateMachine::new(sender), receiver)
+    }
 
     #[fuchsia::test]
     async fn initialization() {
-        let state_machine = StateMachine::new();
+        let (state_machine, _) = make_state_machine();
         assert_matches!(state_machine.get().await, State::WaitingForPassword);
     }
 
     #[fuchsia::test]
-    async fn try_set_error_without_change_function() {
-        let state_machine = StateMachine::new();
-        for error in [
-            PasswordError::Incorrect,
-            PasswordError::TooShort(TEST_MINIMUM_LENGTH),
-            PasswordError::TooWeak,
-            PasswordError::MustWait(Time::INFINITE),
-            // Note: repeat the same error to verify that is allowed
-            PasswordError::MustWait(Time::INFINITE),
-        ] {
-            state_machine.set_error(error).await;
-            assert_eq!(state_machine.get().await, State::Error { error_type: error });
-        }
-    }
-
-    #[fuchsia::test]
-    async fn try_set_error_with_change_function() {
-        let state_machine = StateMachine::new();
-        let reported_state = Rc::new(RefCell::new(State::WaitingForPassword));
-        let reported_state_clone = Rc::clone(&reported_state);
-        state_machine.register_change_function(Box::new(move |state| {
-            *reported_state_clone.borrow_mut() = *state;
-        }));
-
+    async fn try_set_error() {
+        let (state_machine, mut receiver) = make_state_machine();
         for error in [
             PasswordError::Incorrect,
             PasswordError::TooShort(TEST_MINIMUM_LENGTH),
@@ -193,20 +161,14 @@ mod test {
             PasswordError::MustWait(Time::INFINITE),
         ] {
             state_machine.set_error(error).await;
-            assert_eq!(*reported_state.borrow(), State::Error { error_type: error });
             assert_eq!(state_machine.get().await, State::Error { error_type: error });
+            assert_eq!(receiver.next().await, Some(State::Error { error_type: error }));
         }
     }
 
     #[fuchsia::test]
     async fn try_leave_error_valid() {
-        let state_machine = StateMachine::new();
-        let reported_state = Rc::new(RefCell::new(State::WaitingForTime { time: Time::INFINITE }));
-        let reported_state_clone = Rc::clone(&reported_state);
-        state_machine.register_change_function(Box::new(move |state| {
-            *reported_state_clone.borrow_mut() = *state;
-        }));
-
+        let (state_machine, mut receiver) = make_state_machine();
         for error in [
             PasswordError::Incorrect,
             PasswordError::TooShort(TEST_MINIMUM_LENGTH),
@@ -214,15 +176,17 @@ mod test {
         ] {
             state_machine.set_error(error).await;
             state_machine.leave_error().await;
-            assert_matches!(*reported_state.borrow(), State::WaitingForPassword);
             assert_matches!(state_machine.get().await, State::WaitingForPassword);
+            // The receiver should have received events to first enter then leave the error.
+            assert_eq!(receiver.next().await, Some(State::Error { error_type: error }));
+            assert_eq!(receiver.next().await, Some(State::WaitingForPassword));
         }
     }
 
     #[fuchsia::test]
     #[should_panic]
     async fn try_leave_error_invalid() {
-        let state_machine = StateMachine::new();
+        let (state_machine, _) = make_state_machine();
 
         // Attempting to leave a must wait error leads to a panic because we don't support
         // waiting for time yet.
@@ -232,17 +196,12 @@ mod test {
 
     #[fuchsia::test]
     async fn try_leave_error_noop() {
-        let state_machine = StateMachine::new();
-        let was_called = Rc::new(RefCell::new(false));
-        let was_called_clone = Rc::clone(&was_called);
-        state_machine.register_change_function(Box::new(move |_| {
-            *was_called_clone.borrow_mut() = true;
-        }));
+        let (state_machine, mut receiver) = make_state_machine();
 
         // Attempting to leave a waiting state has no effect.
         assert_eq!(state_machine.get().await, State::WaitingForPassword);
         state_machine.leave_error().await;
         assert_eq!(state_machine.get().await, State::WaitingForPassword);
-        assert!(!*was_called.borrow());
+        assert!(receiver.try_next().is_err());
     }
 }
