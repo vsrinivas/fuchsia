@@ -82,7 +82,7 @@ you need to modify the arguments that follow.
 
 `fx set` stores its configuration in an `args.gn` file in the output directory.
 The output directly is `out/default`. You can specify a different directory
-using `fx set --dir <out_dir>`.
+using `fx --dir <out_dir> set <set_args>`.
 
 You can edit the generated `args.gn` file using the `fx args` command to create
 more elaborate configurations. `fx args` will open `args.gn` in an editor, let
