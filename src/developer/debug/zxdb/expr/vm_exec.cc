@@ -33,6 +33,10 @@ enum class Completion {
 // Sanity check for the maximum local variables alive at a given time.
 constexpr uint32_t kMaxLocals = 256;
 
+// Sanity check for total program instructions executed. The program will be terminated after
+// this many instructions. This is to prevent infinite loops from hanging the debugger.
+constexpr int kMaxInstructions = 16384;
+
 // This class wants to run everything sequentially until an asynchronous operation happens. It
 // needs to integrate with the rest of the expression system which takes EvalCallbacks that can
 // execute synchronously (from within the current stack frame) or asynchronously (from the message
@@ -148,6 +152,9 @@ class VmExecState : public fxl::RefCountedThreadSafe<VmExecState> {
   // instruction will be stream_index_ - 1.
   size_t stream_index_ = 0;
 
+  // Counter for the total number of instructions executed.
+  int instruction_count_ = 0;
+
   std::vector<ExprValue> stack_;
 
   // The local variable "slots" in the Op::LocalInfo refer into this array. See the comment at the
@@ -191,6 +198,10 @@ void VmExecState::Exec(fxl::RefPtr<VmExecState> state) {
 }
 
 Completion VmExecState::ExecOp(const VmOp& op) {
+  instruction_count_++;
+  if (instruction_count_ > kMaxInstructions)
+    return ReportError("Execution terminated after max instruction count reached.");
+
   switch (op.op) {
     // clang-format off
     case VmOpType::kError:          return ExecError(op);
