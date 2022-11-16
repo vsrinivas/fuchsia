@@ -5,13 +5,14 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_V2_NODE_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_V2_NODE_H_
 
+#include <fidl/fuchsia.component.runner/cpp/wire.h>
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.driver.host/cpp/wire.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <list>
 
-#include "src/devices/bin/driver_manager/v2/driver_component.h"
 #include "src/devices/bin/driver_manager/v2/driver_host.h"
 
 namespace dfv2 {
@@ -70,6 +71,8 @@ enum class Collection {
 
 class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
              public fidl::WireServer<fuchsia_driver_framework::Node>,
+             public fidl::WireServer<fuchsia_component_runner::ComponentController>,
+             public fidl::WireAsyncEventHandler<fuchsia_driver_host::Driver>,
              public std::enable_shared_from_this<Node> {
  public:
   Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_manager,
@@ -115,7 +118,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 
   const std::string& name() const;
   const DriverHost* driver_host() const { return *driver_host_; }
-  const DriverComponent* driver_component() const;
+  const std::string& driver_url() const;
   const std::vector<Node*>& parents() const;
   const std::list<std::shared_ptr<Node>>& children() const;
   fidl::ArenaBase& arena() { return arena_; }
@@ -134,6 +137,21 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   std::string TopoName() const;
 
  private:
+  struct DriverComponent {
+    // This represents the Driver Component within the Component Framework.
+    // When this is closed with an epitaph it signals to the Component Framework
+    // that this driver component has stopped.
+    fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> component_controller_ref;
+    std::optional<fidl::WireSharedClient<fuchsia_driver_host::Driver>> driver;
+    std::string driver_url;
+    bool stop_called = false;
+  };
+  // This is called when fuchsia_driver_framework::Driver is closed.
+  void on_fidl_error(fidl::UnbindInfo error) override;
+  // fidl::WireServer<fuchsia_component_runner::ComponentController>
+  // We ignore these signals.
+  void Stop(StopCompleter::Sync& completer) override;
+  void Kill(KillCompleter::Sync& completer) override;
   // fidl::WireServer<fuchsia_driver_framework::NodeController>
   void Remove(RemoveCompleter::Sync& completer) override;
   // fidl::WireServer<fuchsia_driver_framework::Node>
@@ -141,6 +159,9 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 
   // Add this Node to its parents. This should be called when the node is created.
   void AddToParents();
+
+  // Close the component connection to signal to CF that the component has stopped.
+  void StopComponent();
 
   // The node's original name. This should be used for exporting to devfs.
   // TODO(fxbug.dev/111156): Migrate driver names to only use CF valid characters and simplify
@@ -168,8 +189,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 
   bool removal_in_progress_ = false;
 
-  // If this exists, then this `driver_component_` is bound to this node.
-  std::unique_ptr<DriverComponent> driver_component_;
+  std::optional<DriverComponent> driver_component_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;
 };

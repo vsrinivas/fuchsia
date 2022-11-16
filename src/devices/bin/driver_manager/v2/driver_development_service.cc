@@ -80,9 +80,7 @@ zx::result<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator,
 
   device_info.moniker(fidl::StringView(allocator, node->TopoName()));
 
-  if (node->driver_component()) {
-    device_info.bound_driver_url(fidl::StringView(allocator, node->driver_component()->url()));
-  }
+  device_info.bound_driver_url(fidl::StringView(allocator, node->driver_url()));
 
   auto properties = node->properties();
   if (!properties.empty()) {

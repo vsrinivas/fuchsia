@@ -30,7 +30,6 @@
 #include "src/devices/bin/driver_manager/v2/composite_assembler.h"
 #include "src/devices/bin/driver_manager/v2/composite_manager.h"
 #include "src/devices/bin/driver_manager/v2/device_group_v2.h"
-#include "src/devices/bin/driver_manager/v2/driver_component.h"
 #include "src/devices/bin/driver_manager/v2/driver_host.h"
 #include "src/devices/bin/driver_manager/v2/node.h"
 

@@ -112,10 +112,7 @@ void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
       }
       root->RecordString("symbols", fxl::JoinStrings(strings, ", "));
     }
-    std::string driver_string = "unbound";
-    if (node->driver_component()) {
-      driver_string = std::string(node->driver_component()->url());
-    }
+    std::string driver_string = node->driver_url();
     root->RecordString("driver", driver_string);
 
     // Push children of this node onto the stack. We do this in reverse order to

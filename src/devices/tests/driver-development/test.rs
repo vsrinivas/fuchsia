@@ -508,7 +508,10 @@ async fn test_get_device_info_no_filter_dfv2() -> Result<()> {
     let sys = &root.child_nodes[0];
     assert_eq!(sys.info.moniker.as_ref().expect("DFv2 node missing moniker"), "root.sys");
     assert!(sys.info.bound_driver_libname.is_none(), "DFv2 node specified bound driver libname");
-    assert!(sys.info.bound_driver_url.is_none());
+    assert_eq!(
+        sys.info.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
+        "unbound"
+    );
     assert_eq!(
         sys.info.node_property_list.as_ref().map(|x| x.as_slice()),
         get_no_protocol_dfv2_property_list().as_ref().map(|x| x.as_slice())

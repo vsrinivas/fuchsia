@@ -14,6 +14,8 @@
 #include "src/devices/lib/log/log.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
+const std::string kUnboundUrl = "unbound";
+
 namespace fdf = fuchsia_driver_framework;
 namespace fdecl = fuchsia_component_decl;
 
@@ -343,8 +345,12 @@ Node::~Node() { UnbindAndReset(controller_ref_); }
 
 const std::string& Node::name() const { return name_; }
 
-const DriverComponent* Node::driver_component() const { return driver_component_.get(); }
-
+const std::string& Node::driver_url() const {
+  if (driver_component_) {
+    return driver_component_->driver_url;
+  }
+  return kUnboundUrl;
+}
 const std::vector<Node*>& Node::parents() const { return parents_; }
 
 const std::list<std::shared_ptr<Node>>& Node::children() const { return children_; }
@@ -395,6 +401,16 @@ void Node::OnBind() const {
   }
 }
 
+void Node::Stop(StopCompleter::Sync& completer) {
+  LOGF(INFO, "Calling Remove on %s because of Stop() from component framework.", name().c_str());
+  Remove();
+}
+
+void Node::Kill(KillCompleter::Sync& completer) {
+  LOGF(INFO, "Calling Remove on %s because of Kill() from component framework.", name().c_str());
+  Remove();
+}
+
 Node* Node::GetPrimaryParent() const {
   return parents_.empty() ? nullptr : parents_[primary_index_];
 }
@@ -432,10 +448,15 @@ void Node::Remove() {
 
   // If we still have a driver bound to us, we tell it to stop.
   // (The Driver will call back into this Remove function once it stops).
-  if (driver_component_ && driver_component_->is_alive()) {
-    zx_status_t status = driver_component_->StopDriver();
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to stop node: %s", TopoName().c_str());
+  if (driver_component_ && driver_component_->driver) {
+    if (!driver_component_->stop_called) {
+      auto result = (*driver_component_->driver)->Stop();
+      if (!result.ok()) {
+        LOGF(ERROR, "Node: %s failed to stop driver: %s", name().c_str(),
+             result.FormatDescription().data());
+      } else {
+        driver_component_->stop_called = true;
+      }
     }
     return;
   }
@@ -631,12 +652,46 @@ zx::result<> Node::StartDriver(
     return zx::error(start.error_value());
   }
 
-  // Create a DriverComponent to manage the driver.
-  driver_component_ = std::make_unique<DriverComponent>(
-      std::move(*start), std::move(controller), dispatcher_, url,
-      [node = this](auto status) { node->Remove(); },
-      [node = this](auto status) { node->Remove(); });
+  driver_component_ = DriverComponent{
+      .component_controller_ref =
+          fidl::BindServer<fidl::WireServer<fuchsia_component_runner::ComponentController>>(
+              dispatcher_, std::move(controller), shared_from_this(),
+              [](fidl::WireServer<fuchsia_component_runner::ComponentController>* node, auto,
+                 auto) {
+                LOGF(WARNING, "Removing node %s because of ComponentController binding closed",
+                     static_cast<Node*>(node)->name().c_str());
+                static_cast<Node*>(node)->Remove();
+              }),
+
+      .driver =
+          fidl::WireSharedClient<fuchsia_driver_host::Driver>(std::move(*start), dispatcher_, this),
+      .driver_url = std::string(url),
+  };
+
   return zx::ok();
+}
+
+void Node::StopComponent() {
+  if (!driver_component_) {
+    return;
+  }
+  // Send an epitaph to the component manager and close the connection. The
+  // server of a `ComponentController` protocol is expected to send an epitaph
+  // before closing the associated connection.
+  driver_component_->component_controller_ref.Close(ZX_OK);
+}
+
+void Node::on_fidl_error(fidl::UnbindInfo info) {
+  if (driver_component_) {
+    driver_component_->driver.reset();
+  }
+  // The only valid way a driver host should shut down the Driver channel
+  // is with the ZX_OK epitaph.
+  if (info.reason() != fidl::Reason::kPeerClosed || info.status() != ZX_OK) {
+    LOGF(ERROR, "Node: %s: driver channel shutdown with: %s", name().c_str(),
+         info.FormatDescription().data());
+  }
+  StopComponent();
 }
 
 }  // namespace dfv2
