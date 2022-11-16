@@ -74,6 +74,5 @@ third_party_rust_crate_log_visibility = [
   "//src/power/power-manager:*",
   "//src/settings/service:*",
   "//src/settings/storage:*",
-  "//src/storage/bin/odu:*",
   "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext:*",
 ]
