@@ -262,7 +262,7 @@ void DriverDevelopmentService::RemoveTestNode(RemoveTestNodeRequestView request,
     return;
   }
 
-  node->Remove();
+  node->Remove(dfv2::RemovalSet::kAll);
   test_nodes_.erase(name);
   completer.ReplySuccess();
 }

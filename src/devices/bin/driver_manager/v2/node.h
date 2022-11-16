@@ -69,6 +69,19 @@ enum class Collection {
   kUniversePackage,
 };
 
+enum class RemovalSet {
+  kAll,      // Remove the boot drivers and the package drivers
+  kPackage,  // Remove the package drivers
+};
+
+enum class NodeState {
+  kRunning,            // Normal running state.
+  kPrestop,            // Still running, but will remove soon. usually because
+                       //  Received Remove(kPackage), but is a boot driver.
+  kWaitingOnChildren,  // Received Remove, and waiting for children to be removed.
+  kWaitingOnDriver,    // Waiting for driver to respond from Stop() command.
+  kStopping,           // finishing shutdown of node.
+};
 class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
              public fidl::WireServer<fuchsia_driver_framework::Node>,
              public fidl::WireServer<fuchsia_component_runner::ComponentController>,
@@ -96,11 +109,13 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   // only removed after all of its children are removed. It also ensures that
   // a Node is only removed after the driver that is bound to it has been stopped.
   // This is safe to call multiple times.
-  // There are lots of reasons a Node's removal will be started:
-  //   - The Node's driver component wants to exit.
-  //   - The `node_ref` server has become unbound.
-  //   - The Node's parent is being removed.
-  void Remove();
+  // There are multiple reasons a Node's removal will be started:
+  //   - The system is being stopped.
+  //   - The Node had an unexpected error or disconnect
+  // During a system stop, Remove is expected to be called twice:
+  // once with |removal_set| == kPackage, and once with |removal_set| == kAll.
+  // Errors and disconnects that are unrecoverable should call Remove(kAll).
+  void Remove(RemovalSet removal_set);
 
   fit::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> AddChild(
       fuchsia_driver_framework::wire::NodeAddArgs args,
@@ -144,7 +159,6 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
     fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> component_controller_ref;
     std::optional<fidl::WireSharedClient<fuchsia_driver_host::Driver>> driver;
     std::string driver_url;
-    bool stop_called = false;
   };
   // This is called when fuchsia_driver_framework::Driver is closed.
   void on_fidl_error(fidl::UnbindInfo error) override;
@@ -159,6 +173,14 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 
   // Add this Node to its parents. This should be called when the node is created.
   void AddToParents();
+
+  // Shutdown helpers:
+  // Remove a child from this parent
+  void RemoveChild(std::shared_ptr<Node> child);
+  // Check to see if all children have been removed.  If so, move on to stopping driver.
+  void CheckForRemoval();
+  // After stopping driver, cleanup and remove node.
+  void FinishRemoval();
 
   // Close the component connection to signal to CF that the component has stopped.
   void StopComponent();
@@ -187,7 +209,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   Collection collection_ = Collection::kNone;
   fit::nullable<DriverHost*> driver_host_;
 
-  bool removal_in_progress_ = false;
+  NodeState node_state_ = NodeState::kRunning;
 
   std::optional<DriverComponent> driver_component_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;

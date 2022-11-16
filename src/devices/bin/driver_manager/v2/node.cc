@@ -23,6 +23,21 @@ namespace dfv2 {
 
 namespace {
 
+const char* State2String(NodeState state) {
+  switch (state) {
+    case NodeState::kRunning:
+      return "kRunning";
+    case NodeState::kPrestop:
+      return "kPrestop";
+    case NodeState::kWaitingOnChildren:
+      return "kWaitingOnChildren";
+    case NodeState::kWaitingOnDriver:
+      return "kWaitingOnDriver";
+    case NodeState::kStopping:
+      return "kStopping";
+  }
+}
+
 // The driver's component name is based on the node name, which means that the
 // node name cam only have [a-z0-9-_.] characters. DFv1 composites contain ':'
 // which is not allowed, so replace those characters.
@@ -402,13 +417,13 @@ void Node::OnBind() const {
 }
 
 void Node::Stop(StopCompleter::Sync& completer) {
-  LOGF(INFO, "Calling Remove on %s because of Stop() from component framework.", name().c_str());
-  Remove();
+  LOGF(DEBUG, "Calling Remove on %s because of Stop() from component framework.", name().c_str());
+  Remove(RemovalSet::kAll);
 }
 
 void Node::Kill(KillCompleter::Sync& completer) {
-  LOGF(INFO, "Calling Remove on %s because of Kill() from component framework.", name().c_str());
-  Remove();
+  LOGF(DEBUG, "Calling Remove on %s because of Kill() from component framework.", name().c_str());
+  Remove(RemovalSet::kAll);
 }
 
 Node* Node::GetPrimaryParent() const {
@@ -422,65 +437,108 @@ void Node::AddToParents() {
   }
 }
 
-void Node::Remove() {
-  removal_in_progress_ = true;
+void Node::RemoveChild(std::shared_ptr<Node> child) {
+  LOGF(DEBUG, "RemoveChild %s from parent %s", child->name().c_str(), name().c_str());
+  children_.erase(std::find(children_.begin(), children_.end(), child));
+  // If we are waiting for children, see if that is done:
+  if (node_state_ != NodeState::kPrestop && node_state_ != NodeState::kRunning) {
+    CheckForRemoval();
+  }
+}
+
+void Node::CheckForRemoval() {
+  if (node_state_ != NodeState::kWaitingOnChildren) {
+    LOGF(DEBUG, "Node: %s CheckForRemoval: not waiting on children.", name().c_str());
+    return;
+  }
+
+  LOGF(DEBUG, "Node: %s Checking for removal", name().c_str());
+  if (!children_.empty()) {
+    return;
+  }
+  LOGF(DEBUG, "Node::Remove(): %s children are empty", name().c_str());
+  node_state_ = NodeState::kWaitingOnDriver;
+  if (driver_component_ && driver_component_->driver && driver_component_->driver->is_valid()) {
+    auto result = (*driver_component_->driver)->Stop();
+    if (result.ok()) {
+      return;  // We'll now wait for the channel to close
+    }
+    LOGF(ERROR, "Node: %s failed to stop driver: %s", name().c_str(),
+         result.FormatDescription().data());
+    // We'd better continue to close, since we can't talk to the driver.
+  }
+  // No driver, go straight to full shutdown
+  FinishRemoval();
+  }
+
+void Node::FinishRemoval() {
+  LOGF(DEBUG, "Node: %s Finishing removal", name().c_str());
   // Get an extra shared_ptr to ourselves so we are not freed halfway through this function.
   auto this_node = shared_from_this();
+  ZX_ASSERT(node_state_ == NodeState::kWaitingOnDriver);
+  node_state_ = NodeState::kStopping;
+  StopComponent();
+  driver_component_.reset();
+  for (auto& parent : parents()) {
+    parent->RemoveChild(shared_from_this());
+    }
+  parents_.clear();
 
-  // Disable driver binding for the node. This also prevents child nodes from
-  // being added to this node.
-  node_manager_ = nullptr;
+  LOGF(DEBUG, "Node: %s unbinding and resetting", name().c_str());
+  UnbindAndReset(controller_ref_);
+  UnbindAndReset(node_ref_);
+}
+// State table for package driver:
+//                                   Initial States
+//                 Running | Prestop|  WoC   | WoDriver | Stopping
+// Remove(kPkg)      WoC   |  WoC   | Ignore |  Error!  |  Error!
+// Remove(kAll)      WoC   |  WoC   |  WoC   |  Error!  |  Error!
+// children empty    N/A   |  N/A   |WoDriver|  Error!  |  Error!
+// Driver exit       WoC   |  WoC   |  WoC   | Stopping |  Error!
+//
+// State table for boot driver:
+//                                   Initial States
+//                  Running | Prestop |  WoC   | WoDriver | Stopping
+// Remove(kPkg)     Prestop | Ignore  | Ignore |  Ignore  |  Ignore
+// Remove(kAll)      WoC    |   WoC   | Ignore |  Ignore  |  Ignore
+// children empty    N/A    |   N/A   |WoDriver|  Ignore  |  Ignore
+// Driver exit       WoC    |   WoC   |  WoC   | Stopping |  Ignore
+// Boot drivers go into the Prestop state when Remove(kPackage) is set, to signify that
+// a removal is taking place, but this node will not be removed yet, even if all its children
+// are removed.
+void Node::Remove(RemovalSet removal_set) {
+  LOGF(DEBUG, "Remove called on Node: %s", name().c_str());
+  // Two cases where we will transition state and take action:
+  // Removing kAll, and state is Running or Prestop
+  // Removing kPkg, and state is Running
+  if ((node_state_ != NodeState::kPrestop && node_state_ != NodeState::kRunning) ||
+      (node_state_ == NodeState::kPrestop && removal_set == RemovalSet::kPackage)) {
+    LOGF(WARNING, "Node::Remove() called late, already in state %s", State2String(node_state_));
+    return;
+  }
+
+  // Now, the cases where we do something:
+  // Set the new state
+  if (removal_set == RemovalSet::kPackage && collection_ == Collection::kBoot) {
+    node_state_ = NodeState::kPrestop;
+  } else {
+    // Either removing kAll, or is package driver and removing kPackage.
+    node_state_ = NodeState::kWaitingOnChildren;
+  }
+  // Either way, propagate removal message to children
 
   // Ask each of our children to remove themselves.
   for (auto it = children_.begin(); it != children_.end();) {
     // We have to be careful here - Remove() could invalidate the iterator, so we increment the
     // iterator before we call Remove().
+    LOGF(DEBUG, "Node: %s calling remove on child: %s", name().c_str(), (*it)->name().c_str());
     auto child = it->get();
     ++it;
-    child->Remove();
+    child->Remove(removal_set);
   }
 
-  // If we have any children, return. It's too early to remove ourselves.
-  // (The children will call back into this Remove function as they exit).
-  if (!children_.empty()) {
-    return;
-  }
-
-  // If we still have a driver bound to us, we tell it to stop.
-  // (The Driver will call back into this Remove function once it stops).
-  if (driver_component_ && driver_component_->driver) {
-    if (!driver_component_->stop_called) {
-      auto result = (*driver_component_->driver)->Stop();
-      if (!result.ok()) {
-        LOGF(ERROR, "Node: %s failed to stop driver: %s", name().c_str(),
-             result.FormatDescription().data());
-      } else {
-        driver_component_->stop_called = true;
-      }
-    }
-    return;
-  }
-
-  // Let the removal begin
-
-  // Erase ourselves from each parent.
-  for (auto parent : parents_) {
-    auto& children = parent->children_;
-    children.erase(std::find(children.begin(), children.end(), this_node));
-
-    // If our parent is waiting to be removed and we are its last child,
-    // then remove it.
-    if (parent->removal_in_progress_ && children.empty()) {
-      parent->Remove();
-    }
-  }
-  // It's no longer safe to access our parents, as they can free themselves now.
-  parents_.clear();
-
-  // Remove our controller and node servers. These hold the last shared_ptr
-  // references to this node.
-  UnbindAndReset(controller_ref_);
-  UnbindAndReset(node_ref_);
+  // In case we had no children, or they removed themselves synchronously:
+  CheckForRemoval();
 }
 
 fit::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> Node::AddChild(
@@ -583,8 +641,11 @@ fit::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> No
   }
   if (node.is_valid()) {
     child->node_ref_ = fidl::BindServer<fidl::WireServer<fdf::Node>>(
-        dispatcher_, std::move(node), child,
-        [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
+        dispatcher_, std::move(node), child, [](fidl::WireServer<fdf::Node>* node, auto, auto) {
+          LOGF(WARNING, "Removing node %s because of binding closed",
+               static_cast<Node*>(node)->name().c_str());
+          static_cast<Node*>(node)->Remove(RemovalSet::kAll);
+        });
   } else {
     // We don't care about tracking binds here, sending nullptr is fine.
     (*node_manager_)->Bind(*child, nullptr);
@@ -595,7 +656,10 @@ fit::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> No
 
 bool Node::IsComposite() const { return parents_.size() > 1; }
 
-void Node::Remove(RemoveCompleter::Sync& completer) { Remove(); }
+void Node::Remove(RemoveCompleter::Sync& completer) {
+  LOGF(DEBUG, "Remove() Fidl call for %s", name().c_str());
+  Remove(RemovalSet::kAll);
+}
 
 void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) {
   auto node = AddChild(request->args, std::move(request->controller), std::move(request->node));
@@ -641,7 +705,11 @@ zx::result<> Node::StartDriver(
   }
   node_ref_ = fidl::BindServer<fidl::WireServer<fdf::Node>>(
       dispatcher_, std::move(endpoints->server), shared_from_this(),
-      [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
+      [](fidl::WireServer<fdf::Node>* node, fidl::UnbindInfo info, auto) {
+        LOGF(WARNING, "Removing node %s because of fdf::Node binding closed: %s",
+             static_cast<Node*>(node)->name().c_str(), info.FormatDescription().c_str());
+        static_cast<Node*>(node)->Remove(RemovalSet::kAll);
+      });
 
   LOGF(INFO, "Binding %.*s to  %s", static_cast<int>(url.size()), url.data(), name().c_str());
   // Start the driver within the driver host.
@@ -656,11 +724,11 @@ zx::result<> Node::StartDriver(
       .component_controller_ref =
           fidl::BindServer<fidl::WireServer<fuchsia_component_runner::ComponentController>>(
               dispatcher_, std::move(controller), shared_from_this(),
-              [](fidl::WireServer<fuchsia_component_runner::ComponentController>* node, auto,
-                 auto) {
-                LOGF(WARNING, "Removing node %s because of ComponentController binding closed",
-                     static_cast<Node*>(node)->name().c_str());
-                static_cast<Node*>(node)->Remove();
+              [](fidl::WireServer<fuchsia_component_runner::ComponentController>* node,
+                 fidl::UnbindInfo info, auto) {
+                LOGF(WARNING, "Removing node %s because of ComponentController binding closed: %s",
+                     static_cast<Node*>(node)->name().c_str(), info.FormatDescription().c_str());
+                static_cast<Node*>(node)->Remove(RemovalSet::kAll);
               }),
 
       .driver =
@@ -691,7 +759,14 @@ void Node::on_fidl_error(fidl::UnbindInfo info) {
     LOGF(ERROR, "Node: %s: driver channel shutdown with: %s", name().c_str(),
          info.FormatDescription().data());
   }
-  StopComponent();
+  if (node_state_ == NodeState::kWaitingOnDriver) {
+    LOGF(DEBUG, "Node: %s: driver channel had expected shutdown.", name().c_str());
+    FinishRemoval();
+  } else {
+    LOGF(WARNING, "Removing node %s because of unexpected driver channel shutdown.",
+         name().c_str());
+    Remove(RemovalSet::kAll);
+  }
 }
 
 }  // namespace dfv2
