@@ -31,11 +31,19 @@
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
                 "fuchsia.sys2.CrashIntrospect",
-                "fuchsia.sys2.EventSource",
                 "fuchsia.sys2.SystemController",
             ],
             from: "parent",
             to: [ "#vfs-compliance-tests" ],
+        },
+        {
+            event_stream: [
+                "capability_requested_v2",
+                "directory_ready_v2",
+            ],
+            from: "parent",
+            to: "#vfs-compliance-tests",
+            scope: "#vfs-compliance-tests",
         },
         {
             protocol: [
