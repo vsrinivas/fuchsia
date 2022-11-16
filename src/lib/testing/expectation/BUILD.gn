@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import(
-    "//src/connectivity/network/testing/expectation/fuchsia_test_with_expectations_package.gni")
+    "//src/lib/testing/expectation/fuchsia_test_with_expectations_package.gni")
 
 rustc_binary("bin") {
   edition = "2021"

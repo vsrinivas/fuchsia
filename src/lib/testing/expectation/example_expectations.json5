@@ -12,17 +12,21 @@
                 "*",
             ],
         },
-        // Expectation files can be included using relative paths,
+
+        // Expectation files can be included using relative paths...
         {
             include: "included_expectations.json5",
         },
+
         // or using absolute ones. Note that including the same expectation file multiple times is
         // allowed. There's not much reason to do that directly as is done here, but it's more
         // convenient in deeper expectation include trees.
         {
-            include: "//src/connectivity/network/testing/expectation/included_expectations.json5",
+            include: "//src/lib/testing/expectation/included_expectations.json5",
         },
-        // Expectation matchers are globs in the Unix file sense.
+
+        // Expectation matchers are globs against test case names, with the same rules as
+        // Unix file globbing (see the `glob` crate docs: https://docs.rs/crate/glob/latest).
         {
             type: "expect_failure",
             matchers: [

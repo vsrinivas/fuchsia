@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/connectivity/network/testing/expectation/meta/client.shard.cml",
+        "//src/lib/testing/expectation/meta/client.shard.cml",
         "//third_party/gvisor_syscall_tests/meta/syscall_tests_common.shard.cml",
     ],
     program: {

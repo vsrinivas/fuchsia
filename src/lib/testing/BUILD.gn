@@ -19,6 +19,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "expectation:tests",
     "fixture:tests",
     "fuchsia-hyper-test-support:tests",
     "loop_fixture:tests",

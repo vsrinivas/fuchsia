@@ -4,7 +4,7 @@
 
 import("//build/components.gni")
 import(
-    "//src/connectivity/network/testing/expectation/fuchsia_test_with_expectations_package.gni")
+    "//src/lib/testing/expectation/fuchsia_test_with_expectations_package.gni")
 
 group("tests") {
   testonly = true

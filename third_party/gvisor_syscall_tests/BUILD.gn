@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//build/test.gni")
 import(
-    "//src/connectivity/network/testing/expectation/fuchsia_test_with_expectations_package.gni")
+    "//src/lib/testing/expectation/fuchsia_test_with_expectations_package.gni")
 
 source_set("expectations") {
   sources = [
