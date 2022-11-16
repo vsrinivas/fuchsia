@@ -31,24 +31,11 @@ zx::result<fidl::ClientEnd<fuchsia_hardware_i2c::Device>> Driver::GetI2cClient()
 }
 
 zx::result<zx::interrupt> Driver::GetIrq() const {
-  auto acpi_endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
-  if (acpi_endpoints.is_error()) {
-    return acpi_endpoints.take_error();
-  }
-  auto acpi_client = context().incoming()->OpenService<fuchsia_driver_compat::Service>("acpi");
+  auto acpi_client = context().incoming()->Connect<fuchsia_hardware_acpi::Service::Device>("acpi");
   if (!acpi_client.is_ok()) {
     return acpi_client.take_error();
   }
-  auto acpi_fidl =
-      fidl::WireCall(*acpi_client.value().connect_device())
-          ->ConnectFidl(fidl::StringView::FromExternal(
-                            fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>),
-                        acpi_endpoints->server.TakeChannel());
-  if (!acpi_fidl.ok()) {
-    return zx::error(acpi_fidl.status());
-  }
-
-  auto irq = fidl::WireCall(acpi_endpoints->client)->MapInterrupt(0);
+  auto irq = fidl::WireCall(acpi_client.value())->MapInterrupt(0);
   if (!irq.ok() || irq.value().is_error()) {
     DA7219_LOG(ERROR, "Could not get IRQ: %s",
                irq.ok() ? zx_status_get_string(irq.value().error_value())
