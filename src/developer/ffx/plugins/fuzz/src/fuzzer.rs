@@ -579,7 +579,7 @@ mod tests {
         }
 
         let mut test = Test::try_new()?;
-        let (fake, fuzzer, _task) = perform_test_setup(&test)?;
+        let (fake, mut fuzzer, _task) = perform_test_setup(&test)?;
 
         let runs = Some("10".to_string());
         let time = Some("10s".to_string());
@@ -596,6 +596,7 @@ mod tests {
 
         // Simulate a hung fuzzer.
         fake.set_result(Err(zx::Status::SHOULD_WAIT));
+        fuzzer.controller.set_min_timeout(0);
         let result = fuzzer.run(None, Some("100ms".to_string())).await;
         assert!(result.is_err());
         let msg = format!("{}", result.unwrap_err());

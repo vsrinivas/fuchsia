@@ -27,13 +27,19 @@ use {
 pub struct Controller<O: OutputSink> {
     proxy: fuzz::ControllerProxy,
     forwarder: Forwarder<O>,
+    min_timeout: i64,
     timeout: RefCell<Option<i64>>,
 }
 
 impl<O: OutputSink> Controller<O> {
     /// Returns a new Controller instance.
     pub fn new(proxy: fuzz::ControllerProxy, writer: &Writer<O>) -> Self {
-        Self { proxy, forwarder: Forwarder::<O>::new(writer), timeout: RefCell::new(None) }
+        Self {
+            proxy,
+            forwarder: Forwarder::<O>::new(writer),
+            min_timeout: 60 * NANOS_PER_SECOND,
+            timeout: RefCell::new(None),
+        }
     }
 
     /// Registers the provided output socket with the forwarder.
@@ -44,6 +50,17 @@ impl<O: OutputSink> Controller<O> {
         logs_dir: &Option<P>,
     ) -> Result<()> {
         self.forwarder.set_output(socket, output, logs_dir)
+    }
+
+    /// Sets the minimum amount of time, in nanoseconds, before a workflow can time out.
+    ///
+    /// If a the `max_total_time` option is set for a workflow that hangs, it will eventually
+    /// timeout. This method can be used to specify the minimum duration that must elapse before a
+    /// workflow is considered hung. The default of 1 minute is usually appropriate, but this method
+    /// can be useful when testing.
+    ///
+    pub fn set_min_timeout(&mut self, min_timeout: i64) {
+        self.min_timeout = min_timeout;
     }
 
     /// Sets various execution and error detection parameters for the fuzzer.
@@ -90,7 +107,7 @@ impl<O: OutputSink> Controller<O> {
                     *timeout_mut = None;
                 }
                 n => {
-                    *timeout_mut = Some(max(n * 2, 60 * NANOS_PER_SECOND));
+                    *timeout_mut = Some(max(n * 2, self.min_timeout));
                 }
             }
         }
