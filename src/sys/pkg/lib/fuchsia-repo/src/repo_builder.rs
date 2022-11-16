@@ -6,10 +6,10 @@ use {
     crate::{repo_client::RepoClient, repo_keys::RepoKeys, repository::RepoStorageProvider},
     anyhow::{anyhow, Context, Result},
     async_fs::File,
-    camino::Utf8Path,
+    camino::{Utf8Path, Utf8PathBuf},
     chrono::{DateTime, Duration, Utc},
-    fuchsia_pkg::{PackageManifest, PackagePath},
-    std::collections::{hash_map, HashMap},
+    fuchsia_pkg::{BlobInfo, PackageManifest, PackageManifestList, PackagePath},
+    std::collections::{hash_map, BTreeMap, HashMap, HashSet},
     tuf::{
         crypto::HashAlgorithm, metadata::TargetPath, pouf::Pouf1,
         repo_builder::RepoBuilder as TufRepoBuilder, Database,
@@ -39,7 +39,8 @@ pub struct RepoBuilder<'a, R: RepoStorageProvider> {
     refresh_metadata: bool,
     refresh_non_root_metadata: bool,
     inherit_from_trusted_targets: bool,
-    packages: HashMap<PackagePath, PackageManifest>,
+    packages: HashMap<PackagePath, (Option<Utf8PathBuf>, PackageManifest)>,
+    deps: HashSet<Utf8PathBuf>,
 }
 
 impl<'a, R> RepoBuilder<'a, &'a R>
@@ -86,6 +87,7 @@ where
             refresh_non_root_metadata: false,
             inherit_from_trusted_targets: true,
             packages: HashMap::new(),
+            deps: HashSet::new(),
         }
     }
 
@@ -126,33 +128,105 @@ where
         self
     }
 
-    pub fn add_package(mut self, package: PackageManifest) -> Result<Self> {
+    /// Stage a package manifest from the `path` to be published.
+    pub async fn add_package(self, path: Utf8PathBuf) -> Result<RepoBuilder<'a, R>> {
+        let contents = async_fs::read(path.as_std_path())
+            .await
+            .with_context(|| format!("reading package manifest {}", path))?;
+
+        let package = PackageManifest::from_reader(&path, &contents[..])
+            .with_context(|| format!("reading package manifest {}", path))?;
+
+        self.add_package_manifest(Some(path), package)
+    }
+
+    /// Stage the package manifests from the iterator of paths to be published.
+    pub async fn add_packages(
+        mut self,
+        paths: impl Iterator<Item = Utf8PathBuf>,
+    ) -> Result<RepoBuilder<'a, R>> {
+        for path in paths {
+            self = self.add_package(path).await?;
+        }
+        Ok(self)
+    }
+
+    /// Stage a package manifest described by `package` from the `path` to be published.
+    pub fn add_package_manifest(
+        mut self,
+        path: Option<Utf8PathBuf>,
+        package: PackageManifest,
+    ) -> Result<RepoBuilder<'a, R>> {
+        // Track all the blobs from the package manifest as a dependency.
+        for blob in package.blobs() {
+            self.deps.insert(blob.source_path.clone().into());
+        }
+
         match self.packages.entry(package.package_path()) {
             hash_map::Entry::Vacant(entry) => {
-                entry.insert(package);
+                entry.insert((path.clone(), package));
             }
             hash_map::Entry::Occupied(entry) => {
-                if entry.get().hash() != package.hash() {
-                    return Err(anyhow!(
-                        "conflicting entry for package {}: {} != {}",
-                        entry.key(),
-                        entry.get().hash(),
-                        package.hash(),
-                    ));
-                }
+                let (old_manifest_path, old_manifest) = entry.get();
+
+                check_manifests_are_equivalent(
+                    entry.key(),
+                    old_manifest_path,
+                    old_manifest,
+                    &path,
+                    &package,
+                )?;
             }
         }
+
+        if let Some(path) = path {
+            self.deps.insert(path);
+        }
+
         Ok(self)
     }
 
-    pub fn add_packages(mut self, packages: impl Iterator<Item = PackageManifest>) -> Result<Self> {
-        for package in packages {
-            self = self.add_package(package)?;
+    /// Stage all the package manifests from `iter` to be published.
+    pub fn add_package_manifests(
+        mut self,
+        iter: impl Iterator<Item = (Option<Utf8PathBuf>, PackageManifest)>,
+    ) -> Result<RepoBuilder<'a, R>> {
+        for (path, package) in iter {
+            self = self.add_package_manifest(path, package)?;
         }
         Ok(self)
     }
 
-    pub async fn commit(self) -> Result<()> {
+    /// Stage all the packages pointed to by the package list to be published.
+    pub async fn add_package_list(mut self, path: Utf8PathBuf) -> Result<RepoBuilder<'a, R>> {
+        let contents = async_fs::read(path.as_std_path())
+            .await
+            .with_context(|| format!("reading package manifest list {}", path))?;
+
+        let package_list_manifest = PackageManifestList::from_reader(&contents[..])
+            .with_context(|| format!("reading package manifest list {}", path))?;
+
+        self.deps.insert(path);
+
+        self.add_packages(package_list_manifest.into_iter()).await
+    }
+
+    /// Stage all the packages pointed to by the iterator of package lists to be published.
+    pub async fn add_package_lists(
+        mut self,
+        paths: impl Iterator<Item = Utf8PathBuf>,
+    ) -> Result<RepoBuilder<'a, R>> {
+        for path in paths {
+            self = self.add_package_list(path).await?;
+        }
+
+        Ok(self)
+    }
+
+    /// Commit the changes to the repository.
+    ///
+    /// Returns the list of the files that were read.
+    pub async fn commit(self) -> Result<HashSet<Utf8PathBuf>> {
         let repo_builder = if let Some(database) = self.database.as_ref() {
             TufRepoBuilder::from_database(&self.repo, database)
         } else {
@@ -219,7 +293,7 @@ where
         let mut staged_blobs = HashMap::new();
         let mut package_meta_fars = HashMap::new();
 
-        for (package_path, package) in self.packages {
+        for (package_path, (_, package)) in self.packages {
             let mut meta_far_blob = None;
             for blob in package.blobs() {
                 if blob.path == "meta/" {
@@ -290,8 +364,95 @@ where
             self.repo.store_blob(&blob_hash, Utf8Path::new(&blob.source_path)).await?;
         }
 
-        Ok(())
+        Ok(self.deps)
     }
+}
+
+fn check_manifests_are_equivalent(
+    package_path: &PackagePath,
+    old_manifest_path: &Option<Utf8PathBuf>,
+    old_manifest: &PackageManifest,
+    new_manifest_path: &Option<Utf8PathBuf>,
+    new_manifest: &PackageManifest,
+) -> Result<()> {
+    // Check if the packages conflict.
+    if old_manifest.hash() == new_manifest.hash() {
+        return Ok(());
+    }
+
+    // Create a message that tries to explain why we have a conflict.
+    let old_manifest_path =
+        old_manifest_path.as_ref().map(|path| path.as_str()).unwrap_or("<generated>");
+    let new_manifest_path =
+        new_manifest_path.as_ref().map(|path| path.as_str()).unwrap_or("<generated>");
+
+    let mut msg = vec![format!(
+        "conflict for repository path '{}'\n  manifest paths:\n  - {}\n  - {}\n  differences:",
+        package_path, old_manifest_path, new_manifest_path,
+    )];
+
+    #[derive(PartialEq, Eq)]
+    enum Entry {
+        Contents(Vec<u8>),
+        Blob(BlobInfo),
+    }
+
+    // Helper to read in all the package contents so we can compare entries.
+    fn manifest_contents(manifest: &PackageManifest) -> Result<BTreeMap<String, Entry>> {
+        let mut entries = BTreeMap::new();
+
+        for blob in manifest.blobs() {
+            if blob.path == "meta/" {
+                let file = std::fs::File::open(&blob.source_path)
+                    .with_context(|| format!("reading {}", blob.path))?;
+                let mut far = fuchsia_archive::Utf8Reader::new(file)?;
+
+                let far_entries =
+                    far.list().map(|entry| entry.path().to_owned()).collect::<Vec<_>>();
+                for path in far_entries {
+                    let contents = far.read_file(&path)?;
+                    entries.insert(path, Entry::Contents(contents));
+                }
+            }
+
+            entries.insert(blob.path.clone(), Entry::Blob(blob.clone()));
+        }
+
+        Ok(entries)
+    }
+
+    // Compare the contents and report any differences.
+    if let (Ok(old_contents), Ok(mut new_contents)) =
+        (manifest_contents(old_manifest), manifest_contents(new_manifest))
+    {
+        for (path, old_entry) in old_contents {
+            if let Some(new_entry) = new_contents.remove(&path) {
+                match (old_entry, new_entry) {
+                    (Entry::Blob(old_blob), Entry::Blob(new_blob)) => {
+                        if old_blob.merkle != new_blob.merkle {
+                            msg.push(format!(
+                                "  - {}: different contents found in:\n    - {}\n    - {}",
+                                path, old_blob.source_path, new_blob.source_path
+                            ));
+                        }
+                    }
+                    (old_entry, new_entry) => {
+                        if old_entry != new_entry {
+                            msg.push(format!("  - {}: different contents", path));
+                        }
+                    }
+                }
+            } else {
+                msg.push(format!("  - {}: missing from manifest {}", path, new_manifest_path));
+            }
+        }
+
+        for path in new_contents.into_keys() {
+            msg.push(format!("  - {}: missing from manifest {}", path, old_manifest_path));
+        }
+    }
+
+    Err(anyhow!(msg.join("\n")))
 }
 
 #[cfg(test)]
@@ -358,10 +519,14 @@ mod tests {
         let pkg1_dir = dir.join("package1");
         let (pkg1_meta_far_path, pkg1_manifest) =
             test_utils::make_package_manifest("package1", pkg1_dir.as_std_path());
+        let pkg1_manifest_path = pkg1_dir.join("package1.manifest");
+        serde_json::to_writer(std::fs::File::create(&pkg1_manifest_path).unwrap(), &pkg1_manifest)
+            .unwrap();
         let pkg1_meta_far_contents = std::fs::read(&pkg1_meta_far_path).unwrap();
 
         RepoBuilder::create(&repo, &repo_keys)
-            .add_package(pkg1_manifest)
+            .add_package(pkg1_manifest_path)
+            .await
             .unwrap()
             .commit()
             .await
@@ -390,10 +555,14 @@ mod tests {
         let pkg2_dir = dir.join("package2");
         let (pkg2_meta_far_path, pkg2_manifest) =
             test_utils::make_package_manifest("package2", pkg2_dir.as_std_path());
+        let pkg2_manifest_path = pkg2_dir.join("package2.manifest");
+        serde_json::to_writer(std::fs::File::create(&pkg2_manifest_path).unwrap(), &pkg2_manifest)
+            .unwrap();
         let pkg2_meta_far_contents = std::fs::read(&pkg2_meta_far_path).unwrap();
 
         RepoBuilder::from_client(&repo_client, &repo_keys)
-            .add_package(pkg2_manifest)
+            .add_package(pkg2_manifest_path)
+            .await
             .unwrap()
             .commit()
             .await
@@ -662,12 +831,17 @@ mod tests {
         repo_client.update().await.unwrap();
 
         // Publish package3 to the repository.
+        let pkg3_dir = root.join("pkg3");
         let (_, pkg3_manifest) =
-            test_utils::make_package_manifest("package3", root.join("pkg3").as_std_path());
+            test_utils::make_package_manifest("package3", pkg3_dir.as_std_path());
+        let pkg3_manifest_path = pkg3_dir.join("package3.manifest");
+        serde_json::to_writer(std::fs::File::create(&pkg3_manifest_path).unwrap(), &pkg3_manifest)
+            .unwrap();
 
         let repo_keys = test_utils::make_repo_keys();
         RepoBuilder::from_database(repo_client.remote_repo(), &repo_keys, repo_client.database())
-            .add_package(pkg3_manifest)
+            .add_package(pkg3_manifest_path)
+            .await
             .unwrap()
             .commit()
             .await
@@ -681,12 +855,17 @@ mod tests {
         assert!(trusted_targets.targets().get("package3/0").is_some());
 
         // Now do another commit, but this time not inheriting the old packages.
+        let pkg4_dir = root.join("pkg4");
         let (_, pkg4_manifest) =
-            test_utils::make_package_manifest("package4", root.join("pkg4").as_std_path());
+            test_utils::make_package_manifest("package4", pkg4_dir.as_std_path());
+        let pkg4_manifest_path = pkg4_dir.join("package4.manifest");
+        serde_json::to_writer(std::fs::File::create(&pkg4_manifest_path).unwrap(), &pkg4_manifest)
+            .unwrap();
 
         RepoBuilder::from_database(repo_client.remote_repo(), &repo_keys, repo_client.database())
             .inherit_from_trusted_targets(false)
-            .add_package(pkg4_manifest)
+            .add_package(pkg4_manifest_path)
+            .await
             .unwrap()
             .commit()
             .await
@@ -779,17 +958,25 @@ mod tests {
         let pkg1_dir = dir.join("package1");
         let (_, pkg1_manifest) =
             test_utils::make_package_manifest("package1", pkg1_dir.as_std_path());
+        let pkg1_manifest_path = pkg1_dir.join("package1.manifest");
+        serde_json::to_writer(std::fs::File::create(&pkg1_manifest_path).unwrap(), &pkg1_manifest)
+            .unwrap();
 
         // Whoops, we created a package with the same package name but with different contents.
         let pkg2_dir = dir.join("package2");
         let pkg2_meta_far_path = pkg2_dir.join("meta.far");
         let pkg2_manifest =
             PackageBuilder::new("package1").build(&pkg2_dir, &pkg2_meta_far_path).unwrap();
+        let pkg2_manifest_path = pkg2_dir.join("package2.manifest");
+        serde_json::to_writer(std::fs::File::create(&pkg2_manifest_path).unwrap(), &pkg2_manifest)
+            .unwrap();
 
         assert!(RepoBuilder::create(&repo, &repo_keys)
-            .add_package(pkg1_manifest)
+            .add_package(pkg1_manifest_path)
+            .await
             .unwrap()
-            .add_package(pkg2_manifest)
+            .add_package(pkg2_manifest_path)
+            .await
             .is_err());
     }
 }

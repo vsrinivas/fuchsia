@@ -325,7 +325,6 @@ pub mod host {
     use assembly_util::{path_relative_from_file, resolve_path_from_file};
     use camino::Utf8Path;
     use std::fs::File;
-    use std::io::BufReader;
 
     impl PackageManifest {
         pub fn try_load_from(manifest_path: impl AsRef<Utf8Path>) -> anyhow::Result<Self> {
@@ -333,9 +332,20 @@ pub mod host {
                 let file = File::open(manifest_path)
                     .with_context(|| format!("Opening package manifest: {}", manifest_path))?;
 
-                let versioned: VersionedPackageManifest =
-                    serde_json::from_reader(BufReader::new(file))
-                        .with_context(|| format!("Reading package manifest: {}", manifest_path))?;
+                PackageManifest::from_reader(manifest_path, file)
+            }
+            inner(manifest_path.as_ref())
+        }
+
+        pub fn from_reader(
+            manifest_path: impl AsRef<Utf8Path>,
+            reader: impl std::io::Read,
+        ) -> anyhow::Result<Self> {
+            fn inner(
+                manifest_path: &Utf8Path,
+                reader: impl std::io::Read,
+            ) -> anyhow::Result<PackageManifest> {
+                let versioned: VersionedPackageManifest = serde_json::from_reader(reader)?;
 
                 let versioned = match versioned {
                     VersionedPackageManifest::Version1(manifest) => {
@@ -347,7 +357,7 @@ pub mod host {
 
                 Ok(Self(versioned))
             }
-            inner(manifest_path.as_ref())
+            inner(manifest_path.as_ref(), reader)
         }
 
         pub fn write_with_relative_blob_paths(

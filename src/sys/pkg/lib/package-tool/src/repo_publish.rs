@@ -5,7 +5,6 @@
 use {
     crate::args::RepoPublishCommand,
     anyhow::{Context, Result},
-    fuchsia_pkg::{PackageManifest, PackageManifestList},
     fuchsia_repo::{
         repo_builder::RepoBuilder,
         repo_client::RepoClient,
@@ -23,13 +22,18 @@ use {
 pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     let repo = PmRepository::builder(cmd.repo_path.clone()).copy_mode(cmd.copy_mode).build();
 
+    let mut deps = BTreeSet::new();
+
     // Load the signing metadata keys if from a file if specified.
     let repo_signing_keys = if let Some(path) = cmd.signing_keys {
         if !path.exists() {
             anyhow::bail!("--signing-keys path {} does not exist", path);
         }
 
-        Some(RepoKeys::from_dir(path.as_std_path())?)
+        let keys = RepoKeys::from_dir(path.as_std_path())?;
+        deps.insert(path);
+
+        Some(keys)
     } else {
         None
     };
@@ -45,52 +49,6 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     } else {
         repo.repo_keys()?
     };
-
-    // Load in all the package manifests up front so we'd error out if any are missing or malformed.
-    let mut deps = BTreeSet::new();
-    let mut packages = vec![];
-    for package_manifest_path in cmd.package_manifests {
-        let package_manifest = PackageManifest::try_load_from(&package_manifest_path)
-            .with_context(|| format!("reading package manifest {}", package_manifest_path))?;
-
-        // Track the package manifest path as a dependency.
-        deps.insert(package_manifest_path);
-
-        // Track all the blobs from the package manifest as a dependency.
-        for blob in package_manifest.blobs() {
-            deps.insert(blob.source_path.clone().into());
-        }
-
-        packages.push(package_manifest);
-    }
-
-    for package_list_manifest_path in cmd.package_list_manifests {
-        let file = File::open(&package_list_manifest_path).with_context(|| {
-            format!("opening package manifest list {}", package_list_manifest_path)
-        })?;
-
-        let package_list_manifest = PackageManifestList::from_reader(file).with_context(|| {
-            format!("reading package manifest list {}", package_list_manifest_path)
-        })?;
-
-        // Track the package list manifest path as a dependency.
-        deps.insert(package_list_manifest_path);
-
-        for package_manifest_path in package_list_manifest {
-            let package_manifest = PackageManifest::try_load_from(&package_manifest_path)
-                .with_context(|| format!("reading package manifest {}", package_manifest_path))?;
-
-            // Track the package manifest path as a dependency.
-            deps.insert(package_manifest_path);
-
-            // Track all the blobs from the package manifest as a dependency.
-            for blob in package_manifest.blobs() {
-                deps.insert(blob.source_path.clone().into());
-            }
-
-            packages.push(package_manifest);
-        }
-    }
 
     // Try to connect to the repository. This should succeed if we have at least some root metadata
     // in the repository. If none exists, we'll create a new repository.
@@ -145,11 +103,15 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     };
 
     // Publish all the packages.
-    for package in packages {
-        repo_builder = repo_builder.add_package(package)?;
-    }
-
-    repo_builder.commit().await?;
+    deps.extend(
+        repo_builder
+            .add_packages(cmd.package_manifests.into_iter())
+            .await?
+            .add_package_lists(cmd.package_list_manifests.into_iter())
+            .await?
+            .commit()
+            .await?,
+    );
 
     if let Some(depfile_path) = cmd.depfile {
         let timestamp_path = cmd.repo_path.join("repository").join("timestamp.json");
@@ -179,6 +141,7 @@ mod tests {
         assert_matches::assert_matches,
         camino::Utf8Path,
         chrono::{TimeZone, Utc},
+        fuchsia_pkg::PackageManifestList,
         fuchsia_repo::{repository::CopyMode, test_utils},
         tuf::metadata::Metadata as _,
     };

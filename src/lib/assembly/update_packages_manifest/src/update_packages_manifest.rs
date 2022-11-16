@@ -39,7 +39,7 @@ impl Default for UpdatePackagesManifest {
 
 impl UpdatePackagesManifest {
     /// Add a package to be updated by its PackageManifest.
-    pub fn add_by_manifest(&mut self, package: PackageManifest) -> Result<()> {
+    pub fn add_by_manifest(&mut self, package: &PackageManifest) -> Result<()> {
         let path = package.package_path();
         let meta_blob = package.blobs().into_iter().find(|blob| blob.path == "meta/");
         match meta_blob {
@@ -102,7 +102,7 @@ mod tests {
                     size: 42,
                 })
                 .build();
-        manifest.add_by_manifest(package_manifest).unwrap();
+        manifest.add_by_manifest(&package_manifest).unwrap();
         let out = serde_json::to_value(&manifest).unwrap();
         assert_eq!(
             out,

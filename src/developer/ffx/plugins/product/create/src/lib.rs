@@ -85,8 +85,8 @@ pub async fn pb_create_with_tools(cmd: CreateCommand, tools: Box<dyn ToolProvide
                     .context("checkinf if temporary directory is UTF-8")?,
             );
             let mut all_packages = UpdatePackagesManifest::default();
-            for package in &packages_a {
-                all_packages.add_by_manifest(package.clone())?;
+            for (_path, package) in &packages_a {
+                all_packages.add_by_manifest(&package)?;
             }
             builder.add_packages(all_packages);
             if let Some(manifest) = &system_a {
@@ -110,9 +110,9 @@ pub async fn pb_create_with_tools(cmd: CreateCommand, tools: Box<dyn ToolProvide
             RepoKeys::from_dir(tuf_keys.as_std_path()).context("Gathering repo keys")?;
 
         RepoBuilder::create(&repo, &repo_keys)
-            .add_packages(packages_a.into_iter())?
-            .add_packages(packages_b.into_iter())?
-            .add_packages(update_packages.into_iter())?
+            .add_package_manifests(packages_a.into_iter())?
+            .add_package_manifests(packages_b.into_iter())?
+            .add_package_manifests(update_packages.into_iter().map(|manifest| (None, manifest)))?
             .commit()
             .await
             .context("Building the repo")?;
@@ -168,7 +168,7 @@ fn load_partitions_config(
 fn load_assembly_manifest(
     path: &Option<Utf8PathBuf>,
     out_dir: impl AsRef<Utf8Path>,
-) -> Result<(Option<AssemblyManifest>, Vec<PackageManifest>)> {
+) -> Result<(Option<AssemblyManifest>, Vec<(Option<Utf8PathBuf>, PackageManifest)>)> {
     let out_dir = out_dir.as_ref();
 
     if let Some(path) = path {
@@ -181,8 +181,8 @@ fn load_assembly_manifest(
             .with_context(|| format!("Parsing assembly manifest: {}", path))?;
 
         // Filter out the base package, and the blobfs contents.
-        let mut images = Vec::<Image>::new();
-        let mut packages = Vec::<PackageManifest>::new();
+        let mut images = Vec::new();
+        let mut packages = Vec::new();
         for image in manifest.images.into_iter() {
             match image {
                 Image::BasePackage(..) => {}
@@ -194,7 +194,7 @@ fn load_assembly_manifest(
                             .with_context(|| {
                                 format!("reading package manifest: {}", package.manifest)
                             })?;
-                        packages.push(manifest);
+                        packages.push((Some(package.manifest), manifest));
                     }
                     images.push(Image::BlobFS { path, contents: BlobfsContents::default() });
                 }
@@ -290,7 +290,7 @@ mod test {
 
         let (parsed, packages) = load_assembly_manifest(&Some(manifest_path), &pb_dir).unwrap();
         assert!(parsed.is_some());
-        assert_eq!(packages, Vec::<PackageManifest>::new());
+        assert_eq!(packages, Vec::new());
 
         let error = load_assembly_manifest(&Some(error_path), &pb_dir);
         assert!(error.is_err());

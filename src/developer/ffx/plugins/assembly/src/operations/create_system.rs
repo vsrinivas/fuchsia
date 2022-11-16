@@ -184,7 +184,7 @@ fn create_package_manifest(
         for package_path in packages {
             let manifest = PackageManifest::try_load_from(package_path)?;
             packages_manifest
-                .add_by_manifest(manifest)
+                .add_by_manifest(&manifest)
                 .with_context(|| format!("Adding manifest: {}", package_path))?;
         }
         Ok(())
