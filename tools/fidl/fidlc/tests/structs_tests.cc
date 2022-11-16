@@ -307,16 +307,9 @@ type Intersection = struct {
                 "struct 'Intersection' -> struct 'Yang' -> struct 'Intersection'");
 }
 
-TEST(StructsTests, BadBoxCannotBeNullable) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type BoxedStruct = struct {};
-
-type Foo = struct {
-  foo box<Foo>:optional;
-};
-)FIDL");
+TEST(StructsTests, BadBoxCannotBeOptional) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0169.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBoxCannotBeOptional);
 }
 

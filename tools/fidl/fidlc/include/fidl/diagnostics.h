@@ -395,7 +395,7 @@ constexpr UndocumentedErrorDef<168, flat::Name> ErrProtocolConstraintRequired(
     "{} requires a protocol as its first constraint");
 // The same error as ErrCannotBeOptional, but with a more specific message since the
 // optionality of boxes may be confusing
-constexpr UndocumentedErrorDef<169> ErrBoxCannotBeOptional(
+constexpr ErrorDef<169> ErrBoxCannotBeOptional(
     "cannot specify optionality for box, boxes are optional by default");
 constexpr UndocumentedErrorDef<170> ErrBoxedTypeCannotBeOptional(
     "no double optionality, boxes are already optional");
