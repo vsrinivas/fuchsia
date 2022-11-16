@@ -251,8 +251,9 @@ int SingleVmoTestInstance::vmo_thread() {
         }
         // map it somewhere
         Printf("m");
-        status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_, 0,
-                                            vmo_size_, ptrs_ + idx);
+        status = zx::vmar::root_self()->map(
+            ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | (use_pager_ ? ZX_VM_ALLOW_FAULTS : 0), 0, vmo_, 0,
+            vmo_size_, ptrs_ + idx);
         CheckVmoThreadError(status, "failed to map range");
         break;
       case 20 ... 34:
@@ -1553,6 +1554,11 @@ class MultiVmoTestInstance : public TestInstance {
               uint32_t options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
               if (uniform_rand(2, rng) == 0) {
                 options |= ZX_VM_MAP_RANGE;
+              }
+              zx_info_vmo_t info;
+              ZX_ASSERT(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr) == ZX_OK);
+              if (info.flags & ZX_INFO_VMO_PAGER_BACKED) {
+                options |= ZX_VM_ALLOW_FAULTS;
               }
               zx_vaddr_t addr;
               // Currently fault prevention isn't enforced in mappings and so we must be *very*
