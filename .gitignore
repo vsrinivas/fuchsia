@@ -127,6 +127,8 @@ tables_generator_tests_*.txt
 /third_party/fmtlib/src
 !/third_party/python_portpicker
 /third_party/python_portpicker/src
+!/third_party/mobly
+/third_party/mobly/src
 
 /tmp/
 /vendor/

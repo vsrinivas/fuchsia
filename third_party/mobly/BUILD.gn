@@ -1,0 +1,31 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_library.gni")
+
+python_library("mobly") {
+  source_root = "src/mobly"
+  sources = [
+    "__init__.py",
+    "asserts.py",
+    "base_instrumentation_test.py",
+    "base_suite.py",
+    "base_test.py",
+    "config_parser.py",
+    "controller_manager.py",
+    "expects.py",
+    "keys.py",
+    "logger.py",
+    "records.py",
+    "runtime_test_info.py",
+    "signals.py",
+    "suite_runner.py",
+    "test_runner.py",
+    "utils.py",
+  ]
+  library_deps = [
+    "//third_party/python_portpicker:portpicker",
+    "//third_party/pyyaml:yaml",
+  ]
+}

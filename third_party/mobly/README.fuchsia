@@ -1,0 +1,7 @@
+Name: mobly
+License: Apache 2.0
+License File: src/LICENSE
+Upstream Git: https://github.com/google/mobly
+Description:
+
+Python E2E test framework
