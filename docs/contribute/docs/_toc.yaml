@@ -30,6 +30,11 @@ toc:
   path: /docs/contribute/docs/modify-mdlint-inclusive-language.md
 - title: "Deprecating documentation"
   path: /docs/contribute/docs/deprecating-docs.md
+- heading: "Documentation tools"
+- title: "Automated documentation checks - doc-checker"
+  path: /docs/contribute/docs/doc-checker.md
+- title: "Markdown linter - mdlint"
+  path: /docs/contribute/docs/mdlint.md
 - title: Shortlinks
   section:
   - include: /docs/contribute/docs/shortlinks/_toc.yaml
