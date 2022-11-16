@@ -9,14 +9,28 @@
 
 #include <gtest/gtest.h>
 
+#include "src/performance/lib/perfmon/event-registry.h"
+#include "src/performance/lib/perfmon/events.h"
+
 namespace cpuperf_provider {
 
 namespace {
 
 class CategoryTest : public ::testing::Test {
  public:
-  CategoryTest()
-      : model_event_manager_(perfmon::ModelEventManager::Create(perfmon::GetDefaultModelName())) {}
+  CategoryTest() {}
+
+  void SetUp() override {
+    static const perfmon::EventDetails details{
+        .id = 0xffff,
+        .name = "test",
+        .readable_name = "test",
+        .description = "test",
+    };
+    perfmon::internal::GetGlobalEventRegistry()->RegisterEvents("categories-test", "arch", &details,
+                                                                1);
+    model_event_manager_ = perfmon::ModelEventManager::Create("categories-test");
+  }
 
   perfmon::ModelEventManager* model_event_manager() const { return model_event_manager_.get(); }
 
