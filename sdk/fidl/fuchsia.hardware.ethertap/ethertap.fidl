@@ -25,7 +25,6 @@ const MAX_PARAM_DATA uint32 = 64;
 const MAX_NAME_LENGTH uint32 = 30;
 
 /// Configuration of an ethertap device.
-@for_deprecated_c_bindings
 type Config = struct {
     /// Ethertap options, a bit mask of OPT_* constants.
     options uint32;
@@ -41,7 +40,6 @@ type Config = struct {
 /// Provides control over the created tap device. The lifetime of the device itself is tied to the
 /// channel over which this protocol is served, closing a `TapDevice` channel will trigger the
 /// destruction and deallocation of the underlying tap device.
-@for_deprecated_c_bindings
 protocol TapDevice {
     /// Writes data to the tap device. If device is offline, data will just be discarded.
     WriteFrame(struct {
@@ -66,7 +64,6 @@ protocol TapDevice {
 };
 
 /// Ethertap driver interface.
-@for_deprecated_c_bindings
 protocol TapControl {
     /// Opens a named device with given `name` and `config`.
     /// `name` is only used for debugging purposes.
