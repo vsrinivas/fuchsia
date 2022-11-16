@@ -318,7 +318,7 @@ constexpr ErrorDef<132, const flat::Attribute *> ErrAttributeDisallowsArgs(
 constexpr ErrorDef<133, std::string_view, const flat::Attribute *> ErrAttributeArgRequiresLiteral(
     "argument '{}' of attribute '{}' does not support referencing constants; "
     "please use a literal instead");
-constexpr UndocumentedErrorDef<134, const flat::Attribute *> ErrAttributeConstraintNotSatisfied(
+constexpr RetiredDef<134, const flat::Attribute *> ErrAttributeConstraintNotSatisfied(
     "declaration did not satisfy constraint of attribute '{}'");
 constexpr UndocumentedErrorDef<135, std::string_view> ErrInvalidDiscoverableName(
     "invalid @discoverable name '{}'; must follow the format 'the.library.name.TheProtocolName'");

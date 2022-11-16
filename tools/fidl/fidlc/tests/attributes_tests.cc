@@ -652,16 +652,23 @@ protocol MyProtocol {
   }
 }
 
+// A test error, with a notably high power level, used for the fictitious `MustHaveThreeMembers`
+// constraint we define below for testing purposes.
+constexpr fidl::ErrorDef<9001> TestErrIncorrectNumberOfMembers("incorrect number of members");
+
 bool MustHaveThreeMembers(fidl::Reporter* reporter, const fidl::ExperimentalFlags flags,
                           const fidl::flat::Attribute* attribute,
                           const fidl::flat::Element* element) {
   switch (element->kind) {
     case fidl::flat::Element::Kind::kStruct: {
       auto struct_decl = static_cast<const fidl::flat::Struct*>(element);
-      return struct_decl->members.size() == 3;
+      if (struct_decl->members.size() != 3) {
+        return reporter->Fail(TestErrIncorrectNumberOfMembers, attribute->span);
+      }
+      return true;
     }
     default:
-      return false;
+      return reporter->Fail(fidl::ErrInvalidAttributePlacement, attribute->span, attribute);
   }
 }
 
@@ -679,8 +686,8 @@ type MyStruct = struct {
 
 )FIDL");
   library.AddAttributeSchema("must_have_three_members").Constrain(MustHaveThreeMembers);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "must_have_three_members");
+  ASSERT_ERRORED_DURING_COMPILE(library, TestErrIncorrectNumberOfMembers);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "incorrect number of members");
 }
 
 TEST(AttributesTests, BadConstraintOnlyThreeMembersOnMethod) {
@@ -693,7 +700,7 @@ protocol MyProtocol {
 
 )FIDL");
   library.AddAttributeSchema("must_have_three_members").Constrain(MustHaveThreeMembers);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "must_have_three_members");
 }
 
@@ -709,7 +716,7 @@ protocol MyProtocol {
 
 )FIDL");
   library.AddAttributeSchema("must_have_three_members").Constrain(MustHaveThreeMembers);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "must_have_three_members");
 }
 

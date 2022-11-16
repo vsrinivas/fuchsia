@@ -151,9 +151,7 @@ void AttributeSchema::Validate(Reporter* reporter, const ExperimentalFlags flags
     ZX_ASSERT_MSG(check.NoNewErrors(), "cannot add errors and pass");
     return;
   }
-  if (check.NoNewErrors()) {
-    reporter->Fail(ErrAttributeConstraintNotSatisfied, attribute->span, attribute);
-  }
+  ZX_ASSERT_MSG(!check.NoNewErrors(), "cannot fail a constraint without reporting errors");
 }
 
 void AttributeSchema::ResolveArgs(CompileStep* step, Attribute* attribute) const {
@@ -472,8 +470,7 @@ static bool DiscoverableConstraint(Reporter* reporter, const ExperimentalFlags f
   ZX_ASSERT(arg->value->Value().kind == flat::ConstantValue::Kind::kString);
   auto name = static_cast<const flat::StringConstantValue&>(arg->value->Value()).MakeContents();
   if (!utils::IsValidDiscoverableName(name)) {
-    reporter->Fail(ErrInvalidDiscoverableName, arg->span, name);
-    return false;
+    return reporter->Fail(ErrInvalidDiscoverableName, arg->span, name);
   }
   return true;
 }
@@ -481,6 +478,7 @@ static bool DiscoverableConstraint(Reporter* reporter, const ExperimentalFlags f
 static bool SimpleLayoutConstraint(Reporter* reporter, const ExperimentalFlags flags,
                                    const Attribute* attr, const Element* element) {
   ZX_ASSERT(element);
+  auto check = reporter->Checkpoint();
   bool ok = true;
   switch (element->kind) {
     case Element::Kind::kConst: {
@@ -575,6 +573,10 @@ static bool SimpleLayoutConstraint(Reporter* reporter, const ExperimentalFlags f
     default:
       ZX_PANIC("unexpected kind");
   }
+
+  if (!ok) {
+    ZX_ASSERT_MSG(!check.NoNewErrors(), "simple constraint cannot fail without reporting an error");
+  }
   return ok;
 }
 
@@ -583,11 +585,9 @@ static bool ParseBound(Reporter* reporter, const ExperimentalFlags flags,
   auto result = utils::ParseNumeric(input, out_value, 10);
   switch (result) {
     case utils::ParseNumericResult::kOutOfBounds:
-      reporter->Fail(ErrBoundIsTooBig, attribute->span, attribute, input);
-      return false;
+      return reporter->Fail(ErrBoundIsTooBig, attribute->span, attribute, input);
     case utils::ParseNumericResult::kMalformed: {
-      reporter->Fail(ErrUnableToParseBound, attribute->span, attribute, input);
-      return false;
+      return reporter->Fail(ErrUnableToParseBound, attribute->span, attribute, input);
     }
     case utils::ParseNumericResult::kSuccess:
       return true;
@@ -597,12 +597,15 @@ static bool ParseBound(Reporter* reporter, const ExperimentalFlags flags,
 static bool MaxBytesConstraint(Reporter* reporter, const ExperimentalFlags flags,
                                const Attribute* attribute, const Element* element) {
   ZX_ASSERT(element);
+  auto check = reporter->Checkpoint();
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto& arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
-  if (!ParseBound(reporter, flags, attribute, arg_value.MakeContents(), &bound))
+  if (!ParseBound(reporter, flags, attribute, arg_value.MakeContents(), &bound)) {
+    ZX_ASSERT_MSG(!check.NoNewErrors(), "max_bytes cannot fail without reporting an error");
     return false;
+  }
   uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
   switch (element->kind) {
     case Element::Kind::kProtocol: {
@@ -613,6 +616,9 @@ static bool MaxBytesConstraint(Reporter* reporter, const ExperimentalFlags flags
         if (!MaxBytesConstraint(reporter, flags, attribute, method)) {
           ok = false;
         }
+      }
+      if (!ok) {
+        ZX_ASSERT_MSG(!check.NoNewErrors(), "max_bytes cannot fail without reporting an error");
       }
       return ok;
     }
@@ -632,6 +638,9 @@ static bool MaxBytesConstraint(Reporter* reporter, const ExperimentalFlags flags
         if (!MaxBytesConstraint(reporter, flags, attribute, as_type_decl)) {
           ok = false;
         }
+      }
+      if (!ok) {
+        ZX_ASSERT_MSG(!check.NoNewErrors(), "max_bytes cannot fail without reporting an error");
       }
       return ok;
     }
@@ -657,8 +666,7 @@ static bool MaxBytesConstraint(Reporter* reporter, const ExperimentalFlags flags
       ZX_PANIC("unexpected kind");
   }
   if (max_bytes > bound) {
-    reporter->Fail(ErrTooManyBytes, attribute->span, bound, max_bytes);
-    return false;
+    return reporter->Fail(ErrTooManyBytes, attribute->span, bound, max_bytes);
   }
   return true;
 }
@@ -666,12 +674,15 @@ static bool MaxBytesConstraint(Reporter* reporter, const ExperimentalFlags flags
 static bool MaxHandlesConstraint(Reporter* reporter, const ExperimentalFlags flags,
                                  const Attribute* attribute, const Element* element) {
   ZX_ASSERT(element);
+  auto check = reporter->Checkpoint();
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto& arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
-  if (!ParseBound(reporter, flags, attribute, arg_value.MakeContents(), &bound))
+  if (!ParseBound(reporter, flags, attribute, arg_value.MakeContents(), &bound)) {
+    ZX_ASSERT_MSG(!check.NoNewErrors(), "max_handles cannot fail without reporting an error");
     return false;
+  }
   uint32_t max_handles = std::numeric_limits<uint32_t>::max();
   switch (element->kind) {
     case Element::Kind::kProtocol: {
@@ -682,6 +693,9 @@ static bool MaxHandlesConstraint(Reporter* reporter, const ExperimentalFlags fla
         if (!MaxHandlesConstraint(reporter, flags, attribute, method)) {
           ok = false;
         }
+      }
+      if (!ok) {
+        ZX_ASSERT_MSG(!check.NoNewErrors(), "max_handles cannot fail without reporting an error");
       }
       return ok;
     }
@@ -701,6 +715,9 @@ static bool MaxHandlesConstraint(Reporter* reporter, const ExperimentalFlags fla
         if (!MaxHandlesConstraint(reporter, flags, attribute, as_type_decl)) {
           ok = false;
         }
+      }
+      if (!ok) {
+        ZX_ASSERT_MSG(!check.NoNewErrors(), "max_handles cannot fail without reporting an error");
       }
       return ok;
     }
@@ -723,8 +740,7 @@ static bool MaxHandlesConstraint(Reporter* reporter, const ExperimentalFlags fla
       ZX_PANIC("unexpected kind");
   }
   if (max_handles > bound) {
-    reporter->Fail(ErrTooManyHandles, attribute->span, bound, max_handles);
-    return false;
+    return reporter->Fail(ErrTooManyHandles, attribute->span, bound, max_handles);
   }
   return true;
 }
@@ -755,8 +771,7 @@ static bool ResultShapeConstraint(Reporter* reporter, const ExperimentalFlags fl
 
     if (!error_primitive || (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
                              error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
-      reporter->Fail(ErrInvalidErrorType, union_decl->name.span().value());
-      return false;
+      return reporter->Fail(ErrInvalidErrorType, union_decl->name.span().value());
     }
   }
 
@@ -774,8 +789,8 @@ static bool TransportConstraint(Reporter* reporter, const ExperimentalFlags flag
   const std::string& value = arg_value.MakeContents();
   std::optional<Transport> transport = Transport::FromTransportName(value);
   if (!transport.has_value()) {
-    reporter->Fail(ErrInvalidTransportType, attribute->span, value, Transport::AllTransportNames());
-    return false;
+    return reporter->Fail(ErrInvalidTransportType, attribute->span, value,
+                          Transport::AllTransportNames());
   }
   return true;
 }
