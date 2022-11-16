@@ -1179,7 +1179,10 @@ class DisplayPllSpreadSpectrumClocking
 // On Kaby Lake and Skylake, all DPLLs can be used to drive DDIs. DPLL0 also
 // drives the core display clocks (CDCLK, CD2XCLK). LCPLL (DPLL0, DPLL1)
 // probably stands for "LC-tank PLL" and WRPLL (DPLL2, DPLL3) probably means
-// "Wide-Range PLL".
+// "Wide-Range PLL". The distinction is historical, alluding to the LCPLLs and
+// WRPLLs on Broadwell (IHD-OS-BDW-Vol 11-11.15 page 110) and Haswell
+// (intel-gfx-prm-osrc-hsw-display Vol 11a dated 12/18/2013 page 191),
+// which support different ranges of output frequencies.
 //
 // On Tiger Lake, TC (USB Type-C connector) DDI has its own PLL, called an MG
 // PLL. DPLLs (Display PLLs) 0, 1, and 4 can be connected to all DDIs. DPLL2 is
