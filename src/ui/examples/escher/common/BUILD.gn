@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("vulkan_no_nodiscard") {
+  defines = [ "VULKAN_HPP_NO_NODISCARD_WARNINGS" ]
+}
+
 static_library("common") {
   sources = [ "demo_harness.cc" ]
   deps = [
@@ -73,6 +77,8 @@ source_set("demo_harness_fuchsia") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  configs += [ ":vulkan_no_nodiscard" ]
 }
 
 source_set("demo_harness_glfw") {

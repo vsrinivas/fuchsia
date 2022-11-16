@@ -62,7 +62,7 @@ VK_TEST_F(FrameTest, SubmitFrameWithUnsignalledWaitSemaphore) {
   EXPECT_TRUE(IsEventSignalled(release_semaphore_pair.second, ZX_EVENT_SIGNALED));
 
   // Cleanup
-  escher->vk_device().waitIdle();
+  EXPECT_EQ(vk::Result::eSuccess, escher->vk_device().waitIdle());
   loop.RunUntilIdle();
 }
 
