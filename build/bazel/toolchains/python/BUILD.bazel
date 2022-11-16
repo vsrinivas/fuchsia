@@ -9,11 +9,19 @@ load("@rules_python//python:defs.bzl", "py_runtime_pair")
 
 package(default_visibility = ["//visibility:public"])
 
+_python3_interpreter_path = "prebuilt/third_party/python3/%s/bin/python3" % build_config.host_tag
+
 py_runtime(
     name = "py3_runtime",
     files = ["//:prebuilt_python_files"],
-    interpreter = "//:prebuilt/third_party/python3/%s/bin/python3" % build_config.host_tag,
+    interpreter = "//:%s" % _python3_interpreter_path,
     python_version = "PY3",
+    # Set stub_shebang so the Python wrapper can find the prebuilt Python
+    # interpreter.
+    #
+    # See details about this shebang line in https://fxbug.dev/115164#c29, and
+    # general information about the underlying issue in that bug.
+    stub_shebang = '#!/usr/bin/env -S /bin/bash -c \'"$0".runfiles/main/%s "$0" "$@"\'' % _python3_interpreter_path,
 )
 
 py_runtime_pair(
