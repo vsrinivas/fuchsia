@@ -12,8 +12,3 @@ extend uint fuchsia.BIND_PROTOCOL {
 extend uint fuchsia.BIND_INIT_STEP {
   GPIO = 0x4F495047,
 };
-
-enum FUNCTION {
-   TOUCH_INTERRUPT,
-   TOUCH_RESET,
-};
