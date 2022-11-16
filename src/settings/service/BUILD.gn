@@ -219,6 +219,8 @@ rustc_library("lib") {
     "src/setup/types.rs",
     "src/storage.rs",
     "src/storage_migrations.rs",
+    "src/storage_migrations/v1653667208_light_migration.rs",
+    "src/storage_migrations/v1653667210_light_migration_teardown.rs",
     "src/task.rs",
     "src/tests.rs",
     "src/tests/accessibility_tests.rs",
