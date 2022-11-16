@@ -321,6 +321,7 @@ impl UnpopulatedInspectDataContainer {
                     .on_timeout((timeout - elapsed_time).after_now(), move || {
                         warn!(identity = ?unpopulated_for_timeout.identity.relative_moniker,
                             "{}", &*TIMEOUT_MESSAGE);
+                        global_stats.add_timeout();
                         let result = PopulatedInspectDataContainer {
                             identity: unpopulated_for_timeout.identity.clone(),
                             inspect_matcher: unpopulated_for_timeout.inspect_matcher.clone(),
