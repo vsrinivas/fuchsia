@@ -23,10 +23,6 @@ declare_args() {
 #
 # Parameters
 #
-#   is_emu
-#     [bool] Whether the device_types provided are all emulator types. If false,
-#     all device_types are expected to be hardware.
-#
 #   device_types
 #     [list of strings] Devices the test should run on.
 #     Allowable values are those among the entries in
@@ -37,7 +33,19 @@ declare_args() {
 #     See //build/testing/test_spec.gni.
 #
 template("boot_test") {
-  forward_variables_from(invoker, [ "is_emu" ])
+  assert(defined(invoker.device_types),
+         "boot_test(\"$target_name\") must define `device_types`")
+
+  forward_variables_from(invoker, [ "device_types" ])
+  emu_types = [
+    "QEMU",
+    "AEMU",
+  ]
+  is_emu = device_types + emu_types - emu_types != device_types
+  assert(
+      is_emu || !defined(invoker.qemu_kernel),
+      "`qemu_kernel` must be specified with an emulator device type: $device_types")
+
   toolchain = host_toolchain
   os = host_os
   cpu = host_cpu
@@ -96,8 +104,8 @@ template("boot_test") {
     deps = [ ":${_test_script_target}" ]
 
     environments = []
-    if (defined(invoker.device_types)) {
-      foreach(dt, invoker.device_types) {
+    if (defined(device_types)) {
+      foreach(dt, device_types) {
         environments += [
           {
             dimensions = {
@@ -311,24 +319,22 @@ template("zbi_test") {
     host_test_name = "${main_target}_host_test"
     if (emu_types != []) {
       boot_test(host_test_name) {
-        is_emu = true
+        device_types = emu_types
         zbi_image = output_name
         if (defined(invoker.qemu_kernel)) {
           qemu_kernel = invoker.qemu_kernel
         }
-        device_types = emu_types
       }
       group_deps += [ ":$host_test_name" ]
     }
     if (hardware_types != []) {
       host_test_hw_name = "${host_test_name}_for_hardware"
       boot_test(host_test_hw_name) {
-        is_emu = false
+        device_types = hardware_types
         zbi_image = output_name
         if (use_vbmeta) {
           vbmeta_image = vbmeta_target
         }
-        device_types = hardware_types
       }
       group_deps += [ ":$host_test_hw_name" ]
     }

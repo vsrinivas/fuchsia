@@ -17,7 +17,7 @@ func AddFFXDeps(s *Shard, buildDir string, images []build.Image, flash bool) err
 	if len(s.Tests) == 0 {
 		return fmt.Errorf("shard %s has no tests", s.Name)
 	}
-	if s.Env.IsEmu {
+	if s.Env.TargetsEmulator() {
 		targetCPU := s.Tests[0].CPU
 		deps, err := ffxutil.GetEmuDeps(buildDir, targetCPU, []string{})
 		if err != nil {

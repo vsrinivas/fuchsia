@@ -508,7 +508,6 @@ func fuchsiaTestSpec(basename string) build.TestSpec {
 				Dimensions: build.DimensionSet{
 					DeviceType: "AEMU",
 				},
-				IsEmu: true,
 			},
 		},
 	}

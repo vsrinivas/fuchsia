@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -68,7 +67,6 @@ func TestAddFFXDeps(t *testing.T) {
 			}
 			s := &Shard{
 				Env: build.Environment{
-					IsEmu: strings.HasSuffix(tc.deviceType, "EMU"),
 					Dimensions: build.DimensionSet{
 						DeviceType: tc.deviceType,
 					},

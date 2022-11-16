@@ -82,7 +82,6 @@ func TestAddImageDeps(t *testing.T) {
 	testCases := []struct {
 		name           string
 		pave           bool
-		isEmu          bool
 		imageOverrides build.ImageOverrides
 		deviceType     string
 		want           []string
@@ -91,28 +90,24 @@ func TestAddImageDeps(t *testing.T) {
 			name:       "emulator image deps",
 			deviceType: "AEMU",
 			pave:       false,
-			isEmu:      true,
 			want:       []string{"fuchsia.zbi", "images.json", "multiboot.bin", "obj/build/images/fuchsia/fuchsia/fvm.blk"},
 		},
 		{
 			name:       "paving image deps",
 			deviceType: "NUC",
 			pave:       true,
-			isEmu:      false,
 			want:       []string{"fuchsia.zbi", "images.json", "zedboot.zbi"},
 		},
 		{
 			name:       "netboot image deps",
 			deviceType: "NUC",
 			pave:       false,
-			isEmu:      false,
 			want:       []string{"images.json", "netboot.zbi", "zedboot.zbi"},
 		},
 		{
 			name:           "emulator env with image overrides",
 			deviceType:     "AEMU",
 			pave:           false,
-			isEmu:          true,
 			imageOverrides: build.ImageOverrides{build.ZbiImage: {Name: "zbi-image"}, build.QemuKernel: {Label: "//:other-qemu-kernel"}},
 			want:           []string{"images.json", "other-qemu-kernel", "zbi-image.zbi"},
 		},
@@ -120,7 +115,6 @@ func TestAddImageDeps(t *testing.T) {
 			name:           "hardware env with image overrides",
 			deviceType:     "NUC",
 			pave:           false,
-			isEmu:          false,
 			imageOverrides: build.ImageOverrides{build.ZbiImage: {Name: "zbi-image"}, build.VbmetaImage: {Name: "vbmeta-image"}},
 			want:           []string{"images.json", "vbmeta-image.vbmeta", "zbi-image.zbi", "zedboot.zbi"},
 		},
@@ -128,20 +122,17 @@ func TestAddImageDeps(t *testing.T) {
 			name:       "GCE image deps",
 			deviceType: "GCE",
 			pave:       false,
-			isEmu:      false,
 			want:       []string{"images.json"},
 		},
 		{
-			name:  "host-test only shard image deps",
-			pave:  false,
-			isEmu: false,
+			name: "host-test only shard image deps",
+			pave: false,
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := &Shard{
 				Env: build.Environment{
-					IsEmu:          tc.isEmu,
 					ImageOverrides: tc.imageOverrides,
 					Dimensions: build.DimensionSet{
 						DeviceType: tc.deviceType,

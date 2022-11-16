@@ -96,9 +96,6 @@ type Environment struct {
 	// Netboot tells whether to "netboot" instead of paving before running the tests.
 	Netboot bool `json:"netboot,omitempty"`
 
-	// IsEmu is true if this environment targets an emulator, false otherwise.
-	IsEmu bool `json:"is_emu,omitempty"`
-
 	// ExtraEnvNameKeys are keys to further distinguish a unique environment by.
 	ExtraEnvNameKeys []string `json:"extra_env_name_keys,omitempty"`
 
@@ -107,6 +104,10 @@ type Environment struct {
 	// and the value should be the name of the image to override with as defined
 	// in images.json.
 	ImageOverrides ImageOverrides `json:"image_overrides,omitempty"`
+}
+
+func (env Environment) TargetsEmulator() bool {
+	return env.Dimensions.DeviceType == "QEMU" || env.Dimensions.DeviceType == "AEMU"
 }
 
 // ImageOverrides is a map of image type to image metadata as defined in images.json.
