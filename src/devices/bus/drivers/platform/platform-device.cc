@@ -613,6 +613,41 @@ zx_status_t PlatformDevice::Start() {
     // but the actual composite device will be in a new devhost or devhost belonging to
     // one of the other fragments.
     args.set_flags(DEVICE_ADD_MUST_ISOLATE);
+
+    auto add_service_result = outgoing_.AddService<fuchsia_hardware_platform_device::Service>(
+        fuchsia_hardware_platform_device::Service::InstanceHandler(
+            {.device = bind_handler(fdf::Dispatcher::GetCurrent()->async_dispatcher())}));
+    if (add_service_result.is_error()) {
+      zxlogf(ERROR, "could not add service to outgoing directory: %s",
+             add_service_result.status_string());
+      return add_service_result.error_value();
+    }
+
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    if (endpoints.is_error()) {
+      zxlogf(ERROR, "could not create fuchsia.io endpoints for outgoing directory: %s",
+             endpoints.status_string());
+      return endpoints.status_value();
+    }
+
+    auto result = outgoing_.Serve(std::move(endpoints->server));
+    if (result.is_error()) {
+      zxlogf(ERROR, "could not serve outgoing directory: %s", result.status_string());
+      return result.error_value();
+    }
+
+    std::array protocol_offers = {
+        fidl::DiscoverableProtocolName<fuchsia_hardware_platform_device::Device>,
+    };
+
+    std::array offers = {
+        fuchsia_hardware_platform_device::Service::Name,
+    };
+
+    args.set_outgoing_dir(endpoints->client.TakeChannel())
+        .set_fidl_protocol_offers(protocol_offers)
+        .set_fidl_service_offers(offers);
+
     char argstr[64];
     snprintf(argstr, sizeof(argstr), "pdev:%s,", name);
     args.set_proxy_args(argstr);
@@ -660,6 +695,92 @@ void PlatformDevice::DdkInit(ddk::InitTxn txn) {
     }
   }
   return txn.Reply(ZX_OK);
+}
+
+void PlatformDevice::GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& completer) {
+  pdev_mmio_t banjo_mmio;
+  zx_status_t status = PDevGetMmio(request->index, &banjo_mmio);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+
+  fidl::Arena arena;
+  fuchsia_hardware_platform_device::wire::Mmio mmio =
+      fuchsia_hardware_platform_device::wire::Mmio::Builder(arena)
+          .offset(banjo_mmio.offset)
+          .size(banjo_mmio.size)
+          .vmo(zx::vmo(banjo_mmio.vmo))
+          .Build();
+  completer.ReplySuccess(std::move(mmio));
+}
+
+void PlatformDevice::GetInterrupt(GetInterruptRequestView request,
+                                  GetInterruptCompleter::Sync& completer) {
+  zx::interrupt interrupt;
+  zx_status_t status = PDevGetInterrupt(request->index, request->flags, &interrupt);
+  if (status == ZX_OK) {
+    completer.ReplySuccess(std::move(interrupt));
+  } else {
+    completer.ReplyError(status);
+  }
+}
+
+void PlatformDevice::GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) {
+  zx::bti bti;
+  zx_status_t status = PDevGetBti(request->index, &bti);
+  if (status == ZX_OK) {
+    completer.ReplySuccess(std::move(bti));
+  } else {
+    completer.ReplyError(status);
+  }
+}
+
+void PlatformDevice::GetSmc(GetSmcRequestView request, GetSmcCompleter::Sync& completer) {
+  zx::resource resource;
+  zx_status_t status = PDevGetSmc(request->index, &resource);
+  if (status == ZX_OK) {
+    completer.ReplySuccess(std::move(resource));
+  } else {
+    completer.ReplyError(status);
+  }
+}
+
+void PlatformDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
+  pdev_device_info_t banjo_info;
+  zx_status_t status = PDevGetDeviceInfo(&banjo_info);
+  if (status == ZX_OK) {
+    fidl::Arena arena;
+    completer.ReplySuccess(fuchsia_hardware_platform_device::wire::DeviceInfo::Builder(arena)
+                               .vid(banjo_info.vid)
+                               .pid(banjo_info.pid)
+                               .did(banjo_info.did)
+                               .mmio_count(banjo_info.mmio_count)
+                               .irq_count(banjo_info.irq_count)
+                               .bti_count(banjo_info.bti_count)
+                               .smc_count(banjo_info.smc_count)
+                               .metadata_count(banjo_info.metadata_count)
+                               .name(banjo_info.name)
+                               .Build());
+  } else {
+    completer.ReplyError(status);
+  }
+}
+
+void PlatformDevice::GetBoardInfo(GetBoardInfoCompleter::Sync& completer) {
+  pdev_board_info_t banjo_info;
+  zx_status_t status = PDevGetBoardInfo(&banjo_info);
+  if (status == ZX_OK) {
+    fidl::Arena arena;
+    completer.ReplySuccess(fuchsia_hardware_platform_device::wire::BoardInfo::Builder(arena)
+                               .vid(banjo_info.vid)
+                               .pid(banjo_info.pid)
+                               .board_name(banjo_info.board_name)
+                               .board_revision(banjo_info.board_revision)
+                               .Build());
+  } else {
+    completer.ReplyError(status);
+  }
 }
 
 }  // namespace platform_bus

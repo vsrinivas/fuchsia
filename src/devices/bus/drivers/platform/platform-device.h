@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fidl/fuchsia.hardware.platform.bus/cpp/natural_types.h>
+#include <fidl/fuchsia.hardware.platform.device/cpp/wire.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/driver/component/cpp/outgoing_directory.h>
 #include <lib/zx/bti.h>
@@ -73,7 +74,8 @@ using PlatformDeviceType =
 // calls the platform bus protocol method pbus_device_add().
 
 class PlatformDevice : public PlatformDeviceType,
-                       public ddk::PDevProtocol<PlatformDevice, ddk::base_protocol> {
+                       public ddk::PDevProtocol<PlatformDevice, ddk::base_protocol>,
+                       public fidl::WireServer<fuchsia_hardware_platform_device::Device> {
  public:
   enum Type {
     // This platform device is started in a new devhost.
@@ -112,6 +114,15 @@ class PlatformDevice : public PlatformDeviceType,
   zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info);
   zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info);
   zx_status_t PDevDeviceAdd(uint32_t index, const device_add_args_t* args, zx_device_t** device);
+
+  // Platform device protocol FIDL implementation.
+  void GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& completer) override;
+  void GetInterrupt(GetInterruptRequestView request,
+                    GetInterruptCompleter::Sync& completer) override;
+  void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override;
+  void GetSmc(GetSmcRequestView request, GetSmcCompleter::Sync& completer) override;
+  void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) override;
+  void GetBoardInfo(GetBoardInfoCompleter::Sync& completer) override;
 
   // Starts the underlying devmgr device.
   zx_status_t Start();

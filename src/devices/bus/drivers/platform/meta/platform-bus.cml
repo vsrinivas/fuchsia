@@ -15,6 +15,7 @@
     },
     capabilities: [
         { service: "fuchsia.hardware.platform.bus.Service" },
+        { service: "fuchsia.hardware.platform.device.Service" },
     ],
     use: [
         { protocol: "fuchsia.boot.RootResource" },
@@ -22,6 +23,10 @@
     expose: [
         {
             service: "fuchsia.hardware.platform.bus.Service",
+            from: "self",
+        },
+        {
+            service: "fuchsia.hardware.platform.device.Service",
             from: "self",
         },
     ],
