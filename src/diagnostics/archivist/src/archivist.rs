@@ -11,8 +11,9 @@ use crate::{
         sources::{ComponentEventProvider, EventSource, LogConnector, UnattributedLogSinkSource},
         types::*,
     },
+    identity::ComponentIdentity,
     inspect::repository::InspectRepository,
-    logs::{repository::LogsRepository, servers::*, KernelDebugLog},
+    logs::{budget::BudgetManager, repository::LogsRepository, servers::*, KernelDebugLog},
     pipeline::Pipeline,
 };
 use archivist_config::Config;
@@ -27,7 +28,7 @@ use fuchsia_component::{
 use fuchsia_inspect::{component, health::Reporter};
 use fuchsia_zircon as zx;
 use futures::{
-    channel::oneshot,
+    channel::{mpsc, oneshot},
     future::{self, abortable},
     prelude::*,
 };
@@ -61,6 +62,9 @@ pub struct Archivist {
     /// The repository holding active log connections.
     logs_repository: Arc<LogsRepository>,
 
+    /// The overall capacity we enforce for log messages across containers.
+    logs_budget: BudgetManager,
+
     /// The server handling fuchsia.diagnostics.ArchiveAccessor
     accessor_server: Arc<ArchiveAccessorServer>,
 
@@ -85,11 +89,9 @@ impl Archivist {
         // Initialize the pipelines that the archivist will expose.
         let pipelines = Self::init_pipelines(config);
 
-        let logs_repo = LogsRepository::new(
-            config.logs_max_cached_original_bytes,
-            component::inspector().root(),
-        )
-        .await;
+        // Initialize our data repositories.
+        let logs_budget = BudgetManager::new(config.logs_max_cached_original_bytes as usize);
+        let logs_repo = Arc::new(LogsRepository::new(&logs_budget, component::inspector().root()));
         let inspect_repo =
             Arc::new(InspectRepository::new(pipelines.iter().map(Arc::downgrade).collect()));
 
@@ -177,6 +179,7 @@ impl Archivist {
             pipelines,
             _inspect_repository: inspect_repo,
             logs_repository: logs_repo,
+            logs_budget,
             unattributed_log_sink_source,
         }
     }
@@ -286,6 +289,14 @@ impl Archivist {
         fs.serve_connection(outgoing_channel).map_err(Error::ServeOutgoing)?;
         let run_outgoing = fs.collect::<()>();
 
+        // Start the log budget component removal task.
+        // TODO(fxbug.dev/92015): move this logic and the logs budget to the logs repository.
+        let logs_repository = self.logs_repository.clone();
+        let (snd, rcv) = mpsc::unbounded::<Arc<ComponentIdentity>>();
+        self.logs_budget.set_remover(snd).await;
+        let component_removal_task =
+            fasync::Task::spawn(Self::process_removal_of_components(rcv, logs_repository.clone()));
+
         // Start ingesting events.
         let (terminate_handle, drain_events_fut) = self
             .event_router
@@ -298,13 +309,18 @@ impl Archivist {
 
         let accessor_server = self.accessor_server.clone();
         let log_server = self.log_server.clone();
-        let logs_repo = self.logs_repository.clone();
+        let logs_repo = logs_repository.clone();
+        let logs_budget = self.logs_budget.handle();
         let all_msg = async {
             logs_repo.wait_for_termination().await;
+            debug!("Terminated logs");
+            logs_budget.terminate().await;
             debug!("Flushing to listeners.");
             accessor_server.wait_for_servers_to_complete().await;
             log_server.wait_for_servers_to_complete().await;
             debug!("Log listeners and batch iterators stopped.");
+            component_removal_task.cancel().await;
+            debug!("Not processing more component removal requests.");
         };
 
         let (abortable_fut, abort_handle) = abortable(run_outgoing);
@@ -312,7 +328,6 @@ impl Archivist {
         let log_server = self.log_server;
         let accessor_server = self.accessor_server;
         let incoming_external_event_producers = self.incoming_external_event_producers;
-        let logs_repo = self.logs_repository;
         let stop_fut = match self.stop_recv {
             Some(stop_recv) => async move {
                 stop_recv.into_future().await.ok();
@@ -322,7 +337,7 @@ impl Archivist {
                 }
                 log_server.stop().await;
                 accessor_server.stop().await;
-                logs_repo.stop_accepting_new_log_sinks().await;
+                logs_repository.stop_accepting_new_log_sinks().await;
                 abort_handle.abort()
             }
             .left_future(),
@@ -379,6 +394,18 @@ impl Archivist {
             log_settings_server.spawn(stream);
         });
     }
+
+    async fn process_removal_of_components(
+        mut removal_requests: mpsc::UnboundedReceiver<Arc<ComponentIdentity>>,
+        logs_repo: Arc<LogsRepository>,
+    ) {
+        while let Some(identity) = removal_requests.next().await {
+            if !logs_repo.is_live(&identity).await {
+                debug!(%identity, "Removing component from repository.");
+                logs_repo.remove(&identity).await;
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -405,8 +432,8 @@ mod tests {
             install_controller: true,
             listen_to_lifecycle: false,
             log_to_debuglog: false,
+            logs_max_cached_original_bytes: LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES as u64,
             serve_unattributed_logs: true,
-            logs_max_cached_original_bytes: LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES,
             num_threads: 1,
             pipelines_path: DEFAULT_PIPELINES_PATH.into(),
             bind_services: vec![],

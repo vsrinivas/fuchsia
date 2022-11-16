@@ -43,30 +43,17 @@ lazy_static! {
 /// LogsRepository holds all diagnostics data and is a singleton wrapped by multiple
 /// [`pipeline::Pipeline`]s in a given Archivist instance.
 pub struct LogsRepository {
-    log_sender: Arc<Mutex<mpsc::UnboundedSender<fasync::Task<()>>>>,
+    log_sender: Arc<RwLock<mpsc::UnboundedSender<fasync::Task<()>>>>,
     mutable_state: RwLock<LogsRepositoryState>,
-    /// Processes removal of components emitted by the budget handler. This is done to prevent a
-    /// deadlock. It's behind a mutex, but it's only set once. Holds an Arc<Self>.
-    component_removal_task: Mutex<Option<fasync::Task<()>>>,
 }
 
 impl LogsRepository {
-    pub async fn new(
-        logs_max_cached_original_bytes: u64,
-        parent: &fuchsia_inspect::Node,
-    ) -> Arc<Self> {
-        let (remover_snd, remover_rcv) = mpsc::unbounded();
-        let logs_budget = BudgetManager::new(logs_max_cached_original_bytes as usize, remover_snd);
+    pub fn new(logs_budget: &BudgetManager, parent: &fuchsia_inspect::Node) -> Self {
         let (log_sender, log_receiver) = mpsc::unbounded();
-        let this = Arc::new(LogsRepository {
-            mutable_state: RwLock::new(LogsRepositoryState::new(logs_budget, log_receiver, parent)),
-            log_sender: Arc::new(Mutex::new(log_sender)),
-            component_removal_task: Mutex::new(None),
-        });
-        *this.component_removal_task.lock().await = Some(fasync::Task::spawn(
-            Self::process_removal_of_components(remover_rcv, this.clone()),
-        ));
-        this
+        LogsRepository {
+            mutable_state: LogsRepositoryState::new(logs_budget.clone(), log_receiver, parent),
+            log_sender: Arc::new(RwLock::new(log_sender)),
+        }
     }
 
     /// Drain the kernel's debug log. The returned future completes once
@@ -138,6 +125,16 @@ impl LogsRepository {
         merged
     }
 
+    /// Returns `true` if a container exists for the requested `identity` and that container either
+    /// corresponds to a running component or we've decided to still retain it.
+    pub async fn is_live(&self, identity: &ComponentIdentity) -> bool {
+        let this = self.mutable_state.read().await;
+        match this.data_directories.get(&identity.unique_key()) {
+            Some(container) => container.should_retain().await,
+            None => false,
+        }
+    }
+
     pub async fn get_log_container(
         &self,
         identity: ComponentIdentity,
@@ -145,6 +142,9 @@ impl LogsRepository {
         self.mutable_state.write().await.get_log_container(identity).await
     }
 
+    pub async fn remove(&self, identity: &ComponentIdentity) {
+        self.mutable_state.write().await.remove(identity);
+    }
     /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
     /// consuming any messages received before this call.
     pub async fn wait_for_termination(&self) {
@@ -157,15 +157,12 @@ impl LogsRepository {
             container.terminate_logs();
         }
         repo.logs_multiplexers.terminate().await;
-
-        debug!("Terminated logs");
-        repo.logs_budget.terminate().await;
     }
 
     /// Closes the connection in which new logger draining tasks are sent. No more logger tasks
     /// will be accepted when this is called and we'll proceed to terminate logs.
     pub async fn stop_accepting_new_log_sinks(&self) {
-        self.log_sender.lock().await.disconnect();
+        self.log_sender.write().await.disconnect();
     }
 
     /// Returns an id to use for a new interest connection. Used by both LogSettings and Log, to
@@ -188,26 +185,10 @@ impl LogsRepository {
         self.mutable_state.write().await.finish_interest_connection(connection_id).await;
     }
 
-    async fn process_removal_of_components(
-        mut removal_requests: mpsc::UnboundedReceiver<Arc<ComponentIdentity>>,
-        logs_repo: Arc<LogsRepository>,
-    ) {
-        while let Some(identity) = removal_requests.next().await {
-            let mut repo = logs_repo.mutable_state.write().await;
-            if !repo.is_live(&identity).await {
-                debug!(%identity, "Removing component from repository.");
-                repo.remove(&identity);
-            }
-        }
-    }
-
     #[cfg(test)]
-    pub(crate) async fn default() -> Arc<Self> {
-        LogsRepository::new(
-            crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES,
-            &Default::default(),
-        )
-        .await
+    pub(crate) fn default() -> Self {
+        let budget = BudgetManager::new(crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES);
+        LogsRepository::new(&budget, &Default::default())
     }
 }
 
@@ -222,7 +203,9 @@ impl EventConsumer for LogsRepository {
                 debug!(identity = %component, "LogSink requested.");
                 if let Some(request_stream) = request_stream {
                     let container = self.get_log_container(component).await;
-                    container.handle_log_sink(request_stream, self.log_sender.clone()).await;
+                    container
+                        .handle_log_sink(request_stream, self.log_sender.read().await.clone())
+                        .await;
                 }
             }
             _ => unreachable!("Archivist state just subscribes to log sink requested"),
@@ -258,8 +241,8 @@ impl LogsRepositoryState {
         logs_budget: BudgetManager,
         log_receiver: mpsc::UnboundedReceiver<fasync::Task<()>>,
         parent: &fuchsia_inspect::Node,
-    ) -> Self {
-        Self {
+    ) -> RwLock<Self> {
+        RwLock::new(Self {
             inspect_node: parent.create_child("sources"),
             data_directories: trie::Trie::new(),
             logs_budget,
@@ -268,7 +251,7 @@ impl LogsRepositoryState {
             logs_multiplexers: MultiplexerBroker::new(),
             interest_registrations: BTreeMap::new(),
             drain_klog_task: None,
-        }
+        })
     }
 
     /// Returns a container for logs artifacts, constructing one and adding it to the trie if
@@ -302,13 +285,6 @@ impl LogsRepositoryState {
                     .logs(&self.logs_budget, &self.logs_interest, &mut self.logs_multiplexers)
                     .await
             }
-        }
-    }
-
-    async fn is_live(&self, identity: &ComponentIdentity) -> bool {
-        match self.data_directories.get(&identity.unique_key()) {
-            Some(container) => container.should_retain().await,
-            None => false,
         }
     }
 
@@ -425,7 +401,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn data_repo_filters_logs_by_selectors() {
-        let repo = LogsRepository::default().await;
+        let repo = LogsRepository::default();
         let foo_container = repo
             .get_log_container(ComponentIdentity::from_identifier_and_url(
                 ComponentIdentifier::parse_from_moniker("./foo").unwrap(),
@@ -464,7 +440,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn multiplexer_broker_cleanup() {
-        let repo = LogsRepository::default().await;
+        let repo = LogsRepository::default();
         let stream =
             repo.logs_cursor(StreamMode::SnapshotThenSubscribe, None, ftrace::Id::random()).await;
 
