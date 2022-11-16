@@ -7,6 +7,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 
+#include "src/cobalt/bin/app/metric_event_logger_factory_impl.h"
 #include "third_party/cobalt/src/public/cobalt_service_interface.h"
 
 namespace cobalt {
@@ -15,7 +16,8 @@ namespace cobalt {
 class AggregateAndUploadImpl : public fuchsia::cobalt::AggregateAndUpload {
  public:
   // All of the pointers passed to the constructor must be non-null.
-  explicit AggregateAndUploadImpl(CobaltServiceInterface* cobalt_service);
+  explicit AggregateAndUploadImpl(CobaltServiceInterface* cobalt_service,
+                                  MetricEventLoggerFactoryImpl* metric_event_logger_factory);
 
   // Locally aggregates all collected metrics and uploads generated observations immediately.
   //
@@ -26,7 +28,16 @@ class AggregateAndUploadImpl : public fuchsia::cobalt::AggregateAndUpload {
   void AggregateAndUploadMetricEvents(AggregateAndUploadMetricEventsCallback callback) override;
 
  private:
+  // Shutdown running loggers and other background local aggregators.
+  //
+  // Shutting down running loggers will prevent any more metrics from being logged when aggregated
+  // observations are being generated. Shutting down other background local aggregators will
+  // guarantee that metrics will only be locally aggregated when AggregateAndUploadMetricEvents is
+  // called.
+  void ShutdownLoggersAndBackgroundAggregators();
+
   CobaltServiceInterface* cobalt_service_;  // not owned
+  MetricEventLoggerFactoryImpl* metric_event_logger_factory_impl_;
 };
 }  // namespace cobalt
 

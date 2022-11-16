@@ -21,11 +21,17 @@ namespace cobalt {
 // The base delay that the exponential backoff will use.
 const uint32_t kExponentialBackoffMicroseconds = 1000000;  // 1000000 usec = 1 sec
 
-AggregateAndUploadImpl::AggregateAndUploadImpl(CobaltServiceInterface* cobalt_service)
-    : cobalt_service_(cobalt_service) {}
+AggregateAndUploadImpl::AggregateAndUploadImpl(
+    CobaltServiceInterface* cobalt_service,
+    MetricEventLoggerFactoryImpl* metric_event_logger_factory_impl)
+    : cobalt_service_(cobalt_service),
+      metric_event_logger_factory_impl_(metric_event_logger_factory_impl) {}
 
 void AggregateAndUploadImpl::AggregateAndUploadMetricEvents(
     AggregateAndUploadMetricEventsCallback callback) {
+  // Shutdown loggers and background aggregator threads.
+  ShutdownLoggersAndBackgroundAggregators();
+
   std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
   uint32_t utc_day_index = util::TimePointToDayIndexUtc(now);
   uint32_t exp_backoff_multiplier = 0;
@@ -94,6 +100,18 @@ void AggregateAndUploadImpl::AggregateAndUploadMetricEvents(
   } while (should_retry);
 
   callback();
+}
+
+void AggregateAndUploadImpl::ShutdownLoggersAndBackgroundAggregators() {
+  // Shutdown logger
+  FX_LOGS(INFO) << "Shutting down running loggers.";
+  metric_event_logger_factory_impl_->ShutDown();
+  FX_LOGS(INFO) << "Running loggers have been shut down.";
+
+  // Shutdown background aggregator threads
+  FX_LOGS(INFO) << "Shutting down other background aggregator threads.";
+  cobalt_service_->ShutDown();
+  FX_LOGS(INFO) << "Other background aggregator threads have been shut down.";
 }
 
 }  // namespace cobalt

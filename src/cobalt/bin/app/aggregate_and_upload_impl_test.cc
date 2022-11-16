@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include "src/cobalt/bin/app/metric_event_logger_factory_impl.h"
 #include "src/public/lib/status.h"
 #include "src/public/lib/status_codes.h"
 #include "third_party/cobalt/src/public/testing/fake_cobalt_service.h"
@@ -37,10 +38,20 @@ class FakeService : public testing::FakeCobaltService {
   std::vector<cobalt::StatusCode> status_codes_ = {};
 };
 
+class FakeMetricEventLoggerFactoryImpl : public MetricEventLoggerFactoryImpl {
+ public:
+  explicit FakeMetricEventLoggerFactoryImpl(cobalt::CobaltServiceInterface* cobalt_service)
+      : MetricEventLoggerFactoryImpl(cobalt_service) {}
+
+  void ShutDown() {}
+};
+
 TEST(AggregateAndUploadImplTest, Succeeds) {
   cobalt::FakeService fake_service;
   fake_service.set_send_soon_succeeds(true);
-  AggregateAndUploadImpl aggregate_and_upload_impl(&fake_service);
+  FakeMetricEventLoggerFactoryImpl fake_metric_event_logger_factory(&fake_service);
+  AggregateAndUploadImpl aggregate_and_upload_impl(&fake_service,
+                                                   &fake_metric_event_logger_factory);
   bool callback_invoked = false;
   aggregate_and_upload_impl.AggregateAndUploadMetricEvents(
       [&callback_invoked]() { callback_invoked = true; });
@@ -51,7 +62,9 @@ TEST(AggregateAndUploadImplTest, RetryImmediately) {
   cobalt::FakeService fake_service;
   fake_service.set_send_soon_succeeds(true);
   fake_service.set_status_code_sequence({StatusCode::RESOURCE_EXHAUSTED});
-  AggregateAndUploadImpl aggregate_and_upload_impl(&fake_service);
+  FakeMetricEventLoggerFactoryImpl fake_metric_event_logger_factory(&fake_service);
+  AggregateAndUploadImpl aggregate_and_upload_impl(&fake_service,
+                                                   &fake_metric_event_logger_factory);
   bool callback_invoked = false;
   aggregate_and_upload_impl.AggregateAndUploadMetricEvents(
       [&callback_invoked]() { callback_invoked = true; });
@@ -64,7 +77,9 @@ TEST(AggregateAndUploadImplTest, RetryWithExponentialBackoff) {
   fake_service.set_send_soon_succeeds(true);
   fake_service.set_status_code_sequence(
       {StatusCode::DATA_LOSS, StatusCode::ABORTED, StatusCode::INTERNAL, StatusCode::UNAVAILABLE});
-  AggregateAndUploadImpl aggregate_and_upload_impl(&fake_service);
+  FakeMetricEventLoggerFactoryImpl fake_metric_event_logger_factory(&fake_service);
+  AggregateAndUploadImpl aggregate_and_upload_impl(&fake_service,
+                                                   &fake_metric_event_logger_factory);
   bool callback_invoked = false;
   aggregate_and_upload_impl.AggregateAndUploadMetricEvents(
       [&callback_invoked]() { callback_invoked = true; });
@@ -77,7 +92,9 @@ TEST(AggregateAndUploadImplTest, NoRetry) {
   fake_service.set_send_soon_succeeds(true);
   // A status code of FAILED_PRECONDITION should stop any further retries.
   fake_service.set_status_code_sequence({StatusCode::FAILED_PRECONDITION, StatusCode::ABORTED});
-  AggregateAndUploadImpl aggregate_and_upload_impl(&fake_service);
+  FakeMetricEventLoggerFactoryImpl fake_metric_event_logger_factory(&fake_service);
+  AggregateAndUploadImpl aggregate_and_upload_impl(&fake_service,
+                                                   &fake_metric_event_logger_factory);
   bool callback_invoked = false;
   aggregate_and_upload_impl.AggregateAndUploadMetricEvents(
       [&callback_invoked]() { callback_invoked = true; });

@@ -233,7 +233,8 @@ CobaltApp::CobaltApp(
   context_->outgoing()->AddPublicService(controller_bindings_.GetHandler(controller_impl_.get()));
 
   // Create AggregateAndUpload protocol implementation and start serving it.
-  aggregate_and_upload_impl_ = std::make_unique<AggregateAndUploadImpl>(cobalt_service_.get());
+  aggregate_and_upload_impl_ = std::make_unique<AggregateAndUploadImpl>(
+      cobalt_service_.get(), metric_event_logger_factory_impl_.get());
   context_->outgoing()->AddPublicService(
       aggregate_and_upload_bindings_.GetHandler(aggregate_and_upload_impl_.get()));
 }
