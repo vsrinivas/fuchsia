@@ -51,6 +51,10 @@ impl FromStr for Version {
 
     fn from_str(value: &str) -> Result<Self> {
         // Verify the version string is URL-safe.
+        let value = value.trim();
+        if value.is_empty() {
+            return Err(anyhow::anyhow!("Version string cannot be empty."));
+        }
         let placeholder_url = format!("http://some.domain/{}", value.to_string());
         if let Ok(val) = Url::parse(&placeholder_url) {
             // If the parsed URL has changed, then the string had to be escaped (it was not URL-safe).
@@ -247,6 +251,79 @@ mod test {
         match TestList::from_str(multiple_csv.as_str()) {
             Ok(_) => assert!(false, "This call should not pass."),
             Err(e) => assert_eq!(e.to_string(), "'def' does not appear to be a fuchsia-pkg URL."),
+        }
+    }
+
+    #[test]
+    fn test_test_version_from_str_ok() {
+        let test0 = "1.0";
+        assert_eq!(
+            Version::from_str(test0).unwrap().0,
+            test0,
+            "Version value was modified when saved."
+        );
+        let test1 = "1";
+        assert_eq!(
+            Version::from_str(test1).unwrap().0,
+            test1,
+            "Version value was modified when saved."
+        );
+        let test2 = "0.0.1b-29faf3";
+        assert_eq!(
+            Version::from_str(test2).unwrap().0,
+            test2,
+            "Version value was modified when saved."
+        );
+        let test3 = "1.0-rev3";
+        assert_eq!(
+            Version::from_str(test3).unwrap().0,
+            test3,
+            "Version value was modified when saved."
+        );
+        let test4 = "A";
+        assert_eq!(
+            Version::from_str(test4).unwrap().0,
+            test4,
+            "Version value was modified when saved."
+        );
+        let test5 = "1-2.3_4~5";
+        assert_eq!(
+            Version::from_str(test5).unwrap().0,
+            test5,
+            "Version value was modified when saved."
+        );
+    }
+
+    #[test]
+    fn test_test_version_from_str_err() {
+        let has_curly = "1.0{b}";
+        match Version::from_str(has_curly) {
+            Ok(_) => assert!(false, "This call should not pass."),
+            Err(e) => assert_eq!(e.to_string(), "Please limit your version number to consist of alphanumeric, '-', '.', '_', and '~'."),
+        }
+
+        let has_unicode = "1.0Ӂ";
+        match Version::from_str(has_unicode) {
+            Ok(_) => assert!(false, "This call should not pass."),
+            Err(e) => assert_eq!(e.to_string(), "Please limit your version number to consist of alphanumeric, '-', '.', '_', and '~'."),
+        }
+
+        let has_space = "1.0 final";
+        match Version::from_str(has_space) {
+            Ok(_) => assert!(false, "This call should not pass."),
+            Err(e) => assert_eq!(e.to_string(), "Please limit your version number to consist of alphanumeric, '-', '.', '_', and '~'."),
+        }
+
+        let empty = "";
+        match Version::from_str(empty) {
+            Ok(_) => assert!(false, "This call should not pass."),
+            Err(e) => assert_eq!(e.to_string(), "Version string cannot be empty."),
+        }
+
+        let space = " ";
+        match Version::from_str(space) {
+            Ok(_) => assert!(false, "This call should not pass."),
+            Err(e) => assert_eq!(e.to_string(), "Version string cannot be empty."),
         }
     }
 }
