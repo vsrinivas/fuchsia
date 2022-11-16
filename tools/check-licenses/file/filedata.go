@@ -50,7 +50,7 @@ func (a OrderFileData) Less(i, j int) bool {
 	return a[i].LineNumber < a[j].LineNumber
 }
 
-func NewFileData(path string, relPath string, content []byte, filetype FileType) ([]*FileData, error) {
+func NewFileData(path string, relPath string, content []byte, filetype FileType, project string) ([]*FileData, error) {
 	data := make([]*FileData, 0)
 
 	// The "LicenseFormat" field of each file is set at the project level
@@ -61,32 +61,23 @@ func NewFileData(path string, relPath string, content []byte, filetype FileType)
 	// This is most likely a regular source file in the repository.
 	// May or may not have copyright information.
 	case Any:
-		data = append(data, &FileData{
-			FilePath:   path,
-			RelPath:    relPath,
-			LineNumber: 0,
-			Data:       bytes.TrimSpace(content),
-		})
+		fallthrough
 
 	// File.LicenseFormat == CopyrightHeader
 	// All source files belonging to "The Fuchsia Authors" (fuchsia.git)
 	// must contain Copyright header information.
 	case CopyrightHeader:
-		data = append(data, &FileData{
-			FilePath:   path,
-			RelPath:    relPath,
-			LineNumber: 0,
-			Data:       bytes.TrimSpace(content),
-		})
+		fallthrough
 
 	// File.LicenseFormat == SingleLicense
 	// Regular LICENSE files that contain text for a single license.
 	case SingleLicense:
 		data = append(data, &FileData{
-			FilePath:   path,
-			RelPath:    relPath,
-			LineNumber: 0,
-			Data:       bytes.TrimSpace(content),
+			FilePath:    path,
+			RelPath:     relPath,
+			LineNumber:  0,
+			LibraryName: project,
+			Data:        bytes.TrimSpace(content),
 		})
 
 	// File.LicenseFormat == MultiLicense*

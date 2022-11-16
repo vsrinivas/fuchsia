@@ -86,6 +86,9 @@ func NewPattern(path string) (*Pattern, error) {
 	// special characters.
 	if filepath.Ext(path) == ".txt" {
 		b = bytes.ReplaceAll(b, []byte(`\`), []byte(`\\`))
+		b = bytes.ReplaceAll(b, []byte(`|`), []byte(`\|`))
+		b = bytes.ReplaceAll(b, []byte(`^`), []byte(`\^`))
+		b = bytes.ReplaceAll(b, []byte(`$`), []byte(`\$`))
 		b = bytes.ReplaceAll(b, []byte(`.`), []byte(`\.`))
 		b = bytes.ReplaceAll(b, []byte(`?`), []byte(`\?`))
 		b = bytes.ReplaceAll(b, []byte("`"), []byte(`\x60`))
@@ -95,6 +98,7 @@ func NewPattern(path string) (*Pattern, error) {
 		b = bytes.ReplaceAll(b, []byte(`)`), []byte(`\)`))
 		b = bytes.ReplaceAll(b, []byte(`*`), []byte(`\*`))
 		b = bytes.ReplaceAll(b, []byte(`+`), []byte(`\+`))
+		b = bytes.ReplaceAll(b, []byte(`-`), []byte(`\-`))
 
 		b = append([]byte(`(`), b...)
 		b = append(b, []byte(`)`)...)

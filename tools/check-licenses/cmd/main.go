@@ -21,7 +21,7 @@ const (
 var (
 	Config *CheckLicensesConfig
 
-	target string
+	target = "//:default"
 )
 
 var (

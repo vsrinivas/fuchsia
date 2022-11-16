@@ -18,7 +18,7 @@ func TestFileCreatedSuccessfully(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := NewFile(filename, SingleLicense); err != nil {
+	if _, err := NewFile(filename, SingleLicense, "Example Project"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -27,7 +27,7 @@ func TestFileCreationFails(t *testing.T) {
 	setup(t)
 	filename := filepath.Join(t.TempDir(), "failure.txt")
 
-	if _, err := NewFile(filename, SingleLicense); err == nil {
+	if _, err := NewFile(filename, SingleLicense, "Example Project"); err == nil {
 		t.Fatal(err)
 	}
 }
@@ -52,7 +52,7 @@ func TestReplacements(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	f, err := NewFile(filename, SingleLicense)
+	f, err := NewFile(filename, SingleLicense, "Example Project")
 	if err != nil {
 		t.Fatal(err)
 	}

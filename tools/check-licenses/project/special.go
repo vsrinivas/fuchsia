@@ -38,8 +38,10 @@ func NewSpecialProject(projectRootPath string) (*Project, error) {
 		if item.IsDir() {
 			continue
 		}
+
 		if strings.Contains(strings.ToLower(item.Name()), "licen") &&
-			!strings.Contains(strings.ToLower(item.Name()), "tmpl") {
+			!strings.Contains(strings.ToLower(item.Name()), "tmpl") &&
+			filepath.Ext(item.Name()) != ".go" {
 			licenseFilePaths = append(licenseFilePaths, item.Name())
 		}
 	}
@@ -55,6 +57,7 @@ func NewSpecialProject(projectRootPath string) (*Project, error) {
 		RegularFileType:    file.Any,
 		ShouldBeDisplayed:  true,
 		SourceCodeIncluded: false,
+		Children:           make(map[string]*Project, 0),
 	}
 
 	switch {
@@ -83,7 +86,7 @@ func NewSpecialProject(projectRootPath string) (*Project, error) {
 		l = filepath.Join(p.Root, l)
 		l = filepath.Clean(l)
 
-		licenseFile, err := file.NewFile(l, p.LicenseFileType)
+		licenseFile, err := file.NewFile(l, p.LicenseFileType, p.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -108,5 +111,6 @@ func NewSpecialProject(projectRootPath string) (*Project, error) {
 	plusVal(NumProjects, p.Root)
 	plusVal(ProjectURLs, fmt.Sprintf("%v - %v", p.Root, p.URL))
 	AllProjects[p.Root] = p
+
 	return p, nil
 }

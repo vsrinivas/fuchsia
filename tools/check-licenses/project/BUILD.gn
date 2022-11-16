@@ -9,6 +9,7 @@ go_library("project") {
   sources = [
     "analyze.go",
     "config.go",
+    "filter.go",
     "init.go",
     "metrics.go",
     "project.go",

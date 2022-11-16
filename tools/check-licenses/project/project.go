@@ -43,6 +43,10 @@ type Project struct {
 	// For Compliance worksheet
 	ShouldBeDisplayed  bool
 	SourceCodeIncluded bool
+
+	// Projects that this project depends on.
+	// Constructed from the GN dependency tree.
+	Children map[string]*Project
 }
 
 // Order implements sort.Interface for []*Project based on the Root field.
@@ -131,6 +135,7 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 		RegularFileType:    file.Any,
 		ShouldBeDisplayed:  true,
 		SourceCodeIncluded: false,
+		Children:           make(map[string]*Project, 0),
 	}
 
 	if Config.OutputLicenseFile {
@@ -234,7 +239,7 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 		l = filepath.Join(Config.FuchsiaDir, p.Root, l)
 		l = filepath.Clean(l)
 
-		licenseFile, err := file.NewFile(l, licenseFileType)
+		licenseFile, err := file.NewFile(l, licenseFileType, p.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -248,8 +253,8 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 
 	plusVal(NumProjects, p.Root)
 	AllProjects[p.Root] = p
-
 	plusVal(ProjectURLs, fmt.Sprintf("%v - %v", p.Root, p.URL))
+
 	return p, nil
 }
 
@@ -298,7 +303,7 @@ func (p *Project) AddFiles(filepaths []string) error {
 			continue
 		}
 
-		f, err := file.NewFile(path, p.RegularFileType)
+		f, err := file.NewFile(path, p.RegularFileType, p.Name)
 		if err != nil {
 			return err
 		}

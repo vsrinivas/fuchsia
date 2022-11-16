@@ -59,7 +59,7 @@ func Execute(ctx context.Context) error {
 		}
 		log.Printf("Filtering out projects that are not in the build graph for [%v]...",
 			target)
-		if err := FilterProjects(); err != nil {
+		if err := project.FilterProjects(); err != nil {
 			log.Println("Error!")
 			return err
 		}

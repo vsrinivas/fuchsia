@@ -1,0 +1,11 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+action("depAAA") {
+  script = "print.sh"
+  deps = [ "//tools/check-licenses/util/testdata/example/depB" ]
+  args = []
+  inputs = [ "//tools/check-licenses/util/testdata/example/depC/depC.txt" ]
+  outputs = [ "$target_gen_dir/$target_name" ]
+}

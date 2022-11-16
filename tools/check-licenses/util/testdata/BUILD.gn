@@ -1,0 +1,13 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/host_test_data.gni")
+
+group("testdata") {
+  testonly = true
+  deps = [
+    "empty:tests",
+    "example:tests",
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "//tools/check-licenses/util/testdata/example:example": {
+    "name": "//tools/check-licenses/util/testdata/example:example",
+    "deps": [
+      "//tools/check-licenses/util/testdata/example/depA:depA"
+    ],
+    "cleanNames": [
+      "//tools/check-licenses/util/testdata/example",
+      "//tools/check-licenses/util/testdata/example:example"
+    ],
+    "cleanDeps": [
+      "//tools/check-licenses/util/testdata/example/depA",
+      "//tools/check-licenses/util/testdata/example/depA:depA"
+    ],
+    "toolchain": "//build/toolchain/fuchsia:x64"
+  },
+  "//tools/check-licenses/util/testdata/example/depA:depA": {
+    "name": "//tools/check-licenses/util/testdata/example/depA:depA",
+    "deps": [
+      "//tools/check-licenses/util/testdata/example/depB:depB"
+    ],
+    "cleanNames": [
+      "//tools/check-licenses/util/testdata/example/depA",
+      "//tools/check-licenses/util/testdata/example/depA:depA"
+    ],
+    "cleanDeps": [
+      "//tools/check-licenses/util/testdata/example/depA/print.sh",
+      "//tools/check-licenses/util/testdata/example/depB",
+      "//tools/check-licenses/util/testdata/example/depB:depB",
+      "//tools/check-licenses/util/testdata/example/depC/depC.txt"
+    ],
+    "script": "//build/rbe/output-scanner.sh",
+    "inputs": [
+      "//tools/check-licenses/util/testdata/example/depC/depC.txt",
+      "//tools/check-licenses/util/testdata/example/depA/print.sh"
+    ],
+    "args": [
+      "--label",
+      "//tools/check-licenses/util/testdata/example/depA:depA(//build/toolchain/fuchsia:x64)",
+      "gen/tools/check-licenses/util/testdata/example/depA/depA",
+      "--",
+      "../../tools/check-licenses/util/testdata/example/depA/print.sh",
+      "--input",
+      "depC.txt"
+    ],
+    "toolchain": "//build/toolchain/fuchsia:x64"
+  },
+  "//tools/check-licenses/util/testdata/example/depB:depB": {
+    "name": "//tools/check-licenses/util/testdata/example/depB:depB",
+    "deps": [],
+    "cleanNames": [
+      "//tools/check-licenses/util/testdata/example/depB",
+      "//tools/check-licenses/util/testdata/example/depB:depB"
+    ],
+    "cleanDeps": [],
+    "toolchain": "//build/toolchain/fuchsia:x64"
+  }
+}

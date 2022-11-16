@@ -28,7 +28,7 @@ func (a Order) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a Order) Less(i, j int) bool { return a[i].AbsPath < a[j].AbsPath }
 
 // NewFile returns a new File struct, with the file content loaded in.
-func NewFile(path string, ft FileType) (*File, error) {
+func NewFile(path string, ft FileType, project string) (*File, error) {
 	// If this file was already created, return the previous File object.
 	if f, ok := AllFiles[path]; ok {
 		plusVal(RepeatedFileTraversal, path)
@@ -70,7 +70,7 @@ func NewFile(path string, ft FileType) (*File, error) {
 		}
 	}
 
-	data, err := NewFileData(absPath, relPath, content, ft)
+	data, err := NewFileData(absPath, relPath, content, ft, project)
 	if err != nil {
 		return nil, err
 	}

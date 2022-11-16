@@ -1,5 +1,8 @@
 {
     "project": {
+        "gnPath": "{GN_PATH}",
+        "target": "{TARGET}",
+        "buildDir": "{BUILD_DIR}",
         "fuchsiaDir": "{FUCHSIA_DIR}",
         "outputLicenseFile": {OUTPUT_LICENSE_FILE},
         "readmes": [

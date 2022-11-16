@@ -14,14 +14,16 @@ go_library("util") {
     "init.go",
     "target.go",
   ]
-  deps = [ "//tools/lib/logger" ]
+  deps = [
+    "//third_party/golibs:github.com/google/go-cmp",
+    "//tools/lib/logger",
+  ]
 }
 
 group("tests") {
   testonly = true
 
-  # TODO(fxbug.dev/111235): Investigate flakiness, then re-add util tests here.
-  deps = []
+  deps = [ ":check-licenses_util_tests($host_toolchain)" ]
 }
 
 if (is_host) {
@@ -33,6 +35,9 @@ if (is_host) {
                   root_build_dir),
       "--build_dir",
       rebase_path(root_out_dir, root_build_dir),
+      "--test_data_dir",
+      rebase_path("$target_gen_dir/testdata", root_build_dir),
     ]
+    non_go_deps = [ "testdata" ]
   }
 }

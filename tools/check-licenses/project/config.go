@@ -16,6 +16,10 @@ func init() {
 
 type ProjectConfig struct {
 	FuchsiaDir string `json:"fuchsiaDir"`
+	BuildDir   string `json:"buildDir"`
+
+	GnPath string `json:"gnPath"`
+	Target string `json:"target"`
 
 	OutputLicenseFile bool `json:"outputLicenseFile"`
 
@@ -68,6 +72,16 @@ func (c *ProjectConfig) Merge(other *ProjectConfig) {
 	if c.FuchsiaDir == "" {
 		c.FuchsiaDir = other.FuchsiaDir
 	}
+	if c.GnPath == "" {
+		c.GnPath = other.GnPath
+	}
+	if c.Target == "" {
+		c.Target = other.Target
+	}
+	if c.BuildDir == "" {
+		c.BuildDir = other.BuildDir
+	}
+
 	c.Readmes = append(c.Readmes, other.Readmes...)
 	c.Barriers = append(c.Barriers, other.Barriers...)
 	c.OutputLicenseFile = c.OutputLicenseFile || other.OutputLicenseFile
