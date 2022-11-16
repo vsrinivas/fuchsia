@@ -264,8 +264,7 @@ impl NetworkSelector {
     }
 
     /// Scans and compiles list of BSSs that appear in the scan and belong to currently saved
-    /// networks. If a network is provided, a directed active scan will be used to find available
-    /// BSSs. Otherwise, either an undirected scan or cached scan results will be used.
+    /// networks.
     async fn find_available_bss_list(
         &self,
         network: Option<types::NetworkIdentifier>,
@@ -321,11 +320,17 @@ impl NetworkSelector {
     fn select_networks(
         &self,
         available_networks: HashSet<types::NetworkIdentifier>,
+        network: &Option<types::NetworkIdentifier>,
     ) -> HashSet<types::NetworkIdentifier> {
-        // TODO(fxbug.dev/113030): Add network selection logic.
-        // Currently, the connection selection is determined solely based on the BSS. All available
-        // networks are allowed.
-        available_networks
+        match network {
+            Some(ref network) => HashSet::from([network.clone()]),
+            None => {
+                // TODO(fxbug.dev/113030): Add network selection logic.
+                // Currently, the connection selection is determined solely based on the BSS. All available
+                // networks are allowed.
+                available_networks
+            }
+        }
     }
 
     /// BSS selection. Selects the best from a list of InternalBss that are available for
@@ -381,24 +386,19 @@ impl NetworkSelector {
         // Scan for BSSs belonging to saved networks.
         let available_bss_list = self.find_available_bss_list(network.clone()).await;
 
-        let allowed_bss_list = match network {
-            Some(_) => available_bss_list.clone(),
-            None => {
-                // Network selection.
-                let available_networks: HashSet<types::NetworkIdentifier> = available_bss_list
-                    .iter()
-                    .map(|bss| bss.saved_network_info.network_id.clone())
-                    .collect();
-                let selected_networks = self.select_networks(available_networks);
+        // Network selection.
+        let available_networks: HashSet<types::NetworkIdentifier> = available_bss_list
+            .iter()
+            .map(|bss| bss.saved_network_info.network_id.clone())
+            .collect();
+        let selected_networks = self.select_networks(available_networks, &network);
 
-                // Filter down to only BSSs in the selected networks.
-                available_bss_list
-                    .iter()
-                    .cloned()
-                    .filter(|bss| selected_networks.contains(&bss.saved_network_info.network_id))
-                    .collect()
-            }
-        };
+        // Filter down to only BSSs in the selected networks.
+        let allowed_bss_list = available_bss_list
+            .iter()
+            .filter(|bss| selected_networks.contains(&bss.saved_network_info.network_id))
+            .cloned()
+            .collect();
 
         // BSS Selection.
         let selection = match self.select_bss(allowed_bss_list).await {
@@ -1959,6 +1959,38 @@ mod tests {
                 selected_any: true,
             });
         });
+    }
+
+    #[fuchsia::test]
+    fn select_networks_selects_specified_network() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let test_values = exec.run_singlethreaded(test_setup());
+        let network_selector = test_values.network_selector;
+
+        let ssid = "foo";
+        let all_networks = vec![
+            types::NetworkIdentifier {
+                ssid: ssid.try_into().unwrap(),
+                security_type: types::SecurityType::Wpa3,
+            },
+            types::NetworkIdentifier {
+                ssid: ssid.try_into().unwrap(),
+                security_type: types::SecurityType::Wpa2,
+            },
+        ];
+        let all_network_set = HashSet::from_iter(all_networks.clone());
+
+        // Specifying a network filters to just that network
+        let desired_network = all_networks[0].clone();
+        let selected_network = network_selector
+            .select_networks(all_network_set.clone(), &Some(desired_network.clone()));
+        assert_eq!(selected_network, HashSet::from([desired_network]));
+
+        // No specified network returns all networks
+        assert_eq!(
+            network_selector.select_networks(all_network_set.clone(), &None),
+            all_network_set
+        );
     }
 
     #[fuchsia::test]
