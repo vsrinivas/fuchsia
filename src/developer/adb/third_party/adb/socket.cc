@@ -222,7 +222,8 @@ static bool local_socket_flush_outgoing(asocket* s) {
   /* r = 0 or unhandled error */
   if (r == 0) {
     is_eof = 1;
-    FX_LOGS(ERROR) << "LS(" << s->id << "): socket read eof. status - " << status << ", r - " << r;
+    FX_LOGS(WARNING) << "LS(" << s->id << "): socket read eof. status - " << status << ", r - "
+                     << r;
   }
   FX_LOGS(DEBUG) << "LS(" << s->id << "): " /* fd=" << s->fd */ << "post avail loop. r=" << r
                  << " is_eof=" << is_eof;

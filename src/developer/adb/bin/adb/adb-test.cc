@@ -15,12 +15,16 @@
 
 #include <memory>
 #include <queue>
+#include <vector>
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <gtest/gtest.h>
+#include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 
 namespace adb {
+
+using namespace component_testing;
 
 class FakeAdbDriver {
  public:
@@ -206,38 +210,36 @@ class FakeAdb : public Adb, public component_testing::LocalComponentImpl {
   explicit FakeAdb(async_dispatcher_t* dispatcher) : Adb(dispatcher) {}
 
   // component_testing::LocalComponentImpl methods
-  void OnStart() override {}
+  void OnStart() override { started_ = true; }
+
+  bool IsStarted() const { return started_; }
+
+  void OnStop() override { started_ = false; }
 
   zx::result<zx::socket> GetServiceSocket(std::string_view service_name,
                                           std::string_view args) override {
-    zx::socket server, client;
-    EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &server, &client), ZX_OK);
-
-    EXPECT_TRUE(realm_ != nullptr);
-    auto provider = realm_->ConnectSync<fuchsia::hardware::adb::Provider>();
-    fuchsia::hardware::adb::Provider_ConnectToService_Result result;
-    EXPECT_EQ(provider->ConnectToService(std::move(server), "", &result), ZX_OK);
-    EXPECT_FALSE(result.is_err());
-    return zx::ok(std::move(client));
+    if (!client_.is_valid()) {
+      return zx::error(ZX_ERR_INTERNAL);
+    }
+    return zx::ok(std::move(client_));
   }
 
-  void realm(component_testing::RealmRoot* realm) { realm_ = realm; }
+  void SetServiceSocket(zx::socket client) { client_ = std::move(client); }
 
  private:
   friend class AdbTest;
 
+  bool started_ = false;
   fidl::BindingSet<fuchsia::hardware::adb::Provider> bindings_;
-  component_testing::RealmRoot* realm_;
+  zx::socket client_;
 };
 
 class AdbTest : public testing::Test {
  public:
   AdbTest()
       : fidl_loop_(&kAsyncLoopConfigNeverAttachToThread),
-        realm_loop_(&kAsyncLoopConfigNeverAttachToThread),
         dev_(std::make_unique<FakeAdb>(fidl_loop_.dispatcher())) {
     EXPECT_EQ(fidl_loop_.StartThread("adb-test-fidl-thread"), ZX_OK);
-    EXPECT_EQ(realm_loop_.StartThread("adb-test-realm-thread"), ZX_OK);
   }
 
   void SetUp() override {
@@ -268,19 +270,14 @@ class AdbTest : public testing::Test {
     while (!fake_driver_.expectations_empty()) {
       usleep(1'000);
     }
-
+    dev_.reset();
     fake_driver_.TearDown();
     fidl_loop_.Shutdown();
-    realm_loop_.Shutdown();
-    realm_.reset();
   }
 
  private:
  protected:
   async::Loop fidl_loop_;
-  async::Loop realm_loop_;
-  std::unique_ptr<component_testing::RealmRoot> realm_;
-
   FakeAdbDriver fake_driver_;
   std::unique_ptr<FakeAdb> dev_;
 };
@@ -325,148 +322,268 @@ class FakeAdbServiceProvider : public fuchsia::hardware::adb::Provider,
     socket_ = std::move(socket);
     callback(fuchsia::hardware::adb::Provider_ConnectToService_Result::WithResponse(
         fuchsia::hardware::adb::Provider_ConnectToService_Response()));
-    connected_.Signal();
   }
 
   // component_testing::LocalComponentImpl methods
   void OnStart() override {
+    started_ = true;
     ASSERT_EQ(outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_)), ZX_OK);
   }
 
+  bool IsStarted() const { return started_; }
+
+  void OnStop() override { started_ = false; }
+
+  zx::socket& socket() { return socket_; }
+
+ private:
+  bool started_ = false;
   async_dispatcher_t* dispatcher_;
   fidl::BindingSet<fuchsia::hardware::adb::Provider> bindings_;
   zx::socket socket_;
-  libsync::Completion connected_;
 };
 
-// TODO(fxbug.dev/114311): Disabled due to flake (fxbug.dev/114311) and also it fails when fixing
-// fxbug.dev/113624. Reenable after fixing the failure.
-TEST_F(AdbTest, DISABLED_ServiceConnectTest) {
-  // Send A_CNXN
-  std::string connection_string =
-      "device::ro.product.name=zircon;ro.product.model=zircon;ro.product.device=zircon;";
-  fake_driver_.ExpectQueueTx(
-      0, {
-             .msg =
-                 {
-                     .command = A_CNXN,
-                     .arg0 = A_VERSION,
-                     .arg1 = MAX_PAYLOAD,
-                     .data_length = static_cast<uint32_t>(connection_string.size()),
-                     .data_check = 0,
-                     .magic = A_CNXN ^ 0xffffffff,
-                 },
-             .payload = {},
-         });
-  fake_driver_.ExpectQueueTx(
-      0, std::vector<uint8_t>(connection_string.begin(), connection_string.end()));
-  fake_driver_.SendConnect();
+class AdbRealmTest : public AdbTest, public loop_fixture::RealLoop {
+ public:
+  void SetUp() override {
+    AdbTest::SetUp();
+    SendConnect();
+    BuildRealm();
+  }
+
+  void TearDown() override {
+    realm_.reset();
+    AdbTest::TearDown();
+  }
+
+  void SendConnect() {
+    // Send A_CNXN
+    std::string connection_string =
+        "device::ro.product.name=zircon;ro.product.model=zircon;ro.product.device=zircon;";
+    fake_driver_.ExpectQueueTx(
+        0, {
+               .msg =
+                   {
+                       .command = A_CNXN,
+                       .arg0 = A_VERSION,
+                       .arg1 = MAX_PAYLOAD,
+                       .data_length = static_cast<uint32_t>(connection_string.size()),
+                       .data_check = 0,
+                       .magic = A_CNXN ^ 0xffffffff,
+                   },
+               .payload = {},
+           });
+    fake_driver_.ExpectQueueTx(
+        0, std::vector<uint8_t>(connection_string.begin(), connection_string.end()));
+    fake_driver_.SendConnect();
+    while (!fake_driver_.expectations_empty()) {
+      usleep(1'000);
+    }
+  }
+
+  void BuildRealm() {
+    auto builder = RealmBuilder::Create();
+    dev_ptr_ = dev_.get();
+    builder.AddLocalChild(
+        "adb", [&]() { return std::move(dev_); }, ChildOptions{.startup_mode = StartupMode::EAGER});
+
+    auto service_provider = std::make_unique<FakeAdbServiceProvider>(dispatcher());
+    service_provider_ptr_ = service_provider.get();
+
+    // Add component to the realm, providing a mock implementation
+    builder.AddLocalChild(
+        std::string(kShellService),
+        [provider = std::move(service_provider)]() mutable { return std::move(provider); },
+        ChildOptions{});
+
+    builder.AddRoute(Route{.capabilities = {Protocol{fuchsia::hardware::adb::Provider::Name_}},
+                           .source = ChildRef{std::string(kShellService)},
+                           .targets = {ParentRef()}});
+    realm_ = std::make_unique<RealmRoot>(builder.Build(dispatcher()));
+    RunLoopUntil([&]() { return dev_ptr_->IsStarted(); });
+  }
+
+ protected:
+  std::unique_ptr<RealmRoot> realm_;
+  FakeAdbServiceProvider* service_provider_ptr_ = nullptr;
+  FakeAdb* dev_ptr_ = nullptr;
+};
+
+TEST_F(AdbRealmTest, ServiceConnectTest) {
+  auto provider = realm_->Connect<fuchsia::hardware::adb::Provider>();
+
+  zx::socket server, client;
+  EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &server, &client), ZX_OK);
+  provider->ConnectToService(std::move(server), "",
+                             [&](fuchsia::hardware::adb::Provider_ConnectToService_Result result) {
+                               EXPECT_FALSE(result.is_err());
+                               QuitLoop();
+                             });
+
+  RunLoop();
+}
+
+TEST_F(AdbRealmTest, ServiceOpenCloseTest) {
+  auto provider = realm_->Connect<fuchsia::hardware::adb::Provider>();
+  zx::socket server, client;
+  EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &server, &client), ZX_OK);
+
+  provider->ConnectToService(std::move(server), "",
+                             [&](fuchsia::hardware::adb::Provider_ConnectToService_Result result) {
+                               EXPECT_FALSE(result.is_err());
+                               QuitLoop();
+                             });
+
+  RunLoop();
+  dev_ptr_->SetServiceSocket(std::move(client));
+
+  // Send A_OPEN
+  fake_driver_.ExpectQueueTx(0, {
+                                    .msg =
+                                        {
+                                            .command = A_OKAY,
+                                            .arg0 = 1,  // local-id
+                                            .arg1 = 1,  // remote-id
+                                            .data_length = 0,
+                                            .data_check = 0,
+                                            .magic = A_OKAY ^ 0xffffffff,
+                                        },
+                                    .payload = {},
+                                });
+  fake_driver_.SendOpen({'s', 'h', 'e', 'l', 'l', ':', '\0'});
+
   while (!fake_driver_.expectations_empty()) {
     usleep(1'000);
   }
 
-  // Create Realm with RealmBuilder
-  using namespace component_testing;
-  auto builder = RealmBuilder::Create();
-  auto* dev_ptr = dev_.get();
-  builder.AddLocalChild(
-      "adb", [&]() { return std::move(dev_); }, ChildOptions{.startup_mode = StartupMode::EAGER});
-
-  auto service_provider = std::make_unique<FakeAdbServiceProvider>(realm_loop_.dispatcher());
-  auto* service_provider_ptr = service_provider.get();
-  // Add component to the realm, providing a mock implementation
-  builder.AddLocalChild(
-      std::string(kShellService), [&]() { return std::move(service_provider); },
-      ChildOptions{.startup_mode = StartupMode::EAGER});
-
-  builder.AddRoute(Route{.capabilities = {Protocol{fuchsia::hardware::adb::Provider::Name_}},
-                         .source = ChildRef{std::string(kShellService)},
-                         .targets = {ParentRef()}});
-  realm_ = std::make_unique<RealmRoot>(builder.Build(realm_loop_.dispatcher()));
-  dev_ptr->realm(realm_.get());
-
-  // Test service connect
-  uint8_t helloworld[] = {'H', 'e', 'l', 'l', 'o', 'W', 'o', 'r', 'l', 'd', '\0'};
-  size_t actual;
-  // Check sockets
-  {
-    auto socket = dev_ptr->GetServiceSocket(kShellService, "");
-    ASSERT_TRUE(socket.is_ok());
-    service_provider_ptr->connected_.Wait();
-    service_provider_ptr->connected_.Reset();
-
-    ASSERT_EQ(service_provider_ptr->socket_.write(0, helloworld, sizeof(helloworld), &actual),
-              ZX_OK);
-    ASSERT_EQ(actual, sizeof(helloworld));
-    ASSERT_EQ(socket->wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                               zx::deadline_after(zx::duration::infinite()), nullptr),
-              ZX_OK);
-    char out_helloworld[11];
-    EXPECT_EQ(socket->read(0, out_helloworld, sizeof(out_helloworld), &actual), ZX_OK);
-    EXPECT_EQ(actual, sizeof(out_helloworld));
-
-    EXPECT_EQ(sizeof(helloworld), sizeof(out_helloworld));
-    for (size_t i = 0; i < sizeof(helloworld); i++) {
-      EXPECT_EQ(helloworld[i], out_helloworld[i]);
-    }
-  }
-  {
-    // Send A_OPEN
-    fake_driver_.ExpectQueueTx(0, {
-                                      .msg =
-                                          {
-                                              .command = A_OKAY,
-                                              .arg0 = 1,  // local-id
-                                              .arg1 = 1,  // remote-id
-                                              .data_length = 0,
-                                              .data_check = 0,
-                                              .magic = A_OKAY ^ 0xffffffff,
-                                          },
-                                      .payload = {},
-                                  });
-    fake_driver_.SendOpen({'s', 'h', 'e', 'l', 'l', ':', '\0'});
-
-    service_provider_ptr->connected_.Wait();
-    service_provider_ptr->connected_.Reset();
-
-    // Send A_WRTE
-    fake_driver_.ExpectQueueTx(0, {
-                                      .msg =
-                                          {
-                                              .command = A_OKAY,
-                                              .arg0 = 1,  // local-id
-                                              .arg1 = 1,  // remote-id
-                                              .data_length = 0,
-                                              .data_check = 0,
-                                              .magic = A_OKAY ^ 0xffffffff,
-                                          },
-                                      .payload = {},
-                                  });
-    fake_driver_.SendWrite(std::vector<uint8_t>(helloworld, helloworld + sizeof(helloworld)));
-    while (!fake_driver_.expectations_empty()) {
-      usleep(1'000);
-    }
-
-    zx_signals_t signal;
-    ASSERT_EQ(service_provider_ptr->socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                                                     zx::deadline_after(zx::duration::infinite()),
-                                                     &signal),
-              ZX_OK);
-    ASSERT_FALSE((signal & ZX_SOCKET_READABLE) == 0);
-    char out_helloworld[11];
-    EXPECT_EQ(
-        service_provider_ptr->socket_.read(0, out_helloworld, sizeof(out_helloworld), &actual),
-        ZX_OK);
-    EXPECT_EQ(actual, sizeof(out_helloworld));
-
-    EXPECT_EQ(sizeof(helloworld), sizeof(out_helloworld));
-    for (size_t i = 0; i < sizeof(helloworld); i++) {
-      EXPECT_EQ(helloworld[i], out_helloworld[i]);
-    }
+  // Expect A_CLSE
+  fake_driver_.ExpectQueueTx(0, {
+                                    .msg =
+                                        {
+                                            .command = A_CLSE,
+                                            .arg0 = 1,  // local-id
+                                            .arg1 = 1,  // remote-id
+                                            .data_length = 0,
+                                            .data_check = 0,
+                                            .magic = A_CLSE ^ 0xffffffff,
+                                        },
+                                    .payload = {},
+                                });
+  service_provider_ptr_->socket().reset();
+  while (!fake_driver_.expectations_empty()) {
+    usleep(1'000);
   }
 }
 
-// TODO(fxbug.dev/113624): Add test case for testing service socket close after enabling
-// ServiceConnectTest.
+TEST_F(AdbRealmTest, ServiceReadWriteTest) {
+  auto provider = realm_->Connect<fuchsia::hardware::adb::Provider>();
+  zx::socket server, client;
+  EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &server, &client), ZX_OK);
+
+  provider->ConnectToService(std::move(server), "",
+                             [&](fuchsia::hardware::adb::Provider_ConnectToService_Result result) {
+                               EXPECT_FALSE(result.is_err());
+                               QuitLoop();
+                             });
+
+  RunLoop();
+  dev_ptr_->SetServiceSocket(std::move(client));
+
+  uint8_t helloworld[] = {'H', 'e', 'l', 'l', 'o', 'W', 'o', 'r', 'l', 'd', '\0'};
+  size_t actual;
+
+  // Open service
+  fake_driver_.ExpectQueueTx(0, {
+                                    .msg =
+                                        {
+                                            .command = A_OKAY,
+                                            .arg0 = 1,  // local-id
+                                            .arg1 = 1,  // remote-id
+                                            .data_length = 0,
+                                            .data_check = 0,
+                                            .magic = A_OKAY ^ 0xffffffff,
+                                        },
+                                    .payload = {},
+                                });
+  fake_driver_.SendOpen({'s', 'h', 'e', 'l', 'l', ':', '\0'});
+
+  // Test sending data to the service.
+  fake_driver_.ExpectQueueTx(0, {
+                                    .msg =
+                                        {
+                                            .command = A_OKAY,
+                                            .arg0 = 1,  // local-id
+                                            .arg1 = 1,  // remote-id
+                                            .data_length = 0,
+                                            .data_check = 0,
+                                            .magic = A_OKAY ^ 0xffffffff,
+                                        },
+                                    .payload = {},
+                                });
+  fake_driver_.SendWrite(std::vector<uint8_t>(helloworld, helloworld + sizeof(helloworld)));
+  while (!fake_driver_.expectations_empty()) {
+    usleep(1'000);
+  }
+
+  zx_signals_t signal;
+  ASSERT_EQ(service_provider_ptr_->socket().wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                                                     zx::deadline_after(zx::duration::infinite()),
+                                                     &signal),
+            ZX_OK);
+  ASSERT_FALSE((signal & ZX_SOCKET_READABLE) == 0);
+  char out_helloworld[11];
+  EXPECT_EQ(
+      service_provider_ptr_->socket().read(0, out_helloworld, sizeof(out_helloworld), &actual),
+      ZX_OK);
+  EXPECT_EQ(actual, sizeof(out_helloworld));
+
+  EXPECT_EQ(sizeof(helloworld), sizeof(out_helloworld));
+  for (size_t i = 0; i < sizeof(helloworld); i++) {
+    EXPECT_EQ(helloworld[i], out_helloworld[i]);
+  }
+
+  // Test service sending data to the client.
+  fake_driver_.ExpectQueueTx(0, {
+                                    .msg =
+                                        {
+                                            .command = A_WRTE,
+                                            .arg0 = 1,  // local-id
+                                            .arg1 = 1,  // remote-id
+                                            .data_length = sizeof(helloworld),
+                                            .data_check = 0,
+                                            .magic = A_WRTE ^ 0xffffffff,
+                                        },
+                                    .payload = {},
+                                });
+  // Payload is sent in the next packet.
+  std::vector<uint8_t> expect_data(sizeof(helloworld));
+  std::copy(helloworld, helloworld + sizeof(helloworld), expect_data.begin());
+  fake_driver_.ExpectQueueTx(0, expect_data);
+  ASSERT_EQ(service_provider_ptr_->socket().write(0, helloworld, sizeof(helloworld), &actual),
+            ZX_OK);
+  ASSERT_EQ(actual, sizeof(helloworld));
+
+  while (!fake_driver_.expectations_empty()) {
+    usleep(1'000);
+  }
+
+  // Expect A_CLSE
+  fake_driver_.ExpectQueueTx(0, {
+                                    .msg =
+                                        {
+                                            .command = A_CLSE,
+                                            .arg0 = 1,  // local-id
+                                            .arg1 = 1,  // remote-id
+                                            .data_length = 0,
+                                            .data_check = 0,
+                                            .magic = A_CLSE ^ 0xffffffff,
+                                        },
+                                    .payload = {},
+                                });
+  service_provider_ptr_->socket().reset();
+  while (!fake_driver_.expectations_empty()) {
+    usleep(1'000);
+  }
+}
 
 }  // namespace adb

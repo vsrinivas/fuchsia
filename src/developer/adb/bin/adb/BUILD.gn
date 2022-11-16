@@ -55,6 +55,7 @@ test("adb-test-bin") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fbl",
   ]
@@ -69,11 +70,6 @@ fuchsia_component("adb-test-component") {
 
 fuchsia_test_package("adb-test") {
   test_components = [ ":adb-test-component" ]
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
 }
 
 group("tests") {
