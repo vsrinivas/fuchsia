@@ -535,8 +535,7 @@ pub struct RemoteBlockClient {
 
 impl RemoteBlockClient {
     /// Returns a connection to a remote block device via the given channel.
-    pub async fn new(channel: zx::Channel) -> Result<Self, Error> {
-        let remote = block::BlockProxy::new(fasync::Channel::from_channel(channel)?);
+    pub async fn new(remote: block::BlockProxy) -> Result<Self, Error> {
         let (status, maybe_info) = remote.get_info().await?;
         let info = maybe_info.ok_or(zx::Status::from_raw(status))?;
         let (status, maybe_fifo) = remote.get_fifo().await?;
@@ -611,8 +610,8 @@ impl RemoteBlockClientSync {
     /// Returns a connection to a remote block device via the given channel, but spawns a separate
     /// thread for polling the fifo which makes it work in cases where no executor is configured for
     /// the calling thread.
-    pub fn new(channel: zx::Channel) -> Result<Self, Error> {
-        let remote = block::BlockSynchronousProxy::new(channel);
+    pub fn new(client_end: fidl::endpoints::ClientEnd<block::BlockMarker>) -> Result<Self, Error> {
+        let remote = block::BlockSynchronousProxy::new(client_end.into_channel());
         let (status, maybe_info) = remote.get_info(zx::Time::INFINITE)?;
         let info = maybe_info.ok_or(zx::Status::from_raw(status))?;
         let (status, maybe_fifo) = remote.get_fifo(zx::Time::INFINITE)?;
@@ -751,9 +750,9 @@ mod tests {
         fuchsia_async::{self as fasync, FifoReadable, FifoWritable},
         fuchsia_zircon as zx,
         futures::{
-            future::{AbortHandle, Abortable, TryFutureExt},
+            future::{AbortHandle, Abortable, TryFutureExt as _},
             join,
-            stream::{futures_unordered::FuturesUnordered, StreamExt},
+            stream::{futures_unordered::FuturesUnordered, StreamExt as _},
         },
         ramdevice_client::RamdiskClient,
     };
@@ -769,10 +768,9 @@ mod tests {
         .expect("ramctl did not appear");
         let ramdisk = RamdiskClient::create(RAMDISK_BLOCK_SIZE, RAMDISK_BLOCK_COUNT)
             .expect("RamdiskClient::create failed");
-        let remote_block_device =
-            RemoteBlockClient::new(ramdisk.open().expect("ramdisk.open failed"))
-                .await
-                .expect("new failed");
+        let client_end = ramdisk.open().expect("ramdisk.open failed");
+        let proxy = client_end.into_proxy().expect("into_proxy failed");
+        let remote_block_device = RemoteBlockClient::new(proxy).await.expect("new failed");
         assert_eq!(remote_block_device.block_size(), 1024);
         (ramdisk, remote_block_device)
     }
@@ -1007,7 +1005,7 @@ mod tests {
     // channel messages and fifo operations are being received - by using set_channel_handler or
     // set_fifo_hander respectively
     struct FakeBlockServer<'a> {
-        server_channel: Option<zx::Channel>,
+        server_channel: Option<fidl::endpoints::ServerEnd<block::BlockMarker>>,
         channel_handler: Box<dyn Fn(&BlockRequest) -> bool + 'a>,
         fifo_handler: Box<dyn Fn(BlockFifoRequest) -> BlockFifoResponse + 'a>,
     }
@@ -1025,7 +1023,7 @@ mod tests {
         // 'fifo_handler' takes as input a BlockFifoRequest and produces a response which the
         // FakeBlockServer will send over the fifo.
         fn new(
-            server_channel: zx::Channel,
+            server_channel: fidl::endpoints::ServerEnd<block::BlockMarker>,
             channel_handler: impl Fn(&BlockRequest) -> bool + 'a,
             fifo_handler: impl Fn(BlockFifoRequest) -> BlockFifoResponse + 'a,
         ) -> FakeBlockServer<'a> {
@@ -1038,9 +1036,7 @@ mod tests {
 
         // Runs the server
         async fn run(&mut self) {
-            let server = fidl::endpoints::ServerEnd::<block::BlockMarker>::new(
-                self.server_channel.take().unwrap(),
-            );
+            let server = self.server_channel.take().unwrap();
 
             // Set up a mock server.
             let (server_fifo, client_fifo) =
@@ -1122,11 +1118,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_block_fifo_close_is_called() {
         let close_called = std::sync::Mutex::new(false);
-        let (client, server) = zx::Channel::create().expect("Channel::create failed");
+        let (client_end, server) =
+            fidl::endpoints::create_endpoints::<block::BlockMarker>().expect("create_proxy failed");
 
         std::thread::spawn(move || {
             let _remote_block_device =
-                RemoteBlockClientSync::new(client).expect("RemoteBlockClientSync::new failed");
+                RemoteBlockClientSync::new(client_end).expect("RemoteBlockClientSync::new failed");
             // The drop here should cause CloseFifo to be sent.
         });
 
@@ -1144,11 +1141,11 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_block_flush_is_called() {
-        let (client, server) = zx::Channel::create().expect("Channel::create failed");
+        let (proxy, server) = fidl::endpoints::create_proxy().expect("create_proxy failed");
 
         futures::join!(
             async {
-                let remote_block_device = RemoteBlockClient::new(client).await.expect("new failed");
+                let remote_block_device = RemoteBlockClient::new(proxy).await.expect("new failed");
 
                 remote_block_device.flush().await.expect("flush failed");
             },
@@ -1172,11 +1169,11 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_trace_flow_ids_set() {
-        let (client, server) = zx::Channel::create().expect("Channel::create failed");
+        let (proxy, server) = fidl::endpoints::create_proxy().expect("create_proxy failed");
 
         futures::join!(
             async {
-                let remote_block_device = RemoteBlockClient::new(client).await.expect("new failed");
+                let remote_block_device = RemoteBlockClient::new(proxy).await.expect("new failed");
                 remote_block_device.flush().await.expect("flush failed");
             },
             async {

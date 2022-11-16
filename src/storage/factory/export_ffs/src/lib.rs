@@ -9,7 +9,9 @@
 use {
     anyhow::{bail, Context, Error},
     byteorder::{LittleEndian, WriteBytesExt},
-    fidl, fidl_fuchsia_io as fio,
+    fidl,
+    fidl_fuchsia_hardware_block::BlockMarker,
+    fidl_fuchsia_io as fio,
     fuchsia_fs::directory::{readdir_recursive, DirEntry, DirentKind},
     fuchsia_zircon as zx,
     futures::StreamExt,
@@ -318,10 +320,13 @@ async fn write_directory<W: Write>(dir: &fio::DirectoryProxy, device: &mut W) ->
 /// name that corresponds with the complete path of the file in the original directory, relative to
 /// that directory. It takes ownership of the channel to the device, which it assumes speaks
 /// fuchsia.hardware.Block, and closes it after all the writes are issued to the block device.
-pub async fn export_directory(dir: &fio::DirectoryProxy, device: zx::Channel) -> Result<(), Error> {
+pub async fn export_directory(
+    dir: &fio::DirectoryProxy,
+    client_end: fidl::endpoints::ClientEnd<BlockMarker>,
+) -> Result<(), Error> {
     // TODO(sdemos): for now we are taking a device as a channel, but this might change as we
     // integrate.
-    let device = RemoteBlockClientSync::new(device)
+    let device = RemoteBlockClientSync::new(client_end)
         .context("failed to create remote block device client")?;
     let mut device = Cache::new(device).context("failed to create cache layer for block device")?;
 

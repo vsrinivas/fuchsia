@@ -606,6 +606,7 @@ mod tests {
     use {
         crate::platform::fuchsia::testing::{open_file_checked, TestFixture},
         fidl::endpoints::{ClientEnd, ServerEnd},
+        fidl_fuchsia_hardware_block::BlockMarker,
         fidl_fuchsia_hardware_block_volume::VolumeAndNodeMarker,
         fidl_fuchsia_io as fio,
         fs_management::{filesystem::Filesystem, Blobfs},
@@ -699,12 +700,20 @@ mod tests {
                         .expect("clone failed");
                 }
 
-                let block_device_cloned1 = RemoteBlockClient::new(client_channel_copy1)
-                    .await
-                    .expect("create new RemoteBlockClient failed");
-                let block_device_cloned2 = RemoteBlockClient::new(client_channel_copy2)
-                    .await
-                    .expect("create new RemoteBlockClient failed");
+                let block_device_cloned1 = RemoteBlockClient::new(
+                    ClientEnd::<BlockMarker>::new(client_channel_copy1)
+                        .into_proxy()
+                        .expect("create proxy"),
+                )
+                .await
+                .expect("create new RemoteBlockClient failed");
+                let block_device_cloned2 = RemoteBlockClient::new(
+                    ClientEnd::<BlockMarker>::new(client_channel_copy2)
+                        .into_proxy()
+                        .expect("create proxy"),
+                )
+                .await
+                .expect("create new RemoteBlockClient failed");
 
                 let offset = block_device_cloned1.block_size() as usize;
                 let len = block_device_cloned1.block_size() as usize;
@@ -746,9 +755,13 @@ mod tests {
             zx::Channel::create().expect("Channel::create failed");
         join!(
             async {
-                let remote_block_device = RemoteBlockClient::new(client_channel)
-                    .await
-                    .expect("RemoteBlockClient::new failed");
+                let remote_block_device = RemoteBlockClient::new(
+                    ClientEnd::<BlockMarker>::new(client_channel)
+                        .into_proxy()
+                        .expect("create proxy"),
+                )
+                .await
+                .expect("RemoteBlockClient::new failed");
                 let mut vmo_set = HashSet::new();
                 let vmo = zx::Vmo::create(1).expect("Vmo::create failed");
                 for _ in 1..5 {
@@ -788,9 +801,13 @@ mod tests {
             zx::Channel::create().expect("Channel::create failed");
         join!(
             async {
-                let remote_block_device = RemoteBlockClient::new(client_channel)
-                    .await
-                    .expect("RemoteBlockClient::new failed");
+                let remote_block_device = RemoteBlockClient::new(
+                    ClientEnd::<BlockMarker>::new(client_channel)
+                        .into_proxy()
+                        .expect("create proxy"),
+                )
+                .await
+                .expect("RemoteBlockClient::new failed");
                 let vmo = zx::Vmo::create(1).expect("Vmo::create failed");
                 let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
                 let vmo_id_copy = VmoId::new(vmo_id.id());
@@ -821,9 +838,13 @@ mod tests {
             zx::Channel::create().expect("Channel::create failed");
         join!(
             async {
-                let remote_block_device = RemoteBlockClient::new(client_channel)
-                    .await
-                    .expect("RemoteBlockClient::new failed");
+                let remote_block_device = RemoteBlockClient::new(
+                    ClientEnd::<BlockMarker>::new(client_channel)
+                        .into_proxy()
+                        .expect("create proxy"),
+                )
+                .await
+                .expect("RemoteBlockClient::new failed");
                 let vmo = zx::Vmo::create(131072).expect("create vmo failed");
                 let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
 
@@ -881,9 +902,13 @@ mod tests {
             zx::Channel::create().expect("Channel::create failed");
         join!(
             async {
-                let remote_block_device = RemoteBlockClient::new(client_channel)
-                    .await
-                    .expect("RemoteBlockClient::new failed");
+                let remote_block_device = RemoteBlockClient::new(
+                    ClientEnd::<BlockMarker>::new(client_channel)
+                        .into_proxy()
+                        .expect("create proxy"),
+                )
+                .await
+                .expect("RemoteBlockClient::new failed");
                 remote_block_device.flush().await.expect("flush failed");
             },
             async {

@@ -9,11 +9,12 @@ use {
     device_watcher::recursive_wait_and_open_node,
     fidl::endpoints::{create_proxy, Proxy as _},
     fidl_fuchsia_fshost as fshost,
+    fidl_fuchsia_hardware_block::BlockProxy,
     fidl_fuchsia_hardware_block_partition::PartitionProxy,
     fidl_fuchsia_io as fio,
     fs_management::{filesystem::Filesystem, Blobfs},
     fshost_test_fixture::TestFixtureBuilder,
-    fuchsia_zircon::{self as zx},
+    fuchsia_zircon as zx,
     remote_block_device::{BlockClient, MutableBufferSlice, RemoteBlockClient},
 };
 
@@ -150,8 +151,11 @@ async fn wipe_storage_data_unformatted() {
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         orig_instance_guid = guid.unwrap();
 
-        let block_client =
-            RemoteBlockClient::new(data_partition.into_channel().unwrap().into()).await.unwrap();
+        let block_client = RemoteBlockClient::new(BlockProxy::from_channel(
+            data_partition.into_channel().unwrap(),
+        ))
+        .await
+        .unwrap();
         let mut buff: [u8; BUFF_LEN] = [0; BUFF_LEN];
         block_client.read_at(MutableBufferSlice::Memory(&mut buff), 0).await.unwrap();
         // The data partition should have been formatted so there should be some non-zero bytes.
@@ -185,7 +189,9 @@ async fn wipe_storage_data_unformatted() {
 
     // The data partition should remain unformatted, so the first few bytes should be all zero now.
     let block_client =
-        RemoteBlockClient::new(data_partition.into_channel().unwrap().into()).await.unwrap();
+        RemoteBlockClient::new(BlockProxy::from_channel(data_partition.into_channel().unwrap()))
+            .await
+            .unwrap();
     let mut buff: [u8; BUFF_LEN] = [0; BUFF_LEN];
     block_client.read_at(MutableBufferSlice::Memory(&mut buff), 0).await.unwrap();
     assert_eq!(buff, [0; BUFF_LEN]);

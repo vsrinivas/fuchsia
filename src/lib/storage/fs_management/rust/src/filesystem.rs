@@ -760,7 +760,7 @@ mod tests {
     }
 
     fn new_fs<FSC: FSConfig>(ramdisk: &RamdiskClient, config: FSC) -> Filesystem<FSC> {
-        Filesystem::from_channel(ramdisk.open().unwrap(), config).unwrap()
+        Filesystem::from_channel(ramdisk.open().unwrap().into_channel(), config).unwrap()
     }
 
     #[fuchsia::test]

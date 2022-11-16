@@ -37,20 +37,22 @@ async fn handle(stream: Services, fs: Arc<FatFs>, scope: &ExecutionScope) -> Res
 #[fuchsia::main(threads = 10)]
 async fn main() -> Result<(), Error> {
     // Open the remote block device.
-    let device =
-        Box::new(remote_block_device::Cache::new(RemoteBlockClientSync::new(zx::Channel::from(
-            fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
-                HandleType::User0,
-                1,
-            ))
-            .ok_or(format_err!("Missing device handle"))?,
-        ))?)?);
+    let client_end = zx::Channel::from(
+        fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
+            HandleType::User0,
+            1,
+        ))
+        .ok_or(format_err!("Missing device handle"))?,
+    )
+    .into();
+    let remote_block_client = RemoteBlockClientSync::new(client_end)?;
+    let device = remote_block_device::Cache::new(remote_block_client)?;
 
     // VFS initialization.
     let scope = ExecutionScope::new();
 
     // Start the filesystem and open the root directory.
-    let fatfs = FatFs::new(device).map_err(|_| Status::IO)?;
+    let fatfs = FatFs::new(Box::new(device)).map_err(|_| Status::IO)?;
     let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
     let root = fatfs.get_root()?;
     root.clone().open(

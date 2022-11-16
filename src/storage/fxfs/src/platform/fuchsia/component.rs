@@ -53,16 +53,16 @@ pub fn map_to_raw_status(e: Error) -> zx::sys::zx_status_t {
     map_to_status(e).into_raw()
 }
 
-pub async fn new_block_client(channel: zx::Channel) -> Result<RemoteBlockClient, Error> {
+pub async fn new_block_client(remote: ClientEnd<BlockMarker>) -> Result<RemoteBlockClient, Error> {
     // The `RemoteBlockClient` must not be created on the main executor because the main
     // executor may block on syscalls that re-enter the filesystem via the pager
     // executor and pager executor tasks can depend on the block client. This creates
     // potential deadlock scenarios. Instead, run the  `RemoteBlockClient` on the pager
     // executor, which will never make re-entrant syscalls.
-    fasync::Task::spawn_on(
-        PagerExecutor::global_instance().executor_handle(),
-        RemoteBlockClient::new(channel),
-    )
+    fasync::Task::spawn_on(PagerExecutor::global_instance().executor_handle(), async {
+        let remote = remote.into_proxy()?;
+        RemoteBlockClient::new(remote).await
+    })
     .await
 }
 
@@ -276,7 +276,7 @@ impl Component {
         // explicitly shut down all volumes first, and make this fail if there are remaining active
         // connections.  Fix the bug in fs_test which requires this.
         state.stop(&self.outgoing_dir).await;
-        let client = new_block_client(device.into_channel()).await?;
+        let client = new_block_client(device).await?;
 
         // TODO(fxbug.dev/112024) Add support for block sizes greater than the page size.
         assert!(client.block_size() <= zx::system_get_page_size());
@@ -327,7 +327,7 @@ impl Component {
     async fn handle_format(&self, device: ClientEnd<BlockMarker>) -> Result<(), Error> {
         let device = DeviceHolder::new(
             BlockDevice::new(
-                Box::new(new_block_client(device.into_channel()).await?),
+                Box::new(new_block_client(device).await?),
                 /* read_only: */ false,
             )
             .await?,
@@ -345,7 +345,7 @@ impl Component {
         let state = self.state.lock().await;
         let (fs_container, fs) = match *state {
             State::ComponentStarted => {
-                let client = new_block_client(device.into_channel()).await?;
+                let client = new_block_client(device).await?;
                 let fs_container = FxFilesystem::open_with_options(
                     DeviceHolder::new(
                         BlockDevice::new(Box::new(client), /* read_only: */ true).await?,

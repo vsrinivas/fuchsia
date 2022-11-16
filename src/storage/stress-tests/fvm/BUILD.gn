@@ -13,6 +13,7 @@ rustc_test("stressor-bin") {
   testonly = true
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
     "//src/lib/diagnostics/log/rust",
     "//src/lib/fidl/rust/fidl",
