@@ -592,7 +592,7 @@ build_api_module("images") {
     "build/images",
 
     # This has the images referred to by $qemu_kernel_label entries.
-    "//build/zircon/boot_tests",
+    "//bundles:boot_tests",
 
     # Images who are pulled as part of host interaction tests.
     ":host",
@@ -772,9 +772,6 @@ build_api_module("tests") {
     ":developer_cache_packages",
     ":developer_universe_packages",
   ]
-  if (include_zbi_host_tests) {
-    deps += [ "//build/zircon/boot_tests" ]
-  }
 }
 
 # The output location of test-list.json.
@@ -1067,10 +1064,7 @@ build_api_module("triage_sources") {
 build_api_module("boot_tests") {
   testonly = true
   data_keys = [ "boot_tests" ]
-  deps = [
-    "build/images",
-    "build/zircon/boot_tests",
-  ]
+  deps = [ "bundles:boot_tests" ]
 }
 
 # Describes the path to a list of all the package manifests, the same
@@ -1286,7 +1280,7 @@ group("default") {
     "//build/assembly:validate_product_defs",
     "//build/images/updates:packages",
     "//build/input:build_only",
-    "//build/zircon/boot_tests",
+    "//bundles:boot_tests",
     "//sdk",
   ]
 

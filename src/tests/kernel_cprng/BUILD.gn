@@ -29,6 +29,14 @@ zbi_test_executable("cprng-draw") {
 
 zbi_test("cprng-draw-zbi") {
   assert(current_cpu != "")
+
+  # TODO(fxbug.dev/115209): This ZBI is not actually a ZBI test, but relies
+  # on the specification just for the `images` metadata implicitly set by
+  # `zbi_test()` and not `zbi()`. Investigate whether we can have `zbi()`
+  # targets set this metadata and update this target accordingly - and
+  # disable the ZBI from being booted as a ZBI test for now.
+  device_types = []
+
   deps = [
     ":cprng-draw",
     "//zircon/kernel",

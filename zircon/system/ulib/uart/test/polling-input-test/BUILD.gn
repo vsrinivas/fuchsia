@@ -24,7 +24,7 @@ if (is_phys_toolchain) {
 if (is_host || is_phys_toolchain) {
   phys_target_out_dir =
       get_label_info(":anything($phys_toolchain)", "target_out_dir")
-  uart_input_zbi = "$phys_target_out_dir/uart-input-zbi-test.zbi"
+  uart_input_zbi = "$phys_target_out_dir/uart-input-test-zbi.zbi"
 }
 
 if (is_phys_toolchain) {
@@ -40,23 +40,25 @@ if (is_phys_toolchain) {
     ]
   }
 
-  zbi_test("uart-input-zbi-test") {
-    deps = [ ":uart-input-test" ]
+  zbi_test("uart-input-test-zbi") {
+    # TODO(fxbug.dev/115209): This ZBI is not actually a ZBI test, but relies
+    # on the specification just for the `images` metadata implicitly set by
+    # `zbi_test()` and not `zbi()`. Investigate whether we can have `zbi()`
+    # targets set this metadata and update this target accordingly - and
+    # disable the ZBI from being booted as a ZBI test for now.
+    device_types = []
 
-    device_types = [
-      "AEMU",
-      "QEMU",
-    ]
+    deps = [ ":uart-input-test" ]
   }
 
-  zbi_outputs = get_target_outputs(":uart-input-zbi-test.zbi")
+  zbi_outputs = get_target_outputs(":uart-input-test-zbi.zbi")
   assert(zbi_outputs + [ uart_input_zbi ] - [ uart_input_zbi ] != zbi_outputs)
 }
 
 if (is_host && is_linux) {
   host_test_data("uart-host-test-zbi") {
     sources = [ uart_input_zbi ]
-    deps = [ ":uart-input-zbi-test($phys_toolchain)" ]
+    deps = [ ":uart-input-test-zbi($phys_toolchain)" ]
   }
 
   go_library("lib") {
