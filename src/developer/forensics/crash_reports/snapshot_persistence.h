@@ -34,7 +34,7 @@ class SnapshotPersistence {
            StorageSize archive_size, bool only_consider_tmp);
 
   // Returns true if a snapshot for |uuid| exists on disk.
-  bool Contains(const SnapshotUuid& uuid) const;
+  bool Contains(const SnapshotUuid& uuid);
 
   // Attempts to move the snapshot from /cache to /tmp. Will attempt to delete the snapshot from
   // /cache regardless of whether the addition to /tmp succeeds. Check-fails that the snapshot was
@@ -74,6 +74,10 @@ class SnapshotPersistence {
 
   // Returns true if storing snapshots in /tmp or /cache is enabled.
   bool SnapshotPersistenceEnabled() const;
+
+  // Keeps the in-memory and on-disk knowledge of the store in sync in case the filesystem has
+  // deleted the snapshot for |uuid|.
+  void SyncWithFilesystem(const SnapshotUuid& uuid);
 
   std::optional<SnapshotPersistenceMetadata> tmp_metadata_;
   std::optional<SnapshotPersistenceMetadata> cache_metadata_;

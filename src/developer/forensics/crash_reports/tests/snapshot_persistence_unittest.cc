@@ -12,6 +12,7 @@
 #include "gtest/gtest.h"
 #include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/feedback_data/constants.h"
+#include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/scoped_memfs_manager.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/storage_size.h"
@@ -335,6 +336,52 @@ TEST_F(SnapshotPersistenceTest, Check_RemovesEmptyDirectories) {
   MakeNewPersistence();
   EXPECT_FALSE(files::IsDirectory(snapshot_cache_dir));
   EXPECT_FALSE(files::IsDirectory(snapshot_tmp_dir));
+}
+
+TEST_F(SnapshotPersistenceTest, Check_ContainsSyncsWithFilesystem) {
+  const SnapshotUuid kTestUuid = "test uuid";
+  const std::string kArchiveValue = "snapshot.data";
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = feedback_data::kSnapshotFilename;
+  FX_CHECK(fsl::VmoFromString(kArchiveValue, &snapshot.value));
+
+  const auto expected_archive = ManagedSnapshot::Archive(snapshot);
+  auto expected_archive_size = StorageSize::Bytes(expected_archive.key.size());
+  expected_archive_size += StorageSize::Bytes(expected_archive.value.size());
+
+  persistence_->Add(kTestUuid, expected_archive, expected_archive_size,
+                    /*only_consider_tmp=*/false);
+
+  ASSERT_TRUE(persistence_->Contains(kTestUuid));
+  ASSERT_EQ(persistence_->SnapshotLocation(kTestUuid), ItemLocation::kCache);
+
+  files::DeletePath(files::JoinPath(GetCacheDir(), kTestUuid), /*recursive=*/true);
+
+  EXPECT_FALSE(persistence_->Contains(kTestUuid));
+}
+
+TEST_F(SnapshotPersistenceTest, Check_SnapshotLocationSyncsWithFilesystem) {
+  const SnapshotUuid kTestUuid = "test uuid";
+  const std::string kArchiveValue = "snapshot.data";
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = feedback_data::kSnapshotFilename;
+  FX_CHECK(fsl::VmoFromString(kArchiveValue, &snapshot.value));
+
+  const auto expected_archive = ManagedSnapshot::Archive(snapshot);
+  auto expected_archive_size = StorageSize::Bytes(expected_archive.key.size());
+  expected_archive_size += StorageSize::Bytes(expected_archive.value.size());
+
+  persistence_->Add(kTestUuid, expected_archive, expected_archive_size,
+                    /*only_consider_tmp=*/false);
+
+  ASSERT_TRUE(persistence_->Contains(kTestUuid));
+  ASSERT_EQ(persistence_->SnapshotLocation(kTestUuid), ItemLocation::kCache);
+
+  files::DeletePath(files::JoinPath(GetCacheDir(), kTestUuid), /*recursive=*/true);
+
+  EXPECT_FALSE(persistence_->SnapshotLocation(kTestUuid).has_value());
 }
 
 }  // namespace

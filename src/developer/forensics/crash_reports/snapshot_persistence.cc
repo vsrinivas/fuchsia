@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/crash_reports/snapshot_persistence_metadata.h"
 #include "src/developer/forensics/utils/sized_data.h"
 #include "src/developer/forensics/utils/storage_size.h"
@@ -177,12 +178,21 @@ void SnapshotPersistence::MoveToTmp(const SnapshotUuid& uuid) {
   }
 }
 
-bool SnapshotPersistence::Contains(const SnapshotUuid& uuid) const {
+bool SnapshotPersistence::Contains(const SnapshotUuid& uuid) {
+  // This is done here because it is a natural synchronization point and any operation acting on a
+  // snapshot must call Contains or SnapshotLocation in order to safely proceed.
+  SyncWithFilesystem(uuid);
+
   return (tmp_metadata_.has_value() && tmp_metadata_->Contains(uuid)) ||
          (cache_metadata_.has_value() && cache_metadata_->Contains(uuid));
 }
 
 std::optional<ItemLocation> SnapshotPersistence::SnapshotLocation(const SnapshotUuid& uuid) {
+  // Call Contains to first sync with the filesystem.
+  if (!Contains(uuid)) {
+    return std::nullopt;
+  }
+
   if (tmp_metadata_.has_value() && tmp_metadata_->Contains(uuid)) {
     return ItemLocation::kTmp;
   }
@@ -297,6 +307,18 @@ SnapshotPersistenceMetadata& SnapshotPersistence::FallbackRoot(
 
 bool SnapshotPersistence::SnapshotPersistenceEnabled() const {
   return tmp_metadata_.has_value() || cache_metadata_.has_value();
+}
+
+void SnapshotPersistence::SyncWithFilesystem(const SnapshotUuid& uuid) {
+  if (tmp_metadata_.has_value() && tmp_metadata_->Contains(uuid) &&
+      !files::IsDirectory(tmp_metadata_->SnapshotDirectory(uuid))) {
+    tmp_metadata_->Delete(uuid);
+  }
+
+  if (cache_metadata_.has_value() && cache_metadata_->Contains(uuid) &&
+      !files::IsDirectory(cache_metadata_->SnapshotDirectory(uuid))) {
+    cache_metadata_->Delete(uuid);
+  }
 }
 
 }  // namespace forensics::crash_reports
