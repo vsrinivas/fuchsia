@@ -74,7 +74,7 @@ void InputReport::HidReportListenerReceiveReport(const uint8_t* report, size_t r
   const zx::duration latency = zx::clock::get_monotonic() - zx::time(report_time);
 
   total_latency_ += latency;
-  report_count_++;
+  total_report_count_.Set(++report_count_);
   average_latency_usecs_.Set(total_latency_.to_usecs() / report_count_);
 
   if (latency > max_latency_) {
@@ -83,6 +83,7 @@ void InputReport::HidReportListenerReceiveReport(const uint8_t* report, size_t r
   }
 
   latency_histogram_usecs_.Insert(latency.to_usecs());
+  last_event_timestamp_.Set(report_time);
 }
 
 bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* report_desc) {
@@ -417,6 +418,8 @@ zx_status_t InputReport::Start() {
   average_latency_usecs_ = root_.CreateUint("average_latency_usecs", 0);
   max_latency_usecs_ = root_.CreateUint("max_latency_usecs", 0);
   device_types_ = root_.CreateString("device_types", device_types);
+  total_report_count_ = root_.CreateUint("total_report_count", 0);
+  last_event_timestamp_ = root_.CreateUint("last_event_timestamp", 0);
 
   return ZX_OK;
 }

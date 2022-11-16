@@ -211,6 +211,8 @@ zx_status_t Gt6853Device::Init() {
   metrics_root_ = inspector_.GetRoot().CreateChild("hid-input-report-touch");
   average_latency_usecs_ = metrics_root_.CreateUint("average_latency_usecs", 0);
   max_latency_usecs_ = metrics_root_.CreateUint("max_latency_usecs", 0);
+  total_report_count_ = metrics_root_.CreateUint("total_report_count", 0);
+  last_event_timestamp_ = metrics_root_.CreateUint("last_event_timestamp", 0);
 
   zx_status_t status = interrupt_gpio_.ConfigIn(GPIO_NO_PULL);
   if (status != ZX_OK) {
@@ -1022,13 +1024,14 @@ int Gt6853Device::Thread() {
     const zx::duration latency = zx::clock::get_monotonic() - timestamp;
 
     total_latency_ += latency;
-    report_count_++;
+    total_report_count_.Set(++report_count_);
     average_latency_usecs_.Set(total_latency_.to_usecs() / report_count_);
 
     if (latency > max_latency_) {
       max_latency_ = latency;
       max_latency_usecs_.Set(max_latency_.to_usecs());
     }
+    last_event_timestamp_.Set(timestamp.get());
   }
 
   return thrd_success;

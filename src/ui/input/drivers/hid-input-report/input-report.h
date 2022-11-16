@@ -94,6 +94,8 @@ class InputReport : public fidl::WireServer<fuchsia_input_report::InputDevice>,
   inspect::UintProperty average_latency_usecs_;
   inspect::UintProperty max_latency_usecs_;
   inspect::StringProperty device_types_;
+  inspect::UintProperty total_report_count_;
+  inspect::UintProperty last_event_timestamp_;
 
   uint64_t report_count_ = 0;
   zx::duration total_latency_ = {};

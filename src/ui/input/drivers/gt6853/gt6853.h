@@ -174,6 +174,8 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
   inspect::Node metrics_root_;
   inspect::UintProperty average_latency_usecs_;
   inspect::UintProperty max_latency_usecs_;
+  inspect::UintProperty total_report_count_;
+  inspect::UintProperty last_event_timestamp_;
 
   uint64_t report_count_ = 0;
   zx::duration total_latency_ = {};
