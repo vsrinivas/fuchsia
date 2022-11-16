@@ -98,7 +98,6 @@ source_set("shared") {
   deps = [
     ":block-core-bind",
     "//sdk/lib/syslog/cpp",
-    "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",

@@ -13,6 +13,32 @@
 #include <lib/zx/vmo.h>
 
 namespace block_client {
+namespace {
+
+zx_status_t BlockGetFifo(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                         zx::fifo* out_fifo) {
+  fidl::WireResult result = fidl::WireCall(device)->GetFifo();
+  if (!result.ok()) {
+    return result.status();
+  }
+  auto& response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    return status;
+  }
+  *out_fifo = std::move(response.fifo);
+  return ZX_OK;
+}
+
+zx_status_t BlockCloseFifo(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device) {
+  const fidl::WireResult result = fidl::WireCall(device)->CloseFifo();
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  return response.status;
+}
+
+}  // namespace
 
 zx_status_t RemoteBlockDevice::FifoTransaction(block_fifo_request_t* requests, size_t count) {
   return fifo_client_.Transaction(requests, count);
@@ -48,11 +74,19 @@ zx_status_t RemoteBlockDevice::BlockGetInfo(
 }
 
 zx_status_t RemoteBlockDevice::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) {
-  zx::result vmoid = fifo_client_.RegisterVmo(vmo);
-  if (vmoid.is_error()) {
-    return vmoid.error_value();
+  zx::vmo xfer_vmo;
+  if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo); status != ZX_OK) {
+    return status;
   }
-  *out_vmoid = std::move(vmoid.value());
+  const fidl::WireResult result = fidl::WireCall(device_)->AttachVmo(std::move(xfer_vmo));
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    return status;
+  }
+  *out_vmoid = storage::Vmoid(response.vmoid->id);
   return ZX_OK;
 }
 
@@ -122,26 +156,15 @@ zx_status_t RemoteBlockDevice::VolumeShrink(uint64_t offset, uint64_t length) {
 
 zx_status_t RemoteBlockDevice::Create(fidl::ClientEnd<fuchsia_hardware_block::Block> device,
                                       std::unique_ptr<RemoteBlockDevice>* out) {
-  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();
-  if (endpoints.is_error()) {
-    return endpoints.error_value();
-  }
-  auto& [session, server] = endpoints.value();
-  if (fidl::WireResult result = fidl::WireCall(device)->OpenSession(std::move(server));
-      !result.ok()) {
-    return result.status();
-  }
-  const fidl::WireResult result = fidl::WireCall(session)->GetFifo();
-  if (!result.ok()) {
-    return result.status();
-  }
-  const fit::result response = result.value();
-  if (response.is_error()) {
-    return response.error_value();
+  zx::fifo fifo;
+  zx_status_t status = BlockGetFifo(device, &fifo);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Could not acquire block fifo";
+    return status;
   }
 
-  *out = std::unique_ptr<RemoteBlockDevice>(
-      new RemoteBlockDevice(std::move(device), std::move(session), std::move(response->fifo)));
+  *out =
+      std::unique_ptr<RemoteBlockDevice>(new RemoteBlockDevice(std::move(device), std::move(fifo)));
   return ZX_OK;
 }
 
@@ -160,9 +183,10 @@ zx::result<std::unique_ptr<RemoteBlockDevice>> RemoteBlockDevice::Create(int fd)
 }
 
 RemoteBlockDevice::RemoteBlockDevice(fidl::ClientEnd<fuchsia_hardware_block::Block> device,
-                                     fidl::ClientEnd<fuchsia_hardware_block::Session> session,
                                      zx::fifo fifo)
-    : device_(std::move(device)), fifo_client_(std::move(session), std::move(fifo)) {}
+    : device_(std::move(device)), fifo_client_(std::move(fifo)) {}
+
+RemoteBlockDevice::~RemoteBlockDevice() { BlockCloseFifo(device_); }
 
 zx_status_t ReadWriteBlocks(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
                             void* buffer, size_t buffer_length, size_t offset, bool write) {

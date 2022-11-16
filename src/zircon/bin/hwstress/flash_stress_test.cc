@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/block/cpp/fidl.h>
+#include <fuchsia/hardware/block/cpp/fidl_test_base.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/result.h>
 #include <lib/zx/time.h>
@@ -35,42 +36,30 @@ constexpr size_t kTestSize = 4 * 1024 * 1024;
 constexpr size_t kTransferSize = 768 * 1024;
 constexpr size_t kVmoSize = kTransferSize * /*kMaxInFlightRequests*/ 8;
 
-class FakeBlock : public fuchsia::hardware::block::Session {
+class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
  public:
   FakeBlock(bool introduce_incorrect_reads, uint64_t device_size)
       : introduce_incorrect_reads_(introduce_incorrect_reads), device_size_(device_size) {}
 
   void GetFifo(GetFifoCallback callback) override {
-    fuchsia::hardware::block::Session_GetFifo_Response response;
-    if (zx_status_t status =
-            zx::fifo::create(/*elem_count=*/BLOCK_FIFO_MAX_DEPTH, /*elem_size=*/BLOCK_FIFO_ESIZE,
-                             /*options=*/0, &fifo_, &response.fifo);
-        status != ZX_OK) {
-      callback(fuchsia::hardware::block::Session_GetFifo_Result::WithErr(std::move(status)));
-    } else {
-      callback(fuchsia::hardware::block::Session_GetFifo_Result::WithResponse(std::move(response)));
-    }
+    zx::fifo fifo;
+    zx_status_t status =
+        zx::fifo::create(/*elem_count=*/BLOCK_FIFO_MAX_DEPTH, /*elem_size=*/BLOCK_FIFO_ESIZE,
+                         /*options=*/0, &fifo_, &fifo);
+    callback(status, std::move(fifo));
   }
 
   void AttachVmo(::zx::vmo vmo, AttachVmoCallback callback) override {
-    ASSERT_FALSE(vmo_.is_valid());
+    ZX_ASSERT(!vmo_.is_valid());
     vmo_ = std::move(vmo);
     uint64_t vmo_size;
-    ASSERT_OK(vmo_.get_size(&vmo_size));
+    ZX_ASSERT(vmo_.get_size(&vmo_size) == ZX_OK);
     // Map the VMO into memory.
-    if (zx_status_t status = zx::vmar::root_self()->map(
-            /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE),
-            /*vmar_offset=*/0, vmo_, /*vmo_offset=*/0, vmo_size, &vmo_addr_);
-        status != ZX_OK) {
-      callback(fuchsia::hardware::block::Session_AttachVmo_Result::WithErr(std::move(status)));
-    } else {
-      callback(fuchsia::hardware::block::Session_AttachVmo_Result::WithResponse(
-          fuchsia::hardware::block::Session_AttachVmo_Response(kVmoId)));
-    }
-  }
-
-  void Close(CloseCallback callback) override {
-    callback(fuchsia::unknown::Closeable_Close_Result::WithResponse({}));
+    zx_status_t status = zx::vmar::root_self()->map(
+        /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE),
+        /*vmar_offset=*/0, vmo_, /*vmo_offset=*/0, vmo_size, &vmo_addr_);
+    ZX_ASSERT(status == ZX_OK);
+    callback(ZX_OK, std::make_unique<fuchsia::hardware::block::VmoId>(kVmoId));
   }
 
   void StartServer() {
@@ -80,6 +69,11 @@ class FakeBlock : public fuchsia::hardware::block::Session {
   void CloseServer() {
     fifo_.signal(0, ZX_USER_SIGNAL_0);
     thread_->join();
+  }
+
+  // Callback when a unimplemented FIDL method is called.
+  void NotImplemented_(const std::string& name) override {
+    ZX_PANIC("Unimplemented: %s", name.c_str());
   }
 
  private:
@@ -109,18 +103,19 @@ class FakeBlock : public fuchsia::hardware::block::Session {
 
       if (status == ZX_OK && (pending & ZX_FIFO_READABLE) != 0) {
         block_fifo_request_t request;
-        ASSERT_OK(fifo_.read(sizeof(request), &request, 1, nullptr));
-        ASSERT_EQ(request.vmoid, kVmoId.id);
+        zx_status_t status = fifo_.read(sizeof(request), &request, 1, nullptr);
+        ZX_ASSERT(status == ZX_OK);
+        ZX_ASSERT(request.vmoid == kVmoId.id);
         // Check that the data is correct and that it is being written to the correct device
         // location.
-        ASSERT_EQ(request.dev_offset, expected_offset);
+        ZX_ASSERT(request.dev_offset == expected_offset);
         expected_offset = request.dev_offset + request.length;
-        ASSERT_LT(request.dev_offset, device_size_ * kBlockSize);
+        ZX_ASSERT(request.dev_offset < device_size_ * kBlockSize);
         if (request.opcode == BLOCKIO_WRITE) {
           uint64_t expected_value = request.dev_offset;
           uint64_t found_value =
               reinterpret_cast<uint64_t*>(vmo_addr_ + request.vmo_offset * kBlockSize)[0];
-          ASSERT_EQ(found_value, expected_value);
+          ZX_ASSERT(found_value == expected_value);
         }
         reqs.push_back(request);
       }
@@ -149,14 +144,15 @@ class FakeBlock : public fuchsia::hardware::block::Session {
               .status = ZX_OK,
               .reqid = request.reqid,
           };
-          ASSERT_OK(fifo_.write(sizeof(response), &response, 1, nullptr));
+          status = fifo_.write(sizeof(response), &response, 1, nullptr);
+          ZX_ASSERT(status == ZX_OK);
         }
         reqs.clear();
       }
     }
   }
 
-  static void WriteSectorData(zx_vaddr_t start, uint64_t value) {
+  void WriteSectorData(zx_vaddr_t start, uint64_t value) {
     uint64_t num_words = kBlockSize / sizeof(value);
     uint64_t* data = reinterpret_cast<uint64_t*>(start);
     for (uint64_t i = 0; i < num_words; i++) {
@@ -191,7 +187,7 @@ TEST(Flash, WriteFlashIo) {
   FakeBlock block(false, kTestSize);
 
   BlockDevice device = {
-      .device = factory.CreateSyncPtrTo<fuchsia::hardware::block::Session>(&block),
+      .device = factory.CreateSyncPtrTo<fuchsia::hardware::block::Block>(&block),
   };
 
   device.vmo_size = kVmoSize;
@@ -211,7 +207,7 @@ TEST(Flash, ReadFlashIo) {
   FakeBlock block(false, kTestSize);
 
   BlockDevice device = {
-      .device = factory.CreateSyncPtrTo<fuchsia::hardware::block::Session>(&block),
+      .device = factory.CreateSyncPtrTo<fuchsia::hardware::block::Block>(&block),
   };
 
   device.vmo_size = kVmoSize;
@@ -231,7 +227,7 @@ TEST(Flash, ReadErrorFlashIo) {
   FakeBlock block(true, kTestSize);
 
   BlockDevice device = {
-      .device = factory.CreateSyncPtrTo<fuchsia::hardware::block::Session>(&block),
+      .device = factory.CreateSyncPtrTo<fuchsia::hardware::block::Block>(&block),
   };
 
   device.vmo_size = kVmoSize;
@@ -251,7 +247,7 @@ TEST(Flash, SingleBlock) {
   FakeBlock block(false, kBlockSize);
 
   BlockDevice device = {
-      .device = factory.CreateSyncPtrTo<fuchsia::hardware::block::Session>(&block),
+      .device = factory.CreateSyncPtrTo<fuchsia::hardware::block::Block>(&block),
   };
 
   device.vmo_size = kVmoSize;

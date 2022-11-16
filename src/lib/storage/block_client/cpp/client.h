@@ -5,15 +5,12 @@
 #ifndef SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_CLIENT_H_
 #define SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_CLIENT_H_
 
-#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/zx/fifo.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
 #include <condition_variable>
 #include <mutex>
-
-#include <storage/buffer/vmoid_registry.h>
 
 namespace block_client {
 
@@ -25,10 +22,11 @@ namespace block_client {
 // becomes available.
 class Client {
  public:
-  Client(fidl::ClientEnd<fuchsia_hardware_block::Session> session, zx::fifo fifo);
-  ~Client();
+  explicit Client(zx::fifo fifo);
 
-  zx::result<storage::Vmoid> RegisterVmo(const zx::vmo& vmo);
+  // This object can not be moved due to the presence of the mutex.
+  Client(const Client&) = delete;
+  Client(Client&&) = delete;
 
   // Issues a group of block requests over the underlying fifo, and waits for a response.
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count);
@@ -43,8 +41,7 @@ class Client {
   zx_status_t DoRead(block_fifo_response_t* response, size_t* count);
   zx_status_t DoWrite(block_fifo_request_t* request, size_t count);
 
-  const fidl::ClientEnd<fuchsia_hardware_block::Session> session_;
-  const zx::fifo fifo_;
+  zx::fifo fifo_;
 
   std::mutex mutex_;
 

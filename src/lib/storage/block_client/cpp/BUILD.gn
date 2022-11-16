@@ -36,27 +36,24 @@ static_library("cpp") {
   public_configs = [ ":migration" ]
 
   public_deps = [
-    # fake_block_device.h has #include <range/range.h>.
+    # <block-client/cpp/fake-device.h> has #include <range/range.h>.
+    # <block-client/cpp/client.h> has #include <lib/zx/fifo.h>.
     "//zircon/system/ulib/range",
 
-    # fake_block_device.h has #include <storage-metrics/block-metrics.h>.
+    # <block-client/cpp/fake-device.h> has #include <storage-metrics/block-metrics.h>.
     "//zircon/system/ulib/storage-metrics",
-
-    # client.h has #include <storage/buffer/vmoid_registry.h>.
     "//zircon/system/ulib/storage/buffer",
-
-    # client.h has #include <lib/zx/fifo.h>.
     "//zircon/system/ulib/zx",
 
-    # block_device.h has #include <.../wire.h>
+    # <block-client/cpp/block-device.h> has #include <.../wire.h>
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
 
-    # block_device.h has #include <lib/zx/result.h>
+    # <block-client/cpp/block-device.h> has #include <lib/zx/result.h>
     "//zircon/system/ulib/zxc",
 
-    # reader.h has #include <lib/fzl/owned-vmo-mapper.h>
+    # <block-client/cpp/reader.h> has #include <lib/fzl/owned-vmo-mapper.h>
     "//zircon/system/ulib/fzl",
   ]
   deps = [

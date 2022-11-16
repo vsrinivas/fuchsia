@@ -32,6 +32,7 @@ class ServerTestFixture : public zxtest::Test {
   StubBlockDevice blkdev_;
   ddk::BlockProtocolClient client_;
   std::unique_ptr<Server> server_;
+  fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo_;
 
  private:
   static int RunServer(void* arg);
@@ -71,10 +72,10 @@ void ServerTestFixture::JoinThread() {
   is_thread_running_ = false;
 }
 
-TEST_F(ServerTestFixture, CreateServer) { ASSERT_OK(Server::Create(&client_, &server_)); }
+TEST_F(ServerTestFixture, CreateServer) { ASSERT_OK(Server::Create(&client_, &fifo_, &server_)); }
 
 TEST_F(ServerTestFixture, StartServer) {
-  ASSERT_OK(Server::Create(&client_, &server_));
+  ASSERT_OK(Server::Create(&client_, &fifo_, &server_));
 
   CreateThread();
   WaitForThreadStart();
@@ -87,11 +88,24 @@ TEST_F(ServerTestFixture, StartServer) {
   JoinThread();
 }
 
+TEST_F(ServerTestFixture, CloseFifo) {
+  ASSERT_OK(Server::Create(&client_, &fifo_, &server_));
+
+  CreateThread();
+  WaitForThreadStart();
+
+  // Allow the server thread to do some work. The thread may not always get to make progress
+  // before the fifo is closed, but the server thread should handle it regardless.
+  usleep(20 * 1000);
+
+  fifo_.reset();
+
+  WaitForThreadExit();
+  JoinThread();
+}
+
 TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
-  ASSERT_OK(Server::Create(&client_, &server_));
-  zx::result fifo_result = server_->GetFifo();
-  ASSERT_OK(fifo_result);
-  fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo(std::move(fifo_result.value()));
+  ASSERT_OK(Server::Create(&client_, &fifo_, &server_));
   CreateThread();
   auto cleanup = fit::defer([&] {
     server_->Shutdown();
@@ -100,14 +114,14 @@ TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
   zx::vmo vmo;
   constexpr int kTestBlockCount = 257;
   ASSERT_OK(zx::vmo::create(kTestBlockCount * kBlockSize, 0, &vmo));
-  zx::result vmoid = server_->AttachVmo(std::move(vmo));
-  ASSERT_OK(vmoid);
+  vmoid_t vmoid;
+  ASSERT_OK(server_->AttachVmo(std::move(vmo), &vmoid));
 
   block_fifo_request_t request = {
       .opcode = BLOCK_OP_WRITE | BLOCK_GROUP_ITEM,
       .reqid = 100,
       .group = 5,
-      .vmoid = vmoid.value(),
+      .vmoid = vmoid,
       .length = 4,
       .vmo_offset = 0,
       .dev_offset = 0,
@@ -116,21 +130,21 @@ TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
   blkdev_.set_callback([&](const block_op_t&) { return ZX_ERR_IO; });
 
   size_t actual_count = 0;
-  ASSERT_OK(fifo.write(&request, 1, &actual_count));
+  ASSERT_OK(fifo_.write(&request, 1, &actual_count));
   ASSERT_EQ(actual_count, 1);
 
   request = {
       .opcode = BLOCK_OP_READ,
       .reqid = 101,
-      .vmoid = vmoid.value(),
+      .vmoid = vmoid,
   };
-  ASSERT_OK(fifo.write(&request, 1, &actual_count));
+  ASSERT_OK(fifo_.write(&request, 1, &actual_count));
   ASSERT_EQ(actual_count, 1);
 
   block_fifo_response_t response;
   zx_signals_t seen;
-  ASSERT_OK(fifo.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), &seen));
-  ASSERT_OK(fifo.read_one(&response));
+  ASSERT_OK(fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), &seen));
+  ASSERT_OK(fifo_.read_one(&response));
 
   // Should get the response for the read.
   EXPECT_EQ(response.reqid, 101);
@@ -139,17 +153,17 @@ TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
       .opcode = BLOCK_OP_WRITE | BLOCK_GROUP_ITEM | BLOCK_GROUP_LAST,
       .reqid = 102,
       .group = 5,
-      .vmoid = vmoid.value(),
+      .vmoid = vmoid,
       .length = kTestBlockCount,
       .vmo_offset = 0,
       .dev_offset = 0,
   };
-  ASSERT_OK(fifo.write(&request, 1, &actual_count));
+  ASSERT_OK(fifo_.write(&request, 1, &actual_count));
   ASSERT_EQ(actual_count, 1);
 
   // It's the last one so it should trigger a response.
-  ASSERT_OK(fifo.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), &seen));
-  ASSERT_OK(fifo.read_one(&response));
+  ASSERT_OK(fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), &seen));
+  ASSERT_OK(fifo_.read_one(&response));
 
   EXPECT_EQ(response.reqid, 102);
 
@@ -161,7 +175,7 @@ TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
           .opcode = BLOCK_OP_WRITE | BLOCK_GROUP_ITEM,
           .reqid = 103,
           .group = 5,
-          .vmoid = vmoid.value(),
+          .vmoid = vmoid,
           .length = 257,
           .vmo_offset = 0,
           .dev_offset = 0,
@@ -170,17 +184,17 @@ TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
           .opcode = BLOCK_OP_WRITE | BLOCK_GROUP_ITEM | BLOCK_GROUP_LAST,
           .reqid = 104,
           .group = 5,
-          .vmoid = vmoid.value(),
+          .vmoid = vmoid,
           .length = 257,
           .vmo_offset = 0,
           .dev_offset = 0,
       },
   };
-  ASSERT_OK(fifo.write(requests, 2, &actual_count));
+  ASSERT_OK(fifo_.write(requests, 2, &actual_count));
   ASSERT_EQ(actual_count, 2);
 
-  ASSERT_OK(fifo.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), &seen));
-  ASSERT_OK(fifo.read_one(&response));
+  ASSERT_OK(fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), &seen));
+  ASSERT_OK(fifo_.read_one(&response));
 
   EXPECT_EQ(response.reqid, 104);
 }

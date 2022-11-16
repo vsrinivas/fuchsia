@@ -68,9 +68,8 @@ static void ops_per_second(uint64_t count, uint64_t nanos) {
 
 using blkdev_t = struct {
   int fd;
-  zx::vmo vmo;
-  zx::fifo fifo;
-  fidl::ClientEnd<fuchsia_hardware_block::Session> session;
+  zx_handle_t vmo;
+  zx_handle_t fifo;
   reqid_t reqid;
   fuchsia_hardware_block::wire::VmoId vmoid;
   size_t bufsz;
@@ -81,9 +80,8 @@ static void blkdev_close(blkdev_t* blk) {
   if (blk->fd >= 0) {
     close(blk->fd);
   }
-  blk->vmo.reset();
-  blk->fifo.reset();
-  blk->session.reset();
+  zx_handle_close(blk->vmo);
+  zx_handle_close(blk->fifo);
   memset(blk, 0, sizeof(blkdev_t));
   blk->fd = -1;
 }
@@ -115,59 +113,44 @@ static zx_status_t blkdev_open(int fd, const char* dev, size_t bufsz, blkdev_t* 
   }
 
   {
-    zx::result server = fidl::CreateEndpoints(&blk->session);
-    if (server.is_error()) {
-      fprintf(stderr, "error: cannot create server for '%s': %s\n", dev, server.status_string());
-      return server.status_value();
-    }
-    if (fidl::WireResult result = fidl::WireCall(channel)->OpenSession(std::move(server.value()));
-        !result.ok()) {
-      fprintf(stderr, "error: cannot open session for '%s': %s\n", dev,
-              result.FormatDescription().c_str());
-      return result.status();
-    }
-  }
-
-  {
-    const fidl::WireResult result = fidl::WireCall(blk->session)->GetFifo();
+    fidl::WireResult result = fidl::WireCall(channel)->GetFifo();
     if (!result.ok()) {
       fprintf(stderr, "error: cannot get fifo for '%s':%s\n", dev,
               result.FormatDescription().c_str());
       return result.status();
     }
-    const fit::result response = result.value();
-    if (response.is_error()) {
-      fprintf(stderr, "error: cannot get fifo for '%s':%s\n", dev,
-              zx_status_get_string(response.error_value()));
-      return response.error_value();
+    auto& response = result.value();
+    if (zx_status_t status = response.status; status != ZX_OK) {
+      fprintf(stderr, "error: cannot get fifo for '%s':%s\n", dev, zx_status_get_string(status));
+      return status;
     }
-    blk->fifo = std::move(response.value()->fifo);
+    blk->fifo = response.fifo.release();
   }
 
-  if (zx_status_t status = zx::vmo::create(bufsz, 0, &blk->vmo); status != ZX_OK) {
+  if (zx_status_t status = zx_vmo_create(bufsz, 0, &blk->vmo); status != ZX_OK) {
     fprintf(stderr, "error: out of memory: %s\n", zx_status_get_string(status));
     return status;
   }
 
-  zx::vmo dup;
-  if (zx_status_t status = blk->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
+  zx_handle_t dup;
+  if (zx_status_t status = zx_handle_duplicate(blk->vmo, ZX_RIGHT_SAME_RIGHTS, &dup);
+      status != ZX_OK) {
     fprintf(stderr, "error: cannot duplicate handle: %s\n", zx_status_get_string(status));
     return status;
   }
 
-  const fidl::WireResult result = fidl::WireCall(blk->session)->AttachVmo(std::move(dup));
+  const fidl::WireResult result = fidl::WireCall(channel)->AttachVmo(zx::vmo(dup));
   if (!result.ok()) {
     fprintf(stderr, "error: cannot attach vmo for '%s':%s\n", dev,
             result.FormatDescription().c_str());
     return result.status();
   }
-  const fit::result response = result.value();
-  if (response.is_error()) {
-    fprintf(stderr, "error: cannot attach vmo for '%s':%s\n", dev,
-            zx_status_get_string(response.error_value()));
-    return response.error_value();
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    fprintf(stderr, "error: cannot attach vmo for '%s':%s\n", dev, zx_status_get_string(status));
+    return status;
   }
-  blk->vmoid = response.value()->vmoid;
+  blk->vmoid = *response.vmoid;
 
   cleanup.cancel();
   return ZX_OK;
@@ -200,7 +183,7 @@ static int bio_random_thread(void* arg) {
 
   rand64_t r64 = RAND63SEED(a->seed);
 
-  zx::fifo& fifo = a->blk->fifo;
+  zx_handle_t fifo = a->blk->fifo;
   size_t dev_off = 0;
 
   while (count > 0) {
@@ -235,19 +218,20 @@ static int bio_random_thread(void* arg) {
         fprintf(stderr, "IO tid=%u vid=%u op=%x len=%zu vof=%zu dof=%zu\n",
                 req.reqid, req.vmoid.id, req.opcode, req.length, req.vmo_offset, req.dev_offset);
 #endif
-    zx_status_t status = fifo.write(sizeof(req), &req, 1, nullptr);
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      status = fifo.wait_one(ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), nullptr);
-      if (status != ZX_OK) {
-        fprintf(stderr, "failed waiting for fifo: %s\n", zx_status_get_string(status));
-        fifo.reset();
+    zx_status_t r = zx_fifo_write(fifo, sizeof(req), &req, 1, nullptr);
+    if (r == ZX_ERR_SHOULD_WAIT) {
+      r = zx_object_wait_one(fifo, ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED, ZX_TIME_INFINITE,
+                             nullptr);
+      if (r != ZX_OK) {
+        fprintf(stderr, "failed waiting for fifo\n");
+        zx_handle_close(fifo);
         return -1;
       }
       continue;
     }
-    if (status != ZX_OK) {
-      fprintf(stderr, "error: failed writing to fifo: %s\n", zx_status_get_string(status));
-      fifo.reset();
+    if (r < 0) {
+      fprintf(stderr, "error: failed writing fifo\n");
+      zx_handle_close(fifo);
       return -1;
     }
 
@@ -262,35 +246,35 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_duratio
   int r;
 
   size_t count = a->count;
-  zx::fifo& fifo = a->blk->fifo;
+  zx_handle_t fifo = a->blk->fifo;
 
   zx_time_t t0 = zx_clock_get_monotonic();
   thrd_create(&t, bio_random_thread, a);
 
-  auto cleanup = fit::defer([&fifo, &t]() {
+  auto cleanup = fit::defer([&a, &t]() {
     int r;
-    fifo.reset();
+    zx_handle_close(a->blk->fifo);
     thrd_join(t, &r);
   });
 
   while (count > 0) {
     block_fifo_response_t resp;
-    zx_status_t status = fifo.read(sizeof(resp), &resp, 1, nullptr);
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      status = fifo.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), nullptr);
-      if (status != ZX_OK) {
-        fprintf(stderr, "failed waiting for fifo: %s\n", zx_status_get_string(status));
-        return status;
+    zx_status_t r = zx_fifo_read(fifo, sizeof(resp), &resp, 1, nullptr);
+    if (r == ZX_ERR_SHOULD_WAIT) {
+      r = zx_object_wait_one(fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, ZX_TIME_INFINITE,
+                             nullptr);
+      if (r != ZX_OK) {
+        fprintf(stderr, "failed waiting for fifo: %d\n", r);
+        return r;
       }
       continue;
     }
-    if (status != ZX_OK) {
-      fprintf(stderr, "error: failed reading fifo: %s\n", zx_status_get_string(status));
-      return status;
+    if (r < 0) {
+      fprintf(stderr, "error: failed reading fifo: %d\n", r);
+      return r;
     }
     if (resp.status != ZX_OK) {
-      fprintf(stderr, "error: io txn failed %s (%zu remaining)\n",
-              zx_status_get_string(resp.status), count);
+      fprintf(stderr, "error: io txn failed %d (%zu remaining)\n", resp.status, count);
       return resp.status;
     }
     count--;

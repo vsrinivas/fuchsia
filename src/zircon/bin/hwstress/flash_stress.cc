@@ -56,6 +56,22 @@ void VerifyBlockData(zx_vaddr_t start, uint32_t block_size, uint64_t value) {
   }
 }
 
+zx_status_t OpenBlockDevice(const std::string& path,
+                            fuchsia::hardware::block::BlockSyncPtr* device) {
+  // Create a channel, and connect to block device.
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fdio_service_connect(path.c_str(), server.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+  device->Bind(std::move(client));
+  return ZX_OK;
+}
+
 zx_status_t SendFifoRequest(const zx::fifo& fifo, const block_fifo_request_t& request) {
   zx_status_t r = fifo.write(sizeof(request), &request, 1, nullptr);
   if (r == ZX_OK || r == ZX_ERR_SHOULD_WAIT) {
@@ -184,55 +200,47 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t tran
 }
 
 zx_status_t SetupBlockFifo(const std::string& path, BlockDevice* device) {
+  zx_status_t status;
+
   // Fetch a FIFO for communicating with the block device over.
-  fuchsia::hardware::block::Session_GetFifo_Result fifo_result;
-  if (zx_status_t status = device->device->GetFifo(&fifo_result); status != ZX_OK) {
-    fprintf(stderr, "Error: cannot get FIFO for '%s': %s\n", path.c_str(),
-            zx_status_get_string(status));
-    return status;
-  }
-  if (fifo_result.is_err()) {
-    fprintf(stderr, "Error: cannot get FIFO for '%s': %s\n", path.c_str(),
-            zx_status_get_string(fifo_result.err()));
-    return fifo_result.err();
+  zx::fifo fifo;
+  zx_status_t io_status = device->device->GetFifo(&status, &fifo);
+  if (io_status != ZX_OK || status != ZX_OK) {
+    fprintf(stderr, "Error: cannot get FIFO for '%s'\n", path.c_str());
+    return ZX_ERR_INTERNAL;
   }
 
   // Setup a shared VMO with the block device.
   zx::vmo vmo;
-  if (zx_status_t status = zx::vmo::create(device->vmo_size, /*options=*/0, &vmo);
-      status != ZX_OK) {
+  status = zx::vmo::create(device->vmo_size, /*options=*/0, &vmo);
+  if (status != ZX_OK) {
     fprintf(stderr, "Error: could not allocate memory: %s\n", zx_status_get_string(status));
     return status;
   }
   zx::vmo shared_vmo;
-  if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &shared_vmo); status != ZX_OK) {
+  status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &shared_vmo);
+  if (status != ZX_OK) {
     fprintf(stderr, "Error: cannot duplicate handle: %s\n", zx_status_get_string(status));
     return status;
   }
-  fuchsia::hardware::block::Session_AttachVmo_Result vmo_result;
-  if (zx_status_t status = device->device->AttachVmo(std::move(shared_vmo), &vmo_result);
-      status != ZX_OK) {
-    fprintf(stderr, "Error: cannot attach VMO for '%s': %s\n", path.c_str(),
-            zx_status_get_string(status));
-    return status;
+  std::unique_ptr<fuchsia::hardware::block::VmoId> vmo_id;
+  io_status = device->device->AttachVmo(std::move(shared_vmo), &status, &vmo_id);
+  if (io_status != ZX_OK || status != ZX_OK || vmo_id == nullptr) {
+    fprintf(stderr, "Error: cannot attach VMO for '%s'\n", path.c_str());
+    return ZX_ERR_INTERNAL;
   }
-  if (vmo_result.is_err()) {
-    fprintf(stderr, "Error: cannot attach VMO for '%s': %s\n", path.c_str(),
-            zx_status_get_string(vmo_result.err()));
-    return vmo_result.err();
-  }
+  device->vmoid = *vmo_id;
 
   // Map the VMO into memory.
-  if (zx_status_t status = zx::vmar::root_self()->map(
-          /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE),
-          /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, /*len=*/device->vmo_size, &device->vmo_addr);
-      status != ZX_OK) {
+  status = zx::vmar::root_self()->map(
+      /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE),
+      /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, /*len=*/device->vmo_size, &device->vmo_addr);
+  if (status != ZX_OK) {
     fprintf(stderr, "Error: VMO could not be mapped into memory: %s", zx_status_get_string(status));
     return status;
   }
 
-  device->vmoid = vmo_result.response().vmoid;
-  device->fifo = std::move(fifo_result.response().fifo);
+  device->fifo = std::move(fifo);
   device->vmo = std::move(vmo);
   return ZX_OK;
 }
@@ -327,24 +335,19 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
 
   std::string partition_path = fvm_partition->GetPartitionPath();
 
-  fuchsia::hardware::block::BlockSyncPtr block;
-  if (zx_status_t status =
-          fdio_service_connect(partition_path.c_str(), block.NewRequest().TakeChannel().release());
-      status != ZX_OK) {
-    return status;
+  BlockDevice device;
+  if (OpenBlockDevice(partition_path, &device.device) != ZX_OK) {
+    status->Log("Error: Block device could not be opened");
+    return false;
   }
 
   // Fetch information about the underlying block device, such as block size.
   zx_status_t info_status;
   std::unique_ptr<fuchsia::hardware::block::BlockInfo> block_info;
-  zx_status_t io_status = block->GetInfo(&info_status, &block_info);
+  zx_status_t io_status = device.device->GetInfo(&info_status, &block_info);
   if (io_status != ZX_OK || info_status != ZX_OK) {
     status->Log("Error: cannot get block device info for '%s'\n", partition_path.c_str());
     return ZX_ERR_INTERNAL;
-  }
-  BlockDevice device;
-  if (zx_status_t status = block->OpenSession(device.device.NewRequest()); status != ZX_OK) {
-    return status;
   }
   device.info = *block_info;
 

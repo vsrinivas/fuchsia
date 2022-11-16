@@ -203,18 +203,21 @@ void BlockDevice::GetStats(GetStatsRequestView request, GetStatsCompleter::Sync&
                   fidl::ObjectView<fuchsia_hardware_block::wire::BlockStats>::FromExternal(&stats));
 }
 
-void BlockDevice::OpenSession(OpenSessionRequestView request,
-                              OpenSessionCompleter::Sync& completer) {
-  // TODO(https://fxbug.dev/97783): Allow more than one concurrent connection.
-  if (zx_status_t status = manager_.StartServer(zxdev(), &self_protocol_); status != ZX_OK) {
-    request->session.Close(status);
-    return;
-  }
-  fidl::BindServer(
-      fdf::Dispatcher::GetCurrent()->async_dispatcher(), std::move(request->session), &manager_,
-      [](Manager* manager, fidl::UnbindInfo, fidl::ServerEnd<fuchsia_hardware_block::Session>) {
-        manager->CloseFifoServer();
-      });
+void BlockDevice::GetFifo(GetFifoCompleter::Sync& completer) {
+  zx::fifo fifo;
+  zx_status_t status = manager_.StartServer(zxdev(), &self_protocol_, &fifo);
+  completer.Reply(status, std::move(fifo));
+}
+
+void BlockDevice::AttachVmo(AttachVmoRequestView request, AttachVmoCompleter::Sync& completer) {
+  fuchsia_hardware_block::wire::VmoId vmoid;
+  zx_status_t status = manager_.AttachVmo(std::move(request->vmo), &vmoid.id);
+  completer.Reply(status,
+                  fidl::ObjectView<fuchsia_hardware_block::wire::VmoId>::FromExternal(&vmoid));
+}
+
+void BlockDevice::CloseFifo(CloseFifoCompleter::Sync& completer) {
+  completer.Reply(manager_.CloseFifoServer());
 }
 
 void BlockDevice::RebindDevice(RebindDeviceCompleter::Sync& completer) {

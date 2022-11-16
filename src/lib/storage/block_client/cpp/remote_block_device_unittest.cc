@@ -44,19 +44,19 @@ class MockBlockDevice : public fidl::testing::WireTestBase<fuchsia_hardware_bloc
 
   zx_status_t ReadFifoRequests(block_fifo_request_t* requests, size_t* count) const {
     zx_signals_t seen;
-    zx_status_t status = session_.fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
-                                                 zx::deadline_after(zx::sec(5)), &seen);
+    zx_status_t status = fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
+                                        zx::deadline_after(zx::sec(5)), &seen);
     if (status != ZX_OK) {
       return status;
     }
-    return session_.fifo_.read(requests, BLOCK_FIFO_MAX_DEPTH, count);
+    return fifo_.read(requests, BLOCK_FIFO_MAX_DEPTH, count);
   }
 
   zx_status_t WriteFifoResponse(const block_fifo_response_t& response) const {
-    return session_.fifo_.write_one(response);
+    return fifo_.write_one(response);
   }
 
-  bool FifoAttached() const { return session_.fifo_.get().is_valid(); }
+  bool FifoAttached() const { return fifo_.get().is_valid(); }
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
     FAIL() << "unexpected call to: " << name;
@@ -82,23 +82,24 @@ class MockBlockDevice : public fidl::testing::WireTestBase<fuchsia_hardware_bloc
     completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
   }
 
-  void OpenSession(OpenSessionRequestView request, OpenSessionCompleter::Sync& completer) override {
-    if (FifoAttached()) {
-      request->session.Close(ZX_ERR_BAD_STATE);
-      return;
-    }
-    if (zx_status_t status =
-            fzl::create_fifo(BLOCK_FIFO_MAX_DEPTH, 0, &session_.peer_fifo_, &session_.fifo_);
-        status != ZX_OK) {
-      request->session.Close(status);
-      return;
-    }
-    fidl::BindServer(dispatcher_, std::move(request->session), &session_,
-                     [](MockSession* session, fidl::UnbindInfo,
-                        fidl::ServerEnd<fuchsia_hardware_block::Session>) {
-                       session->fifo_.reset();
-                       session->peer_fifo_.reset();
-                     });
+  void GetFifo(GetFifoCompleter::Sync& completer) override {
+    fzl::fifo<block_fifo_request_t, block_fifo_response_t> client;
+    EXPECT_EQ(fzl::create_fifo(BLOCK_FIFO_MAX_DEPTH, 0, &client, &fifo_), ZX_OK);
+    completer.Reply(ZX_OK, std::move(client.get()));
+  }
+
+  void AttachVmo(AttachVmoRequestView request, AttachVmoCompleter::Sync& completer) override {
+    fuchsia_hardware_block::wire::VmoId vmoid = {kGoldenVmoid};
+    completer.Reply(ZX_OK, fidl::ObjectView<decltype(vmoid)>::FromExternal(&vmoid));
+  }
+
+  void CloseFifo(CloseFifoCompleter::Sync& completer) override {
+    fifo_.reset();
+    completer.Reply(ZX_OK);
+  }
+
+  void RebindDevice(RebindDeviceCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 
   void ReadBlocks(ReadBlocksRequestView request, ReadBlocksCompleter::Sync& completer) override {
@@ -113,37 +114,8 @@ class MockBlockDevice : public fidl::testing::WireTestBase<fuchsia_hardware_bloc
     completer.Reply(status);
   }
 
- private:
-  class MockSession : public fidl::WireServer<fuchsia_hardware_block::Session> {
-   public:
-    void GetFifo(GetFifoCompleter::Sync& completer) override {
-      zx::fifo fifo;
-      if (zx_status_t status = peer_fifo_.get().duplicate(ZX_RIGHT_SAME_RIGHTS, &fifo);
-          status != ZX_OK) {
-        return completer.ReplyError(status);
-      }
-      completer.ReplySuccess(std::move(fifo));
-    }
-
-    void AttachVmo(AttachVmoRequestView request, AttachVmoCompleter::Sync& completer) override {
-      completer.ReplySuccess({
-          .id = kGoldenVmoid,
-      });
-    }
-
-    void Close(CloseCompleter::Sync& completer) override {
-      fifo_.reset();
-      peer_fifo_.reset();
-      completer.ReplySuccess();
-      completer.Close(ZX_OK);
-    }
-
-    fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
-    fzl::fifo<block_fifo_request_t, block_fifo_response_t> peer_fifo_;
-  };
-
-  async_dispatcher_t* dispatcher_;
-  MockSession session_;
+  async_dispatcher_t* dispatcher_ = nullptr;
+  fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
   std::vector<uint8_t> buffer_;
 };
 

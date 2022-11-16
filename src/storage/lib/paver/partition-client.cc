@@ -21,77 +21,98 @@
 #include "src/storage/lib/paver/pave-logging.h"
 
 namespace paver {
+namespace {
 
 namespace block = fuchsia_hardware_block;
 
-zx::result<std::reference_wrapper<fuchsia_hardware_block::wire::BlockInfo>>
-BlockPartitionClient::ReadBlockInfo() {
-  if (block_info_.has_value()) {
-    return zx::ok(std::reference_wrapper(block_info_.value()));
+}  // namespace
+
+BlockPartitionClient::~BlockPartitionClient() {
+  if (client_) {
+    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
+    (void)partition_->CloseFifo();
   }
-  auto result = partition_->GetInfo();
-  auto status = zx::make_result(result.ok() ? result.value().status : result.status());
-  if (status.is_error()) {
-    ERROR("Failed to get partition info with status: %s\n", status.status_string());
-    return status.take_error();
+}
+
+zx::result<> BlockPartitionClient::ReadBlockInfo() {
+  if (!block_info_) {
+    auto result = partition_->GetInfo();
+    auto status = zx::make_result(result.ok() ? result.value().status : result.status());
+    if (status.is_error()) {
+      ERROR("Failed to get partition info with status: %s\n", status.status_string());
+      return status.take_error();
+    }
+    block_info_ = *result.value().info;
   }
-  return zx::ok(std::reference_wrapper(block_info_.emplace(*result.value().info)));
+  return zx::ok();
 }
 
 zx::result<size_t> BlockPartitionClient::GetBlockSize() {
-  zx::result block_info = ReadBlockInfo();
-  if (block_info.is_error()) {
-    return block_info.take_error();
+  auto status = ReadBlockInfo();
+  if (status.is_error()) {
+    return status.take_error();
   }
-  return zx::ok(block_info.value().get().block_size);
+  return zx::ok(block_info_->block_size);
 }
 
 zx::result<size_t> BlockPartitionClient::GetPartitionSize() {
-  zx::result block_info_result = ReadBlockInfo();
-  if (block_info_result.is_error()) {
-    return block_info_result.take_error();
+  auto status = ReadBlockInfo();
+  if (status.is_error()) {
+    return status.take_error();
   }
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = block_info_result.value().get();
-  return zx::ok(block_info.block_size * block_info.block_count);
+  return zx::ok(block_info_->block_size * block_info_->block_count);
 }
 
 zx::result<> BlockPartitionClient::RegisterFastBlockIo() {
   if (client_) {
     return zx::ok();
   }
-  zx::result endpoints = fidl::CreateEndpoints<block::Session>();
-  if (endpoints.is_error()) {
-    return endpoints.take_error();
+
+  auto result = partition_->GetFifo();
+  auto status = zx::make_result(result.ok() ? result.value().status : result.status());
+  if (status.is_error()) {
+    return status.take_error();
   }
-  auto& [client, server] = endpoints.value();
-  if (fidl::WireResult result = partition_->OpenSession(std::move(server)); !result.ok()) {
-    return zx::error(result.status());
-  }
-  const fidl::WireResult result = fidl::WireCall(client)->GetFifo();
-  if (!result.ok()) {
-    return zx::error(result.status());
-  }
-  fit::result response = result.value();
-  if (response.is_error()) {
-    return response.take_error();
-  }
-  client_ =
-      std::make_unique<block_client::Client>(std::move(client), std::move(response.value()->fifo));
+
+  client_ = std::make_unique<block_client::Client>(std::move(result.value().fifo));
   return zx::ok();
 }
 
-zx::result<storage::Vmoid> BlockPartitionClient::Setup(const zx::vmo& vmo) {
+zx::result<vmoid_t> BlockPartitionClient::RegisterVmo(const zx::vmo& vmo) {
+  zx::vmo dup;
+  if (vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
+    ERROR("Couldn't duplicate buffer vmo\n");
+    return zx::error(ZX_ERR_IO);
+  }
+
+  auto result = partition_->AttachVmo(std::move(dup));
+  auto status = zx::make_result(result.ok() ? result.value().status : result.status());
+  if (status.is_error()) {
+    return status.take_error();
+  }
+
+  return zx::ok(result.value().vmoid->id);
+}
+
+zx::result<vmoid_t> BlockPartitionClient::Setup(const zx::vmo& vmo) {
   auto status = RegisterFastBlockIo();
   if (status.is_error()) {
     return status.take_error();
   }
 
-  auto register_status = client_->RegisterVmo(vmo);
+  auto register_status = RegisterVmo(vmo);
   if (register_status.is_error()) {
     return register_status.take_error();
   }
 
-  return zx::ok(std::move(register_status.value()));
+  {
+    auto status = GetBlockSize();
+    if (status.is_error()) {
+      return status.take_error();
+    }
+  }
+
+  return zx::ok(register_status.value());
 }
 
 zx::result<> BlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
@@ -100,28 +121,25 @@ zx::result<> BlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
 
 zx::result<> BlockPartitionClient::Read(const zx::vmo& vmo, size_t size, size_t dev_offset,
                                         size_t vmo_offset) {
-  zx::result block_size = GetBlockSize();
-  if (block_size.is_error()) {
-    return block_size.take_error();
+  auto status = Setup(vmo);
+  if (status.is_error()) {
+    return status.take_error();
   }
-  const uint64_t length = size / block_size.value();
+  vmoid_t vmoid = status.value();
+
+  block_fifo_request_t request;
+  request.group = 0;
+  request.vmoid = vmoid;
+  request.opcode = BLOCKIO_READ;
+
+  const uint64_t length = size / block_info_->block_size;
   if (length > UINT32_MAX) {
     ERROR("Error reading partition data: Too large\n");
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
-  zx::result vmoid = Setup(vmo);
-  if (vmoid.is_error()) {
-    return vmoid.take_error();
-  }
-
-  block_fifo_request_t request = {
-      .opcode = BLOCKIO_READ,
-      .group = 0,
-      .vmoid = vmoid.value().TakeId(),
-      .length = static_cast<uint32_t>(length),
-      .vmo_offset = vmo_offset,
-      .dev_offset = dev_offset,
-  };
+  request.length = static_cast<uint32_t>(length);
+  request.vmo_offset = vmo_offset;
+  request.dev_offset = dev_offset;
 
   if (auto status = zx::make_result(client_->Transaction(&request, 1)); status.is_error()) {
     ERROR("Error reading partition data: %s\n", status.status_string());
@@ -137,28 +155,24 @@ zx::result<> BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
 
 zx::result<> BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset,
                                          size_t vmo_offset) {
-  zx::result block_size = GetBlockSize();
-  if (block_size.is_error()) {
-    return block_size.take_error();
+  auto status = Setup(vmo);
+  if (status.is_error()) {
+    return status.take_error();
   }
-  uint64_t length = vmo_size / block_size.value();
+
+  block_fifo_request_t request;
+  request.group = 0;
+  request.vmoid = status.value();
+  request.opcode = BLOCKIO_WRITE;
+
+  uint64_t length = vmo_size / block_info_->block_size;
   if (length > UINT32_MAX) {
     ERROR("Error writing partition data: Too large\n");
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
-  zx::result vmoid = Setup(vmo);
-  if (vmoid.is_error()) {
-    return vmoid.take_error();
-  }
-
-  block_fifo_request_t request = {
-      .opcode = BLOCKIO_WRITE,
-      .group = 0,
-      .vmoid = vmoid.value().TakeId(),
-      .length = static_cast<uint32_t>(length),
-      .vmo_offset = vmo_offset,
-      .dev_offset = dev_offset,
-  };
+  request.length = static_cast<uint32_t>(length);
+  request.vmo_offset = vmo_offset;
+  request.dev_offset = dev_offset;
 
   if (auto status = zx::make_result(client_->Transaction(&request, 1)); status.is_error()) {
     ERROR("Error writing partition data: %s\n", status.status_string());
@@ -168,24 +182,18 @@ zx::result<> BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size, si
 }
 
 zx::result<> BlockPartitionClient::Trim() {
-  zx::result block_info = ReadBlockInfo();
-  if (block_info.is_error()) {
-    return block_info.take_error();
-  }
-  uint64_t block_count = block_info.value().get().block_count;
-
-  if (zx::result status = RegisterFastBlockIo(); status.is_error()) {
+  auto status = RegisterFastBlockIo();
+  if (status.is_error()) {
     return status.take_error();
   }
 
-  block_fifo_request_t request = {
-      .opcode = BLOCKIO_TRIM,
-      .group = 0,
-      .vmoid = BLOCK_VMOID_INVALID,
-      .length = static_cast<uint32_t>(block_count),
-      .vmo_offset = 0,
-      .dev_offset = 0,
-  };
+  block_fifo_request_t request;
+  request.group = 0;
+  request.vmoid = BLOCK_VMOID_INVALID;
+  request.opcode = BLOCKIO_TRIM;
+  request.length = static_cast<uint32_t>(block_info_->block_count);
+  request.vmo_offset = 0;
+  request.dev_offset = 0;
 
   return zx::make_result(client_->Transaction(&request, 1));
 }
@@ -196,19 +204,18 @@ zx::result<> BlockPartitionClient::Flush() {
     return status.take_error();
   }
 
-  block_fifo_request_t request = {
-      .opcode = BLOCKIO_FLUSH,
-      .group = 0,
-      .vmoid = BLOCK_VMOID_INVALID,
-      .length = 0,
-      .vmo_offset = 0,
-      .dev_offset = 0,
-  };
+  block_fifo_request_t request;
+  request.group = 0;
+  request.vmoid = BLOCK_VMOID_INVALID;
+  request.opcode = BLOCKIO_FLUSH;
+  request.length = 0;
+  request.vmo_offset = 0;
+  request.dev_offset = 0;
 
   return zx::make_result(client_->Transaction(&request, 1));
 }
 
-fidl::ClientEnd<block::Block> BlockPartitionClient::GetChannel() {
+fidl::ClientEnd<fuchsia_hardware_block::Block> BlockPartitionClient::GetChannel() {
   return component::MaybeClone(partition_.client_end(), component::AssumeProtocolComposesNode);
 }
 
@@ -278,7 +285,7 @@ zx::result<> FixedOffsetBlockPartitionClient::Trim() { return client_.Trim(); }
 
 zx::result<> FixedOffsetBlockPartitionClient::Flush() { return client_.Flush(); }
 
-fidl::ClientEnd<block::Block> FixedOffsetBlockPartitionClient::GetChannel() {
+fidl::ClientEnd<fuchsia_hardware_block::Block> FixedOffsetBlockPartitionClient::GetChannel() {
   return client_.GetChannel();
 }
 
@@ -361,7 +368,7 @@ zx::result<> PartitionCopyClient::Flush() {
   return zx::ok();
 }
 
-fidl::ClientEnd<block::Block> PartitionCopyClient::GetChannel() { return {}; }
+fidl::ClientEnd<fuchsia_hardware_block::Block> PartitionCopyClient::GetChannel() { return {}; }
 
 fbl::unique_fd PartitionCopyClient::block_fd() { return fbl::unique_fd(); }
 
