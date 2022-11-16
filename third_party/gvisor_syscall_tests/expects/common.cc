@@ -67,30 +67,99 @@ void SkipTestsRunByLoopbackTcpBacklogTarget(TestMap& tests) {
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/*");
 }
 
-void SkipTestsRunByLoopbackTcpAcceptBacklogTarget(TestMap& tests) {
-  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/*");
+void SkipTestsRunByLoopbackTcpAcceptBacklogListenV4Target(TestMap& tests) {
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4Any_ConnectV4Any");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4Any_ConnectV4Loopback");
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4Any_ConnectV4MappedAny");
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4Any_ConnectV4MappedLoopback");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4Loopback_ConnectV4Any");
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4Loopback_ConnectV4Loopback");
+  SkipTest(
+      tests,
+      "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4Loopback_ConnectV4MappedLoopback");
+}
+
+void SkipTestsRunByLoopbackTcpAcceptBacklogListenV4MappedTarget(TestMap& tests) {
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4MappedAny_ConnectV4Any");
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4MappedAny_ConnectV4Loopback");
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4MappedAny_ConnectV4MappedAny");
+  SkipTest(
+      tests,
+      "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4MappedAny_ConnectV4MappedLoopback");
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4MappedLoopback_ConnectV4Any");
+  SkipTest(
+      tests,
+      "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4MappedLoopback_ConnectV4Loopback");
+  SkipTest(
+      tests,
+      "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV4MappedLoopback_ConnectV4MappedLoopback");
+}
+
+void SkipTestsRunByLoopbackTcpAcceptBacklogListenV6Target(TestMap& tests) {
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV6Any_ConnectV4Any");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV6Any_ConnectV4Loopback");
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV6Any_ConnectV4MappedAny");
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV6Any_ConnectV4MappedLoopback");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV6Any_ConnectV6Any");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV6Any_ConnectV6Loopback");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV6Loopback_ConnectV6Any");
+  SkipTest(tests,
+           "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/ListenV6Loopback_ConnectV6Loopback");
+}
+
+void SkipAllTestsRunByLoopbackTcpAcceptBacklogTargets(TestMap& tests) {
+  SkipTestsRunByLoopbackTcpAcceptBacklogListenV4Target(tests);
+  SkipTestsRunByLoopbackTcpAcceptBacklogListenV4MappedTarget(tests);
+  SkipTestsRunByLoopbackTcpAcceptBacklogListenV6Target(tests);
 }
 
 void FilterTestsForLoopbackTcpAcceptTarget(TestMap& tests) {
   SkipTestsRunByLoopbackTarget(tests);
   SkipTestsRunByLoopbackTcpBacklogTarget(tests);
-  SkipTestsRunByLoopbackTcpAcceptBacklogTarget(tests);
+  SkipAllTestsRunByLoopbackTcpAcceptBacklogTargets(tests);
 }
 
-void FilterTestsForLoopbackTcpAcceptBacklogTarget(TestMap& tests) {
+void SkipTestsSkippedByEveryLoopbackTcpAcceptBacklogTarget(TestMap& tests) {
   SkipTestsRunByLoopbackTarget(tests);
   SkipTestsRunByLoopbackTcpBacklogTarget(tests);
   SkipTestsRunByLoopbackTcpAcceptTarget(tests);
 }
 
+void FilterTestsForLoopbackTcpAcceptBacklogListenV4Target(TestMap& tests) {
+  SkipTestsSkippedByEveryLoopbackTcpAcceptBacklogTarget(tests);
+  SkipTestsRunByLoopbackTcpAcceptBacklogListenV4MappedTarget(tests);
+  SkipTestsRunByLoopbackTcpAcceptBacklogListenV6Target(tests);
+}
+
+void FilterTestsForLoopbackTcpAcceptBacklogListenV4MappedTarget(TestMap& tests) {
+  SkipTestsSkippedByEveryLoopbackTcpAcceptBacklogTarget(tests);
+  SkipTestsRunByLoopbackTcpAcceptBacklogListenV4Target(tests);
+  SkipTestsRunByLoopbackTcpAcceptBacklogListenV6Target(tests);
+}
+
+void FilterTestsForLoopbackTcpAcceptBacklogListenV6Target(TestMap& tests) {
+  SkipTestsSkippedByEveryLoopbackTcpAcceptBacklogTarget(tests);
+  SkipTestsRunByLoopbackTcpAcceptBacklogListenV4Target(tests);
+  SkipTestsRunByLoopbackTcpAcceptBacklogListenV4MappedTarget(tests);
+}
+
 void FilterTestsForLoopbackTcpBacklogTarget(TestMap& tests) {
   SkipTestsRunByLoopbackTarget(tests);
-  SkipTestsRunByLoopbackTcpAcceptBacklogTarget(tests);
+  SkipAllTestsRunByLoopbackTcpAcceptBacklogTargets(tests);
   SkipTestsRunByLoopbackTcpAcceptTarget(tests);
 }
 
 void FilterTestsForLoopbackTarget(TestMap& tests) {
-  SkipTestsRunByLoopbackTcpAcceptBacklogTarget(tests);
+  SkipAllTestsRunByLoopbackTcpAcceptBacklogTargets(tests);
   SkipTestsRunByLoopbackTcpBacklogTarget(tests);
   SkipTestsRunByLoopbackTcpAcceptTarget(tests);
 }

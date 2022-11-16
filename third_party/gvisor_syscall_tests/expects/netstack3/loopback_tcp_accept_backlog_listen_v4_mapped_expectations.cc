@@ -10,8 +10,8 @@
 namespace netstack_syscall_test {
 
 void AddNonPassingTests(TestMap& tests) {
-  FilterTestsForLoopbackTcpAcceptBacklogTarget(tests);
-  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/*");
+  FilterTestsForLoopbackTcpAcceptBacklogListenV4MappedTarget(tests);
+  SkipTestsRunByLoopbackTcpAcceptBacklogListenV4MappedTarget(tests);
 }  // NOLINT(readability/fn_size)
 
 }  // namespace netstack_syscall_test

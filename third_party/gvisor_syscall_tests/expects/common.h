@@ -33,9 +33,32 @@ void FilterTestsForLoopbackTcpBacklogTarget(TestMap& tests);
 // source files. This method skips all tests besides that subset.
 void FilterTestsForLoopbackTcpAcceptTarget(TestMap& tests);
 
-// The `loopback_tcp_accept_backlog` target runs only a subset of the tests in its included
-// source files. This method skips all tests besides that subset.
-void FilterTestsForLoopbackTcpAcceptBacklogTarget(TestMap& tests);
+// The `loopback_tcp_accept_backlog_listen_v4` target runs only a subset of the
+// tests in its included source files. This method skips all tests besides that
+// subset.
+void FilterTestsForLoopbackTcpAcceptBacklogListenV4Target(TestMap& tests);
+
+// The `loopback_tcp_accept_backlog_listen_v4_mapped` target runs only a subset
+// of the tests in its included source files. This method skips all tests
+// besides that subset.
+void FilterTestsForLoopbackTcpAcceptBacklogListenV4MappedTarget(TestMap& tests);
+
+// The `loopback_tcp_accept_backlog_listen_v6` target runs only a subset of the
+// tests in its included source files. This method skips all tests besides that
+// subset.
+void FilterTestsForLoopbackTcpAcceptBacklogListenV6Target(TestMap& tests);
+
+// Skips the subset of tests run by the `loopback_tcp_accept_backlog_listen_v4`
+// target.
+void SkipTestsRunByLoopbackTcpAcceptBacklogListenV4Target(TestMap& tests);
+
+// Skips the subset of tests run by the
+// `loopback_tcp_accept_backlog_listen_v4_mapped` target.
+void SkipTestsRunByLoopbackTcpAcceptBacklogListenV4MappedTarget(TestMap& tests);
+
+// Skips the subset of tests run by the `loopback_tcp_accept_backlog_listen_v6`
+// target.
+void SkipTestsRunByLoopbackTcpAcceptBacklogListenV6Target(TestMap& tests);
 
 }  // namespace netstack_syscall_test
 
