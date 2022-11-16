@@ -301,8 +301,11 @@ pub fn random_connection_data() -> PastConnectionData {
 
 #[derive(Clone)]
 pub struct FakeScanRequester {
+    // A type alias for this complex type would be needless indirection, so allow the complex type
+    #[allow(clippy::complexity)]
     pub scan_results:
         Arc<Mutex<VecDeque<Result<Vec<client_types::ScanResult>, client_types::ScanError>>>>,
+    #[allow(clippy::complexity)]
     pub scan_requests:
         Arc<Mutex<Vec<(scan::ScanReason, Vec<client_types::Ssid>, Vec<client_types::WlanChan>)>>>,
 }

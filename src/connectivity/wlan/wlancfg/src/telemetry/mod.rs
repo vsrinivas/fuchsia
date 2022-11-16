@@ -2547,8 +2547,11 @@ impl StatsLogger {
         // Add the count to the RSSI velocity histogram, which will be periodically logged.
         // The histogram range is -10 to 10, and index 0 is reserved for values below -10. For
         // example, RSSI velocity -10 should map to index 1 and velocity 0 should map to index 11.
+        const RSSI_VELOCITY_MIN_IDX: i8 = 0;
+        const RSSI_VELOCITY_MAX_IDX: i8 = 22;
         const RSSI_VELOCITY_HIST_OFFSET: i8 = 11;
-        let index = max(0, min(22, rssi_velocity + RSSI_VELOCITY_HIST_OFFSET)) as u32;
+        let index = (rssi_velocity + RSSI_VELOCITY_HIST_OFFSET)
+            .clamp(RSSI_VELOCITY_MIN_IDX, RSSI_VELOCITY_MAX_IDX) as u32;
         let entry = self
             .rssi_velocity_hist
             .entry(index)

@@ -3717,13 +3717,13 @@ mod tests {
             .get_mut(&0)
             .expect("missing PHY")
             .client_ifaces
-            .insert(123, security_support.clone());
+            .insert(123, security_support);
         let _ = phy_manager
             .phys
             .get_mut(&1)
             .expect("missing PHY")
             .client_ifaces
-            .insert(456, security_support.clone());
+            .insert(456, security_support);
         let _ = phy_manager
             .phys
             .get_mut(&2)
