@@ -343,20 +343,13 @@ the drivers that still need it:
 
 ### Picking a task
 
-The drivers that are remaining to be converted are listed on the [mock-ddk migration sheet](https://goto.google.com/mock-ddk-migration-table)
+Bugs have been filed for all remaining uses of Fake DDK (e.g., fxb/115045). The label is [`df-mock-ddk-migration`](https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=label%3Adf-mock-ddk-migration&can=2).
 
-If you can't acces that sheet, you can find targets that depend on fake_ddk by running:
-```bash
-scripts/gn/trim_visibility.py --target="//src/devices/testing/fake_ddk
-```
-
-Or check the allowlist in `src/devices/testing/fake_ddk/BUILD.gn`.
+You can also check the allowlist in `src/devices/testing/fake_ddk/BUILD.gn`.
 
 ### Doing a task
 
-1. Assign the test to yourself in the [mock-ddk migration sheet](https://goto.google.com/mock-ddk-migration-table)
-by putting your name in the “Owner” column.  If the driver test is listed as "Blocked",
-there may be something preventing it from being migrated.
+1. If it isn't already, assign the bug to yourself.
 2. Change build rules and includes to target mock-ddk instead of fake_ddk
 
     ```bash
@@ -400,12 +393,15 @@ there may be something preventing it from being migrated.
 * Deleting the device directly
     * Solution: release the Device from the current scope after calling `DdkAdd()`
 
+#### Overriding `fake_ddk::Bind::DeviceAdd`
+
+Some more complex tests subclass `fake_ddk::Bind` in order to override the `DeviceAdd` method. Typically this is done to intercept some information from the `device_add_args`, such as an inspect VMO.
+
+In Mock DDK, you can instead [access the device using `GetLatestChild`](#getting-device-context).
 
 ### Completing a task
 
-* Upload the change, and copy the gerrit link to the
-    [mock-ddk migration sheet](https://goto.google.com/mock-ddk-migration-table)
-* When the CL is merged, mark the test as “Done” in the migration sheet.
+* Upload the change with the bug number in a `Fixed: ` tag.
 
 
 ## Examples:

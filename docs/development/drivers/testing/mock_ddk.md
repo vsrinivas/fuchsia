@@ -12,7 +12,7 @@ all usages to the mock-ddk.  More on this migration can be found at the
 Note: ***The mock-ddk is only for unit testing.***
 The mock_ddk does not test any interfaces for correctness, it is simply a
 framework which helps driver authors load and exercise their code.
-For integration testing, use the isolated devmgr instead.
+For integration testing, use the [Driver Test Realm](driver_test_realm.md) instead.
 
 ## Simple example
 
