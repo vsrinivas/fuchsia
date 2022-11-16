@@ -76,7 +76,7 @@ zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo) {
     return client_end.error_value();
   }
 
-  auto result = fidl::WireCall(*client_end)->Get(ZBI_TYPE_STORAGE_RAMDISK, 0);
+  auto result = fidl::WireCall(client_end.value())->Get(ZBI_TYPE_STORAGE_RAMDISK, 0);
   if (!result.ok()) {
     return result.status();
   }
@@ -98,8 +98,7 @@ int RamctlWatcher(void* arg) {
   zbi_header_t header;
   status = ramdisk_vmo.read(&header, 0, sizeof(header));
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "cannot read ZBI_TYPE_STORAGE_RAMDISK item header: "
-                   << zx_status_get_string(status);
+    FX_PLOGS(ERROR, status) << "cannot read ZBI_TYPE_STORAGE_RAMDISK item header";
     return -1;
   }
   if (!(header.flags & ZBI_FLAGS_VERSION) || header.magic != ZBI_ITEM_MAGIC ||
@@ -112,13 +111,12 @@ int RamctlWatcher(void* arg) {
   if (header.flags & ZBI_FLAGS_STORAGE_COMPRESSED) {
     status = zx::vmo::create(header.extra, 0, &vmo);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "cannot create VMO for uncompressed RAMDISK: "
-                     << zx_status_get_string(status);
+      FX_PLOGS(ERROR, status) << "cannot create VMO for uncompressed RAMDISK";
       return -1;
     }
     status = DecompressZstd(ramdisk_vmo, sizeof(zbi_header_t), header.length, vmo, 0, header.extra);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "failed to decompress RAMDISK: " << zx_status_get_string(status);
+      FX_PLOGS(ERROR, status) << "failed to decompress RAMDISK";
       return -1;
     }
   } else {
@@ -172,7 +170,7 @@ int Main() {
   zx::vmo ramdisk_vmo;
   zx_status_t status = get_ramdisk(&ramdisk_vmo);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to get ramdisk" << zx_status_get_string(status);
+    FX_PLOGS(ERROR, status) << "failed to get ramdisk";
   } else if (ramdisk_vmo.is_valid()) {
     thrd_t t;
 
@@ -202,7 +200,7 @@ int Main() {
   status =
       fs_manager.Initialize(std::move(dir_request), std::move(lifecycle_request), config, watcher);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot initialize FsManager: " << zx_status_get_string(status);
+    FX_PLOGS(ERROR, status) << "Cannot initialize FsManager";
     return EXIT_FAILURE;
   }
 
