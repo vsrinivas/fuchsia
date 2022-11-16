@@ -94,12 +94,12 @@ bool ReadFdExactly(zx::socket& socket, void* buf, size_t len) {
     auto status =
         socket.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
-      FX_LOGS(DEBUG) << "Socket wait failed " << status;
+      FX_LOGS(ERROR) << "Socket wait failed " << status;
       return false;
     }
     status = socket.read(0, p, len, &actual);
     if (status != ZX_OK) {
-      FX_LOGS(DEBUG) << "Socket read failed " << status;
+      FX_LOGS(ERROR) << "Socket read failed " << status;
       return false;
     }
     len -= actual;

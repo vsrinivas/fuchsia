@@ -11,6 +11,7 @@ group("bin") {
 group("core_shards") {
   deps = [
     "adb:adb-shard",
+    "adb-file-sync:adb-file-sync-shard",
     "adb-shell:adb-shell-shard",
   ]
 }
@@ -19,6 +20,7 @@ group("tests") {
   testonly = true
   deps = [
     "adb:tests",
+    "adb-file-sync:tests",
     "adb-shell:tests",
   ]
 }
@@ -26,6 +28,7 @@ group("tests") {
 group("adb-components") {
   deps = [
     "adb:adb-component",
+    "adb-file-sync:adb-file-sync-component",
     "adb-shell:adb-shell-component",
   ]
 }

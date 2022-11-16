@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/adb-file-sync",
+        args: [], // Default component goes here
+    },
+    capabilities: [
+        { protocol: "fuchsia.hardware.adb.Provider" },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.sys2.RealmQuery.root" ],
+            from: "parent",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.hardware.adb.Provider",
+            from: "self",
+        },
+    ],
+}
