@@ -129,42 +129,33 @@ std::pair<fbl::unique_fd, uint64_t> FshostIntegrationTest::WaitForMount(
 
 inspect::Hierarchy FshostIntegrationTest::TakeSnapshot() const {
   async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  loop.StartThread("inspect-snapshot-thread");
-  async::Executor executor(loop.dispatcher());
 
   fuchsia::inspect::TreePtr tree;
-  async_dispatcher_t* dispatcher = executor.dispatcher();
-  zx_status_t status = fdio_service_connect_at(exposed_dir().client_end().handle()->get(),
-                                               "diagnostics/fuchsia.inspect.Tree",
-                                               tree.NewRequest(dispatcher).TakeChannel().release());
-  ZX_ASSERT_MSG(status == ZX_OK, "Failed to connect to inspect service: %s",
-                zx_status_get_string(status));
+  {
+    zx_status_t status = fdio_service_connect_at(
+        exposed_dir().client_end().handle()->get(), "diagnostics/fuchsia.inspect.Tree",
+        tree.NewRequest(loop.dispatcher()).TakeChannel().release());
+    ZX_ASSERT_MSG(status == ZX_OK, "Failed to connect to inspect service: %s",
+                  zx_status_get_string(status));
+  }
 
-  std::condition_variable cv;
-  std::mutex m;
-  bool done = false;
-  fpromise::result<inspect::Hierarchy> hierarchy_or_error;
-
+  fpromise::result<inspect::Hierarchy> hierarchy;
   auto promise = inspect::ReadFromTree(std::move(tree))
                      .then([&](fpromise::result<inspect::Hierarchy>& result) {
-                       {
-                         std::unique_lock<std::mutex> lock(m);
-                         hierarchy_or_error = std::move(result);
-                         done = true;
-                       }
-                       cv.notify_all();
+                       hierarchy = std::move(result);
+                       loop.Quit();
                      });
 
+  async::Executor executor(loop.dispatcher());
   executor.schedule_task(std::move(promise));
+  {
+    zx_status_t status = loop.Run();
+    ZX_ASSERT_MSG(status == ZX_ERR_CANCELED, "Failed to run loop: %s",
+                  zx_status_get_string(status));
+  }
 
-  std::unique_lock<std::mutex> lock(m);
-  cv.wait(lock, [&done]() { return done; });
-
-  loop.Quit();
-  loop.JoinThreads();
-
-  ZX_ASSERT_MSG(hierarchy_or_error.is_ok(), "Failed to obtain inspect tree snapshot!");
-  return hierarchy_or_error.take_value();
+  ZX_ASSERT_MSG(hierarchy.is_ok(), "Failed to obtain inspect tree snapshot!");
+  return hierarchy.take_value();
 }
 
 }  // namespace fshost::testing
