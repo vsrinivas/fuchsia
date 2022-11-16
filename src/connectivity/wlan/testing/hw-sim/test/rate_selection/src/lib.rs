@@ -55,7 +55,7 @@ fn send_tx_status_report(
             create_wlan_tx_status_entry(0),
         ],
     };
-    proxy.report_tx_status(0, &mut ts)?;
+    proxy.report_tx_status(&mut ts)?;
     Ok(())
 }
 

@@ -26,9 +26,7 @@ fn packet_forwarder<'a>(
     move |event| {
         if let WlantapPhyEvent::Tx { args } = event {
             let frame = &args.packet.data;
-            peer_phy
-                .rx(0, frame, &mut create_rx_info(&WLANCFG_DEFAULT_AP_CHANNEL, 0))
-                .expect(context);
+            peer_phy.rx(frame, &mut create_rx_info(&WLANCFG_DEFAULT_AP_CHANNEL, 0)).expect(context);
         }
     }
 }

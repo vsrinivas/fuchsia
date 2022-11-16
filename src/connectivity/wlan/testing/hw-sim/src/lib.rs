@@ -125,7 +125,7 @@ pub fn send_sae_authentication_frame(
         },
         body: &sae_frame.sae_fields[..],
     })?;
-    proxy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
+    proxy.rx(&buf, &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 
@@ -151,7 +151,7 @@ pub fn send_open_authentication_success(
             },
         },
     })?;
-    proxy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
+    proxy.rx(&buf, &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 
@@ -186,7 +186,7 @@ pub fn send_association_response(
             extended_supported_rates:  &[48, 72, 128 + 96, 108],
         },
     })?;
-    proxy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
+    proxy.rx(&buf, &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 
@@ -211,7 +211,7 @@ pub fn send_disassociate(
             },
         },
     })?;
-    proxy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
+    proxy.rx(&buf, &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 
@@ -400,7 +400,7 @@ pub trait ApAdvertisement {
 
     fn send(&self, phy: &WlantapPhyProxy) -> Result<(), anyhow::Error> {
         let buf = self.generate_frame()?;
-        phy.rx(0, &buf, &mut create_rx_info(&self.channel(), self.rssi_dbm()))?;
+        phy.rx(&buf, &mut create_rx_info(&self.channel(), self.rssi_dbm()))?;
         Ok(())
     }
 
@@ -541,7 +541,7 @@ pub fn send_scan_complete(
         ARTIFICIAL_SCAN_SLEEP.into_seconds()
     );
     ARTIFICIAL_SCAN_SLEEP.sleep();
-    phy.scan_complete(0, scan_id, status).map_err(|e| e.into())
+    phy.scan_complete(scan_id, status).map_err(|e| e.into())
 }
 
 pub fn handle_start_scan_event(
@@ -935,7 +935,7 @@ pub fn rx_wlan_data_frame(
     })?;
     buf.truncate(bytes_written);
 
-    phy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
+    phy.rx(&buf, &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 

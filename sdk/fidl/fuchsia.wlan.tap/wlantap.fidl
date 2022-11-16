@@ -109,24 +109,20 @@ protocol WlantapPhy {
 
     /// The device "receives" a frame "over the air" and pass it up to driver.
     Rx(struct {
-        wlan_softmac_id uint16;
         data vector<uint8>:MAX;
         info WlanRxInfo;
     });
     /// The device report its status to the driver. (Not used).
     Status(struct {
-        wlan_softmac_id uint16;
         st uint32;
     });
     /// For rate selection (Minstrel), the device's last frame transmission is a success/failure,
     /// with a certain number of retries.
     ReportTxStatus(struct {
-        wlan_softmac_id uint16;
         txs fuchsia.wlan.common.WlanTxStatus;
     });
 
     ScanComplete(struct {
-        wlan_softmac_id uint16;
         scan_id uint64;
         status zx.status;
     });
@@ -141,9 +137,7 @@ protocol WlantapPhy {
     /// The device created by its parent device (wlantap-phy: wlanphy) is
     /// detected and being connected by wlanstack/wlancfg.
     /// The device is to enter the "running" state.
-    -> WlanSoftmacStart(struct {
-        args WlanSoftmacStartArgs;
-    });
+    -> WlanSoftmacStart();
     /// The device is to switch to the specified channel.
     -> SetChannel(struct {
         args SetChannelArgs;
@@ -198,8 +192,4 @@ type StartScanArgs = struct {
 type SetKeyArgs = struct {
     wlan_softmac_id uint16;
     config WlanKeyConfig;
-};
-
-type WlanSoftmacStartArgs = struct {
-    wlan_softmac_id uint16;
 };

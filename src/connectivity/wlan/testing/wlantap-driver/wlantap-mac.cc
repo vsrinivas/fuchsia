@@ -30,12 +30,11 @@ struct WlantapMacImpl : WlantapMac,
                         public ddk::Device<WlantapMacImpl, ddk::Initializable, ddk::Unbindable,
                                            ddk::ServiceConnectable>,
                         public fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmac> {
-  WlantapMacImpl(zx_device_t* phy_device, uint16_t id, wlan_common::WlanMacRole role,
+  WlantapMacImpl(zx_device_t* phy_device, wlan_common::WlanMacRole role,
                  const std::shared_ptr<const wlan_tap::WlantapPhyConfig> phy_config,
                  Listener* listener, zx::channel sme_channel)
       : ddk::Device<WlantapMacImpl, ddk::Initializable, ddk::Unbindable, ddk::ServiceConnectable>(
             phy_device),
-        id_(id),
         role_(role),
         phy_config_(phy_config),
         listener_(listener),
@@ -156,18 +155,18 @@ struct WlantapMacImpl : WlantapMac,
       wlan_softmac_ifc_client_ = fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmacIfc>(
           std::move(request->ifc), wlan_softmac_ifc_dispatcher_.get());
     }
-    listener_->WlantapMacStart(id_);
+    listener_->WlantapMacStart();
     completer.buffer(arena).ReplySuccess(std::move(sme_channel_));
   }
 
   void Stop(fdf::Arena& arena, StopCompleter::Sync& completer) override {
-    listener_->WlantapMacStop(id_);
+    listener_->WlantapMacStop();
     completer.buffer(arena).Reply();
   }
 
   void QueueTx(QueueTxRequestView request, fdf::Arena& arena,
                QueueTxCompleter::Sync& completer) override {
-    listener_->WlantapMacQueueTx(id_, request->packet);
+    listener_->WlantapMacQueueTx(request->packet);
     completer.buffer(arena).ReplySuccess(false);
   }
 
@@ -177,7 +176,7 @@ struct WlantapMacImpl : WlantapMac,
       completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
-    listener_->WlantapMacSetChannel(id_, request->chan);
+    listener_->WlantapMacSetChannel(request->chan);
     completer.buffer(arena).ReplySuccess();
   }
 
@@ -188,7 +187,7 @@ struct WlantapMacImpl : WlantapMac,
       completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
-    listener_->WlantapMacConfigureBss(id_, request->config);
+    listener_->WlantapMacConfigureBss(request->config);
     completer.buffer(arena).ReplySuccess();
   }
 
@@ -207,20 +206,20 @@ struct WlantapMacImpl : WlantapMac,
   void StartPassiveScan(StartPassiveScanRequestView request, fdf::Arena& arena,
                         StartPassiveScanCompleter::Sync& completer) override {
     uint64_t scan_id = 111;
-    listener_->WlantapMacStartScan(id_, scan_id);
+    listener_->WlantapMacStartScan(scan_id);
     completer.buffer(arena).ReplySuccess(scan_id);
   }
 
   void StartActiveScan(StartActiveScanRequestView request, fdf::Arena& arena,
                        StartActiveScanCompleter::Sync& completer) override {
     uint64_t scan_id = 222;
-    listener_->WlantapMacStartScan(id_, scan_id);
+    listener_->WlantapMacStartScan(scan_id);
     completer.buffer(arena).ReplySuccess(scan_id);
   }
 
   void SetKey(SetKeyRequestView request, fdf::Arena& arena,
               SetKeyCompleter::Sync& completer) override {
-    listener_->WlantapMacSetKey(id_, request->key_config);
+    listener_->WlantapMacSetKey(request->key_config);
     completer.buffer(arena).ReplySuccess();
   }
 
@@ -325,12 +324,13 @@ struct WlantapMacImpl : WlantapMac,
 
 zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_common::WlanMacRole role,
                              const std::shared_ptr<const wlan_tap::WlantapPhyConfig> phy_config,
-                             uint16_t id, WlantapMac::Listener* listener, zx::channel sme_channel,
+                             WlantapMac::Listener* listener, zx::channel sme_channel,
                              WlantapMac** ret) {
+  static uint16_t n = 0;
   char name[ZX_MAX_NAME_LEN + 1];
-  snprintf(name, sizeof(name), "mac%u", id);
+  snprintf(name, sizeof(name), "wlansoftmac-%u", n++);
   std::unique_ptr<WlantapMacImpl> wlan_softmac(
-      new WlantapMacImpl(parent_phy, id, role, phy_config, listener, std::move(sme_channel)));
+      new WlantapMacImpl(parent_phy, role, phy_config, listener, std::move(sme_channel)));
 
   zx_status_t status =
       wlan_softmac->DdkAdd(::ddk::DeviceAddArgs(name).set_proto_id(ZX_PROTOCOL_WLAN_SOFTMAC));

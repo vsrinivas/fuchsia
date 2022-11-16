@@ -29,58 +29,12 @@ namespace wlan_common = fuchsia_wlan_common::wire;
 
 namespace {
 
-template <typename T, size_t MAX_COUNT>
-class DevicePool {
- public:
-  template <class F>
-  zx_status_t TryCreateNew(F factory, uint16_t* out_id) {
-    for (size_t id = 0; id < MAX_COUNT; ++id) {
-      if (pool_[id] == nullptr) {
-        T* dev = nullptr;
-        zx_status_t status = factory(id, &dev);
-        if (status != ZX_OK) {
-          return status;
-        }
-        pool_[id] = dev;
-        *out_id = id;
-        return ZX_OK;
-      }
-    }
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  T* Get(uint16_t id) {
-    if (id >= MAX_COUNT) {
-      return nullptr;
-    }
-    return pool_[id];
-  }
-
-  T* Release(uint16_t id) {
-    if (id >= MAX_COUNT) {
-      return nullptr;
-    }
-    T* ret = pool_[id];
-    pool_[id] = nullptr;
-    return ret;
-  }
-
-  void ReleaseAll() { std::fill(pool_.begin(), pool_.end(), nullptr); }
-
- private:
-  std::array<T*, MAX_COUNT> pool_{};
-};
-
-constexpr size_t kMaxMacDevices = 4;
-
-wlan_tap::SetKeyArgs ToSetKeyArgs(uint16_t wlan_softmac_id,
-                                  const wlan_softmac::WlanKeyConfig& config) {
+wlan_tap::SetKeyArgs ToSetKeyArgs(const wlan_softmac::WlanKeyConfig& config) {
   ZX_ASSERT(config.has_protection() && config.has_cipher_oui() && config.has_cipher_type() &&
             config.has_key_type() && config.has_peer_addr() && config.has_key_idx() &&
             config.has_key());
 
   auto set_key_args = wlan_tap::SetKeyArgs{
-      .wlan_softmac_id = wlan_softmac_id,
       .config =
           wlan_tap::WlanKeyConfig{
               .protection = static_cast<uint8_t>(config.protection()),
@@ -96,7 +50,7 @@ wlan_tap::SetKeyArgs ToSetKeyArgs(uint16_t wlan_softmac_id,
   return set_key_args;
 }
 
-wlan_tap::TxArgs ToTxArgs(uint16_t wlan_softmac_id, const wlan_softmac::WlanTxPacket pkt) {
+wlan_tap::TxArgs ToTxArgs(const wlan_softmac::WlanTxPacket pkt) {
   if (pkt.info.phy < wlan_common::WlanPhyType::kDsss ||
       pkt.info.phy > wlan_common::WlanPhyType::kHe) {
     ZX_PANIC("Unknown PHY in wlan_tx_packet_t: %u.", static_cast<uint8_t>(pkt.info.phy));
@@ -110,7 +64,6 @@ wlan_tap::TxArgs ToTxArgs(uint16_t wlan_softmac_id, const wlan_softmac::WlanTxPa
       .mcs = pkt.info.mcs,
   };
   auto tx_args = wlan_tap::TxArgs{
-      .wlan_softmac_id = wlan_softmac_id,
       .packet = wlan_tap::WlanTxPacket{.data = pkt.mac_frame, .info = tap_info},
   };
 
@@ -187,8 +140,8 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
       }
     }
 
-    std::lock_guard<std::mutex> guard(self->wlan_softmac_lock_);
-    self->wlan_softmac_devices_.ReleaseAll();
+    std::lock_guard<std::mutex> guard(self->wlantap_mac_lock_);
+    self->wlantap_mac_.reset();
 
     delete self;
     zxlogf(INFO, "%s: DdkRelease done", name.c_str());
@@ -225,8 +178,16 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
     }
   }
 
-  zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req, uint16_t* out_iface_id) {
+  zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req) {
     zxlogf(INFO, "%s: received a 'CreateIface' DDK request", name_.c_str());
+    {
+      std::lock_guard<std::mutex> guard(wlantap_mac_lock_);
+      if (wlantap_mac_) {
+        zxlogf(ERROR, "%s: CreateIface: only 1 iface supported per WlantapPhy", name_.c_str());
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+    }
+
     wlan_common::WlanMacRole dev_role;
     zx_status_t status = ConvertMacRole(req->role, &dev_role);
     if (status != ZX_OK) {
@@ -243,31 +204,32 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
     if (!mlme_channel.is_valid()) {
       return ZX_ERR_IO_INVALID;
     }
-    std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
-    status = wlan_softmac_devices_.TryCreateNew(
-        [&](uint16_t id, WlantapMac** out_dev) {
-          return CreateWlantapMac(device_, dev_role, phy_config_, id, this, std::move(mlme_channel),
-                                  out_dev);
-        },
-        out_iface_id);
+    WlantapMac* wlantap_mac_ptr;
+    status = CreateWlantapMac(device_, dev_role, phy_config_, this, std::move(mlme_channel),
+                              &wlantap_mac_ptr);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: CreateIface(%s): maximum number of interfaces already reached",
              name_.c_str(), role_str.c_str());
       return ZX_ERR_NO_RESOURCES;
     }
+
+    std::lock_guard<std::mutex> guard(wlantap_mac_lock_);
+    auto deleter = [](WlantapMac* wlantap_mac_ptr) { wlantap_mac_ptr->RemoveDevice(); };
+    wlantap_mac_ =
+        std::unique_ptr<WlantapMac, std::function<void(WlantapMac*)>>(wlantap_mac_ptr, deleter);
+
     zxlogf(INFO, "%s: CreateIface(%s): success", name_.c_str(), role_str.c_str());
     return ZX_OK;
   }
 
-  zx_status_t DestroyIface(uint16_t id) {
+  zx_status_t DestroyIface() {
     zxlogf(INFO, "%s: received a 'DestroyIface' DDK request", name_.c_str());
-    std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
-    WlantapMac* wlan_softmac = wlan_softmac_devices_.Release(id);
-    if (wlan_softmac == nullptr) {
-      zxlogf(ERROR, "%s: DestroyIface: invalid iface id", name_.c_str());
-      return ZX_ERR_INVALID_ARGS;
+    std::lock_guard<std::mutex> guard(wlantap_mac_lock_);
+    if (!wlantap_mac_) {
+      zxlogf(ERROR, "%s: DestroyIface: no iface exists", name_.c_str());
+      return ZX_ERR_NOT_SUPPORTED;
     }
-    wlan_softmac->RemoveDevice();
+    wlantap_mac_.reset();
     zxlogf(DEBUG, "%s: DestroyIface: done", name_.c_str());
     return ZX_OK;
   }
@@ -328,32 +290,43 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
 
   void Rx(RxRequestView request, RxCompleter::Sync& completer) override {
     zxlogf(INFO, "%s: Rx(%zu bytes)", name_.c_str(), request->data.count());
-    std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
-    if (WlantapMac* wlan_softmac = wlan_softmac_devices_.Get(request->wlan_softmac_id)) {
-      wlan_softmac->Rx(request->data, request->info);
+    std::lock_guard<std::mutex> guard(wlantap_mac_lock_);
+    if (!wlantap_mac_) {
+      zxlogf(ERROR, "No WlantapMac present.");
+      return;
     }
+    wlantap_mac_->Rx(request->data, request->info);
     zxlogf(DEBUG, "%s: Rx done", name_.c_str());
   }
 
   void Status(StatusRequestView request, StatusCompleter::Sync& completer) override {
     zxlogf(INFO, "%s: Status(%u)", name_.c_str(), request->st);
-    std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
-    if (WlantapMac* wlan_softmac = wlan_softmac_devices_.Get(request->wlan_softmac_id)) {
-      wlan_softmac->Status(request->st);
+    std::lock_guard<std::mutex> guard(wlantap_mac_lock_);
+
+    if (!wlantap_mac_) {
+      zxlogf(ERROR, "No WlantapMac present.");
+      return;
     }
+
+    wlantap_mac_->Status(request->st);
     zxlogf(DEBUG, "%s: Status done", name_.c_str());
   }
 
   void ReportTxStatus(ReportTxStatusRequestView request,
                       ReportTxStatusCompleter::Sync& completer) override {
-    std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
+    std::lock_guard<std::mutex> guard(wlantap_mac_lock_);
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
       zxlogf(INFO, "%s: ReportTxStatus %zu", name_.c_str(), report_tx_status_count_);
     }
-    if (WlantapMac* wlan_softmac = wlan_softmac_devices_.Get(request->wlan_softmac_id)) {
-      ++report_tx_status_count_;
-      wlan_softmac->ReportTxStatus(request->txs);
+
+    if (!wlantap_mac_) {
+      zxlogf(ERROR, "No WlantapMac present.");
+      return;
     }
+
+    ++report_tx_status_count_;
+    wlantap_mac_->ReportTxStatus(request->txs);
+    zxlogf(DEBUG, "%s: ScanComplete done", name_.c_str());
     if (!phy_config_->quiet || report_tx_status_count_ <= 32) {
       zxlogf(DEBUG, "%s: ReportTxStatus %zu done", name_.c_str(), report_tx_status_count_);
     }
@@ -362,23 +335,24 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
   virtual void ScanComplete(ScanCompleteRequestView request,
                             ScanCompleteCompleter::Sync& completer) override {
     zxlogf(INFO, "%s: ScanComplete(%u)", name_.c_str(), request->status);
-    std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
-    if (WlantapMac* wlan_softmac = wlan_softmac_devices_.Get(request->wlan_softmac_id)) {
-      wlan_softmac->ScanComplete(request->scan_id, request->status);
+    std::lock_guard<std::mutex> guard(wlantap_mac_lock_);
+    if (!wlantap_mac_) {
+      zxlogf(ERROR, "No WlantapMac present.");
+      return;
     }
+    wlantap_mac_->ScanComplete(request->scan_id, request->status);
     zxlogf(DEBUG, "%s: ScanComplete done", name_.c_str());
   }
 
   // WlantapMac::Listener impl
 
-  virtual void WlantapMacStart(uint16_t wlan_softmac_id) override {
-    zxlogf(INFO, "%s: WlantapMacStart id=%u", name_.c_str(), wlan_softmac_id);
+  virtual void WlantapMacStart() override {
+    zxlogf(INFO, "%s: WlantapMacStart", name_.c_str());
     std::lock_guard<std::mutex> guard(fidl_server_lock_);
     if (fidl_server_unbound_) {
       return;
     }
-    fidl::Status status =
-        fidl::WireSendEvent(user_binding_)->WlanSoftmacStart({.wlan_softmac_id = wlan_softmac_id});
+    fidl::Status status = fidl::WireSendEvent(user_binding_)->WlanSoftmacStart();
     if (!status.ok()) {
       zxlogf(ERROR, "%s: WlanSoftmacStart() failed", status.status_string());
       return;
@@ -387,16 +361,13 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
     zxlogf(INFO, "%s: WlantapMacStart done", name_.c_str());
   }
 
-  virtual void WlantapMacStop(uint16_t wlan_softmac_id) override {
-    zxlogf(INFO, "%s: WlantapMacStop", name_.c_str());
-  }
+  virtual void WlantapMacStop() override { zxlogf(INFO, "%s: WlantapMacStop", name_.c_str()); }
 
-  virtual void WlantapMacQueueTx(uint16_t wlan_softmac_id,
-                                 const fuchsia_wlan_softmac::wire::WlanTxPacket& pkt) override {
+  virtual void WlantapMacQueueTx(const fuchsia_wlan_softmac::wire::WlanTxPacket& pkt) override {
     size_t pkt_size = pkt.mac_frame.count();
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
-      zxlogf(INFO, "%s: WlantapMacQueueTx id=%u, size=%zu, tx_report_count=%zu", name_.c_str(),
-             wlan_softmac_id, pkt_size, report_tx_status_count_);
+      zxlogf(INFO, "%s: WlantapMacQueueTx, size=%zu, tx_report_count=%zu", name_.c_str(), pkt_size,
+             report_tx_status_count_);
     }
 
     std::lock_guard<std::mutex> guard(fidl_server_lock_);
@@ -405,7 +376,7 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
       return;
     }
 
-    fidl::Status status = fidl::WireSendEvent(user_binding_)->Tx(ToTxArgs(wlan_softmac_id, pkt));
+    fidl::Status status = fidl::WireSendEvent(user_binding_)->Tx(ToTxArgs(pkt));
     if (!status.ok()) {
       zxlogf(ERROR, "%s: Tx() failed", status.status_string());
       return;
@@ -416,11 +387,9 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
     }
   }
 
-  virtual void WlantapMacSetChannel(uint16_t wlan_softmac_id,
-                                    const wlan_common::WlanChannel& channel) override {
+  virtual void WlantapMacSetChannel(const wlan_common::WlanChannel& channel) override {
     if (!phy_config_->quiet) {
-      zxlogf(INFO, "%s: WlantapMacSetChannel id=%u, channel=%u", name_.c_str(), wlan_softmac_id,
-             channel.primary);
+      zxlogf(INFO, "%s: WlantapMacSetChannel channel=%u", name_.c_str(), channel.primary);
     }
     std::lock_guard<std::mutex> guard(fidl_server_lock_);
     if (fidl_server_unbound_) {
@@ -428,9 +397,7 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
       return;
     }
 
-    fidl::Status status =
-        fidl::WireSendEvent(user_binding_)
-            ->SetChannel({.wlan_softmac_id = wlan_softmac_id, .channel = channel});
+    fidl::Status status = fidl::WireSendEvent(user_binding_)->SetChannel({.channel = channel});
     if (!status.ok()) {
       zxlogf(ERROR, "%s: SetChannel() failed", status.status_string());
       return;
@@ -441,18 +408,15 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
     }
   }
 
-  virtual void WlantapMacConfigureBss(uint16_t wlan_softmac_id,
-                                      const wlan_internal::BssConfig& config) override {
-    zxlogf(INFO, "%s: WlantapMacConfigureBss id=%u", name_.c_str(), wlan_softmac_id);
+  virtual void WlantapMacConfigureBss(const wlan_internal::BssConfig& config) override {
+    zxlogf(INFO, "%s: WlantapMacConfigureBss", name_.c_str());
     std::lock_guard<std::mutex> guard(fidl_server_lock_);
     if (fidl_server_unbound_) {
       zxlogf(INFO, "%s: WlantapMacConfigureBss ignored, shutting down", name_.c_str());
       return;
     }
 
-    fidl::Status status =
-        fidl::WireSendEvent(user_binding_)
-            ->ConfigureBss({.wlan_softmac_id = wlan_softmac_id, .config = config});
+    fidl::Status status = fidl::WireSendEvent(user_binding_)->ConfigureBss({.config = config});
     if (!status.ok()) {
       zxlogf(ERROR, "%s: ConfigureBss() failed", status.status_string());
       return;
@@ -461,8 +425,8 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
     zxlogf(DEBUG, "%s: WlantapMacConfigureBss done", name_.c_str());
   }
 
-  virtual void WlantapMacStartScan(uint16_t wlan_softmac_id, const uint64_t scan_id) override {
-    zxlogf(INFO, "%s: WlantapMacStartScan id=%u", name_.c_str(), wlan_softmac_id);
+  virtual void WlantapMacStartScan(const uint64_t scan_id) override {
+    zxlogf(INFO, "%s: WlantapMacStartScan", name_.c_str());
     std::lock_guard<std::mutex> guard(fidl_server_lock_);
     if (fidl_server_unbound_) {
       zxlogf(INFO, "%s: WlantapMacStartScan ignored, shutting down", name_.c_str());
@@ -471,7 +435,6 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
 
     fidl::Status status = fidl::WireSendEvent(user_binding_)
                               ->StartScan({
-                                  .wlan_softmac_id = wlan_softmac_id,
                                   .scan_id = scan_id,
                               });
     if (!status.ok()) {
@@ -481,17 +444,15 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
     zxlogf(DEBUG, "%s: WlantapMacStartScan done", name_.c_str());
   }
 
-  virtual void WlantapMacSetKey(uint16_t wlan_softmac_id,
-                                const wlan_softmac::WlanKeyConfig& key_config) override {
-    zxlogf(INFO, "%s: WlantapMacSetKey id=%u", name_.c_str(), wlan_softmac_id);
+  virtual void WlantapMacSetKey(const wlan_softmac::WlanKeyConfig& key_config) override {
+    zxlogf(INFO, "%s: WlantapMacSetKey", name_.c_str());
     std::lock_guard<std::mutex> guard(fidl_server_lock_);
     if (fidl_server_unbound_) {
       zxlogf(INFO, "%s: WlantapMacSetKey ignored, shutting down", name_.c_str());
       return;
     }
 
-    fidl::Status status =
-        fidl::WireSendEvent(user_binding_)->SetKey(ToSetKeyArgs(wlan_softmac_id, key_config));
+    fidl::Status status = fidl::WireSendEvent(user_binding_)->SetKey(ToSetKeyArgs(key_config));
     if (!status.ok()) {
       zxlogf(ERROR, "%s: SetKey() failed", status.status_string());
       return;
@@ -503,8 +464,9 @@ struct WlantapPhy : public fidl::WireServer<fuchsia_wlan_tap::WlantapPhy>, Wlant
   zx_device_t* device_;
   const std::shared_ptr<const wlan_tap::WlantapPhyConfig> phy_config_;
   async_dispatcher_t* loop_;
-  std::mutex wlan_softmac_lock_;
-  DevicePool<WlantapMac, kMaxMacDevices> wlan_softmac_devices_ __TA_GUARDED(wlan_softmac_lock_);
+  std::mutex wlantap_mac_lock_;
+  std::unique_ptr<WlantapMac, std::function<void(WlantapMac*)>> wlantap_mac_
+      __TA_GUARDED(wlantap_mac_lock_);
   std::string name_;
   std::mutex fidl_server_lock_;
   fidl::ServerBindingRef<fuchsia_wlan_tap::WlantapPhy> user_binding_
@@ -529,10 +491,12 @@ static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
     },
     .create_iface = [](void* ctx, const wlanphy_impl_create_iface_req_t* req,
                        uint16_t* out_iface_id) -> zx_status_t {
-      return DEV(ctx)->CreateIface(req, out_iface_id);
+      *out_iface_id = 0;
+      return DEV(ctx)->CreateIface(req);
     },
     .destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
-      return DEV(ctx)->DestroyIface(id);
+      ZX_ASSERT(id == 0);
+      return DEV(ctx)->DestroyIface();
     },
     .set_country = [](void* ctx, const wlanphy_country_t* country) -> zx_status_t {
       return DEV(ctx)->SetCountry(country);

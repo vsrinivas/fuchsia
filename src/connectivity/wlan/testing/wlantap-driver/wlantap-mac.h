@@ -20,13 +20,13 @@ class WlantapMac {
  public:
   class Listener {
    public:
-    virtual void WlantapMacStart(uint16_t id) = 0;
-    virtual void WlantapMacStop(uint16_t id) = 0;
-    virtual void WlantapMacQueueTx(uint16_t id, const wlan_softmac::WlanTxPacket& pkt) = 0;
-    virtual void WlantapMacSetChannel(uint16_t id, const wlan_common::WlanChannel& channel) = 0;
-    virtual void WlantapMacConfigureBss(uint16_t id, const wlan_internal::BssConfig& config) = 0;
-    virtual void WlantapMacStartScan(uint16_t id, uint64_t scan_id) = 0;
-    virtual void WlantapMacSetKey(uint16_t id, const wlan_softmac::WlanKeyConfig& key_config) = 0;
+    virtual void WlantapMacStart() = 0;
+    virtual void WlantapMacStop() = 0;
+    virtual void WlantapMacQueueTx(const wlan_softmac::WlanTxPacket& pkt) = 0;
+    virtual void WlantapMacSetChannel(const wlan_common::WlanChannel& channel) = 0;
+    virtual void WlantapMacConfigureBss(const wlan_internal::BssConfig& config) = 0;
+    virtual void WlantapMacStartScan(uint64_t scan_id) = 0;
+    virtual void WlantapMacSetKey(const wlan_softmac::WlanKeyConfig& key_config) = 0;
   };
 
   virtual void Rx(const fidl::VectorView<uint8_t>& data, const wlan_tap::WlanRxInfo& rx_info) = 0;
@@ -35,7 +35,6 @@ class WlantapMac {
   virtual void ReportTxStatus(const wlan_common::WlanTxStatus& ts) = 0;
 
   virtual void ScanComplete(uint64_t scan_id, int32_t status) = 0;
-
   virtual void RemoveDevice() = 0;
 
   virtual ~WlantapMac() = default;
@@ -43,7 +42,7 @@ class WlantapMac {
 
 zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_common::WlanMacRole role,
                              const std::shared_ptr<const wlan_tap::WlantapPhyConfig> phy_config,
-                             uint16_t id, WlantapMac::Listener* listener, zx::channel sme_channel,
+                             WlantapMac::Listener* listener, zx::channel sme_channel,
                              WlantapMac** ret);
 
 }  // namespace wlan
