@@ -12,8 +12,6 @@
 
 namespace display {
 
-#define ZXLOG(level, fmt, ...) zxlogf(level, "[%s:%u]: " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
-
 MockDisplayDeviceTree::MockDisplayDeviceTree(std::shared_ptr<zx_device> mock_root,
                                              std::unique_ptr<SysmemDeviceWrapper> sysmem,
                                              bool start_vsync)
@@ -25,8 +23,8 @@ MockDisplayDeviceTree::MockDisplayDeviceTree(std::shared_ptr<zx_device> mock_roo
   mock_root_->AddProtocol(ZX_PROTOCOL_PDEV, pdev_.proto()->ops, pdev_.proto()->ctx);
 
   if (auto result = sysmem_->Bind(); result != ZX_OK) {
-    ZXLOG(ERROR, "sysmem_.Bind() return status was not ZX_OK. Error: %s.",
-          zx_status_get_string(result));
+    ZX_PANIC("sysmem_.Bind() return status was not ZX_OK. Error: %s.",
+             zx_status_get_string(result));
   }
   sysmem_driver::Device* sysmem_device =
       mock_root_->GetLatestChild()->GetDeviceContext<sysmem_driver::Device>();
@@ -43,9 +41,8 @@ MockDisplayDeviceTree::MockDisplayDeviceTree(std::shared_ptr<zx_device> mock_roo
 
   display_ = new fake_display::FakeDisplay(mock_root_.get());
   if (auto status = display_->Bind(start_vsync); status != ZX_OK) {
-    ZXLOG(ERROR, "display_->Bind(start_vsync) return status was not ZX_OK. Error: %s.",
-          zx_status_get_string(status));
-    return;
+    ZX_PANIC("display_->Bind(start_vsync) return status was not ZX_OK. Error: %s.",
+             zx_status_get_string(status));
   }
   zx_device_t* mock_display = mock_root_->GetLatestChild();
 
@@ -62,9 +59,7 @@ MockDisplayDeviceTree::MockDisplayDeviceTree(std::shared_ptr<zx_device> mock_roo
   // Save a copy for test cases.
   controller_ = c.get();
   if (auto status = c->Bind(&c); status != ZX_OK) {
-    ZXLOG(ERROR, "c->Bind(&c) return status was not ZX_OK. Error: %s.",
-          zx_status_get_string(status));
-    return;
+    ZX_PANIC("c->Bind(&c) return status was not ZX_OK. Error: %s.", zx_status_get_string(status));
   }
 
   auto display_endpoints = fidl::CreateEndpoints<fuchsia_hardware_display::Provider>();
