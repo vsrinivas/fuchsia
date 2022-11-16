@@ -68,14 +68,14 @@ class InstanceImpl final : public fidl::Server<examples_canvas_addlinemetered::I
     // event.
     state_.changed = true;
 
-    // [START now_has_response]
-    // Because this is now a two-way method, we must use the generated `completer` to send an in
+    // [START diff_1]
+    // Because this is now a two-way method, we must use the generated |completer| to send an in
     // this case empty reply back to the client. This is the mechanic which syncs the flow rate
     // between the client and server on this method, thereby preventing the client from "flooding"
     // the server with unacknowledged work.
     completer.Reply();
     FX_LOGS(INFO) << "AddLine response sent";
-    // [END now_has_response]
+    // [END diff_1]
   }
 
  private:

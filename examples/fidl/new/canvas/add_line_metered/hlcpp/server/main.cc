@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/examples.canvas.addlinemetered/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fidl/cpp/wire/channel.h>
-#include <lib/sys/component/cpp/outgoing_directory.h>
-#include <lib/syslog/cpp/macros.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/sys/cpp/component_context.h>
 #include <unistd.h>
 
+#include <examples/canvas/addlinemetered/cpp/fidl.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 
@@ -18,38 +18,41 @@
 struct CanvasState {
   // Tracks whether there has been a change since the last send, to prevent redundant updates.
   bool changed = true;
-  examples_canvas_addlinemetered::wire::BoundingBox bounding_box;
+  examples::canvas::addlinemetered::BoundingBox bounding_box;
 };
 
 // An implementation of the |Instance| protocol.
-class InstanceImpl final : public fidl::WireServer<examples_canvas_addlinemetered::Instance> {
+class InstanceImpl final : public examples::canvas::addlinemetered::Instance {
  public:
-  // Bind this implementation to a channel.
+  // Bind this implementation to an |InterfaceRequest|.
   InstanceImpl(async_dispatcher_t* dispatcher,
-               fidl::ServerEnd<examples_canvas_addlinemetered::Instance> server_end)
-      : binding_(fidl::BindServer(
-            dispatcher, std::move(server_end), this,
-            [this](InstanceImpl* impl, fidl::UnbindInfo info,
-                   fidl::ServerEnd<examples_canvas_addlinemetered::Instance> server_end) {
-              if (info.reason() != ::fidl::Reason::kPeerClosed) {
-                FX_LOGS(ERROR) << "Shutdown unexpectedly";
-              }
-              delete this;
-            })),
+               fidl::InterfaceRequest<examples::canvas::addlinemetered::Instance> request)
+      : binding_(fidl::Binding<examples::canvas::addlinemetered::Instance>(this)),
         weak_factory_(this) {
-    // Start the update timer on startup. Our server sends one update per second
+    binding_.Bind(std::move(request), dispatcher);
+
+    // Gracefully handle abrupt shutdowns.
+    binding_.set_error_handler([this](zx_status_t status) mutable {
+      if (status != ZX_ERR_PEER_CLOSED) {
+        FX_LOGS(ERROR) << "Shutdown unexpectedly";
+      }
+      delete this;
+    });
+
+    // Start the update timer on startup. Our server sends one update per second.
     ScheduleOnDrawnEvent(dispatcher, zx::sec(1));
   }
 
-  void AddLine(AddLineRequestView request, AddLineCompleter::Sync& completer) override {
-    auto points = request->line;
-    FX_LOGS(INFO) << "AddLine request received: [Point { x: " << points[1].x
-                  << ", y: " << points[1].y << " }, Point { x: " << points[0].x
-                  << ", y: " << points[0].y << " }]";
+  // [START diff_1]
+  void AddLine(::std::array<::examples::canvas::addlinemetered::Point, 2> line,
+               AddLineCallback callback) override {
+    // [END diff_1]
+    FX_LOGS(INFO) << "AddLine request received: [Point { x: " << line[1].x << ", y: " << line[1].y
+                  << " }, Point { x: " << line[0].x << ", y: " << line[0].y << " }]";
 
     // Update the bounding box to account for the new line we've just "added" to the canvas.
     auto& bounds = state_.bounding_box;
-    for (const auto& point : request->line) {
+    for (const auto& point : line) {
       if (point.x < bounds.top_left.x) {
         bounds.top_left.x = point.x;
       }
@@ -68,14 +71,14 @@ class InstanceImpl final : public fidl::WireServer<examples_canvas_addlinemetere
     // event.
     state_.changed = true;
 
-    // [START diff_1]
-    // Because this is now a two-way method, we must use the generated |completer| to send an in
+    // [START diff_2]
+    // Because this is now a two-way method, we must use the generated |callback| to send an in
     // this case empty reply back to the client. This is the mechanic which syncs the flow rate
     // between the client and server on this method, thereby preventing the client from "flooding"
     // the server with unacknowledged work.
-    completer.Reply();
+    callback();
     FX_LOGS(INFO) << "AddLine response sent";
-    // [END diff_1]
+    // [END diff_2]
   }
 
  private:
@@ -101,25 +104,21 @@ class InstanceImpl final : public fidl::WireServer<examples_canvas_addlinemetere
           // This is where we would draw the actual lines. Since this is just an example, we'll
           // avoid doing the actual rendering, and simply send the bounding box to the client
           // instead.
-          auto top_left = weak->state_.bounding_box.top_left;
-          auto bottom_right = weak->state_.bounding_box.bottom_right;
-          fidl::Status status =
-              fidl::WireSendEvent(weak->binding_)->OnDrawn(top_left, bottom_right);
-          if (!status.ok()) {
-            return;
-          }
+          auto top_left = state_.bounding_box.top_left;
+          auto bottom_right = state_.bounding_box.bottom_right;
+          binding_.events().OnDrawn(top_left, bottom_right);
           FX_LOGS(INFO) << "OnDrawn event sent: top_left: Point { x: " << top_left.x
                         << ", y: " << top_left.y
                         << " }, bottom_right: Point { x: " << bottom_right.x
                         << ", y: " << bottom_right.y << " }";
 
           // Reset the change tracker.
-          weak->state_.changed = false;
+          state_.changed = false;
         },
         after);
   }
 
-  fidl::ServerBindingRef<examples_canvas_addlinemetered::Instance> binding_;
+  fidl::Binding<examples::canvas::addlinemetered::Instance> binding_;
   CanvasState state_ = CanvasState{};
 
   // Generates weak references to this object, which are appropriate to pass into asynchronous
@@ -134,36 +133,28 @@ int main(int argc, char** argv) {
   // The event loop is used to asynchronously listen for incoming connections and requests from the
   // client. The following initializes the loop, and obtains the dispatcher, which will be used when
   // binding the server implementation to a channel.
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  //
+  // Note that unlike the new C++ bindings, HLCPP bindings rely on the async loop being attached to
+  // the current thread via the |kAsyncLoopConfigAttachToCurrentThread| configuration.
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
   // Create an |OutgoingDirectory| instance.
   //
-  // The |component::OutgoingDirectory| class serves the outgoing directory for our component. This
-  // directory is where the outgoing FIDL protocols are installed so that they can be provided to
-  // other components.
-  component::OutgoingDirectory outgoing = component::OutgoingDirectory::Create(dispatcher);
-
-  // The `ServeFromStartupInfo()` function sets up the outgoing directory with the startup handle.
-  // The startup handle is a handle provided to every component by the system, so that they can
-  // serve capabilities (e.g. FIDL protocols) to other components.
-  zx::result result = outgoing.ServeFromStartupInfo();
-  if (result.is_error()) {
-    FX_LOGS(ERROR) << "Failed to serve outgoing directory: " << result.status_string();
-    return -1;
-  }
+  // The |component::OutgoingDirectory| class serves the outgoing directory for our component.
+  // This directory is where the outgoing FIDL protocols are installed so that they can be
+  // provided to other components.
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Register a handler for components trying to connect to
   // |examples.canvas.addlinemetered.Instance|.
-  result = outgoing.AddProtocol<examples_canvas_addlinemetered::Instance>(
-      [dispatcher](fidl::ServerEnd<examples_canvas_addlinemetered::Instance> server_end) {
-        // Create an instance of our InstanceImpl that destroys itself when the connection closes.
-        new InstanceImpl(dispatcher, std::move(server_end));
-      });
-  if (result.is_error()) {
-    FX_LOGS(ERROR) << "Failed to add Instance protocol: " << result.status_string();
-    return -1;
-  }
+  context->outgoing()->AddPublicService(
+      fidl::InterfaceRequestHandler<examples::canvas::addlinemetered::Instance>(
+          [dispatcher](fidl::InterfaceRequest<examples::canvas::addlinemetered::Instance> request) {
+            // Create an instance of our |InstanceImpl| that destroys itself when the connection
+            // closes.
+            new InstanceImpl(dispatcher, std::move(request));
+          }));
 
   // Everything is wired up. Sit back and run the loop until an incoming connection wakes us up.
   FX_LOGS(INFO) << "Listening for incoming connections";

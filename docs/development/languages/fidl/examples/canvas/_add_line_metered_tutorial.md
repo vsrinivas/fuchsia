@@ -1,9 +1,9 @@
 Sending unmetered one way calls back and forth produces a simple design, but
-there are potential pitfalls: what if the client is much slower at processing
-updates than the server? For example, the client may load a drawing consisting
-of many thousands of lines from some text file, and try to send them all
-sequentially. How can we apply back pressure to the client to prevent the server
-from being overwhelmed by this wave of updates?
+there are potential pitfalls: what if the server is much slower at processing
+updates than the client sends them? For example, the client may load a drawing
+consisting of many thousands of lines from some text file, and try to send them
+all sequentially. How can we apply back pressure to the client to prevent the
+server from being overwhelmed by this wave of updates?
 
 By using the acknowledgement pattern and making the one way call `AddLine(...);`
 into a two way `AddLine(...) -> ();`, we can provide feedback to the client.
@@ -14,7 +14,7 @@ optimistically, and only throttle when they receive async acks less frequently
 than expected.
 
 Note: The source code for this example is located at
-[//examples/fidl/new/canvas/add_line_metered](/examples/fidl/new/canvas/add_line_metered).
+[//examples/fidl/new/canvas/diff_1](/examples/fidl/new/canvas/add_line_metered).
 This directory includes tests exercising the implementation in all supported
 languages, which may be run locally by executing the following from
 the command line: `fx set core.x64 --with=//examples/fidl/new:tests && fx test
@@ -29,7 +29,7 @@ implementations can use:
     <!-- FIDL -->
     <section>
       <h3>FIDL</h3>
-      <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/fidl/canvas.test.fidl" %}</pre>
+      <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/fidl/canvas.test.fidl" highlight="diff_1" %}</pre>
     </section>
     <!-- CML -->
     <section style="padding: 0px;">
@@ -44,7 +44,7 @@ implementations can use:
           <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/meta/server.cml" %}</pre>
         </section>
         <section>
-          <h3 id="canvas-add_line_metered-cml-realm">Client</h3>
+          <h3 id="canvas-add_line_metered-cml-realm">Realm</h3>
           <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/realm/meta/realm.cml" %}</pre>
         </section>
       </devsite-selector>
@@ -76,11 +76,11 @@ Client and server implementations can then be written in any supported language:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3 id="canvas-add_line_metered-cpp_natural-client">Client</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/cpp_natural/client/main.cc" highlight="now_has_response" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/cpp_natural/client/main.cc" highlight="diff_1" %}</pre>
         </section>
         <section>
           <h3 id="canvas-add_line_metered-cpp_natural-server">Server</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/cpp_natural/server/main.cc" highlight="now_has_response" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/cpp_natural/server/main.cc" highlight="diff_1" %}</pre>
         </section>
       </devsite-selector>
     </section>
@@ -104,11 +104,11 @@ Client and server implementations can then be written in any supported language:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3 id="canvas-add_line_metered-hlcpp-client">Client</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/hlcpp/TODO.md" region_tag="todo" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/hlcpp/client/main.cc" highlight="diff_1" %}</pre>
         </section>
         <section>
           <h3 id="canvas-add_line_metered-hlcpp-server">Server</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/hlcpp/TODO.md" region_tag="todo" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/hlcpp/server/main.cc" highlight="diff_1,diff_2" %}</pre>
         </section>
       </devsite-selector>
     </section>

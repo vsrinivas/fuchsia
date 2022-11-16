@@ -24,7 +24,7 @@ type BoundingBox = struct {
 /// canvas.
 @discoverable
 protocol Instance {
-    // [START add_line_method]
+    // [START diff_1]
     /// Add a line to the canvas.
     ///
     /// This method can be considered an improvement over the one-way case from a flow control
@@ -36,7 +36,7 @@ protocol Instance {
     AddLine(struct {
         line Line;
     }) -> ();
-    // [END add_line_method]
+    // [END diff_1]
 
     /// Update the client with the latest drawing state. The server makes no guarantees about how
     /// often this event occurs - it could occur multiple times per board state, for example.
