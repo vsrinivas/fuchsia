@@ -52,7 +52,7 @@ group("legacy_test") {
   deps = [ ":legacy-test-runner" ]
 }
 
-group("tests") {
+group("legacy_tests") {
   testonly = true
   deps = [ "tests" ]
 }

@@ -52,3 +52,8 @@ group("tests") {
   testonly = true
   deps = [ ":legacy_component_lib_tests" ]
 }
+
+group("legacy_tests") {
+  testonly = true
+  deps = [ ":legacy_component_lib_tests" ]
+}

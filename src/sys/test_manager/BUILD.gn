@@ -202,3 +202,8 @@ group("tests") {
     "tests",
   ]
 }
+
+group("legacy_tests") {
+  testonly = true
+  deps = [ "tests:legacy_tests" ]
+}

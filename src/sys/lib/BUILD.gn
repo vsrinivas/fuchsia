@@ -21,7 +21,6 @@ group("tests") {
     "fuchsia-bootfs:fuchsia-bootfs-tests",
     "fuchsia-zbi:fuchsia-zbi-tests",
     "fuchsia_backoff:fuchsia_backoff_tests",
-    "legacy_component:tests",
     "library_loader:tests",
     "mem_util:tests",
     "moniker:moniker-tests",
@@ -31,4 +30,10 @@ group("tests") {
     "runner:tests",
     "task-exceptions:tests",
   ]
+}
+
+group("legacy_tests") {
+  testonly = true
+
+  deps = [ "legacy_component:legacy_tests" ]
 }
