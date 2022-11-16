@@ -116,6 +116,27 @@ adb -t 2 shell
 adb -s 127.0.0.1:5556 logcat
 ```
 
+### Copy files to/from the device
+
+Use the `adb pull` and `adb push` commands to transfer files to and from
+the device.
+
+For example, to copy the file `/product/etc/build.prop` from the Fuchsia
+device into the `/tmp` folder of your local machine:
+
+```sh
+adb pull /product/etc/build.prop /tmp/
+```
+
+Or, to copy the file `/tmp/build.prop` from your local machine
+into the `/storage/self` folder of the Fuchsia device:
+
+```sh
+adb push /tmp/build.prop /storage/self
+```
+
+For more details check the [ADB documentation][adb.docs].
+
 ### Run a Linux test binary
 
 Linux test binaries can also be run using the Starnix test runner using the
@@ -228,3 +249,6 @@ the "syscall_stats" feature):
 ```
 ffx inspect show core/starnix_manager/starbionic:root:syscall_stats
 ```
+
+
+[adb.docs]: https://developer.android.com/studio/command-line/adb#copyfiles
