@@ -416,89 +416,112 @@ Note: This assumes you're using NUC connected to the EdgeRouter. If
 your networking setup is different, you may need a different network
 configuration.
 
-Do the following:
+First, configure Intel ME on your NUC:
 
+1. Reboot your NUC.
 1. Enter Intel ME settings by pressing `Ctrl+P` on the boot screen.
+1. Select **MEBx Login**
+1. Set up a new password, the default one is `admin`.
 
-   * The first time you need to set a password, the default one is `admin`.
-     Password must be at least 8 characters long, contain both lowercase and
-     uppercase characters, at least one digit and at least one non alphanumeric
-     character.
+   Note: The password must be at least 8 characters long, contain both lowercase and
+   uppercase characters, at least one digit and at least one non alphanumeric
+   character ("_" is considered alphanumeric).
+
+   Tip: If you choose a password that is exactly 8 characters long, you can use the same password
+   as the VNC password below.
 
 1. Configure network:
 
-   1. Go to Network Setup > TCP/IP Settings > Wired LAN IPV4 Configuration.
-   1. Disable __DHCP Mode__ and set a static __IPV4 Address__. You need to
-      pick an address that will be reachable from your host (for example,
-      an address on the same network as the IPv4 interface of your host machine).
-   1. Return to AMT Configuration and enable __Activate Network Access__.
+   1. Select **Intel(R) AMT Configuration**.
+   1. Unconfigure existing network settings:
+
+      1. Select **Unconfigure Network Access**
+      1. Select **Full Unprovision**
+      1. Press `Y` to confirm.
+   1. Select **Network Setup** > **TCP/IP Settings** > **Wired LAN IPV4 Configuration**.
+   1. Set **DHCP Mode** to **Disabled**.
+   1. Set **IPV4 Address** to an address reachable from your host machine via the EdgeRouter.
+
+      On your host machine, run `ifconfig` and find the entry that corresponds to the EdgeRouter, for example:
+
+      ``` none {:.devsite-disable-click-to-copy}
+      $ ifconfig
+      enx00e04c0c13ba: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+              inet 192.168.42.86  netmask 255.255.255.0  broadcast 192.168.42.255
+              ...
+      ```
+
+      In this case, you could try using the address **192.168.42.20**
+
+   1. Set **Subnet Mask Address** to the netmask of your host machine to EdgeRouter connection, for example **255.255.255.0**.
+   1. Press `Esc` until you return to **Intel(R) AMT Configuration**.
+   1. Select **Activate Network Access** and press `Y` to confirm.
    1. Exit Intel ME settings and save your changes.
 
-The [Intel AMT serial-over-LAN](#amt-serial-over-lan) and [vPro KVM](#vpor-kvm)
-needs to be enabled before use. These are enabled using the
-[`wsman`][wsman]{:.external} command-line utility.
+Now, configure the [`amtctrl`][amtctrl]{:.external} command-line utility on your host machine:
 
-These instructions assume you have set the `AMT_HOST` variable, which
-contains the IPv4 address you configured in the Intel ME settings,
-In these instructions, `AMT_PASSWORD` is the Intel ME password and `VNC_PASSWORD`
-is the VNC password.
+These instructions assume you have set some environment variables:
+
+ * `AMT_HOST`: The IPv4 address you configured in the Intel ME settings.
+ * `AMT_PASSWORD`: The password you chose for Intel ME.
+ * `VNC_PASSWORD`: A password for accessing the NUC over VNC.
 
 Note: The password used for `VNC_PASSWORD` must be _exactly_ 8 characters long,
 must contain both lowercase and uppercase characters, at least one digit and
 at least one non alphanumeric character.
 
-#### Intel AMT serial-over-LAN {:#amt-serial-over-lan}
-
-Enable AMT redirection service:
-
-```posix-terminal
-wsman put http://intel.com/wbem/wscim/1/amt-schema/1/AMT_RedirectionService -h ${AMT_HOST} -P 16992 -u admin -p ${AMT_PASSWORD} -k ListenerEnabled=true
-```
-
-Now, you can remotely access the NUC using [`amtterm`][amtterm]{:.external}:
-`amtterm -u admin -p ${AMT_PASWORD} ${AMT_HOST}`.
-
-#### Intel vPro KVM {:#vpor-kvm}
-
-Do the following:
-
-1. Set the VNC password:
+1. Clone the `amtctrl` repository:
 
    ```posix-terminal
-   wsman put http://intel.com/wbem/wscim/1/ips-schema/1/IPS_KVMRedirectionSettingData -h ${AMT_HOST} -P 16992 -u admin -p ${AMT_PASSWORD} -k RFBPassword=${VNC_PASSWORD}
+   git clone https://github.com/sdague/amt
    ```
 
-2. Enable KVM redirection to port 5900:
+1. Install `amtctrl`:
 
    ```posix-terminal
-   wsman put http://intel.com/wbem/wscim/1/ips-schema/1/IPS_KVMRedirectionSettingData -h ${AMT_HOST} -P 16992 -u admin -p ${AMT_PASSWORD} -k Is5900PortEnabled=true
+   cd amt && sudo ./setup.py install
    ```
 
-3. Disable opt-in policy (do not ask user for console access):
+1. Configure NUC IP address and passwords:
 
    ```posix-terminal
-   wsman put http://intel.com/wbem/wscim/1/ips-schema/1/IPS_KVMRedirectionSettingData -h ${AMT_HOST} -P 16992 -u admin -p ${AMT_PASSWORD} -k OptInPolicy=false
+   amtctrl set -V $VNC_PASSWORD nuc $AMT_HOST $AMT_PASSWORD
    ```
 
-4. Disable session timeout:
+1. Enable VNC:
 
    ```posix-terminal
-   wsman put http://intel.com/wbem/wscim/1/ips-schema/1/IPS_KVMRedirectionSettingData -h ${AMT_HOST} -P 16992 -u admin -p ${AMT_PASSWORD} -k SessionTimeout=0
+   amtctrl nuc vnc
    ```
 
-5. Enable KVM:
+Now, you can access the NUC from your host machine using any VNC client by connecting to
+the IP address set in `AMT_HOST`. Enter the password set in `VNC_PASSWORD` when prompted.
+
+Note: The NUC needs to be plugged in to a monitor with a HDMI cable to accept VNC connections.
+
+You can also turn on, turn off or reboot the NUC with the following terminal commands:
+
+ * To turn on the NUC:
 
    ```posix-terminal
-   wsman invoke -a RequestStateChange http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_KVMRedirectionSAP -h ${AMT_HOST} -P 16992 -u admin -p ${AMT_PASSWORD} -k RequestedState=2
+   amtctrl nuc on
    ```
 
-   Now, you can remotely access the NUC using any VNC client, for example using VNC:
-   `vncviewer ${AMT_HOST}`.
+ * To turn off the NUC:
+
+   ```posix-terminal
+   amtctrl nuc off
+   ```
+
+ * To reboot the NUC:
+
+   ```posix-terminal
+   amtctrl nuc reboot
+   ```
 
 <!-- Reference links -->
 
 [nuc-wiki]: https://en.wikipedia.org/wiki/Next_Unit_of_Computing
-[remote-management-for-nuc]: nuc-remote-management.md
 [get-started-with-fuchsia]: /docs/get-started/README.md
 [gigaboot]: /src/firmware/gigaboot
 [glossary.zedboot]: /docs/glossary/README.md#zedboot
@@ -520,7 +543,6 @@ Do the following:
 [ffx]: https://fuchsia.dev/reference/tools/sdk/ffx
 [flash-fuchsia-to-nuc]: intel_nuc.md#flash-fuchsia
 [install-fuchsia]: intel_nuc.md
-[amtterm]: https://git.kraxel.org/cgit/amtterm/
 [amt]: https://www.intel.com/content/www/us/en/architecture-and-technology/intel-active-management-technology.html
-[wsman]: https://github.com/Openwsman/wsmancli
+[amtctrl]: https://github.com/sdague/amt
 [experimental-hardware]: /docs/contribute/governance/rfcs/0111_fuchsia_hardware_specifications.md#experimental-hardware

@@ -339,6 +339,118 @@ To flash a Fuchsia image to your NUC, do the following:
 
    When finished, the NUC reboots and starts running the new Fuchsia image.
 
+### Remote management of NUC devices {:#remote-management-of-nuc-devices}
+
+To enable remote management, including KVM, you need to configure
+Intel [AMT][amt]{:.external} (Active Management Technology).
+
+Note: This assumes you're using NUC connected to the EdgeRouter. If
+your networking setup is different, you may need a different network
+configuration.
+
+First, configure Intel ME on your NUC:
+
+1. Reboot your NUC.
+1. Enter Intel ME settings by pressing `Ctrl+P` on the boot screen.
+1. Select **MEBx Login**
+1. Set up a new password, the default one is `admin`.
+
+   Note: The password must be at least 8 characters long, contain both lowercase and
+   uppercase characters, at least one digit and at least one non alphanumeric
+   character ("_" is considered alphanumeric).
+
+   Tip: If you choose a password that is exactly 8 characters long, you can use the same password
+   as the VNC password below.
+
+1. Configure network:
+
+   1. Select **Intel(R) AMT Configuration**.
+   1. Unconfigure existing network settings:
+
+      1. Select **Unconfigure Network Access**
+      1. Select **Full Unprovision**
+      1. Press `Y` to confirm.
+   1. Select **Network Setup** > **TCP/IP Settings** > **Wired LAN IPV4 Configuration**.
+   1. Set **DHCP Mode** to **Disabled**.
+   1. Set **IPV4 Address** to an address reachable from your host machine via the EdgeRouter.
+
+      On your host machine, run `ifconfig` and find the entry that corresponds to the EdgeRouter, for example:
+
+      ``` none {:.devsite-disable-click-to-copy}
+      $ ifconfig
+      enx00e04c0c13ba: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+              inet 192.168.42.86  netmask 255.255.255.0  broadcast 192.168.42.255
+              ...
+      ```
+
+      In this case, you could try using the address **192.168.42.20**
+
+   1. Set **Subnet Mask Address** to the netmask of your host machine to EdgeRouter connection, for example **255.255.255.0**.
+   1. Press `Esc` until you return to **Intel(R) AMT Configuration**.
+   1. Select **Activate Network Access** and press `Y` to confirm.
+   1. Exit Intel ME settings and save your changes.
+
+Now, configure the [`amtctrl`][amtctrl]{:.external} command-line utility on your host machine:
+
+These instructions assume you have set some environment variables:
+
+ * `AMT_HOST`: The IPv4 address you configured in the Intel ME settings.
+ * `AMT_PASSWORD`: The password you chose for Intel ME.
+ * `VNC_PASSWORD`: A password for accessing the NUC over VNC.
+
+Note: The password used for `VNC_PASSWORD` must be _exactly_ 8 characters long,
+must contain both lowercase and uppercase characters, at least one digit and
+at least one non alphanumeric character.
+
+1. Clone the `amtctrl` repository:
+
+   ```posix-terminal
+   git clone https://github.com/sdague/amt
+   ```
+
+1. Install `amtctrl`:
+
+   ```posix-terminal
+   cd amt && sudo ./setup.py install
+   ```
+
+1. Configure NUC IP address and passwords:
+
+   ```posix-terminal
+   amtctrl set -V $VNC_PASSWORD nuc $AMT_HOST $AMT_PASSWORD
+   ```
+
+1. Enable VNC:
+
+   ```posix-terminal
+   amtctrl nuc vnc
+   ```
+
+Now, you can access the NUC from your host machine using any VNC client by connecting to
+the IP address set in `AMT_HOST`. Enter the password set in `VNC_PASSWORD` when prompted.
+
+Note: The NUC needs to be plugged in to a monitor with a HDMI cable to accept VNC connections.
+
+You can also turn on, turn off or reboot the NUC with the following terminal commands:
+
+ * To turn on the NUC:
+
+   ```posix-terminal
+   amtctrl nuc on
+   ```
+
+ * To turn off the NUC:
+
+   ```posix-terminal
+   amtctrl nuc off
+   ```
+
+ * To reboot the NUC:
+
+   ```posix-terminal
+   amtctrl nuc reboot
+   ```
+
 <!-- Reference links -->
 
 [nuc-wiki]: https://en.wikipedia.org/wiki/Next_Unit_of_Computing
@@ -357,3 +469,5 @@ To flash a Fuchsia image to your NUC, do the following:
 [ffx-workflows]: /docs/development/sdk/ffx/index.md
 [fuchsia-ssh-keys]: /docs/development/sdk/ffx/create-ssh-keys-for-devices.md
 [experimental-hardware]: /docs/contribute/governance/rfcs/0111_fuchsia_hardware_specifications.md#experimental-hardware
+[amt]: https://www.intel.com/content/www/us/en/architecture-and-technology/intel-active-management-technology.html
+[amtctrl]: https://github.com/sdague/amt
