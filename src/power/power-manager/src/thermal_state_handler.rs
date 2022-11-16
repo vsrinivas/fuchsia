@@ -56,10 +56,11 @@ use thermal_config::{ClientConfig, ThermalConfig};
 ///     method.
 
 pub struct ThermalStateHandlerBuilder<'a, 'b> {
+    node_name: String,
     thermal_config: Option<ThermalConfig>,
     outgoing_svc_dir: Option<ServiceFsDir<'a, ServiceObjLocal<'b, ()>>>,
     inspect_root: Option<&'a inspect::Node>,
-    platform_metrics: Rc<dyn Node>,
+    platform_metrics: Option<Rc<dyn Node>>,
 }
 
 impl<'a, 'b> ThermalStateHandlerBuilder<'a, 'b> {
@@ -78,16 +79,20 @@ impl<'a, 'b> ThermalStateHandlerBuilder<'a, 'b> {
 
         #[derive(Deserialize)]
         struct Dependencies {
-            platform_metrics_node: String,
+            /// If not supplied, metrics will not be logged.
+            platform_metrics_node: Option<String>,
         }
 
         #[derive(Deserialize)]
         struct JsonData {
+            name: String,
             config: Option<Config>,
-            dependencies: Dependencies,
+            dependencies: Option<Dependencies>,
         }
 
         let data: JsonData = json::from_value(json_data).unwrap();
+
+        let node_name = data.name;
 
         // Use `thermal_config_path` if it was provided, otherwise default to `THERMAL_CONFIG_PATH`
         let config_path = data
@@ -98,11 +103,16 @@ impl<'a, 'b> ThermalStateHandlerBuilder<'a, 'b> {
         // Read the thermal config file from `config_path`
         let thermal_config = ThermalConfig::read(&Path::new(&config_path)).ok();
 
+        // Clone the platform_metrics node, if specified.
+        let platform_metrics =
+            data.dependencies.map(|d| d.platform_metrics_node.map(|p| nodes[&p].clone())).flatten();
+
         Self {
+            node_name,
             thermal_config,
             outgoing_svc_dir: Some(service_fs.dir("svc")),
             inspect_root: None,
-            platform_metrics: nodes[&data.dependencies.platform_metrics_node].clone(),
+            platform_metrics,
         }
     }
 
@@ -114,7 +124,7 @@ impl<'a, 'b> ThermalStateHandlerBuilder<'a, 'b> {
         let inspect = self
             .inspect_root
             .unwrap_or(inspect::component::inspector().root())
-            .create_child("ThermalStateHandler");
+            .create_child(self.node_name);
 
         let metrics_tracker =
             MetricsTracker::new(inspect.create_child("ThermalLoadStates"), self.platform_metrics);
@@ -531,14 +541,14 @@ impl Node for ThermalStateHandler {
 }
 
 struct MetricsTracker {
-    platform_metrics: Rc<dyn Node>,
+    platform_metrics: Option<Rc<dyn Node>>,
     root_node: inspect::Node,
     per_sensor_metrics: HashMap<String, PerSensorMetrics>,
     throttling_active: bool,
 }
 
 impl MetricsTracker {
-    fn new(root_node: inspect::Node, platform_metrics: Rc<dyn Node>) -> Self {
+    fn new(root_node: inspect::Node, platform_metrics: Option<Rc<dyn Node>>) -> Self {
         Self {
             root_node,
             platform_metrics,
@@ -608,10 +618,12 @@ impl MetricsTracker {
 
     async fn log_platform_metric(&self, metric: PlatformMetric) {
         let msg = Message::LogPlatformMetric(metric);
-        log_if_err!(
-            self.platform_metrics.handle_message(&msg).await,
-            format!("Failed to log platform metric {:?}", msg)
-        );
+        if let Some(platform_metrics) = &self.platform_metrics {
+            log_if_err!(
+                platform_metrics.handle_message(&msg).await,
+                format!("Failed to log platform metric {:?}", msg)
+            );
+        }
     }
 }
 
@@ -729,6 +741,22 @@ mod tests {
         );
     }
 
+    /// Tests that new_from_json correctly handles the no dependencies case.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_new_from_json_no_dependencies() {
+        let json_data = json::json!({
+            "type": "ThermalStateHandler",
+            "name": "thermal_state_handler",
+        });
+
+        let nodes: HashMap<String, Rc<dyn Node>> = HashMap::new();
+        let service_fs = &mut ServiceFs::new_local();
+        let thermal_state_handler =
+            ThermalStateHandlerBuilder::new_from_json(json_data, &nodes, service_fs);
+        let platform_metrics = thermal_state_handler.platform_metrics;
+        assert!(platform_metrics.is_none());
+    }
+
     /// Tests that each thermal client's state is correctly published into Inspect.
     #[test]
     fn test_inspect() {
@@ -749,10 +777,11 @@ mod tests {
 
         let inspector = inspect::Inspector::new();
         let node = ThermalStateHandlerBuilder {
+            node_name: "thermal_state_handler".to_string(),
             inspect_root: Some(inspector.root()),
             thermal_config: Some(thermal_config),
             outgoing_svc_dir: Some(service_fs.root_dir()),
-            platform_metrics: create_dummy_node(),
+            platform_metrics: None,
         }
         .build()
         .unwrap();
@@ -763,7 +792,7 @@ mod tests {
         assert_data_tree!(
             inspector,
             root: {
-                ThermalStateHandler: {
+                thermal_state_handler: {
                     ThermalLoadStates: {},
                     client1: {
                         thermal_state: 0u64,
@@ -784,7 +813,7 @@ mod tests {
         assert_data_tree!(
             inspector,
             root: {
-                ThermalStateHandler: {
+                thermal_state_handler: {
                     ThermalLoadStates: {},
                     client1: {
                         thermal_state: 0u64,
@@ -806,7 +835,7 @@ mod tests {
         assert_data_tree!(
             inspector,
             root: {
-                ThermalStateHandler: {
+                thermal_state_handler: {
                     ThermalLoadStates: {
                         sensor1: 10u64
                     },
@@ -835,10 +864,11 @@ mod tests {
         );
 
         let node = ThermalStateHandlerBuilder {
+            node_name: "thermal_state_handler".to_string(),
             inspect_root: None,
             thermal_config: Some(thermal_config),
             outgoing_svc_dir: Some(service_fs.root_dir()),
-            platform_metrics: create_dummy_node(),
+            platform_metrics: None,
         }
         .build()
         .unwrap();
@@ -876,10 +906,11 @@ mod tests {
         let mut service_fs = ServiceFs::new_local();
 
         let _node = ThermalStateHandlerBuilder {
+            node_name: "thermal_state_handler".to_string(),
             inspect_root: None,
             thermal_config: Some(ThermalConfig::new()),
             outgoing_svc_dir: Some(service_fs.root_dir()),
-            platform_metrics: create_dummy_node(),
+            platform_metrics: None,
         }
         .build()
         .unwrap();
@@ -896,10 +927,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_invalid_thermal_load() {
         let node = ThermalStateHandlerBuilder {
+            node_name: "thermal_state_handler".to_string(),
             thermal_config: Some(ThermalConfig::new()),
             outgoing_svc_dir: None,
             inspect_root: None,
-            platform_metrics: create_dummy_node(),
+            platform_metrics: None,
         }
         .build()
         .unwrap();
@@ -927,10 +959,11 @@ mod tests {
         );
 
         let node = ThermalStateHandlerBuilder {
+            node_name: "thermal_state_handler".to_string(),
             inspect_root: None,
             thermal_config: Some(thermal_config),
             outgoing_svc_dir: Some(service_fs.root_dir()),
-            platform_metrics: create_dummy_node(),
+            platform_metrics: None,
         }
         .build()
         .unwrap();
@@ -969,10 +1002,11 @@ mod tests {
             );
 
         let node = ThermalStateHandlerBuilder {
+            node_name: "thermal_state_handler".to_string(),
             inspect_root: None,
             thermal_config: Some(thermal_config),
             outgoing_svc_dir: Some(service_fs.root_dir()),
-            platform_metrics: create_dummy_node(),
+            platform_metrics: None,
         }
         .build()
         .unwrap();
@@ -1011,10 +1045,11 @@ mod tests {
         let mock_platform_metrics = mock_maker.make("mock_platform_metrics", vec![]);
 
         let node = ThermalStateHandlerBuilder {
+            node_name: "thermal_state_handler".to_string(),
             inspect_root: None,
             thermal_config: Some(ThermalConfig::new()),
             outgoing_svc_dir: None,
-            platform_metrics: mock_platform_metrics.clone(),
+            platform_metrics: Some(mock_platform_metrics.clone()),
         }
         .build()
         .unwrap();
