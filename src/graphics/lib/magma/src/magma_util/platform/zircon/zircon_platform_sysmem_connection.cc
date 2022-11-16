@@ -480,9 +480,9 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
       : sysmem_allocator_(std::move(allocator)) {
     std::string debug_name =
         std::string("magma[") + magma::PlatformProcessHelper::GetCurrentProcessName() + "]";
-    __UNUSED fidl::WireResult result = sysmem_allocator_->SetDebugClientInfo(
-        fidl::StringView::FromExternal(debug_name),
-        magma::PlatformProcessHelper::GetCurrentProcessId());
+    __UNUSED fidl::WireResult result =
+        sysmem_allocator_->SetDebugClientInfo(fidl::StringView::FromExternal(debug_name),
+                                              magma::PlatformProcessHelper::GetCurrentProcessId());
   }
 
   magma_status_t AllocateBuffer(uint32_t flags, size_t size,
@@ -499,10 +499,6 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     if (flags & MAGMA_SYSMEM_FLAG_PROTECTED) {
       usage.video = fuchsia_sysmem::wire::kVideoUsageHwProtected;
     }
-    if (flags & MAGMA_SYSMEM_FLAG_DISPLAY) {
-      usage.display = fuchsia_sysmem::wire::kDisplayUsageLayer;
-    }
-
     fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
     constraints.usage = usage;
     constraints.min_buffer_count_for_camping = 1;

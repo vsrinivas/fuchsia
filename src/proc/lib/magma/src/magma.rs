@@ -151,9 +151,6 @@ pub const MAGMA_CACHE_POLICY_WRITE_COMBINING: u32 = 1;
 pub const MAGMA_CACHE_POLICY_UNCACHED: u32 = 2;
 pub const MAGMA_DUMP_TYPE_NORMAL: u32 = 1;
 pub const MAGMA_PERF_COUNTER_RESULT_DISCONTINUITY: u32 = 1;
-pub const MAGMA_SYSMEM_FLAG_PROTECTED: u32 = 1;
-pub const MAGMA_SYSMEM_FLAG_DISPLAY: u32 = 2;
-pub const MAGMA_SYSMEM_FLAG_FOR_CLIENT: u32 = 4;
 pub const MAGMA_MAX_IMAGE_PLANES: u32 = 4;
 pub const MAGMA_MAX_DRM_FORMAT_MODIFIERS: u32 = 16;
 pub const MAGMA_MAP_FLAG_VENDOR_SHIFT: u32 = 16;
@@ -421,6 +418,9 @@ pub const MAGMA_BUFFER_RANGE_OP_COMMIT: _bindgen_ty_7 = 2;
 pub const MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES: _bindgen_ty_7 = 3;
 pub const MAGMA_BUFFER_RANGE_OP_DECOMMIT: _bindgen_ty_7 = 4;
 pub type _bindgen_ty_7 = ::std::os::raw::c_uint;
+pub const MAGMA_SYSMEM_FLAG_PROTECTED: _bindgen_ty_8 = 1;
+pub const MAGMA_SYSMEM_FLAG_FOR_CLIENT: _bindgen_ty_8 = 4;
+pub type _bindgen_ty_8 = ::std::os::raw::c_uint;
 pub type magma_status_t = i32;
 pub type magma_bool_t = u8;
 pub type magma_cache_operation_t = u32;
@@ -603,9 +603,9 @@ pub struct magma_buffer_info_t {
     pub committed_byte_count: u64,
     pub size: u64,
 }
-pub const MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE: _bindgen_ty_8 = 1;
-pub const MAGMA_IMAGE_CREATE_FLAGS_VULKAN_USAGE: _bindgen_ty_8 = 2;
-pub type _bindgen_ty_8 = ::std::os::raw::c_uint;
+pub const MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE: _bindgen_ty_9 = 1;
+pub const MAGMA_IMAGE_CREATE_FLAGS_VULKAN_USAGE: _bindgen_ty_9 = 2;
+pub type _bindgen_ty_9 = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct magma_image_create_info_t {

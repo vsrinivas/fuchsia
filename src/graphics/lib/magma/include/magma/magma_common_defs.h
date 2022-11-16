@@ -174,11 +174,13 @@ enum {
   MAGMA_BUFFER_RANGE_OP_DECOMMIT = 4,
 };
 
-#define MAGMA_SYSMEM_FLAG_PROTECTED (1 << 0)
-#define MAGMA_SYSMEM_FLAG_DISPLAY (1 << 1)
-// This flag is only used to modify the name of the buffer to signal that the client requested it
-// using vkAllocateMemory or similar.
-#define MAGMA_SYSMEM_FLAG_FOR_CLIENT (1 << 2)
+enum {
+  // Set `is_secure` flag in the `BufferMemorySettings` so protected memory is allocated.
+  MAGMA_SYSMEM_FLAG_PROTECTED = 1 << 0,
+  // This flag is only used to modify the name of the buffer to signal that the client requested it
+  // using vkAllocateMemory or similar.
+  MAGMA_SYSMEM_FLAG_FOR_CLIENT = 1 << 2,
+};
 
 #define MAGMA_MAX_IMAGE_PLANES 4
 
