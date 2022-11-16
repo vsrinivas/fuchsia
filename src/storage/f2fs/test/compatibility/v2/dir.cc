@@ -106,5 +106,37 @@ TEST_F(DirCompatibilityTest, DirDepthTestLinuxToFuchsia) {
   }
 }
 
+TEST_F(DirCompatibilityTest, DirDepthTestFuchsiaToLinux) {
+  constexpr int kDirDepth = 60;
+
+  // Mkdir on Fuchsia
+  {
+    GetEnclosedGuest().GetFuchsiaOperator().Mkfs();
+    GetEnclosedGuest().GetFuchsiaOperator().Mount();
+
+    auto umount = fit::defer([&] { GetEnclosedGuest().GetFuchsiaOperator().Umount(); });
+
+    std::string dir_name;
+    for (int depth = 0; depth < kDirDepth; ++depth) {
+      dir_name.append("/").append(std::to_string(depth));
+      GetEnclosedGuest().GetFuchsiaOperator().Mkdir(dir_name, 0644);
+    }
+  }
+
+  // Check on Linux
+  {
+    GetEnclosedGuest().GetLinuxOperator().Fsck();
+    GetEnclosedGuest().GetLinuxOperator().Mount();
+
+    auto umount = fit::defer([&] { GetEnclosedGuest().GetLinuxOperator().Umount(); });
+    std::string dir_name = linux_path_prefix;
+    for (int depth = 0; depth < kDirDepth; ++depth) {
+      dir_name.append("/").append(std::to_string(depth));
+      auto dir = GetEnclosedGuest().GetLinuxOperator().Open(dir_name, O_RDONLY | O_DIRECTORY, 0644);
+      ASSERT_TRUE(dir->IsValid());
+    }
+  }
+}
+
 }  // namespace
 }  // namespace f2fs
