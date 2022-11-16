@@ -836,5 +836,9 @@ async fn test_prefix_provider_double_watch<M: Manager>(name: &str) {
         .expect("next PrefixControl event")
         .expect("PrefixControl event stream ended");
     assert_eq!(reason, fnet_dhcpv6::PrefixControlExitReason::DoubleWatch);
+
+    // TODO(https://fxbug.dev/74241): Cannot expected `is_closed` to return true
+    // even though PEER_CLOSED has already been observed on the channel.
+    assert_eq!(prefix_control.on_closed().await, Ok(zx::Signals::CHANNEL_PEER_CLOSED));
     assert!(prefix_control.is_closed());
 }
