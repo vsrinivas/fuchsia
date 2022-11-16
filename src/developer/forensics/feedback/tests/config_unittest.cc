@@ -313,22 +313,14 @@ TEST_F(ConfigTest, BoardConfigMissingOverrideAndDefaultConfigs) {
 
 TEST_F(ConfigTest, GetCrashReportsConfig) {
   const std::string default_config_path = WriteConfig(R"({
-    "crash_reporter": {
-        "daily_per_product_quota": -1
-    },
-    "crash_server": {
-        "upload_policy": "disabled"
-    },
+    "daily_per_product_quota": -1,
+    "crash_report_upload_policy": "disabled",
     "hourly_snapshot": false
 })");
 
   const std::string override_config_path = WriteConfig(R"({
-    "crash_reporter": {
-        "daily_per_product_quota": 100
-    },
-    "crash_server" : {
-        "upload_policy": "enabled"
-    },
+    "daily_per_product_quota": 100,
+    "crash_report_upload_policy": "enabled",
     "hourly_snapshot": true
 })");
 

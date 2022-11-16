@@ -21,45 +21,30 @@ namespace forensics {
 namespace crash_reports {
 namespace {
 
+constexpr char kCrashReportUploadPolicyKey[] = "crash_report_upload_policy";
+constexpr char kHourlySnapshotKey[] = "hourly_snapshot";
+
 const char kSchema[] = R"({
   "type": "object",
   "properties": {
-    "crash_reporter": {
-      "type": "object",
-      "properties": {
-        "daily_per_product_quota": {
-          "type": "number"
-        }
-      },
-      "required": [
-        "daily_per_product_quota"
-      ],
-      "additionalProperties": false
+    "crash_report_upload_policy": {
+      "type": "string",
+      "enum": [
+        "disabled",
+        "enabled",
+        "read_from_privacy_settings"
+      ]
     },
-    "crash_server": {
-      "type": "object",
-      "properties": {
-        "upload_policy": {
-          "type": "string",
-          "enum": [
-            "disabled",
-            "enabled",
-            "read_from_privacy_settings"
-          ]
-        }
-      },
-      "required": [
-        "upload_policy"
-      ],
-      "additionalProperties": false
+    "daily_per_product_quota": {
+      "type": "number"
     },
     "hourly_snapshot": {
       "type": "boolean"
     }
   },
   "required": [
-    "crash_reporter",
-    "crash_server",
+    "crash_report_upload_policy",
+    "daily_per_product_quota",
     "hourly_snapshot"
   ],
   "additionalProperties": false
@@ -110,8 +95,7 @@ std::optional<Config> ParseConfig(const std::string& filepath) {
   }
 
   Config config;
-  if (const std::string upload_policy =
-          doc[kCrashServerKey][kCrashServerUploadPolicyKey].GetString();
+  if (const std::string upload_policy = doc[kCrashReportUploadPolicyKey].GetString();
       upload_policy == "disabled") {
     config.crash_report_upload_policy = Config::UploadPolicy::kDisabled;
   } else if (upload_policy == "enabled") {
@@ -122,15 +106,14 @@ std::optional<Config> ParseConfig(const std::string& filepath) {
     FX_LOGS(FATAL) << "Upload policy '" << upload_policy << "' not permitted by schema";
   }
 
-  if (const int64_t daily_per_product_quota =
-          doc[kCrashReporterKey][kDailyPerProductQuotaKey].GetInt64();
+  if (const int64_t daily_per_product_quota = doc[kDailyPerProductQuotaKey].GetInt64();
       daily_per_product_quota > 0) {
     config.daily_per_product_quota = daily_per_product_quota;
   } else {
     config.daily_per_product_quota = std::nullopt;
   }
 
-  config.hourly_snapshot = doc[kHourlySnapshot].GetBool();
+  config.hourly_snapshot = doc[kHourlySnapshotKey].GetBool();
 
   // If crash reports won't be uploaded, there shouldn't be a quota in the config.
   if (config.crash_report_upload_policy == Config::UploadPolicy::kDisabled) {
