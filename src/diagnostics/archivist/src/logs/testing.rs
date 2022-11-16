@@ -5,8 +5,9 @@
 use crate::{
     events::types::{Event, EventPayload, LogSinkRequestedPayload},
     identity::ComponentIdentity,
-    logs::{budget::BudgetManager, repository::LogsRepository, servers::LogServer},
+    logs::{repository::LogsRepository, servers::LogServer},
 };
+use async_lock::Mutex;
 use async_trait::async_trait;
 use diagnostics_log_encoding::{encode::Encoder, Record};
 use diagnostics_message::{fx_log_packet_t, MAX_DATAGRAM_LEN};
@@ -68,24 +69,21 @@ pub fn create_log_sink_requested_event(
     }
 }
 
-impl Default for TestHarness {
-    fn default() -> Self {
-        Self::make(false)
-    }
-}
-
 impl TestHarness {
+    pub async fn default() -> Self {
+        Self::make(false).await
+    }
+
     /// Create a new test harness which will keep its LogSinks alive as long as it itself is,
     /// useful for testing inspect hierarchies for attribution.
     // TODO(fxbug.dev/53932) this will be made unnecessary by historical retention of component stats
-    pub fn with_retained_sinks() -> Self {
-        Self::make(true)
+    pub async fn with_retained_sinks() -> Self {
+        Self::make(true).await
     }
 
-    fn make(hold_sinks: bool) -> Self {
+    async fn make(hold_sinks: bool) -> Self {
         let inspector = Inspector::new();
-        let budget = BudgetManager::new(1_000_000);
-        let log_manager = Arc::new(LogsRepository::new(&budget, inspector.root()));
+        let log_manager = LogsRepository::new(1_000_000, inspector.root()).await;
         let log_server = LogServer::new(log_manager.clone());
 
         let (log_proxy, log_stream) =
@@ -201,7 +199,7 @@ impl TestHarness {
         E: LogWriter<Packet = P>,
     {
         let (log_sender, log_receiver) = mpsc::unbounded();
-        let _log_sink_proxy = log_reader.handle_request(log_sender).await;
+        let _log_sink_proxy = log_reader.handle_request(Arc::new(Mutex::new(log_sender))).await;
 
         fasync::Task::spawn(log_receiver.for_each_concurrent(None, |rx| async move { rx.await }))
             .detach();
@@ -267,7 +265,10 @@ impl LogWriter for StructuredMessageWriter {
 /// A `LogReader` host a LogSink connection.
 #[async_trait]
 pub trait LogReader {
-    async fn handle_request(&self, sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy;
+    async fn handle_request(
+        &self,
+        sender: Arc<Mutex<mpsc::UnboundedSender<Task<()>>>>,
+    ) -> LogSinkProxy;
 }
 
 // A LogReader that exercises the handle_log_sink code path.
@@ -284,7 +285,10 @@ impl DefaultLogReader {
 
 #[async_trait]
 impl LogReader for DefaultLogReader {
-    async fn handle_request(&self, log_sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy {
+    async fn handle_request(
+        &self,
+        log_sender: Arc<Mutex<mpsc::UnboundedSender<Task<()>>>>,
+    ) -> LogSinkProxy {
         let (log_sink_proxy, log_sink_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
         let container = self.log_manager.get_log_container((*self.identity).clone()).await;
@@ -312,7 +316,7 @@ impl EventStreamLogReader {
 
     async fn handle_event_stream(
         mut stream: fsys::EventStreamRequestStream,
-        sender: mpsc::UnboundedSender<Task<()>>,
+        sender: Arc<Mutex<mpsc::UnboundedSender<Task<()>>>>,
         log_manager: Arc<LogsRepository>,
     ) {
         while let Ok(Some(request)) = stream.try_next().await {
@@ -326,7 +330,7 @@ impl EventStreamLogReader {
 
     async fn handle_event(
         event: fsys::Event,
-        sender: mpsc::UnboundedSender<Task<()>>,
+        sender: Arc<Mutex<mpsc::UnboundedSender<Task<()>>>>,
         log_manager: Arc<LogsRepository>,
     ) {
         let LogSinkRequestedPayload { component, request_stream } =
@@ -341,7 +345,10 @@ impl EventStreamLogReader {
 
 #[async_trait]
 impl LogReader for EventStreamLogReader {
-    async fn handle_request(&self, log_sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy {
+    async fn handle_request(
+        &self,
+        log_sender: Arc<Mutex<mpsc::UnboundedSender<Task<()>>>>,
+    ) -> LogSinkProxy {
         let (event_stream_proxy, event_stream) =
             fidl::endpoints::create_proxy_and_stream::<fsys::EventStreamMarker>().unwrap();
         let (log_sink_proxy, log_sink_server_end) =
@@ -358,7 +365,7 @@ impl LogReader for EventStreamLogReader {
             log_sender.clone(),
             self.log_manager.clone(),
         ));
-        log_sender.unbounded_send(task).unwrap();
+        log_sender.lock().await.unbounded_send(task).unwrap();
 
         log_sink_proxy
     }
@@ -392,8 +399,7 @@ pub async fn debuglog_test(
     debug_log: TestDebugLog,
 ) -> Inspector {
     let inspector = Inspector::new();
-    let budget = BudgetManager::new(1_000_000);
-    let lm = Arc::new(LogsRepository::new(&budget, inspector.root()));
+    let lm = LogsRepository::new(1_000_000, inspector.root()).await;
     let log_server = LogServer::new(lm.clone());
     let (log_proxy, log_stream) = fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
     log_server.spawn(log_stream);

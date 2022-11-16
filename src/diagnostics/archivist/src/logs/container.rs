@@ -204,7 +204,7 @@ impl LogsArtifactsContainer {
     pub async fn handle_log_sink(
         self: &Arc<Self>,
         stream: LogSinkRequestStream,
-        sender: mpsc::UnboundedSender<Task<()>>,
+        sender: Arc<Mutex<mpsc::UnboundedSender<Task<()>>>>,
     ) {
         {
             let mut guard = self.state.lock().await;
@@ -212,14 +212,14 @@ impl LogsArtifactsContainer {
             guard.is_initializing = false;
         }
         let task = Task::spawn(self.clone().actually_handle_log_sink(stream, sender.clone()));
-        sender.unbounded_send(task).expect("channel is live for whole program");
+        sender.lock().await.unbounded_send(task).expect("channel is live for whole program");
     }
 
     /// This function does not return until the channel is closed.
     async fn actually_handle_log_sink(
         self: Arc<Self>,
         mut stream: LogSinkRequestStream,
-        sender: mpsc::UnboundedSender<Task<()>>,
+        sender: Arc<Mutex<mpsc::UnboundedSender<Task<()>>>>,
     ) {
         let hanging_get_sender = Arc::new(Mutex::new(None));
 
@@ -233,7 +233,7 @@ impl LogsArtifactsContainer {
                     Ok(log_stream) => {
                         self.state.lock().await.num_active_sockets += 1;
                         let task = Task::spawn(self.clone().drain_messages(log_stream));
-                        sender.unbounded_send(task).expect("channel alive for whole program");
+                        sender.lock().await.unbounded_send(task).expect("channel alive for whole program");
                     }
                     Err(e) => {
                         $control_handle.shutdown();
@@ -641,7 +641,8 @@ mod tests {
     async fn initialize_container(
     ) -> (Arc<LogsArtifactsContainer>, LogSinkProxy, UnboundedReceiver<Task<()>>) {
         // Initialize container
-        let budget_manager = BudgetManager::new(0);
+        let (snd, _rcv) = mpsc::unbounded();
+        let budget_manager = BudgetManager::new(0, snd);
         let container = Arc::new(
             LogsArtifactsContainer::new(
                 Arc::new(ComponentIdentity::from_identifier_and_url(
@@ -661,7 +662,7 @@ mod tests {
         let (sender, _recv) = mpsc::unbounded();
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().expect("create log sink");
-        container.handle_log_sink(stream, sender).await;
+        container.handle_log_sink(stream, Arc::new(Mutex::new(sender))).await;
         (container, proxy, _recv)
     }
 

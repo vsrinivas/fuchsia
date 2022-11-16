@@ -6,7 +6,7 @@ use crate::{identity::ComponentIdentity, logs::container::LogsArtifactsContainer
 use async_lock::Mutex;
 use futures::channel::mpsc;
 use std::sync::{Arc, Weak};
-use tracing::{debug, error};
+use tracing::{debug, warn};
 
 #[derive(Clone)]
 pub struct BudgetManager {
@@ -14,19 +14,15 @@ pub struct BudgetManager {
 }
 
 impl BudgetManager {
-    pub fn new(capacity: usize) -> Self {
+    pub fn new(capacity: usize, remover: mpsc::UnboundedSender<Arc<ComponentIdentity>>) -> Self {
         Self {
             state: Arc::new(Mutex::new(BudgetState {
+                remover,
                 capacity,
                 current: 0,
                 containers: vec![],
-                remover: None,
             })),
         }
-    }
-
-    pub async fn set_remover(&self, remover: mpsc::UnboundedSender<Arc<ComponentIdentity>>) {
-        self.state.lock().await.remover = Some(remover);
     }
 
     pub async fn add_container(&self, container: Arc<LogsArtifactsContainer>) {
@@ -36,12 +32,18 @@ impl BudgetManager {
     pub fn handle(&self) -> BudgetHandle {
         BudgetHandle { state: Arc::downgrade(&self.state) }
     }
+
+    /// Terminate the log buffers of all components here in case we have some that have been
+    /// removed from the data repo but we haven't dropped ourselves.
+    pub async fn terminate(&self) {
+        self.state.lock().await.terminate();
+    }
 }
 
 struct BudgetState {
     current: usize,
     capacity: usize,
-    remover: Option<mpsc::UnboundedSender<Arc<ComponentIdentity>>>,
+    remover: mpsc::UnboundedSender<Arc<ComponentIdentity>>,
 
     /// Log containers are stored in a `Vec` which is regularly sorted instead of a `BinaryHeap`
     /// because `BinaryHeap`s are broken with interior mutability in the contained type which would
@@ -85,12 +87,14 @@ impl BudgetState {
             if !self.containers[i].should_retain().await {
                 let container = self.containers.remove(i);
                 container.terminate();
-                debug!(identity = %container.identity, "Removing now that we've popped the last message.");
-                if let Some(remover) = &self.remover {
-                    remover.unbounded_send(container.identity.clone()).unwrap_or_else(|err| {
-                        error!(%err, identity = %container.identity, "Failed to send identity for removal");
-                    });
-                }
+                debug!(
+                    identity = %container.identity,
+                    "Removing now that we've popped the last message.");
+                self.remover.unbounded_send(container.identity.clone()).unwrap_or_else(|err| {
+                    warn!(
+                            %err,
+                            identity = %container.identity, "Failed to send identity for removal");
+                });
             } else {
                 i += 1;
             }
@@ -120,17 +124,6 @@ impl BudgetHandle {
             .await
             .allocate(size)
             .await;
-    }
-
-    /// Terminate the log buffers of all components here in case we have some that have been
-    /// removed from the data repo but we haven't dropped ourselves.
-    pub async fn terminate(&self) {
-        self.state
-            .upgrade()
-            .expect("budgetmanager outlives all containers")
-            .lock()
-            .await
-            .terminate();
     }
 }
 
@@ -168,7 +161,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn verify_container_is_terminated_on_removal() {
-        let manager = BudgetManager::new(128);
+        let (snd, _rcv) = mpsc::unbounded();
+        let manager = BudgetManager::new(128, snd);
         let container_a = Arc::new(
             LogsArtifactsContainer::new(
                 TEST_IDENTITY.clone(),

@@ -594,7 +594,7 @@ impl TryFrom<&StreamParameters> for PerformanceConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{diagnostics::AccessorStats, logs::budget::BudgetManager, pipeline::Pipeline};
+    use crate::{diagnostics::AccessorStats, pipeline::Pipeline};
     use assert_matches::assert_matches;
     use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, BatchIteratorMarker};
     use fuchsia_inspect::{Inspector, Node};
@@ -606,8 +606,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<ArchiveAccessorMarker>().unwrap();
         let pipeline = Arc::new(Pipeline::for_test(None));
         let inspector = Inspector::new();
-        let budget = BudgetManager::new(1_000_000);
-        let log_repo = Arc::new(LogsRepository::new(&budget, inspector.root()));
+        let log_repo = LogsRepository::new(1_000_000, inspector.root()).await;
         let inspect_repo = Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
         let server = ArchiveAccessorServer::new(inspect_repo, log_repo);
         server.spawn_server(pipeline, stream);
@@ -661,8 +660,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<ArchiveAccessorMarker>().unwrap();
         let pipeline = Arc::new(Pipeline::for_test(None));
         let inspector = Inspector::new();
-        let budget = BudgetManager::new(1_000_000);
-        let log_repo = Arc::new(LogsRepository::new(&budget, inspector.root()));
+        let log_repo = LogsRepository::new(1_000_000, inspector.root()).await;
         let inspect_repo = Arc::new(InspectRepository::new(vec![Arc::downgrade(&pipeline)]));
         let server = Arc::new(ArchiveAccessorServer::new(inspect_repo, log_repo));
         server.spawn_server(pipeline, stream);
