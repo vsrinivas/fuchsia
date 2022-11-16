@@ -7,7 +7,6 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/forensics/crash_reports/constants.h"
-#include "src/developer/forensics/feedback_data/constants.h"
 
 namespace forensics {
 namespace crash_reports {
@@ -36,6 +35,26 @@ ManagedSnapshot::Archive::Archive(const fuchsia::feedback::Attachment& attachmen
 
 ManagedSnapshot::Archive::Archive(std::string archive_key, SizedData archive)
     : key(std::move(archive_key)), value(std::move(archive)) {}
+
+ManagedSnapshot ManagedSnapshot::StoreWeak(WeakArchive archive) {
+  return ManagedSnapshot(std::move(archive));
+}
+
+ManagedSnapshot ManagedSnapshot::StoreShared(SharedArchive archive) {
+  return ManagedSnapshot(std::move(archive));
+}
+
+ManagedSnapshot::ManagedSnapshot(WeakArchive archive) : archive_(std::move(archive)) {}
+
+ManagedSnapshot::ManagedSnapshot(SharedArchive archive) : archive_(std::move(archive)) {}
+
+std::shared_ptr<const ManagedSnapshot::Archive> ManagedSnapshot::LockArchive() const {
+  if (std::holds_alternative<SharedArchive>(archive_)) {
+    return std::get<SharedArchive>(archive_);
+  }
+
+  return std::get<WeakArchive>(archive_).lock();
+}
 
 }  // namespace crash_reports
 }  // namespace forensics

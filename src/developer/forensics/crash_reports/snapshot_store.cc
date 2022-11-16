@@ -94,11 +94,14 @@ Snapshot SnapshotStore::GetSnapshot(const SnapshotUuid& uuid) {
       return BuildMissing(garbage_collected_snapshot_);
     }
 
-    // TODO(fxbug.dev/102479): Check for snapshot in persistence.
+    if (persistence_.Contains(uuid)) {
+      return ManagedSnapshot::StoreShared(persistence_.Get(uuid));
+    }
+
     return BuildMissing(not_persisted_snapshot_);
   }
 
-  return ManagedSnapshot(data->archive);
+  return ManagedSnapshot::StoreWeak(data->archive);
 }
 
 std::vector<SnapshotUuid> SnapshotStore::GetSnapshotUuids() const {

@@ -120,6 +120,21 @@ TEST_F(SnapshotStoreTest, Check_GetSnapshot) {
   EXPECT_EQ(snapshot.LockArchive()->key, kDefaultArchiveKey);
 }
 
+TEST_F(SnapshotStoreTest, Check_GetSnapshotFromPersistence) {
+  SetUpSnapshotStore(/*max_archives_size=*/StorageSize::Megabytes(1),
+                     /*max_tmp_size=*/StorageSize::Bytes(0),
+                     /*max_cache_size=*/StorageSize::Megabytes(1));
+
+  snapshot_store_->AddSnapshot(kTestUuid, GetDefaultAttachment());
+  snapshot_store_->MoveToPersistence(kTestUuid, /*only_consider_tmp=*/false);
+
+  ASSERT_EQ(snapshot_store_->SnapshotLocation(kTestUuid), ItemLocation::kCache);
+
+  auto snapshot = AsManaged(snapshot_store_->GetSnapshot(kTestUuid));
+  ASSERT_TRUE(snapshot.LockArchive());
+  EXPECT_EQ(snapshot.LockArchive()->key, kDefaultArchiveKey);
+}
+
 TEST_F(SnapshotStoreTest, Check_ArchivesMaxSizeIsEnforced) {
   // Initialize the manager to only hold a single default snapshot archive.
   SetUpSnapshotStore(StorageSize::Bytes(kDefaultArchiveKey.size()));

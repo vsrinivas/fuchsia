@@ -25,8 +25,8 @@ bool IsSpecialCaseSnapshot(const SnapshotUuid& uuid);
 
 // Allows for the data from a single FIDL fuchsia.feedback.Snapshot to be shared amongst many
 // clients and managed by the SnapshotStore. The SnapshotStore may drop the underlying data at
-// any point, however if a reference is held (gotten from LockArchive) the data will not be deleted
-// until the last reference is deleted.
+// any point, however if a reference is held (gotten from LockArchive or by constructing with
+// StoreShared) the data will not be deleted until the last reference is deleted.
 class ManagedSnapshot {
  public:
   struct Archive {
@@ -36,12 +36,19 @@ class ManagedSnapshot {
     SizedData value;
   };
 
-  explicit ManagedSnapshot(std::weak_ptr<const Archive> archive) : archive_(std::move(archive)) {}
+  static ManagedSnapshot StoreWeak(std::weak_ptr<const Archive> archive);
+  static ManagedSnapshot StoreShared(std::shared_ptr<const Archive> archive);
 
-  std::shared_ptr<const Archive> LockArchive() const { return archive_.lock(); }
+  std::shared_ptr<const Archive> LockArchive() const;
 
  private:
-  std::weak_ptr<const Archive> archive_;
+  using WeakArchive = std::weak_ptr<const Archive>;
+  using SharedArchive = std::shared_ptr<const Archive>;
+
+  explicit ManagedSnapshot(WeakArchive archive);
+  explicit ManagedSnapshot(SharedArchive archive);
+
+  std::variant<WeakArchive, SharedArchive> archive_;
 };
 
 // Replacement for a ManagedSnapshot when the Snapshot manager drops a snapshot.
