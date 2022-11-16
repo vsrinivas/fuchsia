@@ -35,5 +35,5 @@ var ipExpectations map[AnvlCaseNumber]outcome.Outcome = map[AnvlCaseNumber]outco
 	{7, 3}:  Fail,
 	{7, 4}:  Pass,
 	{7, 5}:  Pass,
-	{7, 6}:  Inconclusive,
+	{7, 6}:  Pass,
 }
