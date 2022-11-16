@@ -184,6 +184,13 @@ pub async fn trace(
                      Trace should be run with the --background flag."
                 );
             }
+            if opts.buffer_size > 64 {
+                ffx_bail!(
+                    "Error: Requested buffer size of {}MB is larger \
+                           than the maximum supported buffer size of 64MB",
+                    opts.buffer_size
+                );
+            }
             let trace_config = TraceConfig {
                 buffer_size_megabytes_hint: Some(opts.buffer_size),
                 categories: Some(opts.categories),
@@ -888,5 +895,28 @@ Current tracing status:
             Upload to https://ui.perfetto.dev/#!/ to view.";
         let want = Regex::new(regex_str).unwrap();
         assert!(want.is_match(&output), "\"{}\" didn't match regex /{}/", output, regex_str);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_large_buffer() {
+        let _env = ffx_config::test_init().await.unwrap();
+        let writer = Writer::new_test(None);
+        let proxy = setup_fake_service();
+        let controller = setup_closed_fake_controller_proxy();
+        let cmd = TraceCommand {
+            sub_cmd: TraceSubCommand::Start(Start {
+                buffering_mode: BufferingMode::Oneshot,
+                categories: vec![],
+                duration: Some(1.0),
+                background: false,
+                buffer_size: 65,
+                output: "foober.fxt".to_owned(),
+                trigger: vec![],
+            }),
+        };
+        let res = trace(proxy, controller, writer.clone(), cmd).await.unwrap_err();
+        assert!(res.ffx_error().is_some());
+        assert!(res.to_string().contains("Error: Requested buffer size of"));
+        assert!(writer.test_output().unwrap().is_empty());
     }
 }
