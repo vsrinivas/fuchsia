@@ -132,10 +132,6 @@ group("ui_packages_base") {
     "a11y",
     "bin/text:text_manager",
     "scenic",
-
-    # TODO(fxbug.dev/98781): Remove after products use this directly in their
-    # base packages
-    "//src/sys/activity",
   ]
 }
 
