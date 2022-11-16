@@ -297,8 +297,6 @@ class TestsConfig {
     var ffxOutputDirectory = flags.ffxOutputDirectory;
     if (ffxOutputDirectory != null && !flags.fallbackUseRunTestSuite) {
       v2dynamicTokens.add(FfxOutputDirectoryToken(ffxOutputDirectory));
-    } else if (!flags.fallbackUseRunTestSuite) {
-      v2runnerTokens.add('--disable-output-directory');
     }
 
     if (flags.showFullMonikerInLogs && !flags.fallbackUseRunTestSuite) {
