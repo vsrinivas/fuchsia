@@ -17,7 +17,6 @@ use {
     fuchsia_inspect::reader::PartialNodeHierarchy,
     fuchsia_trace as ftrace, fuchsia_zircon as zx,
     futures::prelude::*,
-    selectors,
     std::{
         convert::{TryFrom, TryInto},
         sync::Arc,
@@ -388,7 +387,6 @@ mod tests {
             inspect::repository::InspectRepository,
             pipeline::Pipeline,
         },
-        fdio,
         fidl::endpoints::{create_proxy_and_stream, DiscoverableProtocolMarker},
         fidl_fuchsia_diagnostics::{BatchIteratorMarker, BatchIteratorProxy, StreamMode},
         fidl_fuchsia_inspect::TreeMarker,
@@ -869,7 +867,6 @@ mod tests {
                         connections_opened: 0u64,
                         get_next: {
                             time_usec: AnyProperty,
-                            errors: 0u64,
                             requests: 0u64,
                             responses: 0u64,
                             result_count: 0u64,
@@ -889,7 +886,6 @@ mod tests {
                         connections_closed: 0u64,
                         connections_opened: 0u64,
                         get_next: {
-                            errors: 0u64,
                             requests: 0u64,
                             responses: 0u64,
                             result_count: 0u64,
@@ -975,7 +971,6 @@ mod tests {
                             connections_opened: 1u64,
                             get_next: {
                                 time_usec: AnyProperty,
-                                errors: 0u64,
                                 requests: 2u64,
                                 responses: 2u64,
                                 result_count: 1u64,
@@ -1002,7 +997,6 @@ mod tests {
                             connections_closed: 0u64,
                             connections_opened: 0u64,
                             get_next: {
-                                errors: 0u64,
                                 requests: 0u64,
                                 responses: 0u64,
                                 result_count: 0u64,
@@ -1048,7 +1042,6 @@ mod tests {
                             connections_opened: 2u64,
                             get_next: {
                                 time_usec: AnyProperty,
-                                errors: 0u64,
                                 requests: 3u64,
                                 responses: 3u64,
                                 result_count: 1u64,
@@ -1075,7 +1068,6 @@ mod tests {
                             connections_closed: 0u64,
                             connections_opened: 0u64,
                             get_next: {
-                                errors: 0u64,
                                 requests: 0u64,
                                 responses: 0u64,
                                 result_count: 0u64,

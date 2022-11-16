@@ -48,7 +48,8 @@ impl EventSource {
         })
     }
 
-    pub async fn new_for_test(event_stream: EventStream2Proxy) -> Result<Self, EventError> {
+    #[cfg(test)]
+    async fn new_for_test(event_stream: EventStream2Proxy) -> Result<Self, EventError> {
         // Connect to /events/event_stream which contains our newer FIDL protocol
         Ok(Self {
             event_streams: Some(vec![event_stream]),
@@ -83,10 +84,9 @@ impl EventSource {
     pub async fn spawn(mut self) -> Result<(), Error> {
         let (tx, mut rx) = mpsc::unbounded();
         let event_streams = self.event_streams.take();
-        let default_value = vec![];
         let _task = Task::spawn(async move {
             let tx = tx.clone();
-            let tasks = event_streams
+            let tasks: Vec<_> = event_streams
                 .map(|event_streams| {
                     let tx = tx.clone();
                     event_streams
@@ -97,7 +97,7 @@ impl EventSource {
                         })
                         .collect()
                 })
-                .unwrap_or(default_value);
+                .unwrap_or_default();
             join_all(tasks).await;
         });
         while let Some(event) = rx.next().await {
