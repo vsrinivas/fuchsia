@@ -112,6 +112,7 @@ handlebars = "4.3.5"
 heck = "0.3.1"
 hex = "0.3.2"
 hmac = "0.11.0"
+hound = { path = "forks/hound" }
 humansize = "1.1.1"
 http = "0.2.4"
 # TODO(fxbug.dev/100964): We intentionally did not enable http2, since we're
@@ -357,6 +358,7 @@ windows_x86_64_msvc = { path = "empty/windows_x86_64_msvc" }
 
 ### Forks: vendored crates whose code doesn't match the upstream version
 fatfs = { path = "forks/fatfs" }
+hound = { path = "forks/hound" }
 libm = { path = "forks/libm" }
 pulldown-cmark = { path = "forks/pulldown-cmark" }
 rustls = { path = "forks/rustls" }

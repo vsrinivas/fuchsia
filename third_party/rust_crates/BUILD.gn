@@ -373,6 +373,10 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
+group("hound") {
+  public_deps = [ ":hound-v3_5_0" ]
+}
+
 group("http") {
   public_deps = [ ":http-v0_2_4" ]
 }
@@ -4947,6 +4951,26 @@ rust_library("home-v0_5_3") {
     "--edition=2018",
     "-Cmetadata=9a402443b9ac5998",
     "-Cextra-filename=-9a402443b9ac5998",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("hound-v3_5_0") {
+  crate_name = "hound"
+  crate_root = "//third_party/rust_crates/forks/hound/src/lib.rs"
+  output_name = "hound-80b4d537af823d33"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=80b4d537af823d33",
+    "-Cextra-filename=-80b4d537af823d33",
   ]
 
   visibility = [ ":*" ]

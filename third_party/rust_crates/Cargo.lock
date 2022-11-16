@@ -1343,6 +1343,7 @@ dependencies = [
  "hex",
  "hmac",
  "home",
+ "hound",
  "http",
  "humansize",
  "hyper",
@@ -1796,6 +1797,10 @@ checksum = "2456aef2e6b6a9784192ae780c0f15bc57df0e918585282325e8c8ac27737654"
 dependencies = [
  "winapi",
 ]
+
+[[package]]
+name = "hound"
+version = "3.5.0"
 
 [[package]]
 name = "http"

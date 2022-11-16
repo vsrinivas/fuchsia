@@ -1,0 +1,26 @@
+# What is this crate used for?
+
+At the time of writing, reading and writing WAV files for use in the ffx audio plugin.
+
+# Are there any use restrictions? i.e. only for development hosts
+
+Will be only used in development tools, both on host or on-target-device.
+
+# What differs from upstream?
+
+Safety changes to avoid undefined behavior. These changes landed in
+[this PR](https://github.com/ruuda/hound/pull/58) to the upstream master branch,
+but were not included in 3.5.0 release.
+
+# Are there any restrictions to how it should be rolled?
+
+This fork can be deleted after the next release includes our patch.
+
+We expect that the next release will include our PR. If it does, this fork can be replaced
+with a direct mirror of the upstream release. If our PR is not included in the next release,
+the fork should be continued and our PR should be cherry-picked onto that release.
+
+# Is there anything else which makes this dependency "special"?
+
+No.
+
