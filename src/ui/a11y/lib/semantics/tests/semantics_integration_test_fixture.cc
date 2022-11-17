@@ -34,7 +34,6 @@
 #include "lib/sys/component/cpp/testing/realm_builder_types.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/a11y/lib/view/a11y_view_semantics.h"
-#include "src/ui/testing/util/device_pixel_ratio.h"
 
 namespace accessibility_test {
 
@@ -47,6 +46,8 @@ using component_testing::ParentRef;
 using component_testing::Protocol;
 using component_testing::Route;
 using fuchsia::accessibility::semantics::Node;
+
+constexpr auto kDevicePixelRatio = 1.25f;
 
 bool CompareFloat(float f0, float f1, float epsilon = 0.01f) {
   return std::abs(f0 - f1) <= epsilon;
@@ -78,9 +79,7 @@ std::vector<ui_testing::UITestRealm::Config> SemanticsIntegrationTestV2::UIConfi
   {
     ui_testing::UITestRealm::Config config;
 
-    config.display_pixel_density = ui_testing::kMediumResolutionDisplayPixelDensity;
-    config.display_usage = ui_testing::kDisplayUsageNear;
-
+    config.device_pixel_ratio = kDevicePixelRatio;
     config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
 
@@ -96,9 +95,7 @@ std::vector<ui_testing::UITestRealm::Config> SemanticsIntegrationTestV2::UIConfi
   {
     ui_testing::UITestRealm::Config config;
 
-    config.display_pixel_density = ui_testing::kMediumResolutionDisplayPixelDensity;
-    config.display_usage = ui_testing::kDisplayUsageNear;
-
+    config.device_pixel_ratio = kDevicePixelRatio;
     config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
 
@@ -269,18 +266,6 @@ bool SemanticsIntegrationTestV2::PerformAccessibilityAction(
   return *callback_handled;
 }
 
-float SemanticsIntegrationTestV2::ExpectedPixelScaleForDisplayPixelDensity(
-    float display_pixel_density) {
-  // The math to compute the pixel scale is quite complex, so we'll just
-  // hard-code the set of values we use in our tests here.
-  static std::unordered_map<float, float> pixel_density_to_pixel_scale;
-  pixel_density_to_pixel_scale[4.1668f] = 1.2549f;
-
-  FX_CHECK(pixel_density_to_pixel_scale.count(display_pixel_density));
-
-  return pixel_density_to_pixel_scale[display_pixel_density];
-}
-
 void SemanticsIntegrationTestV2::WaitForScaleFactor() {
   RunLoopUntil([this] {
     auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
@@ -291,17 +276,11 @@ void SemanticsIntegrationTestV2::WaitForScaleFactor() {
     // The root node applies a transform to convert between the client's
     // allocated and logical coordinate spaces. The scale of this transform is
     // the inverse of the pixel scale for the view.
-    auto display_pixel_density = GetParam().display_pixel_density;
-    auto display_usage = GetParam().display_usage;
-    auto expected_root_node_scale =
-        1 / ui_testing::GetExpectedPixelScale(display_pixel_density, display_usage);
-
     // TODO(fxb.dev/93943): Remove accommodation for transform field.
     return (node->has_transform() &&
-            CompareFloat(node->transform().matrix[0], 1 / expected_root_node_scale)) ||
+            CompareFloat(node->transform().matrix[0], 1 / kDevicePixelRatio)) ||
            (node->has_node_to_container_transform() &&
-            CompareFloat(node->node_to_container_transform().matrix[0],
-                         1 / expected_root_node_scale));
+            CompareFloat(node->node_to_container_transform().matrix[0], 1 / kDevicePixelRatio));
   });
 }
 

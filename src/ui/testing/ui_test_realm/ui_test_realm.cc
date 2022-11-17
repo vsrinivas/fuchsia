@@ -29,6 +29,7 @@
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
+#include <math.h>
 
 #include <test/accessibility/cpp/fidl.h>
 #include <test/inputsynthesis/cpp/fidl.h>
@@ -50,6 +51,15 @@ using component_testing::Protocol;
 using component_testing::RealmBuilder;
 using component_testing::Ref;
 using component_testing::Route;
+
+// TODO(fxbug.dev/114001): Remove hard-coded values.
+// Fake display dimensions.
+constexpr auto kDisplayWidthPhysicalPixels = 1280;
+constexpr auto kDisplayHeightPhysicalPixels = 800;
+
+// Pixel density + usage that result in a DPR of 1.
+constexpr float kLowResolutionDisplayPixelDensity = 4.1668f;
+constexpr auto kDisplayUsageNear = "near";
 
 // Base realm urls.
 constexpr auto kScenicOnlyUrl = "#meta/scenic_only.cm";
@@ -398,14 +408,20 @@ void UITestRealm::RouteConfigData() {
     // Supply a default display rotation.
     config_directory_contents.AddFile("display_rotation", std::to_string(config_.display_rotation));
 
-    if (config_.display_pixel_density > 0) {
-      config_directory_contents.AddFile("display_pixel_density",
-                                        std::to_string(config_.display_pixel_density));
-    }
+    FX_CHECK(config_.device_pixel_ratio > 0) << "Device pixel ratio must be positive";
+    FX_CHECK(fmodf(static_cast<float>(kDisplayWidthPhysicalPixels), config_.device_pixel_ratio) ==
+             0)
+        << "DPR must result in integer logical display dimensions";
+    FX_CHECK(fmodf(static_cast<float>(kDisplayHeightPhysicalPixels), config_.device_pixel_ratio) ==
+             0)
+        << "DPR must result in integer logical display dimensions";
 
-    if (!config_.display_usage.empty()) {
-      config_directory_contents.AddFile("display_usage", config_.display_usage);
-    }
+    // Pick a display usage + pixel density pair that will result in the
+    // desired DPR.
+    config_directory_contents.AddFile("display_usage", kDisplayUsageNear);
+    auto display_pixel_density = kLowResolutionDisplayPixelDensity * config_.device_pixel_ratio;
+    config_directory_contents.AddFile("display_pixel_density",
+                                      std::to_string(display_pixel_density));
 
     targets.push_back(ChildRef{scene_owner_name});
   }

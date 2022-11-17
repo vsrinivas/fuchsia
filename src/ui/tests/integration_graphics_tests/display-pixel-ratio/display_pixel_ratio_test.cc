@@ -17,7 +17,6 @@
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
-#include "src/ui/testing/util/device_pixel_ratio.h"
 #include "src/ui/testing/util/gfx_test_view.h"
 
 namespace integration_tests {
@@ -41,11 +40,11 @@ class DisplayPixelRatioTest : public gtest::RealLoopFixture,
                               public ::testing::WithParamInterface<
                                   std::tuple<ui_testing::UITestRealm::SceneOwnerType, float>> {
  public:
-  static std::vector<float> GetPixelDensitiesToTest() {
+  static std::vector<float> GetDevicePixelRatiosToTest() {
     std::vector<float> pixel_density;
-    pixel_density.emplace_back(ui_testing::kLowResolutionDisplayPixelDensity);
-    pixel_density.emplace_back(ui_testing::kMediumResolutionDisplayPixelDensity);
-    pixel_density.emplace_back(ui_testing::kHighResolutionDisplayPixelDensity);
+    pixel_density.emplace_back(ui_testing::kDefaultDevicePixelRatio);
+    pixel_density.emplace_back(ui_testing::kMediumResolutionDevicePixelRatio);
+    pixel_density.emplace_back(ui_testing::kHighResolutionDevicePixelRatio);
     return pixel_density;
   }
 
@@ -55,8 +54,7 @@ class DisplayPixelRatioTest : public gtest::RealLoopFixture,
     ui_testing::UITestRealm::Config config;
     config.scene_owner = std::get<0>(GetParam());  // scene owner.
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
-    config.display_pixel_density = std::get<1>(GetParam());
-    config.display_usage = "near";
+    config.device_pixel_ratio = std::get<1>(GetParam());
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
     // Build realm.
@@ -109,7 +107,7 @@ INSTANTIATE_TEST_SUITE_P(
     DisplayPixelRatioTestWithParams, DisplayPixelRatioTest,
     testing::Combine(::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
                                        ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
-                     testing::ValuesIn(DisplayPixelRatioTest::GetPixelDensitiesToTest())));
+                     testing::ValuesIn(DisplayPixelRatioTest::GetDevicePixelRatiosToTest())));
 
 // This test leverage the coordinate test view to ensure that display pixel ratio is working
 // properly.
@@ -123,12 +121,11 @@ INSTANTIATE_TEST_SUITE_P(
 // |      RED       |     MAGENTA    |
 // |________________|________________|
 TEST_P(DisplayPixelRatioTest, TestScale) {
-  auto expected_scale =
-      ui_testing::GetExpectedPixelScale(std::get<1>(GetParam()), ui_testing::kDisplayUsageNear);
-  EXPECT_NEAR(ClientViewScaleFactor(), 1.0f / expected_scale, kEpsilon);
+  const auto expected_dpr = std::get<1>(GetParam());
+  EXPECT_NEAR(ClientViewScaleFactor(), expected_dpr, kEpsilon);
 
-  EXPECT_NEAR(test_view_->width() / display_width_, expected_scale, kEpsilon);
-  EXPECT_NEAR(test_view_->height() / display_height_, expected_scale, kEpsilon);
+  EXPECT_NEAR(display_width_ / test_view_->width(), expected_dpr, kEpsilon);
+  EXPECT_NEAR(display_height_ / test_view_->height(), expected_dpr, kEpsilon);
 
   // The drawn content should cover the screen's display.
   auto data = TakeScreenshot();

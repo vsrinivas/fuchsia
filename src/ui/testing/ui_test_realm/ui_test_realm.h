@@ -16,6 +16,11 @@
 
 namespace ui_testing {
 
+// DPR constants.
+constexpr auto kDefaultDevicePixelRatio = 1.f;
+constexpr auto kMediumResolutionDevicePixelRatio = 1.25f;
+constexpr auto kHighResolutionDevicePixelRatio = 2.f;
+
 // Library class to manage test realm on behalf of UI integration test clients.
 //
 // TEST REALM
@@ -157,12 +162,10 @@ class UITestRealm {
     // Clockwise display rotation, in degrees. Display rotation MUST be a multiple of 90 degrees.
     int display_rotation = 0;
 
-    // Pixel density for the display.
-    float display_pixel_density = 0;
-
-    // String ("close", "far", etc) for the 'display usage' config (viewing distance). See
-    // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/bin/scene_manager/src/main.rs;l=181
-    std::string display_usage;
+    // Device pixel ratio for the fake display.
+    //
+    // Must result in integer logical display dimensions.
+    float device_pixel_ratio = kDefaultDevicePixelRatio;
 
     // Indicates which graphics composition API to use (true -> flatland, false
     // -> gfx).
