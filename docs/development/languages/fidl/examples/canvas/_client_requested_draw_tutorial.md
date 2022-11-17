@@ -1,4 +1,31 @@
-<!-- TODO(fxbug.dev/111273): DOCUMENT[canvas/client_requested_draw] no need for a header, just a brief description -->
+One way to improve the performance of the `Instance` protocol is to allow the
+batching of lines: rather than sending a single `AddLine(...);` every time we
+have a new line we'd like to add to the canvas, waiting for the reply, then
+doing it again for the next line, we can instead batch many lines into a single
+invocation of the new `AddLines(...);` call. The client can now decide how to
+best segment a large collection of lines to be drawn.
+
+Naively implemented, we would find ourselves in a situation where the server and
+the client are completely unsynchronized: the client can flood the server with
+unbounded `AddLines(...);` calls, and the server can similarly flood the client
+with more `-> OnDrawn(...);` events than it can handle. The solution to both of
+these problems is to add a simple `Ready() -> ();` method for synchronization
+purposes. This method is called by the client whenever it is prepared to receive
+the next draw update, with the response from the server indicating that the client
+can proceed with more requests.
+
+We now have some flow control in both directions. The protocol now implements
+the *feed forward pattern*, allowing many uncontrolled calls before some
+synchronizing "commit" call triggers the actual work on the server. This
+prevents the client from overwhelming the server with work. Similarly, the
+server is no longer allowed to send unbounded `-> OnDrawn(...);` events: each
+event must follow a signal from the client, the `Ready() -> ();` call, that
+indicates that it is ready to do more work. This is known as the *throttled
+event pattern*.
+
+The concrete implementations must apply some of these rules manually: the client
+must close the connection if it receives an `-> OnDrawn(...);` event it did not
+request via the `Ready() -> ();` method.
 
 Note: The source code for this example is located at
 [//examples/fidl/new/canvas/client_requested_draw](/examples/fidl/new/canvas/client_requested_draw).

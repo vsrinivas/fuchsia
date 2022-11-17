@@ -1086,6 +1086,8 @@ produces messages to match the rate at which the callee consumes them.  For
 example, the caller might arrange for only one (or a fixed number) of messages
 to be in flight (i.e., waiting for acknowledgement).
 
+<<../languages/fidl/widgets/_acknowledgement_pattern.md>>
+
 #### Push bounded data using events
 
 In FIDL, servers can send clients unsolicited messages called _events_.
@@ -1139,7 +1141,7 @@ relationship between the request and the response in FIDL syntax and therefore
 it is prone to misuse. Flow control will only work when clients correctly
 implement sending of the notification message.
 
-<<../languages/fidl/widgets/_acknowledgement_pattern.md>>
+<<../languages/fidl/widgets/_throttled_event_pattern.md>>
 
 ### Feed-forward dataflow {#feed-forward}
 
@@ -1183,6 +1185,8 @@ Example:
 ```fidl
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="feed-forward" %}
 ```
+
+<<../languages/fidl/widgets/_size_constraint.md>>
 
 ### Privacy by design
 

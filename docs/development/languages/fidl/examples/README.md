@@ -42,6 +42,8 @@ section.
 
 <<../widgets/_enum.md>>
 
+<<../widgets/_feed_forward_pattern.md>>
+
 <<../widgets/_generated_name.md>>
 
 <<../widgets/_handle_rights.md>>
@@ -49,6 +51,8 @@ section.
 <<../widgets/_named_payload.md>>
 
 <<../widgets/_optionality.md>>
+
+<<../widgets/_pagination_pattern.md>>
 
 <<../widgets/_persistence.md>>
 
@@ -63,6 +67,8 @@ section.
 <<../widgets/_size_constraint.md>>
 
 <<../widgets/_table_payload.md>>
+
+<<../widgets/_throttled_event_pattern.md>>
 
 <<../widgets/_union_payload.md>>
 
