@@ -19,11 +19,6 @@
             from: "#ui",
             dependency: "weak_for_migration",
         },
-        {
-            protocol: [ "fuchsia.lightsensor.Sensor" ],
-            from: "#ui",
-            dependency: "weak_for_migration",
-        },
     ],
     offer: [
         {
@@ -41,24 +36,6 @@
             from: "void",
             to: "#session-manager",
             availability: "optional",
-        },
-        {
-            protocol: [ "fuchsia.settings.Light" ],
-            from: "#setui_service",
-            to: "#ui",
-            source_availability: "unknown",
-        },
-        {
-            protocol: [ "fuchsia.factory.MiscFactoryStoreProvider" ],
-            from: "#factory_store_providers",
-            to: "#ui",
-            source_availability: "unknown",
-        },
-        {
-            protocol: [ "fuchsia.ui.brightness.Control" ],
-            from: "#brightness_manager",
-            to: "#ui",
-            source_availability: "unknown",
         },
     ],
 }

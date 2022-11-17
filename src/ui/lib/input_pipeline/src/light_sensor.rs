@@ -11,5 +11,4 @@ mod test_utils;
 mod types;
 
 pub use calibrator::FactoryFileLoader;
-pub use led_watcher::CancelableTask;
 pub use types::{Calibration, Configuration, FileLoader};

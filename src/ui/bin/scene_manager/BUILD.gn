@@ -15,11 +15,9 @@ rustc_binary("scene_manager_bin") {
     ":input_config_lib",
     "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_rust",
     "//sdk/fidl/fuchsia.accessibility.scene:fuchsia.accessibility.scene_rust",
-    "//sdk/fidl/fuchsia.factory:fuchsia.factory_rust",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection_rust",
     "//sdk/fidl/fuchsia.input.interaction:fuchsia.input.interaction_rust",
     "//sdk/fidl/fuchsia.input.interaction.observation:fuchsia.input.interaction.observation_rust",
-    "//sdk/fidl/fuchsia.lightsensor:fuchsia.lightsensor_rust",
     "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy_rust",
     "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui_rust",
     "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene_rust",
@@ -52,7 +50,6 @@ rustc_binary("scene_manager_bin") {
     "//src/ui/lib/scene_management",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tracing",
   ]
 
@@ -68,7 +65,6 @@ rustc_binary("scene_manager_bin") {
     "src/input_config_server.rs",
     "src/input_device_registry_server.rs",
     "src/input_pipeline.rs",
-    "src/light_sensor_server.rs",
     "src/main.rs",
     "src/media_buttons_listener_registry_server.rs",
   ]
@@ -113,7 +109,6 @@ fuchsia_structured_config_values("config_for_test") {
     supported_input_devices = [
       "button",
       "keyboard",
-      "lightsensor",
       "mouse",
       "touchscreen",
     ]

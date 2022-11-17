@@ -23,21 +23,5 @@
             from: "#scene_manager",
             to: [ "#a11y_manager" ],
         },
-        {
-            protocol: [
-                "fuchsia.factory.MiscFactoryStoreProvider",
-                "fuchsia.settings.Light",
-                "fuchsia.ui.brightness.Control",
-            ],
-            from: "parent",
-            to: [ "#scene_manager" ],
-            availability: "same_as_target",
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.lightsensor.Sensor",
-            from: "#scene_manager",
-        },
     ],
 }

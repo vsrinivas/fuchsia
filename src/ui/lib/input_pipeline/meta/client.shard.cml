@@ -20,7 +20,6 @@
             protocol: [
                 "fuchsia.input.interaction.Notifier",
                 "fuchsia.input.interaction.observation.Aggregator",
-                "fuchsia.lightsensor.Sensor",
                 "fuchsia.recovery.policy.Device",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.ui.policy.DeviceListenerRegistry",
@@ -39,21 +38,6 @@
             from: "parent",
             rights: [ "r*" ],
             path: "/config/data",
-        },
-        {
-            directory: "sensor-config",
-            from: "parent",
-            rights: [ "r*" ],
-            path: "/sensor-config",
-        },
-        {
-            // Used for light sensor if configured.
-            protocol: [
-                "fuchsia.factory.MiscFactoryStoreProvider",
-                "fuchsia.settings.Light",
-                "fuchsia.ui.brightness.Control",
-            ],
-            availability: "optional",
         },
         {
             protocol: [
@@ -85,7 +69,6 @@
             protocol: [
                 "fuchsia.input.interaction.Notifier",
                 "fuchsia.input.interaction.observation.Aggregator",
-                "fuchsia.lightsensor.Sensor",
                 "fuchsia.recovery.policy.Device",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.ui.policy.DeviceListenerRegistry",

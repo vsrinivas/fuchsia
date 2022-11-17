@@ -29,18 +29,8 @@
             name: "input_pipeline",
             url: "fuchsia-pkg://fuchsia.com/input-pipeline#meta/input-pipeline.cm",
         },
-        {
-            name: "sensor-config",
-            url: "fuchsia-pkg://fuchsia.com/sensor-config#meta/sensor-config.cm",
-        },
     ],
     offer: [
-        {
-            directory: "sensor-config",
-            from: "#sensor-config",
-            to: [ "#input_pipeline" ],
-            rights: [ "r*" ],
-        },
         {
             directory: "config-data",
             from: "parent",

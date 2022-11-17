@@ -42,20 +42,5 @@
             to: "#session-manager",
             availability: "optional",
         },
-        {
-            protocol: [ "fuchsia.factory.MiscFactoryStoreProvider" ],
-            from: "#factory_store_providers",
-            to: "#ui",
-        },
-        {
-            protocol: [ "fuchsia.ui.brightness.Control" ],
-            from: "#brightness_manager",
-            to: "#ui",
-        },
-        {
-            protocol: [ "fuchsia.settings.Light" ],
-            from: "#setui_service",
-            to: "#ui",
-        },
     ],
 }

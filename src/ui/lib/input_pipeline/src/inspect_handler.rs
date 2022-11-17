@@ -161,7 +161,6 @@ impl InspectHandler {
         let mut events_by_type = HashMap::new();
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::Keyboard);
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::ConsumerControls);
-        EventCounters::add_new_into(&mut events_by_type, &node, EventType::LightSensor);
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::Mouse);
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::TouchScreen);
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::Touchpad);
@@ -216,12 +215,6 @@ mod tests {
                      last_seen_timestamp_ns: 0i64,
                 },
                 keyboard: {
-                     events_count: 0u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0i64,
-                     last_seen_timestamp_ns: 0i64,
-                },
-                light_sensor: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
                      last_generated_timestamp_ns: 0i64,
@@ -283,12 +276,6 @@ mod tests {
                      last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
-                light_sensor: {
-                     events_count: 0u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0i64,
-                     last_seen_timestamp_ns: 0i64,
-                },
                 mouse: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
@@ -345,12 +332,6 @@ mod tests {
                      last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
-                light_sensor: {
-                     events_count: 0u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0i64,
-                     last_seen_timestamp_ns: 0i64,
-                },
                 mouse: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
@@ -402,12 +383,6 @@ mod tests {
                      last_seen_timestamp_ns: 42i64,
                 },
                 keyboard: {
-                     events_count: 0u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0i64,
-                     last_seen_timestamp_ns: 0i64,
-                },
-                light_sensor: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
                      last_generated_timestamp_ns: 0i64,
