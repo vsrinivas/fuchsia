@@ -6,12 +6,18 @@ library fuchsia.ui.test.scene;
 
 using fuchsia.ui.app;
 using fuchsia.ui.observation.geometry;
+using fuchsia.ui.views;
 using zx;
 
 /// Controls a UI test scene. Allows a test to attach test Views to the scene
 /// and add View-related instrumentation.
 @discoverable
 protocol Controller {
+    /// *** NOTE: `ViewProvider` is no longer the preferred way for a parent
+    /// and child view to agree on a ViewportCreationToken / ViewCreationToken
+    /// pair. Flatland-based clients are encouraged to use `PresentView` (below)
+    /// instead of `AttachClientView`.
+    ///
     /// Elicits the server to request a view using the
     /// `fuchsia.ui.app.ViewProvider` handle provided, and attach it to the
     /// scene.
@@ -23,7 +29,7 @@ protocol Controller {
     /// SYNCHRONIZATION
     ///
     /// This call returns as soon as the client `ViewRef` is available. Note
-    /// that this signal does NOT necessarily indicate that the view has been 
+    /// that this signal does NOT necessarily indicate that the view has been
     /// attached to the scene.
     ///
     /// LIFE CYCLE
@@ -34,6 +40,18 @@ protocol Controller {
         1: view_provider client_end:fuchsia.ui.app.ViewProvider;
     }) -> (struct {
         view_ref_koid zx.koid;
+    });
+
+    /// Elicits the server to create a viewport using `viewport_creation_token`.
+    ///
+    /// LIFE CYCLE
+    ///
+    /// Clients may drop the `Controller` connection once `PresentClientView` has
+    /// returned.
+    @available(added=10)
+    PresentClientView(resource table {
+        @available(added=10)
+        1: viewport_creation_token fuchsia.ui.views.ViewportCreationToken;
     });
 
     /// Registers a `ViewTreeWatcher` on the client's behalf.

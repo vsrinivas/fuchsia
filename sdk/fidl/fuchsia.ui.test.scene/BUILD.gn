@@ -15,6 +15,7 @@ fidl("fuchsia.ui.test.scene") {
   public_deps = [
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.observation.geometry",
+    "//sdk/fidl/fuchsia.ui.views",
     "//zircon/vdso/zx",
   ]
 }

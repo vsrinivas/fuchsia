@@ -62,6 +62,19 @@ void SceneProvider::AttachClientView(
   callback(fsl::GetKoid(client_view_ref.reference.get()));
 }
 
+void SceneProvider::PresentClientView(
+    fuchsia::ui::test::scene::ControllerPresentClientViewRequest request) {
+  FX_CHECK(use_flatland_)
+      << "Client attempted to present a view using a flatland token when GFX is enabled";
+  FX_CHECK(request.has_viewport_creation_token()) << "Missing viewport creation token";
+
+  fuchsia::session::scene::Manager_PresentRootView_Result present_root_view_result;
+  scene_manager_->PresentRootView(std::move(*request.mutable_viewport_creation_token()),
+                                  &present_root_view_result);
+
+  FX_LOGS(INFO) << "Requested to present client view";
+}
+
 void SceneProvider::RegisterViewTreeWatcher(
     fidl::InterfaceRequest<fuchsia::ui::observation::geometry::ViewTreeWatcher> view_tree_watcher,
     RegisterViewTreeWatcherCallback callback) {

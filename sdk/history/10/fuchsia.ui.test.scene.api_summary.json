@@ -7,6 +7,12 @@
     },
     {
         "kind": "protocol/member",
+        "name": "fuchsia.ui.test.scene/Controller.PresentClientView",
+        "ordinal": "5815052630321335465",
+        "type": "(fuchsia.ui.test.scene/ControllerPresentClientViewRequest payload)"
+    },
+    {
+        "kind": "protocol/member",
         "name": "fuchsia.ui.test.scene/Controller.RegisterViewTreeWatcher",
         "ordinal": "87542316747800676",
         "type": "(server_end:fuchsia.ui.observation.geometry/ViewTreeWatcher watcher) -> ()"
@@ -24,6 +30,17 @@
     {
         "kind": "table",
         "name": "fuchsia.ui.test.scene/ControllerAttachClientViewRequest",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.scene/ControllerPresentClientViewRequest.viewport_creation_token",
+        "ordinal": "1",
+        "type": "fuchsia.ui.views/ViewportCreationToken"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.scene/ControllerPresentClientViewRequest",
         "resourceness": "resource"
     },
     {

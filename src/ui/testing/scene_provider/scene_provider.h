@@ -46,6 +46,10 @@ class SceneProvider : public fuchsia::ui::test::scene::Controller,
                         AttachClientViewCallback callback) override;
 
   // |fuchsia::ui::test::scene::Controller|
+  void PresentClientView(
+      fuchsia::ui::test::scene::ControllerPresentClientViewRequest request) override;
+
+  // |fuchsia::ui::test::scene::Controller|
   void RegisterViewTreeWatcher(
       fidl::InterfaceRequest<fuchsia::ui::observation::geometry::ViewTreeWatcher> geometry_observer,
       RegisterViewTreeWatcherCallback callback) override;
