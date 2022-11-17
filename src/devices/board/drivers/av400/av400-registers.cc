@@ -95,21 +95,17 @@ zx_status_t Av400::RegistersInit() {
                       .registers(register_entries)
                       .Build();
 
-  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_registers::wire::Metadata> encoded_metadata(
-      fidl::internal::WireFormatVersion::kV2, &metadata);
-  if (!encoded_metadata.ok()) {
+  fit::result metadata_bytes = fidl::Persist(metadata);
+  if (!metadata_bytes.is_ok()) {
     zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__,
-           encoded_metadata.FormatDescription().c_str());
-    return encoded_metadata.status();
+           metadata_bytes.error_value().FormatDescription().c_str());
+    return metadata_bytes.error_value().status();
   }
 
-  auto encoded_metadata_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
   std::vector<fpbus::Metadata> registers_metadata{
       {{
           .type = DEVICE_METADATA_REGISTERS,
-          .data =
-              std::vector<uint8_t>(encoded_metadata_bytes.data(),
-                                   encoded_metadata_bytes.data() + encoded_metadata_bytes.size()),
+          .data = metadata_bytes.value(),
       }},
   };
 

@@ -128,8 +128,7 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 #define DEVICE_METADATA_LIGHTS 0x5448474C             // LGHT
 #define DEVICE_METADATA_LIGHTS_GROUP_NAME 0x4E505247  // GRPN
 
-// Encodings of Metadata for fuchsia::hardware::registers::Metadata
-// list of linearized bytes as in fidl_outgoing_msg_t
+// type: FIDL fuchsia.hardware.registers/Metadata
 #define DEVICE_METADATA_REGISTERS 0x53474552  // REGS
 
 // Encodings of Metadata for fuchsia::hardware::vreg::Metadata

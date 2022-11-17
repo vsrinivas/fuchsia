@@ -124,51 +124,36 @@ TEST_F(RegistersDeviceTest, EncodeDecodeTest) {
                                    {.mask = 0x1234, .mmio_offset = 0x5, .reg_count = 4},
                                });
 
-  auto metadata_original =
-      registers::BuildMetadata(allocator_, std::move(mmio), std::move(registers));
-  fidl::unstable::OwnedEncodedMessage<Metadata> msg(fidl::internal::WireFormatVersion::kV2,
-                                                    &metadata_original);
-  EXPECT_EQ(msg.GetOutgoingMessage().handle_actual(), 0);
-  EXPECT_EQ(msg.GetOutgoingMessage().handles(), nullptr);
+  auto metadata_original = registers::BuildMetadata(allocator_, mmio, registers);
+  fit::result msg = fidl::Persist(metadata_original);
+  ASSERT_TRUE(msg.is_ok(), "%s", msg.error_value().FormatDescription().c_str());
 
-  auto converted = fidl::OutgoingToIncomingMessage(msg.GetOutgoingMessage());
-  auto metadata = fidl::unstable::DecodedMessage<Metadata>(fidl::internal::WireFormatVersion::kV2,
-                                                           std::move(converted.incoming_message()));
-  ASSERT_TRUE(metadata.ok(), "%s", metadata.FormatDescription().c_str());
-  ASSERT_EQ(metadata.PrimaryObject()->mmio().count(), 3);
-  EXPECT_EQ(metadata.PrimaryObject()->mmio()[0].id(), 0);
-  EXPECT_EQ(metadata.PrimaryObject()->mmio()[1].id(), 1);
-  EXPECT_EQ(metadata.PrimaryObject()->mmio()[2].id(), 2);
-  ASSERT_EQ(metadata.PrimaryObject()->registers().count(), 2);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[0].bind_id(), 0);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[0].mmio_id(), 0);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[0].masks()[0].mask().r32(), 0xFFFF);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[0].masks()[0].mmio_offset(), 0x1);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[0].masks()[0].count(), 3);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[0].masks()[1].mask().r32(), 0x8888);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[0].masks()[1].mmio_offset(), 0x2);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[0].masks()[1].count(), 2);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[1].bind_id(), 1);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[1].mmio_id(), 1);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[1].masks()[0].mask().r32(), 0x5555);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[1].masks()[0].mmio_offset(), 0x3);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[1].masks()[0].count(), 1);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[1].masks()[1].mask().r32(), 0x77777777);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[1].masks()[1].mmio_offset(), 0x4);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[1].masks()[1].count(), 2);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[1].masks()[2].mask().r32(), 0x1234);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[1].masks()[2].mmio_offset(), 0x5);
-  EXPECT_EQ(metadata.PrimaryObject()->registers()[1].masks()[2].count(), 4);
-}
-
-TEST_F(RegistersDeviceTest, InvalidDecodeTest) {
-  fidl::unstable::OwnedEncodedMessage<Metadata> msg(fidl::internal::WireFormatVersion::kV2,
-                                                    nullptr);
-  auto converted = fidl::OutgoingToIncomingMessage(msg.GetOutgoingMessage());
-  ASSERT_TRUE(converted.ok());
-  auto metadata = fidl::unstable::DecodedMessage<Metadata>(fidl::internal::WireFormatVersion::kV2,
-                                                           std::move(converted.incoming_message()));
-  EXPECT_FALSE(metadata.ok());
+  auto metadata = fidl::InplaceUnpersist<Metadata>(cpp20::span(msg.value()));
+  ASSERT_TRUE(metadata.is_ok(), "%s", metadata.error_value().FormatDescription().c_str());
+  ASSERT_EQ(metadata->mmio().count(), 3);
+  EXPECT_EQ(metadata->mmio()[0].id(), 0);
+  EXPECT_EQ(metadata->mmio()[1].id(), 1);
+  EXPECT_EQ(metadata->mmio()[2].id(), 2);
+  ASSERT_EQ(metadata->registers().count(), 2);
+  EXPECT_EQ(metadata->registers()[0].bind_id(), 0);
+  EXPECT_EQ(metadata->registers()[0].mmio_id(), 0);
+  EXPECT_EQ(metadata->registers()[0].masks()[0].mask().r32(), 0xFFFF);
+  EXPECT_EQ(metadata->registers()[0].masks()[0].mmio_offset(), 0x1);
+  EXPECT_EQ(metadata->registers()[0].masks()[0].count(), 3);
+  EXPECT_EQ(metadata->registers()[0].masks()[1].mask().r32(), 0x8888);
+  EXPECT_EQ(metadata->registers()[0].masks()[1].mmio_offset(), 0x2);
+  EXPECT_EQ(metadata->registers()[0].masks()[1].count(), 2);
+  EXPECT_EQ(metadata->registers()[1].bind_id(), 1);
+  EXPECT_EQ(metadata->registers()[1].mmio_id(), 1);
+  EXPECT_EQ(metadata->registers()[1].masks()[0].mask().r32(), 0x5555);
+  EXPECT_EQ(metadata->registers()[1].masks()[0].mmio_offset(), 0x3);
+  EXPECT_EQ(metadata->registers()[1].masks()[0].count(), 1);
+  EXPECT_EQ(metadata->registers()[1].masks()[1].mask().r32(), 0x77777777);
+  EXPECT_EQ(metadata->registers()[1].masks()[1].mmio_offset(), 0x4);
+  EXPECT_EQ(metadata->registers()[1].masks()[1].count(), 2);
+  EXPECT_EQ(metadata->registers()[1].masks()[2].mask().r32(), 0x1234);
+  EXPECT_EQ(metadata->registers()[1].masks()[2].mmio_offset(), 0x5);
+  EXPECT_EQ(metadata->registers()[1].masks()[2].count(), 4);
 }
 
 TEST_F(RegistersDeviceTest, Read32Test) {

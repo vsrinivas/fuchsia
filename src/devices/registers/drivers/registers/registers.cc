@@ -260,19 +260,19 @@ zx_status_t RegistersDevice<T>::Create(zx_device_t* parent, Metadata metadata) {
 zx_status_t Bind(void* ctx, zx_device_t* parent) {
   zx_status_t status = ZX_OK;
   // Get metadata
-  auto decoded = ddk::GetEncodedMetadata<Metadata>(parent, DEVICE_METADATA_REGISTERS);
+  auto decoded = ddk::GetEncodedMetadata2<Metadata>(parent, DEVICE_METADATA_REGISTERS);
   if (!decoded.is_ok()) {
     return decoded.error_value();
   }
 
-  const auto& metadata = decoded->PrimaryObject();
+  const Metadata& metadata = *decoded.value();
 
   // Validate
-  if (!metadata->has_mmio() || !metadata->has_registers()) {
+  if (!metadata.has_mmio() || !metadata.has_registers()) {
     zxlogf(ERROR, "Metadata incomplete");
     return ZX_ERR_INTERNAL;
   }
-  for (const auto& mmio : metadata->mmio()) {
+  for (const auto& mmio : metadata.mmio()) {
     if (!mmio.has_id()) {
       zxlogf(ERROR, "Metadata incomplete");
       return ZX_ERR_INTERNAL;
@@ -280,7 +280,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   }
   bool begin = true;
   fuchsia_hardware_registers::wire::Mask::Tag tag;
-  for (const auto& reg : metadata->registers()) {
+  for (const auto& reg : metadata.registers()) {
     if (!reg.has_bind_id() && !reg.has_mmio_id() && !reg.has_masks()) {
       // Doesn't have to have all Register IDs.
       continue;
@@ -317,16 +317,16 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   // Create devices
   switch (tag) {
     case fuchsia_hardware_registers::wire::Mask::Tag::kR8:
-      status = RegistersDevice<uint8_t>::Create(parent, std::move(*metadata));
+      status = RegistersDevice<uint8_t>::Create(parent, metadata);
       break;
     case fuchsia_hardware_registers::wire::Mask::Tag::kR16:
-      status = RegistersDevice<uint16_t>::Create(parent, std::move(*metadata));
+      status = RegistersDevice<uint16_t>::Create(parent, metadata);
       break;
     case fuchsia_hardware_registers::wire::Mask::Tag::kR32:
-      status = RegistersDevice<uint32_t>::Create(parent, std::move(*metadata));
+      status = RegistersDevice<uint32_t>::Create(parent, metadata);
       break;
     case fuchsia_hardware_registers::wire::Mask::Tag::kR64:
-      status = RegistersDevice<uint64_t>::Create(parent, std::move(*metadata));
+      status = RegistersDevice<uint64_t>::Create(parent, metadata);
       break;
   }
 

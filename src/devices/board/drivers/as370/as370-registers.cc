@@ -70,20 +70,18 @@ zx_status_t As370::RegistersInit() {
                                                  });
   auto metadata =
       registers::BuildMetadata(allocator, std::move(mmio_entries), std::move(register_entries));
-  fidl::unstable::OwnedEncodedMessage<registers::Metadata> encoded_metadata(
-      fidl::internal::WireFormatVersion::kV2, &metadata);
-  if (!encoded_metadata.ok()) {
-    zxlogf(ERROR, "Could not build metadata %s", encoded_metadata.FormatDescription().c_str());
-    return encoded_metadata.status();
+  fit::result metadata_bytes = fidl::Persist(metadata);
+  if (!metadata_bytes.is_ok()) {
+    zxlogf(ERROR, "Could not build metadata %s",
+           metadata_bytes.error_value().FormatDescription().c_str());
+    return metadata_bytes.error_value().status();
   }
 
-  auto encoded_metadata_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
   std::vector<fpbus::Metadata> registers_metadata{
       [&]() {
         fpbus::Metadata ret;
         ret.type() = DEVICE_METADATA_REGISTERS;
-        ret.data() = std::vector(encoded_metadata_bytes.data(),
-                                 encoded_metadata_bytes.data() + encoded_metadata_bytes.size());
+        ret.data() = metadata_bytes.value();
         return ret;
       }(),
   };
