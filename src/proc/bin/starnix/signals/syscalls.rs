@@ -509,7 +509,7 @@ impl WaitingOptions {
     /// Build a `WaitingOptions` from the waiting flags of wait4.
     pub fn new_for_wait4(task: &Task, options: u32) -> Result<Self, Errno> {
         if options & !(WNOHANG | WUNTRACED | WCONTINUED) != 0 {
-            not_implemented!(task, "unsupported waitid options: {:#x}", options);
+            not_implemented!(task, "unsupported wait4 options: {:#x}", options);
             return error!(EINVAL);
         }
         Ok(Self::new(options | WEXITED))
