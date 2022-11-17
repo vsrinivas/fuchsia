@@ -38,7 +38,7 @@ struct {{ .WireMethodTypes }} {
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       {{ .Marker }},
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           {{ .WireTransactionalRequest }}, {{ .Transport.Type }}
       >
   >;

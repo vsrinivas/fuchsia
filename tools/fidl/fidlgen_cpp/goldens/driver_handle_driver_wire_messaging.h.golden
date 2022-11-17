@@ -231,7 +231,7 @@ struct ::fidl::internal::WireMethodTypes<::test_driverhandle::HandlesInProtocol:
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_driverhandle::HandlesInProtocol::SendHandles,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>, ::fidl::internal::DriverTransport>>;
 };
 

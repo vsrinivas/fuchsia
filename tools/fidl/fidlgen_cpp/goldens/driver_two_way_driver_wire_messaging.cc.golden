@@ -23,7 +23,7 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseTable;
       ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>, ::fidl::MessageDirection::kSending>();
   uint8_t* buffer = static_cast<uint8_t*>(arena.Allocate(buffer_size));
 
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>, fidl::internal::DriverTransport> request_message(
+  ::fidl::internal::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>, fidl::internal::DriverTransport> request_message(
       buffer, buffer_size, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> response_storage;
@@ -135,7 +135,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_drivertwoway::TwoWay::Add>::
   ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add> _response{sum};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_drivertwoway::TwoWay::Add>();
   uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
-  ::fidl::unstable::UnownedEncodedMessage<
+  ::fidl::internal::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>, ::fidl::internal::DriverTransport>
       _response_message(
           _buffer, _buffer_size, &_response);

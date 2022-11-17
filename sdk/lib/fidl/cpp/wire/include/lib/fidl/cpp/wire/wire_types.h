@@ -163,6 +163,10 @@ class UnownedEncodedMessageBase {
   fidl::internal::WireFormatVersion wire_format_version_;
 };
 
+// This class manages the handles within |FidlType| and encodes the message automatically upon
+// construction. Different from |OwnedEncodedMessage|, it takes in a caller-allocated buffer and
+// uses that as the backing storage for the message. The buffer must outlive instances of this
+// class.
 template <typename FidlType, typename Transport = internal::ChannelTransport>
 class UnownedEncodedMessage final
     : public fidl::internal::UnownedEncodedMessageHandleContainer<FidlType, Transport>,

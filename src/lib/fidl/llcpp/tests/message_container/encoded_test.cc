@@ -20,7 +20,7 @@ TEST(Encoded, CallerAllocateEncoded) {
   fidl_linearized::wire::FullyLinearizedStruct input{
       .ptr = fidl::ObjectView<fidl_linearized::wire::InnerStruct>::FromExternal(&inner)};
   uint8_t bytes[kSizeJustRight];
-  fidl::unstable::UnownedEncodedMessage<fidl_linearized::wire::FullyLinearizedStruct> encoded(
+  fidl::internal::UnownedEncodedMessage<fidl_linearized::wire::FullyLinearizedStruct> encoded(
       fidl::internal::WireFormatVersion::kV2, bytes, std::size(bytes), &input);
   EXPECT_TRUE(encoded.ok());
 
@@ -39,7 +39,7 @@ TEST(Encoded, BufferTooSmall) {
   fidl_linearized::wire::FullyLinearizedStruct input{
       .ptr = fidl::ObjectView<fidl_linearized::wire::InnerStruct>::FromExternal(&inner)};
   uint8_t bytes[kSizeTooSmall];
-  fidl::unstable::UnownedEncodedMessage<fidl_linearized::wire::FullyLinearizedStruct> encoded(
+  fidl::internal::UnownedEncodedMessage<fidl_linearized::wire::FullyLinearizedStruct> encoded(
       fidl::internal::WireFormatVersion::kV2, bytes, std::size(bytes), &input);
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, encoded.status());
 }
@@ -51,7 +51,7 @@ TEST(Encoded, EarlyCatchBufferTooSmall) {
   // Allocate a buffer that follows FIDL alignment.
   FIDL_ALIGNDECL uint8_t bytes[kSizeTooSmall];
   constexpr size_t kEarlyCatchSizeTooSmall = 0;
-  fidl::unstable::UnownedEncodedMessage<fidl_linearized::wire::FullyLinearizedStruct> encoded(
+  fidl::internal::UnownedEncodedMessage<fidl_linearized::wire::FullyLinearizedStruct> encoded(
       fidl::internal::WireFormatVersion::kV2, bytes, kEarlyCatchSizeTooSmall, &input);
   // ZX_ERR_BUFFER_TOO_SMALL failures only happen when the buffer size is less than the inline size.
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, encoded.status());
@@ -78,7 +78,7 @@ TEST(Iovec, EncodeDoesntMutateVectorObject) {
   auto initial_snapshot = make_snapshot(&obj);
 
   auto buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
-  fidl::unstable::UnownedEncodedMessage<fidl_linearized::wire::Uint32VectorStruct> encoded(
+  fidl::internal::UnownedEncodedMessage<fidl_linearized::wire::Uint32VectorStruct> encoded(
       fidl::internal::ChannelTransport::kNumIovecs, buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &obj);
   ASSERT_TRUE(encoded.ok());
   ASSERT_EQ(encoded.GetOutgoingMessage().iovec_actual(), 3u);
@@ -109,7 +109,7 @@ TEST(Iovec, ExceedVectorBufferCount) {
   // 3 iovecs are needed to directly point at the vector body.
   // When 1 or 2 are present, the encoder should linearize into just the first
   // iovec.
-  fidl::unstable::UnownedEncodedMessage<fidl_linearized::wire::Uint32VectorStruct> encoded(
+  fidl::internal::UnownedEncodedMessage<fidl_linearized::wire::Uint32VectorStruct> encoded(
       2u, buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &obj);
   ASSERT_TRUE(encoded.ok());
   ASSERT_EQ(encoded.GetOutgoingMessage().iovec_actual(), 1u);
@@ -130,7 +130,7 @@ TEST(Iovec, MatchNeededVectorBufferCount) {
 
   auto buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
   // With 3 iovecs, the second iovec will directly point at the vector body.
-  fidl::unstable::UnownedEncodedMessage<fidl_linearized::wire::Uint32VectorStruct> encoded(
+  fidl::internal::UnownedEncodedMessage<fidl_linearized::wire::Uint32VectorStruct> encoded(
       2u, buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &obj);
   ASSERT_TRUE(encoded.ok());
   ASSERT_EQ(encoded.GetOutgoingMessage().iovec_actual(), 1u);

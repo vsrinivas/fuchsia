@@ -177,7 +177,7 @@ struct ::fidl::internal::WireMethodTypes<::test_drivertwoway::TwoWay::Add> {
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_drivertwoway::TwoWay::Add,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>, ::fidl::internal::DriverTransport>>;
 };
 

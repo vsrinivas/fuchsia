@@ -181,7 +181,7 @@ struct ::fidl::internal::WireMethodTypes<::test_anonymous::SomeProtocol::SomeMet
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_anonymous::SomeProtocol::SomeMethod,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_anonymous::SomeProtocol::SomeMethod>, ::fidl::internal::ChannelTransport>>;
 };
 

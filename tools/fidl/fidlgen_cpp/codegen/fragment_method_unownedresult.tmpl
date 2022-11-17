@@ -97,7 +97,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
     uint8_t* request_bytes = buffer;
   {{- end }}
 
-  ::fidl::unstable::UnownedEncodedMessage<{{ .WireTransactionalRequest }}> request_message(
+  ::fidl::internal::UnownedEncodedMessage<{{ .WireTransactionalRequest }}> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
 

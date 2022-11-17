@@ -287,7 +287,7 @@ struct ::fidl::internal::WireMethodTypes<::test_errorsyntax::ExampleUseOfErrorSy
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::fidl::internal::ChannelTransport>>;
 };
 
@@ -312,7 +312,7 @@ struct ::fidl::internal::WireMethodTypes<::test_errorsyntax::ExampleUseOfErrorSy
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::fidl::internal::ChannelTransport>>;
 };
 

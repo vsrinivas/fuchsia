@@ -522,7 +522,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolrequest::Parent::TakeChi
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolrequest::Parent::TakeChild,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>, ::fidl::internal::ChannelTransport>>;
 };
 
@@ -545,7 +545,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolrequest::Parent::TakeChi
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolrequest::Parent::TakeChildRequest,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>, ::fidl::internal::ChannelTransport>>;
 };
 
@@ -568,7 +568,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolrequest::Parent::GetChil
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolrequest::Parent::GetChild,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>, ::fidl::internal::ChannelTransport>>;
 };
 
@@ -591,7 +591,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolrequest::Parent::GetChil
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolrequest::Parent::GetChildRequest,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>, ::fidl::internal::ChannelTransport>>;
 };
 

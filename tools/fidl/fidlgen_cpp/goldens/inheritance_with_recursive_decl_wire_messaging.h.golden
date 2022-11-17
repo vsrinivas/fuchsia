@@ -125,7 +125,7 @@ struct ::fidl::internal::WireMethodTypes<::test_inheritancewithrecursivedecl::Pa
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_inheritancewithrecursivedecl::Parent::First,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>, ::fidl::internal::ChannelTransport>>;
 };
 
@@ -481,7 +481,7 @@ struct ::fidl::internal::WireMethodTypes<::test_inheritancewithrecursivedecl::Ch
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_inheritancewithrecursivedecl::Child::First,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>, ::fidl::internal::ChannelTransport>>;
 };
 
@@ -504,7 +504,7 @@ struct ::fidl::internal::WireMethodTypes<::test_inheritancewithrecursivedecl::Ch
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_inheritancewithrecursivedecl::Child::Second,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>, ::fidl::internal::ChannelTransport>>;
 };
 

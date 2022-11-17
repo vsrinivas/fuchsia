@@ -179,7 +179,7 @@ struct ::fidl::internal::WireMethodTypes<::test_inheritance::Super::Foo> {
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_inheritance::Super::Foo,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>, ::fidl::internal::ChannelTransport>>;
 };
 
@@ -654,7 +654,7 @@ struct ::fidl::internal::WireMethodTypes<::test_inheritance::Sub::Foo> {
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_inheritance::Sub::Foo,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>, ::fidl::internal::ChannelTransport>>;
 };
 

@@ -649,7 +649,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -687,7 +687,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -725,7 +725,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -763,7 +763,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -801,7 +801,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -839,7 +839,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2499,7 +2499,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Resp
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithErrorSyntax::ResponseAsStruct,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2540,7 +2540,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Erro
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithErrorSyntax::ErrorAsPrimitive,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2581,7 +2581,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Erro
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithErrorSyntax::ErrorAsEnum,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2622,7 +2622,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Hand
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithErrorSyntax::HandleInResult,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::HandleInResult>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -4105,7 +4105,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::Meth
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::ChannelProtocol::MethodA,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -4143,7 +4143,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::Meth
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::ChannelProtocol::MethodB,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -4181,7 +4181,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::Take
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::ChannelProtocol::TakeHandle,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -4219,7 +4219,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::Muta
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::ChannelProtocol::MutateSocket,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -5421,7 +5421,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::Transitional::OneWay>
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::Transitional::OneWay,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -5459,7 +5459,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::Transitional::Request
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::Transitional::Request,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -6063,7 +6063,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::DiscoverableProtocol:
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::DiscoverableProtocol::Method,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::DiscoverableProtocol::Method>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -6778,7 +6778,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::HandleRightsProtocol:
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::HandleRightsProtocol::NoResponseMethod,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -6816,7 +6816,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::HandleRightsProtocol:
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::HandleRightsProtocol::ResponseMethod,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -7781,7 +7781,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithProtocolEnds::Cli
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithProtocolEnds::ClientEnds,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -7819,7 +7819,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithProtocolEnds::Ser
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithProtocolEnds::ServerEnds,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -7857,7 +7857,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithProtocolEnds::Str
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::WithProtocolEnds::StructContainingEnds,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -8791,7 +8791,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::ManyParameters::Fifte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::ManyParameters::Fifteen,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -9211,7 +9211,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::MethodWithUnion::Unio
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocols::MethodWithUnion::UnionMethod,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::internal::ChannelTransport
       >
   >;

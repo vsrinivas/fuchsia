@@ -9,7 +9,7 @@ for them:
   - `fidl::OutgoingMessage`
   - `fidl::OutgoingIovecMessage`
   - `fidl::unstable::OwnedEncodedMessage<Foo>`
-  - `fidl::unstable::UnownedEncodedMessage<Foo>`
+  - `fidl::internal::UnownedEncodedMessage<Foo>`
   - `fidl::OutgoingToIncomingMessage`
   - ...
 

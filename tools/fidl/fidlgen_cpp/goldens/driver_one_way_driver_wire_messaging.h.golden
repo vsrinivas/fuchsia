@@ -116,7 +116,7 @@ struct ::fidl::internal::WireMethodTypes<::test_driveroneway::OneWay::Send> {
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_driveroneway::OneWay::Send,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>, ::fidl::internal::DriverTransport>>;
 };
 

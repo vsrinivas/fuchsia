@@ -26,7 +26,7 @@
   }
 
   {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-  ::fidl::unstable::UnownedEncodedMessage<{{ .WireTransactionalRequest }}> _request_message(
+  ::fidl::internal::UnownedEncodedMessage<{{ .WireTransactionalRequest }}> _request_message(
       _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }

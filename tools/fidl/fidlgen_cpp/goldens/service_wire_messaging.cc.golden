@@ -40,7 +40,7 @@ namespace test_service {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>> request_message(
+  ::fidl::internal::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
@@ -70,7 +70,7 @@ namespace test_service {
   }
 
   ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst> _request{};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>> _request_message(
+  ::fidl::internal::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>> _request_message(
       _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
@@ -176,7 +176,7 @@ namespace test_service {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>> request_message(
+  ::fidl::internal::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
@@ -206,7 +206,7 @@ namespace test_service {
   }
 
   ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond> _request{};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>> _request_message(
+  ::fidl::internal::UnownedEncodedMessage<::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>> _request_message(
       _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }

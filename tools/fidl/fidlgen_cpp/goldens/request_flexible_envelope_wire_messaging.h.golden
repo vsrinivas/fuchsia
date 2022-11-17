@@ -281,7 +281,7 @@ struct ::fidl::internal::WireMethodTypes<::test_requestflexibleenvelope::Protoco
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>, ::fidl::internal::ChannelTransport>>;
 };
 
@@ -304,7 +304,7 @@ struct ::fidl::internal::WireMethodTypes<::test_requestflexibleenvelope::Protoco
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>, ::fidl::internal::ChannelTransport>>;
 };
 

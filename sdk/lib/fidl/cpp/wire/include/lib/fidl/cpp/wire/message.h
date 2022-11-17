@@ -88,13 +88,6 @@ IncomingHeaderAndMessage MessageRead(
 // FIDL wire format.
 namespace unstable {
 
-// This class manages the handles within |FidlType| and encodes the message automatically upon
-// construction. Different from |OwnedEncodedMessage|, it takes in a caller-allocated buffer and
-// uses that as the backing storage for the message. The buffer must outlive instances of this
-// class.
-template <typename FidlType, typename Transport = internal::ChannelTransport>
-using UnownedEncodedMessage = ::fidl::internal::UnownedEncodedMessage<FidlType, Transport>;
-
 // This class owns a message of |FidlType| and encodes the message automatically upon construction
 // into a byte buffer.
 template <typename FidlType, typename Transport = internal::ChannelTransport>
@@ -144,7 +137,7 @@ class OwnedEncodedMessage final {
 
  private:
   ::fidl::internal::OutgoingMessageBuffer<FidlType> backing_buffer_;
-  ::fidl::unstable::UnownedEncodedMessage<FidlType, Transport> message_;
+  ::fidl::internal::UnownedEncodedMessage<FidlType, Transport> message_;
 };
 
 // This class manages the handles within |FidlType| and decodes the message automatically upon

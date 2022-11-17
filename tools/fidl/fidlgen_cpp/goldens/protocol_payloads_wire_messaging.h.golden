@@ -1663,7 +1663,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolpayloads::MainProtocol::OneWayComposed,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -1701,7 +1701,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolpayloads::MainProtocol::OneWayLocal,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -1739,7 +1739,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolpayloads::MainProtocol::OneWayImport,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayImport>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -1777,7 +1777,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolpayloads::MainProtocol::OneWayAnon,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -1815,7 +1815,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolpayloads::MainProtocol::TwoWayComposed,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -1856,7 +1856,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -1894,7 +1894,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolpayloads::MainProtocol::TwoWayLocal,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -1935,7 +1935,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -1973,7 +1973,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolpayloads::MainProtocol::TwoWayImport,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2014,7 +2014,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2052,7 +2052,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolpayloads::MainProtocol::TwoWayAnon,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2093,7 +2093,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>, ::fidl::internal::ChannelTransport
       >
   >;

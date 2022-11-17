@@ -255,7 +255,7 @@ struct ::fidl::internal::WireMethodTypes<::test_versions::Protocol::Foo> {
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_versions::Protocol::Foo,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>, ::fidl::internal::ChannelTransport>>;
 };
 

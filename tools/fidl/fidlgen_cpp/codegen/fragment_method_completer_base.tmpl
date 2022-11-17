@@ -129,7 +129,7 @@ void
     ::fidl::OutgoingMessage _failure{_allocation.error_value()};
     return _core()->SendReply(&_failure, ::fidl::internal::OutgoingTransportContext());
   }
-  ::fidl::unstable::UnownedEncodedMessage<
+  ::fidl::internal::UnownedEncodedMessage<
       {{ .WireTransactionalResponse }}, {{ .Transport.Type }}> _response_message(
       _allocation->data, _buffer_size, &_response);
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),

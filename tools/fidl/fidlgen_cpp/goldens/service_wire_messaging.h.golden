@@ -115,7 +115,7 @@ struct ::fidl::internal::WireMethodTypes<::test_service::FirstProtocol::MethodOn
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_service::FirstProtocol::MethodOnFirst,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>, ::fidl::internal::ChannelTransport>>;
 };
 
@@ -393,7 +393,7 @@ struct ::fidl::internal::WireMethodTypes<::test_service::SecondProtocol::MethodO
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_service::SecondProtocol::MethodOnSecond,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>, ::fidl::internal::ChannelTransport>>;
 };
 

@@ -97,7 +97,7 @@ fidl::Status {{ $.WireWeakBufferEventSender.NoLeading }}::{{ .Name }}(
   }
 
   {{ .WireTransactionalEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
-  ::fidl::unstable::UnownedEncodedMessage<{{ .WireTransactionalEvent }}, {{ .Transport.Type }}> _response_message(
+  ::fidl::internal::UnownedEncodedMessage<{{ .WireTransactionalEvent }}, {{ .Transport.Type }}> _response_message(
       _allocation->data, _buffer_size, &_response);
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
@@ -128,7 +128,7 @@ fidl::Status {{ $.InternalWireBufferEventSender.NoLeading }}::{{ .Name }}(
   }
 
   {{ .WireTransactionalEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
-  ::fidl::unstable::UnownedEncodedMessage<{{ .WireTransactionalEvent }}, {{ .Transport.Type }}> _response_message(
+  ::fidl::internal::UnownedEncodedMessage<{{ .WireTransactionalEvent }}, {{ .Transport.Type }}> _response_message(
         _allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());

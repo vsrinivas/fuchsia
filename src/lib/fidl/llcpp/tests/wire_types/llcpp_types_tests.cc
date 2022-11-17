@@ -65,7 +65,7 @@ TEST(LlcppTypesTests, RoundTripTest) {
   // We need to define our own storage because it is used after encoded is deleted.
   FIDL_ALIGNDECL uint8_t storage[sizeof(NonNullableChannelTransactionalRequest)];
 
-  auto* encoded = new fidl::unstable::UnownedEncodedMessage<NonNullableChannelTransactionalRequest>(
+  auto* encoded = new fidl::internal::UnownedEncodedMessage<NonNullableChannelTransactionalRequest>(
       storage, sizeof(storage), &msg);
   EXPECT_EQ(encoded->status(), ZX_OK);
   encoded->GetOutgoingMessage().set_txid(10);

@@ -2743,7 +2743,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2781,7 +2781,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2819,7 +2819,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2857,7 +2857,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2895,7 +2895,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2933,7 +2933,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2974,7 +2974,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -3015,7 +3015,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -3056,7 +3056,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -3097,7 +3097,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -3135,7 +3135,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -3173,7 +3173,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -3211,7 +3211,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -3249,7 +3249,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -3290,7 +3290,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -3331,7 +3331,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -3372,7 +3372,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -3413,7 +3413,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -9831,7 +9831,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -9869,7 +9869,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -9907,7 +9907,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -9945,7 +9945,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -9983,7 +9983,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -10021,7 +10021,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -10062,7 +10062,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -10103,7 +10103,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -10144,7 +10144,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -10185,7 +10185,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -14361,7 +14361,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -14399,7 +14399,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -14437,7 +14437,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -14475,7 +14475,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -14513,7 +14513,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -14554,7 +14554,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -14595,7 +14595,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -14636,7 +14636,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -14677,7 +14677,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr,
-      ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::UnownedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport
       >
   >;
