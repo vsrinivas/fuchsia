@@ -295,7 +295,14 @@ def process_content(content):
         correlation = cov[0][1] / (sqrt(cov[0][0]) * sqrt(cov[1][1]))
 
         # Weight by the arithmetic mean of geometric means of matched measurements.
-        weight = np.mean([sqrt(e[0] * e[1]) for e in entries])
+        try:
+          weight = np.mean([sqrt(e[0] * e[1]) for e in entries])
+        except ValueError:
+          # It has been observed that measurements in this calculation
+          # can be negative, which causes the sqrt to fail. Catch
+          # this case while we investigate more closely.
+          # TODO(fxbug.dev/115483): Investigate negative values.
+          weight = 0
         correlations.append({
             'name1': key1,
             'name2': key2,
