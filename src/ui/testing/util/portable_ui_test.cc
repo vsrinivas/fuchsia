@@ -19,6 +19,7 @@ namespace {
 
 // Types imported for the realm_builder library.
 using component_testing::ChildRef;
+using component_testing::ConfigValue;
 using component_testing::ParentRef;
 using component_testing::Protocol;
 using component_testing::RealmRoot;
@@ -62,6 +63,16 @@ void PortableUITest::SetUpRealmBase() {
                              Protocol{fuchsia::ui::test::scene::Controller::Name_}},
             .source = kTestUIStackRef,
             .targets = {ParentRef{}}});
+
+  // Configure test-ui-stack.
+  realm_builder_.InitMutableConfigToEmpty(kTestUIStack);
+  realm_builder_.SetConfigValue(kTestUIStack, "use_scene_manager",
+                                ConfigValue::Bool(use_scene_manager()));
+  realm_builder_.SetConfigValue(kTestUIStack, "use_flatland", ConfigValue::Bool(use_flatland()));
+  realm_builder_.SetConfigValue(kTestUIStack, "display_rotation",
+                                ConfigValue::Uint32(display_rotation()));
+  realm_builder_.SetConfigValue(kTestUIStack, "device_pixel_ratio",
+                                ConfigValue(std::to_string(device_pixel_ratio())));
 }
 
 void PortableUITest::SetUp() {

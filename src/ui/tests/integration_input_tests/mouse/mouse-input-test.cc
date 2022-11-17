@@ -237,12 +237,6 @@ class MouseInputBase : public ui_testing::PortableUITest {
                                .source = kTestUIStackRef,
                                .targets = {ParentRef()}});
 
-    // Configure test-ui-stack.
-    realm_builder()->InitMutableConfigToEmpty(kTestUIStack);
-    realm_builder()->SetConfigValue(kTestUIStack, "use_scene_manager", ConfigValue::Bool(true));
-    realm_builder()->SetConfigValue(kTestUIStack, "use_flatland", ConfigValue::Bool(true));
-    realm_builder()->SetConfigValue(kTestUIStack, "display_rotation", ConfigValue::Uint32(0));
-
     for (const auto& [name, component] : GetTestComponents()) {
       realm_builder()->AddChild(name, component);
     }
@@ -258,6 +252,10 @@ class MouseInputBase : public ui_testing::PortableUITest {
   uint32_t display_height() const { return display_height_; }
 
   std::unique_ptr<MouseInputListenerServer> mouse_input_listener_;
+
+  // Override test-ui-stack config.
+  bool use_scene_manager() override { return true; }
+  bool use_flatland() override { return true; }
 
  private:
   uint32_t display_width_ = 0;

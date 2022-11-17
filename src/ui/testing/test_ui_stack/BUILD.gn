@@ -67,6 +67,7 @@ fuchsia_structured_config_values("gfx_root_presenter_config") {
     use_scene_manager = false
     use_flatland = false
     display_rotation = 0
+    device_pixel_ratio = "1.0"
   }
 }
 
@@ -77,6 +78,7 @@ fuchsia_structured_config_values("gfx_scene_manager_config") {
     use_scene_manager = true
     use_flatland = false
     display_rotation = 0
+    device_pixel_ratio = "1.0"
   }
 }
 
@@ -87,6 +89,7 @@ fuchsia_structured_config_values("flatland_scene_manager_config") {
     use_scene_manager = true
     use_flatland = true
     display_rotation = 0
+    device_pixel_ratio = "1.0"
   }
 }
 

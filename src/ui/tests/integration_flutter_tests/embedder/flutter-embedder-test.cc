@@ -148,6 +148,7 @@ void FlutterEmbedderTest::SetUpRealmBase() {
   realm_builder_.SetConfigValue(kTestUIStack, "use_flatland",
                                 ConfigValue::Bool(ui_stack_config.use_flatland));
   realm_builder_.SetConfigValue(kTestUIStack, "display_rotation", ConfigValue::Uint32(0));
+  realm_builder_.SetConfigValue(kTestUIStack, "device_pixel_ratio", ConfigValue("1.0"));
 
   // Add embedded child component to realm.
   realm_builder_.AddChild(kChildFlutterRealm, kChildViewUrl);

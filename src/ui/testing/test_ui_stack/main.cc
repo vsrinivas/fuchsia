@@ -61,6 +61,7 @@ int run_test_ui_stack(int argc, const char** argv) {
   config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
   config.use_input = true;
   config.display_rotation = test_ui_stack_config.display_rotation();
+  config.device_pixel_ratio = std::stof(test_ui_stack_config.device_pixel_ratio());
 
   // Build test realm.
   ui_testing::UITestRealm realm(config);

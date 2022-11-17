@@ -90,6 +90,12 @@ class PortableUITest : public ::loop_fixture::RealLoop, public ::testing::Test {
 
   int touch_injection_request_count() const { return touch_injection_request_count_; }
 
+  // Methods to control the test-ui-stack parameters. Override as necessary.
+  virtual float device_pixel_ratio() { return 1.f; }
+  virtual uint32_t display_rotation() { return 0.f; }
+  virtual bool use_flatland() = 0;
+  virtual bool use_scene_manager() = 0;
+
  private:
   void SetUpRealmBase();
 

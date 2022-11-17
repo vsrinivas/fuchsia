@@ -89,5 +89,11 @@
         use_scene_manager: { type: "bool" },
         use_flatland: { type: "bool" },
         display_rotation: { type: "uint32" },
+
+        // Structured configuration doesn't support floats.
+        device_pixel_ratio: {
+            type: "string",
+            max_size: 100,
+        },
     },
 }

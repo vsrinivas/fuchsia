@@ -491,6 +491,15 @@ class TouchInputBase : public ui_testing::PortableUITest,
 
   ResponseListenerServer* response_listener() { return response_listener_.get(); }
 
+  // Override test-ui-stack parameters.
+  bool use_scene_manager() override { return std::get<0>(this->GetParam()).use_scene_manager; }
+
+  bool use_flatland() override { return std::get<0>(this->GetParam()).use_flatland; }
+
+  uint32_t display_rotation() override { return std::get<0>(this->GetParam()).display_rotation; }
+
+  float device_pixel_ratio() override { return 1.f; }
+
  private:
   void ExtendRealm() override {
     // Key part of service setup: have this test component vend the
@@ -501,16 +510,6 @@ class TouchInputBase : public ui_testing::PortableUITest,
     realm_builder()->AddRoute({.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
                                .source = kTestUIStackRef,
                                .targets = {ParentRef()}});
-
-    // Use a display rotation of 90 degrees.
-    auto ui_stack_config = std::get<0>(this->GetParam());
-    realm_builder()->InitMutableConfigToEmpty(kTestUIStack);
-    realm_builder()->SetConfigValue(kTestUIStack, "use_scene_manager",
-                                    ConfigValue::Bool(ui_stack_config.use_scene_manager));
-    realm_builder()->SetConfigValue(kTestUIStack, "use_flatland",
-                                    ConfigValue::Bool(ui_stack_config.use_flatland));
-    realm_builder()->SetConfigValue(kTestUIStack, "display_rotation",
-                                    ConfigValue::Uint32(ui_stack_config.display_rotation));
 
     // Add components specific for this test case to the realm.
     for (const auto& [name, component] : GetTestComponents()) {
