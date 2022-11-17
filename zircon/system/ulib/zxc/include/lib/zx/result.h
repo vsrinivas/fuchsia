@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ZX_STATUS_H_
-#define LIB_ZX_STATUS_H_
+#ifndef LIB_ZX_RESULT_H_
+#define LIB_ZX_RESULT_H_
 
 #include <lib/fit/internal/compiler.h>
 #include <lib/fit/result.h>
@@ -86,6 +86,22 @@ class LIB_FIT_NODISCARD result<T> : public ::fit::result<zx_status_t, T> {
  public:
   using base::base;
 
+  // Explicit conversion from fit::result<zx_status_t, T>.
+  constexpr explicit result(const base& other) : base{other} {
+    if (base::is_error()) {
+      if (base::error_value() == ZX_OK) {
+        __builtin_abort();
+      }
+    }
+  }
+  constexpr explicit result(base&& other) : base{std::move(other)} {
+    if (base::is_error()) {
+      if (base::error_value() == ZX_OK) {
+        __builtin_abort();
+      }
+    }
+  }
+
   // Implicit conversion from error<zx_status_t>.
   constexpr result(error<zx_status_t> error) : base{error} {
     // It is invalid to pass ZX_OK as an error state. Use zx::ok() or
@@ -115,6 +131,15 @@ class LIB_FIT_NODISCARD result<> : public ::fit::result<zx_status_t> {
 
  public:
   using base::base;
+
+  // Explicit conversion from fit::result<zx_status_t>.
+  constexpr explicit result(base other) : base{other} {
+    if (base::is_error()) {
+      if (base::error_value() == ZX_OK) {
+        __builtin_abort();
+      }
+    }
+  }
 
   // Implicit conversion from error<zx_status_t>.
   constexpr result(error<zx_status_t> error) : base{error} {
@@ -222,4 +247,4 @@ const char* result<T>::status_string() const {
 
 }  // namespace zx
 
-#endif  // LIB_ZX_STATUS_H_
+#endif  // LIB_ZX_RESULT_H_

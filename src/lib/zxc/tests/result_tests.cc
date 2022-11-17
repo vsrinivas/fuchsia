@@ -161,6 +161,9 @@ static_assert(zx::result<>{zx::make_result(ZX_ERR_INVALID_ARGS)}.error_value() =
               ZX_ERR_INVALID_ARGS);
 static_assert(zx::result<>{zx::make_result(ZX_ERR_INVALID_ARGS)}.status_value() ==
               ZX_ERR_INVALID_ARGS);
+static_assert(std::is_constructible_v<zx::result<>, fit::result<zx_status_t>>);
+static_assert(zx::result<>{fit::result<zx_status_t>{fit::error(ZX_ERR_INVALID_ARGS)}}
+                  .status_value() == ZX_ERR_INVALID_ARGS);
 
 // Status or value.
 static_assert(zx::result<int>{zx::ok(10)}.is_ok() == true);
@@ -174,6 +177,12 @@ static_assert(zx::result<int>{zx::error{ZX_ERR_INVALID_ARGS}}.is_error() == true
 static_assert(zx::result<int>{zx::error{ZX_ERR_INVALID_ARGS}}.error_value() == ZX_ERR_INVALID_ARGS);
 static_assert(zx::result<int>{zx::error{ZX_ERR_INVALID_ARGS}}.status_value() ==
               ZX_ERR_INVALID_ARGS);
+static_assert(
+    std::is_constructible_v<zx::result<test_members>, fit::result<zx_status_t, test_members>>);
+static_assert(zx::result<test_members>{
+                  fit::result<zx_status_t, test_members>{fit::error(ZX_ERR_INVALID_ARGS)}}
+                  .status_value() == ZX_ERR_INVALID_ARGS);
+static_assert(zx::result<int>{fit::result<zx_status_t, int>{fit::ok(1)}}.value() == 1);
 
 // Status or value via make_status.
 static_assert(zx::make_result(ZX_OK, 10).is_ok() == true);
@@ -591,6 +600,14 @@ TEST(LibZxCommon, Abort) {
   // Validate that attempting to use ZX_OK as an explicit error aborts.
   ASSERT_DEATH(([] {
     zx::result<> status{zx::error_result(ZX_OK)};
+    (void)status;
+  }));
+  ASSERT_DEATH(([] {
+    zx::result<int> status{fit::result<zx_status_t, int>(fit::error(ZX_OK))};
+    (void)status;
+  }));
+  ASSERT_DEATH(([] {
+    zx::result<> status{fit::result<zx_status_t>(fit::error(ZX_OK))};
     (void)status;
   }));
 
@@ -1208,6 +1225,89 @@ TEST(LibZxCommon, MakeStatusWithMoveOnlyType) {
     auto status = zx::make_result(divide(9, 0, n), std::move(n));
     ASSERT_TRUE(status.is_error());
     ASSERT_EQ(status.error_value(), ZX_ERR_INVALID_ARGS);
+  }
+}
+
+TEST(LibZxCommon, MapError) {
+  auto to_string = [](auto x) { return std::to_string(x); };
+  // Test l-value reference qualifier.
+  {
+    fit::result<int, std::monostate> result1 = fit::error(1);
+    fit::result<std::string, std::monostate> result2 = result1.map_error(to_string);
+    EXPECT_EQ(result2.error_value(), "1");
+  }
+  {
+    fit::result<int, std::monostate> result1 = fit::ok(std::monostate{});
+    fit::result<std::string, std::monostate> result2 = result1.map_error(to_string);
+    EXPECT_EQ(result2.value(), std::monostate{});
+  }
+  {
+    fit::result<int> result1 = fit::error(1);
+    fit::result<std::string> result2 = result1.map_error(to_string);
+    EXPECT_EQ(result2.error_value(), "1");
+  }
+
+  // Test const l-value reference qualifier.
+  {
+    const fit::result<int, std::monostate> result1 = fit::error(1);
+    fit::result<std::string, std::monostate> result2 = result1.map_error(to_string);
+    EXPECT_EQ(result2.error_value(), "1");
+  }
+  {
+    const fit::result<int, std::monostate> result1 = fit::ok(std::monostate{});
+    fit::result<std::string, std::monostate> result2 = result1.map_error(to_string);
+    EXPECT_EQ(result2.value(), std::monostate{});
+  }
+  {
+    const fit::result<int> result1 = fit::error(1);
+    fit::result<std::string> result2 = result1.map_error(to_string);
+    EXPECT_EQ(result2.error_value(), "1");
+  }
+
+  auto add_string = [](std::string s) {
+    s.append("def");
+    return s;
+  };
+  // Test r-value reference qualifier.
+  {
+    fit::result<std::string, int> result1 = fit::error("abc");
+    fit::result<std::string, int> result2 = std::move(result1).map_error(add_string);
+    EXPECT_EQ(result2.error_value(), "abcdef");
+    EXPECT_EQ(result1.error_value(), "");
+  }
+  {
+    fit::result<std::string, std::monostate> result1 = fit::ok(std::monostate{});
+    fit::result<std::string, std::monostate> result2 = std::move(result1).map_error(add_string);
+    EXPECT_EQ(result2.value(), std::monostate{});
+  }
+  {
+    fit::result<std::string> result1 = fit::error("abc");
+    fit::result<std::string> result2 = std::move(result1).map_error(add_string);
+    EXPECT_EQ(result2.error_value(), "abcdef");
+    EXPECT_EQ(result1.error_value(), "");
+  }
+
+  // Test const r-value reference qualifier.
+  {
+    fit::result<std::string, int> result1 = fit::error("abc");
+    fit::result<std::string, int> result2 =
+        static_cast<const fit::result<std::string, int>&&>(result1).map_error(add_string);
+    EXPECT_EQ(result2.error_value(), "abcdef");
+    EXPECT_EQ(result1.error_value(), "abc");
+  }
+  {
+    fit::result<std::string, std::monostate> result1 = fit::ok(std::monostate{});
+    fit::result<std::string, std::monostate> result2 =
+        static_cast<const fit::result<std::string, std::monostate>&&>(result1).map_error(
+            add_string);
+    EXPECT_EQ(result2.value(), std::monostate{});
+  }
+  {
+    fit::result<std::string> result1 = fit::error("abc");
+    fit::result<std::string> result2 =
+        static_cast<const fit::result<std::string>&&>(result1).map_error(add_string);
+    EXPECT_EQ(result2.error_value(), "abcdef");
+    EXPECT_EQ(result1.error_value(), "abc");
   }
 }
 
