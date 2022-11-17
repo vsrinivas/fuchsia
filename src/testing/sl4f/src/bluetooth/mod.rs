@@ -8,7 +8,6 @@ pub mod ble_advertise_facade;
 pub mod bt_sys_facade;
 pub mod commands;
 pub mod constants;
-pub mod facade;
 pub mod gatt_client_facade;
 pub mod gatt_server_facade;
 pub mod profile_server_facade;

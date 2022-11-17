@@ -39,7 +39,6 @@ use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use test_call_manager::TestCallManager as HfpFacade;
 use test_rfcomm_client::RfcommManager as RfcommFacade;
 
-use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 
 // Common
@@ -184,7 +183,6 @@ impl Sl4f {
                 "basemgr_facade" => ModularFacade::new(),
                 "modular_facade" => ModularFacade::new(),
                 "ble_advertise_facade" => BleAdvertiseFacade::new(),
-                "bluetooth" => BluetoothFacade::new(),
                 "bt_sys_facade" => BluetoothSysFacade::new(),
                 "component_facade" => ComponentFacade::new(),
                 "diagnostics_facade" => DiagnosticsFacade::new(),

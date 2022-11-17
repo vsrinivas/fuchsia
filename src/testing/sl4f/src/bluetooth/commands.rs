@@ -7,11 +7,9 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use bt_rfcomm::ServerChannel;
 use fidl_fuchsia_bluetooth::PeerId;
-use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
 use fidl_fuchsia_bluetooth_hfp::{CallDirection, CallState, NetworkInformation, SignalStrength};
 use fidl_fuchsia_bluetooth_le::Filter;
 use fidl_fuchsia_bluetooth_sys::{LeSecurityMode, Settings};
-use parking_lot::RwLock;
 use serde_json::{from_value, to_value, Value};
 use std::convert::{TryFrom, TryInto};
 use test_call_manager::TestCallManager as HfpFacade;
@@ -22,7 +20,6 @@ use crate::bluetooth::avdtp_facade::AvdtpFacade;
 use crate::bluetooth::avrcp_facade::AvrcpFacade;
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
 use crate::bluetooth::bt_sys_facade::BluetoothSysFacade;
-use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
@@ -64,30 +61,6 @@ impl Facade for BleAdvertiseFacade {
 
     fn print(&self) {
         Self::print(self)
-    }
-}
-
-#[async_trait(?Send)]
-impl Facade for RwLock<BluetoothFacade> {
-    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
-        match method.as_ref() {
-            "BlePublishService" => {
-                let local_service_id = parse_arg!(args, as_str, "local_service_id")?;
-                let service_info = FacadeArg::new(args.clone());
-                //let service_info_json = ServiceInfoJson::new(args)?;
-                publish_service_async(self, service_info.try_into()?, local_service_id.to_string())
-                    .await
-            }
-            _ => return Err(format_err!("Invalid BLE FIDL method: {:?}", method)),
-        }
-    }
-
-    fn cleanup(&self) {
-        BluetoothFacade::cleanup(self)
-    }
-
-    fn print(&self) {
-        self.read().print()
     }
 }
 
@@ -707,16 +680,6 @@ async fn gattc_toggle_notify_characteristic_async(
 ) -> Result<Value, Error> {
     let toggle_notify_result = facade.gattc_toggle_notify_characteristic(id, value).await?;
     Ok(to_value(toggle_notify_result)?)
-}
-
-async fn publish_service_async(
-    facade: &RwLock<BluetoothFacade>,
-    service_info: ServiceInfo,
-    local_service_id: String,
-) -> Result<Value, Error> {
-    let publish_service_result =
-        BluetoothFacade::publish_service(&facade, service_info, local_service_id).await?;
-    Ok(to_value(publish_service_result)?)
 }
 
 #[async_trait(?Send)]

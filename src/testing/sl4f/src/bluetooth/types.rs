@@ -10,7 +10,6 @@ use fidl_fuchsia_bluetooth_avrcp::{
     Equalizer, PlayStatus, PlaybackStatus, PlayerApplicationSettingAttributeId,
     PlayerApplicationSettings, RepeatStatusMode, ScanMode, ShuffleMode,
 };
-use fidl_fuchsia_bluetooth_gatt::ServiceInfo as DeprecatedServiceInfo;
 use fidl_fuchsia_bluetooth_gatt2::{
     AttributePermissions, Characteristic, Descriptor, ReadByTypeResult, SecurityRequirements,
     ServiceHandle, ServiceInfo, ServiceKind,
@@ -1064,26 +1063,6 @@ impl TryInto<Filter> for FacadeArg {
         let name = value["name_substring"].as_str().map(String::from);
         // For now, no scan profile, so default to empty Filter
         Ok(Filter { name, ..Filter::EMPTY })
-    }
-}
-
-// TODO(fxbug.dev/115008): Delete this once BluetoothFacade has been deleted.
-impl TryInto<DeprecatedServiceInfo> for FacadeArg {
-    type Error = Error;
-    fn try_into(self) -> Result<DeprecatedServiceInfo, Self::Error> {
-        let value = self.value.clone();
-        let id = parse_arg!(value, as_u64, "id")?;
-        let primary = parse_arg!(value, as_bool, "primary")?;
-        let type_ = parse_arg!(value, as_str, "type")?.to_string();
-
-        Ok(DeprecatedServiceInfo {
-            id,
-            primary,
-            type_,
-            // TODO(fxbug.dev/883): Add support for GATT characteristics and includes
-            characteristics: None,
-            includes: None,
-        })
     }
 }
 

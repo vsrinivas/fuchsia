@@ -688,7 +688,7 @@ impl GattClientFacade {
         let inner = self.inner.read();
         info!(
             tag = &with_line!(tag),
-            "BluetoothFacade: Central: {:?}, Active Service: {:?}, Scan Results: {:?}, Clients: {:?}",
+            "Central: {:?}, Active Service: {:?}, Scan Results: {:?}, Clients: {:?}",
             inner.central,
             inner.active_remote_service,
             inner.scan_results,
