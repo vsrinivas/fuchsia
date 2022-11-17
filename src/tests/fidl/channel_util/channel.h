@@ -23,8 +23,6 @@ using HandleDispositions = std::vector<zx_handle_disposition_t>;
 using HandleInfos = std::vector<zx_handle_info_t>;
 
 class Channel {
-  static constexpr zx::duration kTimeoutDuration = zx::sec(5);
-
  public:
   Channel() = default;
   Channel(Channel&&) = default;
@@ -41,7 +39,7 @@ class Channel {
 
   zx_status_t wait_for_signal(zx_signals_t signal) {
     ZX_ASSERT_MSG(__builtin_popcount(signal) == 1, "wait_for_signal expects exactly 1 signal");
-    return channel_.wait_one(signal, zx::deadline_after(kTimeoutDuration), nullptr);
+    return channel_.wait_one(signal, zx::time::infinite(), nullptr);
   }
 
   bool is_signal_present(zx_signals_t signal) {
