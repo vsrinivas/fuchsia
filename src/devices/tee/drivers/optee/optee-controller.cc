@@ -422,20 +422,20 @@ zx_status_t OpteeController::InitThreadPools() {
   zx_status_t status = ZX_ERR_INTERNAL;
   uint32_t default_pool_size = kDefaultNumThreads;
 
-  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_tee::wire::TeeMetadata>(
+  auto decoded = ddk::GetEncodedMetadata2<fuchsia_hardware_tee::wire::TeeMetadata>(
       parent(), DEVICE_METADATA_TEE_THREAD_CONFIG);
   if (!decoded.is_ok()) {
     LOG(INFO, "No metadata for driver. Use default thread configuration.");
     return CreateThreadPool(&loop_, default_pool_size, kDefaultRoleName);
   }
 
-  fuchsia_hardware_tee::wire::TeeMetadata* metadata = decoded->PrimaryObject();
+  fuchsia_hardware_tee::wire::TeeMetadata& metadata = *decoded.value();
 
   LOG(INFO, "Default thread pool size %d, %zu custom thread pools supplied.",
-      metadata->default_thread_count(), metadata->custom_threads().count());
+      metadata.default_thread_count(), metadata.custom_threads().count());
 
-  if (metadata->has_default_thread_count() && metadata->default_thread_count() != 0) {
-    default_pool_size = metadata->default_thread_count();
+  if (metadata.has_default_thread_count() && metadata.default_thread_count() != 0) {
+    default_pool_size = metadata.default_thread_count();
   }
 
   status = CreateThreadPool(&loop_, default_pool_size, kDefaultRoleName);
@@ -443,9 +443,9 @@ zx_status_t OpteeController::InitThreadPools() {
     LOG(ERROR, "Failed to create default thread pool: %d", status);
   }
 
-  if (metadata->has_custom_threads()) {
+  if (metadata.has_custom_threads()) {
     std::map<std::string, std::list<async::Loop>::iterator> roles;
-    for (auto& custom_thread : metadata->custom_threads()) {
+    for (auto& custom_thread : metadata.custom_threads()) {
       if (!custom_thread.has_count() || custom_thread.count() == 0 || !custom_thread.has_role() ||
           custom_thread.role().empty() || !custom_thread.has_trusted_apps() ||
           custom_thread.trusted_apps().empty()) {

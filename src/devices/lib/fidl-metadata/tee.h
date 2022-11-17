@@ -30,7 +30,8 @@ struct CustomThreadConfig {
 };
 
 // Convert an Tee Thread Config to fuchsia.hardware.tee.TeeMetadata encoded
-// in a FIDL bytestream.
+// in a FIDL byte stream, using the convention for data persistence:
+// https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format?hl=en#convention_for_data_persistence
 zx::result<std::vector<uint8_t>> TeeMetadataToFidl(
     uint32_t default_thread_count, cpp20::span<const CustomThreadConfig> thread_config);
 

@@ -19,18 +19,18 @@ static void check_encodes(
   std::vector<uint8_t>& data = result.value();
 
   // Decode.
-  fidl::unstable::DecodedMessage<fuchsia_hardware_tee::wire::TeeMetadata> decoded(
-      fidl::internal::WireFormatVersion::kV2, data.data(), data.size());
-  ASSERT_OK(decoded.status());
+  fit::result decoded =
+      fidl::InplaceUnpersist<fuchsia_hardware_tee::wire::TeeMetadata>(cpp20::span(data));
+  ASSERT_TRUE(decoded.is_ok(), "%s", decoded.error_value().FormatDescription().c_str());
 
-  auto metadata = decoded.PrimaryObject();
+  auto& metadata = *decoded.value();
 
   // Check everything looks sensible.
-  ASSERT_TRUE(metadata->has_custom_threads());
-  ASSERT_TRUE(metadata->has_default_thread_count());
-  ASSERT_EQ(metadata->default_thread_count(), thread_count);
+  ASSERT_TRUE(metadata.has_custom_threads());
+  ASSERT_TRUE(metadata.has_default_thread_count());
+  ASSERT_EQ(metadata.default_thread_count(), thread_count);
 
-  auto configs = metadata->custom_threads();
+  auto configs = metadata.custom_threads();
   ASSERT_EQ(configs.count(), thread_configs.size());
 
   for (size_t i = 0; i < thread_configs.size(); i++) {
