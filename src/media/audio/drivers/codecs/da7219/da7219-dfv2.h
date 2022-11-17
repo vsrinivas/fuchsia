@@ -26,6 +26,7 @@ class ServerConnector : public fidl::WireServer<fuchsia_hardware_audio::CodecCon
   explicit ServerConnector(Logger* logger, std::shared_ptr<Core> core, bool is_input)
       : logger_(logger), core_(core), is_input_(is_input) {}
 
+ private:
   // Bind the server without the trampoline.
   void BindServer(fidl::ServerEnd<fuchsia_hardware_audio::Codec> request) {
     auto on_unbound = [this](fidl::WireServer<fuchsia_hardware_audio::Codec>*,
@@ -37,13 +38,13 @@ class ServerConnector : public fidl::WireServer<fuchsia_hardware_audio::CodecCon
         // Do not log canceled cases which happens too often in particular in test cases.
         DA7219_LOG(ERROR, "Client connection unbound: %s", info.status_string());
       }
+      server_.reset();  // Allow re-connecting after unbind.
     };
     server_ = std::make_unique<Server>(logger_, core_, is_input_);
     fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::Codec>>(
         core_->dispatcher(), std::move(request), server_.get(), std::move(on_unbound));
   }
 
- private:
   // LLCPP implementation for the CodecConnector API.
   void Connect(fuchsia_hardware_audio::wire::CodecConnectorConnectRequest* request,
                ConnectCompleter::Sync& completer) override {
@@ -75,7 +76,7 @@ class Driver : public driver::DriverBase {
   zx::result<zx::interrupt> GetIrq() const;
 
   std::shared_ptr<Core> core_;
-  std::unique_ptr<ServerConnector> server_output_;
+  std::shared_ptr<ServerConnector> server_output_;
   std::unique_ptr<compat::Context> compat_context_;
 };
 

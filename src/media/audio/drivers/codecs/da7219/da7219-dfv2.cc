@@ -84,11 +84,27 @@ zx::result<> Driver::Serve(std::string_view name) {
   component::ServiceInstanceHandler handler;
   fuchsia_hardware_audio::CodecConnectorService::Handler service(&handler);
 
+  // For a given instance of this driver only one client is supported at the time, however before
+  // any client connects to the server the framework opens the corresponding devfs nodes creating
+  // a first connection to CodecConnector.
+  // Since the framework requires allowing and keeping this connection in addition to the connection
+  // from a client, we allow multiple bindings of ServerConnector but share the instance.
+  // ServerConnector limits the actual usage to one client at the time.
+  server_output_ = std::make_shared<ServerConnector>(logger_.get(), core_, false);
   auto result = service.add_codec_connector(
       [this](fidl::ServerEnd<fuchsia_hardware_audio::CodecConnector> request) -> void {
-        server_output_ = std::make_unique<ServerConnector>(logger_.get(), core_, false);
+        auto on_unbound =
+            [this](fidl::WireServer<fuchsia_hardware_audio::CodecConnector>*, fidl::UnbindInfo info,
+                   fidl::ServerEnd<fuchsia_hardware_audio::CodecConnector> server_end) {
+              if (info.is_peer_closed()) {
+                DA7219_LOG(DEBUG, "Client disconnected");
+              } else if (!info.is_user_initiated() && info.status() != ZX_ERR_CANCELED) {
+                // Do not log canceled cases which happens too often in particular in test cases.
+                DA7219_LOG(ERROR, "Client connection unbound: %s", info.status_string());
+              }
+            };
         fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::CodecConnector>>(
-            dispatcher(), std::move(request), server_output_.get());
+            dispatcher(), std::move(request), server_output_.get(), std::move(on_unbound));
       });
   ZX_ASSERT(result.is_ok());
 
