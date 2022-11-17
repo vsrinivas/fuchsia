@@ -2,14 +2,44 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fuzzing/fuzzer.gni")
+import("//build/fuzzing/fuchsia_library_fuzzer.gni")
+import("//build/fuzzing/host_library_fuzzer.gni")
 
-# cpp_fuzzer() is simply a preferred alias for fuzzer().
+# Creates a C++ fuzzer binary.
 #
-# Parameters are precisely those of an `fuzzer`.
+# This template can be used to create fuzzers for both the Fuchsia and development host platforms.
+#
+# Parameters are the same as `executable`, plus:
+#
+#   corpus
+#   dictionary
+#   options
+#     Same meaning as for `fuchsia_library_fuzzer` when building for Fuchsia, ignored otherwise.
+#
+#   test_inputs
+#     Same meaning as for `host_library_fuzzer` when building for host, ignored otherwise.
 #
 template("cpp_fuzzer") {
-  fuzzer(target_name) {
-    forward_variables_from(invoker, "*")
+  ignored_parameters = []
+  if (is_fuchsia) {
+    ignored_parameters += [ "test_inputs" ]
+    fuchsia_library_fuzzer(target_name) {
+      forward_variables_from(invoker, "*", ignored_parameters)
+    }
+  } else {
+    # TODO(fxbug.dev/105707): Remove once all fuzzers are using explicit manifests.
+    ignored_parameters += [
+      "corpus",
+      "dictionary",
+      "options",
+    ]
+    host_library_fuzzer(target_name) {
+      forward_variables_from(invoker, "*", ignored_parameters)
+    }
   }
+  not_needed(invoker, ignored_parameters)
+}
+
+set_defaults("cpp_fuzzer") {
+  configs = default_executable_configs
 }
