@@ -15,15 +15,15 @@ static void check_encodes(const cpp20::span<const fidl_metadata::i2c::Channel> i
   std::vector<uint8_t>& data = result.value();
 
   // Decode.
-  fidl::unstable::DecodedMessage<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata> decoded(
-      fidl::internal::WireFormatVersion::kV2, data.data(), data.size());
-  ASSERT_OK(decoded.status());
+  fit::result decoded =
+      fidl::InplaceUnpersist<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata>(cpp20::span(data));
+  ASSERT_TRUE(decoded.is_ok(), "%s", decoded.error_value().FormatDescription().c_str());
 
-  auto metadata = decoded.PrimaryObject();
+  auto metadata = *decoded.value();
 
   // Check everything looks sensible.
-  ASSERT_TRUE(metadata->has_channels());
-  auto channels = metadata->channels();
+  ASSERT_TRUE(metadata.has_channels());
+  auto channels = metadata.channels();
   ASSERT_EQ(channels.count(), i2c_channels.size());
 
   for (size_t i = 0; i < i2c_channels.size(); i++) {

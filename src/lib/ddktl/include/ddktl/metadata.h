@@ -97,6 +97,47 @@ zx::result<DecodedMetadata<T>> GetEncodedMetadata(zx_device_t* dev, uint32_t typ
   return zx::make_result(ZX_OK, std::move(decoded));
 }
 
+// TODO(fxbug.dev/115148): Migrate all users to this variant, then rename back
+// to |DecodedMetadata|.
+template <typename T>
+class DecodedMetadata2 {
+ public:
+  explicit DecodedMetadata2(std::vector<uint8_t> metadata_blob)
+      : metadata_blob_(std::move(metadata_blob)),
+        decoded_(fidl::InplaceUnpersist<T>(cpp20::span(metadata_blob_))) {}
+
+  T& value() { return *decoded_.value().get(); }
+  T* operator->() { return &value(); }
+  T& operator*() { return value(); }
+  bool is_ok() { return decoded_.is_ok(); }
+  fidl::Error error_value() { return decoded_.error_value(); }
+
+ private:
+  std::vector<uint8_t> metadata_blob_;
+  fit::result<fidl::Error, fidl::ObjectView<T>> decoded_;
+};
+
+// Gets metadata that is encoded in a specific fidl wire format. Decodes the
+// metadata and returns a DecodedMetadata object, which stores the raw data as
+// well as the decoded struct.
+//
+// TODO(fxbug.dev/115148): Migrate all users to this variant, then rename back
+// to |GetEncodedMetadata|.
+template <typename T>
+zx::result<DecodedMetadata2<T>> GetEncodedMetadata2(zx_device_t* dev, uint32_t type) {
+  auto metadata = GetMetadataBlob(dev, type);
+  if (!metadata.is_ok()) {
+    return metadata.take_error();
+  }
+  DecodedMetadata2<T> decoded(metadata.value());
+  if (!decoded.is_ok()) {
+    zxlogf(ERROR, "Failed to deserialize metadata: %s",
+           decoded.error_value().FormatDescription().c_str());
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+  return zx::make_result(ZX_OK, std::move(decoded));
+}
+
 }  // namespace ddk
 
 #endif  // SRC_LIB_DDKTL_INCLUDE_DDKTL_METADATA_H_

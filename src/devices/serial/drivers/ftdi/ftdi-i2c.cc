@@ -85,15 +85,15 @@ void FtdiI2c::DdkInit(ddk::InitTxn txn) {
   }
   fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata metadata(allocator);
   metadata.set_channels(allocator, i2c_channels);
-  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata> encoded(
-      fidl::internal::WireFormatVersion::kV2, &metadata);
-  if (!encoded.ok()) {
-    zxlogf(ERROR, "encoding device metadata failed: %s\n", encoded.status_string());
+  fit::result persisted = fidl::Persist(metadata);
+  if (!persisted.is_ok()) {
+    zxlogf(ERROR, "encoding device metadata failed: %s\n",
+           persisted.error_value().FormatDescription().c_str());
     txn.Reply(ZX_ERR_INTERNAL);
     return;
   }
-  auto message = encoded.GetOutgoingMessage().CopyBytes();
-  zx_status_t status = DdkAddMetadata(DEVICE_METADATA_I2C_CHANNELS, message.data(), message.size());
+  std::vector<uint8_t>& bytes = persisted.value();
+  zx_status_t status = DdkAddMetadata(DEVICE_METADATA_I2C_CHANNELS, bytes.data(), bytes.size());
   if (status != ZX_OK) {
     txn.Reply(status);
     return;

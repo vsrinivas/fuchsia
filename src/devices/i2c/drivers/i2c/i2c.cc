@@ -104,21 +104,21 @@ zx_status_t I2cDevice::Init(ddk::I2cImplProtocolClient i2c) {
 }
 
 void I2cDevice::AddChildren(async_dispatcher_t* dispatcher) {
-  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata>(
+  auto decoded = ddk::GetEncodedMetadata2<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata>(
       parent(), DEVICE_METADATA_I2C_CHANNELS);
   if (!decoded.is_ok()) {
     return;
   }
 
-  fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata* metadata = decoded->PrimaryObject();
-  if (!metadata->has_channels()) {
+  fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata& metadata = *decoded.value();
+  if (!metadata.has_channels()) {
     zxlogf(INFO, "%s: no channels supplied.", __func__);
     return;
   }
 
-  zxlogf(INFO, "%s: %zu channels supplied.", __func__, metadata->channels().count());
+  zxlogf(INFO, "%s: %zu channels supplied.", __func__, metadata.channels().count());
 
-  for (auto& channel : metadata->channels()) {
+  for (auto& channel : metadata.channels()) {
     const uint32_t bus_id = channel.has_bus_id() ? channel.bus_id() : 0;
     if (bus_id < first_bus_id_ || (bus_id - first_bus_id_) >= i2c_buses_.size()) {
       zxlogf(ERROR, "%s: bus_id %u out of range", __func__, bus_id);

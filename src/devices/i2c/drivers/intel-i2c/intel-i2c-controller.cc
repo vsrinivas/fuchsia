@@ -809,22 +809,22 @@ zx_status_t IntelI2cController::AddSubordinates() {
     return (status == ZX_OK) ? ZX_ERR_INTERNAL : status;
   }
 
-  fidl::unstable::DecodedMessage<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata> decoded(
-      fidl::internal::WireFormatVersion::kV2, buffer, metadata_size);
-  if (!decoded.ok()) {
+  auto decoded = fidl::InplaceUnpersist<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata>(
+      cpp20::span(buffer, metadata_size));
+  if (!decoded.is_ok()) {
     zxlogf(ERROR, "%s: Failed to deserialize metadata.", __func__);
-    return decoded.status();
+    return decoded.error_value().status();
   }
 
-  fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata* metadata = decoded.PrimaryObject();
-  if (!metadata->has_channels()) {
+  fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata& metadata = *decoded.value();
+  if (!metadata.has_channels()) {
     // One day we might put the bus in a lower power state.
     zxlogf(INFO, "%s: no channels supplied.", __func__);
     return ZX_OK;
   }
 
   uint32_t bus_speed = 0;
-  for (auto const& child : metadata->channels()) {
+  for (auto const& child : metadata.channels()) {
     zxlogf(INFO, "i2c: got child bus_controller=%d ten_bit=%d address=0x%x bus_speed=%u, bus_id=%u",
            child.is_bus_controller(), child.is_ten_bit(), child.address(), child.bus_speed(),
            child.bus_id());

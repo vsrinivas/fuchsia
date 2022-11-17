@@ -38,14 +38,9 @@ class FakeI2cImpl : public DeviceType,
     auto channels_view = fidl::VectorView<fi2c::I2CChannel>::FromExternal(channels);
     metadata.set_channels(arena, channels_view);
 
-    fidl::unstable::OwnedEncodedMessage<fi2c::I2CBusMetadata> encoded(
-        fidl::internal::WireFormatVersion::kV2, &metadata);
-    ZX_ASSERT(encoded.ok());
-    auto message = encoded.GetOutgoingMessage().CopyBytes();
-    std::vector<uint8_t> bytes(message.size());
-    memcpy(bytes.data(), message.data(), message.size());
-
-    auto impl = new FakeI2cImpl(parent, std::move(bytes));
+    auto bytes = fidl::Persist(metadata);
+    ZX_ASSERT(bytes.is_ok());
+    auto impl = new FakeI2cImpl(parent, std::move(bytes.value()));
     return impl;
   }
   uint32_t I2cImplGetBusBase() { return 0; }
@@ -123,8 +118,8 @@ TEST_F(I2cMetadataTest, ProvidesMetadataToChildren) {
     }
 
     auto decoded =
-        ddk::GetEncodedMetadata<fi2c::I2CChannel>(child.get(), DEVICE_METADATA_I2C_DEVICE);
+        ddk::GetEncodedMetadata2<fi2c::I2CChannel>(child.get(), DEVICE_METADATA_I2C_DEVICE);
     ASSERT_TRUE(decoded.is_ok());
-    ASSERT_EQ(decoded->PrimaryObject()->address(), expected_addr);
+    ASSERT_EQ(decoded->address(), expected_addr);
   }
 }

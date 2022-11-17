@@ -29,15 +29,13 @@ zx_status_t I2cChild::CreateAndAddDevice(
   const uint32_t did = channel.has_did() ? channel.did() : 0;
 
   fuchsia_hardware_i2c_businfo::wire::I2CChannel local_channel(channel);
-  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_i2c_businfo::wire::I2CChannel> metadata(
-      fidl::internal::WireFormatVersion::kV2, &local_channel);
-  if (!metadata.ok()) {
-    zxlogf(ERROR, "Failed to fidl-encode channel: %s", metadata.FormatDescription().data());
-    return metadata.status();
+  fit::result metadata = fidl::Persist(local_channel);
+  if (!metadata.is_ok()) {
+    zxlogf(ERROR, "Failed to fidl-encode channel: %s",
+           metadata.error_value().FormatDescription().data());
+    return metadata.error_value().status();
   }
-
-  auto metadata_bytes = metadata.GetOutgoingMessage().CopyBytes();
-  cpp20::span<const uint8_t> metadata_span(metadata_bytes.data(), metadata_bytes.size());
+  cpp20::span<const uint8_t> metadata_span(metadata.value());
 
   const zx_device_prop_t id_props[] = {
       {BIND_I2C_BUS_ID, 0, bus_id},    {BIND_I2C_ADDRESS, 0, address},

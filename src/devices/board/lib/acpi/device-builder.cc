@@ -32,18 +32,6 @@ static const zx_bind_inst_t kSysmemFidlFragment[]{
     BI_MATCH_IF(EQ, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_SYSMEM),
 };
 
-template <typename T>
-zx::result<std::vector<uint8_t>> DoFidlEncode(T data) {
-  fidl::unstable::OwnedEncodedMessage<T> encoded(fidl::internal::WireFormatVersion::kV2, &data);
-  if (!encoded.ok()) {
-    return zx::error(encoded.status());
-  }
-  auto message = encoded.GetOutgoingMessage().CopyBytes();
-  std::vector<uint8_t> result(message.size());
-  memcpy(result.data(), message.data(), message.size());
-  return zx::ok(std::move(result));
-}
-
 }  // namespace
 
 acpi::status<> DeviceBuilder::GatherResources(acpi::Acpi* acpi, fidl::AnyArena& allocator,
@@ -273,7 +261,8 @@ zx::result<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
           }
           auto channels = fidl::VectorView<SpiChannel>::FromExternal(arg);
           metadata.set_channels(allocator, channels);
-          return DoFidlEncode(metadata);
+          return zx::result<std::vector<uint8_t>>{
+              fidl::Persist(metadata).map_error(std::mem_fn(&fidl::Error::status))};
         } else if constexpr (std::is_same_v<T, std::vector<I2CChannel>>) {
           ZX_ASSERT(HasBusId());  // Bus ID should get set when a child device is added.
           fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata metadata(allocator);
@@ -282,8 +271,8 @@ zx::result<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
           }
           auto channels = fidl::VectorView<I2CChannel>::FromExternal(arg);
           metadata.set_channels(allocator, channels);
-          return DoFidlEncode(metadata);
-
+          return zx::result<std::vector<uint8_t>>{
+              fidl::Persist(metadata).map_error(std::mem_fn(&fidl::Error::status))};
         } else {
           return zx::error(ZX_ERR_NOT_SUPPORTED);
         }
