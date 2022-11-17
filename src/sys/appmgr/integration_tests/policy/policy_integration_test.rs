@@ -18,39 +18,22 @@ macro_rules! policy_url {
 lazy_static! {
     static ref NONE_ACCEPTED_URL: String = policy_url!("none.cmx");
     static ref PACKAGE_CACHE_DENIED_URL: String = policy_url!("package_cache_denied.cmx");
-    static ref PACKAGE_CACHE_ALLOWED_URL: String = policy_url!("package_cache_allowed.cmx");
     static ref PACKAGE_RESOLVER_DENIED_URL: String = policy_url!("package_resolver_denied.cmx");
-    static ref PACKAGE_RESOLVER_ALLOWED_URL: String = policy_url!("package_resolver_allowed.cmx");
     static ref ROOT_JOB_DENIED_URL: String = policy_url!("root_job_denied.cmx");
-    static ref ROOT_JOB_ALLOWED_URL: String = policy_url!("root_job_allowed.cmx");
     static ref DEBUG_RESOURCE_DENIED_URL: String = policy_url!("debug_resource_denied.cmx");
-    static ref DEBUG_RESOURCE_ALLOWED_URL: String = policy_url!("debug_resource_allowed.cmx");
     static ref HYPERVISOR_RESOURCE_DENIED_URL: String =
         policy_url!("hypervisor_resource_denied.cmx");
-    static ref HYPERVISOR_RESOURCE_ALLOWED_URL: String =
-        policy_url!("hypervisor_resource_allowed.cmx");
     static ref MMIO_RESOURCE_DENIED_URL: String = policy_url!("mmio_resource_denied.cmx");
-    static ref MMIO_RESOURCE_ALLOWED_URL: String = policy_url!("mmio_resource_allowed.cmx");
     static ref INFO_RESOURCE_DENIED_URL: String = policy_url!("info_resource_denied.cmx");
-    static ref INFO_RESOURCE_ALLOWED_URL: String = policy_url!("info_resource_allowed.cmx");
     static ref IRQ_RESOURCE_DENIED_URL: String = policy_url!("irq_resource_denied.cmx");
-    static ref IRQ_RESOURCE_ALLOWED_URL: String = policy_url!("irq_resource_allowed.cmx");
     static ref IOPORT_RESOURCE_DENIED_URL: String = policy_url!("ioport_resource_denied.cmx");
-    static ref IOPORT_RESOURCE_ALLOWED_URL: String = policy_url!("ioport_resource_allowed.cmx");
     static ref POWER_RESOURCE_DENIED_URL: String = policy_url!("power_resource_denied.cmx");
-    static ref POWER_RESOURCE_ALLOWED_URL: String = policy_url!("power_resource_allowed.cmx");
     static ref SMC_RESOURCE_DENIED_URL: String = policy_url!("smc_resource_denied.cmx");
-    static ref SMC_RESOURCE_ALLOWED_URL: String = policy_url!("smc_resource_allowed.cmx");
     static ref ROOT_RESOURCE_DENIED_URL: String = policy_url!("root_resource_denied.cmx");
-    static ref ROOT_RESOURCE_ALLOWED_URL: String = policy_url!("root_resource_allowed.cmx");
     static ref VMEX_RESOURCE_DENIED_URL: String = policy_url!("vmex_resource_denied.cmx");
-    static ref VMEX_RESOURCE_ALLOWED_URL: String = policy_url!("vmex_resource_allowed.cmx");
     static ref PKGFS_VERSIONS_DENIED_URL: String = policy_url!("pkgfs_versions_denied.cmx");
-    static ref PKGFS_VERSIONS_ALLOWED_URL: String = policy_url!("pkgfs_versions_allowed.cmx");
     static ref DEPRECATED_EXEC_DENIED_URL: String =
         policy_url!("deprecated_ambient_replace_as_exec_denied.cmx");
-    static ref DEPRECATED_EXEC_ALLOWED_URL: String =
-        policy_url!("deprecated_ambient_replace_as_exec_allowed.cmx");
 }
 
 async fn launch_component(component_url: &str) -> Result<String, Error> {
@@ -64,35 +47,13 @@ async fn launch_component(component_url: &str) -> Result<String, Error> {
     Ok(result.unwrap())
 }
 
-async fn assert_launch_allowed(component_url: &str) {
-    assert!(launch_component(component_url).await.unwrap() == "policy")
-}
-
 async fn assert_launch_denied(component_url: &str) {
     assert!(launch_component(component_url).await.is_err())
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn none_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&NONE_ACCEPTED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn package_cache_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&PACKAGE_CACHE_ALLOWED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn package_cache_denied() -> Result<(), Error> {
     assert_launch_denied(&PACKAGE_CACHE_DENIED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn package_resolver_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&PACKAGE_RESOLVER_ALLOWED_URL).await;
     Ok(())
 }
 
@@ -103,20 +64,8 @@ async fn package_resolver_denied() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn root_job_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&ROOT_JOB_ALLOWED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn root_job_denied() -> Result<(), Error> {
     assert_launch_denied(&ROOT_JOB_DENIED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn debug_resource_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&DEBUG_RESOURCE_ALLOWED_URL).await;
     Ok(())
 }
 
@@ -127,20 +76,8 @@ async fn debug_resource_denied() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn hypervisor_resource_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&HYPERVISOR_RESOURCE_ALLOWED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn hypervisor_resource_denied() -> Result<(), Error> {
     assert_launch_denied(&HYPERVISOR_RESOURCE_DENIED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn mmio_resource_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&MMIO_RESOURCE_ALLOWED_URL).await;
     Ok(())
 }
 
@@ -151,20 +88,8 @@ async fn mmio_resource_denied() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn info_resource_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&INFO_RESOURCE_ALLOWED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn info_resource_denied() -> Result<(), Error> {
     assert_launch_denied(&INFO_RESOURCE_DENIED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn irq_resource_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&IRQ_RESOURCE_ALLOWED_URL).await;
     Ok(())
 }
 
@@ -175,20 +100,8 @@ async fn irq_resource_denied() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn ioport_resource_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&IOPORT_RESOURCE_ALLOWED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn ioport_resource_denied() -> Result<(), Error> {
     assert_launch_denied(&IOPORT_RESOURCE_DENIED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn power_resource_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&POWER_RESOURCE_ALLOWED_URL).await;
     Ok(())
 }
 
@@ -199,32 +112,14 @@ async fn power_resource_denied() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn smc_resource_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&SMC_RESOURCE_ALLOWED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn smc_resource_denied() -> Result<(), Error> {
     assert_launch_denied(&SMC_RESOURCE_DENIED_URL).await;
     Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn root_resource_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&ROOT_RESOURCE_ALLOWED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn root_resource_denied() -> Result<(), Error> {
     assert_launch_denied(&ROOT_RESOURCE_DENIED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn vmex_resource_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&VMEX_RESOURCE_ALLOWED_URL).await;
     Ok(())
 }
 
@@ -243,20 +138,8 @@ async fn vmex_resource_denied() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn pkgfs_versions_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&PKGFS_VERSIONS_ALLOWED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn pkgfs_versions_denied() -> Result<(), Error> {
     assert_launch_denied(&PKGFS_VERSIONS_DENIED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn deprecated_exec_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&DEPRECATED_EXEC_ALLOWED_URL).await;
     Ok(())
 }
 

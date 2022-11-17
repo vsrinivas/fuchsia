@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/config.gni")
 import("//build/security.gni")
 
-group("tests") {
+group("legacy_tests") {
   testonly = true
   deps = [ "integration_tests" ]
 }

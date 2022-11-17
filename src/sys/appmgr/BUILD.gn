@@ -300,7 +300,7 @@ fuchsia_unittest_package("appmgr_unittests") {
   }
 }
 
-group("tests") {
+group("legacy_tests") {
   testonly = true
   deps = [
     ":appmgr_unittests",
