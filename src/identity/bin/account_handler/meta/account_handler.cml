@@ -48,5 +48,12 @@
         // If true, created accounts will be ephemeral. Otherwise, they will be
         // persistent.
         is_ephemeral: { type: "bool" },
+
+        // Which backing storage manager to use. Options are currently:
+        // one of [ "MINFS" ].
+        storage_manager: {
+            type: "string",
+            max_size: 32,
+        },
     },
 }

@@ -66,12 +66,34 @@ where
     )
 }
 
-fn main() -> Result<(), Error> {
-    let lifetime = match Config::take_from_startup_handle() {
-        Config { is_ephemeral: true } => AccountLifetime::Ephemeral,
-        Config { is_ephemeral: false } => {
-            AccountLifetime::Persistent { account_dir: DATA_DIR.into() }
+fn get_storage_manager(
+    config: &Config,
+) -> impl StorageManager<Key = [u8; 32]> + Send + Sync + 'static {
+    match config.storage_manager.as_str() {
+        "MINFS" => MinfsStorageManager::new(DevDiskManager::new(
+            open_in_namespace(
+                "/dev",
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            )
+            .expect("open /dev root for disk manager"),
+        )),
+        other => {
+            panic!(
+                "AccountHandler was configured with invalid argument: storage_manager={:?}. \
+                See the CML declaration for valid values.",
+                other
+            );
         }
+    }
+}
+
+fn main() -> Result<(), Error> {
+    let config = Config::take_from_startup_handle();
+
+    let lifetime = if config.is_ephemeral {
+        AccountLifetime::Ephemeral
+    } else {
+        AccountLifetime::Persistent { account_dir: DATA_DIR.into() }
     };
 
     let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
@@ -83,18 +105,8 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     inspect_runtime::serve(&inspector, &mut fs)?;
 
-    let account_handler = Arc::new(AccountHandler::new(
-        lifetime,
-        &inspector,
-        /*storage_manager_factory=*/
-        MinfsStorageManager::new(DevDiskManager::new(
-            open_in_namespace(
-                "/dev",
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-            )
-            .expect("open /dev root for disk manager"),
-        )),
-    ));
+    let account_handler =
+        Arc::new(AccountHandler::new(lifetime, &inspector, get_storage_manager(&config)));
 
     let _lifecycle_task: fuchsia_async::Task<()> =
         set_up_lifecycle_watcher(Arc::clone(&account_handler));
