@@ -235,6 +235,7 @@ pub async fn handle_vsh(
                 println!("Retry? (Y/n)");
                 let mut answer = [0];
                 stdin.read_exact(&mut answer).await?;
+                println!("{}", answer[0] as char);
                 match answer[0] {
                     b'y' | b'Y' | b'\n' => continue,
                     _ => anyhow::bail!(e),
