@@ -303,11 +303,10 @@ TEST(GpioTest, Init) {
                                   .Build();
   gpio.ExpectSetAltFunction(ZX_OK, 3, 3).ExpectSetDriveStrength(ZX_OK, 3, 2000, 2000);
 
-  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_gpio_init::wire::GpioInitMetadata> encoded(
-      fidl::internal::WireFormatVersion::kV2, &metadata);
-  ASSERT_TRUE(encoded.ok());
+  fit::result encoded = fidl::Persist(metadata);
+  ASSERT_TRUE(encoded.is_ok(), "%s", encoded.error_value().FormatDescription().c_str());
 
-  auto message = encoded.GetOutgoingMessage().CopyBytes();
+  std::vector<uint8_t>& message = encoded.value();
   fake_root->SetMetadata(DEVICE_METADATA_GPIO_INIT_STEPS, message.data(), message.size());
   fake_root->SetMetadata(DEVICE_METADATA_GPIO_PINS, kGpioPins, sizeof(kGpioPins));
 
@@ -373,11 +372,10 @@ TEST(GpioTest, InitErrorHandling) {
                                   .Build();
   gpio.ExpectSetAltFunction(ZX_OK, 2, 0).ExpectSetDriveStrength(ZX_OK, 2, 1000, 1000);
 
-  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_gpio_init::wire::GpioInitMetadata> encoded(
-      fidl::internal::WireFormatVersion::kV2, &metadata);
-  ASSERT_TRUE(encoded.ok());
+  fit::result encoded = fidl::Persist(metadata);
+  ASSERT_TRUE(encoded.is_ok(), "%s", encoded.error_value().FormatDescription().c_str());
 
-  auto message = encoded.GetOutgoingMessage().CopyBytes();
+  std::vector<uint8_t>& message = encoded.value();
   fake_root->SetMetadata(DEVICE_METADATA_GPIO_INIT_STEPS, message.data(), message.size());
   fake_root->SetMetadata(DEVICE_METADATA_GPIO_PINS, kGpioPins, sizeof(kGpioPins));
 

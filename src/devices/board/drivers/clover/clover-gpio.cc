@@ -83,14 +83,12 @@ zx_status_t Clover::GpioInit() {
   metadata.steps = fidl::VectorView<fuchsia_hardware_gpio_init::wire::GpioInitStep>::FromExternal(
       gpio_init_steps_.data(), gpio_init_steps_.size());
 
-  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_gpio_init::wire::GpioInitMetadata> encoded(
-      fidl::internal::WireFormatVersion::kV2, &metadata);
-  if (!encoded.ok()) {
-    zxlogf(ERROR, "Failed to encode GPIO init metadata: %s", encoded.status_string());
-    return encoded.status();
+  fit::result encoded = fidl::Persist(metadata);
+  if (!encoded.is_ok()) {
+    zxlogf(ERROR, "Failed to encode GPIO init metadata: %s",
+           encoded.error_value().FormatDescription().c_str());
+    return encoded.error_value().status();
   }
-
-  auto message = encoded.GetOutgoingMessage().CopyBytes();
 
   static const std::vector<fpbus::Metadata> gpio_metadata{
       {{
@@ -101,7 +99,7 @@ zx_status_t Clover::GpioInit() {
       }},
       {{
           .type = DEVICE_METADATA_GPIO_INIT_STEPS,
-          .data = std::vector<uint8_t>(message.data(), message.data() + message.size()),
+          .data = std::move(encoded.value()),
       }},
   };
 

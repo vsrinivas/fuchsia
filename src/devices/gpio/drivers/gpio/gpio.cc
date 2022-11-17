@@ -141,7 +141,7 @@ zx_status_t GpioDevice::Create(void* ctx, zx_device_t* parent) {
 void GpioInitDevice::Create(zx_device_t* parent, const ddk::GpioImplProtocolClient& gpio) {
   // Don't add the init device if anything goes wrong here, as the hardware may be in a state that
   // child devices don't expect.
-  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_gpio_init::wire::GpioInitMetadata>(
+  auto decoded = ddk::GetEncodedMetadata2<fuchsia_hardware_gpio_init::wire::GpioInitMetadata>(
       parent, DEVICE_METADATA_GPIO_INIT_STEPS);
   if (!decoded.is_ok()) {
     if (decoded.status_value() == ZX_ERR_NOT_FOUND) {
@@ -153,7 +153,7 @@ void GpioInitDevice::Create(zx_device_t* parent, const ddk::GpioImplProtocolClie
   }
 
   auto device = std::make_unique<GpioInitDevice>(parent);
-  if (device->ConfigureGpios(*decoded->PrimaryObject(), gpio) != ZX_OK) {
+  if (device->ConfigureGpios(*decoded.value(), gpio) != ZX_OK) {
     return;
   }
 
