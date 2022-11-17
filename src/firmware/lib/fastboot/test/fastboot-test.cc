@@ -668,6 +668,17 @@ TEST_F(FastbootFlashTest, FlashFVM) {
             std::vector<paver_test::Command>{paver_test::Command::kWriteVolumes});
 }
 
+TEST_F(FastbootFlashTest, GetVarVersion) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  const char command[] = "getvar:version";
+  TestTransport transport;
+  transport.AddInPacket(command, strlen(command));
+  zx::result<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  std::vector<std::string> expected_packets = {"OKAY0.4"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+}
+
 TEST_F(FastbootFlashTest, GetVarSlotCount) {
   paver().set_abr_supported(true);
   Fastboot fastboot(0x40000, std::move(svc_chan()));

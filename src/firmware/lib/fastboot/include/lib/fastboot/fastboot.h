@@ -46,6 +46,7 @@ class __EXPORT Fastboot : public FastbootBase {
   zx::result<std::string> GetVarSlotCount(const std::vector<std::string_view> &, Transport *);
   zx::result<std::string> GetVarIsUserspace(const std::vector<std::string_view> &, Transport *);
   zx::result<std::string> GetVarHwRevision(const std::vector<std::string_view> &, Transport *);
+  zx::result<std::string> GetVarVersion(const std::vector<std::string_view> &, Transport *);
   zx::result<> Flash(const std::string &command, Transport *transport);
   zx::result<> SetActive(const std::string &command, Transport *transport);
   zx::result<> Reboot(const std::string &command, Transport *transport);

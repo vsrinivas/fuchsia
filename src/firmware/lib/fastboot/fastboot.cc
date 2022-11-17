@@ -126,6 +126,7 @@ const Fastboot::VariableHashTable& Fastboot::GetVariableTable() {
       {"slot-count", &Fastboot::GetVarSlotCount},
       {"is-userspace", &Fastboot::GetVarIsUserspace},
       {"hw-revision", &Fastboot::GetVarHwRevision},
+      {"version", &Fastboot::GetVarVersion},
   });
   return *kVariableTable;
 }
@@ -181,6 +182,10 @@ zx::result<> Fastboot::GetVar(const std::string& command, Transport* transport) 
   }
 
   return SendResponse(ResponseType::kOkay, var_ret.value(), transport);
+}
+
+zx::result<std::string> Fastboot::GetVarVersion(const std::vector<std::string_view>&, Transport*) {
+  return zx::ok("0.4");
 }
 
 zx::result<std::string> Fastboot::GetVarMaxDownloadSize(const std::vector<std::string_view>&,
