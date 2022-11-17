@@ -10,7 +10,10 @@ group("bringup") {
 
 group("tests") {
   testonly = true
-  deps = [ "bin:tests" ]
+  deps = [
+    "bin:tests",
+    "lib:tests",
+  ]
 }
 
 group("bootfs") {

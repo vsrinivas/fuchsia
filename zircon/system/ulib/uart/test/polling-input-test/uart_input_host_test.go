@@ -29,7 +29,7 @@ const (
 	serialDone string = serialPrefix + "Received " + serialCommand
 	// LINT.ThenChange(./uart-input-test.cc)
 
-	zbiName string = "uart-input-test-zbi"
+	zbiName string = "uart-input-zbi-test"
 )
 
 func getCwd(t *testing.T) string {

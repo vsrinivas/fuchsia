@@ -287,12 +287,6 @@ group("tests") {
   deps = [
     ":legacy-boot-shim-tests($host_toolchain)",
     ":legacy-mem-config-tests($host_toolchain)",
-  ]
-}
-
-group("boot_tests") {
-  testonly = true
-  deps = [
     ":x86-boot-shim-tests",
     "depthcharge-tests:tests",
   ]

@@ -3636,6 +3636,13 @@ assembled_system().  See documentation there.
 
 From //build/images/args.gni:157
 
+### include_zbi_host_tests
+Set this variable to true to include zbi_tests into tests.json.
+
+**Current value (from the default):** `false`
+
+From //build/testing/zbi_test.gni:13
+
 ### include_zxdb_large_tests
 Normally these tests are not built and run because they require large amounts of optional data
 be downloaded. Set this to true to enable the build for the zxdb_large_tests.

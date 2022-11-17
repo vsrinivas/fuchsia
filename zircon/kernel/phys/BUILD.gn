@@ -497,21 +497,14 @@ group("tests") {
   deps = [
     "boot-shim:tests",
     "efi:tests",
+    "test",
+    "//zircon/kernel/arch/$zircon_cpu/phys:tests",
   ]
   if (build_info_product != "bringup") {
     # The following target includes tests that cannot be run on the bringup
     # product.
     deps += [ "lib:tests" ]
   }
-}
-
-group("boot_tests") {
-  testonly = true
-  deps = [
-    "boot-shim:boot_tests",
-    "test",
-    "//zircon/kernel/arch/$zircon_cpu/phys:tests",
-  ]
 }
 
 zbi_executable("physboot") {

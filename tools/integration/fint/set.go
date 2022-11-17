@@ -269,10 +269,8 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 		vars["test_durations_file"] = testDurationsFile
 	}
 
-	// TODO(ihuh): Remove once builders are including this target in their universe
-	// packages.
 	if staticSpec.IncludeZbiTests {
-		staticSpec.UniversePackages = append(staticSpec.UniversePackages, "//bundles:boot_tests")
+		vars["include_zbi_host_tests"] = true
 	}
 
 	for varName, values := range map[string][]string{
