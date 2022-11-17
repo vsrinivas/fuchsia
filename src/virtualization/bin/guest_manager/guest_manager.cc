@@ -100,8 +100,10 @@ void GuestManager::Launch(GuestConfig user_config,
     // never intentionally close the channel, this channel closing means that the component has
     // terminated unexpectedly.
     context_->svc()->Connect(lifecycle_.NewRequest());
-    lifecycle_.set_error_handler(
-        [this](zx_status_t) { state_ = GuestStatus::VMM_UNEXPECTED_TERMINATION; });
+    lifecycle_.set_error_handler([this](zx_status_t) {
+      state_ = GuestStatus::VMM_UNEXPECTED_TERMINATION;
+      OnGuestStopped();
+    });
   }
 
   auto default_config = GetDefaultGuestConfig();
