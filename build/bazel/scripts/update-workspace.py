@@ -86,6 +86,14 @@ def force_symlink(target_path: str, dst_path: str):
 
 def make_removeable(path: str):
     '''Ensure the file at |path| is removeable.'''
+
+    # Skip if the input path is a symlink, and chmod with
+    # `follow_symlinks=False` is not supported. Linux is the most notable
+    # platform that meets this requirement, and adding S_IWUSR is not necessary
+    # for removing symlinks.
+    if os.path.islink(path) and (os.chmod not in os.supports_follow_symlinks):
+        return
+
     info = os.stat(path, follow_symlinks=False)
     if info.st_mode & stat.S_IWUSR == 0:
         os.chmod(path, info.st_mode | stat.S_IWUSR, follow_symlinks=False)
@@ -620,7 +628,7 @@ common --experimental_enable_bzlmod
         with open(generated_info_file, 'w') as f:
             f.write(generated_json)
     else:
-        log2("Mothing to do (no changes detected)")
+        log2("Nothing to do (no changes detected)")
 
     # Done!
     return 0
