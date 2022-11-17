@@ -65,7 +65,3 @@ fuchsia_component("virtio_sound_component") {
   manifest = "../../meta/virtio_sound.cml"
   deps = [ ":virtio_sound_bin" ]
 }
-
-fuchsia_package("virtio_sound") {
-  deps = [ ":virtio_sound_component" ]
-}

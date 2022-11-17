@@ -104,10 +104,6 @@ fuchsia_component("virtio_magma_component") {
   ]
 }
 
-fuchsia_package("virtio_magma") {
-  deps = [ ":virtio_magma_component" ]
-}
-
 executable("unittests_bin") {
   testonly = true
   output_name = "virtio_magma_unittests"

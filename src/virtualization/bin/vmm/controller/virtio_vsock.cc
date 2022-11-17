@@ -21,7 +21,7 @@ constexpr uint32_t kDeviceFeatures = 0;
 
 constexpr const char* kComponentName = "virtio_vsock";
 constexpr const char* kComponentCollectionName = "virtio_vsock_devices";
-constexpr const char* kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_vsock#meta/virtio_vsock.cm";
+constexpr const char* kComponentUrl = "#meta/virtio_vsock.cm";
 
 // There is one device per guest, and one guest per host, so all guests will use the same CID.
 constexpr uint64_t kGuestCid = fuchsia::virtualization::DEFAULT_GUEST_CID;

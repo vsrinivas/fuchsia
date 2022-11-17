@@ -38,7 +38,7 @@ static_assert((kMediaKeyboardLastCode + 7) / 8 < sizeof(virtio_input_config_t().
               "Last scan code cannot exceed allowed range.");
 
 constexpr auto kComponentCollectionName = "virtio_input_devices";
-constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cm";
+constexpr auto kComponentUrl = "#meta/virtio_input.cm";
 
 void set_config_bit(uint8_t* bitmap, uint32_t event_code) {
   bitmap[event_code / 8] |= 1u << (event_code % 8);

@@ -14,7 +14,7 @@
 namespace {
 
 constexpr auto kVirtioBlockCollectionName = "virtio_block_devices";
-constexpr auto component_url = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
+constexpr auto component_url = "#meta/virtio_block.cm";
 
 uint32_t read_only(fuchsia::virtualization::BlockMode mode) {
   return mode == fuchsia::virtualization::BlockMode::READ_ONLY ? VIRTIO_BLK_F_RO : 0;

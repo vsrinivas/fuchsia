@@ -50,10 +50,6 @@ rustc_binary("virtio_vsock_bin") {
   ]
 }
 
-fuchsia_package("virtio_vsock") {
-  deps = [ ":virtio_vsock_cmp" ]
-}
-
 fuchsia_unittest_package("virtio_vsock_unittests") {
   deps = [ ":virtio_vsock_bin_test" ]
   test_specs = {

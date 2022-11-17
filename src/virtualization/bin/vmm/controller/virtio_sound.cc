@@ -13,7 +13,7 @@ static constexpr uint32_t kDeviceFeatures = 0;
 
 constexpr auto kComponentName = "virtio_sound";
 constexpr auto kComponentCollectionName = "virtio_sound_devices";
-constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_sound#meta/virtio_sound.cm";
+constexpr auto kComponentUrl = "#meta/virtio_sound.cm";
 
 }  // namespace
 

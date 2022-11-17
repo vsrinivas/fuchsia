@@ -10,7 +10,7 @@ namespace {
 
 constexpr auto kComponentName = "virtio_console";
 constexpr auto kComponentCollectionName = "virtio_console_devices";
-constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cm";
+constexpr auto kComponentUrl = "#meta/virtio_console.cm";
 
 }  // namespace
 

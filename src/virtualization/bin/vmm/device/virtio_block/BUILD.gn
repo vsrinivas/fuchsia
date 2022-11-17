@@ -97,7 +97,3 @@ fuchsia_component("virtio_block_component") {
   manifest = "meta/virtio_block.cml"
   deps = [ ":virtio_block_bin" ]
 }
-
-fuchsia_package("virtio_block") {
-  deps = [ ":virtio_block_component" ]
-}

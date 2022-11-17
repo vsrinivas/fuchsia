@@ -45,11 +45,6 @@ fuchsia_unittest_package("virtio_console_unittests") {
   deps = [ ":virtio_console_bin_test" ]
 }
 
-fuchsia_package("virtio_console") {
-  package_name = "virtio_console"
-  deps = [ ":virtio_console_component" ]
-}
-
 fuchsia_component("virtio_console_component") {
   manifest = "meta/virtio_console.cml"
   deps = [ ":virtio_console_bin" ]

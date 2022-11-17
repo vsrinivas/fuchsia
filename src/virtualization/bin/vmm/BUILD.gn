@@ -7,10 +7,7 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/fuzzing/fuzzer_package.gni")
 
 group("vmm") {
-  deps = [
-    ":vmm_package",
-    "//src/virtualization/bin/vmm/device:packages",
-  ]
+  deps = [ ":vmm_package" ]
 }
 
 group("tests") {
@@ -190,12 +187,20 @@ resource("vmm-resources") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-fuchsia_package_with_single_component("vmm_package") {
-  package_name = "vmm"
+fuchsia_component("vmm_component") {
+  component_name = "vmm"
   manifest = "meta/vmm.cml"
   deps = [
     ":bin",
     ":vmm-resources",
+  ]
+}
+
+fuchsia_package("vmm_package") {
+  package_name = "vmm"
+  deps = [
+    ":vmm_component",
+    "device:components",
   ]
 }
 

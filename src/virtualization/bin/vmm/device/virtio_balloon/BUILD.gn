@@ -44,10 +44,6 @@ fuchsia_unittest_package("virtio_balloon_unittests") {
   deps = [ ":virtio_balloon_bin_test" ]
 }
 
-fuchsia_package("virtio_balloon") {
-  deps = [ ":virtio_balloon_component" ]
-}
-
 fuchsia_component("virtio_balloon_component") {
   manifest = "meta/virtio_balloon.cml"
   deps = [ ":virtio_balloon_bin" ]

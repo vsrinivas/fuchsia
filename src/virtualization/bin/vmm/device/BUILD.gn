@@ -23,20 +23,20 @@ group("tests") {
   ]
 }
 
-group("packages") {
+group("components") {
   deps = [
-    ":virtio_wl",
-    "virtio_balloon",
-    "virtio_block",
-    "virtio_console",
-    "virtio_gpu",
-    "virtio_input",
-    "virtio_magma",
-    "virtio_mem",
-    "virtio_net",
-    "virtio_rng",
-    "virtio_sound",
-    "virtio_vsock",
+    ":virtio_wl_component",
+    "virtio_balloon:virtio_balloon_component",
+    "virtio_block:virtio_block_component",
+    "virtio_console:virtio_console_component",
+    "virtio_gpu:virtio_gpu_component",
+    "virtio_input:virtio_input_component",
+    "virtio_magma:virtio_magma_component",
+    "virtio_mem:virtio_mem_component",
+    "virtio_net:virtio_net_component",
+    "virtio_rng:virtio_rng_component",
+    "virtio_sound:virtio_sound_component",
+    "virtio_vsock:virtio_vsock_cmp",
   ]
 }
 

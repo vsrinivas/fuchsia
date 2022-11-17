@@ -90,11 +90,6 @@ fuchsia_unittest_package("virtio_net_unittests") {
   }
 }
 
-fuchsia_package("virtio_net") {
-  package_name = "virtio_net"
-  deps = [ ":virtio_net_component" ]
-}
-
 fuchsia_component("virtio_net_component") {
   manifest = "meta/virtio_net.cml"
   deps = [ ":virtio_net_bin" ]

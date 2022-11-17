@@ -8,7 +8,7 @@ namespace {
 
 constexpr auto kComponentName = "virtio_gpu";
 constexpr auto kComponentCollectionName = "virtio_gpu_devices";
-constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
+constexpr auto kComponentUrl = "#meta/virtio_gpu.cm";
 
 }  // namespace
 

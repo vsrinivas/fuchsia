@@ -42,10 +42,6 @@ fuchsia_unittest_package("virtio_mem_unittests") {
   deps = [ ":virtio_mem_bin_test" ]
 }
 
-fuchsia_package("virtio_mem") {
-  deps = [ ":virtio_mem_component" ]
-}
-
 fuchsia_component("virtio_mem_component") {
   manifest = "meta/virtio_mem.cml"
   deps = [ ":virtio_mem_bin" ]

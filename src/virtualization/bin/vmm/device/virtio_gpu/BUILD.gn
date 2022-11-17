@@ -72,11 +72,6 @@ fuchsia_unittest_package("virtio_gpu_unittests") {
   deps = [ ":virtio_gpu_bin_test" ]
 }
 
-fuchsia_package("virtio_gpu") {
-  package_name = "virtio_gpu"
-  deps = [ ":virtio_gpu_component" ]
-}
-
 fuchsia_component("virtio_gpu_component") {
   manifest = "meta/virtio_gpu.cml"
   deps = [ ":virtio_gpu_bin" ]

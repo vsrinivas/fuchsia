@@ -31,7 +31,3 @@ fuchsia_component("virtio_rng_component") {
   manifest = "../../meta/virtio_rng.cml"
   deps = [ ":virtio_rng_bin" ]
 }
-
-fuchsia_package("virtio_rng") {
-  deps = [ ":virtio_rng_component" ]
-}
