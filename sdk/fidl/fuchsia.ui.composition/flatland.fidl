@@ -44,6 +44,9 @@ type BlendMode = strict enum {
     SRC_OVER = 2;
 };
 
+/// Represents a color with alpha channel.
+/// Values are unorm (i.e. the valid range is [0,1]), and are in linear color
+/// space. They are not gamma-corrected nor premultiplied.
 type ColorRgba = struct {
     red float32;
     green float32;

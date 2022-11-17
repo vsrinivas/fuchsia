@@ -36,7 +36,7 @@ constexpr auto kNestedViewProvider = "nested-view-provider";
 
 // The color used for a11y highlights.
 const ui_testing::Pixel kHighlightColor =
-    ui_testing::Pixel::from_linear_brga(0x57, 0x00, 0xF5, 0xFF);
+    ui_testing::Pixel::from_unorm_bgra(0.242f, 0.0f, 0.9131f, 1.0f);
 
 // This test fixture sets up a test realm with scenic and a11y manager.
 // The test fixture mocks the "scene owner" portion of the handshake by creating

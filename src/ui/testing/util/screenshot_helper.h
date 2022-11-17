@@ -14,15 +14,13 @@
 
 namespace ui_testing {
 
-static uint8_t linear_to_srgb(const uint8_t in) {
+static uint8_t linear_to_srgb(const float val) {
   // Function to convert from linear RGB to sRGB.
   // (https://en.wikipedia.org/wiki/SRGB#From_CIE_XYZ_to_sRGB)
-  float scaled_val = static_cast<float>(in) / 0xFF;
-  if (0.f <= scaled_val && scaled_val <= 0.0031308f) {
-    return static_cast<uint8_t>(roundf((scaled_val * 12.92f) * 255U));
+  if (0.f <= val && val <= 0.0031308f) {
+    return static_cast<uint8_t>(roundf((val * 12.92f) * 255U));
   } else {
-    return static_cast<uint8_t>(
-        roundf(((std::powf(scaled_val, 1.0f / 2.4f) * 1.055f) - 0.055f) * 255U));
+    return static_cast<uint8_t>(roundf(((std::powf(val, 1.0f / 2.4f) * 1.055f) - 0.055f) * 255U));
   }
 }
 
@@ -37,8 +35,9 @@ struct Pixel {
   Pixel(uint8_t blue, uint8_t green, uint8_t red, uint8_t alpha)
       : blue(blue), green(green), red(red), alpha(alpha) {}
 
-  static Pixel from_linear_brga(uint8_t blue, uint8_t green, uint8_t red, uint8_t alpha) {
-    return Pixel{linear_to_srgb(blue), linear_to_srgb(green), linear_to_srgb(red), alpha};
+  static Pixel from_unorm_bgra(float blue, float green, float red, float alpha) {
+    return Pixel{linear_to_srgb(blue), linear_to_srgb(green), linear_to_srgb(red),
+                 static_cast<uint8_t>(roundf(alpha * 255U))};
   }
 
   bool operator==(const Pixel& rhs) const {

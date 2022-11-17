@@ -48,9 +48,10 @@ using fuchsia::ui::composition::ViewportProperties;
 //       -->rectangle transform 2 (id=27) {content: filled rect id=31} [right]
 //       -->rectangle transform 3 (id=28) {content: filled rect id=32} [left]
 
-// Color for accessibility highlights. Chosen arbitrarily.
+// Color for accessibility highlights. (0.9131, 0, 0.2423) in linear color space, which is near to
+// #F50057 (Pink A400) in sRGB space.
 const fuchsia::ui::composition::ColorRgba kHighlightColor = {
-    .red = 0xF5 / 255.f, .green = 0, .blue = 0x57 / 255.f, .alpha = 1};
+    .red = 0.9131f, .green = 0.0f, .blue = 0.2423f, .alpha = 1.0f};
 
 // Multiply by 2 to get the width (in logical pixels) of the four rectangles that
 // constitute the boundaries of the highlight.
