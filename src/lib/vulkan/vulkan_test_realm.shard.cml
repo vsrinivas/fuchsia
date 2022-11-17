@@ -16,7 +16,6 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys2.EventSource",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",

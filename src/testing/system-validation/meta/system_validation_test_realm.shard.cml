@@ -36,7 +36,6 @@
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.process.Launcher",
                 "fuchsia.session.scene.Manager",
-                "fuchsia.sys2.EventSource",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.controller.Controller",

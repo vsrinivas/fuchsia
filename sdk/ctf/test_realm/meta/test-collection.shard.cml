@@ -23,10 +23,7 @@
     offer: [
         {
             // These hermetic protocols are offered to be used by tests.
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.sys2.EventSource",
-            ],
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [ "#cts-tests" ],
         },

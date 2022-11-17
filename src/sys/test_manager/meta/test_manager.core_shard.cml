@@ -37,7 +37,6 @@
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.Log",
                 "fuchsia.logger.LogSink",
-                "fuchsia.sys2.EventSource",
             ],
             from: "parent",
             to: "#test_manager",

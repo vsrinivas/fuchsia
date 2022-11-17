@@ -96,10 +96,7 @@
             dependency: "weak",
         },
         {
-            protocol: [
-                "fuchsia.sys2.EventSource",
-                "fuchsia.time.Maintenance",
-            ],
+            protocol: [ "fuchsia.time.Maintenance" ],
             from: "parent",
             to: "#core",
         },
@@ -275,40 +272,6 @@
             protocol: "fuchsia.sys2.RouteValidator",
             from: "framework",
             as: "fuchsia.sys2.RouteValidator.root",
-            to: "#core",
-        },
-
-        // Offer events to `bootstrap` for diagnostics usage.
-        {
-            event: [ "stopped" ],
-            from: "framework",
-            to: "#bootstrap",
-        },
-        {
-            event: "directory_ready",
-            from: "parent",
-            to: "#bootstrap",
-            filter: { name: "diagnostics" },
-        },
-        {
-            event: "capability_requested",
-            from: "framework",
-            to: "#bootstrap",
-            filter: { name: "fuchsia.logger.LogSink" },
-        },
-        {
-            protocol: [ "fuchsia.sys2.EventSource" ],
-            from: "parent",
-            to: "#bootstrap",
-        },
-
-        // Offer events to `core` for debugger usage.
-        {
-            event: [
-                "debug_started",
-                "stopped",
-            ],
-            from: "framework",
             to: "#core",
         },
 

@@ -82,33 +82,6 @@
             from: "debug",
         },
         {
-            event: "started",
-            from: "framework",
-            as: "began",
-        },
-        {
-            event: [
-                "destroyed",
-                "stopped",
-            ],
-            from: "parent",
-        },
-        {
-            event: "directory_ready",
-            from: "parent",
-            as: "diagnostics_ready",
-            filter: { path: "diagnostics" },
-            availability: "optional",
-        },
-        {
-            event_stream_deprecated: "my_stream",
-            subscriptions: [
-                { event: "began" },
-                { event: "destroyed" },
-                { event: "diagnostics_ready" },
-            ],
-        },
-        {
             event_stream: [
                 "events",
                 "other",
@@ -134,13 +107,6 @@
             from: "#logger",
             as: "fuchsia.logger.OldLog",
             to: "#modular",
-        },
-        {
-            event: "stopped",
-            from: "parent",
-            as: "stopped-logger",
-            to: "#logger",
-            availability: "required",
         },
         {
             event_stream: "directory_ready",

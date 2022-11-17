@@ -84,7 +84,6 @@
 
                 // TODO(https://fxbug.dev/109428) remove once tiles facade is deleted
                 "fuchsia.sys.Launcher",
-                "fuchsia.sys2.EventSource",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.test.audio.recording.AudioRecordingControl",
                 "fuchsia.testing.proxy.TcpProxyControl",
@@ -139,10 +138,6 @@
         {
             event_stream: "stopped_v2",
             from: "parent",
-        },
-        {
-            event: "stopped",
-            from: "framework",
         },
     ],
     expose: [

@@ -29,11 +29,6 @@
             ],
         },
         {
-            protocol: "fuchsia.sys2.EventSource",
-            from: "parent",
-            to: "#archivist",
-        },
-        {
             event_stream: "directory_ready_v2",
             from: "parent",
             to: "#archivist",

@@ -17,7 +17,6 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys2.EventSource",
             ],
             from: "parent",
             to: [ "#chromium-tests" ],

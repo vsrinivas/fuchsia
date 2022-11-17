@@ -17,7 +17,6 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys2.EventSource",
 
                 // Tests can produce traces.
                 "fuchsia.tracing.provider.Registry",
@@ -69,6 +68,7 @@
             from: "parent",
             to: "#google-tests",
         },
+
         // vulkan
         {
             directory: [

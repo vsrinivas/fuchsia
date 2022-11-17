@@ -217,7 +217,6 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys2.EventSource",
 
                 // Tests can produce trace.
                 "fuchsia.tracing.provider.Registry",
@@ -464,22 +463,6 @@
             protocol: "fuchsia.fuzzer.Registrar",
             from: "parent",
             to: "#fuzz_test_runner",
-        },
-        {
-            event: "capability_requested",
-            from: "framework",
-            to: "#debug_data",
-            filter: { name: "fuchsia.debugdata.Publisher" },
-        },
-        {
-            event: "started",
-            from: "framework",
-            to: "#debug_data",
-        },
-        {
-            event: "destroyed",
-            from: "framework",
-            to: "#debug_data",
         },
         {
             event_stream: [

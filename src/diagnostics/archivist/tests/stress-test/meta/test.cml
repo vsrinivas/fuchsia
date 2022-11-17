@@ -31,29 +31,17 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.sys2.EventSource",
-            ],
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: "#archivist",
         },
         {
-            event: [ "stopped" ],
-            from: "framework",
+            event_stream: [
+                "capability_requested_v2",
+                "directory_ready_v2",
+            ],
+            from: "parent",
             to: "#archivist",
-        },
-        {
-            event: "directory_ready",
-            from: "framework",
-            to: "#archivist",
-            filter: { name: "diagnostics" },
-        },
-        {
-            event: "capability_requested",
-            from: "framework",
-            to: "#archivist",
-            filter: { name: "fuchsia.logger.LogSink" },
         },
         {
             protocol: [

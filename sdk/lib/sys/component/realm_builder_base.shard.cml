@@ -28,7 +28,6 @@
             protocol: [
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.logger.LogSink",
-                "fuchsia.sys2.EventSource",
             ],
             from: "parent",
             to: [ "#realm_builder" ],

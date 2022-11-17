@@ -13,10 +13,7 @@
     },
     use: [
         {
-            protocol: [
-                "fuchsia.diagnostics.ArchiveAccessor",
-                "fuchsia.sys2.EventSource",
-            ],
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
         },
         {
             event_stream: [

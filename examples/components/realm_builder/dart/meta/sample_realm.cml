@@ -13,14 +13,4 @@
     ],
 
     // [END include_shard_dart]
-    use: [
-        { protocol: "fuchsia.sys2.EventSource" },
-        {
-            event: [
-                "started",
-                "stopped",
-            ],
-            from: "framework",
-        },
-    ],
 }

@@ -16,7 +16,6 @@
                 "fuchsia.component.resolution.Resolver",
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys2.EventSource",
             ],
             from: "parent",
             to: "#test_manager",

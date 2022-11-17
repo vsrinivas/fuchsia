@@ -890,11 +890,6 @@
 
         // Required events
         {
-            event: [ "stopped" ],
-            from: "parent",
-            to: "#archivist",
-        },
-        {
             event_stream: "stopped_v2",
             from: "parent",
             to: "#archivist",
@@ -906,23 +901,6 @@
         },
         {
             event_stream: "directory_ready_v2",
-            from: "parent",
-            to: "#archivist",
-        },
-        {
-            event: "directory_ready",
-            from: "parent",
-            to: "#archivist",
-            filter: { name: "diagnostics" },
-        },
-        {
-            event: "capability_requested",
-            from: "parent",
-            to: "#archivist",
-            filter: { name: "fuchsia.logger.LogSink" },
-        },
-        {
-            protocol: "fuchsia.sys2.EventSource",
             from: "parent",
             to: "#archivist",
         },

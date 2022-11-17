@@ -236,7 +236,6 @@ const PROTOCOLS_FOR_HERMETIC_TESTS: &[&str] = &[
     "fuchsia.sys.Environment",
     "fuchsia.sys.Launcher",
     "fuchsia.sys.Loader",
-    "fuchsia.sys2.EventSource",
     "fuchsia.tracing.provider.Registry",
 ];
 const PROTOCOLS_FOR_SYSTEM_TESTS: &[&str] = &[
