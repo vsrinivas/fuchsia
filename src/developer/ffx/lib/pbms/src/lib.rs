@@ -90,6 +90,7 @@ impl FromStr for AuthFlowChoice {
 #[derive(PartialEq, Debug, Clone)]
 pub enum ListingMode {
     AllBundles,
+    GetableBundles,
     ReadyBundlesOnly,
     RemovableBundles,
 }
@@ -348,15 +349,18 @@ pub async fn select_product_bundle(
         // Unfortunately this can't be a filter() because is_pb_ready is async.
         let mut ready = Vec::new();
         for url in iter {
-            // Locally-built bundles aren't removable.
-            if mode == ListingMode::RemovableBundles && is_locally_built(&url) {
-                continue;
-            } else if is_pb_ready(&url).await? {
+            if is_pb_ready(&url).await? {
                 ready.push(url);
             }
         }
         iter = ready.into_iter();
     }
+    // The locally built bundle can't be removed or downloaded, so skip it for those cases.
+    let iter = iter.filter(|url| {
+        mode == ListingMode::AllBundles
+            || mode == ListingMode::ReadyBundlesOnly
+            || !is_locally_built(&url)
+    });
     if let Some(looking_for) = &looking_for {
         let matches = iter.filter(|url| {
             return url.as_str() == looking_for

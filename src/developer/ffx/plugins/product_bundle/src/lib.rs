@@ -8,6 +8,7 @@
 
 use {
     anyhow::{bail, Context, Result},
+    errors::ffx_bail,
     ffx_config::ConfigLevel,
     ffx_core::ffx_plugin,
     ffx_product_bundle_args::{
@@ -292,23 +293,96 @@ where
 }
 
 /// `ffx product-bundle get` sub-command.
+///
+/// This command is broken up into a few pieces:
+///
+/// First, we determine the URL of the target product bundle. This can be provided by the user
+/// as a fully-qualified URL, or as a fragment (a.k.a. short-name) to match against the current
+/// version's available product bundles. If a unique URL cannot be determined based on the user's
+/// input or the available list, the command fails.
+///
+/// We then generate a name for the package repository, and ensure another repository with that
+/// name is not already registered. The user can provide a custom name for the package repository,
+/// or else the tool will default to the product bundle's short-name. If the selected repository
+/// name is unavailable, the command fails unless the user has specified the --force-repo flag; in
+/// that case, the existing package repository will be overwritten by a new package repository for
+/// the product bundle being downloaded. The previous repository can be restored by running the
+/// product-bundle get command again for the previously targeted product bundle.
+///
+/// The product bundle images and packages are then retrieved. The files are initially downloaded
+/// to a temporary directory to ensure atomicity of the download operation, and moved to the final
+/// location on success. If the final location already exists, we assume the contents are valid and
+/// skip the download step unless the user has specified the --force flag. Skipping the download is
+/// not an error, but if the download fails for any other reason, the command fails.
+///
+/// Once the download step is complete, the final step is to set up the package repository for the
+/// downloaded product bundle based on the repository name determined earlier in the command.
 async fn pb_get<I>(ui: &mut I, cmd: &GetCommand, repos: RepositoryRegistryProxy) -> Result<()>
 where
     I: structured_ui::Interface + Sync,
 {
     let start = std::time::Instant::now();
     tracing::debug!("pb_get {:?}", cmd.product_bundle_name);
-    let product_url = determine_pbm_url(cmd, ui).await?;
-    let output_dir = pbms::get_product_dir(&product_url).await?;
+    let product_url = match determine_pbm_url(cmd, ui).await {
+        Ok(url) => url,
+        Err(e) => {
+            let mut note = TableRows::builder();
+            note.title(format!("{:?}", e));
+            ui.present(&Presentation::Table(note)).expect("Problem presenting the note.");
+            // We can't make any progress without a Url.
+            return Ok(());
+        }
+    };
 
-    let path = get_images_dir(&product_url).await;
-    if path.is_ok() && path.unwrap().exists() && !cmd.force {
-        let mut note = TableRows::builder();
-        note.title("This product bundle is already downloaded. Use --force to replace it.");
-        ui.present(&Presentation::Table(note)).expect("Problem presenting the note.");
-        return Ok(());
+    let repo_name = match get_repository_name(cmd, &repos, &product_url).await {
+        Ok(name) => name,
+        Err(e) => {
+            let mut note = TableRows::builder();
+            note.title(format!("{:?}", e));
+            ui.present(&Presentation::Table(note)).expect("Problem presenting the note.");
+            // Don't attempt to download or setup-repo if the repo_name conflicts.
+            return Ok(());
+        }
+    };
+
+    match download_product_bundle(ui, cmd, &product_url).await {
+        Ok(true) => tracing::debug!("Product Bundle downloaded successfully."),
+        Ok(false) => tracing::debug!("Product Bundle download skipped."),
+        Err(e) => {
+            let mut note = TableRows::builder();
+            note.title(format!("{:?}", e));
+            ui.present(&Presentation::Table(note)).expect("Problem presenting the note.");
+            // Don't proceed to setup-repo if the download failed.
+            return Ok(());
+        }
     }
 
+    match set_up_package_repository(&repo_name, &repos, &product_url).await {
+        Ok(()) => {
+            tracing::debug!("Repository '{}' added for '{}'.", &repo_name, product_url);
+            let mut note = TableRows::builder();
+            note.title(format!("Repository added for {}.", &repo_name));
+            ui.present(&Presentation::Table(note)).expect("Problem presenting the note.");
+        }
+        Err(e) => ffx_bail!("Error adding repository {}: {:?}", &repo_name, e),
+    }
+
+    tracing::debug!(
+        "Total fx product-bundle get runtime {} seconds.",
+        start.elapsed().as_secs_f32()
+    );
+    Ok(())
+}
+
+/// Determines the name used for the package repository for this product bundle, starting with
+/// any name provided by the user, then the short-name of the product bundle being retrieved,
+/// or finally defaulting to "devhost". Returns an Err() if the selected repository name is an
+/// invalid domain name or is already in use by another repository.
+async fn get_repository_name(
+    cmd: &GetCommand,
+    repos: &RepositoryRegistryProxy,
+    product_url: &Url,
+) -> Result<String> {
     let repo_name = if let Some(repo_name) = &cmd.repository {
         repo_name.clone()
     } else if let Some(product_name) = product_url.fragment() {
@@ -340,22 +414,49 @@ where
     // If a repo with the selected name already exists, that's an error.
     let repo_list = get_repos(&repos).await?;
     if repo_list.iter().any(|r| r.name == repo_name) {
-        let mut note = TableRows::builder();
-        note.title(format!(
+        bail!(
             "A package repository already exists with the name '{}'. \
             Specify an alternative name using the --repository flag.",
             repo_name
-        ));
-        ui.present(&Presentation::Table(note)).expect("Problem presenting the note.");
-        return Ok(());
+        );
+    } else {
+        Ok(repo_name)
     }
+}
+
+/// Downloads the selected product bundle contents to the local storage directory.
+/// Returns:
+///   - Err(_) if the download fails unexpectedly.
+///   - Ok(false) if the download is skipped because the product bundle is already
+///     available in local storage.
+///   - Ok(true) if the files are successfully downloaded.
+async fn download_product_bundle<I>(ui: &mut I, cmd: &GetCommand, product_url: &Url) -> Result<bool>
+where
+    I: structured_ui::Interface + Sync,
+{
+    let output_dir = pbms::get_product_dir(&product_url).await?;
 
     // Go ahead and download the product images.
-    if !get_product_data(&product_url, &output_dir, select_auth(cmd.oob_auth, cmd.auth), ui).await?
-    {
-        return Ok(());
+    let path = get_images_dir(&product_url).await;
+    if path.is_ok() && path.unwrap().exists() && !cmd.force {
+        let mut note = TableRows::builder();
+        note.title("This product bundle is already downloaded. Use --force to replace it.");
+        ui.present(&Presentation::Table(note)).expect("Problem presenting the note.");
+        return Ok(false);
     }
 
+    get_product_data(&product_url, &output_dir, select_auth(cmd.oob_auth, cmd.auth), ui).await
+}
+
+/// Sets up a package server repository for the product bundle being downloaded. This is
+/// equivalent to calling `ffx repository add-from-pm` with the product bundle's storage path.
+/// If no packages are available as part of the product bundle, this is a no-op. Otherwise,
+/// this returns the result of the `add-from-pm` call.
+async fn set_up_package_repository(
+    repo_name: &str,
+    repos: &RepositoryRegistryProxy,
+    product_url: &Url,
+) -> Result<()> {
     // Register a repository with the daemon if we downloaded any packaging artifacts.
     if let Ok(repo_path) = pbms::get_packages_dir(&product_url).await {
         if repo_path.exists() {
@@ -373,11 +474,6 @@ where
             tracing::info!("Created repository named '{}'", repo_name);
         }
     }
-
-    tracing::debug!(
-        "Total fx product-bundle get runtime {} seconds.",
-        start.elapsed().as_secs_f32()
-    );
     Ok(())
 }
 
@@ -391,7 +487,7 @@ where
         update_metadata_all(&base_dir, select_auth(cmd.oob_auth, cmd.auth), ui).await?;
     }
     let should_print = true;
-    select_product_bundle(&cmd.product_bundle_name, ListingMode::AllBundles, should_print).await
+    select_product_bundle(&cmd.product_bundle_name, ListingMode::GetableBundles, should_print).await
 }
 
 /// `ffx product-bundle create` sub-command.
