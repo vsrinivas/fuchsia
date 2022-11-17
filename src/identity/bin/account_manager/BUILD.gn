@@ -58,7 +58,6 @@ fuchsia_component("account_manager_component") {
 fuchsia_package("account_manager") {
   deps = [
     ":account_manager_component",
-    "//src/identity/bin/account_handler:account_handler_cmp",
-    "//src/identity/bin/account_handler:account_handler_ephemeral",
+    "//src/identity/bin/account_handler",
   ]
 }

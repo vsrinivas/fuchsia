@@ -24,7 +24,8 @@ use {
 /// the integration test and in production so the same relative URL works
 /// in both cases. In the future, we could use structured configuration to
 /// set the account_handler url to allow more flexibility in packaging.
-const ACCOUNT_HANDLER_URL: &str = "#meta/account_handler.cm";
+const ACCOUNT_HANDLER_URL: &str =
+    "fuchsia-pkg://fuchsia.com/account_handler_persistent#meta/account_handler.cm";
 
 /// The url used to launch new ephemeral AccountHandler component instances.
 ///
@@ -32,7 +33,8 @@ const ACCOUNT_HANDLER_URL: &str = "#meta/account_handler.cm";
 /// the integration test and in production so the same relative URL works
 /// in both cases. In the future, we could use structured configuration to
 /// set the account_handler url to allow more flexibility in packaging.
-const ACCOUNT_HANDLER_EPHEMERAL_URL: &str = "#meta/account_handler_ephemeral.cm";
+const ACCOUNT_HANDLER_EPHEMERAL_URL: &str =
+    "fuchsia-pkg://fuchsia.com/account_handler_ephemeral#meta/account_handler.cm";
 
 /// The collection where we spawn new AccountHandler component instances.
 const ACCOUNT_HANDLER_COLLECTION_NAME: &str = "account_handlers";

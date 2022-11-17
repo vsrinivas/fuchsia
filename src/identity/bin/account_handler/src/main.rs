@@ -26,6 +26,8 @@ mod stored_account;
 #[cfg(test)]
 mod test_util;
 
+use account_handler_structured_config::Config;
+
 use {
     crate::{account_handler::AccountHandler, common::AccountLifetime},
     anyhow::{Context as _, Error},
@@ -48,9 +50,6 @@ use {
 
 const DATA_DIR: &str = "/data";
 
-/// This command line flag (prefixed with `--`) results in an in-memory ephemeral account.
-const EPHEMERAL_FLAG: &str = "ephemeral";
-
 fn set_up_lifecycle_watcher<SM>(account_handler: Arc<AccountHandler<SM>>) -> fasync::Task<()>
 where
     SM: StorageManager<Key = [u8; 32]> + Send + Sync + 'static,
@@ -68,14 +67,11 @@ where
 }
 
 fn main() -> Result<(), Error> {
-    let mut opts = getopts::Options::new();
-    opts.optflag("", EPHEMERAL_FLAG, "this account is an in-memory ephemeral account");
-    let args: Vec<String> = std::env::args().collect();
-    let options = opts.parse(args)?;
-    let lifetime = if options.opt_present(EPHEMERAL_FLAG) {
-        AccountLifetime::Ephemeral
-    } else {
-        AccountLifetime::Persistent { account_dir: DATA_DIR.into() }
+    let lifetime = match Config::take_from_startup_handle() {
+        Config { is_ephemeral: true } => AccountLifetime::Ephemeral,
+        Config { is_ephemeral: false } => {
+            AccountLifetime::Persistent { account_dir: DATA_DIR.into() }
+        }
     };
 
     let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;

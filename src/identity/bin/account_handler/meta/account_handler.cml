@@ -44,4 +44,9 @@
             from: "self",
         },
     ],
+    config: {
+        // If true, created accounts will be ephemeral. Otherwise, they will be
+        // persistent.
+        is_ephemeral: { type: "bool" },
+    },
 }

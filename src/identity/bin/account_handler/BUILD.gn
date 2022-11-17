@@ -11,6 +11,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    ":structured-config-lib",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_rust",
     "//sdk/fidl/fuchsia.identity.authentication:fuchsia.identity.authentication_rust",
     "//sdk/fidl/fuchsia.identity.internal:fuchsia.identity.internal_rust",
@@ -32,7 +33,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bincode",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:getopts",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:scopeguard",
@@ -64,20 +64,50 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("account_handler_cmp") {
-  deps = [ ":bin" ]
+fuchsia_component_manifest("manifest") {
   component_name = "account_handler"
   manifest = "meta/account_handler.cml"
 }
 
-fuchsia_component("account_handler_ephemeral") {
-  deps = [ ":bin" ]
-  manifest = "meta/account_handler_ephemeral.cml"
+fuchsia_structured_config_rust_lib("structured-config-lib") {
+  name = "account_handler_structured_config"
+  cm_label = ":manifest"
 }
 
-fuchsia_package("account_handler") {
+fuchsia_structured_config_values("ephemeral-config") {
+  cm_label = ":manifest"
+  values_source = "configs/ephemeral.json5"
+}
+
+fuchsia_structured_config_values("persistent-config") {
+  cm_label = ":manifest"
+  values_source = "configs/persistent.json5"
+}
+
+fuchsia_component("component") {
+  cm_label = ":manifest"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("account_handler_persistent") {
   deps = [
-    ":account_handler_cmp",
+    ":component",
+    ":persistent-config",
+    "//src/storage/bin/minfs",
+  ]
+}
+
+fuchsia_package("account_handler_ephemeral") {
+  deps = [
+    ":component",
+    ":ephemeral-config",
+    "//src/storage/bin/minfs",
+  ]
+}
+
+group("account_handler") {
+  deps = [
     ":account_handler_ephemeral",
+    ":account_handler_persistent",
   ]
 }

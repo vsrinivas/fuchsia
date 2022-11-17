@@ -37,4 +37,12 @@
             to: [ "#realm_builder" ],
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "account_handler_ephemeral",
+                "account_handler_persistent",
+            ],
+        },
+    },
 }

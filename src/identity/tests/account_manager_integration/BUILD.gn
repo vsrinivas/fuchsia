@@ -67,8 +67,7 @@ fuchsia_test_package("account_manager_integration_test") {
   }
 
   deps = [
-    "//src/identity/bin/account_handler:account_handler_cmp",
-    "//src/identity/bin/account_handler:account_handler_ephemeral",
+    "//src/identity/bin/account_handler",
     "//src/identity/bin/account_manager:account_manager_component",
     "//src/identity/bin/dev_authenticator:dev_authenticator_always_fail_authentication",
     "//src/identity/bin/dev_authenticator:dev_authenticator_always_succeed",
