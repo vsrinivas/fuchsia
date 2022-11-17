@@ -406,7 +406,7 @@ impl<'a> TextUi<'a> {
             write!(
                 inner.output,
                 "  {}{}\n",
-                ellipsis(&entry.name, (term_width - 1) as usize),
+                ellipsis(&entry.name, (term_width - 1) as usize, Some('/')),
                 CLEAR_TO_EOL
             )?;
             write!(
@@ -491,7 +491,7 @@ impl<'a> Interface for TextUi<'a> {
 
 /// If the string is longer than `limit`, ellipsis the string in the middle so
 /// that the overall len is `limit` in length.
-fn ellipsis(s: &str, limit: usize) -> String {
+fn ellipsis(s: &str, limit: usize, prefer: Option<char>) -> String {
     // Should this be MLA style "[...]" or Chicago manual style "..."?
     const ELLIPSE: &str = "...";
     // Optimization: if the byte length is less than limit, it's very unlikely
@@ -508,12 +508,24 @@ fn ellipsis(s: &str, limit: usize) -> String {
     if limit < ELLIPSE.len() {
         return ELLIPSE.to_string();
     }
-    // All characters in our ellipse are known grapheme values so .len() is ok.
-    let half = (limit - ELLIPSE.len()) / 2;
+    // Determine offsets (end of first piece and start of second piece).
+    let mut first = (limit - ELLIPSE.len()) / 2;
+    if let Some(ch) = prefer {
+        if let Some(n) = s[..first].rfind(ch) {
+            first = n + 1;
+        }
+    }
+    let mut second = total - (limit - ELLIPSE.len() - first);
+    if let Some(ch) = prefer {
+        if let Some(n) = s[second..].find(ch) {
+            second += n;
+        }
+    }
+    // Build the new string.
     s.graphemes(/*is_extended=*/ true)
-        .take(half)
+        .take(first)
         .chain(ELLIPSE.graphemes(/*is_extended=*/ true))
-        .chain(s.graphemes(true).skip(total - half).take(half))
+        .chain(s.graphemes(true).skip(second).take(total))
         .collect()
 }
 
@@ -616,12 +628,26 @@ mod tests {
 
     #[test]
     fn test_ellipsis() {
-        assert_eq!(ellipsis("alpha beta gamma", 100), "alpha beta gamma");
-        assert_eq!(ellipsis("alpha beta gamma", 16), "alpha beta gamma");
-        assert_eq!(ellipsis("alpha beta gamma", 15), "alpha ... gamma");
-        assert_eq!(ellipsis("alpha beta gamma", 13), "alpha...gamma");
-        assert_eq!(ellipsis("alpha beta gamma", 5), "a...a");
-        assert_eq!(ellipsis("alpha beta gamma", 4), "...");
-        assert_eq!(ellipsis("alpha beta gamma", 0), "...");
+        assert_eq!(ellipsis("cake/drought/fins", 100, /*prefer=*/ None), "cake/drought/fins");
+        assert_eq!(ellipsis("cake/drought/fins", 17, /*prefer=*/ None), "cake/drought/fins");
+        assert_eq!(ellipsis("cake/drought/fins", 16, /*prefer=*/ None), "cake/d...ht/fins");
+        assert_eq!(ellipsis("cake/drought/fins", 15, /*prefer=*/ None), "cake/d...t/fins");
+        assert_eq!(ellipsis("cake/drought/fins", 14, /*prefer=*/ None), "cake/...t/fins");
+        assert_eq!(ellipsis("cake/drought/fins", 12, /*prefer=*/ None), "cake.../fins");
+        assert_eq!(ellipsis("cake/drought/fins", 11, /*prefer=*/ None), "cake...fins");
+        assert_eq!(ellipsis("cake/drought/fins", 5, /*prefer=*/ None), "c...s");
+        assert_eq!(ellipsis("cake/drought/fins", 4, /*prefer=*/ None), "...s");
+        assert_eq!(ellipsis("cake/drought/fins", 0, /*prefer=*/ None), "...");
+
+        assert_eq!(ellipsis("cake/drought/fins", 100, Some('/')), "cake/drought/fins");
+        assert_eq!(ellipsis("cake/drought/fins", 17, Some('/')), "cake/drought/fins");
+        assert_eq!(ellipsis("cake/drought/fins", 16, Some('/')), "cake/.../fins");
+        assert_eq!(ellipsis("cake/drought/fins", 15, Some('/')), "cake/.../fins");
+        assert_eq!(ellipsis("cake/drought/fins", 14, Some('/')), "cake/.../fins");
+        assert_eq!(ellipsis("cake/drought/fins", 12, Some('/')), "cake.../fins");
+        assert_eq!(ellipsis("cake/drought/fins", 11, Some('/')), "cake...fins");
+        assert_eq!(ellipsis("cake/drought/fins", 5, Some('/')), "c...s");
+        assert_eq!(ellipsis("cake/drought/fins", 4, Some('/')), "...s");
+        assert_eq!(ellipsis("cake/drought/fins", 0, Some('/')), "...");
     }
 }
