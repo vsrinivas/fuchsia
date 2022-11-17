@@ -599,7 +599,7 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
                         ordinal: header.ordinal(),
                         control_handle,
                         {{- if $protocol.TwoWayUnknownInteractions }}
-                        direction: fidl::endpoints::UnknownMethodDirection::OneWay,
+                        unknown_method_type: fidl::endpoints::UnknownMethodType::OneWay,
                         {{- end }}
                     })
                     // with_tls_decode_buf will clear the handles when we return
@@ -647,7 +647,7 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
                     Ok({{ $protocol.Name }}Request::_UnknownMethod {
                         ordinal: header.ordinal(),
                         control_handle,
-                        direction: fidl::endpoints::UnknownMethodDirection::TwoWay,
+                        unknown_method_type: fidl::endpoints::UnknownMethodType::TwoWay,
                     })
                 }
                 {{- end }}
@@ -690,7 +690,7 @@ pub enum {{ $protocol.Name }}Request {
         ordinal: u64,
         control_handle: {{ $protocol.Name}}ControlHandle,
         {{- if $protocol.TwoWayUnknownInteractions }}
-        direction: fidl::endpoints::UnknownMethodDirection,
+        unknown_method_type: fidl::endpoints::UnknownMethodType,
         {{- end }}
     },
     {{- end }}
@@ -748,10 +748,10 @@ impl {{ $protocol.Name }}Request {
 
             {{- if $protocol.TwoWayUnknownInteractions }}
             {{ $protocol.Name }}Request::_UnknownMethod {
-                direction: fidl::endpoints::UnknownMethodDirection::OneWay, ..
+                unknown_method_type: fidl::endpoints::UnknownMethodType::OneWay, ..
             } => "unknown one-way method",
             {{ $protocol.Name }}Request::_UnknownMethod {
-                direction: fidl::endpoints::UnknownMethodDirection::TwoWay, ..
+                unknown_method_type: fidl::endpoints::UnknownMethodType::TwoWay, ..
             } => "unknown two-way method",
             {{- else if $protocol.OneWayUnknownInteractions }}
             {{ $protocol.Name }}Request::_UnknownMethod {..} => "unknown one-way method",

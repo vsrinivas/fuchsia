@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::{ControlHandle, ServerEnd, UnknownMethodDirection},
+    fidl::endpoints::{ControlHandle, ServerEnd, UnknownMethodType},
     fidl::{AsHandleRef, Event, Status},
     fidl_fidl_serversuite::{
         AjarTargetMarker, AjarTargetRequest, AnyTarget, ClosedTargetMarker, ClosedTargetRequest,
@@ -14,7 +14,7 @@ use {
         OpenTargetFlexibleTwoWayErrRequest, OpenTargetFlexibleTwoWayFieldsErrRequest,
         OpenTargetMarker, OpenTargetRequest, OpenTargetStrictTwoWayErrRequest,
         OpenTargetStrictTwoWayFieldsErrRequest, ReporterProxy, RunnerRequest, RunnerRequestStream,
-        Test, UnknownMethodType,
+        Test, UnknownMethodType as DynsuiteUnknownMethodType,
     },
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
@@ -137,7 +137,7 @@ async fn run_ajar_target_server(
             match request {
                 AjarTargetRequest::_UnknownMethod { ordinal, control_handle: _ } => {
                     reporter_proxy
-                        .received_unknown_method(ordinal, UnknownMethodType::OneWay)
+                        .received_unknown_method(ordinal, DynsuiteUnknownMethodType::OneWay)
                         .expect("failed to report unknown method call");
                 }
             }
@@ -217,10 +217,14 @@ async fn run_open_target_server(
                         }
                     }
                 }
-                OpenTargetRequest::_UnknownMethod { ordinal, direction, control_handle: _ } => {
-                    let unknown_method_type = match direction {
-                        UnknownMethodDirection::OneWay => UnknownMethodType::OneWay,
-                        UnknownMethodDirection::TwoWay => UnknownMethodType::TwoWay,
+                OpenTargetRequest::_UnknownMethod {
+                    ordinal,
+                    unknown_method_type,
+                    control_handle: _,
+                } => {
+                    let unknown_method_type = match unknown_method_type {
+                        UnknownMethodType::OneWay => DynsuiteUnknownMethodType::OneWay,
+                        UnknownMethodType::TwoWay => DynsuiteUnknownMethodType::TwoWay,
                     };
                     reporter_proxy
                         .received_unknown_method(ordinal, unknown_method_type)
@@ -311,12 +315,12 @@ async fn run_large_message_target_server(
                 }
                 LargeMessageTargetRequest::_UnknownMethod {
                     ordinal,
-                    direction,
+                    unknown_method_type,
                     control_handle: _,
                 } => {
-                    let unknown_method_type = match direction {
-                        UnknownMethodDirection::OneWay => UnknownMethodType::OneWay,
-                        UnknownMethodDirection::TwoWay => UnknownMethodType::TwoWay,
+                    let unknown_method_type = match unknown_method_type {
+                        UnknownMethodType::OneWay => DynsuiteUnknownMethodType::OneWay,
+                        UnknownMethodType::TwoWay => DynsuiteUnknownMethodType::TwoWay,
                     };
                     reporter_proxy
                         .received_unknown_method(ordinal, unknown_method_type)

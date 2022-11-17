@@ -428,9 +428,9 @@ pub fn create_proxy_and_stream<T: ProtocolMarker>() -> Result<(T::Proxy, T::Requ
     Ok((client.into_proxy()?, server.into_stream()?))
 }
 
-/// Indicates the direction of an unknown method.
+/// Indicates whether an unknown method is one-way or two-way.
 #[derive(Copy, Clone, Debug)]
-pub enum UnknownMethodDirection {
+pub enum UnknownMethodType {
     /// Unknown method was one-way.
     OneWay,
     /// Unknown method was two-way.

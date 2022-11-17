@@ -9289,7 +9289,7 @@ impl futures::Stream for UnknownInteractionsProtocolRequestStream {
                     Ok(UnknownInteractionsProtocolRequest::_UnknownMethod {
                         ordinal: header.ordinal(),
                         control_handle,
-                        direction: fidl::endpoints::UnknownMethodDirection::OneWay,
+                        unknown_method_type: fidl::endpoints::UnknownMethodType::OneWay,
                     })
                     // with_tls_decode_buf will clear the handles when we return
                     // before the application can handle the _UnknownMethod, so
@@ -9335,7 +9335,7 @@ impl futures::Stream for UnknownInteractionsProtocolRequestStream {
                     Ok(UnknownInteractionsProtocolRequest::_UnknownMethod {
                         ordinal: header.ordinal(),
                         control_handle,
-                        direction: fidl::endpoints::UnknownMethodDirection::TwoWay,
+                        unknown_method_type: fidl::endpoints::UnknownMethodType::TwoWay,
                     })
                 }
                 _ => Err(fidl::Error::UnknownOrdinal {
@@ -9406,7 +9406,7 @@ pub enum UnknownInteractionsProtocolRequest {
     _UnknownMethod {
         ordinal: u64,
         control_handle: UnknownInteractionsProtocolControlHandle,
-        direction: fidl::endpoints::UnknownMethodDirection,
+        unknown_method_type: fidl::endpoints::UnknownMethodType,
     },
 }
 
@@ -9645,11 +9645,11 @@ impl UnknownInteractionsProtocolRequest {
                 "flexible_two_way_table_err"
             }
             UnknownInteractionsProtocolRequest::_UnknownMethod {
-                direction: fidl::endpoints::UnknownMethodDirection::OneWay,
+                unknown_method_type: fidl::endpoints::UnknownMethodType::OneWay,
                 ..
             } => "unknown one-way method",
             UnknownInteractionsProtocolRequest::_UnknownMethod {
-                direction: fidl::endpoints::UnknownMethodDirection::TwoWay,
+                unknown_method_type: fidl::endpoints::UnknownMethodType::TwoWay,
                 ..
             } => "unknown two-way method",
         }

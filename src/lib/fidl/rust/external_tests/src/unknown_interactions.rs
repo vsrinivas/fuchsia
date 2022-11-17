@@ -1434,7 +1434,7 @@ async fn receive_unknown_one_way_flexible() {
         request,
         UnknownInteractionsProtocolRequest::_UnknownMethod {
             ordinal: 0xff10ff10ff10ff10,
-            direction: fidl::endpoints::UnknownMethodDirection::OneWay,
+            unknown_method_type: fidl::endpoints::UnknownMethodType::OneWay,
             control_handle: _,
         }
     );
@@ -1484,7 +1484,7 @@ async fn receive_unknown_two_way_flexible() {
                 request,
                 UnknownInteractionsProtocolRequest::_UnknownMethod {
                     ordinal: 0xff10ff10ff10ff10,
-                    direction: fidl::endpoints::UnknownMethodDirection::TwoWay,
+                    unknown_method_type: fidl::endpoints::UnknownMethodType::TwoWay,
                     control_handle: _,
                 }
             );
