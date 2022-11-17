@@ -36,6 +36,7 @@ _common_bootfs_deps = [
   "//src/devices/usb/drivers/crg-udc",
   "//src/graphics/drivers/msd-vsi-vip",
   "//src/media/audio/drivers/aml-dsp",
+  "//src/media/audio/drivers/aml-dsp/aml-g12-tdm-dsp",
   "//src/media/audio/drivers/aml-g12-pdm",
   "//src/media/audio/drivers/aml-g12-tdm",
   "//src/media/audio/drivers/codecs/tas5707",

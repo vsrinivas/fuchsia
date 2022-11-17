@@ -8,6 +8,9 @@ import("//build/drivers.gni")
 declare_args() {
   av400_has_codec = true
   av400_has_loopback = false
+
+  # Audio data can be processed using HW DSP FW.
+  av400_tdm_use_dsp = false
 }
 
 driver_bind_rules("av400-emmc-bind") {
@@ -129,12 +132,36 @@ driver_bind_rules("tdm-i2s-test-codec-bind") {
   ]
 }
 
+driver_bind_rules("tdm-i2s-out-dsp-bind") {
+  rules = "bind/tdm-i2s-out-dsp.bind"
+  header_output = "tdm-i2s-out-dsp-bind.h"
+  bind_output = "tdm-i2s-out-dsp-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.codec",
+    "//src/devices/bind/fuchsia.dsp",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.mailbox",
+    "//src/devices/bind/fuchsia.ti.platform",
+  ]
+}
+
 driver_bind_rules("tdm-i2s-bind") {
   rules = "bind/tdm-i2s.bind"
   header_output = "tdm-i2s-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.a5",
     "//src/devices/bind/fuchsia.gpio",
+  ]
+}
+
+driver_bind_rules("tdm-i2s-in-dsp-bind") {
+  rules = "bind/tdm-i2s-in-dsp.bind"
+  header_output = "tdm-i2s-in-dsp-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.dsp",
+    "//src/devices/bind/fuchsia.mailbox",
   ]
 }
 
@@ -307,8 +334,14 @@ fuchsia_driver("av400-driver") {
   defines = []
   if (av400_has_codec) {
     defines += [ "TEST_CODEC" ]
-    deps += [ ":tdm-i2s-test-codec-bind_header" ]
     deps -= [ ":tdm-i2s-bind_header" ]
+    if (av400_tdm_use_dsp) {
+      defines += [ "TDM_USE_DSP" ]
+      deps += [ ":tdm-i2s-in-dsp-bind_header" ]
+      deps += [ ":tdm-i2s-out-dsp-bind_header" ]
+    } else {
+      deps += [ ":tdm-i2s-test-codec-bind_header" ]
+    }
   }
   if (av400_has_loopback) {
     defines += [ "TEST_LOOPBACK" ]

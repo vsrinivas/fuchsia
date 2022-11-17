@@ -346,6 +346,7 @@
 //src/graphics/drivers/msd-vsi-vip:msd_vsi_test-driver
 //src/graphics/drivers/virtio:virtio_gpu-driver
 //src/media/audio/drivers/aml-dsp:aml-dsp-driver
+//src/media/audio/drivers/aml-dsp/aml-g12-tdm-dsp:aml-g12-tdm-dsp-driver
 //src/media/audio/drivers/aml-g12-pdm:aml-g12-pdm-driver
 //src/media/audio/drivers/aml-g12-tdm:aml-g12-tdm-dai-driver
 //src/media/audio/drivers/aml-g12-tdm:aml-g12-tdm-driver

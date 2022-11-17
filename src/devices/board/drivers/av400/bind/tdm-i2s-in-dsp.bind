@@ -1,0 +1,17 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite tdm_i2s_in_dsp;
+
+using fuchsia.amlogic.platform.a5;
+using fuchsia.dsp;
+using fuchsia.mailbox;
+
+primary node "audio-mailbox" {
+  fuchsia.BIND_FIDL_PROTOCOL == fuchsia.mailbox.BIND_FIDL_PROTOCOL.DEVICE;
+}
+
+node "audio-dsp" {
+  fuchsia.BIND_FIDL_PROTOCOL == fuchsia.dsp.BIND_FIDL_PROTOCOL.DEVICE;
+}

@@ -6,7 +6,7 @@ using fuchsia.amlogic.platform;
 
 fuchsia.BIND_COMPOSITE == 1;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
-fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.TDM;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.TDM_USE_DSP;
 accept fuchsia.BIND_PLATFORM_DEV_PID {
   fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.A5,
 }

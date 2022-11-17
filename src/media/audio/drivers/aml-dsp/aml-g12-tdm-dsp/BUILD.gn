@@ -5,16 +5,16 @@
 import("//build/bind/bind.gni")
 import("//build/drivers.gni")
 
-driver_bind_rules("aml-g12-tdm-bind") {
+driver_bind_rules("aml-g12-tdm-dsp-bind") {
   rules = "aml_tdm.bind"
   header_output = "aml_tdm-bind.h"
-  bind_output = "aml-g12-tdm.bindbc"
+  bind_output = "aml-g12-tdm-dsp.bindbc"
   tests = "tests-stream.json"
   deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
-fuchsia_driver("aml-g12-tdm-driver") {
-  output_name = "aml-g12-tdm"
+fuchsia_driver("aml-g12-tdm-dsp-driver") {
+  output_name = "aml-g12-tdm-dsp"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -25,7 +25,7 @@ fuchsia_driver("aml-g12-tdm-driver") {
   ]
 
   deps = [
-    ":aml-g12-tdm-bind",
+    ":aml-g12-tdm-dsp-bind",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -44,15 +44,11 @@ fuchsia_driver("aml-g12-tdm-driver") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
-fuchsia_driver_component("aml-g12-tdm") {
-  component_name = "aml-g12-tdm"
-  deps = [ ":aml-g12-tdm-driver" ]
+fuchsia_driver_component("aml-g12-tdm-dsp") {
+  component_name = "aml-g12-tdm-dsp"
+  deps = [ ":aml-g12-tdm-dsp-driver" ]
   info = "aml-g12-tdm-info.json"
   colocate = true
 }

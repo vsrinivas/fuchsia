@@ -21,7 +21,12 @@
 
 #ifdef TEST_CODEC
 #include "src/devices/board/drivers/av400/audio-tas5707-stereo-bind.h"
+#ifdef TDM_USE_DSP
+#include "src/devices/board/drivers/av400/tdm-i2s-in-dsp-bind.h"
+#include "src/devices/board/drivers/av400/tdm-i2s-out-dsp-bind.h"
+#else
 #include "src/devices/board/drivers/av400/tdm-i2s-test-codec-bind.h"
+#endif
 #else
 #include "src/devices/board/drivers/av400/tdm-i2s-bind.h"
 #endif
@@ -300,7 +305,11 @@ zx_status_t Av400::AudioInit() {
   tdm_dev.name() = name;
   tdm_dev.vid() = PDEV_VID_AMLOGIC;
   tdm_dev.pid() = PDEV_PID_AMLOGIC_A5;
+#ifdef TDM_USE_DSP
+  tdm_dev.did() = PDEV_DID_AMLOGIC_TDM_USE_DSP;
+#else
   tdm_dev.did() = PDEV_DID_AMLOGIC_TDM;
+#endif
   tdm_dev.instance_id() = tdm_instance_id++;
   tdm_dev.mmio() = audio_mmios;
   tdm_dev.bti() = tdm_btis;
@@ -384,15 +393,27 @@ zx_status_t Av400::AudioInit() {
     tdm_dev.name() = name;
     tdm_dev.vid() = PDEV_VID_AMLOGIC;
     tdm_dev.pid() = PDEV_PID_AMLOGIC_A5;
+#ifdef TDM_USE_DSP
+    tdm_dev.did() = PDEV_DID_AMLOGIC_TDM_USE_DSP;
+#else
     tdm_dev.did() = PDEV_DID_AMLOGIC_TDM;
+#endif
     tdm_dev.instance_id() = tdm_instance_id++;
     tdm_dev.mmio() = audio_mmios;
     tdm_dev.bti() = tdm_in_btis;
     tdm_dev.irq() = toddr_a_irqs;
     tdm_dev.metadata() = tdm_metadata;
 
+#ifdef TDM_USE_DSP
+    result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
+        fidl::ToWire(fidl_arena, tdm_dev),
+        platform_bus_composite::MakeFidlFragment(fidl_arena, tdm_i2s_in_dsp_fragments,
+                                                 std::size(tdm_i2s_in_dsp_fragments)),
+        {});
+#else
     result = pbus_.buffer(arena)->AddCompositeImplicitPbusFragment(
         fidl::ToWire(fidl_arena, tdm_dev), {}, {});
+#endif
     if (!result.ok()) {
       zxlogf(ERROR, "%s: AddCompositeImplicitPbusFragment Audio(tdm_dev) request failed: %s",
              __func__, result.FormatDescription().data());

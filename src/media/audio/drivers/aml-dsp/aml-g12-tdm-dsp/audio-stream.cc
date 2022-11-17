@@ -18,7 +18,7 @@
 
 #include <pretty/hexdump.h>
 
-#include "src/media/audio/drivers/aml-g12-tdm/aml_tdm-bind.h"
+#include "src/media/audio/drivers/aml-dsp/aml-g12-tdm-dsp/aml_tdm-bind.h"
 
 namespace audio {
 namespace aml_g12 {
