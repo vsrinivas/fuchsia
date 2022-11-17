@@ -60,14 +60,17 @@ impl ClientFactory {
 /// A snapshot of the progress.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProgressState<'a> {
-    /// Current URL.
-    pub url: &'a str,
+    /// Label for this layer of progress, e.g. current URL.
+    pub name: &'a str,
 
     /// The current step of the progress.
     pub at: u64,
 
     /// The total steps.
     pub of: u64,
+
+    /// The type of `at` and `of`, such as "steps", "files", "bytes".
+    pub units: &'a str,
 }
 /// This types promote self-documenting code.
 pub type OverallProgress<'a> = ProgressState<'a>;
@@ -159,7 +162,7 @@ impl Client {
     ) -> Result<()>
     where
         P: AsRef<Path>,
-        F: Fn(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
+        F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
     {
         let objects = self
             .token_store
@@ -193,7 +196,8 @@ impl Client {
                 let mut file = File::create(&output_path).context("create file")?;
                 let url = format!("gs://{}/", bucket);
                 count += 1;
-                let dir_progress = ProgressState { url: &url, at: count, of: total };
+                let dir_progress =
+                    ProgressState { name: &url, at: count, of: total, units: "files" };
                 self.write(bucket, &object, &mut file, &|file_progress| {
                     assert!(
                         file_progress.at <= file_progress.of,
@@ -270,7 +274,7 @@ impl Client {
     ) -> ProgressResult
     where
         W: Write + Sync,
-        F: Fn(ProgressState<'_>) -> ProgressResult,
+        F: Fn(FileProgress<'_>) -> ProgressResult,
     {
         let mut res = self.stream(bucket, object).await?;
         if res.status() == StatusCode::OK {
@@ -308,10 +312,10 @@ impl Client {
                     of = at;
                 }
                 if throttle.is_ready() {
-                    match progress(ProgressState { url: object, at, of })
+                    match progress(ProgressState { name: object, at, of, units: "bytes" })
                         .context("rendering progress")?
                     {
-                        ProgressResponse::Cancel => break,
+                        ProgressResponse::Cancel => return Ok(ProgressResponse::Cancel),
                         _ => (),
                     }
                 }

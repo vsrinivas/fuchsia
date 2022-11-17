@@ -31,6 +31,7 @@ use {
     ::gcs::client::ProgressResponse,
     anyhow::{bail, Context, Result},
     camino::Utf8Path,
+    errors::ffx_bail,
     ffx_config::sdk,
     fms::Entries,
     futures::TryStreamExt as _,
@@ -42,11 +43,13 @@ use {
 };
 
 pub use crate::pbms::{fetch_data_for_product_bundle_v1, get_product_dir, get_storage_dir};
+pub use crate::transfer_manifest::transfer_download;
 
 mod gcs;
 mod pbms;
 mod repo;
 mod repo_info;
+pub mod transfer_manifest;
 
 /// Select an Oauth2 authorization flow.
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -459,6 +462,54 @@ pub async fn get_metadata_glob(product_url: &url::Url) -> Result<PathBuf> {
     local_path_helper(product_url, "product_bundles.json", /*dir=*/ false).await
 }
 
+/// Remove prior output directory, if necessary.
+pub async fn make_way_for_output(local_dir: &Path, force: bool) -> Result<()> {
+    tracing::debug!("make_way_for_output {:?}, force {}", local_dir, force);
+    if local_dir.exists() {
+        tracing::debug!("local_dir.exists {:?}", local_dir);
+        if std::fs::read_dir(&local_dir).expect("reading dir").next().is_none() {
+            tracing::debug!("local_dir is empty (which is good) {:?}", local_dir);
+            return Ok(());
+        } else if force {
+            if local_dir == Path::new("") || local_dir == Path::new("/") {
+                ffx_bail!(
+                    "The output directory is {:?} which looks like a mistake. \
+                    Please try a different output directory path.",
+                    local_dir
+                );
+            }
+            if !local_dir.join("product_bundle.json").exists() {
+                ffx_bail!(
+                    "The directory does not resemble an old product \
+                    bundle. For caution's sake, please remove the output \
+                    directory {:?} by hand and try again.",
+                    local_dir
+                );
+            }
+            async_fs::remove_dir_all(&local_dir)
+                .await
+                .with_context(|| format!("removing output dir {:?}", local_dir))?;
+            tracing::debug!("Removed all of {:?}", local_dir);
+        } else {
+            ffx_bail!(
+                "The output directory already exists. Please provide \
+                another directory to write to, or use --force to overwrite the \
+                contents of {:?}.",
+                local_dir
+            );
+        }
+    }
+    assert!(
+        !local_dir.exists(),
+        "The local_dir exists in make_way_for_output, please report this as a bug."
+    );
+    async_fs::create_dir_all(&local_dir)
+        .await
+        .with_context(|| format!("creating directory {:?}", local_dir))?;
+    tracing::debug!("local_dir dir ready.");
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -521,5 +572,22 @@ mod tests {
         update_metadata_all(&output_dir, AuthFlowChoice::Default, &mut ui).await.expect("get pbms");
         let urls = product_bundle_urls().await.expect("get pbms");
         assert!(!urls.is_empty());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_make_way_for_output() {
+        let test_dir = tempfile::TempDir::new().expect("temp dir");
+
+        make_way_for_output(&test_dir.path(), /*force=*/ false).await.expect("empty dir is okay");
+
+        std::fs::create_dir(&test_dir.path().join("foo")).expect("make_dir foo");
+        std::fs::File::create(test_dir.path().join("info")).expect("create info");
+        std::fs::File::create(test_dir.path().join("product_bundle.json"))
+            .expect("create product_bundle.json");
+        make_way_for_output(&test_dir.path(), /*force=*/ true).await.expect("rm dir is okay");
+
+        let test_dir = tempfile::TempDir::new().expect("temp dir");
+        std::fs::create_dir(&test_dir.path().join("foo")).expect("make_dir foo");
+        assert!(make_way_for_output(&test_dir.path(), /*force=*/ false).await.is_err());
     }
 }

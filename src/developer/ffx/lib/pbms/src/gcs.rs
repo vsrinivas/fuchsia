@@ -10,7 +10,10 @@ use {
     errors::ffx_bail,
     gcs::{
         auth,
-        client::{Client, ClientFactory, ProgressResult, ProgressState},
+        client::{
+            Client, ClientFactory, DirectoryProgress, FileProgress, ProgressResponse,
+            ProgressResult,
+        },
         error::GcsError,
         gs_url::split_gs_url,
         token_store::{read_boto_refresh_token, write_boto_refresh_token, TokenStore},
@@ -143,7 +146,7 @@ pub(crate) async fn fetch_from_gcs<F, I>(
     ui: &I,
 ) -> Result<()>
 where
-    F: Fn(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
+    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
     I: structured_ui::Interface + Sync,
 {
     tracing::debug!("fetch_from_gcs {:?}", gcs_url);
@@ -170,7 +173,7 @@ async fn fetch_from_gcs_with_auth<F, I>(
     ui: &I,
 ) -> Result<()>
 where
-    F: Fn(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
+    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
     I: structured_ui::Interface + Sync,
 {
     tracing::debug!("fetch_from_gcs_with_auth");
@@ -197,8 +200,7 @@ where
                     break;
                 }
                 Some(_) | None => bail!(
-                    "Cannot get product bundle container while \
-                    downloading from gs://{}/{}, saving to {:?}, error {:?}",
+                    "Cannot get data from gs://{}/{}, saving to {:?}, error {:?}",
                     gcs_bucket,
                     gcs_path,
                     local_dir,
@@ -208,6 +210,87 @@ where
         }
     }
     Ok(())
+}
+
+/// Download a single file from `gcs_url` to an in-ram string.
+///
+/// `gcs_url` is the full GCS url, e.g. "gs://bucket/path/to/file".
+pub(crate) async fn string_from_gcs<F, I>(
+    gcs_url: &str,
+    auth_flow: AuthFlowChoice,
+    progress: &F,
+    ui: &I,
+) -> Result<String>
+where
+    F: Fn(FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
+{
+    tracing::debug!("string_from_gcs {:?}", gcs_url);
+    let client = get_gcs_client_without_auth();
+    let (bucket, gcs_path) = split_gs_url(gcs_url).context("Splitting gs URL.")?;
+    let mut result = Vec::new();
+    if client.write(bucket, gcs_path, &mut result, progress).await.is_ok() {
+        return Ok(String::from_utf8_lossy(&result).to_string());
+    }
+    tracing::debug!("Failed without auth, trying auth {:?}", gcs_url);
+    string_from_gcs_with_auth(bucket, gcs_path, auth_flow, progress, ui)
+        .await
+        .context("fetch with auth")
+}
+
+/// Download a single file from `gcs_url` to an in-ram string.
+///
+/// Fallback from using `string_from_gcs()` without auth.
+async fn string_from_gcs_with_auth<F, I>(
+    gcs_bucket: &str,
+    gcs_path: &str,
+    auth_flow: AuthFlowChoice,
+    progress: &F,
+    ui: &I,
+) -> Result<String>
+where
+    F: Fn(FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
+{
+    tracing::debug!("string_from_gcs_with_auth");
+    let boto_path = get_boto_path(auth_flow, ui).await?;
+
+    let mut result = Vec::new();
+    loop {
+        let client =
+            get_gcs_client_with_auth(&boto_path).context("creating gcs client with auth")?;
+        tracing::debug!("gcs_bucket {:?}, gcs_path {:?}", gcs_bucket, gcs_path);
+        match client
+            .write(gcs_bucket, gcs_path, &mut result, progress)
+            .await
+            .context("writing to string")
+        {
+            Ok(ProgressResponse::Continue) => break,
+            Ok(ProgressResponse::Cancel) => {
+                tracing::info!("ProgressResponse requesting cancel, exiting");
+                std::process::exit(1);
+            }
+            Err(e) => match e.downcast_ref::<GcsError>() {
+                Some(GcsError::NeedNewRefreshToken) => {
+                    tracing::debug!("string_from_gcs_with_auth got NeedNewRefreshToken");
+                    update_refresh_token(&boto_path, auth_flow, ui)
+                        .await
+                        .context("Updating refresh token")?
+                }
+                Some(GcsError::NotFound(b, p)) => {
+                    tracing::warn!("[gs://{}/{} not found]", b, p);
+                    break;
+                }
+                Some(_) | None => bail!(
+                    "Cannot get data from gs://{}/{} to string, error {:?}",
+                    gcs_bucket,
+                    gcs_path,
+                    e,
+                ),
+            },
+        }
+    }
+    Ok(String::from_utf8_lossy(&result).to_string())
 }
 
 /// Prompt the user to visit the OAUTH2 permissions web page and enter a new

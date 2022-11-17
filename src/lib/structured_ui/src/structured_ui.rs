@@ -16,6 +16,7 @@ use {
     cfg_if::cfg_if,
     serde::{Deserialize, Serialize},
     std::io::{BufRead, BufReader, Read, Write},
+    unicode_segmentation::UnicodeSegmentation,
 };
 
 // Magic terminal escape codes.
@@ -401,7 +402,13 @@ impl<'a> TextUi<'a> {
         }
         write!(inner.output, "Progress for \"{}\"{}\n", progress.title, CLEAR_TO_EOL)?;
         for entry in &progress.entries {
-            write!(inner.output, "  {}{}\n", entry.name, CLEAR_TO_EOL)?;
+            let (term_width, _) = termion::terminal_size().unwrap_or((80, 40));
+            write!(
+                inner.output,
+                "  {}{}\n",
+                ellipsis(&entry.name, (term_width - 1) as usize),
+                CLEAR_TO_EOL
+            )?;
             write!(
                 inner.output,
                 "    {} of {} {} ({:.2}%){}\n",
@@ -480,6 +487,34 @@ impl<'a> Interface for TextUi<'a> {
             Presentation::Table(p) => self.present_table(p),
         }
     }
+}
+
+/// If the string is longer than `limit`, ellipsis the string in the middle so
+/// that the overall len is `limit` in length.
+fn ellipsis(s: &str, limit: usize) -> String {
+    // Should this be MLA style "[...]" or Chicago manual style "..."?
+    const ELLIPSE: &str = "...";
+    // Optimization: if the byte length is less than limit, it's very unlikely
+    // that the grapheme count will be larger. (I think that's not possible.)
+    // i.e. there would need to be a single byte utf8 which is rendered in
+    // multiple fixed-width font cells.
+    if s.len() <= limit {
+        return s.to_string();
+    }
+    let total = s.graphemes(/*is_extended=*/ true).count();
+    if total <= limit {
+        return s.to_string();
+    }
+    if limit < ELLIPSE.len() {
+        return ELLIPSE.to_string();
+    }
+    // All characters in our ellipse are known grapheme values so .len() is ok.
+    let half = (limit - ELLIPSE.len()) / 2;
+    s.graphemes(/*is_extended=*/ true)
+        .take(half)
+        .chain(ELLIPSE.graphemes(/*is_extended=*/ true))
+        .chain(s.graphemes(true).skip(total - half).take(half))
+        .collect()
 }
 
 pub struct MockUi {}
@@ -577,5 +612,16 @@ mod tests {
         assert!(output.contains("orange"));
         assert!(output.contains("car"));
         assert!(output.contains("red"));
+    }
+
+    #[test]
+    fn test_ellipsis() {
+        assert_eq!(ellipsis("alpha beta gamma", 100), "alpha beta gamma");
+        assert_eq!(ellipsis("alpha beta gamma", 16), "alpha beta gamma");
+        assert_eq!(ellipsis("alpha beta gamma", 15), "alpha ... gamma");
+        assert_eq!(ellipsis("alpha beta gamma", 13), "alpha...gamma");
+        assert_eq!(ellipsis("alpha beta gamma", 5), "a...a");
+        assert_eq!(ellipsis("alpha beta gamma", 4), "...");
+        assert_eq!(ellipsis("alpha beta gamma", 0), "...");
     }
 }

@@ -20,6 +20,7 @@ if (is_host) {
       "//src/lib/fuchsia-hyper",
       "//src/lib/gcs",
       "//src/lib/structured_ui",
+      "//src/lib/transfer_manifest",
       "//src/sys/pkg/lib/fuchsia-repo",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-fs",
@@ -54,6 +55,7 @@ if (is_host) {
       "src/pbms.rs",
       "src/repo.rs",
       "src/repo_info.rs",
+      "src/transfer_manifest.rs",
     ]
   }
 

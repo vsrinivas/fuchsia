@@ -4,13 +4,13 @@
 
 #![deny(missing_docs)]
 
-//! Construct and parse a transfer manifest that indicates how to move artifacts between local and
-//! remote locations.
+//! Construct and parse a transfer manifest that indicates how to move artifacts
+//! between local and remote locations.
 
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
-/// A verioned manifest describing what to upload or download.
+/// A versioned manifest describing what to upload or download.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(tag = "version")]
 pub enum TransferManifest {
@@ -19,7 +19,8 @@ pub enum TransferManifest {
     V1(TransferManifestV1),
 }
 
-/// Version 1 of the transfer manifest that contains a list of entries to upload or download.
+/// Version 1 of the transfer manifest that contains a list of entries to upload
+/// or download.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct TransferManifestV1 {
     /// List of entries to transfer.
@@ -32,22 +33,27 @@ pub struct TransferEntry {
     /// The type of artifacts to transfer.
     #[serde(rename = "type")]
     pub artifact_type: ArtifactType,
-    /// The local directory to find or download the artifact into that is relative to the transfer
-    /// manifest itself.
+
+    /// The local directory to find or download the artifact into that is
+    /// relative to the transfer manifest itself.
     pub local: Utf8PathBuf,
+
     /// The remote directory to store or download the artifact from.
     pub remote: Utf8PathBuf,
-    /// Which files inside either `local` or `remote` that should be transferred.
+
+    /// Which files inside either `local` or `remote` that should be
+    /// transferred.
     pub entries: Vec<ArtifactEntry>,
 }
 
-/// The type of artifacts to transfer, which can indicate to the uploader and downloader where to
-/// place the artifacts.
+/// The type of artifacts to transfer, which can indicate to the uploader and
+/// downloader where to place the artifacts.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum ArtifactType {
     /// Fuchsia package blobs.
     #[serde(rename = "blobs")]
     Blobs,
+
     /// A collection of files.
     #[serde(rename = "files")]
     Files,

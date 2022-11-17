@@ -11,9 +11,7 @@ use {
         repo_info::RepoInfo,
         AuthFlowChoice,
     },
-    ::gcs::client::{
-        DirectoryProgress, FileProgress, ProgressResponse, ProgressResult, ProgressState, Throttle,
-    },
+    ::gcs::client::{DirectoryProgress, FileProgress, ProgressResponse, ProgressResult, Throttle},
     anyhow::{bail, Context, Result},
     async_fs::File,
     ffx_config::sdk::SdkVersion,
@@ -45,7 +43,7 @@ pub(crate) async fn fetch_product_metadata<F, I>(
     ui: &I,
 ) -> Result<()>
 where
-    F: Fn(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
+    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
     I: structured_ui::Interface + Sync,
 {
     tracing::info!("Getting product metadata for {:?}", repo);
@@ -268,8 +266,8 @@ where
                     let mut progress = structured_ui::Progress::builder();
                     progress.title(&product_bundle.name);
                     progress.entry("Image data", /*at=*/ 1, /*of=*/ 2, "steps");
-                    progress.entry(&d.url, d.at, d.of, "files");
-                    progress.entry(&f.url, f.at, f.of, "bytes");
+                    progress.entry(&d.name, d.at, d.of, "files");
+                    progress.entry(&f.name, f.at, f.of, "bytes");
                     ui.present(&structured_ui::Presentation::Progress(progress))?;
                     Ok(ProgressResponse::Continue)
                 },
@@ -300,8 +298,8 @@ where
                 let mut progress = structured_ui::Progress::builder();
                 progress.title(&product_bundle.name);
                 progress.entry("Package data", /*at=*/ 2, /*at=*/ 2, "steps");
-                progress.entry(&d.url, d.at, d.of, "files");
-                progress.entry(&f.url, f.at, f.of, "bytes");
+                progress.entry(&d.name, d.at, d.of, "files");
+                progress.entry(&f.name, f.at, f.of, "bytes");
                 ui.present(&structured_ui::Presentation::Progress(progress))?;
                 Ok(ProgressResponse::Continue)
             },
@@ -484,8 +482,8 @@ where
         }
         if throttle.is_ready() {
             match progress(
-                DirectoryProgress { url: &url, at: 0, of: 1 },
-                FileProgress { url: &url, at, of },
+                DirectoryProgress { name: &url, at: 0, of: 1, units: "files" },
+                FileProgress { name: &url, at, of, units: "bytes" },
             )
             .context("rendering progress")?
             {

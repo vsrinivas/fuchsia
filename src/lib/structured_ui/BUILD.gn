@@ -14,6 +14,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:atty",
     "//third_party/rust_crates:cfg-if",
     "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:termion",
+    "//third_party/rust_crates:unicode-segmentation",
   ]
 
   sources = [

@@ -14,13 +14,9 @@ ffx_plugin("ffx_product_get") {
   sources = [ "src/lib.rs" ]
 
   deps = [
-    "//build/sdk/meta:rust",
-    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
     "//src/developer/ffx/lib/errors:lib",
-    "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
-    "//src/developer/ffx/lib/fms:lib",
     "//src/developer/ffx/lib/pbms:lib",
-    "//src/lib/fuchsia-url",
+    "//src/lib/gcs",
     "//src/lib/structured_ui",
     "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:url",

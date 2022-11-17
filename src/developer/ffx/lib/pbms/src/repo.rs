@@ -376,8 +376,13 @@ where
             count += 1;
             if throttle.is_ready() {
                 match progress(
-                    DirectoryProgress { url: repo_blobs_uri.as_ref(), at: 0, of: 1 },
-                    FileProgress { url: "Packages", at: 0, of: count },
+                    DirectoryProgress {
+                        name: repo_blobs_uri.as_ref(),
+                        at: 0,
+                        of: 1,
+                        units: "files",
+                    },
+                    FileProgress { name: "Packages", at: 0, of: count, units: "bytes" },
                 )
                 .context("rendering progress")?
                 {
@@ -392,8 +397,8 @@ where
 
         while let Some(()) = futures.try_next().await? {}
         progress(
-            DirectoryProgress { url: repo_blobs_uri.as_ref(), at: 1, of: 1 },
-            FileProgress { url: "Packages", at: count, of: count },
+            DirectoryProgress { name: repo_blobs_uri.as_ref(), at: 1, of: 1, units: "files" },
+            FileProgress { name: "Packages", at: count, of: count, units: "bytes" },
         )
         .context("rendering progress")?;
     };

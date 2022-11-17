@@ -17,17 +17,13 @@ pub struct GetCommand {
     #[argh(option, default = "AuthFlowChoice::Default")]
     pub auth: AuthFlowChoice,
 
-    /// use an insecure oauth2 token flow (deprecated).
-    #[argh(switch)]
-    pub oob_auth: bool,
-
     /// repositories will be named `NAME`. Defaults to the product bundle name.
     #[argh(option)]
     pub repository: Option<String>,
 
-    /// url to the product bundle to download.
+    /// url to the transfer manifest of the product bundle to download.
     #[argh(positional)]
-    pub product_bundle_url: String,
+    pub transfer_manifest_url: String,
 
     /// local directory to download the product bundle into.
     #[argh(positional, default = "PathBuf::from(\"local_pb\")")]
