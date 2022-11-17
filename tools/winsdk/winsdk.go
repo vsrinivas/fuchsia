@@ -237,7 +237,10 @@ PathLoop:
 		}
 		if i == len(pathList)-1 {
 			newEntry.Type = "file"
-			newEntry.ExternalContents = path
+			// LLVM VFS library has undefined behaviors when using a non native
+			// path seperator in the VFS overlay file. Using forward slash here as
+			// the produced VFS overlay file will not be used on Windows.
+			newEntry.ExternalContents = filepath.ToSlash(path)
 		} else {
 			newEntry.Type = "directory"
 		}
@@ -850,7 +853,7 @@ func generageSDKDir(files []packedFile, envDir string) error {
 	}
 	defer lockFile.Close()
 	lockFile.Write(lockFileData)
-	overlayFile, err := os.Create("llvm-vfsoverlay.yaml")
+	overlayFile, err := os.Create(filepath.Join(outputPath, "llvm-vfsoverlay.yaml"))
 	if err != nil {
 		return err
 	}
