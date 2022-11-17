@@ -1,0 +1,21 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "fake_graph_server.h",
+    "matchers.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_cpp",
+    "//src/media/audio/lib/format2",
+    "//src/media/audio/services/common",
+    "//third_party/googletest:gmock",
+  ]
+}

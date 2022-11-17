@@ -109,6 +109,34 @@ Format Format::CreateOrDie(Args args) {
   return result.take_value();
 }
 
+fpromise::result<Format, std::string> Format::CreateLegacy(fuchsia_mediastreams::AudioFormat msg) {
+  SampleType sample_type;
+  switch (msg.sample_format()) {
+    case fuchsia_mediastreams::wire::AudioSampleFormat::kUnsigned8:
+      sample_type = SampleType::kUint8;
+      break;
+    case fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16:
+      sample_type = SampleType::kInt16;
+      break;
+    case fuchsia_mediastreams::wire::AudioSampleFormat::kSigned24In32:
+      sample_type = SampleType::kInt32;
+      break;
+    case fuchsia_mediastreams::wire::AudioSampleFormat::kFloat:
+      sample_type = SampleType::kFloat32;
+      break;
+    default:
+      return fpromise::error("bad sample_format '" +
+                             std::to_string(fidl::ToUnderlying(msg.sample_format())) + "'");
+  }
+
+  fidl::Arena<> arena;
+  return Create(fuchsia_audio::wire::Format::Builder(arena)
+                    .sample_type(sample_type)
+                    .channel_count(msg.channel_count())
+                    .frames_per_second(msg.frames_per_second())
+                    .Build());
+}
+
 fpromise::result<Format, std::string> Format::CreateLegacy(
     fuchsia_mediastreams::wire::AudioFormat msg) {
   SampleType sample_type;
@@ -136,6 +164,14 @@ fpromise::result<Format, std::string> Format::CreateLegacy(
                     .channel_count(msg.channel_count)
                     .frames_per_second(msg.frames_per_second)
                     .Build());
+}
+
+Format Format::CreateLegacyOrDie(fuchsia_mediastreams::AudioFormat msg) {
+  auto result = CreateLegacy(msg);
+  if (!result.is_ok()) {
+    FX_CHECK(false) << "Format::CreateLegacyOrDie failed: " << result.error();
+  }
+  return result.take_value();
 }
 
 Format Format::CreateLegacyOrDie(fuchsia_mediastreams::wire::AudioFormat msg) {

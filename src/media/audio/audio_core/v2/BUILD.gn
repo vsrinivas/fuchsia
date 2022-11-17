@@ -6,10 +6,17 @@ source_set("audio_core_lib") {
   sources = [
     "audio_core_component.cc",
     "audio_core_component.h",
+    "reference_clock.cc",
+    "reference_clock.h",
+    "task_barrier.h",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.audio:fuchsia.audio_cpp_wire",
+    "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_cpp_wire",
+    "//sdk/fidl/fuchsia.media2:fuchsia.media2_cpp_wire",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/media/audio/audio_core/shared",

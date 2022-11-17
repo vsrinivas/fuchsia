@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.audio/cpp/natural_types.h>
 #include <fidl/fuchsia.audio/cpp/wire_types.h>
+#include <fidl/fuchsia.mediastreams/cpp/natural_types.h>
 #include <fidl/fuchsia.mediastreams/cpp/wire_types.h>
 #include <lib/fpromise/result.h>
 #include <stdint.h>
@@ -41,8 +42,10 @@ class Format {
   static Format CreateOrDie(Args args);
 
   // TODO(fxbug.dev/114919): Remove when fuchsia.audio.effects has migrated to the new types.
+  static fpromise::result<Format, std::string> CreateLegacy(fuchsia_mediastreams::AudioFormat msg);
   static fpromise::result<Format, std::string> CreateLegacy(
       fuchsia_mediastreams::wire::AudioFormat msg);
+  static Format CreateLegacyOrDie(fuchsia_mediastreams::AudioFormat msg);
   static Format CreateLegacyOrDie(fuchsia_mediastreams::wire::AudioFormat msg);
 
   Format(const Format&) = default;
