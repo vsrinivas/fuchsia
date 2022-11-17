@@ -237,6 +237,9 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   zx_status_t TryLateLogicalAllocation(std::vector<NodeProperties*> nodes);
 
+  zx::result<bool> CompareBufferCollectionInfo(fuchsia_sysmem2::BufferCollectionInfo& lhs,
+                                               fuchsia_sysmem2::BufferCollectionInfo& rhs);
+
   void InitializeConstraintSnapshots(const ConstraintsList& constraints_list);
 
   void SetFailedAllocationResult(zx_status_t status);
@@ -594,8 +597,6 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   // not meaningful until has_allocation_result_ is true.
   bool has_allocation_result_ = false;
   std::optional<fuchsia_sysmem2::BufferCollectionInfo> buffer_collection_info_before_population_;
-  std::optional<fidl::unstable::OwnedEncodedMessage<fuchsia_sysmem2::wire::BufferCollectionInfo>>
-      linearized_buffer_collection_info_before_population_;
   zx_status_t allocation_result_status_ = ZX_OK;
   std::optional<fuchsia_sysmem2::BufferCollectionInfo> allocation_result_info_;
 

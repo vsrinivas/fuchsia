@@ -1383,20 +1383,6 @@ LogicalBufferCollection::TryAllocate(std::vector<NodeProperties*> nodes) {
     return clone_result;
   }
   buffer_collection_info_before_population_.emplace(clone_result.take_value());
-  clone_result = sysmem::V2CloneBufferCollectionInfo(buffer_collection_info, 0, 0);
-  if (!clone_result.is_ok()) {
-    ZX_DEBUG_ASSERT(clone_result.error() != ZX_OK);
-    ZX_DEBUG_ASSERT(clone_result.error() != ZX_ERR_NOT_SUPPORTED);
-    LogError(FROM_HERE, "V2CloneBufferCollectionInfo() failed");
-    return clone_result;
-  }
-  auto tmp_buffer_collection_info_before_population = clone_result.take_value();
-  fidl::Arena arena;
-  auto wire_tmp_buffer_collection_info_before_population =
-      fidl::ToWire(arena, std::move(tmp_buffer_collection_info_before_population));
-  // TODO(fxbug.dev/45252): Use FIDL at rest.
-  linearized_buffer_collection_info_before_population_.emplace(
-      fidl::internal::WireFormatVersion::kV2, &wire_tmp_buffer_collection_info_before_population);
 
   fpromise::result<fuchsia_sysmem2::BufferCollectionInfo, zx_status_t> result =
       Allocate(combined_constraints, &buffer_collection_info);
@@ -1576,45 +1562,16 @@ zx_status_t LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePr
   fuchsia_sysmem2::BufferCollectionInfo unpopulated_buffer_collection_info =
       generate_result.take_value();
 
-  auto clone_result = sysmem::V2CloneBufferCollectionInfo(unpopulated_buffer_collection_info, 0, 0);
-  if (!clone_result.is_ok()) {
-    ZX_DEBUG_ASSERT(clone_result.error() != ZX_OK);
-    ZX_DEBUG_ASSERT(clone_result.error() != ZX_ERR_NOT_SUPPORTED);
-    LogError(FROM_HERE,
-             "V2CloneBufferCollectionInfo() failed -> AttachToken() "
-             "sequence failed - status: %d",
-             clone_result.error());
-    return clone_result.error();
+  zx::result comparison = CompareBufferCollectionInfo(*buffer_collection_info_before_population_,
+                                                      unpopulated_buffer_collection_info);
+  if (comparison.is_error()) {
+    LogInfo(FROM_HERE, "Failed to compare buffer collection info, %s", comparison.status_string());
+    return comparison.error_value();
   }
-  auto tmp_unpopulated_buffer_collection_info = clone_result.take_value();
-  fidl::Arena arena;
-  auto wire_tmp_unpopulated_buffer_collection_info =
-      fidl::ToWire(arena, std::move(tmp_unpopulated_buffer_collection_info));
-  // This could be big so use heap.
-  // TODO(fxbug.dev/45252): Use FIDL at rest.
-  auto linearized_late_logical_allocation_buffer_collection_info = std::make_unique<
-      fidl::unstable::OwnedEncodedMessage<fuchsia_sysmem2::wire::BufferCollectionInfo>>(
-      fidl::internal::WireFormatVersion::kV2, &wire_tmp_unpopulated_buffer_collection_info);
-
-  fidl::OutgoingMessage& original_linear_buffer_collection_info =
-      linearized_buffer_collection_info_before_population_->GetOutgoingMessage();
-  fidl::OutgoingMessage& new_linear_buffer_collection_info =
-      linearized_late_logical_allocation_buffer_collection_info->GetOutgoingMessage();
-  if (!original_linear_buffer_collection_info.ok()) {
-    LogError(FROM_HERE, "original error: %s",
-             original_linear_buffer_collection_info.FormatDescription().c_str());
-  }
-  if (!new_linear_buffer_collection_info.ok()) {
-    LogError(FROM_HERE, "new error: %s",
-             new_linear_buffer_collection_info.FormatDescription().c_str());
-  }
-  ZX_DEBUG_ASSERT(original_linear_buffer_collection_info.ok());
-  ZX_DEBUG_ASSERT(new_linear_buffer_collection_info.ok());
-  ZX_DEBUG_ASSERT(original_linear_buffer_collection_info.handle_actual() == 0);
-  ZX_DEBUG_ASSERT(new_linear_buffer_collection_info.handle_actual() == 0);
-  if (!original_linear_buffer_collection_info.BytesMatch(new_linear_buffer_collection_info)) {
+  if (!comparison.value()) {
     LogInfo(FROM_HERE,
-            "original_linear_buffer_collection_info.BytesMatch(new_linear_buffer_collection_info)");
+            "buffer_collection_info_before_population_ is not the same as "
+            "unpopulated_buffer_collection_info");
     LogDiffsBufferCollectionInfo(*buffer_collection_info_before_population_,
                                  unpopulated_buffer_collection_info);
     return ZX_ERR_NOT_SUPPORTED;
@@ -1630,6 +1587,47 @@ zx_status_t LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePr
   // failure (despite the possibility that perhaps a lower-priority list of selections could have
   // succeeded if the current list of selections hadn't).
   return ZX_OK;
+}
+
+zx::result<bool> LogicalBufferCollection::CompareBufferCollectionInfo(
+    fuchsia_sysmem2::BufferCollectionInfo& lhs, fuchsia_sysmem2::BufferCollectionInfo& rhs) {
+  // Clone both.
+  auto clone = [this](fuchsia_sysmem2::BufferCollectionInfo& v)
+      -> zx::result<fuchsia_sysmem2::BufferCollectionInfo> {
+    auto clone_result = sysmem::V2CloneBufferCollectionInfo(v, 0, 0);
+    if (!clone_result.is_ok()) {
+      ZX_DEBUG_ASSERT(clone_result.error() != ZX_OK);
+      ZX_DEBUG_ASSERT(clone_result.error() != ZX_ERR_NOT_SUPPORTED);
+      LogError(FROM_HERE, "V2CloneBufferCollectionInfo() failed: %d", clone_result.error());
+      return zx::error(clone_result.error());
+    }
+    return zx::ok(clone_result.take_value());
+  };
+  auto clone_lhs = clone(lhs);
+  if (clone_lhs.is_error()) {
+    return clone_lhs.take_error();
+  }
+  auto clone_rhs = clone(rhs);
+  if (clone_rhs.is_error()) {
+    return clone_rhs.take_error();
+  }
+
+  // Encode both.
+  auto encoded_lhs = fidl::Encode(std::move(clone_lhs.value()));
+  if (!encoded_lhs.message().ok()) {
+    LogError(FROM_HERE, "lhs encode error: %s", encoded_lhs.message().FormatDescription().c_str());
+    return zx::error(encoded_lhs.message().error().status());
+  }
+  ZX_DEBUG_ASSERT(encoded_lhs.message().handle_actual() == 0);
+  auto encoded_rhs = fidl::Encode(std::move(clone_rhs.value()));
+  if (!encoded_rhs.message().ok()) {
+    LogError(FROM_HERE, "rhs encode error: %s", encoded_rhs.message().FormatDescription().c_str());
+    return zx::error(encoded_rhs.message().error().status());
+  }
+  ZX_DEBUG_ASSERT(encoded_rhs.message().handle_actual() == 0);
+
+  // Compare.
+  return zx::ok(encoded_lhs.message().BytesMatch(encoded_rhs.message()));
 }
 
 void LogicalBufferCollection::SetFailedAllocationResult(zx_status_t status) {
