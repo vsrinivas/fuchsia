@@ -8,12 +8,11 @@ use {
         scrypt::ScryptError,
         state::{PasswordError, State, StateMachine},
     },
-    anyhow::{anyhow, Error},
     async_trait::async_trait,
     async_utils::hanging_get::server::{HangingGet, Publisher},
     fidl::endpoints::ControlHandle,
     fidl_fuchsia_identity_authentication::{
-        PasswordInteractionRequest, PasswordInteractionRequestStream,
+        Error as ApiError, PasswordInteractionRequest, PasswordInteractionRequestStream,
         PasswordInteractionWatchStateResponder,
     },
     fuchsia_async::Task,
@@ -122,7 +121,7 @@ where
     async fn handle_password_interaction_request_stream(
         self,
         mut stream: PasswordInteractionRequestStream,
-    ) -> Result<T, Error> {
+    ) -> Result<T, ApiError> {
         let subscriber = self.hanging_get.borrow_mut().new_subscriber();
 
         while let Some(request) = stream.next().await {
@@ -144,9 +143,7 @@ where
                                 Err(ValidationError::InternalScryptError(e)) => {
                                     warn!("Responded with internal error: {:?}", e);
                                     control_handle.shutdown_with_epitaph(zx::Status::INTERNAL);
-                                    return Err(anyhow!(
-                                        "Internal error while attempting to validate"
-                                    ));
+                                    return Err(ApiError::Internal);
                                 }
                             }
                         }
@@ -159,14 +156,15 @@ where
                     }
                 }
                 Ok(PasswordInteractionRequest::WatchState { responder }) => {
-                    subscriber.register(responder)?;
+                    subscriber.register(responder).map_err(|_| ApiError::Resource)?;
                 }
                 Err(e) => {
-                    return Err(anyhow!("Error reading PasswordInteractionRequest: {}", e));
+                    warn!("Responded with fidl error: {:?}", e);
+                    return Err(ApiError::Resource);
                 }
             }
         }
-        return Err(anyhow!("Channel closed before successful validation."));
+        Err(ApiError::Aborted)
     }
 }
 
