@@ -11,6 +11,7 @@
 #include <deque>
 #include <unordered_set>
 
+#include "src/devices/bin/driver_manager/v2/node_removal_tracker.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
@@ -418,12 +419,12 @@ void Node::OnBind() const {
 
 void Node::Stop(StopCompleter::Sync& completer) {
   LOGF(DEBUG, "Calling Remove on %s because of Stop() from component framework.", name().c_str());
-  Remove(RemovalSet::kAll);
+  Remove(RemovalSet::kAll, nullptr);
 }
 
 void Node::Kill(KillCompleter::Sync& completer) {
   LOGF(DEBUG, "Calling Remove on %s because of Kill() from component framework.", name().c_str());
-  Remove(RemovalSet::kAll);
+  Remove(RemovalSet::kAll, nullptr);
 }
 
 Node* Node::GetPrimaryParent() const {
@@ -456,6 +457,9 @@ void Node::CheckForRemoval() {
   if (!children_.empty()) {
     return;
   }
+  if (removal_tracker_) {
+    removal_tracker_->NotifyNoChildren(this);
+  }
   LOGF(DEBUG, "Node::Remove(): %s children are empty", name().c_str());
   node_state_ = NodeState::kWaitingOnDriver;
   if (driver_component_ && driver_component_->driver && driver_component_->driver->is_valid()) {
@@ -469,7 +473,7 @@ void Node::CheckForRemoval() {
   }
   // No driver, go straight to full shutdown
   FinishRemoval();
-  }
+}
 
 void Node::FinishRemoval() {
   LOGF(DEBUG, "Node: %s Finishing removal", name().c_str());
@@ -481,12 +485,15 @@ void Node::FinishRemoval() {
   driver_component_.reset();
   for (auto& parent : parents()) {
     parent->RemoveChild(shared_from_this());
-    }
+  }
   parents_.clear();
 
   LOGF(DEBUG, "Node: %s unbinding and resetting", name().c_str());
   UnbindAndReset(controller_ref_);
   UnbindAndReset(node_ref_);
+  if (removal_tracker_) {
+    removal_tracker_->NotifyRemovalComplete(this);
+  }
 }
 // State table for package driver:
 //                                   Initial States
@@ -506,7 +513,25 @@ void Node::FinishRemoval() {
 // Boot drivers go into the Prestop state when Remove(kPackage) is set, to signify that
 // a removal is taking place, but this node will not be removed yet, even if all its children
 // are removed.
-void Node::Remove(RemovalSet removal_set) {
+void Node::Remove(RemovalSet removal_set, NodeRemovalTracker* removal_tracker) {
+  bool should_register = false;
+  if (removal_tracker) {
+    if (!removal_tracker_) {
+      // First time we are seeing the removal tracker, register with it:
+      removal_tracker_ = removal_tracker;
+      should_register = true;
+    } else {
+      // We should never have two competing trackers
+      ZX_ASSERT(removal_tracker_ == removal_tracker);
+    }
+  } else {
+    if (removal_tracker_) {
+      // TODO(fxbug.dev/115171): Change this to an error when we track shutdown steps better.
+      LOGF(WARNING, "Untracked Node::Remove() called on %s, indicating an error during shutdown",
+           name().c_str());
+    }
+  }
+
   LOGF(DEBUG, "Remove called on Node: %s", name().c_str());
   // Two cases where we will transition state and take action:
   // Removing kAll, and state is Running or Prestop
@@ -514,6 +539,8 @@ void Node::Remove(RemovalSet removal_set) {
   if ((node_state_ != NodeState::kPrestop && node_state_ != NodeState::kRunning) ||
       (node_state_ == NodeState::kPrestop && removal_set == RemovalSet::kPackage)) {
     LOGF(WARNING, "Node::Remove() called late, already in state %s", State2String(node_state_));
+    if (should_register)
+      removal_tracker_->RegisterNode(this, collection_, name_, node_state_);
     return;
   }
 
@@ -526,6 +553,9 @@ void Node::Remove(RemovalSet removal_set) {
     node_state_ = NodeState::kWaitingOnChildren;
   }
   // Either way, propagate removal message to children
+  if (should_register) {
+    removal_tracker_->RegisterNode(this, collection_, name_, node_state_);
+  }
 
   // Ask each of our children to remove themselves.
   for (auto it = children_.begin(); it != children_.end();) {
@@ -534,7 +564,7 @@ void Node::Remove(RemovalSet removal_set) {
     LOGF(DEBUG, "Node: %s calling remove on child: %s", name().c_str(), (*it)->name().c_str());
     auto child = it->get();
     ++it;
-    child->Remove(removal_set);
+    child->Remove(removal_set, removal_tracker);
   }
 
   // In case we had no children, or they removed themselves synchronously:
@@ -644,7 +674,7 @@ fit::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> No
         dispatcher_, std::move(node), child, [](fidl::WireServer<fdf::Node>* node, auto, auto) {
           LOGF(WARNING, "Removing node %s because of binding closed",
                static_cast<Node*>(node)->name().c_str());
-          static_cast<Node*>(node)->Remove(RemovalSet::kAll);
+          static_cast<Node*>(node)->Remove(RemovalSet::kAll, nullptr);
         });
   } else {
     // We don't care about tracking binds here, sending nullptr is fine.
@@ -658,7 +688,7 @@ bool Node::IsComposite() const { return parents_.size() > 1; }
 
 void Node::Remove(RemoveCompleter::Sync& completer) {
   LOGF(DEBUG, "Remove() Fidl call for %s", name().c_str());
-  Remove(RemovalSet::kAll);
+  Remove(RemovalSet::kAll, nullptr);
 }
 
 void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) {
@@ -708,7 +738,7 @@ zx::result<> Node::StartDriver(
       [](fidl::WireServer<fdf::Node>* node, fidl::UnbindInfo info, auto) {
         LOGF(WARNING, "Removing node %s because of fdf::Node binding closed: %s",
              static_cast<Node*>(node)->name().c_str(), info.FormatDescription().c_str());
-        static_cast<Node*>(node)->Remove(RemovalSet::kAll);
+        static_cast<Node*>(node)->Remove(RemovalSet::kAll, nullptr);
       });
 
   LOGF(INFO, "Binding %.*s to  %s", static_cast<int>(url.size()), url.data(), name().c_str());
@@ -728,7 +758,7 @@ zx::result<> Node::StartDriver(
                  fidl::UnbindInfo info, auto) {
                 LOGF(WARNING, "Removing node %s because of ComponentController binding closed: %s",
                      static_cast<Node*>(node)->name().c_str(), info.FormatDescription().c_str());
-                static_cast<Node*>(node)->Remove(RemovalSet::kAll);
+                static_cast<Node*>(node)->Remove(RemovalSet::kAll, nullptr);
               }),
 
       .driver =
@@ -765,7 +795,7 @@ void Node::on_fidl_error(fidl::UnbindInfo info) {
   } else {
     LOGF(WARNING, "Removing node %s because of unexpected driver channel shutdown.",
          name().c_str());
-    Remove(RemovalSet::kAll);
+    Remove(RemovalSet::kAll, nullptr);
   }
 }
 

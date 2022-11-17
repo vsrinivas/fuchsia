@@ -23,6 +23,7 @@ std::optional<fuchsia_component_decl::wire::Offer> CreateCompositeServiceOffer(
     std::string_view parents_name, bool primary_parent);
 
 class Node;
+class NodeRemovalTracker;
 
 using NodeBindingInfoResultCallback =
     fit::callback<void(fidl::VectorView<fuchsia_driver_development::wire::NodeBindingInfo>)>;
@@ -114,8 +115,8 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   //   - The Node had an unexpected error or disconnect
   // During a system stop, Remove is expected to be called twice:
   // once with |removal_set| == kPackage, and once with |removal_set| == kAll.
-  // Errors and disconnects that are unrecoverable should call Remove(kAll).
-  void Remove(RemovalSet removal_set);
+  // Errors and disconnects that are unrecoverable should call Remove(kAll, nullptr).
+  void Remove(RemovalSet removal_set, NodeRemovalTracker* removal_tracker);
 
   fit::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> AddChild(
       fuchsia_driver_framework::wire::NodeAddArgs args,
@@ -210,6 +211,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   fit::nullable<DriverHost*> driver_host_;
 
   NodeState node_state_ = NodeState::kRunning;
+  NodeRemovalTracker* removal_tracker_ = nullptr;
 
   std::optional<DriverComponent> driver_component_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;

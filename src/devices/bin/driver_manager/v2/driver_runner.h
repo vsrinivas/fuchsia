@@ -32,6 +32,8 @@
 #include "src/devices/bin/driver_manager/v2/device_group_v2.h"
 #include "src/devices/bin/driver_manager/v2/driver_host.h"
 #include "src/devices/bin/driver_manager/v2/node.h"
+#include "src/devices/bin/driver_manager/v2/node_removal_tracker.h"
+#include "src/devices/bin/driver_manager/v2/node_remover.h"
 
 // Note, all of the logic here assumes we are operating on a single-threaded
 // dispatcher. It is not safe to use a multi-threaded dispatcher with this code.
@@ -41,7 +43,8 @@ namespace dfv2 {
 class DriverRunner : public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,
                      public fidl::WireServer<fuchsia_driver_framework::DeviceGroupManager>,
                      public CompositeManagerBridge,
-                     public NodeManager {
+                     public NodeManager,
+                     public NodeRemover {
   using LoaderServiceFactory = fit::function<zx::result<fidl::ClientEnd<fuchsia_ldsvc::Loader>>()>;
 
  public:
@@ -80,6 +83,16 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   zx::result<> StartDriver(Node& node, std::string_view url,
                            fuchsia_driver_index::DriverPackageType package_type);
 
+  // Shutdown hooks called by the shutdown manager
+  void ShutdownAllDrivers(fit::callback<void()> callback) override {
+    removal_tracker_.set_all_callback(std::move(callback));
+    root_node_->Remove(RemovalSet::kAll, &removal_tracker_);
+  }
+  void ShutdownPkgDrivers(fit::callback<void()> callback) override {
+    removal_tracker_.set_pkg_callback(std::move(callback));
+    root_node_->Remove(RemovalSet::kPackage, &removal_tracker_);
+  }
+
  private:
   // fidl::WireServer<fuchsia_component_runner::ComponentRunner>
   void Start(StartRequestView request, StartCompleter::Sync& completer) override;
@@ -117,6 +130,8 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
 
   // This is for dfv2 device groups.
   DeviceGroupManager device_group_manager_;
+
+  NodeRemovalTracker removal_tracker_;
 
   std::unordered_map<zx_koid_t, Node&> driver_args_;
   fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>> driver_hosts_;
