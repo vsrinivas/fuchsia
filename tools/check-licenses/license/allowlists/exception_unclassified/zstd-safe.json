@@ -1,0 +1,20 @@
+{
+    "license": {
+        "exceptions": [
+            {
+                "entries": [
+                    {
+                        "bug": "",
+                        "projects": [
+                            "third_party/rust_crates/vendor/zstd-safe-5.0.2+zstd.1.5.2"
+                        ]
+                    }
+                ],
+                "example": "MIT or Apache-2.0",
+                "licenseType": "zstd-safe",
+                "notes": [],
+                "patternRoot": "//tools/check-licenses/license/patterns/exception_unclassified/zstd-safe"
+            }
+        ]
+    }
+}
