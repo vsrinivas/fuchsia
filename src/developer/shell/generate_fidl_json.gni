@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dist/distribution_manifest.gni")
+import("//build/fidl/toolchain.gni")
 
 # Generate a manifest providing all of the .fidl.json files exported by the
 # core SDK and any other FIDL files.
@@ -34,7 +35,6 @@ import("//build/dist/distribution_manifest.gni")
 #   testonly
 #   data_deps
 #   deps
-#   fidl_toolchain
 template("distribution_fidl_json") {
   action("gen_fidl_json_${target_name}") {
     forward_variables_from(invoker,
@@ -71,7 +71,6 @@ template("distribution_fidl_json") {
     }
 
     if (defined(fidl_deps)) {
-      forward_variables_from(invoker, [ "fidl_toolchain" ])
       foreach(fidl_dep, fidl_deps) {
         deps += [ "${fidl_dep}($fidl_toolchain)" ]
         fidl_name = get_label_info(fidl_dep, "name")
