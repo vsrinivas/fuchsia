@@ -49,7 +49,7 @@ The FIDL, CML, and realm interface definitions are as follows:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3 id="canvas-client_requested_draw-cml-client">Client</h3>
-          <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/client_requested_draw/meta/client.cml" %}</pre>
+          <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/client_requested_draw/meta/client.cml" highlight="diff_1" %}</pre>
         </section>
         <section>
           <h3 id="canvas-client_requested_draw-server">Server</h3>
@@ -74,11 +74,11 @@ Client and server implementations can then be written in any supported language:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3 id="canvas-client_requested_draw-rust-client">Client</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/client_requested_draw/rust/TODO.md" region_tag="todo" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/client_requested_draw/rust/client/src/main.rs" highlight="diff_1,diff_2,diff_3" %}</pre>
         </section>
         <section>
           <h3 id="canvas-client_requested_draw-rust-server">Server</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/client_requested_draw/rust/TODO.md" region_tag="todo" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/client_requested_draw/rust/server/src/main.rs" highlight="diff_1,diff_2,diff_3,diff_4,diff_5,diff_6" %}</pre>
         </section>
       </devsite-selector>
     </section>

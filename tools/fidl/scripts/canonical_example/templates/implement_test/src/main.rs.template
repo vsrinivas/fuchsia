@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     diagnostics_data::{Data, Logs},
-    example_tester::{assert_logs_eq_to_golden, run_test, Client, Server, TestKind},
+    example_tester::{assert_filtered_logs_eq_to_golden, run_test, Client, Server, TestKind},
     fidl::prelude::*,
     fidl_examples_${series_flat_case}_${variant_flat_case}::${protocol_pascal_case}Marker,
     fuchsia_async as fasync,

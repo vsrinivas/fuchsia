@@ -26,7 +26,7 @@ type BoundingBox = struct {
 protocol Instance {
     // [START diff_1]
     /// Add multiple lines to the canvas. We are able to reduce protocol chatter and the number of
-    /// requests needed by batching instead of calling the simpled `AddLine(...)` one line at a
+    /// requests needed by batching instead of calling the simpler `AddLine(...)` one line at a
     /// time.
     AddLines(struct {
         lines vector<Line>;
@@ -39,10 +39,10 @@ protocol Instance {
     ///
     /// This method also has the benefit of "throttling" the `-> OnDrawn(...)` event - rather than
     /// allowing a potentially unlimited flood of `-> OnDrawn(...)` calls, we now have the runtime
-    /// enforced semantic that each `-> OnDrawn(...)` call must follow a unique `Ready()` call from
-    /// the client. An unprompted `-> OnDrawn(...)` is invalid, and should cause the channel to
+    /// enforced semantic that each `-> OnDrawn(...)` call must follow a unique `Ready() -> ()` call
+    /// from the client. An unprompted `-> OnDrawn(...)` is invalid, and should cause the channel to
     /// immediately close.
-    Ready();
+    Ready() -> ();
     // [END diff_1]
 
     /// Update the client with the latest drawing state. The server makes no guarantees about how
