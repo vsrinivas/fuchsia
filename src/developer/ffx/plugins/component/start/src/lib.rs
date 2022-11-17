@@ -4,19 +4,17 @@
 
 use {
     anyhow::Result,
-    errors::ffx_bail,
+    component_debug::lifecycle::start_instance,
     ffx_component::{
+        format_lifecycle_error,
         query::get_cml_moniker_from_query,
         rcs::{connect_to_lifecycle_controller, connect_to_realm_explorer},
     },
     ffx_component_start_args::ComponentStartCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
 };
-
-static LIFECYCLE_ERROR_HELP: &'static str = "To learn more, see \
-https://fuchsia.dev/go/components/run-errors";
 
 #[ffx_plugin()]
 pub async fn start(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentStartCommand) -> Result<()> {
@@ -35,32 +33,23 @@ async fn start_impl<W: std::io::Write>(
     writer: &mut W,
 ) -> Result<fsys::StartResult> {
     writeln!(writer, "Moniker: {}", moniker)?;
+    writeln!(writer, "Starting component instance...")?;
 
-    // LifecycleController accepts RelativeMonikers only
-    let moniker = format!(".{}", moniker.to_string());
-    let res = lifecycle_controller.start(&moniker).await;
-    match res {
-        Ok(sr) => match sr {
-            Ok(fsys::StartResult::Started) => {
-                writeln!(writer, "Component started.")?;
-                Ok(fsys::StartResult::Started)
-            }
-            Ok(fsys::StartResult::AlreadyStarted) => {
-                writeln!(writer, "Component is already running.")?;
-                Ok(fsys::StartResult::AlreadyStarted)
-            }
-            Err(e) => {
-                ffx_bail!(
-                    "Lifecycle protocol could not start the component instance: {:?}.\n{}",
-                    e,
-                    LIFECYCLE_ERROR_HELP
-                )
-            }
-        },
-        Err(e) => {
-            ffx_bail!("FIDL error: {:?}", e)
+    // Convert the absolute moniker into a relative moniker w.r.t. root.
+    // LifecycleController expects relative monikers only.
+    let relative_moniker = RelativeMoniker::scope_down(&AbsoluteMoniker::root(), &moniker).unwrap();
+
+    let result = start_instance(&lifecycle_controller, &relative_moniker)
+        .await
+        .map_err(format_lifecycle_error)?;
+
+    match result {
+        fsys::StartResult::Started => writeln!(writer, "Started component instance!")?,
+        fsys::StartResult::AlreadyStarted => {
+            writeln!(writer, "Component instance was already running!")?
         }
     }
+    Ok(result)
 }
 
 ////////////////////////////////////////////////////////////////////////////////

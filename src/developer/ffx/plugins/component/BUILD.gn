@@ -27,7 +27,6 @@ ffx_plugin("ffx_component") {
   ]
   test_deps = [
     "common:ffx_component_test",
-    "create:ffx_component_create_lib_test",
     "destroy:ffx_component_destroy_tests",
     "graph:ffx_component_graph_tests",
     "list:ffx_component_list_tests",

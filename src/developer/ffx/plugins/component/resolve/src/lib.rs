@@ -4,15 +4,16 @@
 
 use {
     anyhow::Result,
-    errors::ffx_bail,
+    component_debug::lifecycle::resolve_instance,
     ffx_component::{
+        format_lifecycle_error,
         query::get_cml_moniker_from_query,
         rcs::{connect_to_lifecycle_controller, connect_to_realm_explorer},
     },
     ffx_component_resolve_args::ComponentResolveCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
 };
 
 #[ffx_plugin]
@@ -36,15 +37,14 @@ async fn resolve_impl<W: std::io::Write>(
     writeln!(writer, "Moniker: {}", moniker)?;
     writeln!(writer, "Resolving component instance...")?;
 
-    // LifecycleController accepts RelativeMonikers only
-    let moniker = format!(".{}", moniker.to_string());
-    match lifecycle_controller.resolve(&moniker).await {
-        Ok(Ok(())) => Ok(()),
-        Ok(Err(e)) => {
-            ffx_bail!("Lifecycle protocol could not resolve the component instance: {:?}", e)
-        }
-        Err(e) => ffx_bail!("FIDL error: {:?}", e),
-    }
+    // Convert the absolute moniker into a relative moniker w.r.t. root.
+    // LifecycleController expects relative monikers only.
+    let moniker = RelativeMoniker::scope_down(&AbsoluteMoniker::root(), &moniker).unwrap();
+
+    resolve_instance(&lifecycle_controller, &moniker).await.map_err(format_lifecycle_error)?;
+
+    writeln!(writer, "Resolved component instance!")?;
+    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////

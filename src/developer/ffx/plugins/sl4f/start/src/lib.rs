@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     errors::{ffx_bail, ffx_error},
-    ffx_component::{rcs::connect_to_lifecycle_controller, verify_fuchsia_pkg_cm_url},
+    ffx_component::rcs::connect_to_lifecycle_controller,
     ffx_core::ffx_plugin,
     ffx_sl4f_start_args::StartCommand,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
@@ -17,6 +17,7 @@ use {
 
 const COLLECTION_NAME: &'static str = "ffx-laboratory";
 const PARENT_MONIKER: &'static str = "./core";
+const PROXY_NAME: &'static str = "sl4f_proxy_server";
 const PROXY_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/sl4f-ffx-proxy-server#meta/sl4f_proxy_server.cm";
 const PROXY_MONIKER: &'static str = "/core/sl4f_bridge_server";
@@ -122,8 +123,7 @@ pub async fn start(
     // There are three servers to start:
     // 1) The device-side proxy.
     println!("  Starting the device-side proxy.");
-    let name = verify_fuchsia_pkg_cm_url(PROXY_URL)?;
-    create_remote_component(&lifecycle_controller, &name, &PROXY_URL, &PROXY_MONIKER).await?;
+    create_remote_component(&lifecycle_controller, &PROXY_NAME, &PROXY_URL, &PROXY_MONIKER).await?;
     start_remote_component(&lifecycle_controller, &PROXY_MONIKER).await?;
 
     // 2) The SL4F component on-device.

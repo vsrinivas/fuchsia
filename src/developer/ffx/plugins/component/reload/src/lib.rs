@@ -4,15 +4,16 @@
 
 use {
     anyhow::Result,
-    errors::ffx_bail,
+    component_debug::lifecycle::{resolve_instance, start_instance, unresolve_instance},
     ffx_component::{
+        format_lifecycle_error,
         query::get_cml_moniker_from_query,
         rcs::{connect_to_lifecycle_controller, connect_to_realm_explorer},
     },
     ffx_component_reload_args::ReloadComponentCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
 };
 
 #[ffx_plugin()]
@@ -32,40 +33,21 @@ async fn reload_impl<W: std::io::Write>(
     moniker: AbsoluteMoniker,
     writer: &mut W,
 ) -> Result<()> {
-    // LifecycleController accepts RelativeMonikers only.
-    let moniker = format!(".{}", moniker.to_string());
+    // Convert the absolute moniker into a relative moniker w.r.t. root.
+    // LifecycleController expects relative monikers only.
+    let moniker = RelativeMoniker::scope_down(&AbsoluteMoniker::root(), &moniker).unwrap();
 
-    // First: Unresolve the component recursively, first shutting it down.
-    writeln!(writer, "Unresolving the component...")?;
-    match lifecycle_controller.unresolve(&moniker).await {
-        Ok(Ok(())) => {}
-        Ok(Err(e)) => {
-            ffx_bail!("Lifecycle protocol could not unresolve the component instance: {:?}", e);
-        }
-        Err(e) => {
-            ffx_bail!("FIDL error: {:?}", e);
-        }
-    };
+    writeln!(writer, "Unresolving component instance...")?;
+    unresolve_instance(&lifecycle_controller, &moniker).await.map_err(format_lifecycle_error)?;
 
-    // Then restart the component.
-    writeln!(writer, "Restarting the component...")?;
-    match lifecycle_controller.start(&moniker).await {
-        Ok(sr) => match sr {
-            Ok(fsys::StartResult::Started) => {
-                writeln!(writer, "Component started.")?;
-                Ok(())
-            }
-            Ok(fsys::StartResult::AlreadyStarted) => {
-                ffx_bail!("Lifecycle protocol could not start component: already-running")
-            }
-            Err(e) => {
-                ffx_bail!("Lifecycle protocol could not start the component instance: {:?}", e)
-            }
-        },
-        Err(e) => {
-            ffx_bail!("FIDL error: {:?}", e)
-        }
-    }
+    writeln!(writer, "Resolving component instance...")?;
+    resolve_instance(&lifecycle_controller, &moniker).await.map_err(format_lifecycle_error)?;
+
+    writeln!(writer, "Starting component instance...")?;
+    start_instance(&lifecycle_controller, &moniker).await.map_err(format_lifecycle_error)?;
+
+    writeln!(writer, "Reloaded component instance!")?;
+    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -84,7 +66,7 @@ mod test {
             create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
 
         fuchsia_async::Task::local(async move {
-            // Expect 2 requests: Unresolve, Start.
+            // Expect 3 requests: Unresolve, Resolve, Start.
             match stream.try_next().await.unwrap().unwrap() {
                 fsys::LifecycleControllerRequest::Unresolve { moniker, responder, .. } => {
                     assert_eq!(expected_moniker, moniker);
@@ -94,6 +76,18 @@ mod test {
                     "Unexpected Lifecycle Controller request when expecting Unresolve: {:?}",
                     r
                 ),
+            }
+            match stream.try_next().await.unwrap().unwrap() {
+                fsys::LifecycleControllerRequest::Resolve { moniker, responder, .. } => {
+                    assert_eq!(expected_moniker, moniker);
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                r => {
+                    panic!(
+                        "Unexpected Lifecycle Controller request when expecting Resolve: {:?}",
+                        r
+                    )
+                }
             }
             match stream.try_next().await.unwrap().unwrap() {
                 fsys::LifecycleControllerRequest::Start { moniker, responder, .. } => {

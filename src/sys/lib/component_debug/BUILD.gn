@@ -11,17 +11,21 @@ rustc_library("component_debug") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
     "//sdk/fidl/fuchsia.component.config:fuchsia.component.config_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-fs",
+    "//src/lib/fuchsia-url",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/moniker",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
 
   # Some host tools use serde to serialize/deserialize types. This
@@ -38,6 +42,7 @@ rustc_library("component_debug") {
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:test-case",
   ]
@@ -47,6 +52,7 @@ rustc_library("component_debug") {
     "src/copy.rs",
     "src/io.rs",
     "src/lib.rs",
+    "src/lifecycle.rs",
     "src/list.rs",
     "src/path.rs",
     "src/show.rs",

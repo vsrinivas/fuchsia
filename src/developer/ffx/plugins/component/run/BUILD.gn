@@ -14,9 +14,9 @@ ffx_plugin("ffx_component_run") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/plugins/component/common:ffx_component",
-    "//src/developer/ffx/plugins/component/create:ffx_component_create_lib",
     "//src/developer/ffx/plugins/log:ffx_log",
     "//src/developer/ffx/plugins/log:ffx_log_args",
+    "//src/sys/lib/component_debug",
     "//src/sys/lib/moniker",
   ]
   test_deps = [

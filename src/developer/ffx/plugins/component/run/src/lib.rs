@@ -4,19 +4,22 @@
 
 use {
     anyhow::Result,
+    component_debug::lifecycle::{
+        create_instance_in_collection, destroy_instance_in_collection, resolve_instance,
+        start_instance, LifecycleError,
+    },
     errors::{ffx_bail, ffx_error},
-    ffx_component::rcs::connect_to_lifecycle_controller,
+    ffx_component::{
+        format_lifecycle_error, parse_component_url, rcs::connect_to_lifecycle_controller,
+    },
     ffx_component_run_args::RunComponentCommand,
     ffx_core::ffx_plugin,
     ffx_log::{log_impl, LogOpts},
     ffx_log_args::LogCommand,
     fidl_fuchsia_developer_ffx::DiagnosticsProxy,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
 };
-
-static EXISTING_MONIKER_HELP: &'static str = "Use --recreate to destroy and recreate a new \
-instance, or use a different moniker to create a new instance with a different name.";
 
 #[ffx_plugin(DiagnosticsProxy = "daemon::protocol")]
 pub async fn run(
@@ -56,43 +59,57 @@ async fn run_impl<W: std::io::Write>(
     recreate: bool,
     writer: &mut W,
 ) -> Result<()> {
-    let if_exists = if recreate {
-        ffx_component_create_lib::IfExists::Recreate
-    } else {
-        ffx_component_create_lib::IfExists::Error(EXISTING_MONIKER_HELP.to_string())
-    };
-    ffx_component_create_lib::create_component(
-        &lifecycle_controller,
-        &moniker,
-        url,
-        if_exists,
-        writer,
-    )
-    .await?;
+    let url = parse_component_url(url.as_str())?;
+    writeln!(writer, "URL: {}", url)?;
+    writeln!(writer, "Moniker: {}", moniker)?;
+    writeln!(writer, "Creating component instance...")?;
 
-    writeln!(writer, "Starting component instance...")?;
+    // Convert the absolute moniker into a relative moniker w.r.t. root.
+    // LifecycleController expects relative monikers only.
+    let relative_moniker = RelativeMoniker::scope_down(&AbsoluteMoniker::root(), &moniker).unwrap();
 
-    // LifecycleController accepts RelativeMonikers only
-    let relative_moniker = format!(".{}", moniker);
+    let create_result =
+        create_instance_in_collection(&lifecycle_controller, &relative_moniker, &url).await;
 
-    let start_result = lifecycle_controller
-        .start(&relative_moniker)
-        .await
-        .map_err(|e| ffx_error!("FIDL error while starting the component instance: {}", e))?;
+    match create_result {
+        Err(LifecycleError::InstanceAlreadyExists { .. }) => {
+            if recreate {
+                // This component already exists, but the user has asked it to be recreated.
+                writeln!(writer, "{} already exists. Destroying...", moniker)?;
+                destroy_instance_in_collection(&lifecycle_controller, &relative_moniker)
+                    .await
+                    .map_err(format_lifecycle_error)?;
 
-    match start_result {
-        Ok(fsys::StartResult::Started) => {
-            writeln!(writer, "Success! The component instance has been started.")?;
-        }
-        Ok(fsys::StartResult::AlreadyStarted) => {
-            writeln!(writer, "The component instance was already started.")?;
+                writeln!(writer, "Recreating component instance...")?;
+                create_instance_in_collection(&lifecycle_controller, &relative_moniker, &url)
+                    .await
+                    .map_err(format_lifecycle_error)?;
+            } else {
+                ffx_bail!("\nERROR: {} already exists.\nUse --recreate to destroy and create a new instance, or provide a different moniker.\n", moniker)
+            }
         }
         Err(e) => {
-            ffx_bail!(
-                "Lifecycle protocol could not start the component instance: {:?}.\n{}",
-                e,
-                ffx_component_create_lib::LIFECYCLE_ERROR_HELP
-            );
+            return Err(format_lifecycle_error(e).into());
+        }
+        Ok(()) => {}
+    }
+
+    writeln!(writer, "Resolving component instance...")?;
+    resolve_instance(&lifecycle_controller, &relative_moniker)
+        .await
+        .map_err(format_lifecycle_error)?;
+
+    writeln!(writer, "Starting component instance...")?;
+    let start_result = start_instance(&lifecycle_controller, &relative_moniker)
+        .await
+        .map_err(format_lifecycle_error)?;
+
+    match start_result {
+        fsys::StartResult::Started => {
+            writeln!(writer, "Started component instance!")?;
+        }
+        fsys::StartResult::AlreadyStarted => {
+            writeln!(writer, "Component instance was already running!")?;
         }
     }
 
@@ -136,6 +153,15 @@ mod test {
                     assert_eq!(expected_collection, collection.name);
                     assert_eq!(expected_name, decl.name.unwrap());
                     assert_eq!(expected_url, decl.url.unwrap());
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                _ => panic!("Unexpected Lifecycle Controller request"),
+            }
+
+            let req = stream.try_next().await.unwrap().unwrap();
+            match req {
+                fsys::LifecycleControllerRequest::Resolve { moniker, responder, .. } => {
+                    assert_eq!(expected_moniker, moniker);
                     responder.send(&mut Ok(())).unwrap();
                 }
                 _ => panic!("Unexpected Lifecycle Controller request"),
@@ -242,6 +268,15 @@ mod test {
                     assert_eq!(expected_collection, collection.name);
                     assert_eq!(expected_name, decl.name.unwrap());
                     assert_eq!(expected_url, decl.url.unwrap());
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                _ => panic!("Unexpected Lifecycle Controller request"),
+            }
+
+            let req = stream.try_next().await.unwrap().unwrap();
+            match req {
+                fsys::LifecycleControllerRequest::Resolve { moniker, responder, .. } => {
+                    assert_eq!(expected_moniker, moniker);
                     responder.send(&mut Ok(())).unwrap();
                 }
                 _ => panic!("Unexpected Lifecycle Controller request"),

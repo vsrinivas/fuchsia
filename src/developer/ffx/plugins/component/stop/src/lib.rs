@@ -4,15 +4,16 @@
 
 use {
     anyhow::Result,
-    errors::ffx_bail,
+    component_debug::lifecycle::stop_instance,
     ffx_component::{
+        format_lifecycle_error,
         query::get_cml_moniker_from_query,
         rcs::{connect_to_lifecycle_controller, connect_to_realm_explorer},
     },
     ffx_component_stop_args::ComponentStopCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
 };
 
 #[ffx_plugin]
@@ -39,15 +40,21 @@ async fn stop_impl<W: std::io::Write>(
         writeln!(writer, "Stopping component instance...")?;
     }
 
-    // LifecycleController accepts RelativeMonikers only
-    let moniker = format!(".{}", moniker.to_string());
-    match lifecycle_controller.stop(&moniker, recursive).await {
-        Ok(Ok(())) => Ok(()),
-        Ok(Err(e)) => {
-            ffx_bail!("Lifecycle protocol could not stop the component instance: {:?}", e)
-        }
-        Err(e) => ffx_bail!("FIDL error: {:?}", e),
+    // Convert the absolute moniker into a relative moniker w.r.t. root.
+    // LifecycleController expects relative monikers only.
+    let relative_moniker = RelativeMoniker::scope_down(&AbsoluteMoniker::root(), &moniker).unwrap();
+
+    stop_instance(&lifecycle_controller, &relative_moniker, recursive)
+        .await
+        .map_err(format_lifecycle_error)?;
+
+    if recursive {
+        writeln!(writer, "Stopped component instances!")?;
+    } else {
+        writeln!(writer, "Stopped component instance!")?;
     }
+
+    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////

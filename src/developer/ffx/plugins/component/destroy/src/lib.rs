@@ -4,20 +4,17 @@
 
 use {
     anyhow::Result,
-    errors::{ffx_bail, ffx_error},
+    component_debug::lifecycle::destroy_instance_in_collection,
     ffx_component::{
+        format_lifecycle_error,
         query::get_cml_moniker_from_query,
         rcs::{connect_to_lifecycle_controller, connect_to_realm_explorer},
     },
     ffx_component_destroy_args::DestroyComponentCommand,
     ffx_core::ffx_plugin,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
 };
-
-static MONIKER_ERROR_HELP: &'static str = "Provide a moniker to a component instance in a \
-collection. To learn more, see https://fuchsia.dev/go/components/collections";
 
 #[ffx_plugin]
 pub async fn destroy(
@@ -38,40 +35,18 @@ async fn destroy_impl<W: std::io::Write>(
     writer: &mut W,
 ) -> Result<()> {
     writeln!(writer, "Moniker: {}", moniker)?;
-
-    let parent = moniker
-        .parent()
-        .ok_or(ffx_error!("Component moniker cannot be the root. {}", MONIKER_ERROR_HELP))?;
-    let leaf = moniker
-        .leaf()
-        .ok_or(ffx_error!("Component moniker cannot be the root. {}", MONIKER_ERROR_HELP))?;
-    let collection = leaf
-        .collection()
-        .ok_or(ffx_error!("Moniker references a static component. {}", MONIKER_ERROR_HELP))?;
-    let name = leaf.name();
-
     writeln!(writer, "Destroying component instance...")?;
 
-    let mut child =
-        fdecl::ChildRef { name: name.to_string(), collection: Some(collection.to_string()) };
+    // Convert the absolute moniker into a relative moniker w.r.t. root.
+    // LifecycleController expects relative monikers only.
+    let moniker = RelativeMoniker::scope_down(&AbsoluteMoniker::root(), &moniker).unwrap();
 
-    // LifecycleController accepts RelativeMonikers only
-    let parent_moniker = format!(".{}", parent.to_string());
-
-    let result = lifecycle_controller
-        .destroy_child(&parent_moniker, &mut child)
+    destroy_instance_in_collection(&lifecycle_controller, &moniker)
         .await
-        .map_err(|e| ffx_error!("FIDL error while destroying component instance: {:?}", e))?;
+        .map_err(format_lifecycle_error)?;
 
-    match result {
-        Err(fcomponent::Error::InstanceNotFound) => {
-            ffx_bail!("Component instance was not found. Component instances can be created with the `ffx component create` or `ffx component run` commands.")
-        }
-        Err(e) => {
-            ffx_bail!("Lifecycle protocol could not destroy component instance: {:?}", e);
-        }
-        Ok(()) => Ok(()),
-    }
+    writeln!(writer, "Destroyed component instance!")?;
+    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////
