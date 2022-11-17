@@ -24,7 +24,7 @@ typedef void opaque_ctx_t;
 /// TPM transport. The ownership of opaque_ctx_t is transferred to the caller.
 opaque_ctx_t* fuchsia_tpm_init(void);
 
-/// Calls the TPM FIDL protocol to sending `in_buffer_len` bytes of `in_buffer`
+/// Calls the TPM FIDL protocol to sending `buffer_len` bytes of `buffer`
 /// across the channel.
 ///
 /// Return Value:
@@ -33,7 +33,7 @@ opaque_ctx_t* fuchsia_tpm_init(void);
 int fuchsia_tpm_send(opaque_ctx_t* context, int command_code, const uint8_t* buffer,
                      size_t buffer_len);
 
-/// Attempts to extract the `out_buffer_len` bytes into the `out_buffer`.
+/// Attempts to extract `out_buffer_len` bytes into the `out_buffer`.
 /// This function does not perform a FIDL request but instead reads from its
 /// own recv_buffer stored in the context that is appended to from the results
 /// of fuchsia_tpm_send.
