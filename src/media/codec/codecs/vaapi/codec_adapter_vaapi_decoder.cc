@@ -13,6 +13,7 @@
 #include <zircon/status.h>
 
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <unordered_map>
@@ -26,6 +27,8 @@
 #include "h264_accelerator.h"
 #include "media/gpu/h264_decoder.h"
 #include "media/gpu/vp9_decoder.h"
+#include "mjpeg_accelerator.h"
+#include "mjpeg_decoder.h"
 #include "vp9_accelerator.h"
 
 // This class manages output buffers when the client selects a linear buffer output. Since the
@@ -769,14 +772,14 @@ void CodecAdapterVaApiDecoder::CoreCodecInit(
       initial_input_format_details.format_details_version_ordinal();
 
   const std::string& mime_type = initial_input_format_details.mime_type();
-  if (mime_type == "video/h264-multi" || mime_type == "video/h264") {
-    media_codec_ = CodecType::H264;
-  } else if (mime_type == "video/vp9") {
-    media_codec_ = CodecType::VP9;
-  } else {
+  auto maybe_media_codec = CodecTypeFromMime(mime_type);
+  if (!maybe_media_codec.has_value()) {
     SetCodecFailure("CodecCodecInit(): Unknown mime_type %s\n", mime_type.c_str());
     return;
   }
+
+  ZX_ASSERT(maybe_media_codec.has_value());
+  media_codec_ = maybe_media_codec.value();
 
   ZX_ASSERT(media_codec_.has_value());
   ConstructDecoder();
@@ -795,10 +798,13 @@ void CodecAdapterVaApiDecoder::CoreCodecInit(
   VAProfile va_profile;
 
   switch (media_codec_.value()) {
-    case CodecType::H264:
+    case CodecType::kMJPEG:
+      va_profile = VAProfileJPEGBaseline;
+      break;
+    case CodecType::kH264:
       va_profile = VAProfileH264High;
       break;
-    case CodecType::VP9:
+    case CodecType::kVP9:
       va_profile = VAProfileVP9Profile0;
       break;
     default:
@@ -1040,14 +1046,42 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
   }
 }  // ~buffer
 
-const char* CodecAdapterVaApiDecoder::CodecTypeName(CodecType state) {
-  switch (state) {
-    case CodecType::H264:
+std::string_view CodecAdapterVaApiDecoder::CodecTypeName(CodecType codec_type) {
+  switch (codec_type) {
+    case CodecType::kMJPEG:
+      return "MJPEG";
+    case CodecType::kH264:
       return "H264";
-    case CodecType::VP9:
+    case CodecType::kVP9:
       return "VP9";
     default:
-      return "UNKNOWN";
+      FX_NOTREACHED();
+  }
+}
+
+std::set<std::string_view> CodecAdapterVaApiDecoder::CodecMimeFromType(CodecType codec_type) {
+  switch (codec_type) {
+    case CodecType::kMJPEG:
+      return {kMjpegMimeType};
+    case CodecType::kH264:
+      return {kH264MimeType, kH264MultiMimeType};
+    case CodecType::kVP9:
+      return {kVp9MimeType};
+    default:
+      FX_NOTREACHED();
+  }
+}
+
+std::optional<CodecAdapterVaApiDecoder::CodecType> CodecAdapterVaApiDecoder::CodecTypeFromMime(
+    std::string_view mime_type) {
+  if (mime_type == kMjpegMimeType) {
+    return CodecType::kMJPEG;
+  } else if (mime_type == kVp9MimeType) {
+    return CodecType::kVP9;
+  } else if ((mime_type == kH264MimeType) || (mime_type == kH264MultiMimeType)) {
+    return CodecType::kH264;
+  } else {
+    return std::nullopt;
   }
 }
 
@@ -1060,7 +1094,7 @@ const char* CodecAdapterVaApiDecoder::DecoderStateName(DecoderState state) {
     case DecoderState::kError:
       return "Error";
     default:
-      return "UNKNOWN";
+      FX_NOTREACHED();
   }
 }
 
@@ -1087,11 +1121,15 @@ void CodecAdapterVaApiDecoder::ConstructDecoder() {
   ZX_ASSERT(media_codec_.has_value());
 
   switch (media_codec_.value()) {
-    case CodecType::H264:
+    case CodecType::kMJPEG:
+      media_decoder_ =
+          std::make_unique<media::MJPEGDecoder>(std::make_unique<MJPEGAccelerator>(this));
+      break;
+    case CodecType::kH264:
       media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<H264Accelerator>(this),
                                                             media::H264PROFILE_HIGH);
       break;
-    case CodecType::VP9:
+    case CodecType::kVP9:
       media_decoder_ = std::make_unique<media::VP9Decoder>(std::make_unique<VP9Accelerator>(this),
                                                            media::VP9PROFILE_PROFILE0);
       break;
@@ -1266,10 +1304,8 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
     if (input_item.is_format_details()) {
       ZX_ASSERT(media_codec_.has_value());
       const std::string& mime_type = input_item.format_details().mime_type();
-
-      if ((media_codec_.value() == CodecType::VP9 &&
-           (mime_type == "video/h264-multi" || mime_type == "video/h264")) ||
-          (media_codec_.value() == CodecType::H264 && mime_type == "video/vp9")) {
+      const auto allow_mime_types = CodecMimeFromType(media_codec_.value());
+      if (allow_mime_types.count(mime_type) == 0) {
         SetCodecFailure(
             "CodecCodecInit(): Can not switch codec type after setting it in CoreCodecInit(). "
             "Attempting to switch it to %s\n",
@@ -1277,12 +1313,12 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
         return;
       }
 
-      if (mime_type == "video/h264-multi" || mime_type == "video/h264") {
+      if (media_codec_.value() == CodecType::kH264) {
         avcc_processor_.ProcessOobBytes(input_item.format_details());
       }
     } else if (input_item.is_end_of_stream()) {
       ZX_ASSERT(media_codec_.has_value());
-      if (media_codec_.value() == CodecType::H264) {
+      if (media_codec_.value() == CodecType::kH264) {
         constexpr uint8_t kEndOfStreamNalUnitType = 11;
         // Force frames to be processed.
         std::vector<uint8_t> end_of_stream_delimiter{0, 0, 1, kEndOfStreamNalUnitType};
@@ -1324,7 +1360,7 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
           }));
 
       ZX_ASSERT(media_codec_.has_value());
-      if ((media_codec_.value() == CodecType::H264) && avcc_processor_.is_avcc()) {
+      if ((media_codec_.value() == CodecType::kH264) && avcc_processor_.is_avcc()) {
         // TODO(fxbug.dev/94139): Remove this copy.
         auto output_avcc_vec = avcc_processor_.ParseVideoAvcc(buffer_start, buffer_size);
         media::DecoderBuffer buffer(output_avcc_vec, packet->buffer(), packet->start_offset(),
@@ -1339,7 +1375,7 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
       // Ensure that the decode buffer has been destroyed and the input packet has been returned
       ZX_ASSERT(returned_buffer);
 
-      if (media_codec_.value() == CodecType::H264) {
+      if (media_codec_.value() == CodecType::kH264) {
         constexpr uint8_t kAccessUnitDelimiterNalUnitType = 9;
         constexpr uint8_t kPrimaryPicType = 1 << (7 - 3);
         // Force frames to be processed. TODO(jbauman): Key on known_end_access_unit.
@@ -1362,7 +1398,7 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
 
 void CodecAdapterVaApiDecoder::CleanUpAfterStream() {
   ZX_ASSERT(media_codec_.has_value());
-  if (media_codec_.value() == CodecType::H264) {
+  if (media_codec_.value() == CodecType::kH264) {
     // Force frames to be processed.
     std::vector<uint8_t> end_of_stream_delimiter{0, 0, 1, 11};
 

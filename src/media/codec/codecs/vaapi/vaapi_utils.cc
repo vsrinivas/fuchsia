@@ -10,6 +10,7 @@
 #include <zircon/assert.h>
 
 #include <filesystem>
+#include <utility>
 
 #include <va/va_magma.h>
 
@@ -161,30 +162,45 @@ static bool SupportsVP9() {
   return SupportsProfile(VAProfileVP9Profile0, VAEntrypointVLD, VA_RT_FORMAT_YUV420);
 }
 
+static bool SupportsJPEG() {
+  return SupportsProfile(VAProfileJPEGBaseline, VAEntrypointVLD, VA_RT_FORMAT_YUV420);
+}
+
 std::vector<fuchsia::mediacodec::CodecDescription> GetCodecList() {
   std::vector<fuchsia::mediacodec::CodecDescription> descriptions;
+
+  if (SupportsJPEG()) {
+    fuchsia::mediacodec::CodecDescription description;
+    description.codec_type = fuchsia::mediacodec::CodecType::DECODER;
+    description.mime_type = "video/x-motion-jpeg";
+    descriptions.push_back(std::move(description));
+  }
+
   if (SupportsH264Decoder()) {
     fuchsia::mediacodec::CodecDescription description;
     description.codec_type = fuchsia::mediacodec::CodecType::DECODER;
     description.mime_type = "video/h264";
-    descriptions.push_back(description);
-    description.codec_type = fuchsia::mediacodec::CodecType::DECODER;
-    description.mime_type = "video/h264-multi";
-    descriptions.push_back(description);
+    descriptions.push_back(std::move(description));
+
+    fuchsia::mediacodec::CodecDescription multi_description;
+    multi_description.codec_type = fuchsia::mediacodec::CodecType::DECODER;
+    multi_description.mime_type = "video/h264-multi";
+    descriptions.push_back(std::move(multi_description));
   }
 
   if (SupportsVP9()) {
     fuchsia::mediacodec::CodecDescription description;
     description.codec_type = fuchsia::mediacodec::CodecType::DECODER;
     description.mime_type = "video/vp9";
-    descriptions.push_back(description);
+    descriptions.push_back(std::move(description));
   }
 
   if (SupportsProfile(VAProfileH264High, VAEntrypointEncSliceLP, VA_RT_FORMAT_YUV420)) {
     fuchsia::mediacodec::CodecDescription description;
     description.codec_type = fuchsia::mediacodec::CodecType::ENCODER;
     description.mime_type = "video/h264";
-    descriptions.push_back(description);
+    descriptions.push_back(std::move(description));
   }
+
   return descriptions;
 }

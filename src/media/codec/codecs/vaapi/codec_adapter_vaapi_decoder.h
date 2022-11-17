@@ -28,6 +28,7 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <set>
 #include <string>
 
 #include <fbl/algorithm.h>
@@ -36,7 +37,6 @@
 #include "buffer_pool.h"
 #include "media/base/decoder_buffer.h"
 #include "media/gpu/accelerated_video_decoder.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/codec/codecs/vaapi/avcc_processor.h"
 #include "src/media/lib/mpsc_queue/mpsc_queue.h"
@@ -427,7 +427,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
             ZX_ASSERT(media_decoder_);
             ZX_ASSERT(media_codec_.has_value());
 
-            bool is_h264 = (media_codec_.value() == CodecType::H264);
+            bool is_h264 = (media_codec_.value() == CodecType::kH264);
 
             // Currently only support outputting to NV12
             constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
@@ -586,6 +586,12 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
 
   scoped_refptr<VASurface> GetVASurface();
 
+  // MIME Types for the various codecs this CodecAdapter supports
+  static constexpr std::string_view kMjpegMimeType = "video/x-motion-jpeg";
+  static constexpr std::string_view kVp9MimeType = "video/vp9";
+  static constexpr std::string_view kH264MimeType = "video/h264";
+  static constexpr std::string_view kH264MultiMimeType = "video/h264-multi";
+
   // Intel linear surface alignment
   static constexpr uint32_t kLinearSurfaceWidthAlignment = 16u;
   static constexpr uint32_t kLinearSurfaceHeightAlignment = 16u;
@@ -603,11 +609,14 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
 
   // Used to keep track when mime_type is specified by client
   enum class CodecType {
-    H264,
-    VP9,
+    kMJPEG = 1,
+    kH264 = 2,
+    kVP9 = 3,
   };
 
-  static const char* CodecTypeName(CodecType state);
+  static std::string_view CodecTypeName(CodecType codec_type);
+  static std::set<std::string_view> CodecMimeFromType(CodecType codec_type);
+  static std::optional<CodecType> CodecTypeFromMime(std::string_view mime_type);
 
   // Used from trace events
   enum DecoderState { kIdle, kDecoding, kError };
