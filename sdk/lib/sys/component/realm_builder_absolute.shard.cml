@@ -8,5 +8,10 @@
             name: "realm_builder_server",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/realm_builder_server.cm",
         },
-    ],
+    ],facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "test_manager" ],
+        },
+    },
+    
 }
