@@ -115,11 +115,13 @@ if (is_fuchsia) {
     restrict_persistent_storage = false
 
     # TODO(fxbug.dev/102390): deprecate appmgr from this product config
-    deps = _core_realm_deps + appmgr_core_shards + [
-             "//src/developer/sshd-host:core_shard",
-             "//src/recovery/system:system_recovery_core_shard",
-             "//src/sys/process-resolver:core_shard",
-           ]
+    deps =
+        _core_realm_deps + appmgr_core_shards + [
+          "//src/developer/sshd-host:core_shard",
+          "//src/factory/factory_store_providers:factory_store_providers_shard",
+          "//src/recovery/system:system_recovery_core_shard",
+          "//src/sys/process-resolver:core_shard",
+        ]
   }
 
   core_realm("core-installer") {
@@ -195,6 +197,10 @@ if (is_fuchsia) {
 
         # Userspace fastboot for flashing
         "//src/firmware/fastboot-tcp",
+
+        # Support for hwinfo protocol to read regulatory region from factory.
+        "//src/hwinfo:hwinfo",
+        "//src/factory/factory_store_providers",
       ]
 
   recovery_installer_packages =

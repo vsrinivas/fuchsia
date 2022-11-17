@@ -12,6 +12,9 @@ rustc_library("recovery-util") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_rust",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_rust",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_rust",
+    "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace_rust",
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_rust",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_rust",
@@ -46,6 +49,7 @@ rustc_library("recovery-util") {
     "src/ota/mod.rs",
     "src/ota/state_machine.rs",
     "src/reboot.rs",
+    "src/regulatory.rs",
     "src/testing/mod.rs",
     "src/wlan.rs",
   ]

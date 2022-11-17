@@ -5,6 +5,7 @@
 pub mod block;
 pub mod ota;
 pub mod reboot;
+pub mod regulatory;
 pub mod wlan;
 
 #[cfg(test)]

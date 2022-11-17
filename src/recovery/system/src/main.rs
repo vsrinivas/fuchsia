@@ -63,7 +63,7 @@ use {
         keyboard::{KeyboardMessages, KeyboardViewAssistant},
         proxy_view_assistant::ProxyMessages,
     },
-    recovery_util::reboot::request_reboot,
+    recovery_util::{reboot::request_reboot, regulatory},
     std::sync::Arc,
 };
 
@@ -1254,6 +1254,11 @@ fn make_app_assistant_fut(
         stdout_to_debuglog::init().await.unwrap_or_else(|error| {
             eprintln!("Failed to initialize debuglog: {:?}", error);
         });
+
+        #[cfg(feature = "http_setup_server")]
+        if let Err(e) = regulatory::set_region_code_from_factory().await {
+            eprintln!("error setting region code: {:?}", e);
+        }
 
         // Build the fdr restriction depending on whether the fdr restriction config exists,
         // and if so, whether or not the policy api allows fdr.

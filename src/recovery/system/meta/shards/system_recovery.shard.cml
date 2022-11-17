@@ -31,6 +31,8 @@
         {
             protocol: [
                 "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.hwinfo.Product",
+                "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
                 "fuchsia.logger.LogSink",
                 "fuchsia.recovery.FactoryReset",
                 "fuchsia.sysmem.Allocator",

@@ -28,6 +28,16 @@
             to: "#system_recovery",
         },
         {
+            protocol: "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+            from: "#regulatory_region",
+            to: "#system_recovery",
+        },
+        {
+            protocol: "fuchsia.hwinfo.Product",
+            from: "#hwinfo",
+            to: "#system_recovery",
+        },
+        {
             protocol: [
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
