@@ -233,7 +233,7 @@ pub fn dispatch_syscall(
         unlink[1],
         unlinkat[3],
         unshare[1],
-        utimensat[0],
+        utimensat[4],
         vfork[0],
         wait4[4],
         waitid[4],

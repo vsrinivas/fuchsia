@@ -1754,7 +1754,13 @@ pub fn sys_inotify_rm_watch(
     Ok(())
 }
 
-pub fn sys_utimensat(current_task: &CurrentTask) -> Result<(), Errno> {
+pub fn sys_utimensat(
+    current_task: &CurrentTask,
+    _dir_fd: FdNumber,
+    _user_path: UserCString,
+    _user_times: UserRef<[timespec; 2]>,
+    _flags: u32,
+) -> Result<(), Errno> {
     not_implemented!(current_task, "utimensat");
     Ok(())
 }
