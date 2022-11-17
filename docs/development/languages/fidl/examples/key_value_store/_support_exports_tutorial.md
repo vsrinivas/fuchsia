@@ -25,13 +25,13 @@ parties.
 [docs-zx-concepts-vmos]: /docs/concepts/kernel/concepts.md#shared_memory_virtual_memory_objects_vmos
 [wiki-bucket-brigade]: https://en.wikipedia.org/wiki/Bucket_brigade
 
-When writing the data to this VMO, we will write the wire-encoded binary from of
-the new FIDL type `Exportable`. Wire-encoded FIDL types can be *persisted* to
-any byte-interfaced storage medium in this manner: they are encoded and written
-to the storage (in this case, a VMO that will later be saved as a file), and
-decoded from it when the data needs to be accessed again, in much the same way
-that a message is encoded, transported, and decoded again later when using FIDL
-over IPC.
+FIDL value types can be *persisted* to any byte-oriented storage medium, using
+the [FIDL data persistence][fidl-persistence] binary format. We will persist the
+newly introduced FIDL type `Exportable` into the VMO. The object will be encoded
+and written to the storage (in this case, a VMO that could later be saved as a
+file), and decoded from it when the data needs to be accessed again, in much the
+same way that a message is encoded, transported, and decoded again later when
+using FIDL over IPC.
 
 To do this securely and adhere to the [principle of least privilege][wiki-polp],
 we should constrain the privileges the handle representing our VMO may carry.
@@ -42,7 +42,8 @@ resized, and written to. When the VMO is returned, we remove right to resize and
 write, ensuring that no process, not even malicious actors in some far away
 component, can modify this data as it moves through the system.
 
-[wiki-bucket-brigade]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
+[fidl-persistence]: /docs/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format.md#convention_for_data_persistence
+[wiki-polp]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
 
 Note: The source code for this example is located at
 [//examples/fidl/new/key_value_store/support_exports](/examples/fidl/new/key_value_store/support_exports).

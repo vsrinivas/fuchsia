@@ -34,6 +34,8 @@ type ExportError = flexible enum {
 // A data type describing the structure of a single export. We never actually send this data type
 // over the wire (we use the file's VMO instead), but whenever data needs to be written to/read from
 // its backing storage as persistent FIDL, it will have this schema.
+///
+/// The items should be sorted in ascending order, following lexicographic ordering of their keys.
 type Exportable = table {
     1: items vector<Item>;
 };
@@ -48,7 +50,8 @@ protocol Store {
     }) -> () error WriteError;
 
     // [START diff_3]
-    /// Exports the entire store as a persistent FIDL into a VMO provided by the client.
+    /// Exports the entire store as a persistent [`Exportable`] FIDL object into a VMO provided by
+    /// the client.
     ///
     /// By having the client provide (and speculatively size) the VMO, we force the party requesting
     /// the relatively heavy load of generating a backup to acknowledge and bear some of the costs.
