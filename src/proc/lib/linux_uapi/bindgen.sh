@@ -43,6 +43,7 @@ PATH="$PWD/prebuilt/third_party/rust/linux-x64/bin:$PATH" \
   --explicit-padding \
   --opaque-type=__sighandler_t \
   --opaque-type=__sigrestore_t \
+  --opaque-type=group_filter.* \
   --ctypes-prefix="crate::x86_64_types" \
   --raw-line "${RAW_LINES}" \
   -o src/proc/lib/linux_uapi/src/x86_64.rs \

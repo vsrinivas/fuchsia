@@ -119,6 +119,13 @@ impl<T> ::std::fmt::Debug for __IncompleteArrayField<T> {
         fmt.write_str("__IncompleteArrayField")
     }
 }
+pub const _K_SS_MAXSIZE: u32 = 128;
+pub const SOCK_SNDBUF_LOCK: u32 = 1;
+pub const SOCK_RCVBUF_LOCK: u32 = 2;
+pub const SOCK_BUF_LOCK_MASK: u32 = 3;
+pub const SOCK_TXREHASH_DEFAULT: u32 = 255;
+pub const SOCK_TXREHASH_DISABLED: u32 = 0;
+pub const SOCK_TXREHASH_ENABLED: u32 = 1;
 pub const __BITS_PER_LONG: u32 = 64;
 pub const __FD_SETSIZE: u32 = 1024;
 pub const _IOC_NRBITS: u32 = 8;
@@ -1545,13 +1552,397 @@ pub const MAP_HUGE_512MB: u32 = 1946157056;
 pub const MAP_HUGE_1GB: u32 = 2013265920;
 pub const MAP_HUGE_2GB: u32 = 2080374784;
 pub const MAP_HUGE_16GB: u32 = 2281701376;
-pub const _K_SS_MAXSIZE: u32 = 128;
-pub const SOCK_SNDBUF_LOCK: u32 = 1;
-pub const SOCK_RCVBUF_LOCK: u32 = 2;
-pub const SOCK_BUF_LOCK_MASK: u32 = 3;
-pub const SOCK_TXREHASH_DEFAULT: u32 = 255;
-pub const SOCK_TXREHASH_DISABLED: u32 = 0;
-pub const SOCK_TXREHASH_ENABLED: u32 = 1;
+pub const __UAPI_DEF_IF_IFCONF: u32 = 1;
+pub const __UAPI_DEF_IF_IFMAP: u32 = 1;
+pub const __UAPI_DEF_IF_IFNAMSIZ: u32 = 1;
+pub const __UAPI_DEF_IF_IFREQ: u32 = 1;
+pub const __UAPI_DEF_IF_NET_DEVICE_FLAGS: u32 = 1;
+pub const __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO: u32 = 1;
+pub const __UAPI_DEF_IN_ADDR: u32 = 1;
+pub const __UAPI_DEF_IN_IPPROTO: u32 = 1;
+pub const __UAPI_DEF_IN_PKTINFO: u32 = 1;
+pub const __UAPI_DEF_IP_MREQ: u32 = 1;
+pub const __UAPI_DEF_SOCKADDR_IN: u32 = 1;
+pub const __UAPI_DEF_IN_CLASS: u32 = 1;
+pub const __UAPI_DEF_IN6_ADDR: u32 = 1;
+pub const __UAPI_DEF_IN6_ADDR_ALT: u32 = 1;
+pub const __UAPI_DEF_SOCKADDR_IN6: u32 = 1;
+pub const __UAPI_DEF_IPV6_MREQ: u32 = 1;
+pub const __UAPI_DEF_IPPROTO_V6: u32 = 1;
+pub const __UAPI_DEF_IPV6_OPTIONS: u32 = 1;
+pub const __UAPI_DEF_IN6_PKTINFO: u32 = 1;
+pub const __UAPI_DEF_IP6_MTUINFO: u32 = 1;
+pub const __UAPI_DEF_SOCKADDR_IPX: u32 = 1;
+pub const __UAPI_DEF_IPX_ROUTE_DEFINITION: u32 = 1;
+pub const __UAPI_DEF_IPX_INTERFACE_DEFINITION: u32 = 1;
+pub const __UAPI_DEF_IPX_CONFIG_DATA: u32 = 1;
+pub const __UAPI_DEF_IPX_ROUTE_DEF: u32 = 1;
+pub const __UAPI_DEF_XATTR: u32 = 1;
+pub const IFNAMSIZ: u32 = 16;
+pub const IFALIASZ: u32 = 256;
+pub const ALTIFNAMSIZ: u32 = 128;
+pub const GENERIC_HDLC_VERSION: u32 = 4;
+pub const CLOCK_DEFAULT: u32 = 0;
+pub const CLOCK_EXT: u32 = 1;
+pub const CLOCK_INT: u32 = 2;
+pub const CLOCK_TXINT: u32 = 3;
+pub const CLOCK_TXFROMRX: u32 = 4;
+pub const ENCODING_DEFAULT: u32 = 0;
+pub const ENCODING_NRZ: u32 = 1;
+pub const ENCODING_NRZI: u32 = 2;
+pub const ENCODING_FM_MARK: u32 = 3;
+pub const ENCODING_FM_SPACE: u32 = 4;
+pub const ENCODING_MANCHESTER: u32 = 5;
+pub const PARITY_DEFAULT: u32 = 0;
+pub const PARITY_NONE: u32 = 1;
+pub const PARITY_CRC16_PR0: u32 = 2;
+pub const PARITY_CRC16_PR1: u32 = 3;
+pub const PARITY_CRC16_PR0_CCITT: u32 = 4;
+pub const PARITY_CRC16_PR1_CCITT: u32 = 5;
+pub const PARITY_CRC32_PR0_CCITT: u32 = 6;
+pub const PARITY_CRC32_PR1_CCITT: u32 = 7;
+pub const LMI_DEFAULT: u32 = 0;
+pub const LMI_NONE: u32 = 1;
+pub const LMI_ANSI: u32 = 2;
+pub const LMI_CCITT: u32 = 3;
+pub const LMI_CISCO: u32 = 4;
+pub const IF_GET_IFACE: u32 = 1;
+pub const IF_GET_PROTO: u32 = 2;
+pub const IF_IFACE_V35: u32 = 4096;
+pub const IF_IFACE_V24: u32 = 4097;
+pub const IF_IFACE_X21: u32 = 4098;
+pub const IF_IFACE_T1: u32 = 4099;
+pub const IF_IFACE_E1: u32 = 4100;
+pub const IF_IFACE_SYNC_SERIAL: u32 = 4101;
+pub const IF_IFACE_X21D: u32 = 4102;
+pub const IF_PROTO_HDLC: u32 = 8192;
+pub const IF_PROTO_PPP: u32 = 8193;
+pub const IF_PROTO_CISCO: u32 = 8194;
+pub const IF_PROTO_FR: u32 = 8195;
+pub const IF_PROTO_FR_ADD_PVC: u32 = 8196;
+pub const IF_PROTO_FR_DEL_PVC: u32 = 8197;
+pub const IF_PROTO_X25: u32 = 8198;
+pub const IF_PROTO_HDLC_ETH: u32 = 8199;
+pub const IF_PROTO_FR_ADD_ETH_PVC: u32 = 8200;
+pub const IF_PROTO_FR_DEL_ETH_PVC: u32 = 8201;
+pub const IF_PROTO_FR_PVC: u32 = 8202;
+pub const IF_PROTO_FR_ETH_PVC: u32 = 8203;
+pub const IF_PROTO_RAW: u32 = 8204;
+pub const IFHWADDRLEN: u32 = 6;
+pub const IP_TOS: u32 = 1;
+pub const IP_TTL: u32 = 2;
+pub const IP_HDRINCL: u32 = 3;
+pub const IP_OPTIONS: u32 = 4;
+pub const IP_ROUTER_ALERT: u32 = 5;
+pub const IP_RECVOPTS: u32 = 6;
+pub const IP_RETOPTS: u32 = 7;
+pub const IP_PKTINFO: u32 = 8;
+pub const IP_PKTOPTIONS: u32 = 9;
+pub const IP_MTU_DISCOVER: u32 = 10;
+pub const IP_RECVERR: u32 = 11;
+pub const IP_RECVTTL: u32 = 12;
+pub const IP_RECVTOS: u32 = 13;
+pub const IP_MTU: u32 = 14;
+pub const IP_FREEBIND: u32 = 15;
+pub const IP_IPSEC_POLICY: u32 = 16;
+pub const IP_XFRM_POLICY: u32 = 17;
+pub const IP_PASSSEC: u32 = 18;
+pub const IP_TRANSPARENT: u32 = 19;
+pub const IP_RECVRETOPTS: u32 = 7;
+pub const IP_ORIGDSTADDR: u32 = 20;
+pub const IP_RECVORIGDSTADDR: u32 = 20;
+pub const IP_MINTTL: u32 = 21;
+pub const IP_NODEFRAG: u32 = 22;
+pub const IP_CHECKSUM: u32 = 23;
+pub const IP_BIND_ADDRESS_NO_PORT: u32 = 24;
+pub const IP_RECVFRAGSIZE: u32 = 25;
+pub const IP_RECVERR_RFC4884: u32 = 26;
+pub const IP_PMTUDISC_DONT: u32 = 0;
+pub const IP_PMTUDISC_WANT: u32 = 1;
+pub const IP_PMTUDISC_DO: u32 = 2;
+pub const IP_PMTUDISC_PROBE: u32 = 3;
+pub const IP_PMTUDISC_INTERFACE: u32 = 4;
+pub const IP_PMTUDISC_OMIT: u32 = 5;
+pub const IP_MULTICAST_IF: u32 = 32;
+pub const IP_MULTICAST_TTL: u32 = 33;
+pub const IP_MULTICAST_LOOP: u32 = 34;
+pub const IP_ADD_MEMBERSHIP: u32 = 35;
+pub const IP_DROP_MEMBERSHIP: u32 = 36;
+pub const IP_UNBLOCK_SOURCE: u32 = 37;
+pub const IP_BLOCK_SOURCE: u32 = 38;
+pub const IP_ADD_SOURCE_MEMBERSHIP: u32 = 39;
+pub const IP_DROP_SOURCE_MEMBERSHIP: u32 = 40;
+pub const IP_MSFILTER: u32 = 41;
+pub const MCAST_JOIN_GROUP: u32 = 42;
+pub const MCAST_BLOCK_SOURCE: u32 = 43;
+pub const MCAST_UNBLOCK_SOURCE: u32 = 44;
+pub const MCAST_LEAVE_GROUP: u32 = 45;
+pub const MCAST_JOIN_SOURCE_GROUP: u32 = 46;
+pub const MCAST_LEAVE_SOURCE_GROUP: u32 = 47;
+pub const MCAST_MSFILTER: u32 = 48;
+pub const IP_MULTICAST_ALL: u32 = 49;
+pub const IP_UNICAST_IF: u32 = 50;
+pub const MCAST_EXCLUDE: u32 = 0;
+pub const MCAST_INCLUDE: u32 = 1;
+pub const IP_DEFAULT_MULTICAST_TTL: u32 = 1;
+pub const IP_DEFAULT_MULTICAST_LOOP: u32 = 1;
+pub const __SOCK_SIZE__: u32 = 16;
+pub const IN_CLASSA_NET: u32 = 4278190080;
+pub const IN_CLASSA_NSHIFT: u32 = 24;
+pub const IN_CLASSA_HOST: u32 = 16777215;
+pub const IN_CLASSA_MAX: u32 = 128;
+pub const IN_CLASSB_NET: u32 = 4294901760;
+pub const IN_CLASSB_NSHIFT: u32 = 16;
+pub const IN_CLASSB_HOST: u32 = 65535;
+pub const IN_CLASSB_MAX: u32 = 65536;
+pub const IN_CLASSC_NET: u32 = 4294967040;
+pub const IN_CLASSC_NSHIFT: u32 = 8;
+pub const IN_CLASSC_HOST: u32 = 255;
+pub const IN_MULTICAST_NET: u32 = 3758096384;
+pub const IN_CLASSE_NET: u32 = 4294967295;
+pub const IN_CLASSE_NSHIFT: u32 = 0;
+pub const IN_LOOPBACKNET: u32 = 127;
+pub const INADDR_LOOPBACK: u32 = 2130706433;
+pub const INADDR_UNSPEC_GROUP: u32 = 3758096384;
+pub const INADDR_ALLHOSTS_GROUP: u32 = 3758096385;
+pub const INADDR_ALLRTRS_GROUP: u32 = 3758096386;
+pub const INADDR_ALLSNOOPERS_GROUP: u32 = 3758096490;
+pub const INADDR_MAX_LOCAL_GROUP: u32 = 3758096639;
+pub const __LITTLE_ENDIAN: u32 = 1234;
+pub const IPV6_FL_A_GET: u32 = 0;
+pub const IPV6_FL_A_PUT: u32 = 1;
+pub const IPV6_FL_A_RENEW: u32 = 2;
+pub const IPV6_FL_F_CREATE: u32 = 1;
+pub const IPV6_FL_F_EXCL: u32 = 2;
+pub const IPV6_FL_F_REFLECT: u32 = 4;
+pub const IPV6_FL_F_REMOTE: u32 = 8;
+pub const IPV6_FL_S_NONE: u32 = 0;
+pub const IPV6_FL_S_EXCL: u32 = 1;
+pub const IPV6_FL_S_PROCESS: u32 = 2;
+pub const IPV6_FL_S_USER: u32 = 3;
+pub const IPV6_FL_S_ANY: u32 = 255;
+pub const IPV6_FLOWINFO_FLOWLABEL: u32 = 1048575;
+pub const IPV6_FLOWINFO_PRIORITY: u32 = 267386880;
+pub const IPV6_PRIORITY_UNCHARACTERIZED: u32 = 0;
+pub const IPV6_PRIORITY_FILLER: u32 = 256;
+pub const IPV6_PRIORITY_UNATTENDED: u32 = 512;
+pub const IPV6_PRIORITY_RESERVED1: u32 = 768;
+pub const IPV6_PRIORITY_BULK: u32 = 1024;
+pub const IPV6_PRIORITY_RESERVED2: u32 = 1280;
+pub const IPV6_PRIORITY_INTERACTIVE: u32 = 1536;
+pub const IPV6_PRIORITY_CONTROL: u32 = 1792;
+pub const IPV6_PRIORITY_8: u32 = 2048;
+pub const IPV6_PRIORITY_9: u32 = 2304;
+pub const IPV6_PRIORITY_10: u32 = 2560;
+pub const IPV6_PRIORITY_11: u32 = 2816;
+pub const IPV6_PRIORITY_12: u32 = 3072;
+pub const IPV6_PRIORITY_13: u32 = 3328;
+pub const IPV6_PRIORITY_14: u32 = 3584;
+pub const IPV6_PRIORITY_15: u32 = 3840;
+pub const IPPROTO_HOPOPTS: u32 = 0;
+pub const IPPROTO_ROUTING: u32 = 43;
+pub const IPPROTO_FRAGMENT: u32 = 44;
+pub const IPPROTO_ICMPV6: u32 = 58;
+pub const IPPROTO_NONE: u32 = 59;
+pub const IPPROTO_DSTOPTS: u32 = 60;
+pub const IPPROTO_MH: u32 = 135;
+pub const IPV6_TLV_PAD1: u32 = 0;
+pub const IPV6_TLV_PADN: u32 = 1;
+pub const IPV6_TLV_ROUTERALERT: u32 = 5;
+pub const IPV6_TLV_CALIPSO: u32 = 7;
+pub const IPV6_TLV_IOAM: u32 = 49;
+pub const IPV6_TLV_JUMBO: u32 = 194;
+pub const IPV6_TLV_HAO: u32 = 201;
+pub const IPV6_ADDRFORM: u32 = 1;
+pub const IPV6_2292PKTINFO: u32 = 2;
+pub const IPV6_2292HOPOPTS: u32 = 3;
+pub const IPV6_2292DSTOPTS: u32 = 4;
+pub const IPV6_2292RTHDR: u32 = 5;
+pub const IPV6_2292PKTOPTIONS: u32 = 6;
+pub const IPV6_CHECKSUM: u32 = 7;
+pub const IPV6_2292HOPLIMIT: u32 = 8;
+pub const IPV6_NEXTHOP: u32 = 9;
+pub const IPV6_AUTHHDR: u32 = 10;
+pub const IPV6_FLOWINFO: u32 = 11;
+pub const IPV6_UNICAST_HOPS: u32 = 16;
+pub const IPV6_MULTICAST_IF: u32 = 17;
+pub const IPV6_MULTICAST_HOPS: u32 = 18;
+pub const IPV6_MULTICAST_LOOP: u32 = 19;
+pub const IPV6_ADD_MEMBERSHIP: u32 = 20;
+pub const IPV6_DROP_MEMBERSHIP: u32 = 21;
+pub const IPV6_ROUTER_ALERT: u32 = 22;
+pub const IPV6_MTU_DISCOVER: u32 = 23;
+pub const IPV6_MTU: u32 = 24;
+pub const IPV6_RECVERR: u32 = 25;
+pub const IPV6_V6ONLY: u32 = 26;
+pub const IPV6_JOIN_ANYCAST: u32 = 27;
+pub const IPV6_LEAVE_ANYCAST: u32 = 28;
+pub const IPV6_MULTICAST_ALL: u32 = 29;
+pub const IPV6_ROUTER_ALERT_ISOLATE: u32 = 30;
+pub const IPV6_RECVERR_RFC4884: u32 = 31;
+pub const IPV6_PMTUDISC_DONT: u32 = 0;
+pub const IPV6_PMTUDISC_WANT: u32 = 1;
+pub const IPV6_PMTUDISC_DO: u32 = 2;
+pub const IPV6_PMTUDISC_PROBE: u32 = 3;
+pub const IPV6_PMTUDISC_INTERFACE: u32 = 4;
+pub const IPV6_PMTUDISC_OMIT: u32 = 5;
+pub const IPV6_FLOWLABEL_MGR: u32 = 32;
+pub const IPV6_FLOWINFO_SEND: u32 = 33;
+pub const IPV6_IPSEC_POLICY: u32 = 34;
+pub const IPV6_XFRM_POLICY: u32 = 35;
+pub const IPV6_HDRINCL: u32 = 36;
+pub const IPV6_RECVPKTINFO: u32 = 49;
+pub const IPV6_PKTINFO: u32 = 50;
+pub const IPV6_RECVHOPLIMIT: u32 = 51;
+pub const IPV6_HOPLIMIT: u32 = 52;
+pub const IPV6_RECVHOPOPTS: u32 = 53;
+pub const IPV6_HOPOPTS: u32 = 54;
+pub const IPV6_RTHDRDSTOPTS: u32 = 55;
+pub const IPV6_RECVRTHDR: u32 = 56;
+pub const IPV6_RTHDR: u32 = 57;
+pub const IPV6_RECVDSTOPTS: u32 = 58;
+pub const IPV6_DSTOPTS: u32 = 59;
+pub const IPV6_RECVPATHMTU: u32 = 60;
+pub const IPV6_PATHMTU: u32 = 61;
+pub const IPV6_DONTFRAG: u32 = 62;
+pub const IPV6_RECVTCLASS: u32 = 66;
+pub const IPV6_TCLASS: u32 = 67;
+pub const IPV6_AUTOFLOWLABEL: u32 = 70;
+pub const IPV6_ADDR_PREFERENCES: u32 = 72;
+pub const IPV6_PREFER_SRC_TMP: u32 = 1;
+pub const IPV6_PREFER_SRC_PUBLIC: u32 = 2;
+pub const IPV6_PREFER_SRC_PUBTMP_DEFAULT: u32 = 256;
+pub const IPV6_PREFER_SRC_COA: u32 = 4;
+pub const IPV6_PREFER_SRC_HOME: u32 = 1024;
+pub const IPV6_PREFER_SRC_CGA: u32 = 8;
+pub const IPV6_PREFER_SRC_NONCGA: u32 = 2048;
+pub const IPV6_MINHOPCOUNT: u32 = 73;
+pub const IPV6_ORIGDSTADDR: u32 = 74;
+pub const IPV6_RECVORIGDSTADDR: u32 = 74;
+pub const IPV6_TRANSPARENT: u32 = 75;
+pub const IPV6_UNICAST_IF: u32 = 76;
+pub const IPV6_RECVFRAGSIZE: u32 = 77;
+pub const IPV6_FREEBIND: u32 = 78;
+pub const NF_DROP: u32 = 0;
+pub const NF_ACCEPT: u32 = 1;
+pub const NF_STOLEN: u32 = 2;
+pub const NF_QUEUE: u32 = 3;
+pub const NF_REPEAT: u32 = 4;
+pub const NF_STOP: u32 = 5;
+pub const NF_MAX_VERDICT: u32 = 5;
+pub const NF_VERDICT_MASK: u32 = 255;
+pub const NF_VERDICT_FLAG_QUEUE_BYPASS: u32 = 32768;
+pub const NF_VERDICT_QMASK: u32 = 4294901760;
+pub const NF_VERDICT_QBITS: u32 = 16;
+pub const NF_VERDICT_BITS: u32 = 16;
+pub const MB_LEN_MAX: u32 = 1;
+pub const NF_IP_PRE_ROUTING: u32 = 0;
+pub const NF_IP_LOCAL_IN: u32 = 1;
+pub const NF_IP_FORWARD: u32 = 2;
+pub const NF_IP_LOCAL_OUT: u32 = 3;
+pub const NF_IP_POST_ROUTING: u32 = 4;
+pub const NF_IP_NUMHOOKS: u32 = 5;
+pub const SO_ORIGINAL_DST: u32 = 80;
+pub const XT_FUNCTION_MAXNAMELEN: u32 = 30;
+pub const XT_EXTENSION_MAXNAMELEN: u32 = 29;
+pub const XT_TABLE_MAXNAMELEN: u32 = 32;
+pub const XT_CONTINUE: u32 = 4294967295;
+pub const XT_RETURN: i32 = -5;
+pub const XT_STANDARD_TARGET: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"\0") };
+pub const XT_ERROR_TARGET: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"ERROR\0") };
+pub const XT_INV_PROTO: u32 = 64;
+pub const IPT_FUNCTION_MAXNAMELEN: u32 = 30;
+pub const IPT_TABLE_MAXNAMELEN: u32 = 32;
+pub const IPT_CONTINUE: u32 = 4294967295;
+pub const IPT_RETURN: i32 = -5;
+pub const XT_TCP_INV_SRCPT: u32 = 1;
+pub const XT_TCP_INV_DSTPT: u32 = 2;
+pub const XT_TCP_INV_FLAGS: u32 = 4;
+pub const XT_TCP_INV_OPTION: u32 = 8;
+pub const XT_TCP_INV_MASK: u32 = 15;
+pub const XT_UDP_INV_SRCPT: u32 = 1;
+pub const XT_UDP_INV_DSTPT: u32 = 2;
+pub const XT_UDP_INV_MASK: u32 = 3;
+pub const IPT_TCP_INV_SRCPT: u32 = 1;
+pub const IPT_TCP_INV_DSTPT: u32 = 2;
+pub const IPT_TCP_INV_FLAGS: u32 = 4;
+pub const IPT_TCP_INV_OPTION: u32 = 8;
+pub const IPT_TCP_INV_MASK: u32 = 15;
+pub const IPT_UDP_INV_SRCPT: u32 = 1;
+pub const IPT_UDP_INV_DSTPT: u32 = 2;
+pub const IPT_UDP_INV_MASK: u32 = 3;
+pub const IPT_STANDARD_TARGET: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"\0") };
+pub const IPT_ERROR_TARGET: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"ERROR\0") };
+pub const IPT_F_FRAG: u32 = 1;
+pub const IPT_F_GOTO: u32 = 2;
+pub const IPT_F_MASK: u32 = 3;
+pub const IPT_INV_VIA_IN: u32 = 1;
+pub const IPT_INV_VIA_OUT: u32 = 2;
+pub const IPT_INV_TOS: u32 = 4;
+pub const IPT_INV_SRCIP: u32 = 8;
+pub const IPT_INV_DSTIP: u32 = 16;
+pub const IPT_INV_FRAG: u32 = 32;
+pub const IPT_INV_PROTO: u32 = 64;
+pub const IPT_INV_MASK: u32 = 127;
+pub const IPT_BASE_CTL: u32 = 64;
+pub const IPT_SO_SET_REPLACE: u32 = 64;
+pub const IPT_SO_SET_ADD_COUNTERS: u32 = 65;
+pub const IPT_SO_SET_MAX: u32 = 65;
+pub const IPT_SO_GET_INFO: u32 = 64;
+pub const IPT_SO_GET_ENTRIES: u32 = 65;
+pub const IPT_SO_GET_REVISION_MATCH: u32 = 66;
+pub const IPT_SO_GET_REVISION_TARGET: u32 = 67;
+pub const IPT_SO_GET_MAX: u32 = 67;
+pub const IPT_ICMP_INV: u32 = 1;
+pub const NF_IP6_PRE_ROUTING: u32 = 0;
+pub const NF_IP6_LOCAL_IN: u32 = 1;
+pub const NF_IP6_FORWARD: u32 = 2;
+pub const NF_IP6_LOCAL_OUT: u32 = 3;
+pub const NF_IP6_POST_ROUTING: u32 = 4;
+pub const NF_IP6_NUMHOOKS: u32 = 5;
+pub const IP6T_FUNCTION_MAXNAMELEN: u32 = 30;
+pub const IP6T_TABLE_MAXNAMELEN: u32 = 32;
+pub const IP6T_CONTINUE: u32 = 4294967295;
+pub const IP6T_RETURN: i32 = -5;
+pub const IP6T_TCP_INV_SRCPT: u32 = 1;
+pub const IP6T_TCP_INV_DSTPT: u32 = 2;
+pub const IP6T_TCP_INV_FLAGS: u32 = 4;
+pub const IP6T_TCP_INV_OPTION: u32 = 8;
+pub const IP6T_TCP_INV_MASK: u32 = 15;
+pub const IP6T_UDP_INV_SRCPT: u32 = 1;
+pub const IP6T_UDP_INV_DSTPT: u32 = 2;
+pub const IP6T_UDP_INV_MASK: u32 = 3;
+pub const IP6T_STANDARD_TARGET: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"\0") };
+pub const IP6T_ERROR_TARGET: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"ERROR\0") };
+pub const IP6T_F_PROTO: u32 = 1;
+pub const IP6T_F_TOS: u32 = 2;
+pub const IP6T_F_GOTO: u32 = 4;
+pub const IP6T_F_MASK: u32 = 7;
+pub const IP6T_INV_VIA_IN: u32 = 1;
+pub const IP6T_INV_VIA_OUT: u32 = 2;
+pub const IP6T_INV_TOS: u32 = 4;
+pub const IP6T_INV_SRCIP: u32 = 8;
+pub const IP6T_INV_DSTIP: u32 = 16;
+pub const IP6T_INV_FRAG: u32 = 32;
+pub const IP6T_INV_PROTO: u32 = 64;
+pub const IP6T_INV_MASK: u32 = 127;
+pub const IP6T_BASE_CTL: u32 = 64;
+pub const IP6T_SO_SET_REPLACE: u32 = 64;
+pub const IP6T_SO_SET_ADD_COUNTERS: u32 = 65;
+pub const IP6T_SO_SET_MAX: u32 = 65;
+pub const IP6T_SO_GET_INFO: u32 = 64;
+pub const IP6T_SO_GET_ENTRIES: u32 = 65;
+pub const IP6T_SO_GET_REVISION_MATCH: u32 = 68;
+pub const IP6T_SO_GET_REVISION_TARGET: u32 = 69;
+pub const IP6T_SO_GET_MAX: u32 = 69;
+pub const IP6T_SO_ORIGINAL_DST: u32 = 80;
+pub const IP6T_ICMP_INV: u32 = 1;
 pub const NETLINK_ROUTE: u32 = 0;
 pub const NETLINK_UNUSED: u32 = 1;
 pub const NETLINK_USERSOCK: u32 = 2;
@@ -2549,32 +2940,6 @@ pub const P_ALL: u32 = 0;
 pub const P_PID: u32 = 1;
 pub const P_PGID: u32 = 2;
 pub const P_PIDFD: u32 = 3;
-pub const __UAPI_DEF_IF_IFCONF: u32 = 1;
-pub const __UAPI_DEF_IF_IFMAP: u32 = 1;
-pub const __UAPI_DEF_IF_IFNAMSIZ: u32 = 1;
-pub const __UAPI_DEF_IF_IFREQ: u32 = 1;
-pub const __UAPI_DEF_IF_NET_DEVICE_FLAGS: u32 = 1;
-pub const __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO: u32 = 1;
-pub const __UAPI_DEF_IN_ADDR: u32 = 1;
-pub const __UAPI_DEF_IN_IPPROTO: u32 = 1;
-pub const __UAPI_DEF_IN_PKTINFO: u32 = 1;
-pub const __UAPI_DEF_IP_MREQ: u32 = 1;
-pub const __UAPI_DEF_SOCKADDR_IN: u32 = 1;
-pub const __UAPI_DEF_IN_CLASS: u32 = 1;
-pub const __UAPI_DEF_IN6_ADDR: u32 = 1;
-pub const __UAPI_DEF_IN6_ADDR_ALT: u32 = 1;
-pub const __UAPI_DEF_SOCKADDR_IN6: u32 = 1;
-pub const __UAPI_DEF_IPV6_MREQ: u32 = 1;
-pub const __UAPI_DEF_IPPROTO_V6: u32 = 1;
-pub const __UAPI_DEF_IPV6_OPTIONS: u32 = 1;
-pub const __UAPI_DEF_IN6_PKTINFO: u32 = 1;
-pub const __UAPI_DEF_IP6_MTUINFO: u32 = 1;
-pub const __UAPI_DEF_SOCKADDR_IPX: u32 = 1;
-pub const __UAPI_DEF_IPX_ROUTE_DEFINITION: u32 = 1;
-pub const __UAPI_DEF_IPX_INTERFACE_DEFINITION: u32 = 1;
-pub const __UAPI_DEF_IPX_CONFIG_DATA: u32 = 1;
-pub const __UAPI_DEF_IPX_ROUTE_DEF: u32 = 1;
-pub const __UAPI_DEF_XATTR: u32 = 1;
 pub const XATTR_CREATE: u32 = 1;
 pub const XATTR_REPLACE: u32 = 2;
 pub const XATTR_OS2_PREFIX: &'static std::ffi::CStr =
@@ -2654,6 +3019,51 @@ pub struct max_align_t {
     pub __bindgen_padding_0: [u8; 8usize],
     pub __clang_max_align_nonce2: u128,
 }
+pub type __kernel_sa_family_t = crate::x86_64_types::c_ushort;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct __kernel_sockaddr_storage {
+    pub __bindgen_anon_1: __kernel_sockaddr_storage__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union __kernel_sockaddr_storage__bindgen_ty_1 {
+    pub __bindgen_anon_1: __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1,
+    pub __align: *mut crate::x86_64_types::c_void,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1 {
+    pub ss_family: __kernel_sa_family_t,
+    pub __data: [crate::x86_64_types::c_char; 126usize],
+}
+impl Default for __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for __kernel_sockaddr_storage__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for __kernel_sockaddr_storage {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
 pub type __s8 = crate::x86_64_types::c_schar;
 pub type __u8 = crate::x86_64_types::c_uchar;
 pub type __s16 = crate::x86_64_types::c_short;
@@ -2716,6 +3126,12 @@ pub type __wsum = __u32;
 pub type __poll_t = crate::x86_64_types::c_uint;
 pub type pid_t = __kernel_pid_t;
 pub type uid_t = __kernel_uid_t;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct sockaddr {
+    pub sa_family: __kernel_sa_family_t,
+    pub sa_data: [crate::x86_64_types::c_char; 14usize],
+}
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct pollfd {
@@ -6518,25 +6934,565 @@ pub const membarrier_cmd_MEMBARRIER_CMD_SHARED: membarrier_cmd = 1;
 pub type membarrier_cmd = crate::x86_64_types::c_uint;
 pub const membarrier_cmd_flag_MEMBARRIER_CMD_FLAG_CPU: membarrier_cmd_flag = 1;
 pub type membarrier_cmd_flag = crate::x86_64_types::c_uint;
-pub type __kernel_sa_family_t = crate::x86_64_types::c_ushort;
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub struct __kernel_sockaddr_storage {
-    pub __bindgen_anon_1: __kernel_sockaddr_storage__bindgen_ty_1,
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct sync_serial_settings {
+    pub clock_rate: crate::x86_64_types::c_uint,
+    pub clock_type: crate::x86_64_types::c_uint,
+    pub loopback: crate::x86_64_types::c_ushort,
+    pub __bindgen_padding_0: [u8; 2usize],
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct te1_settings {
+    pub clock_rate: crate::x86_64_types::c_uint,
+    pub clock_type: crate::x86_64_types::c_uint,
+    pub loopback: crate::x86_64_types::c_ushort,
+    pub __bindgen_padding_0: [u8; 2usize],
+    pub slot_map: crate::x86_64_types::c_uint,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct raw_hdlc_proto {
+    pub encoding: crate::x86_64_types::c_ushort,
+    pub parity: crate::x86_64_types::c_ushort,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct fr_proto {
+    pub t391: crate::x86_64_types::c_uint,
+    pub t392: crate::x86_64_types::c_uint,
+    pub n391: crate::x86_64_types::c_uint,
+    pub n392: crate::x86_64_types::c_uint,
+    pub n393: crate::x86_64_types::c_uint,
+    pub lmi: crate::x86_64_types::c_ushort,
+    pub dce: crate::x86_64_types::c_ushort,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct fr_proto_pvc {
+    pub dlci: crate::x86_64_types::c_uint,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct fr_proto_pvc_info {
+    pub dlci: crate::x86_64_types::c_uint,
+    pub master: [crate::x86_64_types::c_char; 16usize],
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct cisco_proto {
+    pub interval: crate::x86_64_types::c_uint,
+    pub timeout: crate::x86_64_types::c_uint,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct x25_hdlc_proto {
+    pub dce: crate::x86_64_types::c_ushort,
+    pub __bindgen_padding_0: [u8; 2usize],
+    pub modulo: crate::x86_64_types::c_uint,
+    pub window: crate::x86_64_types::c_uint,
+    pub t1: crate::x86_64_types::c_uint,
+    pub t2: crate::x86_64_types::c_uint,
+    pub n2: crate::x86_64_types::c_uint,
+}
+pub const net_device_flags_IFF_UP: net_device_flags = 1;
+pub const net_device_flags_IFF_BROADCAST: net_device_flags = 2;
+pub const net_device_flags_IFF_DEBUG: net_device_flags = 4;
+pub const net_device_flags_IFF_LOOPBACK: net_device_flags = 8;
+pub const net_device_flags_IFF_POINTOPOINT: net_device_flags = 16;
+pub const net_device_flags_IFF_NOTRAILERS: net_device_flags = 32;
+pub const net_device_flags_IFF_RUNNING: net_device_flags = 64;
+pub const net_device_flags_IFF_NOARP: net_device_flags = 128;
+pub const net_device_flags_IFF_PROMISC: net_device_flags = 256;
+pub const net_device_flags_IFF_ALLMULTI: net_device_flags = 512;
+pub const net_device_flags_IFF_MASTER: net_device_flags = 1024;
+pub const net_device_flags_IFF_SLAVE: net_device_flags = 2048;
+pub const net_device_flags_IFF_MULTICAST: net_device_flags = 4096;
+pub const net_device_flags_IFF_PORTSEL: net_device_flags = 8192;
+pub const net_device_flags_IFF_AUTOMEDIA: net_device_flags = 16384;
+pub const net_device_flags_IFF_DYNAMIC: net_device_flags = 32768;
+pub const net_device_flags_IFF_LOWER_UP: net_device_flags = 65536;
+pub const net_device_flags_IFF_DORMANT: net_device_flags = 131072;
+pub const net_device_flags_IFF_ECHO: net_device_flags = 262144;
+pub type net_device_flags = crate::x86_64_types::c_uint;
+pub const IF_OPER_UNKNOWN: _bindgen_ty_41 = 0;
+pub const IF_OPER_NOTPRESENT: _bindgen_ty_41 = 1;
+pub const IF_OPER_DOWN: _bindgen_ty_41 = 2;
+pub const IF_OPER_LOWERLAYERDOWN: _bindgen_ty_41 = 3;
+pub const IF_OPER_TESTING: _bindgen_ty_41 = 4;
+pub const IF_OPER_DORMANT: _bindgen_ty_41 = 5;
+pub const IF_OPER_UP: _bindgen_ty_41 = 6;
+pub type _bindgen_ty_41 = crate::x86_64_types::c_uint;
+pub const IF_LINK_MODE_DEFAULT: _bindgen_ty_42 = 0;
+pub const IF_LINK_MODE_DORMANT: _bindgen_ty_42 = 1;
+pub const IF_LINK_MODE_TESTING: _bindgen_ty_42 = 2;
+pub type _bindgen_ty_42 = crate::x86_64_types::c_uint;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct ifmap {
+    pub mem_start: crate::x86_64_types::c_ulong,
+    pub mem_end: crate::x86_64_types::c_ulong,
+    pub base_addr: crate::x86_64_types::c_ushort,
+    pub irq: crate::x86_64_types::c_uchar,
+    pub dma: crate::x86_64_types::c_uchar,
+    pub port: crate::x86_64_types::c_uchar,
+    pub __bindgen_padding_0: [u8; 3usize],
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub union __kernel_sockaddr_storage__bindgen_ty_1 {
-    pub __bindgen_anon_1: __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1,
-    pub __align: *mut crate::x86_64_types::c_void,
+pub struct if_settings {
+    pub type_: crate::x86_64_types::c_uint,
+    pub size: crate::x86_64_types::c_uint,
+    pub ifs_ifsu: if_settings__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union if_settings__bindgen_ty_1 {
+    pub raw_hdlc: *mut raw_hdlc_proto,
+    pub cisco: *mut cisco_proto,
+    pub fr: *mut fr_proto,
+    pub fr_pvc: *mut fr_proto_pvc,
+    pub fr_pvc_info: *mut fr_proto_pvc_info,
+    pub x25: *mut x25_hdlc_proto,
+    pub sync: *mut sync_serial_settings,
+    pub te1: *mut te1_settings,
+}
+impl Default for if_settings__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for if_settings {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ifreq {
+    pub ifr_ifrn: ifreq__bindgen_ty_1,
+    pub ifr_ifru: ifreq__bindgen_ty_2,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union ifreq__bindgen_ty_1 {
+    pub ifrn_name: [crate::x86_64_types::c_char; 16usize],
+}
+impl Default for ifreq__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union ifreq__bindgen_ty_2 {
+    pub ifru_addr: sockaddr,
+    pub ifru_dstaddr: sockaddr,
+    pub ifru_broadaddr: sockaddr,
+    pub ifru_netmask: sockaddr,
+    pub ifru_hwaddr: sockaddr,
+    pub ifru_flags: crate::x86_64_types::c_short,
+    pub ifru_ivalue: crate::x86_64_types::c_int,
+    pub ifru_mtu: crate::x86_64_types::c_int,
+    pub ifru_map: ifmap,
+    pub ifru_slave: [crate::x86_64_types::c_char; 16usize],
+    pub ifru_newname: [crate::x86_64_types::c_char; 16usize],
+    pub ifru_data: *mut crate::x86_64_types::c_void,
+    pub ifru_settings: if_settings,
+}
+impl Default for ifreq__bindgen_ty_2 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for ifreq {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ifconf {
+    pub ifc_len: crate::x86_64_types::c_int,
+    pub __bindgen_padding_0: [u8; 4usize],
+    pub ifc_ifcu: ifconf__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union ifconf__bindgen_ty_1 {
+    pub ifcu_buf: *mut crate::x86_64_types::c_char,
+    pub ifcu_req: *mut ifreq,
+}
+impl Default for ifconf__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for ifconf {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+pub type int_least64_t = i64;
+pub type uint_least64_t = u64;
+pub type int_fast64_t = i64;
+pub type uint_fast64_t = u64;
+pub type int_least32_t = i32;
+pub type uint_least32_t = u32;
+pub type int_fast32_t = i32;
+pub type uint_fast32_t = u32;
+pub type int_least16_t = i16;
+pub type uint_least16_t = u16;
+pub type int_fast16_t = i16;
+pub type uint_fast16_t = u16;
+pub type int_least8_t = i8;
+pub type uint_least8_t = u8;
+pub type int_fast8_t = i8;
+pub type uint_fast8_t = u8;
+pub type intmax_t = crate::x86_64_types::c_long;
+pub type uintmax_t = crate::x86_64_types::c_ulong;
+#[doc = " An integral type representing an IPv4 address."]
+pub type in_addr_t = u32;
+#[doc = " A structure representing an IPv4 address."]
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct in_addr {
+    pub s_addr: in_addr_t,
+}
+pub const IPPROTO_IP: _bindgen_ty_43 = 0;
+pub const IPPROTO_ICMP: _bindgen_ty_43 = 1;
+pub const IPPROTO_IGMP: _bindgen_ty_43 = 2;
+pub const IPPROTO_IPIP: _bindgen_ty_43 = 4;
+pub const IPPROTO_TCP: _bindgen_ty_43 = 6;
+pub const IPPROTO_EGP: _bindgen_ty_43 = 8;
+pub const IPPROTO_PUP: _bindgen_ty_43 = 12;
+pub const IPPROTO_UDP: _bindgen_ty_43 = 17;
+pub const IPPROTO_IDP: _bindgen_ty_43 = 22;
+pub const IPPROTO_TP: _bindgen_ty_43 = 29;
+pub const IPPROTO_DCCP: _bindgen_ty_43 = 33;
+pub const IPPROTO_IPV6: _bindgen_ty_43 = 41;
+pub const IPPROTO_RSVP: _bindgen_ty_43 = 46;
+pub const IPPROTO_GRE: _bindgen_ty_43 = 47;
+pub const IPPROTO_ESP: _bindgen_ty_43 = 50;
+pub const IPPROTO_AH: _bindgen_ty_43 = 51;
+pub const IPPROTO_MTP: _bindgen_ty_43 = 92;
+pub const IPPROTO_BEETPH: _bindgen_ty_43 = 94;
+pub const IPPROTO_ENCAP: _bindgen_ty_43 = 98;
+pub const IPPROTO_PIM: _bindgen_ty_43 = 103;
+pub const IPPROTO_COMP: _bindgen_ty_43 = 108;
+pub const IPPROTO_SCTP: _bindgen_ty_43 = 132;
+pub const IPPROTO_UDPLITE: _bindgen_ty_43 = 136;
+pub const IPPROTO_MPLS: _bindgen_ty_43 = 137;
+pub const IPPROTO_ETHERNET: _bindgen_ty_43 = 143;
+pub const IPPROTO_RAW: _bindgen_ty_43 = 255;
+pub const IPPROTO_MPTCP: _bindgen_ty_43 = 262;
+pub const IPPROTO_MAX: _bindgen_ty_43 = 263;
+pub type _bindgen_ty_43 = crate::x86_64_types::c_uint;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct ip_mreq {
+    pub imr_multiaddr: in_addr,
+    pub imr_interface: in_addr,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct ip_mreqn {
+    pub imr_multiaddr: in_addr,
+    pub imr_address: in_addr,
+    pub imr_ifindex: crate::x86_64_types::c_int,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct group_req {
+    pub gr_interface: __u32,
+    pub __bindgen_padding_0: [u8; 4usize],
+    pub gr_group: __kernel_sockaddr_storage,
+}
+impl Default for group_req {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct group_source_req {
+    pub gsr_interface: __u32,
+    pub __bindgen_padding_0: [u8; 4usize],
+    pub gsr_group: __kernel_sockaddr_storage,
+    pub gsr_source: __kernel_sockaddr_storage,
+}
+impl Default for group_source_req {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[repr(align(8))]
+pub struct group_filter {
+    pub _bindgen_opaque_blob: [u64; 34usize],
+}
+#[repr(C)]
+#[repr(align(8))]
+pub struct group_filter__bindgen_ty_1 {
+    pub _bindgen_opaque_blob: [u64; 34usize],
+}
+#[repr(C)]
+#[repr(align(8))]
+pub struct group_filter__bindgen_ty_1__bindgen_ty_1 {
+    pub _bindgen_opaque_blob: [u64; 34usize],
+}
+impl Default for group_filter__bindgen_ty_1__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[repr(align(8))]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct group_filter__bindgen_ty_1__bindgen_ty_2 {
+    pub _bindgen_opaque_blob: [u64; 18usize],
+}
+impl Default for group_filter__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for group_filter {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct in_pktinfo {
+    pub ipi_ifindex: crate::x86_64_types::c_int,
+    pub ipi_spec_dst: in_addr,
+    pub ipi_addr: in_addr,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct sockaddr_in {
+    pub sin_family: __kernel_sa_family_t,
+    pub sin_port: __be16,
+    pub sin_addr: in_addr,
+    pub __pad: [crate::x86_64_types::c_uchar; 8usize],
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct in6_addr {
+    pub in6_u: in6_addr__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union in6_addr__bindgen_ty_1 {
+    pub u6_addr8: [__u8; 16usize],
+    pub u6_addr16: [__be16; 8usize],
+    pub u6_addr32: [__be32; 4usize],
+}
+impl Default for in6_addr__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for in6_addr {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct sockaddr_in6 {
+    pub sin6_family: crate::x86_64_types::c_ushort,
+    pub sin6_port: __be16,
+    pub sin6_flowinfo: __be32,
+    pub sin6_addr: in6_addr,
+    pub sin6_scope_id: __u32,
+}
+impl Default for sockaddr_in6 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ipv6_mreq {
+    pub ipv6mr_multiaddr: in6_addr,
+    pub ipv6mr_ifindex: crate::x86_64_types::c_int,
+}
+impl Default for ipv6_mreq {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct in6_flowlabel_req {
+    pub flr_dst: in6_addr,
+    pub flr_label: __be32,
+    pub flr_action: __u8,
+    pub flr_share: __u8,
+    pub flr_flags: __u16,
+    pub flr_expires: __u16,
+    pub flr_linger: __u16,
+    pub __flr_pad: __u32,
+}
+impl Default for in6_flowlabel_req {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+pub const nf_inet_hooks_NF_INET_PRE_ROUTING: nf_inet_hooks = 0;
+pub const nf_inet_hooks_NF_INET_LOCAL_IN: nf_inet_hooks = 1;
+pub const nf_inet_hooks_NF_INET_FORWARD: nf_inet_hooks = 2;
+pub const nf_inet_hooks_NF_INET_LOCAL_OUT: nf_inet_hooks = 3;
+pub const nf_inet_hooks_NF_INET_POST_ROUTING: nf_inet_hooks = 4;
+pub const nf_inet_hooks_NF_INET_NUMHOOKS: nf_inet_hooks = 5;
+pub const nf_inet_hooks_NF_INET_INGRESS: nf_inet_hooks = 5;
+pub type nf_inet_hooks = crate::x86_64_types::c_uint;
+pub const nf_dev_hooks_NF_NETDEV_INGRESS: nf_dev_hooks = 0;
+pub const nf_dev_hooks_NF_NETDEV_EGRESS: nf_dev_hooks = 1;
+pub const nf_dev_hooks_NF_NETDEV_NUMHOOKS: nf_dev_hooks = 2;
+pub type nf_dev_hooks = crate::x86_64_types::c_uint;
+pub const NFPROTO_UNSPEC: _bindgen_ty_44 = 0;
+pub const NFPROTO_INET: _bindgen_ty_44 = 1;
+pub const NFPROTO_IPV4: _bindgen_ty_44 = 2;
+pub const NFPROTO_ARP: _bindgen_ty_44 = 3;
+pub const NFPROTO_NETDEV: _bindgen_ty_44 = 5;
+pub const NFPROTO_BRIDGE: _bindgen_ty_44 = 7;
+pub const NFPROTO_IPV6: _bindgen_ty_44 = 10;
+pub const NFPROTO_DECNET: _bindgen_ty_44 = 12;
+pub const NFPROTO_NUMPROTO: _bindgen_ty_44 = 13;
+pub type _bindgen_ty_44 = crate::x86_64_types::c_uint;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union nf_inet_addr {
+    pub all: [__u32; 4usize],
+    pub ip: __be32,
+    pub ip6: [__be32; 4usize],
+    pub in_: in_addr,
+    pub in6: in6_addr,
+}
+impl Default for nf_inet_addr {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+pub const nf_ip_hook_priorities_NF_IP_PRI_FIRST: nf_ip_hook_priorities = -2147483648;
+pub const nf_ip_hook_priorities_NF_IP_PRI_RAW_BEFORE_DEFRAG: nf_ip_hook_priorities = -450;
+pub const nf_ip_hook_priorities_NF_IP_PRI_CONNTRACK_DEFRAG: nf_ip_hook_priorities = -400;
+pub const nf_ip_hook_priorities_NF_IP_PRI_RAW: nf_ip_hook_priorities = -300;
+pub const nf_ip_hook_priorities_NF_IP_PRI_SELINUX_FIRST: nf_ip_hook_priorities = -225;
+pub const nf_ip_hook_priorities_NF_IP_PRI_CONNTRACK: nf_ip_hook_priorities = -200;
+pub const nf_ip_hook_priorities_NF_IP_PRI_MANGLE: nf_ip_hook_priorities = -150;
+pub const nf_ip_hook_priorities_NF_IP_PRI_NAT_DST: nf_ip_hook_priorities = -100;
+pub const nf_ip_hook_priorities_NF_IP_PRI_FILTER: nf_ip_hook_priorities = 0;
+pub const nf_ip_hook_priorities_NF_IP_PRI_SECURITY: nf_ip_hook_priorities = 50;
+pub const nf_ip_hook_priorities_NF_IP_PRI_NAT_SRC: nf_ip_hook_priorities = 100;
+pub const nf_ip_hook_priorities_NF_IP_PRI_SELINUX_LAST: nf_ip_hook_priorities = 225;
+pub const nf_ip_hook_priorities_NF_IP_PRI_CONNTRACK_HELPER: nf_ip_hook_priorities = 300;
+pub const nf_ip_hook_priorities_NF_IP_PRI_CONNTRACK_CONFIRM: nf_ip_hook_priorities = 2147483647;
+pub const nf_ip_hook_priorities_NF_IP_PRI_LAST: nf_ip_hook_priorities = 2147483647;
+pub type nf_ip_hook_priorities = crate::x86_64_types::c_int;
+#[repr(C)]
+pub struct xt_entry_match {
+    pub u: xt_entry_match__bindgen_ty_1,
+    pub data: __IncompleteArrayField<crate::x86_64_types::c_uchar>,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union xt_entry_match__bindgen_ty_1 {
+    pub user: xt_entry_match__bindgen_ty_1__bindgen_ty_1,
+    pub kernel: xt_entry_match__bindgen_ty_1__bindgen_ty_2,
+    pub match_size: __u16,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct xt_entry_match__bindgen_ty_1__bindgen_ty_1 {
+    pub match_size: __u16,
+    pub name: [crate::x86_64_types::c_char; 29usize],
+    pub revision: __u8,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1 {
-    pub ss_family: __kernel_sa_family_t,
-    pub __data: [crate::x86_64_types::c_char; 126usize],
+pub struct xt_entry_match__bindgen_ty_1__bindgen_ty_2 {
+    pub match_size: __u16,
+    pub __bindgen_padding_0: [u8; 6usize],
+    pub match_: *mut xt_match,
 }
-impl Default for __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1 {
+impl Default for xt_entry_match__bindgen_ty_1__bindgen_ty_2 {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
         unsafe {
@@ -6545,7 +7501,7 @@ impl Default for __kernel_sockaddr_storage__bindgen_ty_1__bindgen_ty_1 {
         }
     }
 }
-impl Default for __kernel_sockaddr_storage__bindgen_ty_1 {
+impl Default for xt_entry_match__bindgen_ty_1 {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
         unsafe {
@@ -6554,7 +7510,353 @@ impl Default for __kernel_sockaddr_storage__bindgen_ty_1 {
         }
     }
 }
-impl Default for __kernel_sockaddr_storage {
+impl Default for xt_entry_match {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+pub struct xt_entry_target {
+    pub u: xt_entry_target__bindgen_ty_1,
+    pub data: __IncompleteArrayField<crate::x86_64_types::c_uchar>,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union xt_entry_target__bindgen_ty_1 {
+    pub user: xt_entry_target__bindgen_ty_1__bindgen_ty_1,
+    pub kernel: xt_entry_target__bindgen_ty_1__bindgen_ty_2,
+    pub target_size: __u16,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct xt_entry_target__bindgen_ty_1__bindgen_ty_1 {
+    pub target_size: __u16,
+    pub name: [crate::x86_64_types::c_char; 29usize],
+    pub revision: __u8,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct xt_entry_target__bindgen_ty_1__bindgen_ty_2 {
+    pub target_size: __u16,
+    pub __bindgen_padding_0: [u8; 6usize],
+    pub target: *mut xt_target,
+}
+impl Default for xt_entry_target__bindgen_ty_1__bindgen_ty_2 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for xt_entry_target__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for xt_entry_target {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+pub struct xt_standard_target {
+    pub target: xt_entry_target,
+    pub verdict: crate::x86_64_types::c_int,
+    pub __bindgen_padding_0: [u8; 4usize],
+}
+impl Default for xt_standard_target {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+pub struct xt_error_target {
+    pub target: xt_entry_target,
+    pub errorname: [crate::x86_64_types::c_char; 30usize],
+    pub __bindgen_padding_0: [u8; 2usize],
+}
+impl Default for xt_error_target {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct xt_get_revision {
+    pub name: [crate::x86_64_types::c_char; 29usize],
+    pub revision: __u8,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct _xt_align {
+    pub u8_: __u8,
+    pub __bindgen_padding_0: u8,
+    pub u16_: __u16,
+    pub u32_: __u32,
+    pub u64_: __u64,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct xt_counters {
+    pub pcnt: __u64,
+    pub bcnt: __u64,
+}
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct xt_counters_info {
+    pub name: [crate::x86_64_types::c_char; 32usize],
+    pub num_counters: crate::x86_64_types::c_uint,
+    pub __bindgen_padding_0: [u8; 4usize],
+    pub counters: __IncompleteArrayField<xt_counters>,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct xt_tcp {
+    pub spts: [__u16; 2usize],
+    pub dpts: [__u16; 2usize],
+    pub option: __u8,
+    pub flg_mask: __u8,
+    pub flg_cmp: __u8,
+    pub invflags: __u8,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct xt_udp {
+    pub spts: [__u16; 2usize],
+    pub dpts: [__u16; 2usize],
+    pub invflags: __u8,
+    pub __bindgen_padding_0: u8,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct ipt_ip {
+    pub src: in_addr,
+    pub dst: in_addr,
+    pub smsk: in_addr,
+    pub dmsk: in_addr,
+    pub iniface: [crate::x86_64_types::c_char; 16usize],
+    pub outiface: [crate::x86_64_types::c_char; 16usize],
+    pub iniface_mask: [crate::x86_64_types::c_uchar; 16usize],
+    pub outiface_mask: [crate::x86_64_types::c_uchar; 16usize],
+    pub proto: __u16,
+    pub flags: __u8,
+    pub invflags: __u8,
+}
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct ipt_entry {
+    pub ip: ipt_ip,
+    pub nfcache: crate::x86_64_types::c_uint,
+    pub target_offset: __u16,
+    pub next_offset: __u16,
+    pub comefrom: crate::x86_64_types::c_uint,
+    pub counters: xt_counters,
+    pub elems: __IncompleteArrayField<crate::x86_64_types::c_uchar>,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct ipt_icmp {
+    pub type_: __u8,
+    pub code: [__u8; 2usize],
+    pub invflags: __u8,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct ipt_getinfo {
+    pub name: [crate::x86_64_types::c_char; 32usize],
+    pub valid_hooks: crate::x86_64_types::c_uint,
+    pub hook_entry: [crate::x86_64_types::c_uint; 5usize],
+    pub underflow: [crate::x86_64_types::c_uint; 5usize],
+    pub num_entries: crate::x86_64_types::c_uint,
+    pub size: crate::x86_64_types::c_uint,
+}
+#[repr(C)]
+#[derive(Debug)]
+pub struct ipt_replace {
+    pub name: [crate::x86_64_types::c_char; 32usize],
+    pub valid_hooks: crate::x86_64_types::c_uint,
+    pub num_entries: crate::x86_64_types::c_uint,
+    pub size: crate::x86_64_types::c_uint,
+    pub hook_entry: [crate::x86_64_types::c_uint; 5usize],
+    pub underflow: [crate::x86_64_types::c_uint; 5usize],
+    pub num_counters: crate::x86_64_types::c_uint,
+    pub counters: *mut xt_counters,
+    pub entries: __IncompleteArrayField<ipt_entry>,
+}
+impl Default for ipt_replace {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct ipt_get_entries {
+    pub name: [crate::x86_64_types::c_char; 32usize],
+    pub size: crate::x86_64_types::c_uint,
+    pub __bindgen_padding_0: [u8; 4usize],
+    pub entrytable: __IncompleteArrayField<ipt_entry>,
+}
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_FIRST: nf_ip6_hook_priorities = -2147483648;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_RAW_BEFORE_DEFRAG: nf_ip6_hook_priorities = -450;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_CONNTRACK_DEFRAG: nf_ip6_hook_priorities = -400;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_RAW: nf_ip6_hook_priorities = -300;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_SELINUX_FIRST: nf_ip6_hook_priorities = -225;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_CONNTRACK: nf_ip6_hook_priorities = -200;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_MANGLE: nf_ip6_hook_priorities = -150;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_NAT_DST: nf_ip6_hook_priorities = -100;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_FILTER: nf_ip6_hook_priorities = 0;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_SECURITY: nf_ip6_hook_priorities = 50;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_NAT_SRC: nf_ip6_hook_priorities = 100;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_SELINUX_LAST: nf_ip6_hook_priorities = 225;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_CONNTRACK_HELPER: nf_ip6_hook_priorities = 300;
+pub const nf_ip6_hook_priorities_NF_IP6_PRI_LAST: nf_ip6_hook_priorities = 2147483647;
+pub type nf_ip6_hook_priorities = crate::x86_64_types::c_int;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ip6t_ip6 {
+    pub src: in6_addr,
+    pub dst: in6_addr,
+    pub smsk: in6_addr,
+    pub dmsk: in6_addr,
+    pub iniface: [crate::x86_64_types::c_char; 16usize],
+    pub outiface: [crate::x86_64_types::c_char; 16usize],
+    pub iniface_mask: [crate::x86_64_types::c_uchar; 16usize],
+    pub outiface_mask: [crate::x86_64_types::c_uchar; 16usize],
+    pub proto: __u16,
+    pub tos: __u8,
+    pub flags: __u8,
+    pub invflags: __u8,
+    pub __bindgen_padding_0: [u8; 3usize],
+}
+impl Default for ip6t_ip6 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+pub struct ip6t_entry {
+    pub ipv6: ip6t_ip6,
+    pub nfcache: crate::x86_64_types::c_uint,
+    pub target_offset: __u16,
+    pub next_offset: __u16,
+    pub comefrom: crate::x86_64_types::c_uint,
+    pub __bindgen_padding_0: [u8; 4usize],
+    pub counters: xt_counters,
+    pub elems: __IncompleteArrayField<crate::x86_64_types::c_uchar>,
+}
+impl Default for ip6t_entry {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+pub struct ip6t_standard {
+    pub entry: ip6t_entry,
+    pub target: xt_standard_target,
+}
+impl Default for ip6t_standard {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+pub struct ip6t_error {
+    pub entry: ip6t_entry,
+    pub target: xt_error_target,
+}
+impl Default for ip6t_error {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct ip6t_icmp {
+    pub type_: __u8,
+    pub code: [__u8; 2usize],
+    pub invflags: __u8,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct ip6t_getinfo {
+    pub name: [crate::x86_64_types::c_char; 32usize],
+    pub valid_hooks: crate::x86_64_types::c_uint,
+    pub hook_entry: [crate::x86_64_types::c_uint; 5usize],
+    pub underflow: [crate::x86_64_types::c_uint; 5usize],
+    pub num_entries: crate::x86_64_types::c_uint,
+    pub size: crate::x86_64_types::c_uint,
+}
+#[repr(C)]
+pub struct ip6t_replace {
+    pub name: [crate::x86_64_types::c_char; 32usize],
+    pub valid_hooks: crate::x86_64_types::c_uint,
+    pub num_entries: crate::x86_64_types::c_uint,
+    pub size: crate::x86_64_types::c_uint,
+    pub hook_entry: [crate::x86_64_types::c_uint; 5usize],
+    pub underflow: [crate::x86_64_types::c_uint; 5usize],
+    pub num_counters: crate::x86_64_types::c_uint,
+    pub counters: *mut xt_counters,
+    pub entries: __IncompleteArrayField<ip6t_entry>,
+}
+impl Default for ip6t_replace {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+pub struct ip6t_get_entries {
+    pub name: [crate::x86_64_types::c_char; 32usize],
+    pub size: crate::x86_64_types::c_uint,
+    pub __bindgen_padding_0: [u8; 4usize],
+    pub entrytable: __IncompleteArrayField<ip6t_entry>,
+}
+impl Default for ip6t_get_entries {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
         unsafe {
@@ -6623,9 +7925,9 @@ pub const nl_mmap_status_NL_MMAP_STATUS_VALID: nl_mmap_status = 2;
 pub const nl_mmap_status_NL_MMAP_STATUS_COPY: nl_mmap_status = 3;
 pub const nl_mmap_status_NL_MMAP_STATUS_SKIP: nl_mmap_status = 4;
 pub type nl_mmap_status = crate::x86_64_types::c_uint;
-pub const NETLINK_UNCONNECTED: _bindgen_ty_41 = 0;
-pub const NETLINK_CONNECTED: _bindgen_ty_41 = 1;
-pub type _bindgen_ty_41 = crate::x86_64_types::c_uint;
+pub const NETLINK_UNCONNECTED: _bindgen_ty_45 = 0;
+pub const NETLINK_CONNECTED: _bindgen_ty_45 = 1;
+pub type _bindgen_ty_45 = crate::x86_64_types::c_uint;
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct nlattr {
@@ -7200,3 +8502,13 @@ pub const _BINDER_GET_FROZEN_INFO: __u32 = 3222037007;
 pub const BINDER_GET_FROZEN_INFO: __u32 = 3222037007;
 pub const _BINDER_ENABLE_ONEWAY_SPAM_DETECTION: __u32 = 1074029072;
 pub const BINDER_ENABLE_ONEWAY_SPAM_DETECTION: __u32 = 1074029072;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct xt_match {
+    pub _address: u8,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct xt_target {
+    pub _address: u8,
+}
