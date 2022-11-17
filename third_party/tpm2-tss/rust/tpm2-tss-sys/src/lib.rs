@@ -8,6 +8,49 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
+pub const ESYS_TR_NONE: u32 = 4095;
+pub const ESYS_TR_PASSWORD: u32 = 255;
+pub const ESYS_TR_PCR0: u32 = 0;
+pub const ESYS_TR_PCR1: u32 = 1;
+pub const ESYS_TR_PCR2: u32 = 2;
+pub const ESYS_TR_PCR3: u32 = 3;
+pub const ESYS_TR_PCR4: u32 = 4;
+pub const ESYS_TR_PCR5: u32 = 5;
+pub const ESYS_TR_PCR6: u32 = 6;
+pub const ESYS_TR_PCR7: u32 = 7;
+pub const ESYS_TR_PCR8: u32 = 8;
+pub const ESYS_TR_PCR9: u32 = 9;
+pub const ESYS_TR_PCR10: u32 = 10;
+pub const ESYS_TR_PCR11: u32 = 11;
+pub const ESYS_TR_PCR12: u32 = 12;
+pub const ESYS_TR_PCR13: u32 = 13;
+pub const ESYS_TR_PCR14: u32 = 14;
+pub const ESYS_TR_PCR15: u32 = 15;
+pub const ESYS_TR_PCR16: u32 = 16;
+pub const ESYS_TR_PCR17: u32 = 17;
+pub const ESYS_TR_PCR18: u32 = 18;
+pub const ESYS_TR_PCR19: u32 = 19;
+pub const ESYS_TR_PCR20: u32 = 20;
+pub const ESYS_TR_PCR21: u32 = 21;
+pub const ESYS_TR_PCR22: u32 = 22;
+pub const ESYS_TR_PCR23: u32 = 23;
+pub const ESYS_TR_PCR24: u32 = 24;
+pub const ESYS_TR_PCR25: u32 = 25;
+pub const ESYS_TR_PCR26: u32 = 26;
+pub const ESYS_TR_PCR27: u32 = 27;
+pub const ESYS_TR_PCR28: u32 = 28;
+pub const ESYS_TR_PCR29: u32 = 29;
+pub const ESYS_TR_PCR30: u32 = 30;
+pub const ESYS_TR_PCR31: u32 = 31;
+pub const ESYS_TR_RH_OWNER: u32 = 257;
+pub const ESYS_TR_RH_NULL: u32 = 263;
+pub const ESYS_TR_RH_LOCKOUT: u32 = 266;
+pub const ESYS_TR_RH_ENDORSEMENT: u32 = 267;
+pub const ESYS_TR_RH_PLATFORM: u32 = 268;
+pub const ESYS_TR_RH_PLATFORM_NV: u32 = 269;
+pub const ESYS_TR_RH_AUTH_FIRST: u32 = 272;
+pub const ESYS_TR_RH_ACT_FIRST: u32 = 288;
+pub const ESYS_TR_RH_ACT_LAST: u32 = 303;
 pub type size_t = ::std::os::raw::c_ulong;
 pub type __int8_t = ::std::os::raw::c_schar;
 pub type __uint8_t = ::std::os::raw::c_uchar;
@@ -3251,7 +3294,7 @@ pub struct TSS2_TCTI_OPAQUE_CONTEXT_BLOB {
 pub type TSS2_TCTI_CONTEXT = TSS2_TCTI_OPAQUE_CONTEXT_BLOB;
 extern "C" {
     #[doc = " Default TCTI initializer compatible with the function pointer required"]
-    #[doc = " by TSS2."]
+    #[doc = " by TSS2. Any configuration value will be ignored."]
     pub fn Tss2_Tcti_Fuchsia_Init(
         tctiContext: *mut TSS2_TCTI_CONTEXT,
         size: *mut size_t,

@@ -36,6 +36,7 @@ readonly OUTPUT="src/lib.rs"
     --no-layout-tests \
     --raw-line "${RAW_LINES}" \
     --allowlist-function '(Tss2|Esys)_.+' \
+    --allowlist-var '(ESYS)_.+' \
     -o"${OUTPUT}" \
     -- \
     -I "${HEADER_PATH}"
