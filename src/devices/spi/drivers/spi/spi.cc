@@ -69,23 +69,23 @@ zx_status_t SpiDevice::Create(void* ctx, zx_device_t* parent) {
 }
 
 void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi, async_dispatcher_t* dispatcher) {
-  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata>(
+  auto decoded = ddk::GetEncodedMetadata2<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata>(
       parent(), DEVICE_METADATA_SPI_CHANNELS);
   if (!decoded.is_ok()) {
     return;
   }
 
-  fuchsia_hardware_spi_businfo::wire::SpiBusMetadata* metadata = decoded->PrimaryObject();
-  if (!metadata->has_channels()) {
+  fuchsia_hardware_spi_businfo::wire::SpiBusMetadata& metadata = *decoded.value();
+  if (!metadata.has_channels()) {
     zxlogf(INFO, "No channels supplied.");
     return;
   }
-  zxlogf(INFO, "%zu channels supplied.", metadata->channels().count());
+  zxlogf(INFO, "%zu channels supplied.", metadata.channels().count());
 
   fbl::AutoLock lock(&lock_);
 
-  bool has_siblings = metadata->channels().count() > 1;
-  for (auto& channel : metadata->channels()) {
+  bool has_siblings = metadata.channels().count() > 1;
+  for (auto& channel : metadata.channels()) {
     const auto bus_id = channel.has_bus_id() ? channel.bus_id() : 0;
 
     if (bus_id != bus_id_) {

@@ -361,20 +361,20 @@ void GspiDevice::DeassertChipSelect() {
 }
 
 zx_status_t GspiDevice::ValidateChildConfig(Con1Reg& con1) {
-  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata>(
+  auto decoded = ddk::GetEncodedMetadata2<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata>(
       parent(), DEVICE_METADATA_SPI_CHANNELS);
   if (!decoded.is_ok()) {
     zxlogf(INFO, "Failed to get metadata %s", decoded.status_string());
     return decoded.error_value();
   }
 
-  fuchsia_hardware_spi_businfo::wire::SpiBusMetadata* metadata = decoded->PrimaryObject();
-  if (!metadata->has_channels()) {
+  fuchsia_hardware_spi_businfo::wire::SpiBusMetadata& metadata = *decoded.value();
+  if (!metadata.has_channels()) {
     zxlogf(INFO, "%s: no channels supplied.", __func__);
     return ZX_OK;
   }
 
-  auto& channels = metadata->channels();
+  auto& channels = metadata.channels();
   if (channels.count() > GSPI_CS_COUNT) {
     zxlogf(ERROR, "%s: too many SPI children!", __func__);
     return ZX_ERR_NOT_SUPPORTED;

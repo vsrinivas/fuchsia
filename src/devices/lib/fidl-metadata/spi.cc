@@ -25,15 +25,7 @@ zx::result<std::vector<uint8_t>> SpiChannelsToFidl(const cpp20::span<const Chann
   fuchsia_hardware_spi_businfo::wire::SpiBusMetadata metadata(allocator);
   metadata.set_channels(allocator, spi_channels);
 
-  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata> encoded(
-      fidl::internal::WireFormatVersion::kV2, &metadata);
-  if (!encoded.ok()) {
-    return zx::error(encoded.status());
-  }
-
-  auto message = encoded.GetOutgoingMessage().CopyBytes();
-  std::vector<uint8_t> result(message.size());
-  memcpy(result.data(), message.data(), message.size());
-  return zx::ok(std::move(result));
+  return zx::result<std::vector<uint8_t>>{
+      fidl::Persist(metadata).map_error(std::mem_fn(&fidl::Error::status))};
 }
 }  // namespace fidl_metadata::spi

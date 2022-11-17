@@ -15,15 +15,15 @@ static void check_encodes(cpp20::span<const fidl_metadata::spi::Channel> spi_cha
   std::vector<uint8_t>& data = result.value();
 
   // Decode.
-  fidl::unstable::DecodedMessage<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata> decoded(
-      fidl::internal::WireFormatVersion::kV2, data.data(), data.size());
-  ASSERT_OK(decoded.status());
+  auto decoded =
+      fidl::InplaceUnpersist<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata>(cpp20::span(data));
+  ASSERT_TRUE(decoded.is_ok(), "%s", decoded.error_value().FormatDescription().c_str());
 
-  auto metadata = decoded.PrimaryObject();
+  auto& metadata = *decoded.value();
 
   // Check everything looks sensible.
-  ASSERT_TRUE(metadata->has_channels());
-  auto channels = metadata->channels();
+  ASSERT_TRUE(metadata.has_channels());
+  auto channels = metadata.channels();
   ASSERT_EQ(channels.count(), spi_channels.size());
 
   for (size_t i = 0; i < spi_channels.size(); i++) {
