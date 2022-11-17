@@ -23,6 +23,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
+#include "sdk/lib/component/incoming/cpp/service_client.h"
 #include "src/lib/storage/fs_management/cpp/component.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/launch.h"
@@ -34,26 +35,23 @@ namespace {
 
 zx_status_t FsckNativeFs(const char* device_path, const FsckOptions& options, LaunchCallback cb,
                          const char* binary) {
-  fbl::unique_fd device_fd;
-  device_fd.reset(open(device_path, O_RDWR));
-  if (!device_fd) {
-    fprintf(stderr, "Failed to open device\n");
-    return ZX_ERR_BAD_STATE;
-  }
-  zx::channel block_device;
-  zx_status_t status =
-      fdio_get_service_handle(device_fd.release(), block_device.reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
-  }
-
+  auto block_device = component::Connect<fuchsia_hardware_block::Block>(device_path);
+  if (block_device.is_error())
+    return block_device.status_value();
   std::vector<std::pair<uint32_t, zx::handle>> handles;
-  handles.emplace_back(FS_HANDLE_BLOCK_DEVICE_ID, std::move(block_device));
+  handles.emplace_back(FS_HANDLE_BLOCK_DEVICE_ID, block_device->TakeChannel());
   return cb(options.as_argv(binary), std::move(handles));
 }
 
 zx_status_t FsckFat(const char* device_path, const FsckOptions& options, LaunchCallback cb) {
-  return cb(options.as_argv_fat32(GetBinaryPath("fsck-msdosfs").c_str(), device_path), {});
+  auto block_device = component::Connect<fuchsia_hardware_block::Block>(device_path);
+  if (block_device.is_error())
+    return block_device.status_value();
+  std::vector<std::pair<uint32_t, zx::handle>> handles;
+  handles.emplace_back(FS_HANDLE_BLOCK_DEVICE_ID, block_device->TakeChannel());
+  std::vector args = {GetBinaryPath("block_adapter"), GetBinaryPath("fsck-msdosfs")};
+  options.append_argv_fat32(args);
+  return cb(std::move(args), std::move(handles));
 }
 
 zx::result<> FsckComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,

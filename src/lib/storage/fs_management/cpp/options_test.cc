@@ -139,10 +139,13 @@ TEST(MkfsOptionsTest, AllOptionsSet) {
 TEST(FsckOptionsTest, DefaultOptions) {
   FsckOptions options;
   std::vector<std::string> expected_argv = {kTestBinary, "fsck"};
-  std::vector<std::string> expected_argv_fat32 = {kTestBinary, "/device/path"};
+  std::vector<std::string> expected_argv_fat32 = {};
 
   ASSERT_EQ(options.as_argv(kTestBinary.c_str()), expected_argv);
-  ASSERT_EQ(options.as_argv_fat32(kTestBinary.c_str(), "/device/path"), expected_argv_fat32);
+
+  std::vector<std::string> args;
+  options.append_argv_fat32(args);
+  ASSERT_EQ(args, expected_argv_fat32);
 }
 
 TEST(FsckOptionsTest, VerboseNeverModifyForce) {
@@ -154,10 +157,12 @@ TEST(FsckOptionsTest, VerboseNeverModifyForce) {
   // platform fsck only supports verbose
   std::vector<std::string> expected_argv = {kTestBinary, "-v", "fsck"};
   // fat32 fsck doesn't support verbose but does support never/always modify and force
-  std::vector<std::string> expected_argv_fat32 = {kTestBinary, "-n", "-f", "/device/path"};
+  std::vector<std::string> expected_argv_fat32 = {"-n", "-f"};
 
   ASSERT_EQ(options.as_argv(kTestBinary.c_str()), expected_argv);
-  ASSERT_EQ(options.as_argv_fat32(kTestBinary.c_str(), "/device/path"), expected_argv_fat32);
+  std::vector<std::string> args;
+  options.append_argv_fat32(args);
+  ASSERT_EQ(args, expected_argv_fat32);
 }
 
 TEST(FsckOptionsTest, AlwaysModify) {
@@ -167,10 +172,12 @@ TEST(FsckOptionsTest, AlwaysModify) {
   // platform fsck only supports verbose
   std::vector<std::string> expected_argv = {kTestBinary, "fsck"};
   // fat32 fsck doesn't support verbose but does support never/always modify and force
-  std::vector<std::string> expected_argv_fat32 = {kTestBinary, "-y", "/device/path"};
+  std::vector<std::string> expected_argv_fat32 = {"-y"};
 
   ASSERT_EQ(options.as_argv(kTestBinary.c_str()), expected_argv);
-  ASSERT_EQ(options.as_argv_fat32(kTestBinary.c_str(), "/device/path"), expected_argv_fat32);
+  std::vector<std::string> args;
+  options.append_argv_fat32(args);
+  ASSERT_EQ(args, expected_argv_fat32);
 }
 
 }  // namespace

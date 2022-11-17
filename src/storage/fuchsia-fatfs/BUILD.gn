@@ -130,9 +130,8 @@ storage_driver_test_realm_v2_component("fatfs-fat-filename-tests") {
 
 fs_test_suite("fatfs") {
   deps = [
+    ":tools",
     "//src/storage/fuchsia-fatfs:fatfs",
-    "//zircon/third_party/uapp/fsck-msdosfs",
-    "//zircon/third_party/uapp/mkfs-msdosfs",
   ]
   config = {
     disk_format = 4
@@ -157,9 +156,8 @@ fs_test_suite("fatfs") {
 slow_fs_test_suite("fatfs") {
   deps = [
     ":fatfs_fs_test_config",
+    ":tools",
     "//src/storage/fuchsia-fatfs:fatfs",
-    "//zircon/third_party/uapp/fsck-msdosfs",
-    "//zircon/third_party/uapp/mkfs-msdosfs",
   ]
 }
 
@@ -171,5 +169,15 @@ group("tests") {
     ":fuchsia-fatfs-fuzzer",
     ":fuchsia-fatfs-tests",
     "//src/storage/fuchsia-fatfs/mounter:tests",
+  ]
+}
+
+# This group includes mkfs and fsck and the block_adapter tool that is required to run them.
+# fs-management requires all of these to be able to run mkfs and fsck for fatfs.
+group("tools") {
+  deps = [
+    "//src/storage/block_adapter",
+    "//zircon/third_party/uapp/fsck-msdosfs",
+    "//zircon/third_party/uapp/mkfs-msdosfs",
   ]
 }

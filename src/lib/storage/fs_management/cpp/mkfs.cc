@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <fcntl.h>
 #include <fidl/fuchsia.fs.startup/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/component/incoming/cpp/service_client.h>
@@ -27,6 +26,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
+#include "sdk/lib/component/incoming/cpp/service_client.h"
 #include "src/lib/storage/fs_management/cpp/component.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
@@ -37,34 +37,29 @@ namespace fs_management {
 namespace {
 
 zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCallback cb,
-                         const MkfsOptions& options, bool support_fvm) {
-  fbl::unique_fd device_fd;
-  device_fd.reset(open(device_path, O_RDWR));
-  if (!device_fd) {
-    fprintf(stderr, "Failed to open device\n");
-    return ZX_ERR_BAD_STATE;
-  }
-  zx::channel block_device;
-  zx_status_t status =
-      fdio_get_service_handle(device_fd.release(), block_device.reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
-  }
+                         const MkfsOptions& options) {
+  auto block_device = component::Connect<fuchsia_hardware_block::Block>(device_path);
+  if (block_device.is_error())
+    return block_device.status_value();
   std::vector<std::pair<uint32_t, zx::handle>> handles;
-  handles.push_back({FS_HANDLE_BLOCK_DEVICE_ID, std::move(block_device)});
+  handles.push_back({FS_HANDLE_BLOCK_DEVICE_ID, block_device->TakeChannel()});
   if (options.crypt_client)
     handles.push_back({PA_HND(PA_USER0, 2), options.crypt_client()});
   return cb(options.as_argv(binary), std::move(handles));
 }
 
 zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const MkfsOptions& options) {
-  std::vector<std::string> argv = {GetBinaryPath("mkfs-msdosfs")};
+  std::vector<std::string> argv = {GetBinaryPath("block_adapter"), GetBinaryPath("mkfs-msdosfs")};
   if (options.sectors_per_cluster != 0) {
     argv.push_back("-c");
     argv.push_back(std::to_string(options.sectors_per_cluster));
   }
-  argv.push_back(device_path);
-  return cb(std::move(argv), {});
+  auto block_device = component::Connect<fuchsia_hardware_block::Block>(device_path);
+  if (block_device.is_error())
+    return block_device.status_value();
+  std::vector<std::pair<uint32_t, zx::handle>> handles;
+  handles.push_back({FS_HANDLE_BLOCK_DEVICE_ID, block_device->TakeChannel()});
+  return cb(std::move(argv), std::move(handles));
 }
 
 zx::result<> MkfsComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
@@ -109,22 +104,22 @@ zx_status_t Mkfs(const char* device_path, DiskFormat df, LaunchCallback cb,
 
   switch (df) {
     case kDiskFormatFactoryfs:
-      return MkfsNativeFs(GetBinaryPath("factoryfs").c_str(), device_path, cb, options, false);
+      return MkfsNativeFs(GetBinaryPath("factoryfs").c_str(), device_path, cb, options);
     case kDiskFormatMinfs:
-      return MkfsNativeFs(GetBinaryPath("minfs").c_str(), device_path, cb, options, true);
+      return MkfsNativeFs(GetBinaryPath("minfs").c_str(), device_path, cb, options);
     case kDiskFormatFxfs:
-      return MkfsNativeFs(GetBinaryPath("fxfs").c_str(), device_path, cb, options, true);
+      return MkfsNativeFs(GetBinaryPath("fxfs").c_str(), device_path, cb, options);
     case kDiskFormatFat:
       return MkfsFat(device_path, cb, options);
     case kDiskFormatBlobfs:
-      return MkfsNativeFs(GetBinaryPath("blobfs").c_str(), device_path, cb, options, true);
+      return MkfsNativeFs(GetBinaryPath("blobfs").c_str(), device_path, cb, options);
     case kDiskFormatF2fs:
-      return MkfsNativeFs(GetBinaryPath("f2fs").c_str(), device_path, cb, options, true);
+      return MkfsNativeFs(GetBinaryPath("f2fs").c_str(), device_path, cb, options);
     default:
       auto* format = CustomDiskFormat::Get(df);
       if (format == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
-      return MkfsNativeFs(format->binary_path().c_str(), device_path, cb, options, true);
+      return MkfsNativeFs(format->binary_path().c_str(), device_path, cb, options);
   }
 }
 

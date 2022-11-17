@@ -138,10 +138,7 @@ std::vector<std::string> FsckOptions::as_argv(const char *binary) const {
   return argv;
 }
 
-std::vector<std::string> FsckOptions::as_argv_fat32(const char *binary,
-                                                    const char *device_path) const {
-  std::vector<std::string> argv;
-  argv.push_back(binary);
+std::vector<std::string> FsckOptions::append_argv_fat32(std::vector<std::string> &argv) const {
   if (never_modify) {
     argv.push_back("-n");
   } else if (always_modify) {
@@ -150,7 +147,6 @@ std::vector<std::string> FsckOptions::as_argv_fat32(const char *binary,
   if (force) {
     argv.push_back("-f");
   }
-  argv.push_back(device_path);
 
   return argv;
 }
