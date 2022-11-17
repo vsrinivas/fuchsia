@@ -34,6 +34,15 @@
             to: "#vulkan-tests",
         },
         {
+            event_stream: [
+                "capability_requested_v2",
+                "directory_ready_v2",
+            ],
+            from: "parent",
+            to: "#vulkan-tests",
+            scope: "#vulkan-tests",
+        },
+        {
             storage: "data",
             from: "self",
             to: [ "#vulkan-tests" ],
