@@ -18,7 +18,7 @@ std::shared_ptr<Processor> FfmpegAudioDecoder::Create(AvCodecContextPtr av_codec
 FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
     : FfmpegDecoderBase(std::move(av_codec_context)) {
   FX_DCHECK(context());
-  FX_DCHECK(context()->channels > 0);
+  FX_DCHECK(context()->ch_layout.nb_channels > 0);
 
   std::unique_ptr<StreamType> stream_type = output_stream_type();
   FX_DCHECK(stream_type);
@@ -73,9 +73,9 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
 
   AVSampleFormat av_sample_format = static_cast<AVSampleFormat>(av_frame->format);
 
-  int buffer_size = av_samples_get_buffer_size(&av_frame->linesize[0], av_codec_context.channels,
-                                               av_frame->nb_samples, av_sample_format,
-                                               FfmpegAudioDecoder::kChannelAlign);
+  int buffer_size = av_samples_get_buffer_size(
+      &av_frame->linesize[0], av_codec_context.ch_layout.nb_channels, av_frame->nb_samples,
+      av_sample_format, FfmpegAudioDecoder::kChannelAlign);
   if (buffer_size < 0) {
     FX_LOGS(WARNING) << "av_samples_get_buffer_size failed";
     return buffer_size;
@@ -102,7 +102,7 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
     av_frame->data[0] = reinterpret_cast<uint8_t*>(buffer->data());
   } else {
     // Samples are not interleaved. There's one buffer per channel.
-    int channels = av_codec_context.channels;
+    int channels = av_codec_context.ch_layout.nb_channels;
     int bytes_per_channel = buffer_size / channels;
     uint8_t* channel_buffer = reinterpret_cast<uint8_t*>(buffer->data());
 

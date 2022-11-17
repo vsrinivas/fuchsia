@@ -241,8 +241,8 @@ std::unique_ptr<StreamType> StreamTypeFromAudioCodecContext(const AVCodecContext
 
   return AudioStreamType::Create(
       nullptr, decoded ? StreamType::kAudioEncodingLpcm : EncodingFromCodecId(from.codec_id),
-      decoded ? nullptr : BytesFromExtraData(from), Convert(from.sample_fmt), from.channels,
-      from.sample_rate);
+      decoded ? nullptr : BytesFromExtraData(from), Convert(from.sample_fmt),
+      from.ch_layout.nb_channels, from.sample_rate);
 }
 
 // Creates a StreamType from an AVCodecContext describing an audio type.
@@ -256,7 +256,7 @@ std::unique_ptr<StreamType> StreamTypeFromAudioStream(const AVStream& from) {
       EncryptionParametersFromStream(from),
       decoded ? StreamType::kAudioEncodingLpcm : EncodingFromCodecId(codecpar.codec_id),
       decoded ? nullptr : BytesFromExtraData(codecpar),
-      Convert(static_cast<AVSampleFormat>(codecpar.format)), codecpar.channels,
+      Convert(static_cast<AVSampleFormat>(codecpar.format)), codecpar.ch_layout.nb_channels,
       codecpar.sample_rate);
 }
 
@@ -319,7 +319,7 @@ std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(const AVCodecContext
 
 // Creates a StreamType from an AVStream describing a video type.
 std::unique_ptr<StreamType> StreamTypeFromVideoStream(const AVStream& from) {
-  const AVCodecParameters parameters = *from.codecpar;
+  const AVCodecParameters& parameters = *from.codecpar;
 
   VideoStreamType::PixelFormat pixel_format =
       PixelFormatFromAVPixelFormat(static_cast<AVPixelFormat>(parameters.format));
@@ -446,7 +446,7 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(const AudioStreamType& strea
   context->codec_type = AVMEDIA_TYPE_AUDIO;
   context->codec_id = codec_id;
   context->sample_fmt = sample_format;
-  context->channels = stream_type.channels();
+  av_channel_layout_default(&context->ch_layout, stream_type.channels());
   context->sample_rate = stream_type.frames_per_second();
 
   if (stream_type.encoding_parameters()) {

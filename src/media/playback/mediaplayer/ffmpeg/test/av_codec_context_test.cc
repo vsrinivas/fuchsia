@@ -56,7 +56,7 @@ TEST(AvCodecContext, EncryptionParameters) {
   av_codec_parameters.extradata_size = 0;
   av_codec_parameters.extradata = nullptr;
   av_codec_parameters.format = AV_SAMPLE_FMT_S16;
-  av_codec_parameters.channels = kChannels;
+  av_channel_layout_default(&av_codec_parameters.ch_layout, kChannels);
   av_codec_parameters.sample_rate = kSampleRate;
 
   // Build an |AVEncryptionInitInfo| structure.
