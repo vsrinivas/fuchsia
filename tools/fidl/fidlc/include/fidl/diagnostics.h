@@ -341,8 +341,8 @@ constexpr UndocumentedErrorDef<142, std::string_view, std::set<std::string_view>
     ErrInvalidTransportType("invalid transport type: got {} expected one of {}");
 constexpr UndocumentedErrorDef<143, const flat::Attribute *, std::string_view> ErrBoundIsTooBig(
     "'{}' bound of '{}' is too big");
-constexpr UndocumentedErrorDef<144, const flat::Attribute *, std::string_view>
-    ErrUnableToParseBound("unable to parse '{}' bound of '{}'");
+constexpr ErrorDef<144, const flat::Attribute *, std::string_view> ErrUnableToParseBound(
+    "unable to parse '{}' bound of '{}'");
 constexpr WarningDef<145, std::string_view, std::string_view> WarnAttributeTypo(
     "suspect attribute with name '{}'; did you mean '{}'?");
 constexpr UndocumentedErrorDef<146> ErrInvalidGeneratedName(

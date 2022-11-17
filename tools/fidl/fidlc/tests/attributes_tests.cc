@@ -748,14 +748,8 @@ type MyTable = table {
 }
 
 TEST(AttributesTests, BadMaxBytesUnableToParseBound) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-@max_bytes("invalid")
-type MyTable = table {
-  1: u uint8;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0144.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnableToParseBound);
 }
 
