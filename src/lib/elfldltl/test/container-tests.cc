@@ -51,7 +51,7 @@ TEST(ElfldltlContainerTests, ForwardArgs) {
 template <typename T>
 struct Allocator : std::allocator<T> {
   static inline bool called;
-  T *allocate(size_t size) {
+  T* allocate(size_t size) {
     called = true;
     return std::allocator<T>::allocate(size);
   }
@@ -70,11 +70,11 @@ TEST(ElfldltlContainerTests, TemplateArgs) {
   EXPECT_TRUE(Allocator<int>::called);
 }
 
-template <typename List>
-void CheckContainerAPI(List list) {
+template <class List>
+void CheckContainerAPI(List& list) {
   EXPECT_EQ(list.max_size(), 10);
   EXPECT_EQ(list.capacity(), 10);
-  cpp20::span<typename List::value_type> span = list.as_span();
+  cpp20::span<const typename List::value_type> span = list.as_span();
   EXPECT_EQ(span.size(), 0);
   EXPECT_TRUE(list.data());
   EXPECT_EQ(list.size(), 0);
