@@ -17,7 +17,10 @@
     },
     use: [
         {
-            protocol: [ "fuchsia.sysmem.Allocator" ],
+            protocol: [
+                "fuchsia.gpu.agis.ComponentRegistry",
+                "fuchsia.sysmem.Allocator",
+            ],
         },
         {
             directory: "dev-display-controller",

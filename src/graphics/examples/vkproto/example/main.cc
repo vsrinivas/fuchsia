@@ -51,9 +51,7 @@ int main(int argc, char* argv[]) {
 
   // INSTANCE
   const bool kEnableValidation = true;
-  const vk::InstanceCreateInfo instance_info;
-  vkp::Instance vkp_instance(instance_info, kEnableValidation, {} /* extensions */, {"GraphicsSpy"},
-                             nullptr /* pAllocator */);
+  vkp::Instance vkp_instance(kEnableValidation);
   RTN_IF_MSG(1, !vkp_instance.Init(), "Instance Initialization Failed.\n");
   std::shared_ptr<vk::Instance> instance = vkp_instance.shared();
 
