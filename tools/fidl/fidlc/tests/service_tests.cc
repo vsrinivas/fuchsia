@@ -64,17 +64,10 @@ TEST(ServiceTests, BadCannotHaveConflictingMembers) {
 }
 
 TEST(ServiceTests, BadNoNullableProtocolMembers) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol SomeProtocol {};
-
-service SomeService {
-    members_are_optional_already client_end:<SomeProtocol, optional>;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOptionalServiceMember);
+  TestLibrary library;
+  library.AddFile("bad/fi-0088.test.fidl");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrOptionalServiceMember,
+                                      fidl::ErrOptionalServiceMember);
 }
 
 TEST(ServiceTests, BadOnlyProtocolMembers) {

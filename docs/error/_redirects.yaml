@@ -172,6 +172,8 @@ redirects:
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0086
 - from: /fuchsia-src/error/fi-0087
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0087
+- from: /fuchsia-src/error/fi-0088
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0088
 - from: /fuchsia-src/error/fi-0089
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0089
 - from: /fuchsia-src/error/fi-0090

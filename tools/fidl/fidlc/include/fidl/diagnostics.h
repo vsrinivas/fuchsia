@@ -197,7 +197,7 @@ constexpr ErrorDef<87, std::string_view, std::string_view, SourceSpan, std::stri
     ErrDuplicateServiceMemberNameCanonical(
         "service member '{}' conflicts with member '{}' from {}; both are "
         "represented by the canonical form '{}'");
-constexpr UndocumentedErrorDef<88> ErrOptionalServiceMember("service members cannot be optional");
+constexpr ErrorDef<88> ErrOptionalServiceMember("service members cannot be optional");
 constexpr ErrorDef<89, std::string_view, SourceSpan> ErrDuplicateStructMemberName(
     "multiple struct fields named '{}'; previous was at {}");
 constexpr ErrorDef<90, std::string_view, std::string_view, SourceSpan, std::string_view>
