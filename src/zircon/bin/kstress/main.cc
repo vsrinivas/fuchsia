@@ -5,9 +5,10 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/boot/c/fidl.h>
+#include <fidl/fuchsia.boot/cpp/fidl.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -30,28 +31,23 @@
 namespace {
 
 zx_status_t get_root_resource(zx::resource* root_resource) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = fdio_service_connect("/svc/fuchsia.boot.RootResource", remote.release());
-  if (status != ZX_OK) {
-    fprintf(stderr, "ERROR: Cannot open fuchsia.boot.RootResource: %s (%d)\n",
-            zx_status_get_string(status), status);
-    return ZX_ERR_NOT_FOUND;
+  zx::result client_end = component::Connect<fuchsia_boot::RootResource>();
+  if (!client_end.is_ok()) {
+    return client_end.status_value();
   }
 
-  zx_handle_t h;
-  zx_status_t fidl_status = fuchsia_boot_RootResourceGet(local.get(), &h);
+  fidl::SyncClient client{std::move(*client_end)};
 
-  if (fidl_status != ZX_OK) {
+  fidl::Result result = client->Get();
+
+  if (!result.is_ok()) {
+    zx_status_t fidl_status = result.error_value().status();
     fprintf(stderr, "ERROR: Cannot obtain root resource: %s (%d)\n",
-            zx_status_get_string(fidl_status), fidl_status);
+            result.error_value().status_string(), fidl_status);
     return fidl_status;
   }
 
-  root_resource->reset(h);
+  *root_resource = std::move(result->resource());
 
   return ZX_OK;
 }
