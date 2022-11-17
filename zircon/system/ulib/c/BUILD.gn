@@ -110,6 +110,16 @@ if (current_toolchain == default_toolchain) {
       cflags = [
         "-mllvm",
         "-hwasan-record-stack-history=libcall",
+
+        # This replaces all hwasan load/store checks with an outlined libcall.
+        # This is done so we can stub out checks on globals which would be tagged
+        # but before we can actually register their tags into shadow. Note that
+        # we could alternatively add NO_ASAN on each function that accesses a tagged
+        # global, but I've found too many instances where globals can be accessed
+        # in the initial execution path and this is cleaner than adding NO_ASAN
+        # on each of them.
+        "-mllvm",
+        "-hwasan-instrument-with-calls=1",
       ]
     }
   }

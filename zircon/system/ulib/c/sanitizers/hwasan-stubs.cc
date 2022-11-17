@@ -32,19 +32,24 @@
   extern "C" __EXPORT __WEAK __NO_SAFESTACK void __hwasan_##name(void) {}
 
 HWASAN_TRAP_STUB(init)
-HWASAN_TRAP_STUB(storeN)
-HWASAN_TRAP_STUB(store1)
-HWASAN_TRAP_STUB(store2)
-HWASAN_TRAP_STUB(store4)
-HWASAN_TRAP_STUB(store8)
-HWASAN_TRAP_STUB(store16)
-HWASAN_TRAP_STUB(loadN)
-HWASAN_TRAP_STUB(load1)
-HWASAN_TRAP_STUB(load2)
-HWASAN_TRAP_STUB(load4)
-HWASAN_TRAP_STUB(load8)
-HWASAN_TRAP_STUB(load16)
-HWASAN_TRAP_STUB(tag_mismatch_v2)
+HWASAN_STUB(storeN)
+HWASAN_STUB(store1)
+HWASAN_STUB(store2)
+HWASAN_STUB(store4)
+HWASAN_STUB(store8)
+HWASAN_STUB(store16)
+HWASAN_STUB(loadN)
+HWASAN_STUB(load1)
+HWASAN_STUB(load2)
+HWASAN_STUB(load4)
+HWASAN_STUB(load8)
+HWASAN_STUB(load16)
+
+// TODO(fxbug.dev/109033): The llvm flag for replacing memory checking with
+// libcalls also replaces memory tagging. Memory tagging can continue to be
+// inlined though since it's perfectly fine to write tags to shadow memory after
+// it's set up.
+HWASAN_STUB(tag_memory)
 
 // This is instrumented by hwasan into the prologue of every function. Its
 // purpose is to add stack information to a thread-local ring buffer in the
