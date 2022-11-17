@@ -37,6 +37,7 @@ pub struct RemoteDevice {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Peer {
     pub id: PeerId,
+    pub name: Option<String>,
     pub connectable: bool,
     pub rssi: Option<i8>,
     pub advertising_data: Option<AdvertisingData>,
@@ -88,6 +89,7 @@ impl TryFrom<fidl::Peer> for Peer {
                 .id
                 .ok_or(format_err!("`le.Peer` missing mandatory `id` field"))
                 .map(PeerId::from)?,
+            name: src.name,
             connectable: src.connectable.unwrap_or(false),
             rssi: src.rssi,
             advertising_data: src.advertising_data.map(|ad| ad.into()),
@@ -396,8 +398,13 @@ mod tests {
             advertising_data: None,
             ..fble::Peer::EMPTY
         };
-        let expected =
-            Peer { id: PeerId(1), connectable: false, rssi: None, advertising_data: None };
+        let expected = Peer {
+            id: PeerId(1),
+            name: None,
+            connectable: false,
+            rssi: None,
+            advertising_data: None,
+        };
         let peer = Peer::try_from(peer).expect("expected successful conversion");
         assert_eq!(expected, peer);
     }
@@ -422,6 +429,7 @@ mod tests {
         };
         let expected = Peer {
             id: PeerId(1),
+            name: None,
             connectable: true,
             rssi: Some(-10),
             advertising_data: Some(AdvertisingData {

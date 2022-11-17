@@ -3,27 +3,30 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Error};
-use fidl_fuchsia_bluetooth::{Appearance, Uuid};
+use fidl_fuchsia_bluetooth::{Appearance, Uuid as FidlUuid};
 use fidl_fuchsia_bluetooth_avdtp::PeerControllerProxy;
 use fidl_fuchsia_bluetooth_avrcp::{
     AvcPanelCommand, BatteryStatus, CustomAttributeValue, CustomPlayerApplicationSetting,
     Equalizer, PlayStatus, PlaybackStatus, PlayerApplicationSettingAttributeId,
     PlayerApplicationSettings, RepeatStatusMode, ScanMode, ShuffleMode,
 };
-use fidl_fuchsia_bluetooth_gatt::{
+use fidl_fuchsia_bluetooth_gatt::ServiceInfo as DeprecatedServiceInfo;
+use fidl_fuchsia_bluetooth_gatt2::{
     AttributePermissions, Characteristic, Descriptor, ReadByTypeResult, SecurityRequirements,
-    ServiceInfo,
+    ServiceHandle, ServiceInfo, ServiceKind,
 };
 use fidl_fuchsia_bluetooth_le::{
-    AdvertisingData, AdvertisingModeHint, AdvertisingParameters, ConnectionOptions,
-    ManufacturerData, ScanFilter, ServiceData,
+    AdvertisingData, AdvertisingModeHint, AdvertisingParameters, ConnectionOptions, Filter,
+    ManufacturerData, ServiceData,
 };
 use fidl_fuchsia_bluetooth_sys::Peer;
+use fuchsia_bluetooth::types::Uuid;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::str::FromStr;
 
 use crate::common_utils::common::macros::parse_arg;
 
@@ -60,7 +63,7 @@ impl BleAdvertiseResponse {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct SecurityRequirementsContainer {
     pub encryption_required: bool,
     pub authentication_required: bool,
@@ -68,21 +71,14 @@ pub struct SecurityRequirementsContainer {
 }
 
 impl SecurityRequirementsContainer {
-    pub fn new(info: Option<Box<SecurityRequirements>>) -> SecurityRequirementsContainer {
+    pub fn new(info: Option<SecurityRequirements>) -> SecurityRequirementsContainer {
         match info {
-            Some(s) => {
-                let sec = *s;
-                SecurityRequirementsContainer {
-                    encryption_required: sec.encryption_required,
-                    authentication_required: sec.authentication_required,
-                    authorization_required: sec.authorization_required,
-                }
-            }
-            None => SecurityRequirementsContainer {
-                encryption_required: false,
-                authentication_required: false,
-                authorization_required: false,
+            Some(sec) => SecurityRequirementsContainer {
+                encryption_required: sec.encryption_required.unwrap_or(false),
+                authentication_required: sec.authentication_required.unwrap_or(false),
+                authorization_required: sec.authorization_required.unwrap_or(false),
             },
+            None => SecurityRequirementsContainer::default(),
         }
     }
 }
@@ -95,18 +91,13 @@ pub struct AttributePermissionsContainer {
 }
 
 impl AttributePermissionsContainer {
-    pub fn new(
-        info: Option<Box<AttributePermissions>>,
-    ) -> Result<AttributePermissionsContainer, Error> {
+    pub fn new(info: Option<AttributePermissions>) -> Result<AttributePermissionsContainer, Error> {
         match info {
-            Some(p) => {
-                let perm = *p;
-                Ok(AttributePermissionsContainer {
-                    read: SecurityRequirementsContainer::new(perm.read),
-                    write: SecurityRequirementsContainer::new(perm.write),
-                    update: SecurityRequirementsContainer::new(perm.update),
-                })
-            }
+            Some(perm) => Ok(AttributePermissionsContainer {
+                read: SecurityRequirementsContainer::new(perm.read),
+                write: SecurityRequirementsContainer::new(perm.write),
+                update: SecurityRequirementsContainer::new(perm.update),
+            }),
             None => return Err(format_err!("Unable to get information of AttributePermissions.")),
         }
     }
@@ -126,12 +117,12 @@ impl GattcDiscoverDescriptorResponse {
         let mut res = Vec::new();
         for v in info {
             let copy = GattcDiscoverDescriptorResponse {
-                id: v.id,
+                id: v.handle.unwrap().value,
                 permissions: match AttributePermissionsContainer::new(v.permissions) {
                     Ok(n) => Some(n),
                     Err(_) => None,
                 },
-                uuid_type: v.type_,
+                uuid_type: Uuid::from(v.type_.unwrap()).to_string(),
             };
             res.push(copy)
         }
@@ -155,13 +146,13 @@ impl GattcDiscoverCharacteristicResponse {
         let mut res = Vec::new();
         for v in info {
             let copy = GattcDiscoverCharacteristicResponse {
-                id: v.id,
-                properties: v.properties,
+                id: v.handle.unwrap().value,
+                properties: v.properties.unwrap().bits().into(),
                 permissions: match AttributePermissionsContainer::new(v.permissions) {
                     Ok(n) => Some(n),
                     Err(_) => None,
                 },
-                uuid_type: v.type_,
+                uuid_type: Uuid::from(v.type_.unwrap()).to_string(),
                 descriptors: {
                     match v.descriptors {
                         Some(d) => GattcDiscoverDescriptorResponse::new(d),
@@ -188,8 +179,11 @@ impl BleConnectPeripheralResponse {
     pub fn new(info: Vec<ServiceInfo>) -> Vec<BleConnectPeripheralResponse> {
         let mut res = Vec::new();
         for v in info {
-            let copy =
-                BleConnectPeripheralResponse { id: v.id, primary: v.primary, uuid_type: v.type_ };
+            let copy = BleConnectPeripheralResponse {
+                id: v.handle.unwrap().value,
+                primary: v.kind.unwrap() == ServiceKind::Primary,
+                uuid_type: Uuid::from(v.type_.unwrap()).to_string(),
+            };
             res.push(copy)
         }
         res
@@ -246,8 +240,13 @@ pub struct SerializableReadByTypeResult {
 }
 
 impl SerializableReadByTypeResult {
-    pub fn new(result: &ReadByTypeResult) -> Self {
-        SerializableReadByTypeResult { id: result.id.clone(), value: result.value.clone() }
+    pub fn new(result: ReadByTypeResult) -> Option<Self> {
+        if result.error.is_some() {
+            return None;
+        }
+        let id = result.handle.unwrap().value;
+        let value = result.value.unwrap().value.unwrap();
+        Some(SerializableReadByTypeResult { id: Some(id), value: Some(value) })
     }
 }
 
@@ -844,7 +843,7 @@ impl TryInto<AdvertisingData> for FacadeArg {
         ///
         /// # Arguments
         /// * `json_uuid`: The JSON UUID in the form of a list of bytes.
-        fn parse_uuid(json_uuid: &Value) -> Result<Uuid, Error> {
+        fn parse_uuid(json_uuid: &Value) -> Result<FidlUuid, Error> {
             let mut byte_list = vec![];
 
             for byte_string in json_uuid.as_array().unwrap() {
@@ -854,14 +853,16 @@ impl TryInto<AdvertisingData> for FacadeArg {
                 };
                 byte_list.push(raw_value);
             }
-            Ok(Uuid { value: byte_list.as_slice().try_into().expect("Failed to set UUID value.") })
+            Ok(FidlUuid {
+                value: byte_list.as_slice().try_into().expect("Failed to set UUID value."),
+            })
         }
 
         /// Parse a list of service uuids from a json input list.
         ///
         /// # Arguments
         /// * `json_service_uuids`: The JSON UUIDs in the form of lists of list of bytes.
-        fn parse_service_uuids(json_service_uuids: &Vec<Value>) -> Result<Vec<Uuid>, Error> {
+        fn parse_service_uuids(json_service_uuids: &Vec<Value>) -> Result<Vec<FidlUuid>, Error> {
             let mut uuid_list = Vec::new();
 
             for raw_uuid_list in json_service_uuids {
@@ -1056,22 +1057,32 @@ impl TryInto<AdvertisingParameters> for FacadeArg {
     }
 }
 
-impl TryInto<ScanFilter> for FacadeArg {
+impl TryInto<Filter> for FacadeArg {
     type Error = Error;
-    fn try_into(self) -> Result<ScanFilter, Self::Error> {
-        let scan_filter_raw = match self.value.get("filter") {
-            Some(f) => f.clone(),
-            None => return Err(format_err!("Scan filter missing.")),
-        };
-        let name_substring = scan_filter_raw["name_substring"].as_str().map(String::from);
-        // For now, no scan profile, so default to empty ScanFilter
-        Ok(ScanFilter {
-            service_uuids: None,
-            service_data_uuids: None,
-            manufacturer_identifier: None,
-            connectable: None,
-            name_substring,
-            max_path_loss: None,
+    fn try_into(self) -> Result<Filter, Self::Error> {
+        let value = self.value.get("filter").ok_or(format_err!("Scan filter missing."))?.clone();
+        let name = value["name_substring"].as_str().map(String::from);
+        // For now, no scan profile, so default to empty Filter
+        Ok(Filter { name, ..Filter::EMPTY })
+    }
+}
+
+// TODO(fxbug.dev/115008): Delete this once BluetoothFacade has been deleted.
+impl TryInto<DeprecatedServiceInfo> for FacadeArg {
+    type Error = Error;
+    fn try_into(self) -> Result<DeprecatedServiceInfo, Self::Error> {
+        let value = self.value.clone();
+        let id = parse_arg!(value, as_u64, "id")?;
+        let primary = parse_arg!(value, as_bool, "primary")?;
+        let type_ = parse_arg!(value, as_str, "type")?.to_string();
+
+        Ok(DeprecatedServiceInfo {
+            id,
+            primary,
+            type_,
+            // TODO(fxbug.dev/883): Add support for GATT characteristics and includes
+            characteristics: None,
+            includes: None,
         })
     }
 }
@@ -1081,16 +1092,19 @@ impl TryInto<ServiceInfo> for FacadeArg {
     fn try_into(self) -> Result<ServiceInfo, Self::Error> {
         let value = self.value.clone();
         let id = parse_arg!(value, as_u64, "id")?;
+        let handle = ServiceHandle { value: id };
         let primary = parse_arg!(value, as_bool, "primary")?;
+        let kind = if primary { ServiceKind::Primary } else { ServiceKind::Secondary };
         let type_ = parse_arg!(value, as_str, "type")?.to_string();
+        let type_: FidlUuid =
+            Uuid::from_str(&type_).map_err(|_| format_err!("Invalid type"))?.into();
 
         Ok(ServiceInfo {
-            id,
-            primary,
-            type_,
-            // TODO(fxbug.dev/883): Add support for GATT characterstics and includes
-            characteristics: None,
-            includes: None,
+            handle: Some(handle),
+            kind: Some(kind),
+            type_: Some(type_),
+            // TODO(fxbug.dev/883): Add support for GATT characteristics and includes
+            ..ServiceInfo::EMPTY
         })
     }
 }

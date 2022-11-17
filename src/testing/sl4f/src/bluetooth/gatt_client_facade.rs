@@ -5,48 +5,68 @@
 use anyhow::{format_err, Context as _, Error};
 use fidl;
 use fidl::endpoints;
-use fidl_fuchsia_bluetooth_gatt::{Characteristic, ReliableMode, RemoteServiceProxy, WriteOptions};
-use fidl_fuchsia_bluetooth_gatt::{ClientProxy, ServiceInfo};
-use fidl_fuchsia_bluetooth_le::RemoteDevice;
+use fidl_fuchsia_bluetooth_gatt2::{
+    Characteristic, CharacteristicNotifierMarker, CharacteristicNotifierRequest,
+    CharacteristicNotifierRequestStream, ClientEventStream, ClientProxy, Handle, LongReadOptions,
+    ReadOptions, RemoteServiceEventStream, RemoteServiceProxy, ServiceHandle, ServiceInfo,
+    ShortReadOptions, WriteMode, WriteOptions,
+};
 use fidl_fuchsia_bluetooth_le::{
-    CentralEvent, CentralMarker, CentralProxy, ConnectionOptions, ScanFilter,
+    CentralMarker, CentralProxy, ConnectionEventStream, ConnectionOptions, ConnectionProxy, Filter,
+    ScanOptions, ScanResultWatcherMarker, ScanResultWatcherProxy,
 };
 use fuchsia_async as fasync;
 use fuchsia_component as app;
-use futures::future::{Future, TryFutureExt};
-use futures::stream::TryStreamExt;
-use futures::task::Waker;
+use futures::{select, FutureExt, StreamExt};
 use parking_lot::RwLock;
-use slab::Slab;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 use tracing::*;
 
 use fidl_fuchsia_bluetooth;
-use fuchsia_bluetooth::types::Uuid;
+use fuchsia_bluetooth::types::{le::Peer, PeerId, Uuid};
 
 use crate::bluetooth::types::{BleScanResponse, SerializableReadByTypeResult};
-use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
-use crate::common_utils::error::Sl4fError;
+use crate::common_utils::common::macros::with_line;
+
+#[derive(Debug)]
+struct Client {
+    proxy: ClientProxy,
+    _connection: ConnectionProxy,
+    // Cache of services populated by GattClientFacade.list_services() and
+    // watch_services_task.
+    services: HashMap<u64, ServiceInfo>,
+    // Task that processes Client.WatchServices() results. Started during the
+    // initial call to GattClientFacade.list_services().
+    watch_services_task: Option<fasync::Task<()>>,
+    // Task listening for closed events from `proxy` and `_connection`.
+    _events_task: fasync::Task<()>,
+}
+
+#[derive(Debug)]
+struct Central {
+    proxy: CentralProxy,
+    _event_task: fasync::Task<Result<(), Error>>,
+}
+
+#[derive(Debug)]
+struct RemoteService {
+    proxy: RemoteServiceProxy,
+    _event_task: fasync::Task<()>,
+    // Map of characteristic IDs to CharacteristicNotifier tasks.
+    notifier_tasks: HashMap<u64, fasync::Task<()>>,
+    peer_id: PeerId,
+    service_id: u64,
+}
 
 #[derive(Debug)]
 pub struct InnerGattClientFacade {
-    // FIDL proxy to the currently connected service, if any.
-    active_proxy: Option<RemoteServiceProxy>,
-
-    // central: CentralProxy used for Bluetooth connections
-    central: Option<CentralProxy>,
-
-    // devices: HashMap of key = device id and val = RemoteDevice structs discovered from a scan
-    devices: HashMap<String, RemoteDevice>,
-
-    // Pending requests to obtain a host
-    host_requests: Slab<Waker>,
-
-    // peripheral_ids: The identifier for the peripheral of a ConnectPeripheral FIDL call
-    // Key = peripheral id, value = ClientProxy
-    peripheral_ids: HashMap<String, ClientProxy>,
+    active_remote_service: Option<RemoteService>,
+    central: Option<Central>,
+    scan_results: HashMap<PeerId, Peer>,
+    clients: HashMap<PeerId, Client>,
+    scan_task: Option<fasync::Task<()>>,
 }
 
 /// Perform Gatt Client operations.
@@ -62,94 +82,199 @@ impl GattClientFacade {
     pub fn new() -> GattClientFacade {
         GattClientFacade {
             inner: Arc::new(RwLock::new(InnerGattClientFacade {
+                active_remote_service: None,
                 central: None,
-                devices: HashMap::new(),
-                host_requests: Slab::new(),
-                peripheral_ids: HashMap::new(),
-                active_proxy: None,
+                scan_results: HashMap::new(),
+                clients: HashMap::new(),
+                scan_task: None,
             })),
         }
     }
 
-    pub async fn start_scan(&self, mut filter: Option<ScanFilter>) -> Result<(), Error> {
-        self.cleanup_devices();
+    pub async fn stop_scan(&self) -> Result<(), Error> {
+        let tag = "GattClientFacade::stop_scan";
+        if self.inner.write().scan_task.take().is_some() {
+            info!(tag = &with_line!(tag), "Scan stopped");
+        } else {
+            info!(tag = &with_line!(tag), "No scan was running");
+        }
+        Ok(())
+    }
+
+    pub async fn start_scan(&self, filter: Option<Filter>) -> Result<(), Error> {
+        let tag = "GattClientFacade::start_scan";
+
+        self.inner.write().scan_results.clear();
+
         // Set the central proxy if necessary and start a central_listener
         GattClientFacade::set_central_proxy(self.inner.clone());
 
-        match &self.inner.read().central {
-            Some(c) => {
-                let status = c.start_scan(filter.as_mut()).await?;
-                match status.error {
-                    Some(e) => {
-                        return Err(format_err!("Failed to start scan: {}", Sl4fError::from(*e)))
+        let central = self
+            .inner
+            .read()
+            .central
+            .as_ref()
+            .ok_or(format_err!("No central proxy created."))?
+            .proxy
+            .clone();
+
+        let options = ScanOptions {
+            filters: Some(vec![filter.unwrap_or(Filter::EMPTY)]),
+            ..ScanOptions::EMPTY
+        };
+
+        let (watcher_proxy, watcher_server) =
+            fidl::endpoints::create_proxy::<ScanResultWatcherMarker>()?;
+
+        // Scan doesn't return until scanning has stopped. We don't care when scanning stops, so we
+        // can detach a task to run the scan future.
+        let scan_fut = central.scan(options, watcher_server);
+        fasync::Task::spawn(async move {
+            if let Err(e) = scan_fut.await {
+                warn!(tag = &with_line!(tag), "FIDL error during scan: {:?}", e);
+            }
+        })
+        .detach();
+
+        self.inner.write().scan_task = Some(fasync::Task::spawn(
+            GattClientFacade::scan_result_watcher_task(self.inner.clone(), watcher_proxy),
+        ));
+
+        info!(tag = &with_line!(tag), "Scan started");
+        Ok(())
+    }
+
+    async fn scan_result_watcher_task(
+        inner: Arc<RwLock<InnerGattClientFacade>>,
+        watcher_proxy: ScanResultWatcherProxy,
+    ) {
+        let tag = "GattClientFacade::scan_result_watcher_task";
+        let mut event_stream = watcher_proxy.take_event_stream();
+        let mut watch_fut = watcher_proxy.watch();
+        loop {
+            select! {
+                  watch_result = watch_fut => {
+                     let peers = match watch_result {
+                          Ok(peers) => peers,
+                          Err(e) => {
+                               info!(
+                                  tag = &with_line!(tag),
+                                   "FIDL error calling ScanResultWatcher::Watch(): {}", e
+                               );
+                               break;
+                           }};
+                     for fidl_peer in peers {
+                        let peer: Peer = fidl_peer.try_into().unwrap();
+                        debug!(tag = &with_line!(tag), "Peer discovered (id: {}, name: {:?})", peer.id, peer.name);
+                        inner.write().scan_results.insert(peer.id, peer);
+                     }
+                     watch_fut = watcher_proxy.watch();
+                  },
+                  event = event_stream.next() => {
+                    if let Some(Err(err)) = event {
+                              info!(tag = &with_line!(tag), "ScanResultWatcher error: {:?}", err);
                     }
-                    None => Ok(()),
+                    break; // The only events are those that close the protocol.
+                  }
+            }
+        }
+        inner.write().scan_task = None;
+        info!(tag = &with_line!(tag), "ScanResultWatcher closed");
+    }
+
+    async fn active_remote_service_event_task(
+        inner: Arc<RwLock<InnerGattClientFacade>>,
+        mut event_stream: RemoteServiceEventStream,
+    ) {
+        let tag = "GattClientFacade::active_remote_service_event_task";
+        while let Some(event) = event_stream.next().await {
+            match event {
+                Ok(_) => {} // There are no events
+                Err(e) => {
+                    warn!(tag = &with_line!(tag), "RemoteService error: {:?}", e);
+                    break;
                 }
             }
-            None => return Err(format_err!("No central proxy created.")),
         }
+        info!(tag = &with_line!(tag), "RemoteService closed");
+        inner.write().active_remote_service = None;
     }
 
     pub async fn gattc_connect_to_service(
         &self,
-        periph_id: String,
+        peer_id: String,
         service_id: u64,
     ) -> Result<(), Error> {
         let tag = "GattClientFacade::gattc_connect_to_service";
-        let client_proxy = self.get_client_from_peripherals(periph_id);
-        let (proxy, server) = endpoints::create_proxy()?;
+        let peer_id = PeerId::from_str(&peer_id)?;
 
-        // First close the connection to the currently active service.
-        if self.inner.read().active_proxy.is_some() {
-            self.inner.write().active_proxy = None;
-        }
-        match client_proxy {
-            Some(c) => {
-                c.connect_to_service(service_id, server)?;
-                self.inner.write().active_proxy = Some(proxy);
-                Ok(())
-            }
-            None => {
-                error!(tag = &with_line!(tag), "Unable to connect to service.");
-                return Err(format_err!("No peripheral proxy created."));
+        // Check if the service is already the active service.
+        if let Some(service) = self.inner.read().active_remote_service.as_ref() {
+            if service.peer_id == peer_id && service.service_id == service_id {
+                info!(
+                    tag = &with_line!(tag),
+                    "Aready connected to service (peer: {}, service: {})", peer_id, service_id
+                );
+                return Ok(());
             }
         }
+
+        self.inner.write().active_remote_service = None;
+
+        let client_proxy = self.get_client_proxy(peer_id).ok_or_else(|| {
+            error!(
+                tag = &with_line!(tag),
+                "Unable to connect to service {} (not connected to peer {})", service_id, peer_id
+            );
+            format_err!("Not connected to peer")
+        })?;
+        let (proxy, server) = endpoints::create_proxy()?;
+        client_proxy.connect_to_service(&mut ServiceHandle { value: service_id }, server)?;
+        let event_stream = proxy.take_event_stream();
+        let event_task = fasync::Task::spawn(GattClientFacade::active_remote_service_event_task(
+            self.inner.clone(),
+            event_stream,
+        ));
+        self.inner.write().active_remote_service = Some(RemoteService {
+            proxy,
+            _event_task: event_task,
+            notifier_tasks: HashMap::new(),
+            peer_id,
+            service_id,
+        });
+        Ok(())
     }
 
     pub async fn gattc_discover_characteristics(&self) -> Result<Vec<Characteristic>, Error> {
-        let tag = "GattClientFacade::gattc_discover_characteristics";
-        let discover_characteristics = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.discover_characteristics(),
-            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
-        };
+        let discover_characteristics_fut = self
+            .get_remote_service_proxy()
+            .ok_or(format_err!("RemoteService proxy not available"))?
+            .discover_characteristics();
+        discover_characteristics_fut.await.map_err(|_| format_err!("Failed to send message"))
+    }
 
-        let (status, chrcs) =
-            discover_characteristics.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
-        if let Some(e) = status.error {
-            let err_msg = format!("Failed to read characteristics: {}", Sl4fError::from(*e));
-            fx_err_and_bail!(&with_line!(tag), err_msg)
-        }
-        Ok(chrcs)
+    async fn gattc_write_char_internal(
+        &self,
+        id: u64,
+        offset: u16,
+        write_value: Vec<u8>,
+        mode: WriteMode,
+    ) -> Result<(), Error> {
+        let mut handle = Handle { value: id };
+        let options =
+            WriteOptions { offset: Some(offset), write_mode: Some(mode), ..WriteOptions::EMPTY };
+        let write_fut = self
+            .get_remote_service_proxy()
+            .ok_or(format_err!("No active service"))?
+            .write_characteristic(&mut handle, &write_value, options);
+        write_fut
+            .await
+            .map_err(|_| format_err!("Failed to send message"))?
+            .map_err(|err| format_err!("Failed to write characteristic: {:?}", err))
     }
 
     pub async fn gattc_write_char_by_id(&self, id: u64, write_value: Vec<u8>) -> Result<(), Error> {
-        let tag = "GattClientFacade::gattc_write_char_by_id";
-
-        let write_characteristic = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.write_characteristic(id, &write_value),
-            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
-        };
-
-        let status =
-            write_characteristic.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
-
-        match status.error {
-            Some(e) => {
-                let err_msg = format!("Failed to write to characteristic: {}", Sl4fError::from(*e));
-                fx_err_and_bail!(&with_line!(tag), err_msg)
-            }
-            None => Ok(()),
-        }
+        self.gattc_write_char_internal(id, 0, write_value, WriteMode::Default).await
     }
 
     pub async fn gattc_write_long_char_by_id(
@@ -159,35 +284,13 @@ impl GattClientFacade {
         write_value: Vec<u8>,
         reliable_mode: bool,
     ) -> Result<(), Error> {
-        let tag = "GattClientFacade::gattc_write_long_char_by_id";
-
-        let reliable_mode = match reliable_mode {
-            true => ReliableMode::Enabled,
-            false => ReliableMode::Disabled,
-        };
-
-        let write_long_characteristic = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.write_long_characteristic(
-                id,
-                offset,
-                &write_value,
-                WriteOptions { reliable_mode: Some(reliable_mode), ..WriteOptions::EMPTY },
-            ),
-            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
-        };
-
-        let status = write_long_characteristic
-            .await
-            .map_err(|_| Sl4fError::new("Failed to send message"))?;
-
-        match status.error {
-            Some(e) => {
-                let err_msg =
-                    format!("Failed to write long characteristic: {}", Sl4fError::from(*e));
-                fx_err_and_bail!(&with_line!(tag), err_msg)
-            }
-            None => Ok(()),
-        }
+        self.gattc_write_char_internal(
+            id,
+            offset,
+            write_value,
+            if reliable_mode { WriteMode::Reliable } else { WriteMode::Default },
+        )
+        .await
     }
 
     pub async fn gattc_write_char_by_id_without_response(
@@ -195,72 +298,28 @@ impl GattClientFacade {
         id: u64,
         write_value: Vec<u8>,
     ) -> Result<(), Error> {
-        let tag = "GattClientFacade::gattc_write_char_by_id_without_response";
+        self.gattc_write_char_internal(id, 0, write_value, WriteMode::WithoutResponse).await
+    }
 
-        match &self.inner.read().active_proxy {
-            Some(proxy) => proxy
-                .write_characteristic_without_response(id, &write_value)
-                .map_err(|_| Sl4fError::new("Failed to send message").into()),
-            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
-        }
+    async fn gattc_read_char_internal(
+        &self,
+        id: u64,
+        mut options: ReadOptions,
+    ) -> Result<Vec<u8>, Error> {
+        let mut handle = Handle { value: id };
+        let read_fut = self
+            .get_remote_service_proxy()
+            .ok_or(format_err!("RemoteService proxy not available"))?
+            .read_characteristic(&mut handle, &mut options);
+        let read_value = read_fut
+            .await
+            .map_err(|_| format_err!("Failed to send message"))?
+            .map_err(|err| format_err!("Failed to read long characteristic: {:?}", err))?;
+        Ok(read_value.value.unwrap())
     }
 
     pub async fn gattc_read_char_by_id(&self, id: u64) -> Result<Vec<u8>, Error> {
-        let tag = "GattClientFacade::gattc_read_char_by_id";
-
-        let read_characteristic = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.read_characteristic(id),
-            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
-        };
-
-        let (status, value) =
-            read_characteristic.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
-
-        match status.error {
-            Some(e) => {
-                let err_msg = format!("Failed to read characteristic: {}", Sl4fError::from(*e));
-                fx_err_and_bail!(&with_line!(tag), err_msg)
-            }
-            None => Ok(value),
-        }
-    }
-
-    pub async fn gattc_read_char_by_type(
-        &self,
-        raw_uuid: String,
-    ) -> Result<Vec<SerializableReadByTypeResult>, Error> {
-        let tag = "GattClientFacade::gattc_read_char_by_type";
-
-        let uuid = match Uuid::from_str(&raw_uuid) {
-            Ok(uuid) => uuid,
-            Err(e) => {
-                fx_err_and_bail!(
-                    &with_line!(tag),
-                    format_err!("Unable to convert to Uuid: {:?}", e)
-                );
-            }
-        };
-
-        let mut fidl_uuid = fidl_fuchsia_bluetooth::Uuid::from(uuid);
-
-        match &self.inner.read().active_proxy {
-            Some(proxy) => match proxy.read_by_type(&mut fidl_uuid).await {
-                Ok(value) => {
-                    let responses = value.unwrap();
-                    let mut read_by_type_response_list = Vec::new();
-                    for response in responses {
-                        read_by_type_response_list
-                            .push(SerializableReadByTypeResult::new(&response));
-                    }
-                    Ok(read_by_type_response_list)
-                }
-                Err(e) => {
-                    let err_msg = format!("Failed to read characteristic by type: {}", e);
-                    fx_err_and_bail!(&with_line!(tag), err_msg)
-                }
-            },
-            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
-        }
+        self.gattc_read_char_internal(id, ReadOptions::ShortRead(ShortReadOptions {})).await
     }
 
     pub async fn gattc_read_long_char_by_id(
@@ -269,43 +328,58 @@ impl GattClientFacade {
         offset: u16,
         max_bytes: u16,
     ) -> Result<Vec<u8>, Error> {
-        let tag = "GattClientFacade::gattc_read_long_char_by_id";
+        self.gattc_read_char_internal(
+            id,
+            ReadOptions::LongRead(LongReadOptions {
+                offset: Some(offset),
+                max_bytes: Some(max_bytes),
+                ..LongReadOptions::EMPTY
+            }),
+        )
+        .await
+    }
 
-        let read_long_characteristic = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.read_long_characteristic(id, offset, max_bytes),
-            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
-        };
+    pub async fn gattc_read_char_by_type(
+        &self,
+        raw_uuid: String,
+    ) -> Result<Vec<SerializableReadByTypeResult>, Error> {
+        let uuid = Uuid::from_str(&raw_uuid)
+            .map_err(|e| format_err!("Unable to convert to Uuid: {:?}", e))?;
+        let mut fidl_uuid = fidl_fuchsia_bluetooth::Uuid::from(uuid);
+        let read_fut = self
+            .get_remote_service_proxy()
+            .ok_or(format_err!("RemoteService proxy not available"))?
+            .read_by_type(&mut fidl_uuid);
+        let results = read_fut
+            .await
+            .map_err(|err| format_err!("FIDL error: {:?}", err))?
+            .map_err(|err| format_err!("Failed to read characteristic by type: {:?}", err))?
+            .into_iter()
+            .filter(|r| r.error.is_none())
+            .map(|r| SerializableReadByTypeResult::new(r).unwrap())
+            .collect();
+        Ok(results)
+    }
 
-        let (status, value) =
-            read_long_characteristic.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
-
-        match status.error {
-            Some(e) => {
-                let err_msg =
-                    format!("Failed to read long characteristic: {}", Sl4fError::from(*e));
-                fx_err_and_bail!(&with_line!(tag), err_msg)
-            }
-            None => Ok(value),
-        }
+    async fn gattc_read_desc_internal(
+        &self,
+        id: u64,
+        mut options: ReadOptions,
+    ) -> Result<Vec<u8>, Error> {
+        let mut handle = Handle { value: id };
+        let read_fut = self
+            .get_remote_service_proxy()
+            .ok_or(format_err!("RemoteService proxy not available"))?
+            .read_descriptor(&mut handle, &mut options);
+        let read_value = read_fut
+            .await
+            .map_err(|_| format_err!("Failed to send message"))?
+            .map_err(|err| format_err!("Failed to read descriptor: {:?}", err))?;
+        Ok(read_value.value.unwrap())
     }
 
     pub async fn gattc_read_desc_by_id(&self, id: u64) -> Result<Vec<u8>, Error> {
-        let tag = "GattClientFacade::gattc_read_desc_by_id";
-        let read_descriptor = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.read_descriptor(id),
-            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
-        };
-
-        let (status, value) =
-            read_descriptor.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
-
-        match status.error {
-            Some(e) => {
-                let err_msg = format!("Failed to read descriptor: {}", Sl4fError::from(*e));
-                fx_err_and_bail!(&with_line!(tag), err_msg)
-            }
-            None => Ok(value),
-        }
+        self.gattc_read_desc_internal(id, ReadOptions::ShortRead(ShortReadOptions {})).await
     }
 
     pub async fn gattc_read_long_desc_by_id(
@@ -314,42 +388,19 @@ impl GattClientFacade {
         offset: u16,
         max_bytes: u16,
     ) -> Result<Vec<u8>, Error> {
-        let tag = "GattClientFacade::gattc_read_long_desc_by_id";
-        let read_long_descriptor = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.read_long_descriptor(id, offset, max_bytes),
-            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
-        };
-
-        let (status, value) =
-            read_long_descriptor.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
-
-        match status.error {
-            Some(e) => {
-                let err_msg = format!("Failed to read long descriptor: {}", Sl4fError::from(*e));
-                fx_err_and_bail!(&with_line!(tag), err_msg)
-            }
-            None => Ok(value),
-        }
+        self.gattc_read_desc_internal(
+            id,
+            ReadOptions::LongRead(LongReadOptions {
+                offset: Some(offset),
+                max_bytes: Some(max_bytes),
+                ..LongReadOptions::EMPTY
+            }),
+        )
+        .await
     }
 
     pub async fn gattc_write_desc_by_id(&self, id: u64, write_value: Vec<u8>) -> Result<(), Error> {
-        let tag = "GattClientFacade::gattc_write_desc_by_id";
-
-        let write_descriptor = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.write_descriptor(id, &write_value),
-            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
-        };
-
-        let status =
-            write_descriptor.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
-
-        match status.error {
-            Some(e) => {
-                let err_msg = format!("Failed to write to descriptor: {}", Sl4fError::from(*e));
-                fx_err_and_bail!(&with_line!(tag), err_msg)
-            }
-            None => Ok(()),
-        }
+        self.gattc_write_long_desc_by_id(id, 0, write_value).await
     }
 
     pub async fn gattc_write_long_desc_by_id(
@@ -358,309 +409,299 @@ impl GattClientFacade {
         offset: u16,
         write_value: Vec<u8>,
     ) -> Result<(), Error> {
-        let tag = "GattClientFacade::gattc_write_long_desc_by_id";
+        let mut handle = Handle { value: id };
+        let options = WriteOptions { offset: Some(offset), ..WriteOptions::EMPTY };
+        let write_fut = self
+            .get_remote_service_proxy()
+            .ok_or(format_err!("RemoteService proxy not available"))?
+            .write_descriptor(&mut handle, &write_value, options);
+        write_fut
+            .await
+            .map_err(|_| format_err!("Failed to send message"))?
+            .map_err(|err| format_err!("Failed to write descriptor: {:?}", err))
+    }
 
-        let write_long_descriptor = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.write_long_descriptor(id, offset, &write_value),
-            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
-        };
-
-        let status =
-            write_long_descriptor.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
-
-        match status.error {
-            Some(e) => {
-                let err_msg = format!("Failed to write long descriptor: {}", Sl4fError::from(*e));
-                fx_err_and_bail!(&with_line!(tag), err_msg)
+    async fn notifier_task(
+        inner: Arc<RwLock<InnerGattClientFacade>>,
+        id: u64,
+        mut request_stream: CharacteristicNotifierRequestStream,
+    ) {
+        let tag = "GattClientFacade::notifier_task";
+        while let Ok(event) = request_stream.select_next_some().await {
+            match event {
+                CharacteristicNotifierRequest::OnNotification { value, responder } => {
+                    info!(
+                        tag = &with_line!(tag),
+                        "Received notification (id: {}, value: {:?})",
+                        id,
+                        value.value.unwrap()
+                    );
+                    let _ = responder.send();
+                }
             }
-            None => Ok(()),
         }
+        info!(tag = &with_line!(tag), "CharacteristicNotifier closed (id: {})", id);
+        inner.write().active_remote_service.as_mut().and_then(|s| s.notifier_tasks.remove(&id));
     }
 
     pub async fn gattc_toggle_notify_characteristic(
         &self,
         id: u64,
-        value: bool,
+        enable: bool,
     ) -> Result<(), Error> {
-        let tag = "GattClientFacade::gattc_toggle_notify_characteristic";
+        let (register_fut, request_stream) = {
+            let mut inner = self.inner.write();
+            let service = inner
+                .active_remote_service
+                .as_mut()
+                .ok_or(format_err!("Not connected to a service"))?;
 
-        let notify_characteristic = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.notify_characteristic(id, value),
-            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
-        };
-
-        let status =
-            notify_characteristic.await.map_err(|_| Sl4fError::new("Failed to send message"))?;
-
-        match status.error {
-            Some(e) => {
-                let err_msg = format!("Failed to enable notifications: {}", Sl4fError::from(*e));
-                fx_err_and_bail!(&with_line!(tag), err_msg)
+            if !enable {
+                service.notifier_tasks.remove(&id);
+                return Ok(());
             }
-            None => {}
+            if service.notifier_tasks.contains_key(&id) {
+                return Ok(());
+            }
+
+            let (client_end, request_stream) =
+                fidl::endpoints::create_request_stream::<CharacteristicNotifierMarker>()?;
+            let register_fut = service
+                .proxy
+                .register_characteristic_notifier(&mut Handle { value: id }, client_end);
+
+            (register_fut, request_stream)
         };
+        register_fut
+            .await
+            .map_err(|e| format_err!("FIDL error: {:?}", e))?
+            .map_err(|e| format_err!("Error registering notifier: {:?}", e))?;
+
+        let notifier_task = fasync::Task::spawn(GattClientFacade::notifier_task(
+            self.inner.clone(),
+            id,
+            request_stream,
+        ));
+        self.inner
+            .write()
+            .active_remote_service
+            .as_mut()
+            .ok_or(format_err!("Not connected to a service"))?
+            .notifier_tasks
+            .insert(id, notifier_task);
         Ok(())
     }
 
-    pub async fn list_services(&self, id: String) -> Result<Vec<ServiceInfo>, Error> {
-        let tag = "GattClientFacade::list_services";
-        let client_proxy = self.get_client_from_peripherals(id);
-
-        match client_proxy {
-            Some(c) => {
-                let (status, services) = c.list_services(None).await?;
-                match status.error {
-                    None => {
-                        info!(tag = &with_line!(tag), "Found services: {:?}", services);
-                        Ok(services)
-                    }
-                    Some(e) => {
-                        let err_msg = format!(
-                            "Error found while listing services: {:?}",
-                            Sl4fError::from(*e)
-                        );
-                        fx_err_and_bail!(&with_line!(tag), err_msg)
-                    }
-                }
-            }
-            None => bail!("No client exists with provided device id"),
-        }
-    }
-
-    // Given a device id, return its ClientProxy, if existing, otherwise None
-    pub fn get_client_from_peripherals(&self, id: String) -> Option<ClientProxy> {
-        self.inner.read().peripheral_ids.get(&id).map(|c| c.clone())
-    }
-
-    // Given a device id, insert it into the map. If it exists, don't overwrite
-    // TODO(aniramakri): Is this right behavior? If the device id already exists, don't
-    // overwrite ClientProxy?
-    pub fn update_peripheral_id(&self, id: &String, client: ClientProxy) {
-        let tag = "GattClientFacade::update_peripheral_id";
-        if self.inner.read().peripheral_ids.contains_key(id) {
-            warn!(tag = &with_line!(tag), "Overwriting existing id: {}", id);
-            self.inner.write().peripheral_ids.insert(id.clone(), client);
-        } else {
-            info!(tag = &with_line!(tag), "Added {:?} to peripheral ids", id);
-            self.inner.write().peripheral_ids.insert(id.clone(), client);
-        }
-
-        info!(tag = &with_line!(tag), "Peripheral ids: {:?}", self.inner.read().peripheral_ids);
-    }
-
-    pub fn remove_peripheral_id(&self, id: &String) {
-        let tag = "GattClientFacade::remove_peripheral_id";
-        self.inner.write().peripheral_ids.remove(id);
-        info!(
-            tagx = &with_line!(tag),
-            "After removing peripheral id: {:?}",
-            self.inner.read().peripheral_ids
-        );
-    }
-
-    // Update the central proxy if none exists, otherwise raise error
-    // If no proxy exists, set up central server to listen for events. This central listener will
-    // wake up any wakers who may be interested in RemoteDevices discovered
-    pub fn set_central_proxy(inner: Arc<RwLock<InnerGattClientFacade>>) {
-        let tag = "GattClientFacade::set_central_proxy";
-        let mut central_modified = false;
-        let new_central = match inner.read().central.clone() {
-            Some(c) => {
-                warn!(tag = &with_line!(tag), "Current central: {:?}.", c);
-                central_modified = true;
-                Some(c)
-            }
-            None => {
-                let central_svc: CentralProxy = app::client::connect_to_protocol::<CentralMarker>()
-                    .context("Failed to connect to BLE Central service.")
-                    .unwrap();
-                Some(central_svc)
-            }
-        };
-
-        // Update the central with the (potentially) newly created proxy
-        inner.write().central = new_central;
-        // Only spawn if a central hadn't been created
-        if !central_modified {
-            fasync::Task::spawn(GattClientFacade::listen_central_events(inner.clone())).detach()
-        }
-    }
-
-    // Update the devices dictionary with a discovered RemoteDevice
-    pub fn update_devices(
+    // Warning: hangs forever if there are no service updates!
+    async fn watch_services_and_update_map(
         inner: &Arc<RwLock<InnerGattClientFacade>>,
-        id: String,
-        device: RemoteDevice,
-    ) {
-        let tag = "GattClientFacade::update_devices";
-        if inner.read().devices.contains_key(&id) {
-            warn!(tag = &with_line!(tag), "Already discovered: {:?}", id);
-        } else {
-            inner.write().devices.insert(id, device);
+        peer_id: &PeerId,
+    ) -> Result<(), Error> {
+        let client_proxy = inner
+            .read()
+            .clients
+            .get(peer_id)
+            .ok_or(format_err!("Not connected to peer"))?
+            .proxy
+            .clone();
+        let watch_fut = client_proxy.watch_services(&mut Vec::new().into_iter());
+        let (updated, removed) =
+            watch_fut.await.map_err(|_| format_err!("FIDL error calling WatchServices()"))?;
+
+        // watch_services() returns a diff from the previous call, so we need to apply the diff to
+        // the cached services to get an updated list of services.
+        let mut inner = inner.write();
+        let services = &mut inner
+            .clients
+            .get_mut(peer_id)
+            .ok_or(format_err!("Not connected to peer"))?
+            .services;
+        for handle in removed {
+            services.remove(&handle.value);
+        }
+        for svc in updated {
+            services.insert(svc.handle.unwrap().value, svc);
+        }
+        Ok(())
+    }
+
+    async fn watch_services_task(inner: Arc<RwLock<InnerGattClientFacade>>, peer_id: PeerId) -> () {
+        loop {
+            let tag = "GattClientFacade::watch_services_task";
+            if let Err(err) =
+                GattClientFacade::watch_services_and_update_map(&inner, &peer_id).await
+            {
+                warn!(tag = &with_line!(tag), "{}", err);
+                return;
+            }
         }
     }
 
-    pub fn listen_central_events(
+    pub async fn list_services(&self, id: String) -> Result<Vec<ServiceInfo>, Error> {
+        let peer_id = PeerId::from_str(&id).map_err(|_| format_err!("Invalid peer id"))?;
+
+        {
+            let inner = self.inner.read();
+            let client = inner.clients.get(&peer_id).ok_or(format_err!("Not connected to peer"))?;
+            // If watch_services_task has already been started, then client.services has the latest cached list of services and we can simply return then.
+            if client.watch_services_task.is_some() {
+                return Ok(client.services.iter().map(|(_, svc)| svc.clone()).collect());
+            }
+        }
+
+        // On the first call to list_services(), we need to get the initial list of services and start a task to get updates.
+        GattClientFacade::watch_services_and_update_map(&self.inner, &peer_id).await?;
+        let task =
+            fasync::Task::spawn(GattClientFacade::watch_services_task(self.inner.clone(), peer_id));
+        let mut inner = self.inner.write();
+        let client = inner.clients.get_mut(&peer_id).ok_or(format_err!("Not connected to peer"))?;
+        client.watch_services_task = Some(task);
+
+        Ok(client.services.iter().map(|(_, svc)| svc.clone()).collect())
+    }
+
+    pub fn get_client_proxy(&self, id: PeerId) -> Option<ClientProxy> {
+        self.inner.read().clients.get(&id).map(|c| c.proxy.clone())
+    }
+
+    async fn central_event_task(inner: Arc<RwLock<InnerGattClientFacade>>) -> Result<(), Error> {
+        let tag = "GattClientFacade::central_event_task";
+
+        let stream = inner
+            .write()
+            .central
+            .as_ref()
+            .ok_or(format_err!("Central not set"))?
+            .proxy
+            .take_event_stream();
+
+        stream.map(|_| ()).collect::<()>().await;
+
+        info!(tag = &with_line!(tag), "Central closed");
+        inner.write().central.take();
+        return Ok(());
+    }
+
+    // If no proxy exists, set up central server to listen for events.
+    // Otherwise, do nothing.
+    pub fn set_central_proxy(inner: Arc<RwLock<InnerGattClientFacade>>) {
+        if inner.read().central.is_some() {
+            return;
+        }
+        let proxy = app::client::connect_to_protocol::<CentralMarker>()
+            .context("Failed to connect to BLE Central service.")
+            .unwrap();
+        let event_task = fasync::Task::spawn(GattClientFacade::central_event_task(inner.clone()));
+        inner.write().central = Some(Central { proxy, _event_task: event_task });
+    }
+
+    async fn connection_event_task(
         inner: Arc<RwLock<InnerGattClientFacade>>,
-    ) -> impl Future<Output = ()> {
-        let tag = "GattClientFacade::listen_central_events";
-        let evt_stream = match inner.read().central.clone() {
-            Some(c) => c.take_event_stream(),
-            None => panic!("No central created!"),
-        };
-
-        evt_stream
-            .map_ok(move |evt| {
-                match evt {
-                    CentralEvent::OnScanStateChanged { scanning } => {
-                        info!(tag = &with_line!(tag), "Scan state changed: {:?}", scanning);
-                    }
-                    CentralEvent::OnDeviceDiscovered { device } => {
-                        let id = device.identifier.clone();
-                        let name = device.advertising_data.as_ref().map(|adv| &adv.name);
-                        // Update the device discovered list
-                        info!(
-                            tag = &with_line!(tag),
-                            "Device discovered: id: {:?}, name: {:?}", id, name
-                        );
-                        GattClientFacade::update_devices(&inner, id, device);
-
-                        // In the event that we need to short-circuit the stream, wake up all
-                        // wakers in the host_requests Slab
-                        for waker in &inner.read().host_requests {
-                            waker.1.wake_by_ref();
-                        }
-                    }
-                    CentralEvent::OnPeripheralDisconnected { identifier } => {
-                        info!(tag = &with_line!(tag), "Peer disconnected: {:?}", identifier);
-                    }
-                }
-            })
-            .try_collect::<()>()
-            .unwrap_or_else(|e| {
-                error!(
-                    tag = &with_line!("GattClientFacade::listen_central_events"),
-                    "Failed to subscribe to BLE Central events: {:?}", e
-                )
-            })
+        mut connection_stream: ConnectionEventStream,
+        mut client_stream: ClientEventStream,
+        peer_id: PeerId,
+    ) {
+        let tag = "GattClientFacade::connection_event_task";
+        select! {
+           _ = connection_stream.next().fuse() => info!(tag = &with_line!(tag) , "Connection to {} closed", peer_id),
+           _ = client_stream.next().fuse() => info!(tag = &with_line!(tag), "Client for {} closed", peer_id),
+        }
+        inner.write().clients.remove(&peer_id);
     }
 
     pub async fn connect_peripheral(&self, id: String) -> Result<(), Error> {
         let tag = "GattClientFacade::connect_peripheral";
-        // Set the central proxy if necessary
+        let peer_id = PeerId::from_str(&id)?;
+
+        if self.inner.read().clients.contains_key(&peer_id) {
+            info!(tag = &with_line!(tag), "Already connected to {}", peer_id);
+            return Ok(());
+        }
+
         GattClientFacade::set_central_proxy(self.inner.clone());
 
-        // TODO(fxbug.dev/875): Move to private method?
-        // Create server endpoints
-        let (proxy, server_end) = match fidl::endpoints::create_proxy() {
-            Err(e) => {
-                let err_msg = format!("Failed to create proxy endpoint: {:?}", e);
-                fx_err_and_bail!(&with_line!(tag), err_msg)
-            }
-            Ok(x) => x,
-        };
-        let mut identifier = id.clone();
-        self.update_peripheral_id(&identifier, proxy);
-        match &self.inner.read().central {
-            Some(c) => {
-                let conn_opts = ConnectionOptions {
-                    bondable_mode: Some(true),
-                    service_filter: None,
-                    ..ConnectionOptions::EMPTY
-                };
-                let status = c.connect_peripheral(&mut identifier, conn_opts, server_end).await?;
-                match status.error {
-                    Some(e) => {
-                        let err_msg =
-                            format!("Failed to connect to peripheral: {:?}", Sl4fError::from(*e));
-                        fx_err_and_bail!(&with_line!(tag), err_msg)
-                    }
-                    None => {}
-                }
-            }
-            None => fx_err_and_bail!(&with_line!(tag), "No central proxy created."),
-        };
+        let (conn_proxy, conn_server_end) = fidl::endpoints::create_proxy()?;
+        let options = ConnectionOptions { bondable_mode: Some(true), ..ConnectionOptions::EMPTY };
+        self.inner
+            .read()
+            .central
+            .as_ref()
+            .unwrap()
+            .proxy
+            .connect(&mut peer_id.clone().into(), options, conn_server_end)
+            .map_err(|_| format_err!("FIDL error when trying to connect()"))?;
+
+        let (client_proxy, client_server_end) = fidl::endpoints::create_proxy()?;
+        conn_proxy.request_gatt_client(client_server_end)?;
+
+        let events_task = fasync::Task::spawn(GattClientFacade::connection_event_task(
+            self.inner.clone(),
+            conn_proxy.take_event_stream(),
+            client_proxy.take_event_stream(),
+            peer_id.clone(),
+        ));
+
+        self.inner.write().clients.insert(
+            peer_id,
+            Client {
+                proxy: client_proxy,
+                _connection: conn_proxy,
+                services: HashMap::new(),
+                watch_services_task: None,
+                _events_task: events_task,
+            },
+        );
+
         Ok(())
     }
 
     pub async fn disconnect_peripheral(&self, id: String) -> Result<(), Error> {
-        let tag = "GattClientFacade::disconnect_peripheral";
-        match &self.inner.read().central {
-            Some(c) => {
-                let status = c.disconnect_peripheral(&id).await?;
-                match status.error {
-                    None => {}
-                    Some(e) => {
-                        error!(tag = &with_line!(tag), "Failed to disconnect: {:?}", e);
-                        bail!("Failed to disconnect: {:?}", e)
-                    }
-                }
-            }
-            None => fx_err_and_bail!(&with_line!(tag), "Failed to disconnect from perpheral."),
-        };
-        // Remove current id from map of peripheral_ids
-        self.remove_peripheral_id(&id);
+        let peer_id = PeerId::from_str(&id)?;
+        self.inner.write().clients.remove(&peer_id);
         Ok(())
     }
 
     // Return the central proxy
     pub fn get_central_proxy(&self) -> Option<CentralProxy> {
-        self.inner.read().central.clone()
+        self.inner.read().central.as_ref().map(|c| c.proxy.clone())
     }
 
-    pub fn get_periph_ids(&self) -> HashMap<String, ClientProxy> {
-        self.inner.read().peripheral_ids.clone()
+    fn get_remote_service_proxy(&self) -> Option<RemoteServiceProxy> {
+        self.inner.read().active_remote_service.as_ref().map(|s| s.proxy.clone())
     }
 
-    // Given the devices accrued from scan, returns list of (id, name) devices
-    // TODO(fxbug.dev/869): Return list of RemoteDevices (unsupported right now
-    // because Clone() not implemented for RemoteDevice)
-    pub fn get_devices(&self) -> Vec<BleScanResponse> {
+    // Returns scan responses converted to BleScanResponses
+    pub fn get_scan_responses(&self) -> Vec<BleScanResponse> {
         const EMPTY_DEVICE: &str = "";
         let mut devices = Vec::new();
-        for val in self.inner.read().devices.keys() {
-            let name = match &self.inner.read().devices[val].advertising_data {
-                Some(adv) => adv.name.clone().unwrap_or(EMPTY_DEVICE.to_string()),
-                None => EMPTY_DEVICE.to_string(),
-            };
-            let connectable = self.inner.read().devices[val].connectable;
-            devices.push(BleScanResponse::new(val.clone(), name, connectable));
+        for (peer_id, peer) in &self.inner.read().scan_results {
+            let id = format!("{}", peer_id);
+            let name = peer.name.clone().unwrap_or(EMPTY_DEVICE.to_string());
+            let connectable = peer.connectable;
+            devices.push(BleScanResponse::new(id, name, connectable));
         }
-
         devices
-    }
-
-    pub fn cleanup_central_proxy(&self) {
-        self.inner.write().central = None
-    }
-
-    pub fn cleanup_devices(&self) {
-        self.inner.write().devices.clear()
-    }
-
-    pub fn cleanup_central(&self) {
-        self.cleanup_central_proxy();
-        self.cleanup_devices();
-    }
-
-    pub fn cleanup_peripheral_ids(&self) {
-        self.inner.write().peripheral_ids.clear()
     }
 
     pub fn print(&self) {
         let tag = "GattClientFacade::print";
+        let inner = self.inner.read();
         info!(
             tag = &with_line!(tag),
-            "BluetoothFacade: Central: {:?}, Devices: {:?}, Periph_ids: {:?}",
-            self.get_central_proxy(),
-            self.get_devices(),
-            self.get_periph_ids(),
+            "BluetoothFacade: Central: {:?}, Active Service: {:?}, Scan Results: {:?}, Clients: {:?}",
+            inner.central,
+            inner.active_remote_service,
+            inner.scan_results,
+            inner.clients,
         );
     }
 
-    // Close both central proxies
     pub fn cleanup(&self) {
-        self.cleanup_central();
-        self.cleanup_peripheral_ids();
+        let mut inner = self.inner.write();
+        inner.active_remote_service = None;
+        inner.central = None;
+        inner.scan_results.clear();
+        inner.clients.clear();
+        inner.scan_task = None;
     }
 }

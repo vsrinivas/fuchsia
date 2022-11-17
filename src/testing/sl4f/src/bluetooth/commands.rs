@@ -9,7 +9,7 @@ use bt_rfcomm::ServerChannel;
 use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
 use fidl_fuchsia_bluetooth_hfp::{CallDirection, CallState, NetworkInformation, SignalStrength};
-use fidl_fuchsia_bluetooth_le::ScanFilter;
+use fidl_fuchsia_bluetooth_le::Filter;
 use fidl_fuchsia_bluetooth_sys::{LeSecurityMode, Settings};
 use parking_lot::RwLock;
 use serde_json::{from_value, to_value, Value};
@@ -563,29 +563,25 @@ impl Facade for AvrcpFacade {
 
 async fn start_scan_async(
     facade: &GattClientFacade,
-    filter: Option<ScanFilter>,
+    filter: Option<Filter>,
 ) -> Result<Value, Error> {
     let start_scan_result = facade.start_scan(filter).await?;
     Ok(to_value(start_scan_result)?)
 }
 
 async fn stop_scan_async(facade: &GattClientFacade) -> Result<Value, Error> {
-    let central = facade.get_central_proxy().clone().expect("No central proxy.");
-    if let Err(e) = central.stop_scan() {
-        return Err(format_err!("Error stopping scan: {}", e));
-    } else {
-        // Get the list of devices discovered by the scan.
-        let devices = facade.get_devices();
-        match to_value(devices) {
-            Ok(dev) => Ok(dev),
-            Err(e) => Err(e.into()),
-        }
+    facade.stop_scan().await?;
+    // Get the list of devices discovered by the scan.
+    let devices = facade.get_scan_responses();
+    match to_value(devices) {
+        Ok(dev) => Ok(dev),
+        Err(e) => Err(e.into()),
     }
 }
 
 async fn le_get_discovered_devices_async(facade: &GattClientFacade) -> Result<Value, Error> {
     // Get the list of devices discovered by the scan.
-    match to_value(facade.get_devices()) {
+    match to_value(facade.get_scan_responses()) {
         Ok(dev) => Ok(dev),
         Err(e) => Err(e.into()),
     }
