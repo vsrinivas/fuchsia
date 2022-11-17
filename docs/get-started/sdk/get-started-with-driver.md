@@ -93,8 +93,8 @@ Do the following:
    ```
 
    The first build may take a few minutes to download dependencies, such as
-   Bazel build rules, [Clang][clang], and [Fuchsia IDK][fuchsia-idk] (which
-   includes the `ffx` tool).
+   Bazel build rules, [Clang][clang], and [Fuchsia IDK][fuchsia-idk]
+   (which includes the `ffx` tool).
 
    When finished successfully, it prints output similar to the following in the
    end:
@@ -102,9 +102,9 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel build --config=fuchsia_x64 //src/qemu_edu/drivers:qemu_edu
    ...
-   INFO: Elapsed time: 124.509s, Critical Path: 68.29s
-   INFO: 996 processes: 607 internal, 389 linux-sandbox.
-   INFO: Build completed successfully, 996 total actions
+   INFO: Elapsed time: 114.304s, Critical Path: 58.62s
+   INFO: 994 processes: 605 internal, 389 linux-sandbox.
+   INFO: Build completed successfully, 994 total actions
    ```
 
 5. To verify that you can use the `ffx` tool in your environment, run the
@@ -118,13 +118,13 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx sdk version
-   10.20221021.1.1
+   10.20221103.2.1
    ```
 
    At this point, you only need to confirm that you can run `ffx` commands
    without error. (However for your information, the output above shows the version
-   `10.20221021.1.1`, which indicates that this SDK was built and published on
-   October 21, 2022.)
+   `10.20221103.2.1`, which indicates that this SDK was built and published on
+   November 3, 2022.)
 
    Note: To ensure that you’re using the right version of `ffx` during development,
    consider updating your `PATH` to include the SDK's `tools` directory
@@ -191,8 +191,7 @@ Do the following:
      --kernel-args "driver_manager.use_driver_framework_v2=true" \
      --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" \
      --kernel-args "devmgr.enable-ephemeral=true"
-   Creating SSH key pair: /home/alice/.ssh/fuchsia_ed25519
-   Writing authorized_keys file: /home/alice/.ssh/fuchsia_authorized_keys
+   ...
    Logging to "/home/alice/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
    Waiting for Fuchsia to start (up to 60 seconds).
    Emulator is ready.
@@ -336,14 +335,15 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/drivers:pkg.component
-   INFO: Analyzed target //src/qemu_edu/drivers:pkg.component (9 packages loaded, 530 targets configured).
+   INFO: Build options --copt, --cpu, --crosstool_top, and 1 more have changed, discarding analysis cache.
+   INFO: Analyzed target //src/qemu_edu/drivers:pkg.component (9 packages loaded, 3162 targets configured).
    INFO: Found 1 target...
    Target //src/qemu_edu/drivers:pkg.component up-to-date:
      bazel-bin/src/qemu_edu/drivers/pkg.component_run_component.sh
-   INFO: Elapsed time: 101.722s, Critical Path: 65.99s
-   INFO: 1014 processes: 616 internal, 397 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 1014 total actions
-   INFO: Build completed successfully, 1014 total actions
+   INFO: Elapsed time: 100.275s, Critical Path: 56.62s
+   INFO: 1012 processes: 614 internal, 397 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 1012 total actions
+   INFO: Build completed successfully, 1012 total actions
    added repository bazel.pkg.component
    Registering fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
    Successfully bound:
@@ -412,7 +412,7 @@ Do the following:
                             /svc/fuchsia.driver.compat.Service
                             /svc/fuchsia.logger.LogSink
      Exposed Capabilities:  examples.qemuedu.Service
-              Merkle root:  619c1b8bd5596e2f705eb56b016b89eb68add91f4a406b6d60d1a8d2690b406d
+              Merkle root:  986038015ed8e6330e13cb299d7bd9ab50b1de01216c181566672d413f6d5eed
           Execution State:  Running
              Start reason:  Instance is in a single_run collection
     Outgoing Capabilities:  examples.qemuedu.Service
@@ -464,7 +464,7 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.eductl_tool -- live
-   INFO: Analyzed target //src/qemu_edu/tools:pkg.eductl_tool (1 packages loaded, 15 targets configured).
+   INFO: Analyzed target //src/qemu_edu/tools:pkg.eductl_tool (1 packages loaded, 2662 targets configured).
    INFO: Found 1 target...
    Target //src/qemu_edu/tools:pkg.eductl_tool up-to-date:
      bazel-bin/src/qemu_edu/tools/pkg.eductl_tool_run_driver_tool.sh
