@@ -141,8 +141,8 @@ bool MsdVsiDevice::Init(void* device_handle) {
       return DRETF(false, "Failed setting cache policy on external SRAM");
   }
 
-  if (device_id_ != 0x7000 && device_id_ != 0x8000 && device_id_ != 0x9000)
-    return DRETF(false, "Unspported gpu model 0x%x\n", device_id_);
+  if (!IsValidDeviceId())
+    return DRETF(false, "Unsupported gpu model 0x%x\n", device_id_);
 
   revision_ = registers::Revision::Get().ReadFrom(register_io()).chip_revision();
 
@@ -1254,7 +1254,7 @@ std::unique_ptr<MsdVsiConnection> MsdVsiDevice::Open(msd_client_id_t client_id) 
 }
 
 magma_status_t MsdVsiDevice::ChipIdentity(magma_vsi_vip_chip_identity* out_identity) {
-  if (device_id() != 0x8000) {
+  if (!IsValidDeviceId()) {
     // TODO(fxbug.dev/37962): Read hardcoded values from features database instead.
     return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "unhandled device id 0x%x", device_id());
   }
@@ -1280,7 +1280,7 @@ magma_status_t MsdVsiDevice::ChipIdentity(magma_vsi_vip_chip_identity* out_ident
 }
 
 magma_status_t MsdVsiDevice::ChipOption(magma_vsi_vip_chip_option* out_option) {
-  if (device_id() != 0x8000) {
+  if (!IsValidDeviceId()) {
     // TODO(fxbug.dev/37962): Read hardcoded values from features database instead.
     return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "unhandled device id 0x%x", device_id());
   }

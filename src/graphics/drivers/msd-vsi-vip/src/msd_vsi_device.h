@@ -63,6 +63,11 @@ class MsdVsiDevice : public msd_device_t,
     return (!((device_id() == 0x9000) && (customer_id() == MAGMA_VSI_VIP_A5_CUSTOMER_ID)));
   }
 
+  // Check device id is supported
+  bool IsValidDeviceId() {
+    return (device_id() == 0x8000 || device_id() == 0x9000);
+  }
+
   bool Shutdown();
   bool IsIdle();
   bool StopRingbuffer();
