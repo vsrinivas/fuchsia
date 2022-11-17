@@ -52,6 +52,9 @@ The following standards are particularly relevant to this driver.
     * High-Definition Multimedia Interface (HDMI) 2.1a, 7 February 2022
 * [MIPI Alliance][mipi-alliance-about] - all standards are members-only
     *  Display Serial Interface (DSI) 1.3.2, 17 December 2020
+* [NXP][nxp-about] - standards require profile creation
+    * [I2C (Inter-IC) bus specification and user manual][nxp-i2c-spec] document
+      UM10204 revision 7.0, 1 October 2021
 * [Standard Panel Working Group][spwg-about]
     * [SPWG Notebook Panel Specification][spwg-panel-standard] Version 3.8
 * [USB Implementers Forum][usb-if-about] -
@@ -81,6 +84,8 @@ The following standards are particularly relevant to this driver.
 [intel-kbl-prm]: https://01.org/linuxgraphics/hardware-specification-prms/2016-intelr-processors-based-kaby-lake-platform
 [intel-skl-prm]: https://01.org/linuxgraphics/documentation/hardware-specification-prms/2015-2016-intel-processors-based-skylake-platform
 [intel-opregion-prm]: https://01.org/linuxgraphics/documentation/intel%C2%AE-integrated-graphics-device-opregion-specification
+[nxp-about]: https://www.nxp.com/about
+[nxp-i2c-spec]: https://www.nxp.com/webapp/Download?colCode=UM10204&location=null
 [spwg-about]: https://web.archive.org/web/20130516220616/http://www.spwg.org/
 [spwg-panel-standard]: https://web.archive.org/web/20120424092158/http://www.spwg.org/spwg_spec_version3.8_3-14-2007.pdf
 [usb-if-about]: https://www.usb.org/about
