@@ -5,6 +5,7 @@
 pub mod button;
 #[cfg(feature = "debug_console")]
 pub mod console;
+mod constants;
 pub mod font;
 pub mod keyboard;
 pub mod keys;

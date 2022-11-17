@@ -175,7 +175,7 @@ mod tests {
 
     #[test]
     fn test_add_text_message_modifies_lines() -> std::result::Result<(), anyhow::Error> {
-        let font_face = font::load_default_font_face()?;
+        let font_face = font::get_default_font_face();
         let mut console_view_assistant = ConsoleViewAssistant::new(font_face).unwrap();
 
         // Verify line buffer is "initialized full" after console_view_assistant is constructed.
@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn test_small_multiline_messages_get_split() -> std::result::Result<(), anyhow::Error> {
-        let font_face = font::load_default_font_face()?;
+        let font_face = font::get_default_font_face();
         let mut console_view_assistant = ConsoleViewAssistant::new(font_face).unwrap();
 
         // Add a multiline message to Console.
@@ -223,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_giant_multiline_messages_get_split() -> std::result::Result<(), anyhow::Error> {
-        let font_face = font::load_default_font_face()?;
+        let font_face = font::get_default_font_face();
         let mut console_view_assistant = ConsoleViewAssistant::new(font_face).unwrap();
 
         // Add a giant (more rows than the screen can display) multiline message to Console.
@@ -248,7 +248,7 @@ mod tests {
 
     #[test]
     fn test_long_messages_get_split() -> std::result::Result<(), anyhow::Error> {
-        let font_face = font::load_default_font_face()?;
+        let font_face = font::get_default_font_face();
         let max_width = 100f32;
         let expected_lines =
             linebreak_text(&font_face, TEXT_FONT_SIZE, LONG_TEST_MESSAGE, max_width);
@@ -275,7 +275,7 @@ mod tests {
     #[test]
     fn test_long_messages_get_split_after_multiple_messages(
     ) -> std::result::Result<(), anyhow::Error> {
-        let font_face = font::load_default_font_face()?;
+        let font_face = font::get_default_font_face();
         let max_width = 300f32;
         let mut expected_lines =
             linebreak_text(&font_face, TEXT_FONT_SIZE, LONG_TEST_MESSAGE, max_width);
@@ -309,7 +309,7 @@ mod tests {
     #[test]
     fn test_long_paragraphs_get_split_preserving_paragraph_breaks(
     ) -> std::result::Result<(), anyhow::Error> {
-        let font_face = font::load_default_font_face()?;
+        let font_face = font::get_default_font_face();
         let paragraphs = format!("{msg}\n{msg}\n{msg}", msg = LONG_TEST_MESSAGE);
 
         let max_width = 300f32;

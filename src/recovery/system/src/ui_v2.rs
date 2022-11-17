@@ -54,7 +54,7 @@ impl AppAssistant for RecoveryAppAssistant {
         // TODO(b/244744635) Add a structured initialization flow for the recovery component
         let state_machine = Box::new(StateMachine::new(State::Home));
         let _controller = Controller::new(state_machine);
-        let font_face = font::load_default_font_face()?;
+        let font_face = font::get_default_font_face();
         #[cfg(feature = "debug_console")]
         let console_view_assistant_ptr = Box::new(ConsoleViewAssistant::new(font_face.clone())?);
         #[cfg(not(feature = "debug_console"))]

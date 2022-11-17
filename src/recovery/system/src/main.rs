@@ -59,7 +59,7 @@ use {
     ota_lib::{ota, setup, OtaComponent, OtaManager, OtaStatus},
     recovery_metrics_registry::cobalt_registry as metrics,
     recovery_ui::{
-        button::{Button, ButtonMessages},
+        button::{Button, ButtonMessages, ButtonOptions, ButtonShape, SceneBuilderButtonExt},
         keyboard::{KeyboardMessages, KeyboardViewAssistant},
         proxy_view_assistant::ProxyMessages,
     },
@@ -93,7 +93,7 @@ mod http_setup_server {
     // Nice space for text below a button
     pub(super) const SPACE_HEIGHT: f32 = 10.0;
 
-    pub(super) const WIFI_SSID: &'static str = "WiFi SSID";
+    pub(super) const WIFI_SSID: &'static str = "WiFi Name";
     pub(super) const WIFI_PASSWORD: &'static str = "WiFi Password";
     pub(super) const WIFI_CONNECT: &'static str = "WiFi Connect";
     pub(super) const UPDATE: &'static str = "Update";
@@ -197,16 +197,16 @@ impl AppAssistant for RecoveryAppAssistant {
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
         let body = get_recovery_body(self.fdr_restriction.is_initially_enabled());
         let file = load_rive(LOGO_IMAGE_PATH).ok();
-        let font_face = font::load_default_font_face()?;
+        let font_face = font::get_default_font_face().clone();
 
         #[cfg(feature = "debug_console")]
         let console_view_assistant_ptr: Option<ViewAssistantPtr> =
             Some(Box::new(ConsoleViewAssistant::new(font_face.clone())?));
         #[cfg(not(feature = "debug_console"))]
         let console_view_assistant_ptr: Option<ViewAssistantPtr> = None;
-
+        let app_sender = self.app_sender.clone();
         let view_assistant_ptr = Box::new(RecoveryViewAssistant::new(
-            &self.app_sender,
+            app_sender,
             view_key,
             file,
             RECOVERY_MODE_HEADLINE,
@@ -303,7 +303,7 @@ impl RenderResources {
         let text_size = min_dimension / 10.0;
         let body_text_size = min_dimension / 18.0;
         #[cfg(feature = "http_setup_server")]
-        let button_text_size = min_dimension / 14.0;
+        let button_text_size = min_dimension / 16.0;
         let countdown_text_size = min_dimension / 6.0;
         #[cfg(feature = "http_setup_server")]
         let mut buttons: Vec<Button> = Vec::new();
@@ -435,7 +435,7 @@ impl RenderResources {
                     let info_text = if let Some(wifi_ssid) = wifi_ssid.as_ref() {
                         wifi_ssid
                     } else {
-                        "<No Network Name>"
+                        "<No Name>"
                     };
                     RenderResources::build_button_group(
                         face,
@@ -547,9 +547,16 @@ impl RenderResources {
                 CrossAxisAlignment::Center,
             )),
         );
-        buttons.push(
-            Button::new(button_text, button_text_size, BUTTON_BORDER, builder).expect(button_text),
-        );
+        buttons.push(builder.button(
+            button_text,
+            None,
+            ButtonOptions {
+                font_size: button_text_size,
+                padding: BUTTON_BORDER,
+                shape: ButtonShape::Rounded,
+                ..ButtonOptions::default()
+            },
+        ));
         builder.space(size2(SPACE_WIDTH, SPACE_HEIGHT));
         builder.text(
             face.clone(),
@@ -592,7 +599,7 @@ struct RecoveryViewAssistant {
 
 impl RecoveryViewAssistant {
     fn new(
-        app_sender: &AppSender,
+        app_sender: AppSender,
         view_key: ViewKey,
         file: Option<rive::File>,
         heading: &'static str,
@@ -601,7 +608,7 @@ impl RecoveryViewAssistant {
         font_face: FontFace,
         #[cfg(feature = "http_setup_server")] ota_manager: Arc<dyn OtaManager>,
     ) -> Result<RecoveryViewAssistant, Error> {
-        RecoveryViewAssistant::setup(app_sender, view_key)?;
+        RecoveryViewAssistant::setup(app_sender.clone(), view_key)?;
 
         Ok(RecoveryViewAssistant {
             font_face,
@@ -609,7 +616,7 @@ impl RecoveryViewAssistant {
             body,
             fdr_restriction,
             reset_state_machine: fdr::FactoryResetStateMachine::new(),
-            app_sender: app_sender.clone(),
+            app_sender: app_sender,
             view_key,
             file,
             countdown_task: None,
@@ -627,12 +634,12 @@ impl RecoveryViewAssistant {
     }
 
     #[cfg(not(feature = "http_setup_server"))]
-    fn setup(_: &AppSender, _: ViewKey) -> Result<(), Error> {
+    fn setup(_: AppSender, _: ViewKey) -> Result<(), Error> {
         Ok(())
     }
 
     #[cfg(feature = "http_setup_server")]
-    fn setup(app_sender: &AppSender, view_key: ViewKey) -> Result<(), Error> {
+    fn setup(app_sender: AppSender, view_key: ViewKey) -> Result<(), Error> {
         use futures::FutureExt as _;
 
         // TODO: it should be possible to pass a handler function and avoid the need for message
@@ -651,7 +658,7 @@ impl RecoveryViewAssistant {
 
         fasync::Task::local(
             receiver
-                .fold(app_sender.clone(), move |local_app_sender, event| async move {
+                .fold(app_sender, move |local_app_sender, event| async move {
                     println!("recovery: received request");
                     match event {
                         SetupEvent::Root => local_app_sender.queue_message(
