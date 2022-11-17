@@ -18,7 +18,6 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/botanist"
-	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -264,7 +263,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 		if err != nil {
 			return err
 		}
-		var imgs []*bootserver.Image
+		var imgs []bootserver.Image
 		var ffxFlashDeps []string
 		if t.UseFFXExperimental(1) && !t.opts.Netboot {
 			ffxFlashDeps, err = ffxutil.GetFlashDeps(wd, "fuchsia")
@@ -277,17 +276,23 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 			if len(ffxFlashDeps) > 0 {
 				for _, dep := range ffxFlashDeps {
 					if img.Path == dep {
-						imgs = append(imgs, &img)
+						imgs = append(imgs, img)
 					}
 				}
 			} else {
-				if t.neededForFlashing(&img) {
-					imgs = append(imgs, &img)
+				if t.neededForFlashing(img) {
+					imgs = append(imgs, img)
 				}
 			}
 		}
-		if err := copyImagesToDir(ctx, wd, true, imgs...); err != nil {
-			return err
+		{
+			imgPtrs := make([]*bootserver.Image, len(images))
+			for i := range imgs {
+				imgPtrs = append(imgPtrs, &imgs[i])
+			}
+			if err := copyImagesToDir(ctx, wd, true, imgPtrs...); err != nil {
+				return err
+			}
 		}
 
 		if t.opts.Netboot {
@@ -302,12 +307,10 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 	} else {
 		var imgs []bootserver.Image
 		for _, img := range images {
-			if t.imageOverrides != nil {
-				if img.Name == fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage].Name) {
-					img.Args = append(img.Args, "--boot")
-					imgs = append(imgs, img)
-					break
-				}
+			if img.Label == t.imageOverrides.ZBI {
+				img.Args = append(img.Args, "--boot")
+				imgs = append(imgs, img)
+				break
 			} else {
 				imgs = append(imgs, img)
 			}
@@ -324,33 +327,54 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 	return nil
 }
 
-func getImgByName(imgs []*bootserver.Image, name string) string {
+func getImageByName(imgs []bootserver.Image, name string) *bootserver.Image {
 	for _, img := range imgs {
 		if img.Name == name {
-			return img.Path
+			return &img
 		}
 	}
-	return ""
+	return nil
 }
 
-func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) error {
+func getImageByLabel(imgs []bootserver.Image, label string) *bootserver.Image {
+	for _, img := range imgs {
+		if img.Label == label {
+			return &img
+		}
+	}
+	return nil
+}
+
+func (t *DeviceTarget) ramBoot(ctx context.Context, images []bootserver.Image) error {
 	// TODO(fxbug.dev/91352): Remove experimental condition once stable.
 	if t.UseFFXExperimental(1) {
-		zbiImageName := "zbi_zircon-a"
-		vbmetaImageName := "vbmeta_zircon-a"
-		if t.imageOverrides != nil {
-			zbiImageName = fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage].Name)
-			vbmetaImageName = fmt.Sprintf("vbmeta_%s", t.imageOverrides[build.VbmetaImage].Name)
+		var zbi *bootserver.Image
+		if t.imageOverrides.ZBI == "" {
+			zbi = getImageByName(images, "zbi_zircon-a")
+		} else {
+			zbi = getImageByLabel(images, t.imageOverrides.ZBI)
 		}
-		zbi := getImgByName(images, zbiImageName)
-		vbmeta := getImgByName(images, vbmetaImageName)
-		return t.ffx.BootloaderBoot(ctx, t.config.FastbootSernum, zbi, vbmeta, "")
+		if zbi == nil {
+			return fmt.Errorf("could not find \"zbi_zircon-a\" or ZBI override")
+		}
+
+		var vbmeta *bootserver.Image
+		if t.imageOverrides.VBMeta == "" {
+			vbmeta = getImageByName(images, "vbmeta_zircon-a")
+		} else {
+			vbmeta = getImageByLabel(images, t.imageOverrides.VBMeta)
+		}
+		if vbmeta == nil {
+			return fmt.Errorf("could not find \"vbmeta_zircon-a\" or VBMeta override")
+		}
+
+		return t.ffx.BootloaderBoot(ctx, t.config.FastbootSernum, zbi.Path, vbmeta.Path, "")
 	}
-	bootScript := getImgByName(images, "script_fastboot-boot-script")
-	if bootScript == "" {
+	bootScript := getImageByName(images, "script_fastboot-boot-script")
+	if bootScript == nil {
 		return errors.New("fastboot boot script not found")
 	}
-	cmd := exec.CommandContext(ctx, bootScript, "-s", t.config.FastbootSernum)
+	cmd := exec.CommandContext(ctx, bootScript.Path, "-s", t.config.FastbootSernum)
 	stdout, stderr, flush := botanist.NewStdioWriters(ctx)
 	defer flush()
 	cmd.Stdout = stdout
@@ -371,7 +395,7 @@ func (t *DeviceTarget) writePubKey() (string, error) {
 	return pubkey.Name(), nil
 }
 
-func (t *DeviceTarget) flash(ctx context.Context, images []*bootserver.Image) error {
+func (t *DeviceTarget) flash(ctx context.Context, images []bootserver.Image) error {
 	var pubkey string
 	var err error
 	if len(t.signers) > 0 {
@@ -384,15 +408,15 @@ func (t *DeviceTarget) flash(ctx context.Context, images []*bootserver.Image) er
 
 	// TODO(fxbug.dev/91040): Remove experimental condition once stable.
 	if pubkey != "" && t.UseFFXExperimental(1) {
-		flashManifest := getImgByName(images, "manifest_flash-manifest")
-		if flashManifest == "" {
+		flashManifest := getImageByName(images, "manifest_flash-manifest")
+		if flashManifest == nil {
 			return errors.New("flash manifest not found")
 		}
-		return t.ffx.Flash(ctx, t.config.FastbootSernum, flashManifest, pubkey)
+		return t.ffx.Flash(ctx, t.config.FastbootSernum, flashManifest.Path, pubkey)
 	}
 
-	flashScript := getImgByName(images, "script_flash-script")
-	if flashScript == "" {
+	flashScript := getImageByName(images, "script_flash-script")
+	if flashScript == nil {
 		return errors.New("flash script not found")
 	}
 	// Write the public SSH key to disk if one is needed.
@@ -401,7 +425,7 @@ func (t *DeviceTarget) flash(ctx context.Context, images []*bootserver.Image) er
 		flashArgs = append([]string{fmt.Sprintf("--ssh-key=%s", pubkey)}, flashArgs...)
 	}
 
-	cmd := exec.CommandContext(ctx, flashScript, flashArgs...)
+	cmd := exec.CommandContext(ctx, flashScript.Path, flashArgs...)
 	stdout, stderr, flush := botanist.NewStdioWriters(ctx)
 	defer flush()
 	cmd.Stdout = stdout
@@ -445,16 +469,24 @@ func parseOutSigners(keyPaths []string) ([]ssh.Signer, error) {
 	return signers, nil
 }
 
-func (t *DeviceTarget) neededForFlashing(img *bootserver.Image) bool {
-	zbiImageName := "zbi_zircon-a"
-	vbmetaImageName := "vbmeta_zircon-a"
-	if t.imageOverrides != nil {
-		zbiImageName = fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage].Name)
-		vbmetaImageName = fmt.Sprintf("vbmeta_%s", t.imageOverrides[build.VbmetaImage].Name)
-	}
-	neededImages := []string{zbiImageName, vbmetaImageName, "script_flash-script", "exe.linux-x64_fastboot", "script_fastboot-boot-script", "manifest_flash-manifest"}
+func (t *DeviceTarget) neededForFlashing(img bootserver.Image) bool {
 	if img.IsFlashable {
 		return true
+	}
+
+	// If we have specified image overrides, then we are only looking for image
+	// among those specifications in the case of flashing.
+	if t.imageOverrides.ZBI != "" || t.imageOverrides.VBMeta != "" {
+		return img.Label == t.imageOverrides.ZBI || img.Label == t.imageOverrides.VBMeta
+	}
+
+	neededImages := []string{
+		"zbi_zircon-a",
+		"vbmeta_zircon-a",
+		"script_flash-script",
+		"exe.linux-x64_fastboot",
+		"script_fastboot-boot-script",
+		"manifest_flash-manifest",
 	}
 	for _, imageName := range neededImages {
 		if img.Name == imageName {

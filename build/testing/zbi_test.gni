@@ -28,7 +28,7 @@ declare_args() {
 #     Allowable values are those among the entries in
 #     //build/testing/platforms.gni; others will be ignored.
 #
-#   zbi_image, vbmeta_image, qemu_kernel
+#   zbi, vbmeta, qemu_kernel
 #     Passed through to the environments of the associated test_spec.
 #     See //build/testing/test_spec.gni.
 #
@@ -112,26 +112,12 @@ template("boot_test") {
               device_type = dt
             }
             image_overrides = {
-              zbi_image = {
-                name = invoker.zbi_image
-              }
-              if (!is_emu && defined(invoker.vbmeta_image)) {
-                vbmeta_image = {
-                  name = invoker.vbmeta_image
-                }
-              }
-              if (is_emu) {
-                if (defined(invoker.qemu_kernel)) {
-                  qemu_kernel = {
-                    label = get_label_info(invoker.qemu_kernel,
-                                           "label_with_toolchain")
-                  }
-                } else {  # If qemu_kernel is not provided, use the default.
-                  qemu_kernel = {
-                    name = "qemu-kernel"
-                  }
-                }
-              }
+              forward_variables_from(invoker,
+                                     [
+                                       "zbi",
+                                       "qemu_kernel",
+                                       "vbmeta",
+                                     ])
             }
           },
         ]
@@ -320,10 +306,11 @@ template("zbi_test") {
     if (emu_types != []) {
       boot_test(host_test_name) {
         device_types = emu_types
-        zbi_image = output_name
         if (defined(invoker.qemu_kernel)) {
-          qemu_kernel = invoker.qemu_kernel
+          qemu_kernel =
+              get_label_info("${invoker.qemu_kernel}", "label_with_toolchain")
         }
+        zbi = get_label_info(":$zbi_target", "label_with_toolchain")
       }
       group_deps += [ ":$host_test_name" ]
     }
@@ -331,9 +318,9 @@ template("zbi_test") {
       host_test_hw_name = "${host_test_name}_for_hardware"
       boot_test(host_test_hw_name) {
         device_types = hardware_types
-        zbi_image = output_name
+        zbi = get_label_info(":$zbi_target", "label_with_toolchain")
         if (use_vbmeta) {
-          vbmeta_image = vbmeta_target
+          vbmeta = get_label_info(":$vbmeta_target", "label_with_toolchain")
         }
       }
       group_deps += [ ":$host_test_hw_name" ]

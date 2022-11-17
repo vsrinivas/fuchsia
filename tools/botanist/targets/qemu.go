@@ -23,7 +23,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
-	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -239,38 +238,24 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	}
 	qemuCmd.SetBinary(absQEMUSystemPath)
 
-	var qemuKernel, zirconA, storageFull bootserver.Image
-	zbiImageName := "zbi_zircon-a"
-	qemuKernelName := "kernel_qemu-kernel"
-	qemuKernelLabel := ""
-	if t.imageOverrides != nil {
-		zbiImageName = fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage].Name)
-		qemuKernelOverride := t.imageOverrides[build.QemuKernel]
-		if qemuKernelOverride.Name != "" {
-			qemuKernelName = fmt.Sprintf("kernel_%s", qemuKernelOverride.Name)
-		} else {
-			qemuKernelName = ""
-			qemuKernelLabel = qemuKernelOverride.Label
-		}
+	var qemuKernel *bootserver.Image
+	if t.imageOverrides.QEMUKernel == "" {
+		qemuKernel = getImageByName(images, "kernel_qemu-kernel")
+	} else {
+		qemuKernel = getImageByLabel(images, t.imageOverrides.QEMUKernel)
 	}
-	for _, img := range images {
-		switch img.Name {
-		case qemuKernelName:
-			qemuKernel = img
-		case zbiImageName:
-			zirconA = img
-		case "blk_storage-full":
-			storageFull = img
-		}
-		if qemuKernelLabel != "" && img.Label == qemuKernelLabel {
-			qemuKernel = img
-		}
+	if qemuKernel == nil {
+		return fmt.Errorf("could not find \"kernel_qemu-kernel\" or QEMU kernel override")
 	}
-	if qemuKernel.Reader == nil {
-		return fmt.Errorf("could not find kernel_qemu-kernel")
+
+	var zbi *bootserver.Image
+	if t.imageOverrides.ZBI == "" {
+		zbi = getImageByName(images, "zbi_zircon-a")
+	} else {
+		zbi = getImageByLabel(images, t.imageOverrides.ZBI)
 	}
-	if zirconA.Reader == nil {
-		return fmt.Errorf("could not find %s", zbiImageName)
+	if zbi == nil {
+		return fmt.Errorf("could not find \"zbi_zircon-a\" or ZBI override")
 	}
 
 	// The QEMU command needs to be invoked within an empty directory, as QEMU
@@ -286,7 +271,9 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		}
 	}()
 
-	if err := copyImagesToDir(ctx, workdir, false, &qemuKernel, &zirconA, &storageFull); err != nil {
+	storageFull := getImageByName(images, "blk_storage-full")
+
+	if err := copyImagesToDir(ctx, workdir, false, qemuKernel, zbi, storageFull); err != nil {
 		return err
 	}
 
@@ -310,7 +297,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		if useFFX {
 			t.ffx.ConfigSet(ctx, "ssh.pub", tmpFile)
 		}
-		if err := embedZBIWithKey(ctx, &zirconA, t.config.ZBITool, tmpFile); err != nil {
+		if err := embedZBIWithKey(ctx, zbi, t.config.ZBITool, tmpFile); err != nil {
 			return fmt.Errorf("failed to embed zbi with key: %w", err)
 		}
 	}
@@ -318,11 +305,11 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	// Now that the images hav successfully been copied to the working
 	// directory, Path points to their path on disk.
 	qemuCmd.SetKernel(qemuKernel.Path)
-	qemuCmd.SetInitrd(zirconA.Path)
+	qemuCmd.SetInitrd(zbi.Path)
 
-	if storageFull.Path != "" {
+	if storageFull != nil {
 		if t.config.FVMTool != "" {
-			if err := extendStorageFull(ctx, &storageFull, t.config.FVMTool, storageFullMinSize); err != nil {
+			if err := extendStorageFull(ctx, storageFull, t.config.FVMTool, storageFullMinSize); err != nil {
 				return fmt.Errorf("%s to %d bytes: %w", constants.FailedToExtendFVMMsg, storageFullMinSize, err)
 			}
 		}
