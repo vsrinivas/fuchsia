@@ -68,8 +68,6 @@ class ShellService {
     assert(shellConfig is Map);
     assert(shellConfig["url"] is String);
     _shellComponentUrl = shellConfig["url"];
-
-    _shellExposedDirRequest = _shellExposedDir.ctrl.request();
   }
 
   void serve(ComponentContext componentContext) {
@@ -101,6 +99,9 @@ class ShellService {
   /// Launch Ermine shell and return [FuchsiaViewConnection].
   FuchsiaViewConnection launchErmineShell() {
     assert(_ermine == null, 'Instance of ermine shell already exists.');
+
+    _shellExposedDirRequest = _shellExposedDir.ctrl.request();
+
     _ermine = _ErmineViewConnection(
       useFlatland: _useFlatland,
       onReady: () {
@@ -118,7 +119,6 @@ class ShellService {
 
   void disposeErmineShell() {
     _shellExposedDir.ctrl.unbind();
-    _shellExposedDirRequest = _shellExposedDir.ctrl.request();
     _ermine!.dispose();
     _ermine = null;
   }
@@ -151,21 +151,22 @@ class _ErmineViewConnection {
     realm = RealmProxy();
     Incoming.fromSvcPath().connectToService(realm);
 
-    log.info("launching application shell with url " + componentUrl);
-    realm.createChild(
-        CollectionRef(name: kApplicationShellCollectionName),
-        Child(
-            name: kApplicationShellComponentName,
-            url: componentUrl,
-            startup: StartupMode.lazy),
-        CreateChildArgs());
+    log.info('launching application shell with url $componentUrl');
+    realm
+      ..createChild(
+          CollectionRef(name: kApplicationShellCollectionName),
+          Child(
+              name: kApplicationShellComponentName,
+              url: componentUrl,
+              startup: StartupMode.lazy),
+          CreateChildArgs())
 
-    // Get the shell's exposed /svc directory.
-    realm.openExposedDir(
-        ChildRef(
-            collection: kApplicationShellCollectionName,
-            name: kApplicationShellComponentName),
-        exposedDirRequest);
+      // Get the shell's exposed /svc directory.
+      ..openExposedDir(
+          ChildRef(
+              collection: kApplicationShellCollectionName,
+              name: kApplicationShellComponentName),
+          exposedDirRequest);
 
     // Get the ermine shell's view provider.
     final viewProvider = ViewProviderProxy();

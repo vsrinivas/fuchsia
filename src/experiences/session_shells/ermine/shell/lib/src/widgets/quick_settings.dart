@@ -94,16 +94,16 @@ class _ListSettings extends StatelessWidget {
                 // Logout button.
                 // TODO(https://fxbug.dev/94875): Disable until we figure out
                 // how to cleanly stop all child components of ermine shell.
-                // OutlinedButton(
-                //   child: Icon(Icons.logout),
-                //   onPressed: appState.logout,
-                //   style: ErmineButtonStyle.outlinedButton(Theme.of(context))
-                //       .copyWith(
-                //     padding: MaterialStateProperty.all(EdgeInsets.zero),
-                //     minimumSize: MaterialStateProperty.all(Size(40, 40)),
-                //   ),
-                // ).tooltip(Strings.logout),
-                // SizedBox(width: 8),
+                OutlinedButton(
+                  child: Icon(Icons.logout),
+                  onPressed: appState.logout,
+                  style: ErmineButtonStyle.outlinedButton(Theme.of(context))
+                      .copyWith(
+                    padding: MaterialStateProperty.all(EdgeInsets.zero),
+                    minimumSize: MaterialStateProperty.all(Size(40, 40)),
+                  ),
+                ).tooltip(Strings.logout),
+                SizedBox(width: 8),
 
                 // Restart button.
                 OutlinedButton(
