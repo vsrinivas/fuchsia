@@ -16,7 +16,7 @@ group("fuzzers") {
   deps = [ ":ftl-fuzzers" ]
 }
 
-fuzzer("ftl-workload-fuzzer") {
+cpp_fuzzer("ftl-workload-fuzzer") {
   deps = [ "//src/storage/lib/ftl/test:ftl-workload-fuzzer" ]
 
   # Suppress logs on stdout from library under test
