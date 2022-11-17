@@ -8,11 +8,6 @@ import("//build/testing/test_spec.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
 
-declare_args() {
-  # Set this variable to true to include zbi_tests into tests.json.
-  include_zbi_host_tests = false
-}
-
 # Describes a boot test, producing a script to listen on host for the
 # appropriate success string and image metadata describing what and how to
 # boot.
@@ -292,7 +287,7 @@ template("zbi_test") {
     group_deps += [ ":${vbmeta_target}" ]
   }
 
-  if (include_zbi_host_tests) {
+  if (_device_types != []) {
     emu_types = []
     hardware_types = []
     foreach(dt, _device_types) {

@@ -67,6 +67,17 @@ test_platforms = [
     device_type = "Luis"
     cpu = "arm64"
   },
+
+  # TODO(fxbug.dev/110600): While mac-arm64 hosts are not actually targetable
+  # at this time, it is easy evaluate code for this environment today as a
+  # matter of course (e.g., in bringing up the mac-arm64 host as a development
+  # environment or in evaluating an arm64 boot test on a mac host of a different
+  # architecture) and so this definition serves to suppress any spurious GN
+  # 'unknown mac-arm64 test envimonent' assertions.
+  {
+    os = "Mac"
+    cpu = "arm64"
+  },
   {
     os = "Mac"
     cpu = "x64"

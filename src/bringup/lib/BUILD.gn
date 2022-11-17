@@ -6,7 +6,7 @@ group("lib") {
   deps = [ "mexec" ]
 }
 
-group("tests") {
+group("boot_tests") {
   testonly = true
   deps = [ "mexec:tests" ]
 }

@@ -161,7 +161,7 @@ fuchsia_unittest_package("elfldltl-static-pie-test") {
 # Make that into a bootable ZBI with just the kernel.
 zbi_test("zbi-static-pie-test") {
   args = [
-    "userboot=test/fuchsia-static-pie-test",
+    "userboot.test.next=test/fuchsia-static-pie-test",
     "kernel.enable-serial-syscalls=true",
   ]
 
@@ -218,10 +218,14 @@ group("tests") {
     ":elfldltl-static-pie-test",
     ":elfldltl-tests",
     ":elfldltl-unittests($host_toolchain)",
-    ":zbi-static-pie-test",
   ]
 
   if (host_os == "linux") {
     deps += [ ":linux-static-pie-test($host_toolchain)" ]
   }
+}
+
+group("boot_tests") {
+  testonly = true
+  deps = [ ":zbi-static-pie-test" ]
 }
