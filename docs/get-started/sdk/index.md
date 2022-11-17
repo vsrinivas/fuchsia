@@ -106,7 +106,7 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel build @fuchsia_sdk//:fuchsia_toolchain_sdk
    ...
-   INFO: Elapsed time: 64.518s, Critical Path: 0.02s
+   INFO: Elapsed time: 25.185s, Critical Path: 0.03s
    INFO: 1 process: 1 internal.
    INFO: Build completed successfully, 1 total action
    ```
@@ -122,13 +122,13 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx sdk version
-   10.20221021.1.1
+   10.20221103.2.1
    ```
 
    At this point, you only need to confirm that you can run `ffx` commands
    without error. (However for your information, the output above shows the
-   version `10.20221021.1.1`, which indicates that this SDK was built and
-   published on October 21, 2022.)
+   version `10.20221103.2.1`, which indicates that this SDK was built and
+   published on November 3, 2022.)
 
    Note: To ensure that you’re using the right version of `ffx` during
    development, consider updating your `PATH` to include the SDK's `tools`
@@ -185,7 +185,7 @@ Do the following:
 1. Start a new Fuchsia emulator instance:
 
    Important: If your Linux machine does not support
-   [KVM hardware virtualization](#check-if-your-linux-machine-support-kvm-virtualization),
+   [KVM hardware virtualization](#check-if-your-linux-machine-supports-kvm-virtualization),
    start the emulator with the following command instead:
    `tools/ffx emu start workstation_eng.qemu-x64 --engine qemu --startup-timeout 720 --accel none --device qemu-x64-emu-min --headless`
 
@@ -201,8 +201,7 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx emu start workstation_eng.qemu-x64 --headless
-   Creating SSH key pair: /home/alice/.ssh/fuchsia_ed25519
-   Writing authorized_keys file: /home/alice/.ssh/fuchsia_authorized_keys
+   ...
    Logging to "/home/alice/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
    Waiting for Fuchsia to start (up to 60 seconds)...........
    Emulator is ready.
@@ -277,10 +276,10 @@ Do the following:
    Device:
        ...
    Build:
-       Version: "10.20221021.1.1"
+       Version: "10.20221103.2.1"
        Product: "workstation_eng"
        Board: "qemu-x64"
-       Commit: "2022-10-21T07:03:16+00:00"
+       Commit: "2022-11-03T20:02:43+00:00"
    Last Reboot:
        Graceful: "false"
        Reason: "Cold"
@@ -288,7 +287,7 @@ Do the following:
    ```
 
    The example output above shows that the target device is running a
-   `workstation_eng.qemu-x64` prebuilt image whose version is `10.20221021.1.1`.
+   `workstation_eng.qemu-x64` prebuilt image whose version is `10.20221103.2.1`.
 
 1. Verify that you can stream the device logs:
 
@@ -383,19 +382,17 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
    INFO: Build options --copt, --cpu, --crosstool_top, and 1 more have changed, discarding analysis cache.
-   INFO: Analyzed target //src/hello_world:pkg.component (55 packages loaded, 2443 targets configured).
+   INFO: Analyzed target //src/hello_world:pkg.component (20 packages loaded, 2449 targets configured).
    INFO: Found 1 target...
    Target //src/hello_world:pkg.component up-to-date:
      bazel-bin/src/hello_world/pkg.component_run_component.sh
-   INFO: Elapsed time: 4.899s, Critical Path: 2.22s
+   INFO: Elapsed time: 4.709s, Critical Path: 2.47s
    INFO: 129 processes: 104 internal, 24 linux-sandbox, 1 local.
    INFO: Build completed successfully, 129 total actions
    INFO: Build completed successfully, 129 total actions
    added repository bazel.pkg.component
-   WARNING: No component moniker specified. Using value '/core/ffx-laboratory:hello_world'.
-   The moniker arg will be required in the future. See fxbug.dev/104212
    URL: fuchsia-pkg://bazel.pkg.component/hello_world#meta/hello_world.cm
-   Moniker: /core/ffx-laboratory:hello_world
+   Moniker: /core/ffx-laboratory:hello_world.cm
    Creating component instance...
    Starting component instance...
    Success! The component instance has been started.
@@ -411,14 +408,14 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx component show hello_world
-                  Moniker:  /core/ffx-laboratory:hello_world
+                  Moniker:  /core/ffx-laboratory:hello_world.cm
                       URL:  fuchsia-pkg://bazel.pkg.component/hello_world#meta/hello_world.cm
               Instance ID:  None
                      Type:  CML Component
           Component State:  Resolved
     Incoming Capabilities:  /svc/fuchsia.logger.LogSink
      Exposed Capabilities:
-              Merkle root:  e1a21b1f409cb31004e4ed995cebe094a0483056d305d2925b71080ffcfc88d7
+              Merkle root:  ec7f699b421f74843fbc8a24491a347790ece29c513b7b128b84a3e36e7311d7
           Execution State:  Stopped
    ```
 
@@ -1109,7 +1106,7 @@ sudo ufw allow proto tcp from fc00::/7 to any port 8083 comment 'Fuchsia Package
 However, for other non-`ufw`-based firewalls, you will need to ensure that port
 8083 is available for the Fuchsia package server.
 
-### Check if your Linux machine support KVM virtualization {:#check-if-your-linux-machine-support-kvm-virtualization}
+### Check if your Linux machine supports KVM virtualization {:#check-if-your-linux-machine-supports-kvm-virtualization}
 
 To check if your Linux machine supports KVM hardware virtualization,
 run the following command:
@@ -1164,7 +1161,7 @@ If your output does not show the `Virtualization` field, your Linux machine
 ### Set up KVM virtualization on a Linux machine {:#set-up-kvm-virtualization-on-a-linux-machine}
 
 Note: The instructions in this section require that
-[your Linux machine supports KVM hardware virtualization](#check-if-your-linux-machine-support-kvm-virtualization).
+[your Linux machine supports KVM hardware virtualization](#check-if-your-linux-machine-supports-kvm-virtualization).
 
 To verify that KVM is configured correctly on your Linux machine,
 run the following `bash` shell script:
