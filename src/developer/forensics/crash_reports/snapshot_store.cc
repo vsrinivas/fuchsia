@@ -136,6 +136,8 @@ void SnapshotStore::DeleteSnapshot(const SnapshotUuid& uuid) {
 }
 
 void SnapshotStore::AddSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Attachment archive) {
+  FX_CHECK(!SnapshotExists(uuid)) << "Duplicate snapshot uuid '" << uuid << "' added to store";
+
   auto& data = data_[uuid];
 
   if (!archive.key.empty() && archive.value.vmo.is_valid()) {

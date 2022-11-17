@@ -121,6 +121,16 @@ TEST_F(SnapshotPersistenceTest, Succeed_AddDefaultsToCache) {
   EXPECT_EQ(archive.value, kArchiveValue);
 }
 
+TEST_F(SnapshotPersistenceDeathTest, Check_FailDuplicateUuid) {
+  const SnapshotUuid kTestUuid = "test uuid";
+  const std::string kArchiveValue = "snapshot.data";
+
+  ASSERT_TRUE(AddArchive(kTestUuid, kArchiveValue));
+  ASSERT_TRUE(persistence_->Contains(kTestUuid));
+
+  ASSERT_DEATH({ AddArchive(kTestUuid, kArchiveValue); }, HasSubstr("Duplicate snapshot uuid"));
+}
+
 TEST_F(SnapshotPersistenceTest, Succeed_FallbackToTmpIfCacheFull) {
   const SnapshotUuid kTestUuid = "test uuid";
   const std::string kArchiveValue = "snapshot.data";

@@ -112,6 +112,8 @@ class SnapshotStoreTest : public UnitTestFixture {
   std::unique_ptr<SnapshotStore> snapshot_store_;
 };
 
+using SnapshotStoreDeathTest = SnapshotStoreTest;
+
 TEST_F(SnapshotStoreTest, Check_GetSnapshot) {
   snapshot_store_->AddSnapshot(kTestUuid, GetDefaultAttachment());
 
@@ -331,6 +333,13 @@ TEST_F(SnapshotStoreTest, Check_MoveToPersistence) {
   EXPECT_TRUE(snapshot_store_->SnapshotLocation(kTestUuid).has_value());
   EXPECT_FALSE(snapshot_store_->SnapshotLocation(kTestUuid2).has_value());
   EXPECT_TRUE(snapshot_store_->SnapshotLocation(kTestUuid3).has_value());
+}
+
+TEST_F(SnapshotStoreDeathTest, Check_FailDuplicateUuid) {
+  AddDefaultSnapshot(kTestUuid);
+  ASSERT_TRUE(snapshot_store_->SnapshotExists(kTestUuid));
+
+  ASSERT_DEATH({ AddDefaultSnapshot(kTestUuid); }, HasSubstr("Duplicate snapshot uuid"));
 }
 
 }  // namespace

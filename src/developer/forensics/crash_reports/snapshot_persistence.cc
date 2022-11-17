@@ -100,6 +100,8 @@ bool SnapshotPersistence::Add(const SnapshotUuid& uuid, const ManagedSnapshot::A
     return false;
   }
 
+  FX_CHECK(!Contains(uuid)) << "Duplicate snapshot uuid '" << uuid << "' added to persistence";
+
   SnapshotPersistenceMetadata* root_metadata = PickRootForStorage(archive_size, only_consider_tmp);
 
   if (root_metadata == nullptr) {
