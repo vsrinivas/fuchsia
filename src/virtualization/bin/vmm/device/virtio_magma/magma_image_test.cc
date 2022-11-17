@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "drm_fourcc.h"
+#include "src/graphics/lib/magma/tests/helper/test_device_helper.h"
 
 class MagmaImageTesting : public ::testing::Test {};
 
@@ -147,7 +148,14 @@ TEST_F(MagmaImageTesting, IntelMany) {
 #if defined(__aarch64__)
   EXPECT_EQ(DRM_FORMAT_MOD_LINEAR, image_info.drm_format_modifier);
 #else
-  EXPECT_EQ(I915_FORMAT_MOD_Y_TILED_CCS, image_info.drm_format_modifier);
+  {
+    auto helper = magma::TestDeviceBase(0x8086);
+    if (helper.IsIntelGen12()) {
+      EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
+    } else {
+      EXPECT_EQ(I915_FORMAT_MOD_Y_TILED_CCS, image_info.drm_format_modifier);
+    }
+  }
 #endif
   EXPECT_EQ(7680u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
@@ -175,7 +183,14 @@ TEST_F(MagmaImageTesting, Any) {
 #if defined(__aarch64__)
   EXPECT_EQ(DRM_FORMAT_MOD_LINEAR, image_info.drm_format_modifier);
 #else
-  EXPECT_EQ(I915_FORMAT_MOD_Y_TILED_CCS, image_info.drm_format_modifier);
+  {
+    auto helper = magma::TestDeviceBase(0x8086);
+    if (helper.IsIntelGen12()) {
+      EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
+    } else {
+      EXPECT_EQ(I915_FORMAT_MOD_Y_TILED_CCS, image_info.drm_format_modifier);
+    }
+  }
 #endif
   EXPECT_EQ(7680u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);

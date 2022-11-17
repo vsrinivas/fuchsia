@@ -22,6 +22,11 @@
             protocol: [ "fuchsia.ui.composition.Allocator" ],
             from: "#test_ui_stack",
         },
+        {
+            directory: "dev-gpu",
+            rights: [ "r*" ],
+            path: "/dev/class/gpu",
+        },
     ],
     offer: [
         {

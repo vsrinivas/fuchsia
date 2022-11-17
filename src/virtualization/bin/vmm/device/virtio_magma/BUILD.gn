@@ -110,6 +110,7 @@ executable("unittests_bin") {
   sources = [ "magma_image_test.cc" ]
   deps = [
     ":magma_image",
+    "//src/graphics/lib/magma/tests/helper:test_device_helper",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/mesa/include:drm-uapi",
   ]
