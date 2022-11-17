@@ -39,7 +39,6 @@
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioDeviceEnumerator",
-                "fuchsia.media.drm.Widevine",
                 "fuchsia.media.ProfileProvider",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.mediacodec.CodecFactory",
@@ -69,6 +68,12 @@
             ],
             from: "parent",
             to: "#chromium-tests",
+        },
+        {
+            protocol: "fuchsia.media.drm.Widevine",
+            from: "parent",
+            to: "#chromium-tests",
+            availability: "optional",
         },
 
         // Test realms may offer subdirectories of config-data to test

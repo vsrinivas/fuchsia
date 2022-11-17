@@ -247,7 +247,6 @@
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",
                 "fuchsia.sys2.CrashIntrospect",
-                "fuchsia.sys2.SystemController",
             ],
             from: "parent",
             to: "#test_manager",

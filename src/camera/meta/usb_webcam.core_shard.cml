@@ -31,6 +31,22 @@
             to: [ "#usb_camera_device_watcher" ],
         },
         {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "#trace_manager",
+            to: "#usb_camera_device_watcher",
+        },
+        {
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
+            from: "#cobalt",
+            to: "#usb_camera_device_watcher",
+        },
+        {
+            protocol: [ "fuchsia.ui.policy.DeviceListenerRegistry" ],
+            from: "#ui",
+            to: "#usb_camera_device_watcher",
+            dependency: "weak",
+        },
+        {
             directory: "dev-class",
             from: "parent",
             as: "dev-camera",

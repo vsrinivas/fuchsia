@@ -408,7 +408,6 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.exception.Handler",
                 "fuchsia.kernel.RootJob",
-                "fuchsia.virtualconsole.SessionManager",
             ],
             from: "parent",
             to: "#svchost",
@@ -859,10 +858,7 @@
             subdir: "input",
         },
         {
-            protocol: [
-                "fuchsia.fshost.BlockWatcher",
-                "fuchsia.fshost.Registry",
-            ],
+            protocol: [ "fuchsia.fshost.BlockWatcher" ],
             from: "#fshost",
             to: "#miscsvc",
         },

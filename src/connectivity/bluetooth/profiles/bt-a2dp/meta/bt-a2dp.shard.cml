@@ -68,15 +68,13 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.bluetooth.avrcp.PeerManager",
-                "fuchsia.logger.LogSink",
-            ],
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [ "#bt-avrcp-target" ],
         },
         {
             protocol: [
+                "fuchsia.bluetooth.avrcp.PeerManager",
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.power.battery.BatteryManager",
             ],

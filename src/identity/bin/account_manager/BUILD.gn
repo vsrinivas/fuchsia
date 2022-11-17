@@ -55,6 +55,12 @@ fuchsia_component("account_manager_component") {
   manifest = "meta/account_manager.cml"
 }
 
+fuchsia_component("account_manager_for_test_component") {
+  component_name = "account_manager"
+  deps = [ ":bin" ]
+  manifest = "meta/account_manager_for_test.cml"
+}
+
 fuchsia_package("account_manager") {
   deps = [
     ":account_manager_component",

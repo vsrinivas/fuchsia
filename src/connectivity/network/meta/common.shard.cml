@@ -69,6 +69,7 @@
             protocol: [ "fuchsia.tracing.provider.Registry" ],
             from: "parent",
             to: [ "#netstack" ],
+            availability: "optional",
         },
         {
             protocol: [ "fuchsia.diagnostics.persist.DataPersistence-netstack" ],

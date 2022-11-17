@@ -45,7 +45,6 @@
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
-                "fuchsia.time.external.PushSource",
             ],
             from: "parent",
             to: "#timesource",
