@@ -65,8 +65,8 @@ struct UnknownEventMetadata<
     Protocol, std::enable_if_t<Protocol::kOpenness == ::fidl::internal::Openness::kOpen ||
                                    Protocol::kOpenness == ::fidl::internal::Openness::kAjar,
                                void>> {
-  // Ordinal of the method that was called.
-  uint64_t method_ordinal;
+  // Ordinal of the event that was received.
+  uint64_t event_ordinal;
 };
 
 // Interface implemented by FIDL open and ajar protocols to handle unknown

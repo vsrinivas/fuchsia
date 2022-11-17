@@ -295,7 +295,7 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
       void handle_unknown_event(
           fidl::UnknownEventMetadata<fidl_clientsuite::AjarTarget> metadata) override {
         ReportEvent(fidl_clientsuite::AjarTargetEventReport::WithUnknownEvent(
-            {{.ordinal = metadata.method_ordinal}}));
+            {{.ordinal = metadata.event_ordinal}}));
       }
 
       void on_fidl_error(fidl::UnbindInfo error) override {
@@ -363,7 +363,7 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
       void handle_unknown_event(
           fidl::UnknownEventMetadata<fidl_clientsuite::OpenTarget> metadata) override {
         ReportEvent(fidl_clientsuite::OpenTargetEventReport::WithUnknownEvent(
-            {{.ordinal = metadata.method_ordinal}}));
+            {{.ordinal = metadata.event_ordinal}}));
       }
 
       void on_fidl_error(fidl::UnbindInfo error) override {

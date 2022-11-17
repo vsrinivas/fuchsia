@@ -887,7 +887,7 @@ TEST_F(UnknownInteractions, UnknownFlexibleEventAsync) {
     void handle_unknown_event(
         ::fidl::UnknownEventMetadata<::test::UnknownInteractionsProtocol> metadata) override {
       received_event = true;
-      ASSERT_EQ(FakeUnknownMethod::kOrdinal, metadata.method_ordinal);
+      ASSERT_EQ(FakeUnknownMethod::kOrdinal, metadata.event_ordinal);
     }
 
    public:
@@ -937,7 +937,7 @@ TEST_F(UnknownInteractions, UnknownFlexibleEventAsyncAjarProtocol) {
     void handle_unknown_event(
         ::fidl::UnknownEventMetadata<::test::UnknownInteractionsAjarProtocol> metadata) override {
       received_event = true;
-      ASSERT_EQ(FakeUnknownMethod::kOrdinal, metadata.method_ordinal);
+      ASSERT_EQ(FakeUnknownMethod::kOrdinal, metadata.event_ordinal);
     }
 
    public:
@@ -1541,7 +1541,7 @@ TEST_F(UnknownInteractions, UnknownFlexibleEventSync) {
     void handle_unknown_event(
         ::fidl::UnknownEventMetadata<::test::UnknownInteractionsProtocol> metadata) override {
       received_event = true;
-      ASSERT_EQ(FakeUnknownMethod::kOrdinal, metadata.method_ordinal);
+      ASSERT_EQ(FakeUnknownMethod::kOrdinal, metadata.event_ordinal);
     }
 
    public:
@@ -1589,7 +1589,7 @@ TEST_F(UnknownInteractions, UnknownFlexibleEventSyncAjarProtocol) {
     void handle_unknown_event(
         ::fidl::UnknownEventMetadata<::test::UnknownInteractionsAjarProtocol> metadata) override {
       received_event = true;
-      ASSERT_EQ(FakeUnknownMethod::kOrdinal, metadata.method_ordinal);
+      ASSERT_EQ(FakeUnknownMethod::kOrdinal, metadata.event_ordinal);
     }
 
    public:

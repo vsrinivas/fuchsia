@@ -1225,7 +1225,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsDriverProtocol::kOpenness, unknown_method_type)) {
           if (event_handler()) {
             ::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsDriverProtocol> metadata {
-              .method_ordinal = ordinal,
+              .event_ordinal = ordinal,
             };
             event_handler()->handle_unknown_event(metadata);
           }
@@ -2993,7 +2993,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
             ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::kOpenness, unknown_method_type)) {
           if (event_handler()) {
             ::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> metadata {
-              .method_ordinal = ordinal,
+              .event_ordinal = ordinal,
             };
             event_handler()->handle_unknown_event(metadata);
           }

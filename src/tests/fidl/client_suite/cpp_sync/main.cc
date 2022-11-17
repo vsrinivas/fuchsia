@@ -238,7 +238,7 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
           fidl::UnknownEventMetadata<fidl_clientsuite::AjarTarget> metadata) override {
         ZX_ASSERT(!received_event.has_value());
         received_event = fidl_clientsuite::AjarTargetEventReport::WithUnknownEvent(
-            {{.ordinal = metadata.method_ordinal}});
+            {{.ordinal = metadata.event_ordinal}});
       }
 
      public:
@@ -298,7 +298,7 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
           fidl::UnknownEventMetadata<fidl_clientsuite::OpenTarget> metadata) override {
         ZX_ASSERT(!received_event.has_value());
         received_event = fidl_clientsuite::OpenTargetEventReport::WithUnknownEvent(
-            {{.ordinal = metadata.method_ordinal}});
+            {{.ordinal = metadata.event_ordinal}});
       }
 
      public:

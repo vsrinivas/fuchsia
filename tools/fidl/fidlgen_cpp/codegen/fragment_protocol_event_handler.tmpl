@@ -125,7 +125,7 @@ class {{ .WireEventDispatcher }} final :
             ::fidl::internal::CanHandleEvent({{ . }}::kOpenness, unknown_method_type)) {
           if (event_handler()) {
             {{ .UnknownEventMetadata }} metadata {
-              .method_ordinal = ordinal,
+              .event_ordinal = ordinal,
             };
             event_handler()->handle_unknown_event(metadata);
           }
@@ -262,7 +262,7 @@ class {{ .NaturalEventDispatcher }} final :
             ::fidl::internal::CanHandleEvent({{ . }}::kOpenness, unknown_method_type)) {
           if (event_handler()) {
             {{ .UnknownEventMetadata }} metadata {
-              .method_ordinal = ordinal,
+              .event_ordinal = ordinal,
             };
             event_handler()->handle_unknown_event(metadata);
           }
