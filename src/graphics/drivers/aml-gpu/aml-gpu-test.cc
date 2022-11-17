@@ -101,11 +101,9 @@ class TestAmlGpu {
       metadata.supports_protected_mode(false);
       {
         auto built_metadata = metadata.Build();
-        // TODO(fxbug.dev/45252): Use FIDL at rest.
-        fidl::unstable::OwnedEncodedMessage<Metadata> encoded_metadata(
-            fidl::internal::WireFormatVersion::kV2, &built_metadata);
-        ASSERT_TRUE(encoded_metadata.ok());
-        auto message_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
+        fit::result encoded_metadata = fidl::Persist(built_metadata);
+        ASSERT_TRUE(encoded_metadata.is_ok());
+        std::vector<uint8_t>& message_bytes = encoded_metadata.value();
         EXPECT_OK(aml_gpu.ProcessMetadata(std::vector<uint8_t>(
             message_bytes.data(), message_bytes.data() + message_bytes.size())));
       }
@@ -120,13 +118,9 @@ class TestAmlGpu {
       metadata.supports_protected_mode(true);
       {
         auto built_metadata = metadata.Build();
-        // TODO(fxbug.dev/45252): Use FIDL at rest.
-        fidl::unstable::OwnedEncodedMessage<Metadata> encoded_metadata(
-            fidl::internal::WireFormatVersion::kV2, &built_metadata);
-        ASSERT_TRUE(encoded_metadata.ok());
-        auto message_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
-        EXPECT_OK(aml_gpu.ProcessMetadata(std::vector<uint8_t>(
-            message_bytes.data(), message_bytes.data() + message_bytes.size())));
+        fit::result metadata_bytes = fidl::Persist(built_metadata);
+        ASSERT_TRUE(metadata_bytes.is_ok());
+        EXPECT_OK(aml_gpu.ProcessMetadata(std::move(metadata_bytes.value())));
       }
     }
 

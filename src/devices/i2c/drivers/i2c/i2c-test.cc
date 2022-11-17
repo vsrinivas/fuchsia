@@ -118,7 +118,7 @@ TEST_F(I2cMetadataTest, ProvidesMetadataToChildren) {
     }
 
     auto decoded =
-        ddk::GetEncodedMetadata2<fi2c::I2CChannel>(child.get(), DEVICE_METADATA_I2C_DEVICE);
+        ddk::GetEncodedMetadata<fi2c::I2CChannel>(child.get(), DEVICE_METADATA_I2C_DEVICE);
     ASSERT_TRUE(decoded.is_ok());
     ASSERT_EQ(decoded->address(), expected_addr);
   }

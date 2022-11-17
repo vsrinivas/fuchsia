@@ -56,14 +56,14 @@ zx_status_t AmlPwmRegulator::Create(void* ctx, zx_device_t* parent) {
     return decoded.error_value();
   }
 
-  const auto& metadata = decoded->PrimaryObject();
+  const auto& metadata = *decoded.value();
 
   // Validate
-  if (!metadata->has_pwm_vreg()) {
+  if (!metadata.has_pwm_vreg()) {
     zxlogf(ERROR, "Metadata incomplete");
     return ZX_ERR_INTERNAL;
   }
-  for (const auto& pwm_vreg : metadata->pwm_vreg()) {
+  for (const auto& pwm_vreg : metadata.pwm_vreg()) {
     if (!pwm_vreg.has_pwm_index() || !pwm_vreg.has_period_ns() || !pwm_vreg.has_min_voltage_uv() ||
         !pwm_vreg.has_voltage_step_uv() || !pwm_vreg.has_num_steps()) {
       zxlogf(ERROR, "Metadata incomplete");
@@ -72,7 +72,7 @@ zx_status_t AmlPwmRegulator::Create(void* ctx, zx_device_t* parent) {
   }
 
   // Build Voltage Regulators
-  for (const auto& pwm_vreg : metadata->pwm_vreg()) {
+  for (const auto& pwm_vreg : metadata.pwm_vreg()) {
     uint32_t idx = pwm_vreg.pwm_index();
     char name[20];
     snprintf(name, sizeof(name), "pwm-%u", idx);

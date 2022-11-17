@@ -11,6 +11,10 @@
 #include <zircon/boot/image.h>
 
 // This file contains metadata types for device_get_metadata()
+//
+// Note: if a metadata type is a FIDL type, then it is always
+// serialized using the convention for FIDL data persistence, which
+// adds wire format metadata in front of the encoded content.
 
 // MAC Address for Ethernet, Wifi, Bluetooth, etc.
 // Content: uint8_t[] (variable length based on type of MAC address)
@@ -131,8 +135,7 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: FIDL fuchsia.hardware.registers/Metadata
 #define DEVICE_METADATA_REGISTERS 0x53474552  // REGS
 
-// Encodings of Metadata for fuchsia::hardware::vreg::Metadata
-// list of linearized bytes as in fidl_outgoing_msg_t
+// type: FIDL fuchsia.hardware.vreg/Metadata
 #define DEVICE_METADATA_VREG 0x47455256  // VREG
 
 // type: FIDL fuchsia.hardware.tee/TeeMetadata

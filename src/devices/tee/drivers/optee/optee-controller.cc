@@ -422,7 +422,7 @@ zx_status_t OpteeController::InitThreadPools() {
   zx_status_t status = ZX_ERR_INTERNAL;
   uint32_t default_pool_size = kDefaultNumThreads;
 
-  auto decoded = ddk::GetEncodedMetadata2<fuchsia_hardware_tee::wire::TeeMetadata>(
+  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_tee::wire::TeeMetadata>(
       parent(), DEVICE_METADATA_TEE_THREAD_CONFIG);
   if (!decoded.is_ok()) {
     LOG(INFO, "No metadata for driver. Use default thread configuration.");

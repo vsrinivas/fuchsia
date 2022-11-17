@@ -361,7 +361,7 @@ void GspiDevice::DeassertChipSelect() {
 }
 
 zx_status_t GspiDevice::ValidateChildConfig(Con1Reg& con1) {
-  auto decoded = ddk::GetEncodedMetadata2<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata>(
+  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata>(
       parent(), DEVICE_METADATA_SPI_CHANNELS);
   if (!decoded.is_ok()) {
     zxlogf(INFO, "Failed to get metadata %s", decoded.status_string());

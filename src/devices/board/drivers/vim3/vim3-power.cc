@@ -248,16 +248,15 @@ zx_status_t Vim3::PowerInit() {
   pwm_vreg_entries[PWM_A_VREG] = vreg::BuildMetadata(allocator, A311D_PWM_A, kA311dPwmPeriodNs,
                                                      kMinVoltageUv, kVoltageStepUv, kNumSteps);
 
-  auto metadata = vreg::BuildMetadata(allocator, std::move(pwm_vreg_entries));
-  fidl::unstable::OwnedEncodedMessage<vreg::Metadata> encoded_metadata(
-      fidl::internal::WireFormatVersion::kV2, &metadata);
-  if (!encoded_metadata.ok()) {
+  auto metadata = vreg::BuildMetadata(allocator, pwm_vreg_entries);
+  fit::result encoded_metadata = fidl::Persist(metadata);
+  if (!encoded_metadata.is_ok()) {
     zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__,
-           encoded_metadata.FormatDescription().c_str());
-    return encoded_metadata.status();
+           encoded_metadata.error_value().FormatDescription().c_str());
+    return encoded_metadata.error_value().status();
   }
 
-  auto encoded_metadata_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
+  std::vector<uint8_t>& encoded_metadata_bytes = encoded_metadata.value();
   static const device_metadata_t vreg_metadata[] = {
       {
           .type = DEVICE_METADATA_VREG,

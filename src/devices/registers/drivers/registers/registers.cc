@@ -260,7 +260,7 @@ zx_status_t RegistersDevice<T>::Create(zx_device_t* parent, Metadata metadata) {
 zx_status_t Bind(void* ctx, zx_device_t* parent) {
   zx_status_t status = ZX_OK;
   // Get metadata
-  auto decoded = ddk::GetEncodedMetadata2<Metadata>(parent, DEVICE_METADATA_REGISTERS);
+  auto decoded = ddk::GetEncodedMetadata<Metadata>(parent, DEVICE_METADATA_REGISTERS);
   if (!decoded.is_ok()) {
     return decoded.error_value();
   }

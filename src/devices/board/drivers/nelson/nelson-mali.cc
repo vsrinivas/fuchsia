@@ -79,20 +79,17 @@ zx_status_t Nelson::MaliInit() {
   fidl::Arena allocator;
   Metadata metadata(allocator);
   metadata.set_supports_protected_mode(true);
-  fidl::unstable::OwnedEncodedMessage<Metadata> encoded_metadata(
-      fidl::internal::WireFormatVersion::kV2, &metadata);
-  if (!encoded_metadata.ok()) {
+  fit::result encoded_metadata = fidl::Persist(metadata);
+  if (!encoded_metadata.is_ok()) {
     zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__,
-           encoded_metadata.FormatDescription().c_str());
-    return encoded_metadata.status();
+           encoded_metadata.error_value().FormatDescription().c_str());
+    return encoded_metadata.error_value().status();
   }
-  auto encoded_metadata_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
+  std::vector<uint8_t>& encoded_metadata_bytes = encoded_metadata.value();
   const std::vector<fpbus::Metadata> mali_metadata_list{
       {{
           .type = fuchsia_hardware_gpu_amlogic::wire::kMaliMetadata,
-          .data =
-              std::vector<uint8_t>(encoded_metadata_bytes.data(),
-                                   encoded_metadata_bytes.data() + encoded_metadata_bytes.size()),
+          .data = std::move(encoded_metadata_bytes),
       }},
   };
   mali_dev.metadata() = mali_metadata_list;

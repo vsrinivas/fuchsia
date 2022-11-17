@@ -289,15 +289,14 @@ void AmlGpu::SetFrequencySource(SetFrequencySourceRequestView request,
 
 zx_status_t AmlGpu::ProcessMetadata(std::vector<uint8_t> raw_metadata) {
   properties_ = {};
-  fidl::unstable::DecodedMessage<fuchsia_hardware_gpu_amlogic::wire::Metadata> decoded(
-      fidl::internal::WireFormatVersion::kV2, raw_metadata.data(),
-      static_cast<uint32_t>(raw_metadata.size()));
-  if (!decoded.ok()) {
-    GPU_ERROR("Unable to parse metadata %s", decoded.FormatDescription().c_str());
+  fit::result decoded = fidl::InplaceUnpersist<fuchsia_hardware_gpu_amlogic::wire::Metadata>(
+      cpp20::span(raw_metadata));
+  if (!decoded.is_ok()) {
+    GPU_ERROR("Unable to parse metadata %s", decoded.error_value().FormatDescription().c_str());
     return ZX_ERR_INTERNAL;
   }
-  const auto& metadata = decoded.PrimaryObject();
-  if (metadata->has_supports_protected_mode() && metadata->supports_protected_mode()) {
+  const auto& metadata = *decoded.value();
+  if (metadata.has_supports_protected_mode() && metadata.supports_protected_mode()) {
     properties_.supports_protected_mode = true;
   }
   return ZX_OK;
