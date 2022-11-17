@@ -12,6 +12,11 @@ declare_args() {
   # If `custom_signing_script` is not empty, a list of dependencies for the script.
   custom_signing_script_deps = []
 
+  # If `custom_signing_script` is not empty, these inputs will be listed in the
+  # assembly target so that the hermeticity checker knows to expect these files
+  # to be read.
+  custom_signing_script_inputs = []
+
   # If `custom signing script` is not empty, a list of host tool labels, without
   # a toolchain, that the script depends on. The reason why these are not in
   # `custom_signing_script_deps` is because these definitions are typically in
