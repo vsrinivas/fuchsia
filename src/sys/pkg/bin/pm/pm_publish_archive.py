@@ -18,11 +18,13 @@ def zip_dir(dir, zip_file):
 
 
 def prepare_dirs(pm_dir):
+    shutil.rmtree(pm_dir)
+    os.makedirs(pm_dir)
     dirs = {'pm': pm_dir}
-    os.makedirs(dirs['pm'], exist_ok=True)
     for dir in ['keys', 'repository']:
-        dirs[dir] = '{}/{}'.format(pm_dir, dir)
-        os.makedirs(dirs[dir], exist_ok=True)
+        path = os.path.join(pm_dir, dir)
+        os.makedirs(path)
+        dirs[dir] = path
     return dirs
 
 

@@ -272,7 +272,12 @@ template("pm_build") {
   }
 }
 
-# Generate TUF repository metadata and data in a zip fie.
+# Generate TUF repository metadata and data in a zip file.
+#
+# NOTE: Unlike `devhost_repository_publish()`, this template will *not* add
+# the latest version of artifacts to an existing repository, but rather it
+# creates a fresh repository containing only packages referenced in the
+# `inputs[0]` list of package metadata.
 #
 # Globals
 #
