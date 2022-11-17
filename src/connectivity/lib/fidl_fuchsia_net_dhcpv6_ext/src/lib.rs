@@ -129,6 +129,11 @@ mod tests {
                             fidl_fuchsia_net_dhcpv6::ClientRequest::WatchAddress { responder } => {
                                 assert_matches!(address_responder.replace(responder), None);
                             }
+                            fidl_fuchsia_net_dhcpv6::ClientRequest::WatchPrefixes {
+                                responder: _,
+                            } => {
+                                panic!("WatchPrefix method should not be called");
+                            }
                             fidl_fuchsia_net_dhcpv6::ClientRequest::Shutdown { responder: _ } => {
                                 panic!("Shutdown method should not be called");
                             }

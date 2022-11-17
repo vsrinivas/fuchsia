@@ -20,8 +20,9 @@ use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcpv6::{
     AddressConfig, ClientConfig, ClientMarker, ClientRequest, ClientRequestStream,
-    ClientWatchAddressResponder, ClientWatchServersResponder, InformationConfig, NewClientParams,
-    RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS, RELAY_AGENT_AND_SERVER_PORT,
+    ClientWatchAddressResponder, ClientWatchPrefixesResponder, ClientWatchServersResponder,
+    InformationConfig, NewClientParams, RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS,
+    RELAY_AGENT_AND_SERVER_PORT,
 };
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_name as fnet_name;
@@ -41,7 +42,7 @@ use net_types::{ip::Ipv6Addr, MulticastAddress as _};
 use packet::ParsablePacket;
 use packet_formats_dhcp::v6;
 use rand::{rngs::StdRng, SeedableRng};
-use tracing::warn;
+use tracing::{error, warn};
 
 use dhcpv6_core;
 
@@ -83,6 +84,8 @@ pub(crate) struct Client<S: for<'a> AsyncSocket<'a>> {
     dns_responder: Option<ClientWatchServersResponder>,
     /// Stores a responder to send acquired addresses.
     address_responder: Option<ClientWatchAddressResponder>,
+    /// Stores a responder to send acquired prefixes.
+    prefixes_responder: Option<ClientWatchPrefixesResponder>,
     /// Maintains the state for the client.
     state_machine: dhcpv6_core::client::ClientStateMachine<StdRng>,
     /// The socket used to communicate with DHCPv6 servers.
@@ -162,7 +165,19 @@ fn create_state_machine(
     (dhcpv6_core::client::ClientStateMachine<StdRng>, dhcpv6_core::client::Actions),
     ClientError,
 > {
-    let ClientConfig { non_temporary_address_config, information_config, .. } = config;
+    let ClientConfig {
+        non_temporary_address_config,
+        information_config,
+        prefix_delegation_config,
+        ..
+    } = config;
+    // TODO(https://fxbug.dev/80595): Support PD.
+    if let Some(prefix_delegation_config) = prefix_delegation_config {
+        error!(
+            "ignoring prefix delegation configuration {:?} as it's unsupported",
+            prefix_delegation_config
+        );
+    }
     match non_temporary_address_config {
         Some(non_temporary_address_config) => {
             let configured_non_temporary_addresses =
@@ -222,6 +237,7 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
             last_observed_dns_hash: hash(&Vec::<Ipv6Addr>::new()),
             dns_responder: None,
             address_responder: None,
+            prefixes_responder: None,
         };
         let () = client.run_actions(actions).await?;
         Ok(client)
@@ -421,7 +437,7 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
             },
             ClientRequest::WatchAddress { responder } => match self.address_responder.take() {
                 // The responder will be dropped and cause the channel to be closed.
-                Some::<ClientWatchAddressResponder>(_) => Err(ClientError::DoubleWatch),
+                Some(ClientWatchAddressResponder { .. }) => Err(ClientError::DoubleWatch),
                 None => {
                     // TODO(https://fxbug.dev/72701): Implement the address watcher.
                     warn!("WatchAddress call will block forever as it is unimplemented");
@@ -429,7 +445,17 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                     Ok(())
                 }
             },
-            // TODO(https://fxbug.dev/72702) Implement Shutdown.
+            ClientRequest::WatchPrefixes { responder } => match self.prefixes_responder.take() {
+                // The responder will be dropped and cause the channel to be closed.
+                Some(ClientWatchPrefixesResponder { .. }) => Err(ClientError::DoubleWatch),
+                None => {
+                    // TODO(https://fxbug.dev/113371): Implement the prefix watcher.
+                    warn!("WatchPrefix call will block forever as it is unimplemented");
+                    self.prefixes_responder = Some(responder);
+                    Ok(())
+                }
+            },
+            // TODO(https://fxbug.dev/72702): Implement Shutdown.
             ClientRequest::Shutdown { responder: _ } => {
                 Err(ClientError::Unimplemented("Shutdown".to_string()))
             }
@@ -560,13 +586,14 @@ mod tests {
     };
     use fidl_fuchsia_net_dhcpv6::{ClientMarker, DEFAULT_CLIENT_PORT};
     use fuchsia_async as fasync;
-    use futures::{channel::mpsc, join};
+    use futures::{channel::mpsc, join, TryFutureExt as _};
 
     use assert_matches::assert_matches;
     use net_declare::{
         fidl_ip_v6, fidl_socket_addr, fidl_socket_addr_v6, net_ip_v6, std_socket_addr,
     };
     use packet::serialize::InnerPacketBuilder;
+    use test_case::test_case;
 
     use super::*;
 
@@ -666,14 +693,47 @@ mod tests {
         client_res.expect("client future should return with Ok");
     }
 
+    fn client_proxy_watch_servers(
+        client_proxy: &fidl_fuchsia_net_dhcpv6::ClientProxy,
+    ) -> impl Future<Output = Result<(), fidl::Error>> {
+        client_proxy.watch_servers().map_ok(|_: Vec<fidl_fuchsia_net_name::DnsServer_>| ())
+    }
+
+    fn client_proxy_watch_address(
+        client_proxy: &fidl_fuchsia_net_dhcpv6::ClientProxy,
+    ) -> impl Future<Output = Result<(), fidl::Error>> {
+        client_proxy.watch_address().map_ok(
+            |_: (
+                fnet::Subnet,
+                fidl_fuchsia_net_interfaces_admin::AddressParameters,
+                fidl::endpoints::ServerEnd<
+                    fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
+                >,
+            )| (),
+        )
+    }
+
+    fn client_proxy_watch_prefixes(
+        client_proxy: &fidl_fuchsia_net_dhcpv6::ClientProxy,
+    ) -> impl Future<Output = Result<(), fidl::Error>> {
+        client_proxy.watch_prefixes().map_ok(|_: Vec<fidl_fuchsia_net_dhcpv6::Prefix>| ())
+    }
+
+    #[test_case(client_proxy_watch_servers; "watch_servers")]
+    #[test_case(client_proxy_watch_address; "watch_address")]
+    #[test_case(client_proxy_watch_prefixes; "watch_prefixes")]
     #[fasync::run_singlethreaded(test)]
-    async fn test_client_should_return_error_on_double_watch() {
+    async fn test_client_should_return_error_on_double_watch<Fut, F>(watch: F)
+    where
+        Fut: Future<Output = Result<(), fidl::Error>>,
+        F: Fn(&fidl_fuchsia_net_dhcpv6::ClientProxy) -> Fut,
+    {
         let (client_proxy, server_end) =
             create_proxy::<ClientMarker>().expect("failed to create test client proxy");
 
         let (caller1_res, caller2_res, client_res) = join!(
-            client_proxy.watch_servers(),
-            client_proxy.watch_servers(),
+            watch(&client_proxy),
+            watch(&client_proxy),
             serve_client(
                 NewClientParams {
                     interface_id: Some(1),

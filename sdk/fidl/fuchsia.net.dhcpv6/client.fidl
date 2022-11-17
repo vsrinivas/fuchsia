@@ -123,7 +123,8 @@ protocol ClientProvider {
                 /// [RFC 8415, section 6.2](https://tools.ietf.org/html/rfc8415#section-6.2).
                 ///
                 /// If not set, interpreted as empty (non-temporary addresses
-                /// will not be negotiated).
+                /// will not be negotiated). If invalid, client creation will
+                /// fail and the pipelined channel will be closed.
                 2: non_temporary_address_config @generated_name("AddressConfig") table {
                     /// Number of addresses.
                     ///
@@ -143,6 +144,30 @@ protocol ClientProvider {
                     /// `preferred_addresses` is empty, no address hints are
                     /// provided.
                     2: preferred_addresses vector<fuchsia.net.Ipv6Address>:MAX;
+                };
+
+                /// Prefix delegation configuration.
+                ///
+                /// Configures the client to negotiate a delegated prefix
+                /// (IA_PD), as defined in [RFC 8415, section 6.3][RFC 8415 6.3].
+                ///
+                /// Optional. If not set, delegated prefixes will not be
+                /// requested. If invalid, client creation will fail and
+                /// the pipelined channel will be closed.
+                ///
+                /// [RFC 8415 6.3]: https://datatracker.ietf.org/doc/html/rfc8415#section-6.3
+                3: prefix_delegation_config strict union {
+                    /// Request a prefix of any length.
+                    1: empty Empty;
+                    /// Request a prefix of a specific length.
+                    ///
+                    /// Must be in the range [1, 128]; otherwise client creation will fail.
+                    2: prefix_length uint8;
+                    /// Request a specific prefix.
+                    ///
+                    /// The prefix length must be in the range [1, 128], and the host bits of
+                    /// the address must be all zeroes; otherwise client creation will fail.
+                    3: prefix fuchsia.net.Ipv6AddressWithPrefix;
                 };
             };
         };
@@ -179,6 +204,32 @@ protocol Client {
         address fuchsia.net.Subnet;
         address_parameters fuchsia.net.interfaces.admin.AddressParameters;
         address_state_provider server_end:fuchsia.net.interfaces.admin.AddressStateProvider;
+    });
+
+    /// Hanging get for prefix leases.
+    ///
+    /// The first call to this method will return when there is at least
+    /// one lease to report (the first call is guaranteed to return with a
+    /// non-empty vector). Subsequent calls will return immediately if there
+    /// is a change to report, or block until a change occurs.
+    ///
+    /// It is invalid to call this method while a previous call is pending.
+    /// Doing so will cause the server end of the protocol to be closed.
+    ///
+    /// - response `prefixes` the assigned prefixes and their lifetimes.
+    WatchPrefixes() -> (struct {
+        /// Prefixes must be unique on [`Prefix.prefix`].
+        ///
+        /// Prefixes with a `Prefix.prefix` value that did not appear in
+        /// a previous value returned via this method are new; conversely
+        /// prefixes previously present may have been removed, and usage
+        /// should stop immediately. The same prefix may appear with updated
+        /// lifetime values.
+        ///
+        /// Note that any prefix's valid lifetime expiring will cause the
+        /// method to return with said prefix removed; but preferred lifetime
+        /// elapsing does not cause this method to return.
+        prefixes vector<Prefix>:MAX;
     });
 
     /// Gracefully tears down the underlying object.
