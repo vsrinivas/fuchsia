@@ -46,7 +46,7 @@ zx_status_t DirWatcher::Create(fbl::unique_fd dir_fd,
   if (!result.ok()) {
     return result.status();
   }
-  *out_dir_watcher = std::make_unique<DirWatcher>(std::move(endpoints->client));
+  *out_dir_watcher = std::make_unique<DirWatcher>(endpoints->client.TakeChannel());
   return ZX_OK;
 }
 
@@ -56,7 +56,7 @@ zx_status_t DirWatcher::WaitForRemoval(std::string_view filename, zx::duration t
   // Loop until we see the removal event, or wait_one fails due to timeout.
   for (;;) {
     zx_signals_t observed;
-    zx_status_t status = client_.channel().wait_one(ZX_CHANNEL_READABLE, deadline, &observed);
+    zx_status_t status = client_.wait_one(ZX_CHANNEL_READABLE, deadline, &observed);
     if (status != ZX_OK) {
       return status;
     }
@@ -70,7 +70,7 @@ zx_status_t DirWatcher::WaitForRemoval(std::string_view filename, zx::duration t
     //  char* name
     uint8_t buf[fio::wire::kMaxBuf];
     uint32_t actual_len;
-    status = client_.channel().read(0, buf, nullptr, sizeof(buf), 0, &actual_len, nullptr);
+    status = client_.read(0, buf, nullptr, sizeof(buf), 0, &actual_len, nullptr);
     if (status != ZX_OK) {
       return status;
     }
@@ -90,7 +90,7 @@ zx_status_t DirWatcher::WaitForRemoval(std::string_view filename, zx::duration t
 }
 
 __EXPORT
-zx_status_t IterateDirectory(const fbl::unique_fd& fd, FileCallback callback) {
+zx_status_t IterateDirectory(fbl::unique_fd fd, FileCallback callback) {
   struct dirent* entry;
 
   DIR* dir = fdopendir(fd.get());

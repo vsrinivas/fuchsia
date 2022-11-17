@@ -5,7 +5,6 @@
 #ifndef LIB_DEVICE_WATCHER_CPP_DEVICE_WATCHER_H_
 #define LIB_DEVICE_WATCHER_CPP_DEVICE_WATCHER_H_
 
-#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/result.h>
@@ -14,8 +13,6 @@
 #include <string_view>
 
 #include <fbl/unique_fd.h>
-
-namespace fio = fuchsia_io;
 
 namespace device_watcher {
 
@@ -51,7 +48,7 @@ zx_status_t RecursiveWaitForFileReadOnly(const char* path, fbl::unique_fd* out);
 // the error status is returned. This function does not continue to watch the directory for newly
 // created files.
 using FileCallback = fit::function<zx_status_t(std::string_view, zx::channel)>;
-zx_status_t IterateDirectory(const fbl::unique_fd& fd, FileCallback callback);
+zx_status_t IterateDirectory(fbl::unique_fd fd, FileCallback callback);
 
 // DirWatcher can be used to detect when a file has been removed from the filesystem.
 //
@@ -69,7 +66,9 @@ class DirWatcher {
   static zx_status_t Create(fbl::unique_fd dir_fd, std::unique_ptr<DirWatcher>* out_dir_watcher);
 
   // Users should call Create instead. This is public for make_unique.
-  explicit DirWatcher(fidl::ClientEnd<fio::DirectoryWatcher> client) : client_(std::move(client)) {}
+  // TODO(https://fxbug.dev/89042): this should be a `fidl::ClientEnd<fuchsia_io::DirectoryWatcher>`
+  // once LLCPP is in the SDK.
+  explicit DirWatcher(zx::channel client) : client_(std::move(client)) {}
 
   // Returns ZX_OK if |filename| is removed from the directory before the given timeout elapses.
   // If no filename is specified, this will wait for any file in the directory to be removed.
@@ -78,7 +77,7 @@ class DirWatcher {
  private:
   // A channel opened by a call to fuchsia.io.Directory.Watch, from which watch
   // events can be read.
-  fidl::ClientEnd<fio::DirectoryWatcher> client_;
+  zx::channel client_;
 };
 
 }  // namespace device_watcher
