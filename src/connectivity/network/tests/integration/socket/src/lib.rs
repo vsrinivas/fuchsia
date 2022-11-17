@@ -1078,12 +1078,23 @@ async fn tcp_socket_send_recv<
     async fn send_recv(mut sender: fasync::net::TcpStream, mut receiver: fasync::net::TcpStream) {
         const PAYLOAD: &'static [u8] = b"Hello World";
         let write_count = sender.write(PAYLOAD).await.expect("write to tcp client stream failed");
+        assert_matches!(sender.close().await, Ok(()));
 
         assert_eq!(write_count, PAYLOAD.len());
         let mut buf = [0u8; 16];
         let read_count = receiver.read(&mut buf).await.expect("read from tcp server stream failed");
         assert_eq!(read_count, write_count);
         assert_eq!(&buf[..read_count], PAYLOAD);
+
+        // Echo the bytes back the already closed sender, the sender is already
+        // closed and it should not cause any panic.
+        assert_eq!(
+            receiver
+                .write(&mut buf[..read_count])
+                .await
+                .expect("write to tcp server stream failed"),
+            read_count
+        );
     }
     tcp_socket_accept_cross_ns::<I, Client, Server, E, _, _>(name, send_recv).await
 }

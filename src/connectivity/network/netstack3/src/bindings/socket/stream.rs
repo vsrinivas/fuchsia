@@ -225,8 +225,18 @@ impl ReceiveBuffer for ReceiveBufferWithZirconSocket {
             for chunk in avail {
                 let written = match self.socket.write(*chunk) {
                     Ok(n) => n,
-                    Err(zx::Status::BAD_STATE) => {
-                        // The socket has been shutdown for read, discard.
+                    Err(zx::Status::BAD_STATE | zx::Status::PEER_CLOSED) => {
+                        // These two status codes correspond two possible cases
+                        // where the socket has been shutdown for read:
+                        //   - BAD_STATE, the application has called `shutdown`,
+                        //     but fido is still holding onto the peer socket.
+                        //   - PEER_CLOSED, the application has called `close`,
+                        //     or the socket is implicitly closed because the
+                        //     application exits, fido is no longer holding onto
+                        //     the peer socket, nor do we hold it in our
+                        //     `SocketWorker` as it gets dropped after serving
+                        //     the last request.
+                        // In either case, we just discard the incoming bytes.
                         shut_rd = true;
                         return total;
                     }
