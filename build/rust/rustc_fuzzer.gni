@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fuzzing/fuzzer.gni")
+import("//build/fuzzing/fuchsia_library_fuzzer.gni")
+import("//build/fuzzing/host_library_fuzzer.gni")
 import("//build/rust/rustc_staticlib.gni")
 
 # Defines a Rust fuzzer
@@ -20,7 +21,7 @@ import("//build/rust/rustc_staticlib.gni")
 #   - Otherwise, it will build an uninstrumented unit test that ensures the
 #     fuzzer code can build and link.
 #
-# Parameters:
+# Parameters are the same as `executable`, plus:
 #
 #   rustfunction (optional)
 #     Name of the fuzz target function. Defaults to the GN target name.
@@ -40,11 +41,13 @@ import("//build/rust/rustc_staticlib.gni")
 #   disable_rbe
 #     Same meaning as for rustc_staticlib.
 #
-#   cmx
+#   corpus
 #   dictionary
 #   options
-#   executable parameters, except deps
-#     Same meaning as for fuzzer.
+#     Same meaning as for `fuchsia_library_fuzzer` when building for Fuchsia, ignored otherwise.
+#
+#   test_inputs
+#     Same meaning as for `host_library_fuzzer` when building for host, ignored otherwise.
 #
 # Example:
 #
@@ -52,7 +55,7 @@ import("//build/rust/rustc_staticlib.gni")
 #   fuzz!("my_fuzzer", (input: ArbitraryType), { ... });
 #
 # In BUILD.gn:
-#   rust_fuzzer("my_fuzzer") {}
+#   rustc_fuzzer("my_fuzzer") {}
 #
 template("rustc_fuzzer") {
   fuzzer_name = target_name
@@ -70,6 +73,18 @@ template("rustc_fuzzer") {
     _original_target_name = target_name
   }
 
+  staticlib_vars = [
+    "deps",
+    "version",
+    "edition",
+    "source_root",
+    "enforce_source_listing",
+    "sources",
+    "inputs",
+    "features",
+    "rustenv",
+  ]
+
   config(fuzzer_cfg) {
     visibility = [ ":*" ]
     rustflags = [
@@ -83,45 +98,38 @@ template("rustc_fuzzer") {
   }
 
   rustc_staticlib(fuzzer_lib) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "version",
-                             "edition",
-                             "source_root",
-                             "enforce_source_listing",
-                             "sources",
-                             "inputs",
-                             "features",
-                             "rustenv",
-                           ])
-
-    visibility = [ ":*" ]
     testonly = true
+    visibility = [ ":*" ]
+    forward_variables_from(invoker, staticlib_vars)
     configs = []
     configs = [ ":$fuzzer_cfg" ] + invoker.configs
     original_target_name = _original_target_name
   }
+  staticlib_vars += [ "configs" ]
 
-  fuzzer(fuzzer_name) {
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "version",
-                             "edition",
-                             "deps",
-                             "source_root",
-                             "sources",
-                             "inputs",
-                             "features",
-                             "configs",
-                           ])
-    deps = [ ":$fuzzer_lib" ]
-
-    # fxbug.dev/94239: rustc multiple codegen units seems incompatible
-    # with fuzzing.
-    configs += [ "//build/config/rust:one_codegen_unit" ]
+  # fxbug.dev/94239: rustc multiple codegen units are incompatible with fuzzing.
+  ignored_parameters = []
+  if (is_fuchsia) {
+    ignored_parameters += [ "test_inputs" ]
+    fuchsia_library_fuzzer(target_name) {
+      forward_variables_from(invoker, "*", staticlib_vars + ignored_parameters)
+      deps = [ ":$fuzzer_lib" ]
+      configs += [ "//build/config/rust:one_codegen_unit" ]
+    }
+  } else {
+    # TODO(fxbug.dev/105707): Remove once all fuzzers are using explicit manifests.
+    ignored_parameters += [
+      "corpus",
+      "dictionary",
+      "options",
+    ]
+    host_library_fuzzer(target_name) {
+      forward_variables_from(invoker, "*", staticlib_vars + ignored_parameters)
+      deps = [ ":$fuzzer_lib" ]
+      configs += [ "//build/config/rust:one_codegen_unit" ]
+    }
   }
+  not_needed(invoker, ignored_parameters)
 }
 
 set_defaults("rustc_fuzzer") {
