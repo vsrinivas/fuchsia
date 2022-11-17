@@ -72,11 +72,21 @@ _max_severity_allowed_val = [
 #       image_overrides (optional)
 #         [scope] Images to use instead of the defaults in images.json. This should
 #         only be used by boot_test() defined in //build/testing/zbi_test.gni
-#         which requires different images to boot the target with.
+#         which requires different images to boot the target with. The keys
+#         should be one of the following with the value being a scope containing either
+#         the `name` or `label` of the image to use as it appears in images.json.
 #
-#         zbi, vbmeta, qemu_kernel (optional)
-#           [label_with_toolchain] Specifies an override via label. One of
-#           these values must be set.
+#         zbi_image/vbmeta_image/qemu_kernel (optional)
+#           [scope] The zbi image/vbmeta image/qemu kernel to boot the target with
+#           in a boot_test. vbmeta_image only applies to hardware environments
+#           and qemu_kernel only applies to emulator environments. Either `name`
+#           or `label` must be provided.
+#
+#           name (optional)
+#             [string] The name of the image.
+#
+#           label (optional)
+#             [label_with_toolchain] The GN label of the image.
 #
 #   log_settings (optional, default: see below properties)
 #     [json] Properties of logs produced by this test run.

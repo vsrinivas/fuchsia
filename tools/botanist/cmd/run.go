@@ -82,7 +82,8 @@ type RunCommand struct {
 	// The level of experimental ffx features to enable.
 	ffxExperimentLevel int
 
-	// Any image overrides for boot.
+	// A json struct following the build.ImageOverrides schema that defines the
+	// images to override the defaults in images.json.
 	imageOverrides imageOverridesFlagValue
 }
 
@@ -218,7 +219,9 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			}
 			t.SetFFX(&targets.FFXInstance{ffxForTarget, r.ffxExperimentLevel}, ffx.Env())
 		}
-		t.SetImageOverrides(build.ImageOverrides(r.imageOverrides))
+		if r.imageOverrides != nil {
+			t.SetImageOverrides(build.ImageOverrides(r.imageOverrides))
+		}
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)

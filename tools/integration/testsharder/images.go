@@ -43,24 +43,18 @@ func AddImageDeps(s *Shard, buildDir string, images []build.Image, pave bool) er
 }
 
 func isUsedForTesting(s *Shard, image build.Image, pave bool) bool {
-	// If image overrides have been specified, then by convention we only wish
-	// to select among the images that could be overridden.
-	overrides := s.Env.ImageOverrides
-	if overrides.ZBI != "" || overrides.VBMeta != "" || overrides.QEMUKernel != "" {
-		if image.Label == overrides.ZBI || image.Label == overrides.VBMeta || image.Label == overrides.QEMUKernel {
-			return true
+	if s.Env.ImageOverrides != nil {
+		for _, metadata := range s.Env.ImageOverrides {
+			if metadata.Name != "" && image.Name == metadata.Name {
+				return true
+			}
+			if metadata.Label != "" && image.Label == metadata.Label {
+				return true
+			}
 		}
-
-		// Emulators always need a kernel.
-		// TODO(fxbug.dev/113961): ...or a UEFI filesystem/disk image.
-		if s.Env.TargetsEmulator() && image.Name == "qemu-kernel" && overrides.QEMUKernel == "" {
-			return true
-		}
-
-		// TODO(fxbug.dev/47531): Remove zedboot images once we switch to flashing.
+		// TODO(fxubg.dev/47531): Remove zedboot images once we switch to flashing.
 		return !s.Env.TargetsEmulator() && len(image.PaveZedbootArgs) != 0
 	}
-
 	if s.Env.TargetsEmulator() {
 		// This provisions the images used by EMU targets in botanist:
 		// https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/botanist/targets/qemu.go?q=zbi_zircon
