@@ -171,16 +171,12 @@ group("tests") {
     "gtest:tests",
     "gunit:tests",
     "inspect:tests",
+    "legacy_test:tests",
     "lib_loader_cache:tests",
     "rust:tests",
     "starnix:tests",
     "stress_test:tests",
   ]
-}
-
-group("legacy_tests") {
-  testonly = true
-  deps = [ "legacy_test:legacy_tests" ]
 }
 
 # Use this group to include fuchsia.process.Launcher in generated test manifests.

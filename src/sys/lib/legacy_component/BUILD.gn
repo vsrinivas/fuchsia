@@ -30,7 +30,7 @@ rustc_library("legacy_component_lib") {
   sources = [ "src/legacy_component.rs" ]
 }
 
-group("legacy_tests") {
+group("tests") {
   testonly = true
   deps = [ "tests" ]
 }

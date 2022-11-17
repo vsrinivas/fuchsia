@@ -13,12 +13,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 )
 
-// TODO(fxbug.dev/102390): This test does not pass in CFv2 because it assumes the outgoing dir is
-// present in the startup handles, which is not true for tests run in the go test runner.
-//
-// This test is disabled to unblock CFv2 migration. Either rewrite the test, switch to
-// elf_test_runner, or simply delete the test under the premise that it contributes limited value.
-func _TestContext_BindStartupHandle(t *testing.T) {
+func TestContext_BindStartupHandle(t *testing.T) {
 	c := component.NewContextFromStartupInfo()
 
 	if got := c.OutgoingService; got == nil {

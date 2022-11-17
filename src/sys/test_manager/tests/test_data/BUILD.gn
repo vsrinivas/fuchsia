@@ -243,21 +243,14 @@ group("test_data") {
     ":data_storage_test",
     ":debug-data-test",
     ":debug_data_spam_test",
+    ":debug_data_test_v1",
     ":debug_data_write_test",
     ":hanging_test",
+    ":logging-component",
     ":no_suite_service",
     ":nonhermetic_capability_test",
     ":simple_chromium_realm_test",
     ":simple_system_realm_test",
-    "//examples/tests/rust:custom_artifact_user_cmp",
-  ]
-}
-
-group("test_data_v1") {
-  testonly = true
-  public_deps = [
-    ":debug_data_test_v1",
-    ":logging-component",
     ":v2_test_runs_v1_component",
     "//examples/tests/rust:custom_artifact_user_cmp",
     "//src/sys/lib/legacy_component/tests:echo_legacy_server",

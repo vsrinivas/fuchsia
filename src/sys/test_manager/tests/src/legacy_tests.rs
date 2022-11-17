@@ -80,13 +80,6 @@ async fn launch_v1_v2_bridge_test() {
     assert_eq!(&expected_events, &events);
 
     // logged by child v1 component.
-    // fuchsia.debugdata.Publisher may be unavailable due to security policy, ignore those logs
-    let logs: Vec<_> = logs
-        .into_iter()
-        .filter(|log| {
-            !log.starts_with("Required protocol `fuchsia.debugdata.Publisher` was not available")
-        })
-        .collect();
     assert_eq!(
         logs,
         vec![

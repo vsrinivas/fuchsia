@@ -109,7 +109,7 @@ fuchsia_unittest_package("test_manager_legacy_test") {
   manifest = "meta/test_manager_legacy_test.cml"
   deps = [
     ":test_manager_legacy_test_bin",
-    "test_data:test_data_v1",
+    "test_data",
     "//src/sys/test_manager:test_manager_for_test_cmp",
   ]
 
@@ -122,26 +122,10 @@ fuchsia_unittest_package("test_manager_legacy_test") {
   }
 }
 
-group("legacy_tests") {
-  testonly = true
-  deps = [
-    ":test_manager_legacy_test",
-
-    # although these tests don't use test_manager itself, this group includes test_manager's
-    # dependencies (such as test runners).
-    "//src/sys/test_manager",
-
-    # test_manager_test launches these tests.
-    # TODO(fxbug.dev/104764): consider reorganizing these tests so that these dependencies
-    # are not necessary.
-    "//examples/tests:example-tests",
-    "//src/sys/test_runners/gtest/test_data:gtest-runner-example-tests",
-  ]
-}
-
 group("tests") {
   testonly = true
   deps = [
+    ":test_manager_legacy_test",
     ":test_manager_stress_test",
     ":test_manager_test",
     "chromium_tests:tests",
