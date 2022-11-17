@@ -106,7 +106,7 @@ zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config, bool is_str
     fidl::UnownedClientEnd<fuchsia_logger::LogSink> log_sink{
         zx::unowned_channel{config->log_sink_channel}};
 
-    const fidl::WireResult result = fidl::WireCall(log_sink)->ConnectStructured(std::move(remote));
+    const fidl::Status result = fidl::WireCall(log_sink)->ConnectStructured(std::move(remote));
     if (!result.ok()) {
       return result.status();
     }

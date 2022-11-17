@@ -349,7 +349,7 @@ zx_status_t capture_setup() {
   auto token = fidl::WireSyncClient(std::move(token_endpoints->client));
 
   // pass token server to sysmem allocator
-  fidl::WireResult alloc_status =
+  fidl::Status alloc_status =
       sysmem_allocator->AllocateSharedCollection(std::move(token_endpoints->server));
   if (alloc_status.status() != ZX_OK) {
     printf("Could not pass token to sysmem allocator: %s\n",
@@ -393,7 +393,7 @@ zx_status_t capture_setup() {
     return collection_endpoints.error_value();
   }
   // let's return token
-  fidl::WireResult bind_resp = sysmem_allocator->BindSharedCollection(
+  fidl::Status bind_resp = sysmem_allocator->BindSharedCollection(
       token.TakeClientEnd(), std::move(collection_endpoints->server));
   if (bind_resp.status() != ZX_OK) {
     printf("Could not bind to shared collection: %s\n", bind_resp.FormatDescription().c_str());
@@ -433,7 +433,7 @@ zx_status_t capture_setup() {
   image_constraints.display_height_divisor = 1;
 
   collection_ = fidl::WireSyncClient(std::move(collection_endpoints->client));
-  fidl::WireResult collection_resp = collection_->SetConstraints(true, constraints);
+  fidl::Status collection_resp = collection_->SetConstraints(true, constraints);
   if (collection_resp.status() != ZX_OK) {
     printf("Could not set buffer constraints: %s\n", collection_resp.FormatDescription().c_str());
     return collection_resp.status();

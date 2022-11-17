@@ -191,7 +191,7 @@ class NetworkDeviceTest : public ::testing::Test {
     }
     endpoints.status_value();
     auto [client_end, server_end] = std::move(*endpoints);
-    fidl::WireResult result = OpenConnection()->GetPort(port_id, std::move(server_end));
+    fidl::Status result = OpenConnection()->GetPort(port_id, std::move(server_end));
     if (result.status() != ZX_OK) {
       return zx::error(result.status());
     }

@@ -676,9 +676,8 @@ int iochk(int argc, char** argv) {
       return endpoints.status_value();
     }
     auto& [client, server] = endpoints.value();
-    if (fidl::WireResult result =
-            fidl::WireCall(ctx.caller.borrow_as<fuchsia_hardware_block::Block>())
-                ->OpenSession(std::move(server));
+    if (fidl::Status result = fidl::WireCall(ctx.caller.borrow_as<fuchsia_hardware_block::Block>())
+                                  ->OpenSession(std::move(server));
         !result.ok()) {
       fprintf(stderr, "error: cannot open session for device: %s\n",
               result.FormatDescription().c_str());

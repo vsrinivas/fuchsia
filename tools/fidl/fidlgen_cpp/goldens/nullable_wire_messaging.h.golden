@@ -390,7 +390,8 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<::test_nullable::SimpleProtocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_nullable::SimpleProtocol>> {
  public:
   // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-  ::fidl::WireResult<::test_nullable::SimpleProtocol::Add> Add(int32_t a, int32_t b) {
+  ::fidl::WireResult<::test_nullable::SimpleProtocol::Add>
+  Add(int32_t a, int32_t b) {
     ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add> _request{a, b};
     return ::fidl::WireResult<::test_nullable::SimpleProtocol::Add>(_client_end(), &_request);
   }
@@ -406,7 +407,8 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_nullable::SimpleProtocol> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_nullable::SimpleProtocol>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add> Add(int32_t a, int32_t b) {
+  ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add>
+  Add(int32_t a, int32_t b) {
     ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add> _request{a, b};
     return ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add>(_client_end(), _allocator(), &_request);
   }

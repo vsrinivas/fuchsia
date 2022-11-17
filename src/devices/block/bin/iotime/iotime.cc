@@ -132,8 +132,7 @@ static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, s
     return ZX_TIME_INFINITE;
   }
   auto& [session, server] = endpoints.value();
-  if (fidl::WireResult result = fidl::WireCall(channel)->OpenSession(std::move(server));
-      !result.ok()) {
+  if (fidl::Status result = fidl::WireCall(channel)->OpenSession(std::move(server)); !result.ok()) {
     fprintf(stderr, "error: cannot open session for '%s': %s\n", dev,
             result.FormatDescription().c_str());
     return ZX_TIME_INFINITE;

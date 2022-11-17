@@ -200,7 +200,7 @@ zx::result<std::unique_ptr<block_client::Client>> CreateSession(
   }
   auto& [session, server] = endpoints.value();
 
-  const fidl::WireResult result = fidl::WireCall(block)->OpenSession(std::move(server));
+  const fidl::Status result = fidl::WireCall(block)->OpenSession(std::move(server));
   if (!result.ok()) {
     return zx::error(result.status());
   }
@@ -701,8 +701,7 @@ TEST(RamdiskTests, RamdiskTestFifoNoOp) {
     auto& [session, server] = endpoints.value();
 
     {
-      const fidl::WireResult result =
-          fidl::WireCall(block_interface)->OpenSession(std::move(server));
+      const fidl::Status result = fidl::WireCall(block_interface)->OpenSession(std::move(server));
       ASSERT_TRUE(result.ok()) << result.FormatDescription();
     }
 
@@ -798,7 +797,7 @@ TEST(RamdiskTests, RamdiskTestFifoNoGroup) {
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
   auto& [session, server] = endpoints.value();
 
-  const fidl::WireResult result = fidl::WireCall(block_interface)->OpenSession(std::move(server));
+  const fidl::Status result = fidl::WireCall(block_interface)->OpenSession(std::move(server));
   ASSERT_TRUE(result.ok()) << result.FormatDescription();
 
   const fidl::WireResult fifo_result = fidl::WireCall(session)->GetFifo();
@@ -1081,7 +1080,7 @@ TEST(RamdiskTests, RamdiskTestFifoLargeOpsCountShutdown) {
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
   auto& [session, server] = endpoints.value();
 
-  const fidl::WireResult result = fidl::WireCall(block_interface)->OpenSession(std::move(server));
+  const fidl::Status result = fidl::WireCall(block_interface)->OpenSession(std::move(server));
   ASSERT_TRUE(result.ok()) << result.FormatDescription();
 
   // Get the FIFO twice since the client doesn't expose it after construction.

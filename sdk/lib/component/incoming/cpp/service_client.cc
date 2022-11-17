@@ -71,10 +71,9 @@ zx::result<zx::channel> CloneRaw(zx::unowned_channel&& node) {
 }
 
 zx::result<> CloneRaw(zx::unowned_channel&& node, zx::channel server_end) {
-  const fidl::WireResult result =
-      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Node>(node))
-          ->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights,
-                  fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)));
+  const fidl::Status result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Node>(node))
+                                  ->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights,
+                                          fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)));
   if (!result.ok()) {
     return zx::error(result.status());
   }
@@ -128,7 +127,7 @@ zx::result<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path,
       fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightWritable;
   fidl::UnownedClientEnd<fuchsia_io::Directory> dir_end(dir);
   fidl::ServerEnd<fuchsia_io::Node> node_end(remote.release<fidl::internal::ChannelTransport>());
-  fidl::WireResult<fuchsia_io::Directory::Open> result =
+  fidl::Status result =
       fidl::WireCall<fuchsia_io::Directory>(dir_end)->Open(flags, 0755u, path, std::move(node_end));
   return zx::make_result(result.status());
 }

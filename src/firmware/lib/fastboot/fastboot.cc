@@ -424,7 +424,7 @@ zx::result<fidl::WireSyncClient<fuchsia_paver::BootManager>> Fastboot::FindBootM
     return zx::error(endpoints.status_value());
   }
 
-  fidl::WireResult res = paver_client_res.value()->FindBootManager(std::move(endpoints->server));
+  fidl::Status res = paver_client_res.value()->FindBootManager(std::move(endpoints->server));
   if (!res.ok()) {
     FX_LOGST(ERROR, kFastbootLogTag) << "Failed to find boot manager";
     return zx::error(res.status());

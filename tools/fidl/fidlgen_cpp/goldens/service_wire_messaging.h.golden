@@ -238,7 +238,8 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<::test_service::FirstProtocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_service::FirstProtocol>> {
  public:
   // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-  ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst> MethodOnFirst() {
+  ::fidl::Status
+  MethodOnFirst() {
     ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst> _request{};
     return ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst>(_client_end(), &_request);
   }
@@ -254,7 +255,8 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_service::FirstProtocol> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_service::FirstProtocol>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_service::FirstProtocol::MethodOnFirst> MethodOnFirst() {
+  ::fidl::Status
+  MethodOnFirst() {
     ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst> _request{};
     return ::fidl::WireUnownedResult<::test_service::FirstProtocol::MethodOnFirst>(_client_end(), _allocator(), &_request);
   }
@@ -514,7 +516,8 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<::test_service::SecondProtocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_service::SecondProtocol>> {
  public:
   // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-  ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond> MethodOnSecond() {
+  ::fidl::Status
+  MethodOnSecond() {
     ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond> _request{};
     return ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond>(_client_end(), &_request);
   }
@@ -530,7 +533,8 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_service::SecondProtocol> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_service::SecondProtocol>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_service::SecondProtocol::MethodOnSecond> MethodOnSecond() {
+  ::fidl::Status
+  MethodOnSecond() {
     ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond> _request{};
     return ::fidl::WireUnownedResult<::test_service::SecondProtocol::MethodOnSecond>(_client_end(), _allocator(), &_request);
   }

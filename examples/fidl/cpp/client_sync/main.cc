@@ -106,7 +106,7 @@ int main(int argc, const char** argv) {
     // Make a SendString call using wire types.
     // [START send-string-wire]
     // [START send-string-wire-first-line]
-    fidl::WireResult wire_result = client.wire()->SendString("hi");
+    fidl::Status wire_result = client.wire()->SendString("hi");
     // [END send-string-wire-first-line]
     if (!wire_result.ok()) {
       FX_LOGS(ERROR) << "SendString failed: " << wire_result.error();

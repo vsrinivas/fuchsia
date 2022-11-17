@@ -195,7 +195,8 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_driveroneway::OneWay> final : public ::fdf::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_driveroneway::OneWay>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> Send(const ::test_driveroneway::wire::Payload& payload) {
+  ::fidl::Status
+  Send(const ::test_driveroneway::wire::Payload& payload) {
     ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send> _request{payload};
     return ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send>(_client_end(), _arena(), &_request);
   }

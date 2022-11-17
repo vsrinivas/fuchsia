@@ -43,7 +43,7 @@ int main(int argc, const char** argv) {
 
   {
     // Make a SendString call.
-    fidl::WireResult result = client->SendString("hi");
+    fidl::Status result = client->SendString("hi");
     if (!result.ok()) {
       FX_LOGS(ERROR) << "SendString failed: " << result.error();
       return -1;

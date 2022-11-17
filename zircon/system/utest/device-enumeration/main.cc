@@ -214,7 +214,7 @@ class DeviceEnumerationTest : public zxtest::Test {
       ASSERT_OK(endpoints.status_value());
       auto& [client, server] = endpoints.value();
 
-      const fidl::WireResult result =
+      const fidl::Status result =
           fidl::WireCall(driver_development.value())
               ->GetDeviceInfo({}, std::move(server), /* exact_match= */ true);
       ASSERT_OK(result.status());

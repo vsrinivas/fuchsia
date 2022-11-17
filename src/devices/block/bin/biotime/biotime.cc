@@ -120,7 +120,7 @@ static zx_status_t blkdev_open(int fd, const char* dev, size_t bufsz, blkdev_t* 
       fprintf(stderr, "error: cannot create server for '%s': %s\n", dev, server.status_string());
       return server.status_value();
     }
-    if (fidl::WireResult result = fidl::WireCall(channel)->OpenSession(std::move(server.value()));
+    if (fidl::Status result = fidl::WireCall(channel)->OpenSession(std::move(server.value()));
         !result.ok()) {
       fprintf(stderr, "error: cannot open session for '%s': %s\n", dev,
               result.FormatDescription().c_str());

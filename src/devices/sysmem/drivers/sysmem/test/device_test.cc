@@ -199,7 +199,7 @@ class FakeDdkSysmem : public zxtest::Test {
     fidl::BindServer(loop_.dispatcher(), std::move(connector_server_end), sysmem_.get());
     EXPECT_OK(loop_.StartThread());
 
-    fidl::WireResult result =
+    fidl::Status result =
         fidl::WireCall(connector_client_end)->Connect(std::move(allocator_server_end));
 
     EXPECT_OK(result);

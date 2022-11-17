@@ -25,7 +25,7 @@ void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const c
                        zx::result<fio::wire::NodeInfoDeprecated::Tag> expected) {
   zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
-  const fidl::WireResult result = fidl::WireCall(directory)->Open(
+  const fidl::Status result = fidl::WireCall(directory)->Open(
       fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kDescribe, 0,
       fidl::StringView::FromExternal(path), std::move(endpoints->server));
   ASSERT_OK(result.status());

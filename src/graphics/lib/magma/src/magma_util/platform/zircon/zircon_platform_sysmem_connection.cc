@@ -369,7 +369,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
  public:
   ~ZirconPlatformBufferCollection() override {
     if (collection_) {
-      __UNUSED fidl::WireResult result = collection_->Close();
+      __UNUSED fidl::Status result = collection_->Close();
     }
   }
 
@@ -480,7 +480,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
       : sysmem_allocator_(std::move(allocator)) {
     std::string debug_name =
         std::string("magma[") + magma::PlatformProcessHelper::GetCurrentProcessName() + "]";
-    __UNUSED fidl::WireResult result =
+    __UNUSED fidl::Status result =
         sysmem_allocator_->SetDebugClientInfo(fidl::StringView::FromExternal(debug_name),
                                               magma::PlatformProcessHelper::GetCurrentProcessId());
   }
@@ -599,8 +599,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(endpoints->client));
 
     if (!name.empty()) {
-      __UNUSED fidl::WireResult result =
-          collection->SetName(10, fidl::StringView::FromExternal(name));
+      __UNUSED fidl::Status result = collection->SetName(10, fidl::StringView::FromExternal(name));
     }
     status = collection->SetConstraints(true, constraints).status();
     if (status != ZX_OK)
@@ -609,7 +608,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     auto result = collection->WaitForBuffersAllocated();
 
     // Ignore failure - this just prevents unnecessary logged errors.
-    { __UNUSED fidl::WireResult result = collection->Close(); }
+    { __UNUSED fidl::Status result = collection->Close(); }
 
     if (result.status() != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",

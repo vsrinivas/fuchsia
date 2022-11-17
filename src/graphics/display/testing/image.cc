@@ -458,7 +458,7 @@ bool Image::Import(const fidl::WireSyncClient<fhd::Controller>& dc,
 
     info_out->events[i] = std::move(e1);
     info_out->event_ids[i] = event_id;
-    const fidl::WireResult result = dc->ImportEvent(std::move(e2), event_id++);
+    const fidl::Status result = dc->ImportEvent(std::move(e2), event_id++);
     if (!result.ok()) {
       printf("Failed to import event: %s\n", result.FormatDescription().c_str());
       return false;
@@ -484,7 +484,7 @@ bool Image::Import(const fidl::WireSyncClient<fhd::Controller>& dc,
   info_out->id = import_response.image_id;
 
   // image has been imported. we can close the connection
-  __UNUSED fidl::WireResult result = dc->ReleaseBufferCollection(collection_id_);
+  __UNUSED fidl::Status result = dc->ReleaseBufferCollection(collection_id_);
   return true;
 }
 

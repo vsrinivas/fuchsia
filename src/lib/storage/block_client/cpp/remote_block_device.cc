@@ -127,8 +127,7 @@ zx_status_t RemoteBlockDevice::Create(fidl::ClientEnd<fuchsia_hardware_block::Bl
     return endpoints.error_value();
   }
   auto& [session, server] = endpoints.value();
-  if (fidl::WireResult result = fidl::WireCall(device)->OpenSession(std::move(server));
-      !result.ok()) {
+  if (fidl::Status result = fidl::WireCall(device)->OpenSession(std::move(server)); !result.ok()) {
     return result.status();
   }
   const fidl::WireResult result = fidl::WireCall(session)->GetFifo();

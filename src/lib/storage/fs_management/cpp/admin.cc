@@ -27,7 +27,7 @@ zx::result<fidl::ClientEnd<fuchsia_io::Directory>> FsRootHandle(
   }
   auto& [client, server] = endpoints.value();
 
-  const fidl::WireResult result =
+  const fidl::Status result =
       fidl::WireCall(export_root)
           ->Open(flags, 0, "root", fidl::ServerEnd<fuchsia_io::Node>(server.TakeChannel()));
   if (!result.ok()) {

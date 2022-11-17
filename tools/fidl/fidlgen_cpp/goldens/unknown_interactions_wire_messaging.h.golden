@@ -6840,109 +6840,127 @@ class ::fidl::internal::WireSyncClientImpl<::test_unknowninteractions::UnknownIn
  public:
   
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> StrictOneWay() {
+    ::fidl::Status
+    StrictOneWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>(_client_end(), &_request);
     }
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> FlexibleOneWay() {
+    ::fidl::Status
+    FlexibleOneWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>(_client_end(), &_request);
     }
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> StrictTwoWay() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>
+    StrictTwoWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>(_client_end(), &_request);
     }
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> StrictTwoWayFields() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>
+    StrictTwoWayFields() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> StrictTwoWayUnion() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>
+    StrictTwoWayUnion() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> StrictTwoWayTable() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>
+    StrictTwoWayTable() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>(_client_end(), &_request);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> StrictTwoWayErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>
+    StrictTwoWayErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>(_client_end(), &_request);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> StrictTwoWayFieldsErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>
+    StrictTwoWayFieldsErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> StrictTwoWayUnionErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>
+    StrictTwoWayUnionErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> StrictTwoWayTableErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>
+    StrictTwoWayTableErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>(_client_end(), &_request);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> FlexibleTwoWay() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>
+    FlexibleTwoWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>(_client_end(), &_request);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> FlexibleTwoWayFields() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>
+    FlexibleTwoWayFields() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> FlexibleTwoWayUnion() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>
+    FlexibleTwoWayUnion() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> FlexibleTwoWayTable() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>
+    FlexibleTwoWayTable() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>(_client_end(), &_request);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> FlexibleTwoWayErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>
+    FlexibleTwoWayErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>(_client_end(), &_request);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> FlexibleTwoWayFieldsErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>
+    FlexibleTwoWayFieldsErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> FlexibleTwoWayUnionErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>
+    FlexibleTwoWayUnionErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> FlexibleTwoWayTableErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>
+    FlexibleTwoWayTableErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>(_client_end(), &_request);
     }
@@ -6961,109 +6979,127 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::Unk
  public:
   
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> StrictOneWay() {
+    ::fidl::Status
+    StrictOneWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> FlexibleOneWay() {
+    ::fidl::Status
+    FlexibleOneWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> StrictTwoWay() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>
+    StrictTwoWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> StrictTwoWayFields() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>
+    StrictTwoWayFields() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> StrictTwoWayUnion() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>
+    StrictTwoWayUnion() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> StrictTwoWayTable() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>
+    StrictTwoWayTable() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> StrictTwoWayErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>
+    StrictTwoWayErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> StrictTwoWayFieldsErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>
+    StrictTwoWayFieldsErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> StrictTwoWayUnionErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>
+    StrictTwoWayUnionErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> StrictTwoWayTableErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>
+    StrictTwoWayTableErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> FlexibleTwoWay() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>
+    FlexibleTwoWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> FlexibleTwoWayFields() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>
+    FlexibleTwoWayFields() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> FlexibleTwoWayUnion() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>
+    FlexibleTwoWayUnion() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> FlexibleTwoWayTable() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>
+    FlexibleTwoWayTable() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> FlexibleTwoWayErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>
+    FlexibleTwoWayErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> FlexibleTwoWayFieldsErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>
+    FlexibleTwoWayFieldsErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> FlexibleTwoWayUnionErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>
+    FlexibleTwoWayUnionErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> FlexibleTwoWayTableErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>
+    FlexibleTwoWayTableErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>(_client_end(), _allocator(), &_request);
     }
@@ -12379,61 +12415,71 @@ class ::fidl::internal::WireSyncClientImpl<::test_unknowninteractions::UnknownIn
  public:
   
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> StrictOneWay() {
+    ::fidl::Status
+    StrictOneWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>(_client_end(), &_request);
     }
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> FlexibleOneWay() {
+    ::fidl::Status
+    FlexibleOneWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>(_client_end(), &_request);
     }
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> StrictTwoWay() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>
+    StrictTwoWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>(_client_end(), &_request);
     }
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> StrictTwoWayFields() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>
+    StrictTwoWayFields() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> StrictTwoWayUnion() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>
+    StrictTwoWayUnion() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> StrictTwoWayTable() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>
+    StrictTwoWayTable() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>(_client_end(), &_request);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> StrictTwoWayErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>
+    StrictTwoWayErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>(_client_end(), &_request);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> StrictTwoWayFieldsErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>
+    StrictTwoWayFieldsErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> StrictTwoWayUnionErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>
+    StrictTwoWayUnionErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> StrictTwoWayTableErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>
+    StrictTwoWayTableErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>(_client_end(), &_request);
     }
@@ -12452,61 +12498,71 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::Unk
  public:
   
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> StrictOneWay() {
+    ::fidl::Status
+    StrictOneWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> FlexibleOneWay() {
+    ::fidl::Status
+    FlexibleOneWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> StrictTwoWay() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>
+    StrictTwoWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> StrictTwoWayFields() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>
+    StrictTwoWayFields() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> StrictTwoWayUnion() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>
+    StrictTwoWayUnion() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> StrictTwoWayTable() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>
+    StrictTwoWayTable() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> StrictTwoWayErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>
+    StrictTwoWayErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> StrictTwoWayFieldsErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>
+    StrictTwoWayFieldsErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> StrictTwoWayUnionErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>
+    StrictTwoWayUnionErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> StrictTwoWayTableErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>
+    StrictTwoWayTableErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>(_client_end(), _allocator(), &_request);
     }
@@ -16359,55 +16415,64 @@ class ::fidl::internal::WireSyncClientImpl<::test_unknowninteractions::UnknownIn
  public:
   
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> StrictOneWay() {
+    ::fidl::Status
+    StrictOneWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>(_client_end(), &_request);
     }
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> StrictTwoWay() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>
+    StrictTwoWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>(_client_end(), &_request);
     }
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> StrictTwoWayFields() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>
+    StrictTwoWayFields() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> StrictTwoWayUnion() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>
+    StrictTwoWayUnion() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> StrictTwoWayTable() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>
+    StrictTwoWayTable() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>(_client_end(), &_request);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> StrictTwoWayErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>
+    StrictTwoWayErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>(_client_end(), &_request);
     }
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> StrictTwoWayFieldsErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>
+    StrictTwoWayFieldsErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> StrictTwoWayUnionErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>
+    StrictTwoWayUnionErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>(_client_end(), &_request);
     }
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> StrictTwoWayTableErr() {
+    ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>
+    StrictTwoWayTableErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> _request{  };
       return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>(_client_end(), &_request);
     }
@@ -16426,55 +16491,64 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::Unk
  public:
   
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> StrictOneWay() {
+    ::fidl::Status
+    StrictOneWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> StrictTwoWay() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>
+    StrictTwoWay() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> StrictTwoWayFields() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>
+    StrictTwoWayFields() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> StrictTwoWayUnion() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>
+    StrictTwoWayUnion() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> StrictTwoWayTable() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>
+    StrictTwoWayTable() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> StrictTwoWayErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>
+    StrictTwoWayErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> StrictTwoWayFieldsErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>
+    StrictTwoWayFieldsErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> StrictTwoWayUnionErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>
+    StrictTwoWayUnionErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> StrictTwoWayTableErr() {
+    ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>
+    StrictTwoWayTableErr() {
       ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> _request{  };
       return ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>(_client_end(), _allocator(), &_request);
     }

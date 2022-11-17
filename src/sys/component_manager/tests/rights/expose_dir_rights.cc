@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     }
     auto& [client, node_server] = endpoints.value();
     fidl::ServerEnd<fuchsia_io::Node> server(node_server.TakeChannel());
-    if (fidl::WireResult result = fidl::WireCall(memfs_dir)->Clone(rights, std::move(server));
+    if (fidl::Status result = fidl::WireCall(memfs_dir)->Clone(rights, std::move(server));
         !result.ok()) {
       fprintf(stderr, "Failed to clone memfs dir: %s\n", result.FormatDescription().c_str());
       return -1;

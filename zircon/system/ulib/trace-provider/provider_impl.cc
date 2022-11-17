@@ -97,7 +97,7 @@ EXPORT trace_provider_t* trace_provider_create_with_name(zx_handle_t to_service_
   }
 
   // Register the trace provider.
-  const fidl::WireResult result =
+  const fidl::Status result =
       fidl::WireCall(to_service)
           ->RegisterProvider(std::move(endpoints->client), trace::internal::GetPid(),
                              fidl::StringView::FromExternal(name));

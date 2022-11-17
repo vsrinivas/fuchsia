@@ -732,7 +732,7 @@ zx::result<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
       return endpoints.take_error();
     }
     auto& [session, server] = endpoints.value();
-    if (fidl::WireResult result = fidl::WireCall(device)->OpenSession(std::move(server));
+    if (fidl::Status result = fidl::WireCall(device)->OpenSession(std::move(server));
         !result.ok()) {
       return zx::error(result.status());
     }

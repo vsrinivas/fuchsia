@@ -161,7 +161,7 @@ void CoreDisplayTest::CreateToken() {
   ASSERT_TRUE(endpoints.is_ok(), "%s", endpoints.status_string());
 
   // Pass token server to sysmem allocator
-  const fidl::WireResult result =
+  const fidl::Status result =
       sysmem_allocator_->AllocateSharedCollection(std::move(endpoints->server));
   ASSERT_TRUE(result.ok(), "%s", result.status_string());
 
@@ -174,7 +174,7 @@ void CoreDisplayTest::DuplicateAndImportToken() {
   ASSERT_TRUE(endpoints.is_ok(), "%s", endpoints.status_string());
 
   {
-    const fidl::WireResult result =
+    const fidl::Status result =
         token_->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(endpoints->server));
     ASSERT_TRUE(result.ok(), "%s", result.status_string());
   }
@@ -206,7 +206,7 @@ void CoreDisplayTest::FinalizeClientConstraints() {
   ASSERT_TRUE(endpoints.is_ok(), "%s", endpoints.status_string());
 
   {
-    const fidl::WireResult result = sysmem_allocator_->BindSharedCollection(
+    const fidl::Status result = sysmem_allocator_->BindSharedCollection(
         token_.TakeClientEnd(), std::move(endpoints->server));
     ASSERT_TRUE(result.ok(), "%s", result.status_string());
   }
@@ -240,7 +240,7 @@ void CoreDisplayTest::FinalizeClientConstraints() {
 
   collection_ = fidl::WireSyncClient(std::move(endpoints->client));
   {
-    const fidl::WireResult result = collection_->SetConstraints(true, constraints);
+    const fidl::Status result = collection_->SetConstraints(true, constraints);
     ASSERT_TRUE(result.ok(), "%s", result.status_string());
   }
 

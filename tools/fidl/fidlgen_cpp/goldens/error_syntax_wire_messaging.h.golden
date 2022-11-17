@@ -669,13 +669,15 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>> {
  public:
   // Allocates 40 bytes of response buffer on the stack. Request is heap-allocated.
-  ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> ComposedCallWhichMayFail(::fidl::StringView s) {
+  ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+  ComposedCallWhichMayFail(::fidl::StringView s) {
     ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> _request{s};
     return ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(_client_end(), &_request);
   }
 
   // Allocates 40 bytes of response buffer on the stack. Request is heap-allocated.
-  ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> CallWhichMayFail(::fidl::StringView s) {
+  ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+  CallWhichMayFail(::fidl::StringView s) {
     ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> _request{s};
     return ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(_client_end(), &_request);
   }
@@ -691,13 +693,15 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> ComposedCallWhichMayFail(::fidl::StringView s) {
+  ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+  ComposedCallWhichMayFail(::fidl::StringView s) {
     ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> _request{s};
     return ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(_client_end(), _allocator(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> CallWhichMayFail(::fidl::StringView s) {
+  ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+  CallWhichMayFail(::fidl::StringView s) {
     ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> _request{s};
     return ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(_client_end(), _allocator(), &_request);
   }

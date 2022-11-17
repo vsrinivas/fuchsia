@@ -257,7 +257,8 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<::test_inheritancewithrecursivedecl::Parent> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_inheritancewithrecursivedecl::Parent>> {
  public:
   // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-  ::fidl::WireResult<::test_inheritancewithrecursivedecl::Parent::First> First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
+  ::fidl::Status
+  First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
     ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First> _request{std::move(request)};
     return ::fidl::WireResult<::test_inheritancewithrecursivedecl::Parent::First>(_client_end(), &_request);
   }
@@ -273,7 +274,8 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_inheritancewithrecursivedecl::Parent> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_inheritancewithrecursivedecl::Parent>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_inheritancewithrecursivedecl::Parent::First> First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
+  ::fidl::Status
+  First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
     ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First> _request{std::move(request)};
     return ::fidl::WireUnownedResult<::test_inheritancewithrecursivedecl::Parent::First>(_client_end(), _allocator(), &_request);
   }
@@ -698,13 +700,15 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<::test_inheritancewithrecursivedecl::Child> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_inheritancewithrecursivedecl::Child>> {
  public:
   // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-  ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::First> First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
+  ::fidl::Status
+  First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
     ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First> _request{std::move(request)};
     return ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::First>(_client_end(), &_request);
   }
 
   // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-  ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::Second> Second(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
+  ::fidl::Status
+  Second(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
     ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second> _request{std::move(request)};
     return ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::Second>(_client_end(), &_request);
   }
@@ -720,13 +724,15 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_inheritancewithrecursivedecl::Child> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_inheritancewithrecursivedecl::Child>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_inheritancewithrecursivedecl::Child::First> First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
+  ::fidl::Status
+  First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
     ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First> _request{std::move(request)};
     return ::fidl::WireUnownedResult<::test_inheritancewithrecursivedecl::Child::First>(_client_end(), _allocator(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_inheritancewithrecursivedecl::Child::Second> Second(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
+  ::fidl::Status
+  Second(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
     ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second> _request{std::move(request)};
     return ::fidl::WireUnownedResult<::test_inheritancewithrecursivedecl::Child::Second>(_client_end(), _allocator(), &_request);
   }

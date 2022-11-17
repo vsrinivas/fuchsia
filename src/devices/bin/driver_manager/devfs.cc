@@ -667,9 +667,9 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
         return endpoints.status_value();
       }
       auto& [client, server] = endpoints.value();
-      const fidl::WireResult result = fidl::WireCall(service_dir)
-                                          ->Clone(fio::wire::OpenFlags::kCloneSameRights,
-                                                  fidl::ServerEnd<fio::Node>{server.TakeChannel()});
+      const fidl::Status result = fidl::WireCall(service_dir)
+                                      ->Clone(fio::wire::OpenFlags::kCloneSameRights,
+                                              fidl::ServerEnd<fio::Node>{server.TakeChannel()});
       if (!result.ok()) {
         return result.status();
       }

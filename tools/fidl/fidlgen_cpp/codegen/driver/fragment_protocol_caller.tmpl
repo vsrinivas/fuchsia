@@ -15,7 +15,8 @@ class {{ .WireSyncBufferClientImpl }} final :
   {{ range .ClientMethods }}
     {{- .Docs }}
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    {{ .WireUnownedResult }} {{ .Name }}({{ RenderParams .RequestArgs }}) {
+    {{ if .HasResponse }}{{ .WireUnownedResult }}{{ else }}::fidl::Status{{ end }}
+    {{ .Name }}({{ RenderParams .RequestArgs }}) {
       {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
       return {{ .WireUnownedResult }}(_client_end(), _arena(), &_request);
     }

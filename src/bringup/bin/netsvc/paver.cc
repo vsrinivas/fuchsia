@@ -127,7 +127,7 @@ int Paver::StreamBuffer() {
     return 0;
   }
 
-  fidl::WireResult res = paver_svc_->FindDataSink(std::move(data_sink->server));
+  fidl::Status res = paver_svc_->FindDataSink(std::move(data_sink->server));
   if (!res.ok()) {
     fprintf(stderr, "netsvc: unable to find data sink\n");
     exit_code_.store(res.status());
@@ -192,7 +192,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
     return 0;
   }
 
-  fidl::WireResult res = paver_svc_->FindBootManager(std::move(endpoints->server));
+  fidl::Status res = paver_svc_->FindBootManager(std::move(endpoints->server));
   if (!res.ok()) {
     fprintf(stderr, "netsvc: unable to find boot manager\n");
     exit_code_.store(res.status());
@@ -302,7 +302,7 @@ zx_status_t Paver::ClearSysconfig() {
     return endpoints.status_value();
   }
 
-  fidl::WireResult status_find_sysconfig = paver_svc_->FindSysconfig(std::move(endpoints->server));
+  fidl::Status status_find_sysconfig = paver_svc_->FindSysconfig(std::move(endpoints->server));
   if (!status_find_sysconfig.ok()) {
     fprintf(stderr, "netsvc: unable to find sysconfig\n");
     return status_find_sysconfig.status();
@@ -369,7 +369,7 @@ zx_status_t Paver::OpenDataSink(fuchsia_mem::wire::Buffer buffer,
     return endpoints.status_value();
   }
 
-  fidl::WireResult res =
+  fidl::Status res =
       paver_svc_->UseBlockDevice(std::move(client_end.value()), std::move(endpoints->server));
   if (!res.ok()) {
     fprintf(stderr, "netsvc: unable to use block device.\n");
@@ -489,7 +489,7 @@ int Paver::MonitorBuffer() {
     return 0;
   }
 
-  fidl::WireResult res = paver_svc_->FindDataSink(std::move(endpoints->server));
+  fidl::Status res = paver_svc_->FindDataSink(std::move(endpoints->server));
   if (!res.ok()) {
     fprintf(stderr, "netsvc: unable to find data sink\n");
     exit_code_.store(res.status());

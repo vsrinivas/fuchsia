@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     }
     auto& [client, node_server] = endpoints.value();
     fidl::ServerEnd<fuchsia_io::Node> server(node_server.TakeChannel());
-    if (fidl::WireResult result =
+    if (fidl::Status result =
             fidl::WireCall(memfs_dir)->Clone(fuchsia_io::wire::OpenFlags::kRightReadable |
                                                  fuchsia_io::wire::OpenFlags::kRightWritable,
                                              std::move(server));

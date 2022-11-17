@@ -2005,31 +2005,36 @@ class ::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::DenyEachBind
  public:
   
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> OnlyDenyDart(bool a) {
+    ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+    OnlyDenyDart(bool a) {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> _request{ a };
       return ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>(_client_end(), &_request);
     }
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> OnlyDenyGo(bool a) {
+    ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+    OnlyDenyGo(bool a) {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> _request{ a };
       return ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>(_client_end(), &_request);
     }
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> OnlyDenyLibfuzzer(bool a) {
+    ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+    OnlyDenyLibfuzzer(bool a) {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> _request{ a };
       return ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>(_client_end(), &_request);
     }
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> OnlyDenyRust(bool a) {
+    ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+    OnlyDenyRust(bool a) {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> _request{ a };
       return ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>(_client_end(), &_request);
     }
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> OnlyDenySyzkaller(bool a) {
+    ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+    OnlyDenySyzkaller(bool a) {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> _request{ a };
       return ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>(_client_end(), &_request);
     }
@@ -2048,31 +2053,36 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_bindingsdenylist::DenyEa
  public:
   
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> OnlyDenyDart(bool a) {
+    ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+    OnlyDenyDart(bool a) {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> _request{ a };
       return ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> OnlyDenyGo(bool a) {
+    ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+    OnlyDenyGo(bool a) {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> _request{ a };
       return ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> OnlyDenyLibfuzzer(bool a) {
+    ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+    OnlyDenyLibfuzzer(bool a) {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> _request{ a };
       return ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> OnlyDenyRust(bool a) {
+    ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+    OnlyDenyRust(bool a) {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> _request{ a };
       return ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> OnlyDenySyzkaller(bool a) {
+    ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+    OnlyDenySyzkaller(bool a) {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> _request{ a };
       return ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>(_client_end(), _allocator(), &_request);
     }
@@ -2926,13 +2936,15 @@ class ::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::ImportsSameN
  public:
   
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> Unattributed() {
+    ::fidl::Status
+    Unattributed() {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> _request{  };
       return ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>(_client_end(), &_request);
     }
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> AlwaysAppearsInImportingLibrary() {
+    ::fidl::Status
+    AlwaysAppearsInImportingLibrary() {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> _request{  };
       return ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>(_client_end(), &_request);
     }
@@ -2951,13 +2963,15 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_bindingsdenylist::Import
  public:
   
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> Unattributed() {
+    ::fidl::Status
+    Unattributed() {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> _request{  };
       return ::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>(_client_end(), _allocator(), &_request);
     }
 
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-    ::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> AlwaysAppearsInImportingLibrary() {
+    ::fidl::Status
+    AlwaysAppearsInImportingLibrary() {
       ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> _request{  };
       return ::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>(_client_end(), _allocator(), &_request);
     }

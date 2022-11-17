@@ -64,7 +64,7 @@ zx::result<> BlockPartitionClient::RegisterFastBlockIo() {
     return endpoints.take_error();
   }
   auto& [client, server] = endpoints.value();
-  if (fidl::WireResult result = partition_->OpenSession(std::move(server)); !result.ok()) {
+  if (fidl::Status result = partition_->OpenSession(std::move(server)); !result.ok()) {
     return zx::error(result.status());
   }
   const fidl::WireResult result = fidl::WireCall(client)->GetFifo();

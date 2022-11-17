@@ -35,8 +35,7 @@ zx::result<fidl::ClientEnd<fuchsia_hardware_network::StatusWatcher>> GetStatusWa
     return port_endpoints.take_error();
   }
   {
-    fidl::WireResult result =
-        fidl::WireCall(device)->GetPort(port, std::move(port_endpoints->server));
+    fidl::Status result = fidl::WireCall(device)->GetPort(port, std::move(port_endpoints->server));
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -48,8 +47,8 @@ zx::result<fidl::ClientEnd<fuchsia_hardware_network::StatusWatcher>> GetStatusWa
   }
 
   {
-    fidl::WireResult result = fidl::WireCall(port_endpoints->client)
-                                  ->GetStatusWatcher(std::move(watcher_endpoints->server), buffer);
+    fidl::Status result = fidl::WireCall(port_endpoints->client)
+                              ->GetStatusWatcher(std::move(watcher_endpoints->server), buffer);
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -99,7 +98,7 @@ zx::result<fidl::ClientEnd<fuchsia_hardware_network::PortWatcher>> GetPortWatche
     return endpoints.take_error();
   }
   {
-    fidl::WireResult result = fidl::WireCall(device)->GetPortWatcher(std::move(endpoints->server));
+    fidl::Status result = fidl::WireCall(device)->GetPortWatcher(std::move(endpoints->server));
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -566,7 +565,7 @@ class TunTest : public gtest::RealLoopFixture {
     if (tun.is_error()) {
       return tun.take_error();
     }
-    fidl::WireResult result =
+    fidl::Status result =
         tun.value()->CreateDevice(std::move(config), std::move(endpoints->server));
     if (!result.ok()) {
       return zx::error(result.status());
@@ -607,8 +606,7 @@ class TunTest : public gtest::RealLoopFixture {
     if (tun.is_error()) {
       return tun.take_error();
     }
-    fidl::WireResult result =
-        tun.value()->CreatePair(std::move(config), std::move(endpoints->server));
+    fidl::Status result = tun.value()->CreatePair(std::move(config), std::move(endpoints->server));
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -665,7 +663,7 @@ TEST_F(TunTest, InvalidPortConfigs) {
       return port_endpoints.status_value();
     }
 
-    fidl::WireResult result = device->AddPort(config, std::move(port_endpoints->server));
+    fidl::Status result = device->AddPort(config, std::move(port_endpoints->server));
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -808,7 +806,7 @@ TEST_F(TunTest, Status) {
   zx::result port_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
   ASSERT_OK(port_endpoints.status_value());
   {
-    fidl::WireResult result = device->GetPort(port_id, std::move(port_endpoints->server));
+    fidl::Status result = device->GetPort(port_id, std::move(port_endpoints->server));
     ASSERT_OK(result.status());
   }
   fidl::WireSyncClient port{std::move(port_endpoints->client)};

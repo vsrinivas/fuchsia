@@ -328,7 +328,8 @@ class ::fidl::internal::WireSyncClientImpl<::test_doccomments::Interface> final 
   /// method comment #3
   //
   // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-  ::fidl::WireResult<::test_doccomments::Interface::Method> Method() {
+  ::fidl::Status
+  Method() {
     ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method> _request{};
     return ::fidl::WireResult<::test_doccomments::Interface::Method>(_client_end(), &_request);
   }
@@ -347,7 +348,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_doccomments::Interface> 
   ///
   /// method comment #3
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_doccomments::Interface::Method> Method() {
+  ::fidl::Status
+  Method() {
     ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method> _request{};
     return ::fidl::WireUnownedResult<::test_doccomments::Interface::Method>(_client_end(), _allocator(), &_request);
   }

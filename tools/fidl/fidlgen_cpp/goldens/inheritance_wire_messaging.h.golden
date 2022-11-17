@@ -391,7 +391,8 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<::test_inheritance::Super> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_inheritance::Super>> {
  public:
   // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-  ::fidl::WireResult<::test_inheritance::Super::Foo> Foo(::fidl::StringView s) {
+  ::fidl::WireResult<::test_inheritance::Super::Foo>
+  Foo(::fidl::StringView s) {
     ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo> _request{s};
     return ::fidl::WireResult<::test_inheritance::Super::Foo>(_client_end(), &_request);
   }
@@ -407,7 +408,8 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_inheritance::Super> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_inheritance::Super>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_inheritance::Super::Foo> Foo(::fidl::StringView s) {
+  ::fidl::WireUnownedResult<::test_inheritance::Super::Foo>
+  Foo(::fidl::StringView s) {
     ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo> _request{s};
     return ::fidl::WireUnownedResult<::test_inheritance::Super::Foo>(_client_end(), _allocator(), &_request);
   }
@@ -864,7 +866,8 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<::test_inheritance::Sub> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_inheritance::Sub>> {
  public:
   // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-  ::fidl::WireResult<::test_inheritance::Sub::Foo> Foo(::fidl::StringView s) {
+  ::fidl::WireResult<::test_inheritance::Sub::Foo>
+  Foo(::fidl::StringView s) {
     ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo> _request{s};
     return ::fidl::WireResult<::test_inheritance::Sub::Foo>(_client_end(), &_request);
   }
@@ -880,7 +883,8 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_inheritance::Sub> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_inheritance::Sub>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo> Foo(::fidl::StringView s) {
+  ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo>
+  Foo(::fidl::StringView s) {
     ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo> _request{s};
     return ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo>(_client_end(), _allocator(), &_request);
   }

@@ -163,7 +163,7 @@ zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logge
           status != ZX_OK) {
         return zx::error(status);
       }
-      const fidl::WireResult result =
+      const fidl::Status result =
           fidl::WireCall(logger.value())->ConnectStructured(std::move(remote));
       if (!result.ok()) {
         return zx::error(result.status());

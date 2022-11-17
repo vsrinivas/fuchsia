@@ -394,7 +394,8 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<::test_anonymous::SomeProtocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_anonymous::SomeProtocol>> {
  public:
   // Allocates 128 bytes of message buffer on the stack. No heap allocation necessary.
-  ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod> SomeMethod(::test_anonymous::wire::UnionMember union_member, ::test_anonymous::wire::TableMember table_member) {
+  ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>
+  SomeMethod(::test_anonymous::wire::UnionMember union_member, ::test_anonymous::wire::TableMember table_member) {
     ::fidl::internal::TransactionalRequest<::test_anonymous::SomeProtocol::SomeMethod> _request{union_member, table_member};
     return ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>(_client_end(), &_request);
   }
@@ -410,7 +411,8 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_anonymous::SomeProtocol> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_anonymous::SomeProtocol>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::SomeMethod> SomeMethod(::test_anonymous::wire::UnionMember union_member, ::test_anonymous::wire::TableMember table_member) {
+  ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::SomeMethod>
+  SomeMethod(::test_anonymous::wire::UnionMember union_member, ::test_anonymous::wire::TableMember table_member) {
     ::fidl::internal::TransactionalRequest<::test_anonymous::SomeProtocol::SomeMethod> _request{union_member, table_member};
     return ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::SomeMethod>(_client_end(), _allocator(), &_request);
   }

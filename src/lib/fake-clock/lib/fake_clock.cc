@@ -39,8 +39,7 @@ zx::eventpair MakeEvent(zx_time_t deadline) {
   if (zx_status_t status = zx::eventpair::create(0, &l, &r); status != ZX_OK) {
     ZX_PANIC("%s", zx_status_get_string(status));
   }
-  const fidl::WireResult result =
-      fidl::WireCall(GetService())->RegisterEvent(std::move(r), deadline);
+  const fidl::Status result = fidl::WireCall(GetService())->RegisterEvent(std::move(r), deadline);
   ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   return l;
 }

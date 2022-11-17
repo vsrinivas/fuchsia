@@ -129,7 +129,7 @@ TEST(BlkdevTests, blkdev_test_fifo_no_op) {
   ASSERT_OK(endpoints);
   auto& [session, server] = endpoints.value();
 
-  const fidl::WireResult result = fidl::WireCall(client)->OpenSession(std::move(server));
+  const fidl::Status result = fidl::WireCall(client)->OpenSession(std::move(server));
   ASSERT_OK(result.status());
 }
 
@@ -147,7 +147,7 @@ zx::result<std::unique_ptr<block_client::Client>> CreateSession(
   }
   auto& [session, server] = endpoints.value();
 
-  const fidl::WireResult result = fidl::WireCall(block)->OpenSession(std::move(server));
+  const fidl::Status result = fidl::WireCall(block)->OpenSession(std::move(server));
   if (!result.ok()) {
     return zx::error(result.status());
   }

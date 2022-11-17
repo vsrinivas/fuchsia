@@ -79,7 +79,7 @@ zx::result<fidl::ClientEnd<fuchsia_hardware_pty::Device>> CreateVirtualConsole(
   }
   auto& [client, server] = endpoints.value();
 
-  const fidl::WireResult result = session_manager->CreateSession(std::move(server));
+  const fidl::Status result = session_manager->CreateSession(std::move(server));
   if (!result.ok()) {
     FX_PLOGS(ERROR, result.status()) << "failed to create virtcon session";
     return zx::error(result.status());
@@ -191,7 +191,7 @@ std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& 
     }
     auto& [client, server] = endpoints.value();
 
-    const fidl::WireResult result = fidl::WireCall(stdio)->Clone2(
+    const fidl::Status result = fidl::WireCall(stdio)->Clone2(
         fidl::ServerEnd<fuchsia_unknown::Cloneable>(server.TakeChannel()));
     if (!result.ok()) {
       FX_PLOGS(FATAL, result.status()) << "failed to clone stdio handle";
@@ -273,7 +273,7 @@ int main(int argv, char** argc) {
 
     std::string_view path = flat->path[i];
 
-    const fidl::WireResult result =
+    const fidl::Status result =
         fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(flat->handle[i]))
             ->Clone(fuchsia_io::wire::OpenFlags::kDescribe |
                         fuchsia_io::wire::OpenFlags::kCloneSameRights,
@@ -433,8 +433,8 @@ int main(int argv, char** argc) {
       if (server.is_error()) {
         FX_PLOGS(FATAL, server.status_value()) << "failed to create pty endpoints";
       }
-      const fidl::WireResult result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
-                                          ->ConnectToDeviceFidl(server.value().TakeChannel());
+      const fidl::Status result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+                                      ->ConnectToDeviceFidl(server.value().TakeChannel());
       if (!result.ok()) {
         FX_PLOGS(FATAL, result.status()) << "failed to get virtio console channel";
       }

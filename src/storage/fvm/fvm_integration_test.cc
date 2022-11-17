@@ -373,7 +373,7 @@ VmoClient::VmoClient(int fd) : fd_(fd) {
   ASSERT_OK(endpoints);
   auto& [session, server] = endpoints.value();
 
-  const fidl::WireResult result =
+  const fidl::Status result =
       fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())
           ->OpenSession(std::move(server));
   ASSERT_OK(result.status());

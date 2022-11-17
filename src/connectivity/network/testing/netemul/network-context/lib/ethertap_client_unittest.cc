@@ -38,7 +38,7 @@ class EthertapClientTest : public gtest::RealLoopFixture {
 
   zx::result<fidl::InterfaceHandle<fuchsia::netemul::devmgr::IsolatedDevmgr>> GetDevmgr() {
     fidl::InterfaceHandle<fuchsia::netemul::devmgr::IsolatedDevmgr> devmgr;
-    fidl::WireResult result =
+    fidl::Status result =
         fidl::WireCall(devfs_root_.directory())
             ->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights,
                     fidl::ServerEnd<fuchsia_io::Node>(devmgr.NewRequest().TakeChannel()));

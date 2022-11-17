@@ -364,7 +364,7 @@ class Remote : public HasIo {
       return endpoints.status_value();
     }
     auto [client_end, server_end] = std::move(endpoints.value());
-    const fidl::WireResult result =
+    const fidl::Status result =
         client()->Clone(fio::wire::OpenFlags::kCloneSameRights, std::move(server_end));
     if (!result.ok()) {
       return result.status();
@@ -455,7 +455,7 @@ class Pty : public Remote<fuchsia_hardware_pty::Device> {
       return endpoints.status_value();
     }
     auto [client_end, server_end] = std::move(endpoints.value());
-    const fidl::WireResult result = client()->Clone2(std::move(server_end));
+    const fidl::Status result = client()->Clone2(std::move(server_end));
     if (!result.ok()) {
       return result.status();
     }
@@ -886,7 +886,7 @@ zx_status_t Remote<Protocol>::Open(uint32_t flags, uint32_t mode, const char* pa
     return endpoints.status_value();
   }
   auto [client_end, server_end] = std::move(endpoints.value());
-  const fidl::WireResult result =
+  const fidl::Status result =
       client()->Open(static_cast<fio::wire::OpenFlags>(flags) | fio::wire::OpenFlags::kDescribe,
                      mode, fidl::StringView::FromExternal(path, path_len), std::move(server_end));
   if (!result.ok()) {
@@ -899,7 +899,7 @@ template <typename Protocol>
 zx_status_t Remote<Protocol>::OpenAsync(uint32_t flags, uint32_t mode, const char* path,
                                         size_t path_len, zx_handle_t request) {
   fidl::ServerEnd<fio::Node> node_request{zx::channel(request)};
-  const fidl::WireResult result =
+  const fidl::Status result =
       client()->Open(static_cast<fio::wire::OpenFlags>(flags), mode,
                      fidl::StringView::FromExternal(path, path_len), std::move(node_request));
   return result.status();

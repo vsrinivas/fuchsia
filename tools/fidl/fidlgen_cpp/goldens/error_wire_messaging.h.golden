@@ -393,7 +393,8 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<::test_error::Example> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_error::Example>> {
  public:
   // Allocates 40 bytes of response buffer on the stack. Request is heap-allocated.
-  ::fidl::WireResult<::test_error::Example::Foo> Foo(::fidl::StringView s) {
+  ::fidl::WireResult<::test_error::Example::Foo>
+  Foo(::fidl::StringView s) {
     ::fidl::internal::TransactionalRequest<::test_error::Example::Foo> _request{s};
     return ::fidl::WireResult<::test_error::Example::Foo>(_client_end(), &_request);
   }
@@ -409,7 +410,8 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_error::Example> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_error::Example>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_error::Example::Foo> Foo(::fidl::StringView s) {
+  ::fidl::WireUnownedResult<::test_error::Example::Foo>
+  Foo(::fidl::StringView s) {
     ::fidl::internal::TransactionalRequest<::test_error::Example::Foo> _request{s};
     return ::fidl::WireUnownedResult<::test_error::Example::Foo>(_client_end(), _allocator(), &_request);
   }

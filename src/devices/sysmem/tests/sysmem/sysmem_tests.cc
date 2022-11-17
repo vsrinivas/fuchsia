@@ -143,7 +143,7 @@ zx::result<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_dr
   }
 
   fidl::WireSyncClient allocator{std::move(allocator_endpoints->client)};
-  const fidl::WireResult result =
+  const fidl::Status result =
       allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
   EXPECT_OK(result.status());
   return zx::ok(std::move(allocator));
@@ -156,7 +156,7 @@ zx::result<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_se
     return zx::error(client_end.status_value());
   }
   fidl::WireSyncClient allocator{std::move(client_end.value())};
-  const fidl::WireResult result =
+  const fidl::Status result =
       allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
   EXPECT_OK(result.status());
   return zx::ok(std::move(allocator));

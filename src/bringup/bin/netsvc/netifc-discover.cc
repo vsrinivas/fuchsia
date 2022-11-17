@@ -75,7 +75,7 @@ struct Netdevice {
     auto& [client_end, server_end] = endpoints.value();
 
     {
-      fidl::WireResult result = fidl::WireCall(instance)->GetDevice(std::move(server_end));
+      fidl::Status result = fidl::WireCall(instance)->GetDevice(std::move(server_end));
       if (!result.ok()) {
         printf("netifc: failed to get NetworkDevice from instance %s: %s\n", filename.c_str(),
                result.status_string());
@@ -92,7 +92,7 @@ struct Netdevice {
     auto& [watcher_client_end, watcher_server_end] = watcher_endpoints.value();
 
     {
-      fidl::WireResult result =
+      fidl::Status result =
           fidl::WireCall(client_end)->GetPortWatcher(std::move(watcher_server_end));
       if (!result.ok()) {
         printf("netifc: failed to get port watcher %s: %s\n", filename.c_str(),
@@ -156,8 +156,7 @@ struct Netdevice {
           }
           auto [port_client_end, port_server_end] = std::move(port_endpoints.value());
           {
-            fidl::WireResult result =
-                fidl::WireCall(dev)->GetPort(port_id, std::move(port_server_end));
+            fidl::Status result = fidl::WireCall(dev)->GetPort(port_id, std::move(port_server_end));
             if (!result.ok()) {
               printf("netifc: failed to get netdevice port (%d:%d): %s\n", port_id.base,
                      port_id.salt, result.FormatDescription().c_str());
@@ -205,7 +204,7 @@ struct Netdevice {
           }
           auto [mac_client_end, mac_server_end] = std::move(mac_endpoints.value());
           {
-            fidl::WireResult result =
+            fidl::Status result =
                 fidl::WireCall(port_client_end)->GetMac(std::move(mac_server_end));
             if (!result.ok()) {
               printf("netifc: failed to get mac addressing for port (%d:%d): %s\n", port_id.base,

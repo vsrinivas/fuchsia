@@ -244,7 +244,8 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_placementofattributes::ExampleProtocol>> {
  public:
   // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-  ::fidl::WireResult<::test_placementofattributes::ExampleProtocol::Method> Method(const ::test_exampleusing::wire::Empty& arg) {
+  ::fidl::Status
+  Method(const ::test_exampleusing::wire::Empty& arg) {
     ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method> _request{arg};
     return ::fidl::WireResult<::test_placementofattributes::ExampleProtocol::Method>(_client_end(), &_request);
   }
@@ -260,7 +261,8 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_placementofattributes::ExampleProtocol>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_placementofattributes::ExampleProtocol::Method> Method(const ::test_exampleusing::wire::Empty& arg) {
+  ::fidl::Status
+  Method(const ::test_exampleusing::wire::Empty& arg) {
     ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method> _request{arg};
     return ::fidl::WireUnownedResult<::test_placementofattributes::ExampleProtocol::Method>(_client_end(), _allocator(), &_request);
   }

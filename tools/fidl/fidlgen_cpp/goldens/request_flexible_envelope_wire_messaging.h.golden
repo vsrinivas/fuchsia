@@ -661,13 +661,15 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<::test_requestflexibleenvelope::Protocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_requestflexibleenvelope::Protocol>> {
  public:
   // Request is heap-allocated. Response is heap-allocated.
-  ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> RequestStrictResponseFlexible(::test_requestflexibleenvelope::wire::StrictFoo s) {
+  ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
+  RequestStrictResponseFlexible(::test_requestflexibleenvelope::wire::StrictFoo s) {
     ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> _request{s};
     return ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(_client_end(), &_request);
   }
 
   // Request is heap-allocated. Response is heap-allocated.
-  ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> RequestFlexibleResponseStrict(::test_requestflexibleenvelope::wire::FlexibleFoo s) {
+  ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
+  RequestFlexibleResponseStrict(::test_requestflexibleenvelope::wire::FlexibleFoo s) {
     ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> _request{s};
     return ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(_client_end(), &_request);
   }
@@ -683,13 +685,15 @@ template <>
 class ::fidl::internal::WireSyncBufferClientImpl<::test_requestflexibleenvelope::Protocol> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_requestflexibleenvelope::Protocol>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> RequestStrictResponseFlexible(::test_requestflexibleenvelope::wire::StrictFoo s) {
+  ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
+  RequestStrictResponseFlexible(::test_requestflexibleenvelope::wire::StrictFoo s) {
     ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> _request{s};
     return ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(_client_end(), _allocator(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
-  ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> RequestFlexibleResponseStrict(::test_requestflexibleenvelope::wire::FlexibleFoo s) {
+  ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
+  RequestFlexibleResponseStrict(::test_requestflexibleenvelope::wire::FlexibleFoo s) {
     ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> _request{s};
     return ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(_client_end(), _allocator(), &_request);
   }

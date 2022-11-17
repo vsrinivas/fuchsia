@@ -75,7 +75,7 @@ class NetDeviceDriverTest : public ::testing::Test {
       return client.take_error();
     }
     auto [client_end, server_end] = std::move(*endpoints);
-    fidl::WireResult result = client->GetDevice(std::move(server_end));
+    fidl::Status result = client->GetDevice(std::move(server_end));
     if (zx_status_t status = result.status(); status != ZX_OK) {
       return zx::error(status);
     }
