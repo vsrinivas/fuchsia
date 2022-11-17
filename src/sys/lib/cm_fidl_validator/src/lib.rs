@@ -122,10 +122,10 @@ pub fn validate_values_data(data: &fconfig::ValuesData) -> Result<(), ErrorList>
 /// All checks are local to this Component.
 pub fn validate(decl: &fdecl::Component) -> Result<(), ErrorList> {
     let ctx = ValidationContext::default();
-    ctx.validate(decl).map_err(|errs| ErrorList::new(errs))
+    ctx.validate(decl, None).map_err(|errs| ErrorList::new(errs))
 }
 
-/// Validates a list of Capabilitys independently.
+/// Validates a list of Capabilities independently.
 pub fn validate_capabilities(
     capabilities: &Vec<fdecl::Capability>,
     as_builtin: bool,
@@ -180,29 +180,25 @@ fn validate_child(
 /// 3. since this crate isn't really designed to handle dynamic children, we
 ///    disable the checks that ensure that the source/target exist, and that the
 ///    offers don't introduce any cycles.
-pub fn validate_dynamic_offers(offers: &Vec<fdecl::Offer>) -> Result<(), ErrorList> {
-    let mut ctx = ValidationContext::default();
-    for offer in offers {
-        ctx.validate_offers_decl(offer, OfferType::Dynamic)
-    }
-    ctx.validate_offer_group(offers);
-    if ctx.errors.is_empty() {
-        Ok(())
-    } else {
-        Err(ErrorList::new(ctx.errors))
-    }
+pub fn validate_dynamic_offers<'a>(
+    offers: &'a Vec<fdecl::Offer>,
+    decl: &'a fdecl::Component,
+) -> Result<(), ErrorList> {
+    let ctx = ValidationContext::default();
+    ctx.validate(decl, Some(offers)).map_err(|errs| ErrorList::new(errs))
 }
 
 fn check_offer_name(
     prop: Option<&String>,
     decl: &str,
     keyword: &str,
-    errors: &mut Vec<Error>,
     offer_type: OfferType,
+    errors: &mut Vec<Error>,
 ) -> bool {
-    match offer_type {
-        OfferType::Static => check_name(prop, decl, keyword, errors),
-        OfferType::Dynamic => check_dynamic_name(prop, decl, keyword, errors),
+    if offer_type == OfferType::Dynamic {
+        check_dynamic_name(prop, decl, keyword, errors)
+    } else {
+        check_name(prop, decl, keyword, errors)
     }
 }
 
@@ -230,7 +226,7 @@ struct ValidationContext<'a> {
 #[derive(Copy, Clone, Hash, Ord, Debug, PartialOrd, PartialEq, Eq)]
 enum DependencyNode<'a> {
     Self_,
-    Child(&'a str),
+    Child(&'a str, Option<&'a str>),
     Collection(&'a str),
     Environment(&'a str),
     /// This variant is automatically translated to the source backing the capability by
@@ -244,8 +240,8 @@ impl<'a> DependencyNode<'a> {
             return None;
         }
         match ref_.unwrap() {
-            fdecl::Ref::Child(fdecl::ChildRef { name, .. }) => {
-                Some(DependencyNode::Child(name.as_str()))
+            fdecl::Ref::Child(fdecl::ChildRef { name, collection }) => {
+                Some(DependencyNode::Child(name.as_str(), collection.as_ref().map(|s| s.as_str())))
             }
             fdecl::Ref::Collection(fdecl::CollectionRef { name, .. }) => {
                 Some(DependencyNode::Collection(name.as_str()))
@@ -282,7 +278,10 @@ impl<'a> fmt::Display for DependencyNode<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DependencyNode::Self_ => write!(f, "self"),
-            DependencyNode::Child(name) => write!(f, "child {}", name),
+            DependencyNode::Child(name, None) => write!(f, "child {}", name),
+            DependencyNode::Child(name, Some(collection)) => {
+                write!(f, "child {} in collection {}", name, collection)
+            }
             DependencyNode::Collection(name) => write!(f, "collection {}", name),
             DependencyNode::Environment(name) => write!(f, "environment {}", name),
             DependencyNode::Capability(name) => write!(f, "capability {}", name),
@@ -291,7 +290,11 @@ impl<'a> fmt::Display for DependencyNode<'a> {
 }
 
 impl<'a> ValidationContext<'a> {
-    fn validate(mut self, decl: &'a fdecl::Component) -> Result<(), Vec<Error>> {
+    fn validate(
+        mut self,
+        decl: &'a fdecl::Component,
+        dynamic_offers: Option<&'a Vec<fdecl::Offer>>,
+    ) -> Result<(), Vec<Error>> {
         // Collect all environment names first, so that references to them can be checked.
         if let Some(envs) = &decl.environments {
             self.collect_environment_names(&envs);
@@ -337,11 +340,18 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Validate "offers".
+        if let Some(dynamic_offers) = dynamic_offers.as_ref() {
+            for dynamic_offer in dynamic_offers.iter() {
+                self.validate_offers_decl(&dynamic_offer, OfferType::Dynamic);
+            }
+            self.validate_offer_group(&dynamic_offers);
+        }
+
         if let Some(offers) = decl.offers.as_ref() {
             for offer in offers.iter() {
                 self.validate_offers_decl(&offer, OfferType::Static);
             }
-            self.validate_offer_group(offers);
+            self.validate_offer_group(&offers);
         }
 
         // Validate "environments" after all other declarations are processed.
@@ -914,7 +924,7 @@ impl<'a> ValidationContext<'a> {
             }
             if let Some(env) = child.environment.as_ref() {
                 let source = DependencyNode::Environment(env.as_str());
-                let target = DependencyNode::Child(name);
+                let target = DependencyNode::Child(name, None);
                 self.add_strong_dep(None, Some(source), Some(target));
             }
         }
@@ -1072,7 +1082,7 @@ impl<'a> ValidationContext<'a> {
             Some(fdecl::Ref::Self_(_)) => {}
             Some(fdecl::Ref::Child(child_ref)) => {
                 // Make sure the child is valid.
-                self.validate_child_ref(ty, "source", &child_ref);
+                self.validate_child_ref(ty, "source", &child_ref, OfferType::Static);
             }
             Some(_) => {
                 self.errors.push(Error::invalid_field(ty, "source"));
@@ -1174,7 +1184,7 @@ impl<'a> ValidationContext<'a> {
             Some(fdecl::Ref::Parent(_)) => {}
             Some(fdecl::Ref::Self_(_)) => {}
             Some(fdecl::Ref::Child(child)) => {
-                self.validate_source_child(child, "Storage", OfferType::Static);
+                let _ = self.validate_child_ref("Storage", "source", &child, OfferType::Static);
             }
             Some(_) => {
                 self.errors.push(Error::invalid_field("Storage", "source"));
@@ -1287,7 +1297,7 @@ impl<'a> ValidationContext<'a> {
             Some(fdecl::Ref::Self_(_)) => {}
             Some(fdecl::Ref::Framework(_)) => {}
             Some(fdecl::Ref::Child(child)) => {
-                self.validate_source_child(child, decl, OfferType::Static)
+                let _ = self.validate_child_ref(decl, "source", &child, OfferType::Static);
             }
             Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
             None => self.errors.push(Error::missing_field(decl, "source")),
@@ -1311,43 +1321,6 @@ impl<'a> ValidationContext<'a> {
             if !self.all_capability_ids.insert(name) {
                 self.errors.push(Error::duplicate_field("EventStream", "name", name.as_str()));
             }
-        }
-    }
-
-    fn validate_source_child(
-        &mut self,
-        child: &fdecl::ChildRef,
-        decl_type: &str,
-        offer_type: OfferType,
-    ) {
-        let mut valid = true;
-        valid &= check_offer_name(
-            Some(&child.name),
-            decl_type,
-            "source.child.name",
-            &mut self.errors,
-            offer_type,
-        );
-        match offer_type {
-            OfferType::Static => {
-                valid &= if child.collection.is_some() {
-                    self.errors.push(Error::extraneous_field(decl_type, "source.child.collection"));
-                    false
-                } else {
-                    true
-                };
-                if !valid {
-                    return;
-                }
-                if !self.all_children.contains_key(&child.name as &str) {
-                    self.errors.push(Error::invalid_child(
-                        decl_type,
-                        "source",
-                        &child.name as &str,
-                    ));
-                }
-            }
-            OfferType::Dynamic => {}
         }
     }
 
@@ -1558,7 +1531,12 @@ impl<'a> ValidationContext<'a> {
                     for value in scope {
                         match value {
                             fdecl::Ref::Child(child) => {
-                                self.validate_child_ref("ExposeEventStream", "scope", &child);
+                                self.validate_child_ref(
+                                    "ExposeEventStream",
+                                    "scope",
+                                    &child,
+                                    OfferType::Static,
+                                );
                             }
                             fdecl::Ref::Collection(child) => {
                                 self.validate_collection_ref("ExposeEventStream", "scope", &child);
@@ -1598,7 +1576,7 @@ impl<'a> ValidationContext<'a> {
                 fdecl::Ref::Self_(_) => {}
                 fdecl::Ref::Framework(_) => {}
                 fdecl::Ref::Child(child) => {
-                    self.validate_source_child(child, decl, OfferType::Static);
+                    let _ = self.validate_child_ref(decl, "source", &child, OfferType::Static);
                 }
                 fdecl::Ref::Capability(c) => {
                     self.validate_source_capability(c, decl, "source");
@@ -1750,38 +1728,31 @@ impl<'a> ValidationContext<'a> {
                     decl,
                     AllowableIds::Many,
                     CollectionSource::Allow,
-                    offer_type,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                     o.availability.as_ref(),
                     None,
+                    offer_type,
                 );
                 self.validate_filtered_service_fields(
                     decl,
                     o.source_instance_filter.as_ref(),
                     o.renamed_instances.as_ref(),
                 );
-                match offer_type {
-                    OfferType::Static => {
-                        // If the offer source is `self`, ensure we have a corresponding Service.
-                        // TODO: Consider bringing this bit into validate_offer_fields
-                        if let (Some(fdecl::Ref::Self_(_)), Some(ref name)) =
-                            (&o.source, &o.source_name)
-                        {
-                            if !self.all_services.contains(&name as &str) {
-                                self.errors.push(Error::invalid_field(decl, "source"));
-                            }
-                        }
-                        self.add_strong_dep(
-                            o.source_name.as_ref(),
-                            DependencyNode::try_from_ref(o.source.as_ref()),
-                            DependencyNode::try_from_ref(o.target.as_ref()),
-                        );
+                // If the offer source is `self`, ensure we have a corresponding Service.
+                // TODO: Consider bringing this bit into validate_offer_fields
+                if let (Some(fdecl::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
+                    if !self.all_services.contains(&name as &str) {
+                        self.errors.push(Error::invalid_field(decl, "source"));
                     }
-                    OfferType::Dynamic => {}
                 }
+                self.add_strong_dep(
+                    o.source_name.as_ref(),
+                    DependencyNode::try_from_ref(o.source.as_ref()),
+                    DependencyNode::try_from_ref(o.target.as_ref()),
+                );
             }
             fdecl::Offer::Protocol(o) => {
                 let decl = "OfferProtocol";
@@ -1789,42 +1760,30 @@ impl<'a> ValidationContext<'a> {
                     decl,
                     AllowableIds::One,
                     CollectionSource::Deny,
-                    offer_type,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                     o.availability.as_ref(),
                     o.dependency_type,
+                    offer_type,
                 );
                 if o.dependency_type.is_none() {
                     self.errors.push(Error::missing_field(decl, "dependency_type"));
                 } else if o.dependency_type == Some(fdecl::DependencyType::Strong) {
-                    match offer_type {
-                        OfferType::Static => {
-                            self.add_strong_dep(
-                                o.source_name.as_ref(),
-                                DependencyNode::try_from_ref(o.source.as_ref()),
-                                DependencyNode::try_from_ref(o.target.as_ref()),
-                            );
-                        }
-                        OfferType::Dynamic => {}
-                    }
+                    self.add_strong_dep(
+                        o.source_name.as_ref(),
+                        DependencyNode::try_from_ref(o.source.as_ref()),
+                        DependencyNode::try_from_ref(o.target.as_ref()),
+                    );
                 }
-                match offer_type {
-                    OfferType::Static => {
-                        // If the offer source is `self`, ensure we have a
-                        // corresponding Protocol.
-                        // TODO: Consider bringing this bit into validate_offer_fields.
-                        if let (Some(fdecl::Ref::Self_(_)), Some(ref name)) =
-                            (&o.source, &o.source_name)
-                        {
-                            if !self.all_protocols.contains(&name as &str) {
-                                self.errors.push(Error::invalid_capability(decl, "source", name));
-                            }
-                        }
+                // If the offer source is `self`, ensure we have a
+                // corresponding Protocol.
+                // TODO: Consider bringing this bit into validate_offer_fields.
+                if let (Some(fdecl::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
+                    if !self.all_protocols.contains(&name as &str) {
+                        self.errors.push(Error::invalid_capability(decl, "source", name));
                     }
-                    OfferType::Dynamic => {}
                 }
             }
             fdecl::Offer::Directory(o) => {
@@ -1833,38 +1792,32 @@ impl<'a> ValidationContext<'a> {
                     decl,
                     AllowableIds::One,
                     CollectionSource::Deny,
-                    offer_type,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                     o.availability.as_ref(),
                     o.dependency_type,
+                    offer_type,
                 );
                 if o.dependency_type.is_none() {
                     self.errors.push(Error::missing_field(decl, "dependency_type"));
                 } else if o.dependency_type == Some(fdecl::DependencyType::Strong) {
-                    match offer_type {
-                        OfferType::Static => {
-                            self.add_strong_dep(
-                                o.source_name.as_ref(),
-                                DependencyNode::try_from_ref(o.source.as_ref()),
-                                DependencyNode::try_from_ref(o.target.as_ref()),
-                            );
-                            // If the offer source is `self`, ensure we have a corresponding
-                            // Directory.
-                            //
-                            // TODO: Consider bringing this bit into validate_offer_fields.
-                            if let (Some(fdecl::Ref::Self_(_)), Some(ref name)) =
-                                (&o.source, &o.source_name)
-                            {
-                                if !self.all_directories.contains(&name as &str) {
-                                    self.errors
-                                        .push(Error::invalid_capability(decl, "source", name));
-                                }
-                            }
+                    self.add_strong_dep(
+                        o.source_name.as_ref(),
+                        DependencyNode::try_from_ref(o.source.as_ref()),
+                        DependencyNode::try_from_ref(o.target.as_ref()),
+                    );
+                    // If the offer source is `self`, ensure we have a corresponding
+                    // Directory.
+                    //
+                    // TODO: Consider bringing this bit into validate_offer_fields.
+                    if let (Some(fdecl::Ref::Self_(_)), Some(ref name)) =
+                        (&o.source, &o.source_name)
+                    {
+                        if !self.all_directories.contains(&name as &str) {
+                            self.errors.push(Error::invalid_capability(decl, "source", name));
                         }
-                        OfferType::Dynamic => {}
                     }
                 }
 
@@ -1875,43 +1828,36 @@ impl<'a> ValidationContext<'a> {
             fdecl::Offer::Storage(o) => {
                 self.validate_storage_offer_fields(
                     "OfferStorage",
-                    offer_type,
                     o.source_name.as_ref(),
                     o.source.as_ref(),
                     o.target.as_ref(),
                     o.availability.as_ref(),
+                    offer_type,
                 );
 
-                match offer_type {
-                    OfferType::Static => {
-                        // Storage capabilities with a source of `Ref::Self_`
-                        // don't interact with the component's runtime in any
-                        // way, they're actually synthesized by the framework
-                        // out of a pre-existing directory capability. Thus, its
-                        // actual source is the backing directory capability.
-                        match (o.source.as_ref(), o.source_name.as_ref()) {
-                            (Some(fdecl::Ref::Self_ { .. }), Some(source_name)) => {
-                                if let Some(source) = DependencyNode::try_from_ref(
-                                    *self
-                                        .all_storage_and_sources
-                                        .get(source_name.as_str())
-                                        .unwrap_or(&None),
-                                ) {
-                                    if let Some(target) =
-                                        DependencyNode::try_from_ref(o.target.as_ref())
-                                    {
-                                        self.strong_dependencies.add_edge(source, target);
-                                    }
-                                }
+                // Storage capabilities with a source of `Ref::Self_`
+                // don't interact with the component's runtime in any
+                // way, they're actually synthesized by the framework
+                // out of a pre-existing directory capability. Thus, its
+                // actual source is the backing directory capability.
+                match (o.source.as_ref(), o.source_name.as_ref()) {
+                    (Some(fdecl::Ref::Self_ { .. }), Some(source_name)) => {
+                        if let Some(source) = DependencyNode::try_from_ref(
+                            *self
+                                .all_storage_and_sources
+                                .get(source_name.as_str())
+                                .unwrap_or(&None),
+                        ) {
+                            if let Some(target) = DependencyNode::try_from_ref(o.target.as_ref()) {
+                                self.strong_dependencies.add_edge(source, target);
                             }
-                            _ => self.add_strong_dep(
-                                o.source_name.as_ref(),
-                                DependencyNode::try_from_ref(o.source.as_ref()),
-                                DependencyNode::try_from_ref(o.target.as_ref()),
-                            ),
                         }
                     }
-                    OfferType::Dynamic => {}
+                    _ => self.add_strong_dep(
+                        o.source_name.as_ref(),
+                        DependencyNode::try_from_ref(o.source.as_ref()),
+                        DependencyNode::try_from_ref(o.target.as_ref()),
+                    ),
                 }
             }
             fdecl::Offer::Runner(o) => {
@@ -1920,32 +1866,25 @@ impl<'a> ValidationContext<'a> {
                     decl,
                     AllowableIds::One,
                     CollectionSource::Deny,
-                    offer_type,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                     Some(&fdecl::Availability::Required),
                     None,
+                    offer_type,
                 );
-                match offer_type {
-                    OfferType::Static => {
-                        // If the offer source is `self`, ensure we have a corresponding Runner.
-                        if let (Some(fdecl::Ref::Self_(_)), Some(ref name)) =
-                            (&o.source, &o.source_name)
-                        {
-                            if !self.all_runners.contains(&name as &str) {
-                                self.errors.push(Error::invalid_capability(decl, "source", name));
-                            }
-                        }
-                        self.add_strong_dep(
-                            o.source_name.as_ref(),
-                            DependencyNode::try_from_ref(o.source.as_ref()),
-                            DependencyNode::try_from_ref(o.target.as_ref()),
-                        );
+                // If the offer source is `self`, ensure we have a corresponding Runner.
+                if let (Some(fdecl::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
+                    if !self.all_runners.contains(&name as &str) {
+                        self.errors.push(Error::invalid_capability(decl, "source", name));
                     }
-                    OfferType::Dynamic => {}
                 }
+                self.add_strong_dep(
+                    o.source_name.as_ref(),
+                    DependencyNode::try_from_ref(o.source.as_ref()),
+                    DependencyNode::try_from_ref(o.target.as_ref()),
+                );
             }
             fdecl::Offer::Resolver(o) => {
                 let decl = "OfferResolver";
@@ -1953,34 +1892,27 @@ impl<'a> ValidationContext<'a> {
                     decl,
                     AllowableIds::One,
                     CollectionSource::Deny,
-                    offer_type,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                     Some(&fdecl::Availability::Required),
                     None,
+                    offer_type,
                 );
 
-                match offer_type {
-                    OfferType::Static => {
-                        // If the offer source is `self`, ensure we have a
-                        // corresponding Resolver.
-                        if let (Some(fdecl::Ref::Self_(_)), Some(ref name)) =
-                            (&o.source, &o.source_name)
-                        {
-                            if !self.all_resolvers.contains(&name as &str) {
-                                self.errors.push(Error::invalid_capability(decl, "source", name));
-                            }
-                        }
-                        self.add_strong_dep(
-                            o.source_name.as_ref(),
-                            DependencyNode::try_from_ref(o.source.as_ref()),
-                            DependencyNode::try_from_ref(o.target.as_ref()),
-                        );
+                // If the offer source is `self`, ensure we have a
+                // corresponding Resolver.
+                if let (Some(fdecl::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
+                    if !self.all_resolvers.contains(&name as &str) {
+                        self.errors.push(Error::invalid_capability(decl, "source", name));
                     }
-                    OfferType::Dynamic => {}
                 }
+                self.add_strong_dep(
+                    o.source_name.as_ref(),
+                    DependencyNode::try_from_ref(o.source.as_ref()),
+                    DependencyNode::try_from_ref(o.target.as_ref()),
+                );
             }
             fdecl::Offer::Event(e) => {
                 self.validate_event_offer_fields(e, offer_type);
@@ -2000,11 +1932,15 @@ impl<'a> ValidationContext<'a> {
         target: &'a Option<fdecl::Ref>,
         decl_type: &str,
         field_name: &str,
+        offer_type: OfferType,
     ) -> Option<TargetId<'a>> {
         match target.as_ref() {
             Some(fdecl::Ref::Child(child)) => {
-                if self.validate_child_ref(decl_type, field_name, &child) {
-                    Some(TargetId::Component(&child.name))
+                if self.validate_child_ref(decl_type, field_name, &child, offer_type) {
+                    Some(TargetId::Component(
+                        &child.name,
+                        child.collection.as_ref().map(|s| s.as_str()),
+                    ))
                 } else {
                     None
                 }
@@ -2032,20 +1968,22 @@ impl<'a> ValidationContext<'a> {
         decl: &str,
         allowable_names: AllowableIds,
         collection_source: CollectionSource,
-        offer_type: OfferType,
         source: Option<&fdecl::Ref>,
         source_name: Option<&String>,
         target: Option<&'a fdecl::Ref>,
         target_name: Option<&'a String>,
         availability: Option<&fdecl::Availability>,
         dependency: Option<fdecl::DependencyType>,
+        offer_type: OfferType,
     ) {
         match source {
             Some(fdecl::Ref::Parent(_))
             | Some(fdecl::Ref::Self_(_))
             | Some(fdecl::Ref::VoidType(_))
             | Some(fdecl::Ref::Framework(_)) => {}
-            Some(fdecl::Ref::Child(child)) => self.validate_source_child(child, decl, offer_type),
+            Some(fdecl::Ref::Child(child)) => {
+                let _ = self.validate_child_ref(decl, "source", &child, offer_type);
+            }
             Some(fdecl::Ref::Capability(c)) => self.validate_source_capability(c, decl, "source"),
             Some(fdecl::Ref::Collection(c)) if collection_source == CollectionSource::Allow => {
                 self.validate_source_collection(c, decl)
@@ -2054,9 +1992,9 @@ impl<'a> ValidationContext<'a> {
             None => self.errors.push(Error::missing_field(decl, "source")),
         }
         check_offer_availability(decl, availability, source, source_name, &mut self.errors);
-        check_offer_name(source_name, decl, "source_name", &mut self.errors, offer_type);
-        match (offer_type, target) {
-            (OfferType::Static, Some(fdecl::Ref::Child(c))) => {
+        check_offer_name(source_name, decl, "source_name", offer_type, &mut self.errors);
+        match target {
+            Some(fdecl::Ref::Child(c)) => {
                 self.validate_target_child(
                     decl,
                     allowable_names,
@@ -2064,34 +2002,30 @@ impl<'a> ValidationContext<'a> {
                     source,
                     target_name,
                     dependency,
+                    offer_type,
                 );
             }
-            (OfferType::Static, Some(fdecl::Ref::Collection(c))) => {
+            Some(fdecl::Ref::Collection(c)) => {
                 self.validate_target_collection(decl, allowable_names, c, target_name);
             }
-            (OfferType::Static, Some(_)) => {
+            Some(_) => {
                 self.errors.push(Error::invalid_field(decl, "target"));
             }
-            (OfferType::Static, None) => {
+            None => {
                 self.errors.push(Error::missing_field(decl, "target"));
             }
-
-            (OfferType::Dynamic, Some(_)) => {
-                self.errors.push(Error::extraneous_field(decl, "target"));
-            }
-            (OfferType::Dynamic, None) => {}
         }
-        check_offer_name(target_name, decl, "target_name", &mut self.errors, offer_type);
+        check_offer_name(target_name, decl, "target_name", offer_type, &mut self.errors);
     }
 
     fn validate_storage_offer_fields(
         &mut self,
         decl: &str,
-        offer_type: OfferType,
         source_name: Option<&'a String>,
         source: Option<&'a fdecl::Ref>,
         target: Option<&'a fdecl::Ref>,
         availability: Option<&fdecl::Availability>,
+        offer_type: OfferType,
     ) {
         if source_name.is_none() {
             self.errors.push(Error::missing_field(decl, "source_name"));
@@ -2109,16 +2043,7 @@ impl<'a> ValidationContext<'a> {
             }
         }
         check_offer_availability(decl, availability, source, source_name, &mut self.errors);
-        match offer_type {
-            OfferType::Static => {
-                self.validate_storage_target(decl, target);
-            }
-            OfferType::Dynamic => {
-                if target.is_some() {
-                    self.errors.push(Error::extraneous_field(decl, "target"));
-                }
-            }
-        }
+        self.validate_storage_target(decl, target, offer_type);
     }
 
     fn validate_event_stream_offer_fields(
@@ -2148,7 +2073,7 @@ impl<'a> ValidationContext<'a> {
             for value in scope {
                 match value {
                     fdecl::Ref::Child(child) => {
-                        self.validate_child_ref("OfferEventStream", "scope", &child);
+                        self.validate_child_ref("OfferEventStream", "scope", &child, offer_type);
                     }
                     fdecl::Ref::Collection(collection) => {
                         self.validate_collection_ref("OfferEventStream", "scope", &collection);
@@ -2183,31 +2108,18 @@ impl<'a> ValidationContext<'a> {
             &mut self.errors,
         );
 
-        match offer_type {
-            OfferType::Static => {
-                let target_id = self.validate_offer_target(&event_stream.target, decl, "target");
-                if let (Some(target_id), Some(target_name)) =
-                    (target_id, event_stream.target_name.as_ref())
-                {
-                    // Assuming the target_name is valid, ensure the target_name isn't already used.
-                    if let Some(_) = self
-                        .target_ids
-                        .entry(target_id)
-                        .or_insert(HashMap::new())
-                        .insert(target_name, AllowableIds::One)
-                    {
-                        self.errors.push(Error::duplicate_field(
-                            decl,
-                            "target_name",
-                            target_name as &str,
-                        ));
-                    }
-                }
-            }
-            OfferType::Dynamic => {
-                if event_stream.target.is_some() {
-                    self.errors.push(Error::extraneous_field(decl, "target"));
-                }
+        let target_id =
+            self.validate_offer_target(&event_stream.target, decl, "target", offer_type);
+        if let (Some(target_id), Some(target_name)) = (target_id, event_stream.target_name.as_ref())
+        {
+            // Assuming the target_name is valid, ensure the target_name isn't already used.
+            if let Some(_) = self
+                .target_ids
+                .entry(target_id)
+                .or_insert(HashMap::new())
+                .insert(target_name, AllowableIds::One)
+            {
+                self.errors.push(Error::duplicate_field(decl, "target_name", target_name as &str));
             }
         }
         check_name(event_stream.target_name.as_ref(), decl, "target_name", &mut self.errors);
@@ -2219,8 +2131,8 @@ impl<'a> ValidationContext<'a> {
             event.source_name.as_ref(),
             decl,
             "source_name",
-            &mut self.errors,
             offer_type,
+            &mut self.errors,
         );
 
         // Only parent, framework, and void are valid.
@@ -2242,52 +2154,38 @@ impl<'a> ValidationContext<'a> {
             &mut self.errors,
         );
 
-        match offer_type {
-            OfferType::Static => {
-                let target_id = self.validate_offer_target(&event.target, decl, "target");
-                if let (Some(target_id), Some(target_name)) =
-                    (target_id, event.target_name.as_ref())
-                {
-                    // Assuming the target_name is valid, ensure the target_name isn't already used.
-                    if let Some(_) = self
-                        .target_ids
-                        .entry(target_id)
-                        .or_insert(HashMap::new())
-                        .insert(target_name, AllowableIds::One)
-                    {
-                        self.errors.push(Error::duplicate_field(
-                            decl,
-                            "target_name",
-                            target_name as &str,
-                        ));
-                    }
-                }
-            }
-            OfferType::Dynamic => {
-                if event.target.is_some() {
-                    self.errors.push(Error::extraneous_field(decl, "target"));
-                }
+        let target_id = self.validate_offer_target(&event.target, decl, "target", offer_type);
+        if let (Some(target_id), Some(target_name)) = (target_id, event.target_name.as_ref()) {
+            // Assuming the target_name is valid, ensure the target_name isn't already used.
+            if let Some(_) = self
+                .target_ids
+                .entry(target_id)
+                .or_insert(HashMap::new())
+                .insert(target_name, AllowableIds::One)
+            {
+                self.errors.push(Error::duplicate_field(decl, "target_name", target_name as &str));
             }
         }
         check_offer_name(
             event.target_name.as_ref(),
             decl,
             "target_name",
-            &mut self.errors,
             offer_type,
+            &mut self.errors,
         );
     }
 
     /// Check a `ChildRef` contains a valid child that exists.
-    ///
-    /// We ensure the target child is statically defined (i.e., not a dynamic child inside
-    /// a collection).
     fn validate_child_ref(
         &mut self,
         decl: &str,
         field_name: &str,
         child: &fdecl::ChildRef,
+        offer_type: OfferType,
     ) -> bool {
+        if offer_type == OfferType::Dynamic && child.collection.is_some() {
+            return self.validate_dynamic_child_ref(decl, field_name, child);
+        }
         // Ensure the name is valid, and the reference refers to a static child.
         //
         // We attempt to list all errors if possible.
@@ -2317,6 +2215,39 @@ impl<'a> ValidationContext<'a> {
         }
 
         true
+    }
+
+    /// Check a `ChildRef` contains a valid dynamic child.
+    ///
+    /// The manifest we're validating doesn't contain dynamic children so we can't check if the dynamic
+    /// child actually exists, but we can confirm things like the name is valid.
+    fn validate_dynamic_child_ref(
+        &mut self,
+        decl: &str,
+        field_name: &str,
+        child: &fdecl::ChildRef,
+    ) -> bool {
+        // Ensure the name is valid.
+        //
+        // We attempt to list all errors if possible.
+        let mut valid = true;
+        if !check_dynamic_name(
+            Some(&child.name),
+            decl,
+            &format!("{}.child.name", field_name),
+            &mut self.errors,
+        ) {
+            valid = false;
+        }
+        if !check_name(
+            child.collection.as_ref(),
+            decl,
+            &format!("{}.child.collection", field_name),
+            &mut self.errors,
+        ) {
+            valid = false;
+        }
+        valid
     }
 
     /// Check a `CollectionRef` is valid and refers to an existing collection.
@@ -2353,13 +2284,19 @@ impl<'a> ValidationContext<'a> {
         source: Option<&fdecl::Ref>,
         target_name: Option<&'a String>,
         dependency: Option<fdecl::DependencyType>,
+        offer_type: OfferType,
     ) {
-        if !self.validate_child_ref(decl, "target", child) {
+        if !self.validate_child_ref(decl, "target", child, offer_type) {
             return;
         }
         if let Some(target_name) = target_name {
-            let names_for_target =
-                self.target_ids.entry(TargetId::Component(&child.name)).or_insert(HashMap::new());
+            let names_for_target = self
+                .target_ids
+                .entry(TargetId::Component(
+                    &child.name,
+                    child.collection.as_ref().map(|s| s.as_str()),
+                ))
+                .or_insert(HashMap::new());
             if let Some(prev_state) = names_for_target.insert(target_name, allowable_names) {
                 if prev_state == AllowableIds::One || prev_state != allowable_names {
                     self.errors.push(Error::duplicate_field(
@@ -2407,10 +2344,15 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_storage_target(&mut self, decl: &str, target: Option<&'a fdecl::Ref>) {
+    fn validate_storage_target(
+        &mut self,
+        decl: &str,
+        target: Option<&'a fdecl::Ref>,
+        offer_type: OfferType,
+    ) {
         match target {
             Some(fdecl::Ref::Child(c)) => {
-                self.validate_child_ref(decl, "target", &c);
+                self.validate_child_ref(decl, "target", &c, offer_type);
             }
             Some(fdecl::Ref::Collection(c)) => {
                 self.validate_collection_ref(decl, "target", &c);
@@ -9037,144 +8979,167 @@ mod tests {
 
     #[test]
     fn test_validate_dynamic_offers_empty() {
-        assert_eq!(validate_dynamic_offers(&vec![]), Ok(()));
+        assert_eq!(validate_dynamic_offers(&vec![], &fdecl::Component::EMPTY), Ok(()));
     }
 
     #[test]
     fn test_validate_dynamic_offers_okay() {
         assert_eq!(
-            validate_dynamic_offers(&vec![
-                fdecl::Offer::Protocol(fdecl::OfferProtocol {
-                    dependency_type: Some(fdecl::DependencyType::Strong),
-                    source: Some(fdecl::Ref::Self_(fdecl::SelfRef)),
-                    source_name: Some("thing".repeat(26)),
-                    target_name: Some("thing".repeat(26)),
-                    ..fdecl::OfferProtocol::EMPTY
-                }),
-                fdecl::Offer::Service(fdecl::OfferService {
-                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thang".repeat(26)),
-                    target_name: Some("thang".repeat(26)),
-                    ..fdecl::OfferService::EMPTY
-                }),
-                fdecl::Offer::Directory(fdecl::OfferDirectory {
-                    dependency_type: Some(fdecl::DependencyType::Strong),
-                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thung1".repeat(26)),
-                    target_name: Some("thung1".repeat(26)),
-                    ..fdecl::OfferDirectory::EMPTY
-                }),
-                fdecl::Offer::Storage(fdecl::OfferStorage {
-                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thung2".repeat(26)),
-                    target_name: Some("thung2".repeat(26)),
-                    ..fdecl::OfferStorage::EMPTY
-                }),
-                fdecl::Offer::Runner(fdecl::OfferRunner {
-                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thung3".repeat(26)),
-                    target_name: Some("thung3".repeat(26)),
-                    ..fdecl::OfferRunner::EMPTY
-                }),
-                fdecl::Offer::Resolver(fdecl::OfferResolver {
-                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thung4".repeat(26)),
-                    target_name: Some("thung4".repeat(26)),
-                    ..fdecl::OfferResolver::EMPTY
-                }),
-                fdecl::Offer::Event(fdecl::OfferEvent {
-                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thung5".repeat(26)),
-                    target_name: Some("thung5".repeat(26)),
-                    ..fdecl::OfferEvent::EMPTY
-                }),
-            ]),
+            validate_dynamic_offers(
+                &vec![
+                    fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Self_(fdecl::SelfRef)),
+                        source_name: Some("thing".to_string()),
+                        target_name: Some("thing".repeat(26)),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "foo".to_string(),
+                            collection: Some("foo".to_string()),
+                        })),
+                        ..fdecl::OfferProtocol::EMPTY
+                    }),
+                    fdecl::Offer::Service(fdecl::OfferService {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                        source_name: Some("thang".repeat(26)),
+                        target_name: Some("thang".repeat(26)),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "foo".to_string(),
+                            collection: Some("foo".to_string()),
+                        })),
+                        ..fdecl::OfferService::EMPTY
+                    }),
+                    fdecl::Offer::Directory(fdecl::OfferDirectory {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                        source_name: Some("thung1".repeat(26)),
+                        target_name: Some("thung1".repeat(26)),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "foo".to_string(),
+                            collection: Some("foo".to_string()),
+                        })),
+                        ..fdecl::OfferDirectory::EMPTY
+                    }),
+                    fdecl::Offer::Storage(fdecl::OfferStorage {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                        source_name: Some("thung2".repeat(26)),
+                        target_name: Some("thung2".repeat(26)),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "foo".to_string(),
+                            collection: Some("foo".to_string()),
+                        })),
+                        ..fdecl::OfferStorage::EMPTY
+                    }),
+                    fdecl::Offer::Runner(fdecl::OfferRunner {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                        source_name: Some("thung3".repeat(26)),
+                        target_name: Some("thung3".repeat(26)),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "foo".to_string(),
+                            collection: Some("foo".to_string()),
+                        })),
+                        ..fdecl::OfferRunner::EMPTY
+                    }),
+                    fdecl::Offer::Resolver(fdecl::OfferResolver {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                        source_name: Some("thung4".repeat(26)),
+                        target_name: Some("thung4".repeat(26)),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "foo".to_string(),
+                            collection: Some("foo".to_string()),
+                        })),
+                        ..fdecl::OfferResolver::EMPTY
+                    }),
+                    fdecl::Offer::Event(fdecl::OfferEvent {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                        source_name: Some("thung5".repeat(26)),
+                        target_name: Some("thung5".repeat(26)),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "foo".to_string(),
+                            collection: Some("foo".to_string()),
+                        })),
+                        ..fdecl::OfferEvent::EMPTY
+                    }),
+                ],
+                &fdecl::Component {
+                    capabilities: Some(vec![fdecl::Capability::Protocol(fdecl::Protocol {
+                        name: Some("thing".to_string()),
+                        source_path: Some("/svc/foo".into()),
+                        ..fdecl::Protocol::EMPTY
+                    }),]),
+                    ..fdecl::Component::EMPTY
+                }
+            ),
             Ok(())
         );
     }
 
     #[test]
-    fn test_validate_dynamic_offers_specify_target() {
+    fn test_validate_dynamic_offers_omit_target() {
         assert_eq!(
-            validate_dynamic_offers(&vec![
-                fdecl::Offer::Protocol(fdecl::OfferProtocol {
-                    dependency_type: Some(fdecl::DependencyType::Strong),
-                    source: Some(fdecl::Ref::Self_(fdecl::SelfRef)),
-                    target: Some(fdecl::Ref::Child(fdecl::ChildRef {
-                        name: "foo".to_string(),
-                        collection: None
-                    })),
-                    source_name: Some("thing".to_string()),
-                    target_name: Some("thing".to_string()),
-                    ..fdecl::OfferProtocol::EMPTY
-                }),
-                fdecl::Offer::Service(fdecl::OfferService {
-                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    target: Some(fdecl::Ref::Child(fdecl::ChildRef {
-                        name: "bar".to_string(),
-                        collection: Some("baz".to_string())
-                    })),
-                    source_name: Some("thang".to_string()),
-                    target_name: Some("thang".to_string()),
-                    ..fdecl::OfferService::EMPTY
-                }),
-                fdecl::Offer::Directory(fdecl::OfferDirectory {
-                    dependency_type: Some(fdecl::DependencyType::Strong),
-                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    target: Some(fdecl::Ref::Framework(fdecl::FrameworkRef)),
-                    source_name: Some("thung1".to_string()),
-                    target_name: Some("thung1".to_string()),
-                    ..fdecl::OfferDirectory::EMPTY
-                }),
-                fdecl::Offer::Storage(fdecl::OfferStorage {
-                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    target: Some(fdecl::Ref::Child(fdecl::ChildRef {
-                        name: "bar".to_string(),
-                        collection: Some("baz".to_string())
-                    })),
-                    source_name: Some("thung2".to_string()),
-                    target_name: Some("thung2".to_string()),
-                    ..fdecl::OfferStorage::EMPTY
-                }),
-                fdecl::Offer::Runner(fdecl::OfferRunner {
-                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    target: Some(fdecl::Ref::Child(fdecl::ChildRef {
-                        name: "bar".to_string(),
-                        collection: Some("baz".to_string())
-                    })),
-                    source_name: Some("thung3".to_string()),
-                    target_name: Some("thung3".to_string()),
-                    ..fdecl::OfferRunner::EMPTY
-                }),
-                fdecl::Offer::Resolver(fdecl::OfferResolver {
-                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    target: Some(fdecl::Ref::Child(fdecl::ChildRef {
-                        name: "bar".to_string(),
-                        collection: Some("baz".to_string())
-                    })),
-                    source_name: Some("thung4".to_string()),
-                    target_name: Some("thung4".to_string()),
-                    ..fdecl::OfferResolver::EMPTY
-                }),
-                fdecl::Offer::Event(fdecl::OfferEvent {
-                    target: Some(fdecl::Ref::Child(fdecl::ChildRef {
-                        name: "bar".to_string(),
-                        collection: Some("baz".to_string())
-                    })),
-                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
-                    source_name: Some("thung5".to_string()),
-                    target_name: Some("thung5".to_string()),
-                    ..fdecl::OfferEvent::EMPTY
-                }),
-            ]),
+            validate_dynamic_offers(
+                &vec![
+                    fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Self_(fdecl::SelfRef)),
+                        source_name: Some("thing".to_string()),
+                        target_name: Some("thing".to_string()),
+                        ..fdecl::OfferProtocol::EMPTY
+                    }),
+                    fdecl::Offer::Service(fdecl::OfferService {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                        source_name: Some("thang".to_string()),
+                        target_name: Some("thang".to_string()),
+                        ..fdecl::OfferService::EMPTY
+                    }),
+                    fdecl::Offer::Directory(fdecl::OfferDirectory {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                        source_name: Some("thung1".to_string()),
+                        target_name: Some("thung1".to_string()),
+                        ..fdecl::OfferDirectory::EMPTY
+                    }),
+                    fdecl::Offer::Storage(fdecl::OfferStorage {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                        source_name: Some("thung2".to_string()),
+                        target_name: Some("thung2".to_string()),
+                        ..fdecl::OfferStorage::EMPTY
+                    }),
+                    fdecl::Offer::Runner(fdecl::OfferRunner {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                        source_name: Some("thung3".to_string()),
+                        target_name: Some("thung3".to_string()),
+                        ..fdecl::OfferRunner::EMPTY
+                    }),
+                    fdecl::Offer::Resolver(fdecl::OfferResolver {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                        source_name: Some("thung4".to_string()),
+                        target_name: Some("thung4".to_string()),
+                        ..fdecl::OfferResolver::EMPTY
+                    }),
+                    fdecl::Offer::Event(fdecl::OfferEvent {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                        source_name: Some("thung5".to_string()),
+                        target_name: Some("thung5".to_string()),
+                        ..fdecl::OfferEvent::EMPTY
+                    }),
+                ],
+                &fdecl::Component {
+                    capabilities: Some(vec![fdecl::Capability::Protocol(fdecl::Protocol {
+                        name: Some("thing".to_string()),
+                        source_path: Some("/svc/foo".into()),
+                        ..fdecl::Protocol::EMPTY
+                    }),]),
+                    ..fdecl::Component::EMPTY
+                }
+            ),
             Err(ErrorList::new(vec![
-                Error::extraneous_field("OfferProtocol", "target"),
-                Error::extraneous_field("OfferService", "target"),
-                Error::extraneous_field("OfferDirectory", "target"),
-                Error::extraneous_field("OfferStorage", "target"),
-                Error::extraneous_field("OfferRunner", "target"),
-                Error::extraneous_field("OfferResolver", "target"),
-                Error::extraneous_field("OfferEvent", "target"),
+                Error::missing_field("OfferProtocol", "target"),
+                Error::missing_field("OfferService", "target"),
+                Error::missing_field("OfferDirectory", "target"),
+                Error::missing_field("OfferStorage", "target"),
+                Error::missing_field("OfferRunner", "target"),
+                Error::missing_field("OfferResolver", "target"),
+                Error::missing_field("OfferEvent", "target"),
             ]))
         );
     }
@@ -9197,37 +9162,47 @@ mod tests {
     #[test]
     fn test_validate_dynamic_offers_missing_stuff() {
         assert_eq!(
-            validate_dynamic_offers(&vec![
-                fdecl::Offer::Protocol(fdecl::OfferProtocol::EMPTY),
-                fdecl::Offer::Service(fdecl::OfferService::EMPTY),
-                fdecl::Offer::Directory(fdecl::OfferDirectory::EMPTY),
-                fdecl::Offer::Storage(fdecl::OfferStorage::EMPTY),
-                fdecl::Offer::Runner(fdecl::OfferRunner::EMPTY),
-                fdecl::Offer::Resolver(fdecl::OfferResolver::EMPTY),
-                fdecl::Offer::Event(fdecl::OfferEvent::EMPTY),
-            ]),
+            validate_dynamic_offers(
+                &vec![
+                    fdecl::Offer::Protocol(fdecl::OfferProtocol::EMPTY),
+                    fdecl::Offer::Service(fdecl::OfferService::EMPTY),
+                    fdecl::Offer::Directory(fdecl::OfferDirectory::EMPTY),
+                    fdecl::Offer::Storage(fdecl::OfferStorage::EMPTY),
+                    fdecl::Offer::Runner(fdecl::OfferRunner::EMPTY),
+                    fdecl::Offer::Resolver(fdecl::OfferResolver::EMPTY),
+                    fdecl::Offer::Event(fdecl::OfferEvent::EMPTY),
+                ],
+                &fdecl::Component::EMPTY
+            ),
             Err(ErrorList::new(vec![
                 Error::missing_field("OfferProtocol", "source"),
                 Error::missing_field("OfferProtocol", "source_name"),
+                Error::missing_field("OfferProtocol", "target"),
                 Error::missing_field("OfferProtocol", "target_name"),
                 Error::missing_field("OfferProtocol", "dependency_type"),
                 Error::missing_field("OfferService", "source"),
                 Error::missing_field("OfferService", "source_name"),
+                Error::missing_field("OfferService", "target"),
                 Error::missing_field("OfferService", "target_name"),
                 Error::missing_field("OfferDirectory", "source"),
                 Error::missing_field("OfferDirectory", "source_name"),
+                Error::missing_field("OfferDirectory", "target"),
                 Error::missing_field("OfferDirectory", "target_name"),
                 Error::missing_field("OfferDirectory", "dependency_type"),
                 Error::missing_field("OfferStorage", "source_name"),
                 Error::missing_field("OfferStorage", "source"),
+                Error::missing_field("OfferStorage", "target"),
                 Error::missing_field("OfferRunner", "source"),
                 Error::missing_field("OfferRunner", "source_name"),
+                Error::missing_field("OfferRunner", "target"),
                 Error::missing_field("OfferRunner", "target_name"),
                 Error::missing_field("OfferResolver", "source"),
                 Error::missing_field("OfferResolver", "source_name"),
+                Error::missing_field("OfferResolver", "target"),
                 Error::missing_field("OfferResolver", "target_name"),
                 Error::missing_field("OfferEvent", "source_name"),
                 Error::missing_field("OfferEvent", "source"),
+                Error::missing_field("OfferEvent", "target"),
                 Error::missing_field("OfferEvent", "target_name"),
             ]))
         );

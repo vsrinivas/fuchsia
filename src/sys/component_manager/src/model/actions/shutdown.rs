@@ -2894,7 +2894,8 @@ mod tests {
                 ..fcomponent::CreateChildArgs::EMPTY
             },
         )
-        .await;
+        .await
+        .expect("failed to create child");
 
         // Start the components. This should cause them to have an `Execution`.
         let component_container = test.look_up(vec!["container"].into()).await;

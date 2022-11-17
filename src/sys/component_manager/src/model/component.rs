@@ -25,7 +25,8 @@ use {
         component_id_index::{ComponentIdIndex, ComponentInstanceId},
         component_instance::{
             ComponentInstanceInterface, ExtendedInstanceInterface, ResolvedInstanceInterface,
-            TopInstanceInterface, WeakComponentInstanceInterface, WeakExtendedInstanceInterface,
+            ResolvedInstanceInterfaceExt, TopInstanceInterface, WeakComponentInstanceInterface,
+            WeakExtendedInstanceInterface,
         },
         environment::EnvironmentInterface,
         error::ComponentInstanceError,
@@ -41,7 +42,8 @@ use {
     cm_moniker::{IncarnationId, InstancedAbsoluteMoniker, InstancedChildMoniker},
     cm_runner::{component_controller::ComponentController, NullRunner, RemoteRunner, Runner},
     cm_rust::{
-        self, CapabilityName, ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl, UseDecl,
+        self, CapabilityName, ChildDecl, CollectionDecl, ComponentDecl, FidlIntoNative,
+        NativeIntoFidl, OfferDeclCommon, UseDecl,
     },
     cm_task_scope::TaskScope,
     cm_util::channel,
@@ -699,54 +701,18 @@ impl ComponentInstance {
             return Err(ModelError::name_too_long(cm_types::MAX_NAME_LENGTH));
         }
 
-        let dynamic_offers = child_args.dynamic_offers.map(|dynamic_offers| {
-            if !dynamic_offers.is_empty()
-                && collection_decl.allowed_offers != cm_types::AllowedOffers::StaticAndDynamic
-            {
-                return Err(ModelError::dynamic_offers_not_allowed(&collection_name));
-            }
-
-            cm_fidl_validator::validate_dynamic_offers(&dynamic_offers)
-                .map_err(ModelError::dynamic_offer_invalid)?;
-
-            dynamic_offers
-                .into_iter()
-                .map(|mut offer| {
-                    use ::routing::component_instance::ResolvedInstanceInterfaceExt;
-                    use cm_rust::OfferDeclCommon;
-
-                    // Set the `target` field to point to the component
-                    // we're creating. `fidl_into_native()` requires
-                    // `target` to be set.
-                    *offer_target_mut(&mut offer)
-                        .expect("validation should have found unknown enum type") =
-                        Some(fdecl::Ref::Child(fdecl::ChildRef {
-                            name: child_decl.name.clone(),
-                            collection: Some(collection_name.clone()),
-                        }));
-                    // This is safe because of the call to
-                    // `validate_dynamic_offers` above.
-                    let offer = cm_rust::FidlIntoNative::fidl_into_native(offer);
-
-                    // The sources and targets of offers in CFv2 must always exist. For static
-                    // offers, this is ensured by `cm_fidl_validator`. For dynamic offers, we
-                    // check that the source exists here. The target _will_ exist by virtue of
-                    // the fact that we're creating it now.
-                    if !state.offer_source_exists(offer.source()) {
-                        return Err(ModelError::dynamic_offer_source_not_found(offer.clone()));
-                    }
-                    Ok(offer)
-                })
-                .collect()
-        });
-        let dynamic_offers = dynamic_offers.transpose()?;
+        if child_args.dynamic_offers.as_ref().map(|v| v.first()).flatten().is_some()
+            && collection_decl.allowed_offers != cm_types::AllowedOffers::StaticAndDynamic
+        {
+            return Err(ModelError::dynamic_offers_not_allowed(&collection_name));
+        }
         let durability_nf = state
             .add_child(
                 self,
                 child_decl,
                 Some(&collection_decl),
                 child_args.numbered_handles,
-                dynamic_offers,
+                child_args.dynamic_offers,
             )
             .await?;
         durability_nf.await?;
@@ -1593,7 +1559,6 @@ impl ResolvedInstanceState {
         // Delete any dynamic offers whose `source` or `target` matches the
         // component we're deleting.
         self.dynamic_offers.retain(|offer| {
-            use cm_rust::OfferDeclCommon;
             let source_matches = offer.source()
                 == &cm_rust::OfferSource::Child(cm_rust::ChildRef {
                     name: moniker.name().to_string(),
@@ -1660,7 +1625,7 @@ impl ResolvedInstanceState {
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
         numbered_handles: Option<Vec<fidl_fuchsia_process::HandleInfo>>,
-        dynamic_offers: Option<Vec<cm_rust::OfferDecl>>,
+        dynamic_offers: Option<Vec<fdecl::Offer>>,
     ) -> Result<BoxFuture<'static, Result<(), ModelError>>, ModelError> {
         let child = self.add_child_internal(
             component,
@@ -1695,8 +1660,14 @@ impl ResolvedInstanceState {
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
         numbered_handles: Option<Vec<fidl_fuchsia_process::HandleInfo>>,
-        dynamic_offers: Option<Vec<cm_rust::OfferDecl>>,
+        dynamic_offers: Option<Vec<fdecl::Offer>>,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
+        assert!(
+            (numbered_handles.is_none() && dynamic_offers.is_none()) || collection.is_some(),
+            "setting numbered handles or dynamic offers for static children",
+        );
+        let dynamic_offers =
+            self.validate_and_convert_dynamic_offers(dynamic_offers, child, collection)?;
         let child_moniker = ChildMoniker::try_new(&child.name, collection.map(|c| &c.name))?;
         if self.get_child(&child_moniker).is_some() {
             return Err(ModelError::instance_already_exists(
@@ -1728,10 +1699,69 @@ impl ResolvedInstanceState {
             component.persistent_storage_for_child(collection),
         );
         self.children.insert(child_moniker, child.clone());
-        if let Some(dynamic_offers) = dynamic_offers {
-            self.dynamic_offers.extend(dynamic_offers.into_iter());
-        }
+        self.dynamic_offers.extend(dynamic_offers.into_iter());
         Ok(child)
+    }
+
+    fn validate_and_convert_dynamic_offers(
+        &self,
+        dynamic_offers: Option<Vec<fdecl::Offer>>,
+        child: &ChildDecl,
+        collection: Option<&CollectionDecl>,
+    ) -> Result<Vec<cm_rust::OfferDecl>, ModelError> {
+        let mut dynamic_offers = dynamic_offers.unwrap_or_default();
+        if dynamic_offers.is_empty() {
+            return Ok(vec![]);
+        }
+        for offer in dynamic_offers.iter_mut() {
+            match offer {
+                fdecl::Offer::Service(fdecl::OfferService { target, .. })
+                | fdecl::Offer::Protocol(fdecl::OfferProtocol { target, .. })
+                | fdecl::Offer::Directory(fdecl::OfferDirectory { target, .. })
+                | fdecl::Offer::Storage(fdecl::OfferStorage { target, .. })
+                | fdecl::Offer::Runner(fdecl::OfferRunner { target, .. })
+                | fdecl::Offer::Resolver(fdecl::OfferResolver { target, .. })
+                | fdecl::Offer::Event(fdecl::OfferEvent { target, .. })
+                | fdecl::Offer::EventStream(fdecl::OfferEventStream { target, .. }) => {
+                    if target.is_some() {
+                        return Err(ModelError::dynamic_offer_invalid(
+                            cm_fidl_validator::error::ErrorList {
+                                errs: vec![cm_fidl_validator::error::Error::extraneous_field(
+                                    "OfferDecl",
+                                    "target",
+                                )],
+                            },
+                        ));
+                    }
+                }
+                _ => {
+                    return Err(ModelError::unsupported("unknown offer type in dynamic offers"));
+                }
+            }
+            *offer_target_mut(offer).expect("validation should have found unknown enum type") =
+                Some(fdecl::Ref::Child(fdecl::ChildRef {
+                    name: child.name.clone(),
+                    collection: Some(collection.unwrap().name.clone()),
+                }));
+        }
+        let mut all_dynamic_offers: Vec<_> =
+            self.dynamic_offers.clone().into_iter().map(NativeIntoFidl::native_into_fidl).collect();
+        all_dynamic_offers.append(&mut dynamic_offers.clone());
+        cm_fidl_validator::validate_dynamic_offers(
+            &all_dynamic_offers,
+            &self.decl.clone().native_into_fidl(),
+        )
+        .map_err(ModelError::dynamic_offer_invalid)?;
+        // Manifest validation is not informed of the contents of collections, and is thus unable
+        // to confirm the source exists if it's in a collection. Let's check that here.
+        let dynamic_offers: Vec<cm_rust::OfferDecl> =
+            dynamic_offers.into_iter().map(FidlIntoNative::fidl_into_native).collect();
+        for offer in &dynamic_offers {
+            if !self.offer_source_exists(offer.source()) {
+                return Err(ModelError::dynamic_offer_source_not_found(offer.clone()));
+            }
+        }
+        Ok(dynamic_offers)
     }
 
     async fn add_static_children(
@@ -2091,8 +2121,8 @@ pub mod tests {
         cm_rust::{
             Availability, CapabilityDecl, CapabilityPath, ChildRef, DependencyType, EventMode,
             ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl,
-            OfferDirectoryDecl, OfferProtocolDecl, OfferSource, OfferTarget, ProtocolDecl,
-            UseProtocolDecl, UseSource,
+            OfferDirectoryDecl, OfferProtocolDecl, OfferServiceDecl, OfferSource, OfferTarget,
+            ProtocolDecl, UseProtocolDecl, UseSource,
         },
         cm_rust_testing::{
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
@@ -2793,7 +2823,8 @@ pub mod tests {
             subdir: None,
             availability: Availability::Required,
         });
-        let example_capability = ProtocolDecl { name: "bar".into(), source_path: None };
+        let example_capability =
+            ProtocolDecl { name: "bar".into(), source_path: Some("/svc/bar".try_into().unwrap()) };
         let example_expose = ExposeDecl::Protocol(ExposeProtocolDecl {
             source: ExposeSource::Self_,
             target: ExposeTarget::Parent,
@@ -2943,7 +2974,8 @@ pub mod tests {
                 ..fcomponent::CreateChildArgs::EMPTY
             },
         )
-        .await;
+        .await
+        .expect("failed to create child");
         test.create_dynamic_child("coll_2", "a").await;
 
         let example_dynamic_offer = OfferDecl::Protocol(OfferProtocolDecl {
@@ -3041,7 +3073,8 @@ pub mod tests {
                 ..fcomponent::CreateChildArgs::EMPTY
             },
         )
-        .await;
+        .await
+        .expect("failed to create child");
 
         let example_dynamic_offer2 = OfferDecl::Protocol(OfferProtocolDecl {
             source: OfferSource::Child(ChildRef {
@@ -3085,6 +3118,134 @@ pub mod tests {
                 shutdown::Component::offers(&*root_resolved)
             )
         }
+    }
+
+    // TODO(fxbug.dev/114982)
+    #[ignore]
+    #[fuchsia::test]
+    async fn creating_dynamic_child_with_offer_cycle_fails() {
+        let example_offer = OfferDecl::Service(OfferServiceDecl {
+            source: OfferSource::Collection("coll".to_string()),
+            source_name: "foo".try_into().unwrap(),
+            source_instance_filter: None,
+            renamed_instances: None,
+            target: OfferTarget::static_child("static_child".to_string()),
+            target_name: "foo".try_into().unwrap(),
+            availability: Availability::Required,
+        });
+
+        let components = vec![
+            (
+                "root",
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("static_child")
+                    .add_collection(
+                        CollectionDeclBuilder::new_transient_collection("coll")
+                            .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
+                            .build(),
+                    )
+                    .offer(example_offer.clone())
+                    .build(),
+            ),
+            ("static_child", component_decl_with_test_runner()),
+        ];
+
+        let test = ActionsTest::new("root", components, Some(vec![].into())).await;
+
+        let res = test
+            .create_dynamic_child_with_args(
+                "coll",
+                "dynamic_child",
+                fcomponent::CreateChildArgs {
+                    dynamic_offers: Some(vec![fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "static_child".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("bar".to_string()),
+                        target_name: Some("bar".to_string()),
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        ..fdecl::OfferProtocol::EMPTY
+                    })]),
+                    ..fcomponent::CreateChildArgs::EMPTY
+                },
+            )
+            .await;
+        assert_matches!(res, Err(fcomponent::Error::InvalidArguments));
+    }
+
+    #[fuchsia::test]
+    async fn creating_dynamic_child_with_offer_from_undefined_on_self_fails() {
+        let components = vec![(
+            "root",
+            ComponentDeclBuilder::new()
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("coll")
+                        .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
+                        .build(),
+                )
+                .build(),
+        )];
+
+        let test = ActionsTest::new("root", components, Some(vec![].into())).await;
+
+        let res = test
+            .create_dynamic_child_with_args(
+                "coll",
+                "dynamic_child",
+                fcomponent::CreateChildArgs {
+                    dynamic_offers: Some(vec![fdecl::Offer::Directory(fdecl::OfferDirectory {
+                        source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
+                        source_name: Some("foo".to_string()),
+                        target_name: Some("foo".to_string()),
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        availability: Some(fdecl::Availability::Required),
+                        ..fdecl::OfferDirectory::EMPTY
+                    })]),
+                    ..fcomponent::CreateChildArgs::EMPTY
+                },
+            )
+            .await;
+        assert_matches!(res, Err(fcomponent::Error::InvalidArguments));
+    }
+
+    #[fuchsia::test]
+    async fn creating_dynamic_child_with_offer_target_set_fails() {
+        let components = vec![(
+            "root",
+            ComponentDeclBuilder::new()
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("coll")
+                        .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
+                        .build(),
+                )
+                .build(),
+        )];
+
+        let test = ActionsTest::new("root", components, Some(vec![].into())).await;
+
+        let res = test
+            .create_dynamic_child_with_args(
+                "coll",
+                "dynamic_child",
+                fcomponent::CreateChildArgs {
+                    dynamic_offers: Some(vec![fdecl::Offer::Directory(fdecl::OfferDirectory {
+                        source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
+                        source_name: Some("foo".to_string()),
+                        target_name: Some("foo".to_string()),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "dynamic_child".to_string(),
+                            collection: Some("coll".to_string()),
+                        })),
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        availability: Some(fdecl::Availability::Required),
+                        ..fdecl::OfferDirectory::EMPTY
+                    })]),
+                    ..fcomponent::CreateChildArgs::EMPTY
+                },
+            )
+            .await;
+        assert_matches!(res, Err(fcomponent::Error::InvalidArguments));
     }
 
     async fn new_component() -> Arc<ComponentInstance> {

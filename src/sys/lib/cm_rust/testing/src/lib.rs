@@ -211,7 +211,10 @@ impl ChildDeclBuilder {
     }
 
     /// Consumes the builder and returns a ChildDecl.
-    pub fn build(self) -> cm_rust::ChildDecl {
+    pub fn build(mut self) -> cm_rust::ChildDecl {
+        if self.0.url == String::new() {
+            self.0.url = format!("test://{}", self.0.name);
+        }
         self.0
     }
 }

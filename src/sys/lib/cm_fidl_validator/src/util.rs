@@ -23,7 +23,7 @@ pub(crate) enum CollectionSource {
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub(crate) enum TargetId<'a> {
-    Component(&'a str),
+    Component(&'a str, Option<&'a str>),
     Collection(&'a str),
 }
 
