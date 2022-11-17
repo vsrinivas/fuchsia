@@ -55,7 +55,6 @@ const MAX_REGISTERED_TARGETS: i64 = 512;
 
 #[derive(Debug)]
 struct ServerInfo {
-    listen_addr: SocketAddr,
     server: RepositoryServer,
     task: fasync::Task<()>,
     tunnel_manager: TunnelManager,
@@ -78,14 +77,14 @@ impl ServerInfo {
 
         let tunnel_manager = TunnelManager::new(server.local_addr(), sink);
 
-        Ok(ServerInfo { listen_addr, server, task, tunnel_manager })
+        Ok(ServerInfo { server, task, tunnel_manager })
     }
 }
 
 #[derive(Debug)]
 enum ServerState {
     Running(ServerInfo),
-    Stopped(SocketAddr),
+    Stopped,
     Disabled,
 }
 
@@ -102,7 +101,7 @@ impl ServerState {
     async fn stop(&mut self) {
         match std::mem::replace(self, ServerState::Disabled) {
             ServerState::Running(server_info) => {
-                *self = ServerState::Stopped(server_info.listen_addr);
+                *self = ServerState::Stopped;
 
                 tracing::info!("Stopping the repository server");
 
@@ -513,17 +512,31 @@ impl RepoInner {
         }
 
         // Exit early if we're already running on this address.
-        let addr = match &self.server {
+        let listen_addr = match &self.server {
             ServerState::Disabled => {
                 return Ok(None);
             }
             ServerState::Running(info) => {
                 return Ok(Some(info.server.local_addr()));
             }
-            ServerState::Stopped(addr) => *addr,
+            ServerState::Stopped => match pkg_config::repository_listen_addr().await {
+                Ok(Some(addr)) => addr,
+                Ok(None) => {
+                    tracing::error!(
+                        "repository.server.listen address not configured, not starting server"
+                    );
+
+                    metrics::server_disabled_event().await;
+                    return Ok(None);
+                }
+                Err(err) => {
+                    tracing::error!("Failed to read server address from config: {:#}", err);
+                    return Ok(None);
+                }
+            },
         };
 
-        match ServerInfo::new(addr, Arc::clone(&self.manager)).await {
+        match ServerInfo::new(listen_addr, Arc::clone(&self.manager)).await {
             Ok(info) => {
                 let local_addr = info.server.local_addr();
                 self.server = ServerState::Running(info);
@@ -1030,21 +1043,10 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
             }
         }
 
-        match pkg_config::repository_listen_addr().await {
-            Ok(Some(addr)) => {
-                let mut inner = self.inner.write().await;
-                inner.server = ServerState::Stopped(addr);
-            }
-            Ok(None) => {
-                tracing::error!(
-                    "repository.server.listen address not configured, not starting server"
-                );
-
-                metrics::server_disabled_event().await;
-            }
-            Err(err) => {
-                tracing::error!("Failed to read server address from config: {:#}", err);
-            }
+        // Make sure the server is initially off.
+        {
+            let mut inner = self.inner.write().await;
+            inner.server = ServerState::Stopped;
         }
 
         load_repositories_from_config(&self.inner).await;
@@ -1827,7 +1829,7 @@ mod tests {
             // The server should be stopped.
             {
                 let inner = Arc::clone(&repo.borrow().inner);
-                assert_matches!(inner.read().await.server, ServerState::Stopped(_));
+                assert_matches!(inner.read().await.server, ServerState::Stopped);
             }
 
             // Make sure we can read back the repositories.
@@ -1952,7 +1954,7 @@ mod tests {
             // Initially no server should be running.
             {
                 let inner = Arc::clone(&repo.borrow().inner);
-                assert_matches!(inner.read().await.server, ServerState::Stopped(_));
+                assert_matches!(inner.read().await.server, ServerState::Stopped);
             }
 
             proxy
