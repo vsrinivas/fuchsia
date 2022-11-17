@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.device/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -141,6 +142,53 @@ TEST(DeviceWatcherTest, WaitForDeviceTopologicalPath) {
     ASSERT_EQ(status, ZX_OK);
   });
   ASSERT_EQ(sync_completion_wait(&shutdown, zx::duration::infinite().get()), ZX_OK);
+}
+
+TEST(DeviceWatcherTest, DirWatcherWaitForRemoval) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  auto file = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(
+      [](fbl::String* output) { return ZX_OK; }, [](std::string_view input) { return ZX_OK; });
+
+  auto third = fbl::MakeRefCounted<fs::PseudoDir>();
+  third->AddEntry("file", file);
+
+  auto second = fbl::MakeRefCounted<fs::PseudoDir>();
+  second->AddEntry("third", third);
+
+  auto first = fbl::MakeRefCounted<fs::PseudoDir>();
+  first->AddEntry("second", second);
+  first->AddEntry("file", file);
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_EQ(ZX_OK, endpoints.status_value());
+
+  loop.StartThread();
+  fs::ManagedVfs vfs(loop.dispatcher());
+
+  vfs.ServeDirectory(first, std::move(endpoints->server));
+
+  fbl::unique_fd dir;
+  ASSERT_EQ(ZX_OK,
+            fdio_fd_create(endpoints->client.TakeChannel().release(), dir.reset_and_get_address()));
+  fbl::unique_fd sub_dir(openat(dir.get(), "second/third", O_DIRECTORY | O_RDONLY));
+
+  fbl::unique_fd out;
+  ASSERT_EQ(ZX_OK, device_watcher::WaitForFile(dir, "file", &out));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(dir, "second/third/file", &out));
+
+  // Verify removal of the root directory file
+  std::unique_ptr<device_watcher::DirWatcher> root_watcher;
+  ASSERT_EQ(ZX_OK, device_watcher::DirWatcher::Create(std::move(dir), &root_watcher));
+
+  first->RemoveEntry("file");
+  ASSERT_EQ(ZX_OK, root_watcher->WaitForRemoval("file", zx::duration::infinite()));
+
+  // Verify removal of the subdirectory file
+  std::unique_ptr<device_watcher::DirWatcher> sub_watcher;
+  ASSERT_EQ(ZX_OK, device_watcher::DirWatcher::Create(std::move(sub_dir), &sub_watcher));
+
+  third->RemoveEntry("file");
+  ASSERT_EQ(ZX_OK, sub_watcher->WaitForRemoval("file", zx::duration::infinite()));
 }
 
 class IterateDirectoryTest : public zxtest::Test {

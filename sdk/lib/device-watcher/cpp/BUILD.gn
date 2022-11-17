@@ -15,6 +15,7 @@ sdk_source_set("cpp") {
     "device-watcher.h",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
@@ -22,7 +23,6 @@ sdk_source_set("cpp") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
   ]
 }
