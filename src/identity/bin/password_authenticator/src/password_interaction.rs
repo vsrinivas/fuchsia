@@ -57,7 +57,6 @@ where
     V: Validator<T>,
 {
     hanging_get: RefCell<PasswordInteractionStateHangingGet>,
-    stream: RefCell<PasswordInteractionRequestStream>,
     state_machine: Rc<StateMachine>,
     validator: V,
     publish_task: Task<()>,
@@ -68,7 +67,7 @@ impl<V, T> PasswordInteractionHandler<V, T>
 where
     V: Validator<T>,
 {
-    pub async fn new(stream: PasswordInteractionRequestStream, validator: V) -> Self {
+    pub async fn new(validator: V) -> Self {
         let (sender, mut receiver) = mpsc::channel(CHANNEL_SIZE);
         let state_machine = Rc::new(StateMachine::new(sender));
         let hanging_get = PasswordInteractionHandler::<V, T>::hanging_get(&state_machine).await;
@@ -86,7 +85,6 @@ where
 
         Self {
             hanging_get: RefCell::new(hanging_get),
-            stream: RefCell::new(stream),
             state_machine,
             validator,
             publish_task,
@@ -121,55 +119,54 @@ where
         PasswordInteractionStateHangingGet::new(initial_state, notify_fn)
     }
 
-    fn handle_password_interaction_request_stream(
-        self: Rc<Self>,
-    ) -> impl futures::Future<Output = Result<T, Error>> {
+    async fn handle_password_interaction_request_stream(
+        self,
+        mut stream: PasswordInteractionRequestStream,
+    ) -> Result<T, Error> {
         let subscriber = self.hanging_get.borrow_mut().new_subscriber();
 
-        async move {
-            while let Some(request) = self.stream.borrow_mut().next().await {
-                match request {
-                    Ok(PasswordInteractionRequest::SetPassword { password, control_handle }) => {
-                        match self.state_machine.get().await {
-                            State::WaitingForPassword => {
-                                match self.validator.validate(&password).await {
-                                    Ok(res) => {
-                                        // When authentication is successfully completed, close the
-                                        // channel and return a response on the parent channel.
-                                        control_handle.shutdown_with_epitaph(zx::Status::OK);
-                                        return Ok(res);
-                                    }
-                                    Err(ValidationError::PasswordError(e)) => {
-                                        warn!("Password was not valid: {:?}", e);
-                                        self.state_machine.set_error(e).await;
-                                    }
-                                    Err(ValidationError::InternalScryptError(e)) => {
-                                        warn!("Responded with internal error: {:?}", e);
-                                        control_handle.shutdown_with_epitaph(zx::Status::INTERNAL);
-                                        return Err(anyhow!(
-                                            "Internal error while attempting to validate"
-                                        ));
-                                    }
+        while let Some(request) = stream.next().await {
+            match request {
+                Ok(PasswordInteractionRequest::SetPassword { password, control_handle }) => {
+                    match self.state_machine.get().await {
+                        State::WaitingForPassword => {
+                            match self.validator.validate(&password).await {
+                                Ok(res) => {
+                                    // When authentication is successfully completed, close the
+                                    // channel and return a response on the parent channel.
+                                    control_handle.shutdown_with_epitaph(zx::Status::OK);
+                                    return Ok(res);
+                                }
+                                Err(ValidationError::PasswordError(e)) => {
+                                    warn!("Password was not valid: {:?}", e);
+                                    self.state_machine.set_error(e).await;
+                                }
+                                Err(ValidationError::InternalScryptError(e)) => {
+                                    warn!("Responded with internal error: {:?}", e);
+                                    control_handle.shutdown_with_epitaph(zx::Status::INTERNAL);
+                                    return Err(anyhow!(
+                                        "Internal error while attempting to validate"
+                                    ));
                                 }
                             }
-                            state => {
-                                warn!("Cannot call set_password while in state: {:?}", state);
-                                self.state_machine
-                                    .set_error(PasswordError::NotWaitingForPassword)
-                                    .await;
-                            }
+                        }
+                        state => {
+                            warn!("Cannot call set_password while in state: {:?}", state);
+                            self.state_machine
+                                .set_error(PasswordError::NotWaitingForPassword)
+                                .await;
                         }
                     }
-                    Ok(PasswordInteractionRequest::WatchState { responder }) => {
-                        subscriber.register(responder)?;
-                    }
-                    Err(e) => {
-                        return Err(anyhow!("Error reading PasswordInteractionRequest: {}", e));
-                    }
+                }
+                Ok(PasswordInteractionRequest::WatchState { responder }) => {
+                    subscriber.register(responder)?;
+                }
+                Err(e) => {
+                    return Err(anyhow!("Error reading PasswordInteractionRequest: {}", e));
                 }
             }
-            return Err(anyhow!("Channel closed before successful validation."));
         }
+        return Err(anyhow!("Channel closed before successful validation."));
     }
 }
 
@@ -221,16 +218,20 @@ mod tests {
         }
     }
 
+    /// Creates a `PasswordInteractionHandler` using the supplied `Validator`, then creates a
+    /// new `PasswordInteraction` channel that the `PasswordInteractionHandler` operates on,
+    /// returning a client proxy for this channel to use in testing.
     fn make_proxy<V: Validator<T> + 'static, T: Sized + 'static>(
-        validate: V,
+        validator: V,
     ) -> PasswordInteractionProxy {
         let (proxy, stream) = create_proxy_and_stream::<PasswordInteractionMarker>()
             .expect("Failed to create password interaction proxy");
-        let password_interaction_handler = PasswordInteractionHandler::new(stream, validate);
+        let password_interaction_handler_fut = PasswordInteractionHandler::new(validator);
 
         Task::local(async move {
-            if Rc::new(password_interaction_handler.await)
-                .handle_password_interaction_request_stream()
+            if password_interaction_handler_fut
+                .await
+                .handle_password_interaction_request_stream(stream)
                 .await
                 .is_err()
             {
