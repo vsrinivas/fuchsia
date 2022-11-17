@@ -4,12 +4,220 @@
 
 #include <zxtest/zxtest.h>
 
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
 #include "tools/fidl/fidlc/include/fidl/flat/types.h"
 #include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 #include "tools/fidl/fidlc/tests/error_test.h"
 #include "tools/fidl/fidlc/tests/test_library.h"
 
 namespace {
+
+// TODO(fxbug.dev/88366): remove once fully migrated.
+TEST(MethodTests, GoodValidMethodsAndEventsMigrationMode) {
+  TestLibrary library(R"FIDL(library example;
+
+open protocol OpenExample1 {
+    -> OnMyEvent();
+    MyOneWayMethod();
+    MyTwoWayMethod() -> ();
+};
+
+open protocol OpenExample2 {
+    strict -> OnMyEvent();
+    strict MyOneWayMethod();
+    strict MyTwoWayMethod() -> ();
+};
+
+open protocol OpenExample3 {
+    flexible -> OnMyEvent();
+    flexible MyOneWayMethod();
+    flexible MyTwoWayMethod() -> ();
+};
+
+ajar protocol AjarExample1 {
+    -> OnMyEvent();
+    MyOneWayMethod();
+    MyTwoWayMethod() -> ();
+};
+
+ajar protocol AjarExample2 {
+    strict -> OnMyEvent();
+    strict MyOneWayMethod();
+    strict MyTwoWayMethod() -> ();
+};
+
+ajar protocol AjarExample3 {
+    flexible -> OnMyEvent();
+    flexible MyOneWayMethod();
+};
+
+closed protocol ClosedExample1 {
+    -> OnMyEvent();
+    MyOneWayMethod();
+    MyTwoWayMethod() -> ();
+};
+
+closed protocol ClosedExample2 {
+    strict -> OnMyEvent();
+    strict MyOneWayMethod();
+    strict MyTwoWayMethod() -> ();
+};
+
+protocol ImplicitClosedExample1 {
+    -> OnMyEvent();
+    MyOneWayMethod();
+    MyTwoWayMethod() -> ();
+};
+
+protocol ImplicitClosedExample2 {
+    strict -> OnMyEvent();
+    strict MyOneWayMethod();
+    strict MyTwoWayMethod() -> ();
+};
+
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractionsMigration);
+  ASSERT_COMPILED(library);
+
+  auto open_protocol1 = library.LookupProtocol("OpenExample1");
+  ASSERT_NOT_NULL(open_protocol1);
+  ASSERT_EQ(open_protocol1->methods.size(), 3);
+  EXPECT_EQ(open_protocol1->all_methods.size(), 3);
+  for (auto& method : open_protocol1->methods) {
+    EXPECT_EQ(method.strictness, fidl::types::Strictness::kStrict);
+  }
+
+  auto open_protocol2 = library.LookupProtocol("OpenExample2");
+  ASSERT_NOT_NULL(open_protocol2);
+  ASSERT_EQ(open_protocol2->methods.size(), 3);
+  EXPECT_EQ(open_protocol2->all_methods.size(), 3);
+  for (auto& method : open_protocol2->methods) {
+    EXPECT_EQ(method.strictness, fidl::types::Strictness::kStrict);
+  }
+
+  auto open_protocol3 = library.LookupProtocol("OpenExample3");
+  ASSERT_NOT_NULL(open_protocol3);
+  ASSERT_EQ(open_protocol3->methods.size(), 3);
+  EXPECT_EQ(open_protocol3->all_methods.size(), 3);
+  for (auto& method : open_protocol3->methods) {
+    EXPECT_EQ(method.strictness, fidl::types::Strictness::kFlexible);
+  }
+
+  auto ajar_protocol1 = library.LookupProtocol("AjarExample1");
+  ASSERT_NOT_NULL(ajar_protocol1);
+  ASSERT_EQ(ajar_protocol1->methods.size(), 3);
+  EXPECT_EQ(ajar_protocol1->all_methods.size(), 3);
+  for (auto& method : ajar_protocol1->methods) {
+    EXPECT_EQ(method.strictness, fidl::types::Strictness::kStrict);
+  }
+
+  auto ajar_protocol2 = library.LookupProtocol("AjarExample2");
+  ASSERT_NOT_NULL(ajar_protocol2);
+  ASSERT_EQ(ajar_protocol2->methods.size(), 3);
+  EXPECT_EQ(ajar_protocol2->all_methods.size(), 3);
+  for (auto& method : ajar_protocol2->methods) {
+    EXPECT_EQ(method.strictness, fidl::types::Strictness::kStrict);
+  }
+
+  auto ajar_protocol3 = library.LookupProtocol("AjarExample3");
+  ASSERT_NOT_NULL(ajar_protocol3);
+  ASSERT_EQ(ajar_protocol3->methods.size(), 2);
+  EXPECT_EQ(ajar_protocol3->all_methods.size(), 2);
+  for (auto& method : ajar_protocol3->methods) {
+    EXPECT_EQ(method.strictness, fidl::types::Strictness::kFlexible);
+  }
+
+  auto closed_protocol1 = library.LookupProtocol("ClosedExample1");
+  ASSERT_NOT_NULL(closed_protocol1);
+  ASSERT_EQ(closed_protocol1->methods.size(), 3);
+  EXPECT_EQ(closed_protocol1->all_methods.size(), 3);
+  for (auto& method : closed_protocol1->methods) {
+    EXPECT_EQ(method.strictness, fidl::types::Strictness::kStrict);
+  }
+
+  auto closed_protocol2 = library.LookupProtocol("ClosedExample2");
+  ASSERT_NOT_NULL(closed_protocol2);
+  ASSERT_EQ(closed_protocol2->methods.size(), 3);
+  EXPECT_EQ(closed_protocol2->all_methods.size(), 3);
+  for (auto& method : closed_protocol2->methods) {
+    EXPECT_EQ(method.strictness, fidl::types::Strictness::kStrict);
+  }
+
+  auto implicit_closed_protocol1 = library.LookupProtocol("ImplicitClosedExample1");
+  ASSERT_NOT_NULL(implicit_closed_protocol1);
+  ASSERT_EQ(implicit_closed_protocol1->methods.size(), 3);
+  EXPECT_EQ(implicit_closed_protocol1->all_methods.size(), 3);
+  for (auto& method : implicit_closed_protocol1->methods) {
+    EXPECT_EQ(method.strictness, fidl::types::Strictness::kStrict);
+  }
+
+  auto implicit_closed_protocol2 = library.LookupProtocol("ImplicitClosedExample2");
+  ASSERT_NOT_NULL(implicit_closed_protocol2);
+  ASSERT_EQ(implicit_closed_protocol2->methods.size(), 3);
+  EXPECT_EQ(implicit_closed_protocol2->all_methods.size(), 3);
+  for (auto& method : implicit_closed_protocol2->methods) {
+    EXPECT_EQ(method.strictness, fidl::types::Strictness::kStrict);
+  }
+}
+
+// TODO(fxbug.dev/88366): remove once fully migrated.
+TEST(MethodTests, BadInvalidMethodsAndEventsMigrationMode) {
+  TestLibrary library1(R"FIDL(library example;
+ajar protocol Example {
+    flexible TwoWay() -> ();
+};
+)FIDL");
+  library1.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractionsMigration);
+  ASSERT_ERRORED_DURING_COMPILE(library1, fidl::ErrFlexibleTwoWayMethodRequiresOpenProtocol)
+
+  TestLibrary library2(R"FIDL(library example;
+closed protocol Example {
+    flexible TwoWay() -> ();
+};
+)FIDL");
+  library2.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractionsMigration);
+  ASSERT_ERRORED_DURING_COMPILE(library2, fidl::ErrFlexibleTwoWayMethodRequiresOpenProtocol)
+
+  TestLibrary library3(R"FIDL(library example;
+protocol Example {
+    flexible TwoWay() -> ();
+};
+)FIDL");
+  library3.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractionsMigration);
+  ASSERT_ERRORED_DURING_COMPILE(library3, fidl::ErrFlexibleTwoWayMethodRequiresOpenProtocol)
+
+  TestLibrary library4(R"FIDL(library example;
+closed protocol Example {
+    flexible OneWay();
+};
+)FIDL");
+  library4.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractionsMigration);
+  ASSERT_ERRORED_DURING_COMPILE(library4, fidl::ErrFlexibleOneWayMethodInClosedProtocol)
+
+  TestLibrary library5(R"FIDL(library example;
+closed protocol Example {
+    flexible -> OnEvent();
+};
+)FIDL");
+  library5.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractionsMigration);
+  ASSERT_ERRORED_DURING_COMPILE(library5, fidl::ErrFlexibleOneWayMethodInClosedProtocol)
+
+  TestLibrary library6(R"FIDL(library example;
+protocol Example {
+    flexible OneWay();
+};
+)FIDL");
+  library6.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractionsMigration);
+  ASSERT_ERRORED_DURING_COMPILE(library6, fidl::ErrFlexibleOneWayMethodInClosedProtocol)
+
+  TestLibrary library7(R"FIDL(library example;
+protocol Example {
+    flexible -> OnEvent();
+};
+)FIDL");
+  library7.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractionsMigration);
+  ASSERT_ERRORED_DURING_COMPILE(library7, fidl::ErrFlexibleOneWayMethodInClosedProtocol)
+}
 
 TEST(MethodTests, GoodValidComposeMethod) {
   TestLibrary library(R"FIDL(library example;

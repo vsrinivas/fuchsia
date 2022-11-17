@@ -31,6 +31,7 @@ void ExperimentalFlags::ForEach(
 
 std::map<const std::string_view, const ExperimentalFlags::Flag> ExperimentalFlags::FLAG_STRINGS = {
     {"unknown_interactions", Flag::kUnknownInteractions},
+    {"unknown_interactions_migration", Flag::kUnknownInteractionsMigration},
     {"no_optional_structs", Flag::kNoOptionalStructs},
     {"allow_new_types", Flag::kAllowNewTypes},
     {"allow_overflowing", Flag::kAllowOverflowing},

@@ -377,10 +377,15 @@ void ConsumeStep::ConsumeProtocolDeclaration(
     ConsumeAttributeList(std::move(method->attributes), &attributes);
 
     auto strictness = types::Strictness::kStrict;
-    if (experimental_flags().IsFlagEnabled(ExperimentalFlags::Flag::kUnknownInteractions)) {
-      strictness = types::Strictness::kFlexible;
-      if (method->modifiers != nullptr && method->modifiers->maybe_strictness.has_value())
+    if (experimental_flags().IsFlagEnabled(ExperimentalFlags::Flag::kUnknownInteractions) ||
+        experimental_flags().IsFlagEnabled(
+            ExperimentalFlags::Flag::kUnknownInteractionsMigration)) {
+      if (method->modifiers != nullptr && method->modifiers->maybe_strictness.has_value()) {
         strictness = method->modifiers->maybe_strictness->value;
+      } else if (experimental_flags().IsFlagEnabled(
+                     ExperimentalFlags::Flag::kUnknownInteractions)) {
+        strictness = types::Strictness::kFlexible;
+      }
     }
 
     SourceSpan method_name = method->identifier->span();

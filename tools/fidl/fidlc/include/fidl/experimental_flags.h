@@ -19,6 +19,7 @@ class ExperimentalFlags {
     // TODO(fxbug.dev/106641): Allows backends to implement overflowing experiments.
     kAllowOverflowing = 1 << 0,
     kAllowNewTypes = 1 << 1,
+    // TODO(fxbug.dev/88366): Remove once unknown interactions are supported.
     kUnknownInteractions = 1 << 2,
     kNoOptionalStructs = 1 << 3,
     kOutputIndexJson = 1 << 4,
@@ -29,6 +30,9 @@ class ExperimentalFlags {
 
     // TODO(fxbug.dev/112767): Remove once soft transition is done.
     kSimpleEmptyResponseSyntax = 1 << 6,
+
+    // TODO(fxbug.dev/88366): Remove once unknown interactions are supported.
+    kUnknownInteractionsMigration = 1 << 7,
   };
 
   ExperimentalFlags() = default;
