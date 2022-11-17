@@ -30,9 +30,11 @@ class Flags final {
   constexpr inline Flags operator|(const Flags& other) const;
   constexpr inline Flags operator&(const Flags& other) const;
   constexpr inline Flags operator^(const Flags& other) const;
+  constexpr inline Flags operator-(const Flags& other) const;
   constexpr inline void operator|=(const Flags& other);
   constexpr inline void operator&=(const Flags& other);
   constexpr inline void operator^=(const Flags& other);
+  constexpr inline void operator-=(const Flags& other);
 
   // Constructs an instance of |Flags| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
@@ -80,6 +82,11 @@ constexpr inline ::test_anonymous::Flags Flags::operator^(
   return ::test_anonymous::Flags(static_cast<uint16_t>(this->value_ ^ other.value_));
 }
 
+constexpr inline ::test_anonymous::Flags Flags::operator-(
+    const ::test_anonymous::Flags& other) const {
+  return ::test_anonymous::Flags(static_cast<uint16_t>(this->value_ & ~other.value_));
+}
+
 constexpr inline void Flags::operator|=(
     const ::test_anonymous::Flags& other) {
   this->value_ |= other.value_;
@@ -93,6 +100,11 @@ constexpr inline void Flags::operator&=(
 constexpr inline void Flags::operator^=(
     const ::test_anonymous::Flags& other) {
   this->value_ ^= other.value_;
+}
+
+constexpr inline void Flags::operator-=(
+    const ::test_anonymous::Flags& other) {
+  this->value_ &= ~other.value_;
 }
 
 // |BitsMember| is flexible, hence may contain unknown members not
@@ -116,9 +128,11 @@ class BitsMember final {
   constexpr inline BitsMember operator|(const BitsMember& other) const;
   constexpr inline BitsMember operator&(const BitsMember& other) const;
   constexpr inline BitsMember operator^(const BitsMember& other) const;
+  constexpr inline BitsMember operator-(const BitsMember& other) const;
   constexpr inline void operator|=(const BitsMember& other);
   constexpr inline void operator&=(const BitsMember& other);
   constexpr inline void operator^=(const BitsMember& other);
+  constexpr inline void operator-=(const BitsMember& other);
 
   // Constructs an instance of |BitsMember| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
@@ -168,6 +182,11 @@ constexpr inline ::test_anonymous::BitsMember BitsMember::operator^(
   return ::test_anonymous::BitsMember(static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
+constexpr inline ::test_anonymous::BitsMember BitsMember::operator-(
+    const ::test_anonymous::BitsMember& other) const {
+  return ::test_anonymous::BitsMember(static_cast<uint32_t>(this->value_ & ~other.value_));
+}
+
 constexpr inline void BitsMember::operator|=(
     const ::test_anonymous::BitsMember& other) {
   this->value_ |= other.value_;
@@ -181,6 +200,11 @@ constexpr inline void BitsMember::operator&=(
 constexpr inline void BitsMember::operator^=(
     const ::test_anonymous::BitsMember& other) {
   this->value_ ^= other.value_;
+}
+
+constexpr inline void BitsMember::operator-=(
+    const ::test_anonymous::BitsMember& other) {
+  this->value_ &= ~other.value_;
 }
 
 class Op final {

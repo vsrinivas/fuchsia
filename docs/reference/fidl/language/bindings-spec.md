@@ -116,10 +116,14 @@ It is RECOMMENDED to support the following operators over generated values:
 * bitwise or, i.e `|`
 * bitwise exclusive-or, i.e `^`
 * bitwise not, i.e `~`
+* bitwise difference, i.e all the bits present in one operand, except the bits
+  present in the other operand. This is usually represented by the `-` operator.
 
-To provide bitwise operations that always result in valid bits values,
-implementations of bitwise not should further mask the resulting value with the
-mask of all values. In pseudo code:
+An invariant of FIDL bitwise operations is that they should not introduce
+unknown bits unless a corresponding unknown bit occur in the source operands.
+All recommended operators naturally have this property, except `bitwise not`.
+Implementations of the `bitwise not` operation MUST further mask the resulting
+value with the mask of all values. In pseudo code:
 
 ```
 ~value1   means   mask & ~bits_of(value1)
@@ -127,14 +131,26 @@ mask of all values. In pseudo code:
 
 This mask value is provided in the [JSON IR][jsonir] for convenience.
 
-In languages where operator overloading is supported, such as C++, bitwise
-negation MUST be implemented by overloading the built in operator in a manner
-that always unsets the unknown members of the bitfield.  In languages that do
-not support operator overloading, such as Go, values SHOULD provide an
+In languages where operator overloading is supported, such as C++, the `bitwise
+not` operation MUST be implemented by overloading the built in operator in a
+manner that always unsets the unknown members of the bitfield.  In languages
+that do not support operator overloading, such as Go, values SHOULD provide an
 `InvertBits()` method (cased in the manner most appropriate for the language)
 for executing the masked inversion.
 
-Bindings SHOULD NOT support other operators since they could result in invalid
+The bitwise difference operator SHOULD be preferred over the bitwise not
+operator when clearing bits, because the former preserves unknown bits:
+
+```
+// Unknown bits in value1 are preserved.
+value1 = value1 - value2
+
+// Unknown bits in value1 are cleared, even if the user may only intend to
+// clear just the bits in value2.
+value1 = value1 & ~value2
+```
+
+Bindings SHOULD NOT support other operators which could result in invalid
 bits value (or risk a non-obvious translation of their meaning), e.g.:
 
 * bitwise shifts, i.e `<<` or `>>`
@@ -144,14 +160,15 @@ For cases where the generated code includes a type wrapping the underlying
 numeric bits value, it SHOULD be possible to convert between the raw value and
 the wrapper type. It is RECOMMENDED for this conversion to be explicit.
 
-Bindings MAY provide functions for converting a primitive value of the underlying
-type of a `bits` to the `bits` type itself. These converters may be of several
-flavors:
+Bindings MAY provide functions for converting a primitive value of the
+underlying type of a `bits` to the `bits` type itself. These converters may be
+of several flavors:
 
 * Possibly failing (or returning null) if the input value contains any unknown
   bits.
 * Truncates any unknown bits from the input value.
-* For [flexible](#strict-flexible) bits only: Keeps any unknown bits from the input value.
+* For [flexible](#strict-flexible) bits only: Keeps any unknown bits from the
+  input value.
 
 #### Unknown data {#unknown-bits}
 

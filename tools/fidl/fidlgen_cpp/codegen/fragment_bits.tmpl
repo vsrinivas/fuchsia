@@ -36,9 +36,11 @@ public:
   constexpr inline {{ .Name }} operator|(const {{ .Name }}& other) const;
   constexpr inline {{ .Name }} operator&(const {{ .Name }}& other) const;
   constexpr inline {{ .Name }} operator^(const {{ .Name }}& other) const;
+  constexpr inline {{ .Name }} operator-(const {{ .Name }}& other) const;
   constexpr inline void operator|=(const {{ .Name }}& other);
   constexpr inline void operator&=(const {{ .Name }}& other);
   constexpr inline void operator^=(const {{ .Name }}& other);
+  constexpr inline void operator-=(const {{ .Name }}& other);
 
   // Constructs an instance of |{{ .Name }}| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
@@ -92,6 +94,11 @@ constexpr inline {{ . }} {{ .Name }}::operator^(
   return {{ $ }}(static_cast<{{ .Type }}>(this->value_ ^ other.value_));
 }
 
+constexpr inline {{ . }} {{ .Name }}::operator-(
+    const {{ . }}& other) const {
+  return {{ $ }}(static_cast<{{ .Type }}>(this->value_ & ~other.value_));
+}
+
 constexpr inline void {{ .Name }}::operator|=(
     const {{ . }}& other) {
   this->value_ |= other.value_;
@@ -105,6 +112,11 @@ constexpr inline void {{ .Name }}::operator&=(
 constexpr inline void {{ .Name }}::operator^=(
     const {{ . }}& other) {
   this->value_ ^= other.value_;
+}
+
+constexpr inline void {{ .Name }}::operator-=(
+    const {{ . }}& other) {
+  this->value_ &= ~other.value_;
 }
 
 {{ end }}

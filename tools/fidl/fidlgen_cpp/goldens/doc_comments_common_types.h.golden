@@ -35,9 +35,11 @@ class MyStrictBits final {
   constexpr inline MyStrictBits operator|(const MyStrictBits& other) const;
   constexpr inline MyStrictBits operator&(const MyStrictBits& other) const;
   constexpr inline MyStrictBits operator^(const MyStrictBits& other) const;
+  constexpr inline MyStrictBits operator-(const MyStrictBits& other) const;
   constexpr inline void operator|=(const MyStrictBits& other);
   constexpr inline void operator&=(const MyStrictBits& other);
   constexpr inline void operator^=(const MyStrictBits& other);
+  constexpr inline void operator-=(const MyStrictBits& other);
 
   // Constructs an instance of |MyStrictBits| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
@@ -83,6 +85,11 @@ constexpr inline ::test_doccomments::MyStrictBits MyStrictBits::operator^(
   return ::test_doccomments::MyStrictBits(static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
+constexpr inline ::test_doccomments::MyStrictBits MyStrictBits::operator-(
+    const ::test_doccomments::MyStrictBits& other) const {
+  return ::test_doccomments::MyStrictBits(static_cast<uint32_t>(this->value_ & ~other.value_));
+}
+
 constexpr inline void MyStrictBits::operator|=(
     const ::test_doccomments::MyStrictBits& other) {
   this->value_ |= other.value_;
@@ -96,6 +103,11 @@ constexpr inline void MyStrictBits::operator&=(
 constexpr inline void MyStrictBits::operator^=(
     const ::test_doccomments::MyStrictBits& other) {
   this->value_ ^= other.value_;
+}
+
+constexpr inline void MyStrictBits::operator-=(
+    const ::test_doccomments::MyStrictBits& other) {
+  this->value_ &= ~other.value_;
 }
 
 /// flexible bits comment #1
@@ -122,9 +134,11 @@ class MyFlexibleBits final {
   constexpr inline MyFlexibleBits operator|(const MyFlexibleBits& other) const;
   constexpr inline MyFlexibleBits operator&(const MyFlexibleBits& other) const;
   constexpr inline MyFlexibleBits operator^(const MyFlexibleBits& other) const;
+  constexpr inline MyFlexibleBits operator-(const MyFlexibleBits& other) const;
   constexpr inline void operator|=(const MyFlexibleBits& other);
   constexpr inline void operator&=(const MyFlexibleBits& other);
   constexpr inline void operator^=(const MyFlexibleBits& other);
+  constexpr inline void operator-=(const MyFlexibleBits& other);
 
   // Constructs an instance of |MyFlexibleBits| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
@@ -174,6 +188,11 @@ constexpr inline ::test_doccomments::MyFlexibleBits MyFlexibleBits::operator^(
   return ::test_doccomments::MyFlexibleBits(static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
+constexpr inline ::test_doccomments::MyFlexibleBits MyFlexibleBits::operator-(
+    const ::test_doccomments::MyFlexibleBits& other) const {
+  return ::test_doccomments::MyFlexibleBits(static_cast<uint32_t>(this->value_ & ~other.value_));
+}
+
 constexpr inline void MyFlexibleBits::operator|=(
     const ::test_doccomments::MyFlexibleBits& other) {
   this->value_ |= other.value_;
@@ -187,6 +206,11 @@ constexpr inline void MyFlexibleBits::operator&=(
 constexpr inline void MyFlexibleBits::operator^=(
     const ::test_doccomments::MyFlexibleBits& other) {
   this->value_ ^= other.value_;
+}
+
+constexpr inline void MyFlexibleBits::operator-=(
+    const ::test_doccomments::MyFlexibleBits& other) {
+  this->value_ &= ~other.value_;
 }
 
 /// strict enum comment #1.

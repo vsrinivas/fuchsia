@@ -32,7 +32,13 @@ TEST(NaturalTypes, Bits) {
   auto flags = ~fuchsia_examples::FileMode::kRead & fuchsia_examples::FileMode::kExecute;
   flags = fuchsia_examples::FileMode::kRead | fuchsia_examples::FileMode::kWrite;
 
+  // Bits implement the set difference operation (clearing bits) under -.
+  ASSERT_EQ(flags - fuchsia_examples::FileMode::kRead, fuchsia_examples::FileMode::kWrite);
+  flags -= fuchsia_examples::FileMode::kRead;
+  ASSERT_EQ(flags, fuchsia_examples::FileMode::kWrite);
+
   // Bits may be explicitly casted to their underlying integer type.
+  flags = fuchsia_examples::FileMode::kRead | fuchsia_examples::FileMode::kWrite;
   ASSERT_EQ(static_cast<uint16_t>(flags), 0b11);
 
   // They may also be explicitly constructed from an underlying type, but

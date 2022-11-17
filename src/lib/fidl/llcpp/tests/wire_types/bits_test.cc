@@ -40,6 +40,9 @@ TYPED_TEST_P(Bits, BitwiseOperators) {
 
   TypeParam b_or_d_xor_b_or_e = (TypeParam::kB | TypeParam::kD) ^ (TypeParam::kB | TypeParam::kE);
   EXPECT_EQ(static_cast<uint8_t>(b_or_d_xor_b_or_e), 12u /* 6 ^ 10*/);
+
+  TypeParam bde_subtract_d = (TypeParam::kB | TypeParam::kD | TypeParam::kE) - TypeParam::kD;
+  EXPECT_EQ(static_cast<uint8_t>(bde_subtract_d), 10u /* B or E, 2 | 8 */);
 }
 
 TYPED_TEST_P(Bits, BitwiseAssignOperators) {
@@ -54,6 +57,10 @@ TYPED_TEST_P(Bits, BitwiseAssignOperators) {
   TypeParam b_xor_not_e = TypeParam::kB;
   b_xor_not_e ^= ~TypeParam::kE;
   EXPECT_EQ(static_cast<uint8_t>(b_xor_not_e), 4u /* 4 ^ 6*/);
+
+  TypeParam bde_subtract_d = TypeParam::kB | TypeParam::kD | TypeParam::kE;
+  bde_subtract_d -= TypeParam::kD;
+  EXPECT_EQ(static_cast<uint8_t>(bde_subtract_d), 10u /* B or E, 2 | 8 */);
 
   EXPECT_EQ(static_cast<uint8_t>(TypeParam::kB), 2u);
   EXPECT_EQ(static_cast<uint8_t>(TypeParam::kD), 4u);
@@ -98,9 +105,61 @@ TYPED_TEST_P(Bits, AllowingUnknownThroughStaticCast) {
   EXPECT_EQ(static_cast<uint8_t>(bits), 1);
 }
 
+TYPED_TEST_P(Bits, OperatorsDoNotSquashUnknownsExceptNot) {
+  // The bits type only has 2, 4, and 8 defined.
+  auto get_unknown = [] {
+    auto bits = static_cast<TypeParam>(1);
+    EXPECT_EQ(static_cast<uint8_t>(bits), 1);
+    return bits;
+  };
+  EXPECT_EQ(static_cast<uint8_t>(get_unknown() | TypeParam::kB), 3u /* 1 | B */);
+  EXPECT_EQ(static_cast<uint8_t>(get_unknown() - TypeParam::kB), 1u);
+  EXPECT_EQ(static_cast<uint8_t>(get_unknown() & get_unknown()), 1u);
+  EXPECT_EQ(static_cast<uint8_t>(get_unknown() | get_unknown()), 1u);
+  EXPECT_EQ(static_cast<uint8_t>(get_unknown() ^ TypeParam::kB), 3u /* 1 ^ B */);
+
+  {
+    TypeParam b = get_unknown();
+    b |= TypeParam::kB;
+    EXPECT_EQ(static_cast<uint8_t>(b), 3u /* 1 | B */);
+  }
+
+  {
+    TypeParam b = get_unknown();
+    b -= TypeParam::kB;
+    EXPECT_EQ(static_cast<uint8_t>(b), 1u);
+  }
+
+  {
+    TypeParam b = get_unknown();
+    b &= get_unknown();
+    EXPECT_EQ(static_cast<uint8_t>(b), 1u);
+  }
+
+  {
+    TypeParam b = get_unknown();
+    b |= get_unknown();
+    EXPECT_EQ(static_cast<uint8_t>(b), 1u);
+  }
+
+  {
+    TypeParam b = get_unknown();
+    b ^= TypeParam::kB;
+    EXPECT_EQ(static_cast<uint8_t>(b), 3u /* 1 ^ B */);
+  }
+}
+
+TYPED_TEST_P(Bits, NotOperatorDoesSquashUnknowns) {
+  // The bits type only has 2, 4, and 8 defined.
+  auto bits = static_cast<TypeParam>(1);
+  EXPECT_EQ(static_cast<uint8_t>(bits), 1);
+  EXPECT_EQ(static_cast<uint8_t>(~~bits), 0);
+}
+
 REGISTER_TYPED_TEST_SUITE_P(Bits, BitwiseOperators, BitwiseAssignOperators, IsConstexpr,
                             CanConvertToNumberButMustBeExplicit, CanConvertToBool,
-                            TruncatingUnknown, TryFrom, AllowingUnknownThroughStaticCast);
+                            TruncatingUnknown, TryFrom, AllowingUnknownThroughStaticCast,
+                            OperatorsDoNotSquashUnknownsExceptNot, NotOperatorDoesSquashUnknowns);
 
 using BitsTypesToTest =
     ::testing::Types<test_types::wire::StrictBits, test_types::wire::FlexibleBits>;
