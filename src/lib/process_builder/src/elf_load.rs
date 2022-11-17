@@ -218,7 +218,11 @@ pub fn map_elf_segments(
         }
 
         // Create the VMO part of the mapping.
-        let flags = zx::VmarFlags::SPECIFIC | elf_to_vmar_perm_flags(&hdr.flags());
+        // The VMO can be pager-backed, so include the ALLOW_FAULTS flag. ALLOW_FAULTS is a no-op
+        // if not applicable to the VMO type.
+        let flags = zx::VmarFlags::SPECIFIC
+            | zx::VmarFlags::ALLOW_FAULTS
+            | elf_to_vmar_perm_flags(&hdr.flags());
         if file_size != 0 {
             mapper
                 .map(
@@ -739,6 +743,7 @@ mod tests {
         assert_eq!(
             mapping.flags,
             zx::VmarFlags::SPECIFIC
+                | zx::VmarFlags::ALLOW_FAULTS
                 | zx::VmarFlags::PERM_EXECUTE
                 | zx::VmarFlags::PERM_READ_IF_XOM_UNSUPPORTED
         );
