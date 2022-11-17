@@ -13,6 +13,7 @@ group("tests") {
     ":virtio_gpu_device_tests",
     ":virtio_input_device_tests",
     ":virtio_magma_device_tests",
+    ":virtio_mem_device_tests",
     ":virtio_net_device_tests",
     ":virtio_rng_device_tests",
     ":virtio_sound_device_tests",
@@ -372,6 +373,31 @@ device_test("virtio_wl_device_tests") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/virtio",
     "//zircon/system/ulib/zx",
+  ]
+
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+device_test("virtio_mem_device_tests") {
+  sources = [ "virtio_mem_test.cc" ]
+  manifest = "meta/virtio_mem_device_tests.cml"
+  device_components =
+      [ "//src/virtualization/bin/vmm/device/virtio_mem:virtio_mem_component" ]
+  configs = [ "//build/config:all_source" ]
+
+  deps = [
+    ":test_with_device",
+    ":virtio_queue_fake",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_hlcpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//zircon/system/ulib/virtio",
   ]
 
   test_specs = {

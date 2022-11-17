@@ -12,6 +12,7 @@ zx_library("virtio") {
     "virtio/console.h",
     "virtio/gpu.h",
     "virtio/input.h",
+    "virtio/mem.h",
     "virtio/net.h",
     "virtio/sound.h",
     "virtio/virtio.h",
