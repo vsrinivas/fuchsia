@@ -137,6 +137,9 @@ template <typename FidlType>
 class LinearSnap {
   static_assert(fidl::IsFidlType<FidlType>::value);
   using WireType = typename GetWireType<FidlType>::type;
+  using NaturalType =
+      std::conditional_t<std::is_same_v<FidlType, WireType>,
+                         decltype(fidl::ToNatural(std::declval<WireType>())), FidlType>;
 
  public:
   static constexpr size_t kMaxDataSize = 64 * 1024;
@@ -152,79 +155,60 @@ class LinearSnap {
   // This reference can't be used beyond the lifetime of the LinearSnap instance.
   FidlType& value() { return decoded_value_.value(); }
 
-  const fidl::BytePart snap_bytes() const {
-    return fidl::BytePart(const_cast<uint8_t*>(snap_data_), snap_data_size_, snap_data_size_);
-  }
+  cpp20::span<const uint8_t> snap_bytes() const { return cpp20::span(snap_data_); }
 
-  const fidl::HandlePart snap_handles() const {
-    return fidl::HandlePart(const_cast<zx_handle_t*>(snap_handles_), snap_handles_count_,
-                            snap_handles_count_);
-  }
+  cpp20::span<const zx_handle_t> snap_handles() const { return cpp20::span(snap_handles_); }
 
-  const fidl_channel_handle_metadata_t* snap_handle_metadata() const {
-    return snap_handle_metadata_;
+  cpp20::span<const fidl_channel_handle_metadata_t> snap_handle_metadata() const {
+    return cpp20::span(snap_handle_metadata_);
   }
 
  private:
   explicit LinearSnap(FidlType&& to_move_in) {
-    // Always consume to_move_in, along with converting from natural to wire as needed.
-    fidl::Arena arena;
-    alignas(FIDL_ALIGNMENT) WireType aligned;
+    // Always consume to_move_in, along with converting from wire to natural as needed.
+    NaturalType natural;
     if constexpr (std::is_same_v<FidlType, WireType>) {
-      aligned = std::move(to_move_in);
+      natural = fidl::ToNatural(std::move(to_move_in));
     } else {
-      aligned = fidl::ToWire(arena, std::move(to_move_in));
+      natural = std::move(to_move_in);
     }
 
-    // TODO(fxbug.dev/45252): Use FIDL at rest.
-    fidl::unstable::UnownedEncodedMessage<WireType> encoded(fidl::internal::WireFormatVersion::kV2,
-                                                            linear_data_, kMaxDataSize, &aligned);
-    ZX_ASSERT(encoded.ok());
-    fidl::OutgoingMessage& outgoing_message = encoded.GetOutgoingMessage();
-    fidl::OutgoingMessage::CopiedBytes outgoing_message_bytes_(outgoing_message.CopyBytes());
-    ZX_ASSERT(outgoing_message_bytes_.size() <= sizeof(snap_data_));
-    memcpy(snap_data_, outgoing_message_bytes_.data(), outgoing_message_bytes_.size());
-    snap_data_size_ = static_cast<uint32_t>(outgoing_message_bytes_.size());
-    ZX_ASSERT(outgoing_message.handle_actual() * sizeof(zx_handle_t) <= sizeof(snap_handles_));
-    memcpy(snap_handles_, outgoing_message.handles(),
-           outgoing_message.handle_actual() * sizeof(zx_handle_t));
-    ZX_ASSERT(outgoing_message.handle_actual() * sizeof(fidl_channel_handle_metadata_t) <=
-              sizeof(snap_handle_metadata_));
-    memcpy(snap_handle_metadata_,
-           outgoing_message.handle_metadata<fidl::internal::ChannelTransport>(),
-           outgoing_message.handle_actual() * sizeof(fidl_channel_handle_metadata_t));
-    snap_handles_count_ = outgoing_message.handle_actual();
-    outgoing_to_incoming_result_.emplace(encoded.GetOutgoingMessage());
-    ZX_ASSERT(outgoing_to_incoming_result_.value().ok());
-    // TODO(fxbug.dev/45252): Use FIDL at rest.
-    decoded_.emplace(fidl::internal::WireFormatVersion::kV2,
-                     std::move(outgoing_to_incoming_result_.value().incoming_message()));
-    ZX_ASSERT(decoded_.value().ok());
+    fidl::OwnedEncodeResult encoded = fidl::Encode(std::move(natural));
+    ZX_ASSERT(encoded.message().ok());
+    fidl::OutgoingMessage& outgoing_message = encoded.message();
+    fidl::OutgoingMessage::CopiedBytes outgoing_message_bytes = outgoing_message.CopyBytes();
+    snap_data_ = {outgoing_message_bytes.data(),
+                  outgoing_message_bytes.data() + outgoing_message_bytes.size()};
+    snap_handles_ = {outgoing_message.handles(),
+                     outgoing_message.handles() + outgoing_message.handle_actual()};
+    snap_handle_metadata_ = {outgoing_message.handle_metadata<fidl::internal::ChannelTransport>(),
+                             outgoing_message.handle_metadata<fidl::internal::ChannelTransport>() +
+                                 outgoing_message.handle_actual()};
+
+    fidl::OutgoingToIncomingMessage outgoing_to_incoming_result_{outgoing_message};
+    ZX_ASSERT(outgoing_to_incoming_result_.ok());
+    fit::result decoded = fidl::Decode<NaturalType>(
+        std::move(outgoing_to_incoming_result_.incoming_message()), encoded.wire_format_metadata());
+    ZX_ASSERT(decoded.is_ok());
 
     if constexpr (std::is_same_v<FidlType, WireType>) {
-      // Syntactically this is moving, but the storage is really still shared with decoded_; in any
+      // Syntactically this is moving, but the storage is really still shared with arena_; in any
       // case both are still members of LinearSnap so both are tied to lifetime of LinearSnap.
-      decoded_value_.emplace(std::move(*decoded_.value().PrimaryObject()));
+      decoded_value_.emplace(fidl::ToWire(arena_, std::move(decoded.value())));
     } else {
       // This really does move out of decoded_, but decoded_value_ still only lasts as long as
       // LinearSnap.
-      decoded_value_.emplace(fidl::ToNatural(std::move(*decoded_.value().PrimaryObject())));
+      decoded_value_.emplace(std::move(decoded.value()));
     }
   }
 
-  // During MoveFrom, used for linearizing, encoding.
-  alignas(FIDL_ALIGNMENT) uint8_t linear_data_[kMaxDataSize] = {};
+  std::vector<uint8_t> snap_data_;
+  std::vector<zx_handle_t> snap_handles_;
+  std::vector<fidl_channel_handle_metadata_t> snap_handle_metadata_;
 
-  alignas(FIDL_ALIGNMENT) uint8_t snap_data_[kMaxDataSize] = {};
-  zx_handle_t snap_handles_[kMaxHandleCount] = {};
-  fidl_channel_handle_metadata_t snap_handle_metadata_[kMaxHandleCount] = {};
-  uint32_t snap_data_size_ = {};
-  uint32_t snap_handles_count_ = {};
-
-  std::optional<fidl::OutgoingToIncomingMessage> outgoing_to_incoming_result_;
-  // moved out to decoded_value_ ()
-  std::optional<fidl::unstable::DecodedMessage<WireType>> decoded_;
-  // when FidlType == WireType, shares storage with decoded_
+  // when FidlType == WireType, holds out-of-line data and handles in the decoded value.
+  fidl::Arena<> arena_;
+  // when FidlType == WireType, shares storage with |arena_|.
   std::optional<FidlType> decoded_value_;
 };
 
@@ -235,32 +219,32 @@ std::unique_ptr<LinearSnap<FidlType>> SnapMoveFrom(FidlType&& to_move_in) {
 
 template <typename FidlType>
 bool IsEqualImpl(const LinearSnap<FidlType>& a, const LinearSnap<FidlType>& b, bool by_koid) {
-  if (a.snap_bytes().actual() != b.snap_bytes().actual()) {
+  if (a.snap_bytes().size() != b.snap_bytes().size()) {
     return false;
   }
-  if (0 != memcmp(a.snap_bytes().data(), b.snap_bytes().data(), a.snap_bytes().actual())) {
+  if (0 != memcmp(a.snap_bytes().data(), b.snap_bytes().data(), a.snap_bytes().size())) {
     return false;
   }
-  if (a.snap_handles().actual() != b.snap_handles().actual()) {
+  if (a.snap_handles().size() != b.snap_handles().size()) {
     return false;
   }
   if (!by_koid) {
     if (0 != memcmp(a.snap_handles().data(), b.snap_handles().data(),
-                    a.snap_handles().actual() * sizeof(zx_handle_t))) {
+                    a.snap_handles().size() * sizeof(zx_handle_t))) {
       return false;
     }
-    if (0 != memcmp(a.snap_handle_metadata(), b.snap_handle_metadata(),
-                    a.snap_handles().actual() * sizeof(fidl_channel_handle_metadata_t))) {
+    if (0 != memcmp(a.snap_handle_metadata().data(), b.snap_handle_metadata().data(),
+                    a.snap_handle_metadata().size() * sizeof(fidl_channel_handle_metadata_t))) {
       return false;
     }
   } else {
-    for (uint32_t i = 0; i < a.snap_handles().actual(); ++i) {
+    for (uint32_t i = 0; i < a.snap_handles().size(); ++i) {
       zx_info_handle_basic_t a_info{};
       zx_info_handle_basic_t b_info{};
-      ZX_ASSERT(ZX_OK == zx_object_get_info(a.snap_handles().data()[i], ZX_INFO_HANDLE_BASIC,
-                                            &a_info, sizeof(a_info), nullptr, nullptr));
-      ZX_ASSERT(ZX_OK == zx_object_get_info(b.snap_handles().data()[i], ZX_INFO_HANDLE_BASIC,
-                                            &b_info, sizeof(a_info), nullptr, nullptr));
+      ZX_ASSERT(ZX_OK == zx_object_get_info(a.snap_handles()[i], ZX_INFO_HANDLE_BASIC, &a_info,
+                                            sizeof(a_info), nullptr, nullptr));
+      ZX_ASSERT(ZX_OK == zx_object_get_info(b.snap_handles()[i], ZX_INFO_HANDLE_BASIC, &b_info,
+                                            sizeof(a_info), nullptr, nullptr));
       if (a_info.koid != b_info.koid) {
         return false;
       }
