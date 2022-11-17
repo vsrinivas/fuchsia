@@ -165,6 +165,9 @@ func NewQEMUTarget(ctx context.Context, config QEMUConfig, opts Options) (*QEMUT
 	if _, err := r.Read(t.mac[:]); err != nil {
 		return nil, fmt.Errorf("failed to generate random MAC: %w", err)
 	}
+	// Ensure that the generated MAC address is unicast
+	// https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast_(I/G_bit)
+	t.mac[0] &= ^uint8(0x01)
 
 	if config.Serial {
 		// We can run QEMU 'in a terminal' by creating a pseudoterminal slave and
