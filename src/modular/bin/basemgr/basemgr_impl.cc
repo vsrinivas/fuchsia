@@ -246,6 +246,10 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
       view_params = std::make_optional(std::move(view_creation_token));
     }
 
+    if (!view_params) {
+      view_params = std::make_optional(/*use_flatland=*/true);
+    }
+
     auto start_session_result = session_provider_->StartSession(std::move(view_params));
     FX_CHECK(start_session_result.is_ok());
 
@@ -270,6 +274,10 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
       FX_LOGS(INFO) << "No ViewProvider, sessionmgr will create Gfx view for v1 session shell.";
       view_params = std::make_optional(GfxViewParams{.view_token = std::move(view_token),
                                                      .view_ref_pair = std::move(view_ref_pair)});
+    }
+
+    if (!view_params) {
+      view_params = std::make_optional(/*use_flatland=*/false);
     }
 
     auto start_session_result = session_provider_->StartSession(std::move(view_params));

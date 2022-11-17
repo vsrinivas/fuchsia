@@ -69,7 +69,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       std::string session_id,
       fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
       fuchsia::sys::ServiceList v2_services_for_sessionmgr,
-      fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr) override;
+      fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr,
+      bool use_flatland) override;
 
   // InitializeInternal is called for each new session, denoted by a unique session_id. In other
   // words, it initializes a session, not a SessionmgrImpl (despite the class-scoped name).

@@ -18,8 +18,10 @@ struct GfxViewParams {
   scenic::ViewRefPair view_ref_pair;
 };
 
-// Parameters for creating a Gfx or Flatland view.
-using ViewParams = std::variant<GfxViewParams, fuchsia::ui::views::ViewCreationToken>;
+// Bool indicates that we should initialize without view params using Flatland or Gfx protocol.
+// Otherwise, this holds parameters for creating a Gfx or Flatland view.
+using ViewParams =
+    std::variant</*use_flatland=*/bool, GfxViewParams, fuchsia::ui::views::ViewCreationToken>;
 
 }  // namespace modular
 

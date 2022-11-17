@@ -60,7 +60,8 @@ protocol Sessionmgr {
     });
     /// Launches sessionmgr. See `Initialize`.
     ///
-    /// sessionmgr does not receive a view through this method.
+    /// sessionmgr does not receive a view through this method. `use_flatland`
+    /// indicates if Flatland protocol should be used instead of Gfx.
     ///
     /// This should be called when using a v2 session shell component,
     /// launched by basemgr, instead of a v1 shell launched by sessionmgr.
@@ -70,6 +71,7 @@ protocol Sessionmgr {
         session_context client_end:SessionContext;
         additional_services_for_agents fuchsia.sys.ServiceList;
         services_from_sessionmgr server_end:fuchsia.io.Directory;
+        use_flatland bool;
     });
 };
 

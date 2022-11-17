@@ -38,7 +38,14 @@ SessionContextImpl::SessionContextImpl(
 
   // Initialize the Sessionmgr service.
   sessionmgr_app_->services().Connect(sessionmgr_.NewRequest());
-  if (view_params.has_value()) {
+  if (!view_params.has_value()) {
+    FX_LOGS(FATAL) << "ViewParams must be set";
+  }
+  if (auto* use_flatland = std::get_if<bool>(&*view_params)) {
+    sessionmgr_->InitializeWithoutView(sessions::kSessionId, session_context_binding_.NewBinding(),
+                                       std::move(v2_services_for_sessionmgr),
+                                       std::move(svc_from_v1_sessionmgr_request), *use_flatland);
+  } else {
     if (auto* view_creation_token =
             std::get_if<fuchsia::ui::views::ViewCreationToken>(&*view_params)) {
       sessionmgr_->Initialize(sessions::kSessionId, session_context_binding_.NewBinding(),
@@ -53,12 +60,8 @@ SessionContextImpl::SessionContextImpl(
                                     std::move(gfx_view_params->view_ref_pair.control_ref),
                                     std::move(gfx_view_params->view_ref_pair.view_ref));
     } else {
-      FX_LOGS(FATAL) << "ViewParams must be either a ViewCreationToken or GfxViewParams";
+      FX_LOGS(FATAL) << "ViewParams must be either a bool, ViewCreationToken or GfxViewParams";
     }
-  } else {
-    sessionmgr_->InitializeWithoutView(sessions::kSessionId, session_context_binding_.NewBinding(),
-                                       std::move(v2_services_for_sessionmgr),
-                                       std::move(svc_from_v1_sessionmgr_request));
   }
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {

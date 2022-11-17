@@ -133,12 +133,12 @@ void SessionmgrImpl::InitializeWithoutView(
     std::string session_id,
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
     fuchsia::sys::ServiceList v2_services_for_sessionmgr,
-    fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr) {
+    fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr, bool use_flatland) {
   FX_LOGS(INFO) << "SessionmgrImpl::InitializeWithoutView() called.";
 
   InitializeInternal(std::move(session_id), std::move(session_context),
                      std::move(v2_services_for_sessionmgr), std::move(svc_from_v1_sessionmgr),
-                     std::nullopt);
+                     std::make_optional(use_flatland));
 }
 
 void SessionmgrImpl::InitializeInternal(
@@ -158,8 +158,13 @@ void SessionmgrImpl::InitializeInternal(
                            ? std::make_optional(session_shell_app_config->url())
                            : std::nullopt;
 
-  auto use_flatland = view_params.has_value() &&
-                      std::holds_alternative<fuchsia::ui::views::ViewCreationToken>(*view_params);
+  if (!view_params.has_value()) {
+    FX_LOGS(FATAL) << "ViewParams must be set";
+  }
+  auto* view_param_bool = std::get_if<bool>(&*view_params);
+  const bool use_flatland =
+      (view_param_bool && *view_param_bool) ||
+      std::holds_alternative<fuchsia::ui::views::ViewCreationToken>(*view_params);
 
   InitializeSessionEnvironment(std::move(session_id), std::move(v2_services_for_sessionmgr));
 
