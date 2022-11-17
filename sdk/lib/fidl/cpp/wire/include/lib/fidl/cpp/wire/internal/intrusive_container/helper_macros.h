@@ -7,6 +7,13 @@
 
 #include <type_traits>
 
+// The DISALLOW_COPY_ASSIGN_AND_MOVE and DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE
+// macros are sometimes defined in third-party libs, so we should make sure that
+// they don't conflict with existing definitions.
+// TODO(fxbug/115492): These macro usages should be removed from FIDL bindings.
+
+#ifndef DISALLOW_COPY_ASSIGN_AND_MOVE
+
 // Macro used to simplify the task of deleting all of the default copy
 // constructors and assignment operators.
 #define DISALLOW_COPY_ASSIGN_AND_MOVE(_class_name)     \
@@ -15,11 +22,17 @@
   _class_name& operator=(const _class_name&) = delete; \
   _class_name& operator=(_class_name&&) = delete
 
+#endif  // DISALLOW_COPY_ASSIGN_AND_MOVE
+
+#ifndef DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE
+
 // Macro used to simplify the task of deleting the non rvalue reference copy
 // constructors and assignment operators.  (IOW - forcing move semantics)
 #define DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(_class_name) \
   _class_name(const _class_name&) = delete;              \
   _class_name& operator=(const _class_name&) = delete
+
+#endif  // DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE
 
 // Macro for defining a trait that checks if a type T has a method with the
 // given name. This is not as strong as using is_same to check function
