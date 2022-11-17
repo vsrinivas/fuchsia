@@ -93,6 +93,7 @@ class PacketQueue : public ReadableStream {
   bool read_lock_in_progress_ FXL_GUARDED_BY(pending_mutex_) = false;
 
   size_t underflow_count_ FXL_GUARDED_BY(pending_mutex_) = {0};
+  zx::duration most_recent_underflow_duration_{0};
   fit::function<void(zx::duration)> underflow_reporter_;
 
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_;

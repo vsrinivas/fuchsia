@@ -204,6 +204,8 @@ void PacketQueue::ReportUnderflow(const fbl::RefPtr<Packet>& packet, Fixed under
 
   if constexpr (kLogPacketQueueUnderflow) {
     auto underflow_msec = static_cast<double>(duration.to_nsecs()) / ZX_MSEC(1);
+    auto duration_change = duration - most_recent_underflow_duration_;
+    most_recent_underflow_duration_ = duration;
 
 #define LOG_UNDERFLOW(where, interval)                                                   \
   FX_LOGS(where) << "PACKET QUEUE UNDERFLOW #" << underflow_count_ << " (1/" << interval \
@@ -211,16 +213,19 @@ void PacketQueue::ReportUnderflow(const fbl::RefPtr<Packet>& packet, Fixed under
                  << packet->end() << "] arrived late by " << underflow_msec << " ms ("   \
                  << underflow_frames << " frames)"
 
-    if ((kPacketQueueUnderflowWarningInterval > 0) &&
-        ((underflow_count_ - 1) % kPacketQueueUnderflowWarningInterval == 0)) {
+    if ((kPacketQueueUnderflowWarningInterval > 0 &&
+         (underflow_count_ - 1) % kPacketQueueUnderflowWarningInterval == 0) ||
+        duration_change >= kPacketQueueUnderflowDurationIncreaseWarningThreshold) {
       LOG_UNDERFLOW(WARNING, kPacketQueueUnderflowWarningInterval);
 
-    } else if ((kPacketQueueUnderflowInfoInterval > 0) &&
-               ((underflow_count_ - 1) % kPacketQueueUnderflowInfoInterval == 0)) {
+    } else if ((kPacketQueueUnderflowInfoInterval > 0 &&
+                (underflow_count_ - 1) % kPacketQueueUnderflowInfoInterval == 0) ||
+               duration_change >= kPacketQueueUnderflowDurationIncreaseInfoThreshold) {
       LOG_UNDERFLOW(INFO, kPacketQueueUnderflowInfoInterval);
 
-    } else if ((kPacketQueueUnderflowTraceInterval > 0) &&
-               ((underflow_count_ - 1) % kPacketQueueUnderflowTraceInterval == 0)) {
+    } else if ((kPacketQueueUnderflowTraceInterval > 0 &&
+                (underflow_count_ - 1) % kPacketQueueUnderflowTraceInterval == 0) ||
+               duration_change >= kPacketQueueUnderflowDurationIncreaseTraceThreshold) {
       LOG_UNDERFLOW(TRACE, kPacketQueueUnderflowTraceInterval);
     }
   }

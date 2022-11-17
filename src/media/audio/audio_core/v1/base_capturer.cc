@@ -677,11 +677,13 @@ void BaseCapturer::ReportOverflow(zx::time start_time, zx::time end_time) {
   if constexpr (kLogCaptureOverflow) {
     auto duration_ms = static_cast<double>((end_time - start_time).to_nsecs()) / ZX_MSEC(1);
     if ((overflow_count_ - 1) % kCaptureOverflowWarningInterval == 0) {
-      FX_LOGS(WARNING) << "CAPTURE OVERERFLOW #" << overflow_count_ << " lasted "
-                       << std::setprecision(4) << duration_ms << " ms";
+      FX_LOGS(WARNING) << "CAPTURE OVERERFLOW #" << overflow_count_ << " (1/"
+                       << kCaptureOverflowWarningInterval << ") lasted " << std::setprecision(4)
+                       << duration_ms << " ms";
     } else if ((overflow_count_ - 1) % kCaptureOverflowInfoInterval == 0) {
-      FX_LOGS(INFO) << "CAPTURE OVERERFLOW #" << overflow_count_ << " lasted "
-                    << std::setprecision(4) << duration_ms << " ms";
+      FX_LOGS(INFO) << "CAPTURE OVERERFLOW #" << overflow_count_ << " (1/"
+                    << kCaptureOverflowInfoInterval << ") lasted " << std::setprecision(4)
+                    << duration_ms << " ms";
     } else {
       FX_LOGS(TRACE) << "CAPTURE OVERERFLOW #" << overflow_count_ << " lasted "
                      << std::setprecision(4) << duration_ms << " ms";

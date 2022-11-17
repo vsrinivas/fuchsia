@@ -5,6 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_V1_LOGGING_FLAGS_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_V1_LOGGING_FLAGS_H_
 
+#include <lib/zx/time.h>
+
 #include <cstdint>
 
 namespace media::audio {
@@ -29,12 +31,19 @@ inline constexpr bool kLogRendererSetGainMuteRampActions = false;
 // TRACE or DEBUG, all client-side underflows are logged (at log_level -1: VLOG TRACE), per the
 // kPacketQueueUnderflowTraceInterval. If set to INFO, we log less often (at log_level 1: INFO),
 // throttling by kPacketQueueUnderflowInfoInterval. If WARNING or higher, we log even less, per
-// kPacketQueueUnderflowWarningInterval. By default we set NDEBUG builds to WARNING and DEBUG builds
-// to INFO. To disable all client-side underflow logging, set kLogPacketQueueUnderflow to false.
+// kPacketQueueUnderflowWarningInterval. By default, NDEBUG logs at WARNING, and DEBUG at INFO.
+//
+// We also log an underflow if its duration exceeds the previously-reported one by a set threshold.
+// This intends to more consistently log a long underflow's _first_ packet.
+//
+// To disable all client-side underflow logging, set kLogPacketQueueUnderflow to false.
 inline constexpr bool kLogPacketQueueUnderflow = true;
 inline constexpr uint16_t kPacketQueueUnderflowTraceInterval = 1;
 inline constexpr uint16_t kPacketQueueUnderflowInfoInterval = 10;
 inline constexpr uint16_t kPacketQueueUnderflowWarningInterval = 100;
+inline constexpr zx::duration kPacketQueueUnderflowDurationIncreaseTraceThreshold = zx::msec(0);
+inline constexpr zx::duration kPacketQueueUnderflowDurationIncreaseInfoThreshold = zx::msec(50);
+inline constexpr zx::duration kPacketQueueUnderflowDurationIncreaseWarningThreshold = zx::msec(500);
 
 // Capture-related logging
 //
