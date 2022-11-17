@@ -72,7 +72,6 @@ sdk://pkg/trace
 sdk://pkg/trace-engine
 sdk://pkg/utf-utils
 sdk://pkg/zx
-sdk://pkg/zxc
 sdk://tools/arm64/bindc
 sdk://tools/arm64/fidlgen_banjo
 sdk://tools/arm64/fidlgen_cpp

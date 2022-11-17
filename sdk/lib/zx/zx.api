@@ -21,6 +21,7 @@
   "pkg/zx/include/lib/zx/process.h": "3a6aa46124af7a79771dbb191b34def4",
   "pkg/zx/include/lib/zx/profile.h": "8fd6dd8df905e472e36d3dad3abd5ebf",
   "pkg/zx/include/lib/zx/resource.h": "7c26420d426704fd6399349c10d74197",
+  "pkg/zx/include/lib/zx/result.h": "76a48b7f6714a44fe18bb2452409fb24",
   "pkg/zx/include/lib/zx/socket.h": "39a1da73200bd9306b1e07b32622a01c",
   "pkg/zx/include/lib/zx/stream.h": "0369094e104862030cf1fce33120f913",
   "pkg/zx/include/lib/zx/suspend_token.h": "07e6d1be7c5bc6eaca40287b3adb5ee4",
