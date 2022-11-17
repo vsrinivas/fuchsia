@@ -14,10 +14,10 @@
 #include "fidl/fuchsia.tpm/cpp/markers.h"
 #include "src/security/lib/fuchsia-tcti/include/fuchsia-tcti.h"
 
-/// FuchsiaAgentContext defines the internal context that we cast the |opaque_context|
-/// to on each call to fuchsia_tpm_send and fuchsia_tpm_recv. This is because of how
-/// the TCG C library works it requires an opaque C pointer which it will return to
-/// the TCTI on each call to either send/recv.
+/// FuchsiaAgentContext defines the internal Fuchsia context. We cast
+/// `opaque_ctx_t` to on each call to fuchsia_tpm_send and fuchsia_tpm_recv.
+/// This is because of how the TCG C library works it requires an opaque
+/// C pointer which it will return to the TCTI on each call to either send/recv.
 struct FuchsiaAgentContext {
   // The service that implements the fuchsia.tpm.Command protocol isn't designed to
   // hold individual components received commands. Instead it is up to the component
@@ -25,7 +25,7 @@ struct FuchsiaAgentContext {
   // Transmit and returned to the user on subsequent calls to
   // fuchsia_tpm_recv.
   std::vector<uint8_t> recv_buffer;
-  /// We retain a client connection to the service for the lifetime of the context.
+  // We retain a client connection to the service for the lifetime of the context.
   fidl::WireSyncClient<fuchsia_tpm::Command> agent_client;
   // It is important that concurrent sends/recv do not execute at the same time. This
   // is because we are writing to the recv_buffer and std::vector doesn't support
@@ -44,22 +44,22 @@ opaque_ctx_t* fuchsia_tpm_init(void) {
     FX_LOGS(ERROR) << "fuchsia.tpm.Transmit protocol is not valid.";
     return nullptr;
   }
-  FuchsiaAgentContext* context = new FuchsiaAgentContext();
-  context->agent_client = std::move(agent_client);
-  return context;
+  FuchsiaAgentContext* internal_context = new FuchsiaAgentContext();
+  internal_context->agent_client = std::move(agent_client);
+  return internal_context;
 }
 
-int fuchsia_tpm_send(opaque_ctx_t* opaque_context, int command_code, const uint8_t* in_buffer,
-                     size_t len) {
-  if (opaque_context == nullptr || in_buffer == nullptr || len == 0 ||
-      len > fuchsia_tpm::wire::kMaxTpmCommandLen) {
+int fuchsia_tpm_send(opaque_ctx_t* context, int command_code, const uint8_t* buffer,
+                     size_t buffer_len) {
+  if (context == nullptr || buffer == nullptr || buffer_len == 0 ||
+      buffer_len > fuchsia_tpm::wire::kMaxTpmCommandLen) {
     return 1;
   }
-  FuchsiaAgentContext* context = static_cast<FuchsiaAgentContext*>(opaque_context);
-  fbl::AutoLock auto_lock(&context->mutex);
+  FuchsiaAgentContext* internal_context = static_cast<FuchsiaAgentContext*>(context);
+  fbl::AutoLock auto_lock(&internal_context->mutex);
 
-  std::vector<uint8_t> command_copy(in_buffer, in_buffer + len);
-  auto result = context->agent_client->Transmit(
+  std::vector<uint8_t> command_copy(buffer, buffer + buffer_len);
+  auto result = internal_context->agent_client->Transmit(
       fidl::VectorView<uint8_t>::FromExternal(command_copy.data(), command_copy.size()));
   if (!result.ok()) {
     FX_LOGS(ERROR) << "Failed to send command: " << result.error();
@@ -69,39 +69,41 @@ int fuchsia_tpm_send(opaque_ctx_t* opaque_context, int command_code, const uint8
   // Stash any data returned by the TransmitCommand method into the |recv_buffer|. Any
   // error should exit immediately with the error code in TPM_RC format.
   if (result.value().is_error()) {
-    FX_LOGS(ERROR) << "Failed to execute command" << result.value().error_value();
+    FX_LOGS(ERROR) << "Failed to execute command:" << command_code
+                   << " rc: " << result.value().error_value();
     return result.value().error_value();
   }
   auto response = *result.value();
   if (response->data.count() > 0) {
-    context->recv_buffer.insert(context->recv_buffer.end(), response->data.begin(),
-                                response->data.end());
+    internal_context->recv_buffer.insert(internal_context->recv_buffer.end(),
+                                         response->data.begin(), response->data.end());
   }
   return 0;
 }
 
-size_t fuchsia_tpm_recv(opaque_ctx_t* opaque_context, uint8_t* out_buffer, size_t len) {
-  if (opaque_context == nullptr || out_buffer == nullptr || len == 0) {
+size_t fuchsia_tpm_recv(opaque_ctx_t* context, uint8_t* out_buffer, size_t out_buffer_len) {
+  if (context == nullptr || out_buffer == nullptr || out_buffer_len == 0) {
     return 0;
   }
-  FuchsiaAgentContext* context = static_cast<FuchsiaAgentContext*>(opaque_context);
-  fbl::AutoLock auto_lock(&context->mutex);
+  FuchsiaAgentContext* internal_context = static_cast<FuchsiaAgentContext*>(context);
+  fbl::AutoLock auto_lock(&internal_context->mutex);
 
   // Only extract at most the length of the available buffer. fuchsia_tpm_recv returns
   // the size of bytes read so it is always valid to return less than the requested size.
-  size_t bytes_to_read = std::min(len, context->recv_buffer.size());
+  size_t bytes_to_read = std::min(out_buffer_len, internal_context->recv_buffer.size());
   for (size_t i = 0; i < bytes_to_read; i++) {
-    out_buffer[i] = context->recv_buffer[i];
+    out_buffer[i] = internal_context->recv_buffer[i];
   }
-  std::vector<uint8_t>(context->recv_buffer.begin() + bytes_to_read, context->recv_buffer.end())
-      .swap(context->recv_buffer);
+  std::vector<uint8_t>(internal_context->recv_buffer.begin() + bytes_to_read,
+                       internal_context->recv_buffer.end())
+      .swap(internal_context->recv_buffer);
   return bytes_to_read;
 }
 
-void fuchsia_tpm_finalize(opaque_ctx_t* opaque_context) {
-  if (opaque_context == nullptr) {
+void fuchsia_tpm_finalize(opaque_ctx_t* context) {
+  if (context == nullptr) {
     return;
   }
-  FuchsiaAgentContext* context = static_cast<FuchsiaAgentContext*>(opaque_context);
-  delete context;
+  FuchsiaAgentContext* internal_context = static_cast<FuchsiaAgentContext*>(context);
+  delete internal_context;
 }
