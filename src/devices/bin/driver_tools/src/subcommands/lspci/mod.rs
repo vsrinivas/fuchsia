@@ -7,7 +7,6 @@ pub mod args;
 use {
     anyhow::Result, args::LspciCommand, fidl::endpoints::Proxy, fidl_fuchsia_hardware_pci as fhpci,
     fidl_fuchsia_io as fio, lspci::bridge::Bridge, lspci::device::Device, lspci::Args,
-    zstd::block::decompress,
 };
 
 pub async fn lspci(cmd: LspciCommand, dev: fio::DirectoryProxy) -> Result<()> {
@@ -25,7 +24,8 @@ pub async fn lspci(cmd: LspciCommand, dev: fio::DirectoryProxy) -> Result<()> {
     let pci_ids = include_bytes!("../../../../../../../third_party/pciids/pci.ids.zst");
     // The capacity to 2 MB, because the decompressed data
     // should always be less than the capacity's bytes
-    let pci_ids = String::from_utf8(decompress(pci_ids, 2_097_152)?)?;
+    let pci_ids = zstd::decode_all(&pci_ids[..])?;
+    let pci_ids = String::from_utf8(pci_ids)?;
     let db = Some((lspci::db::PciDb::new(&pci_ids))?);
 
     let args = Args {

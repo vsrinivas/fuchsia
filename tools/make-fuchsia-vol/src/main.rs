@@ -814,11 +814,9 @@ mod tests {
         }
 
         let image = std::fs::read("/tmp/image").expect("Unable to read /tmp/image");
-        let golden = zstd::block::decompress(
-            &std::fs::read(test_data_dir.join("golden")).expect("Unable to read golden"),
-            IMAGE_SIZE,
-        )
-        .expect("Unable to decompress");
+        let file =
+            std::fs::File::open(test_data_dir.join("golden")).expect("Unable to read golden");
+        let golden = zstd::decode_all(file).expect("Unable to decompress");
 
         // If this fails, here are some tips for debugging:
         //

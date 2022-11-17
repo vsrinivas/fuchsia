@@ -1137,11 +1137,7 @@ if (!(current_os == "fuchsia")) {
 }
 
 group("zstd") {
-  public_deps = [ ":zstd-v0_8_0+zstd_1_4_9" ]
-}
-
-group("zstd-safe") {
-  public_deps = [ ":zstd-safe-v4_0_0+zstd_1_4_9" ]
+  public_deps = [ ":zstd-v0_11_2+zstd_1_5_2" ]
 }
 
 rust_library("adler32-v1_0_4") {
@@ -12781,60 +12777,63 @@ rust_library("zip-v0_5_5") {
   visibility = [ ":*" ]
 }
 
-rust_library("zstd-v0_8_0+zstd_1_4_9") {
+rust_library("zstd-v0_11_2+zstd_1_5_2") {
   crate_name = "zstd"
   crate_root =
-      "//third_party/rust_crates/vendor/zstd-0.8.0+zstd.1.4.9/src/lib.rs"
-  output_name = "zstd-c8ff0f5dd4ac4df6"
+      "//third_party/rust_crates/vendor/zstd-0.11.2+zstd.1.5.2/src/lib.rs"
+  output_name = "zstd-bcf2d1c121863bf5"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":zstd-safe-v4_0_0+zstd_1_4_9" ]
+  deps += [ ":zstd-safe-v5_0_2+zstd_1_5_2" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=c8ff0f5dd4ac4df6",
-    "-Cextra-filename=-c8ff0f5dd4ac4df6",
+    "-Cmetadata=bcf2d1c121863bf5",
+    "-Cextra-filename=-bcf2d1c121863bf5",
+    "--cfg=feature=\"arrays\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"legacy\"",
+    "--cfg=feature=\"zdict_builder\"",
   ]
 
   visibility = [ ":*" ]
 }
 
-rust_library("zstd-safe-v4_0_0+zstd_1_4_9") {
+rust_library("zstd-safe-v5_0_2+zstd_1_5_2") {
   crate_name = "zstd_safe"
   crate_root =
-      "//third_party/rust_crates/vendor/zstd-safe-4.0.0+zstd.1.4.9/src/lib.rs"
-  output_name = "zstd_safe-2be33306fb989aac"
+      "//third_party/rust_crates/vendor/zstd-safe-5.0.2+zstd.1.5.2/src/lib.rs"
+  output_name = "zstd_safe-b1d2ef593bc9f55f"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
   deps += [ ":libc-v0_2_116" ]
-  deps += [ ":zstd-sys-v1_5_0+zstd_1_4_9" ]
+  deps += [ ":zstd-sys-v2_0_1+zstd_1_5_2" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=2be33306fb989aac",
-    "-Cextra-filename=-2be33306fb989aac",
-    "--cfg=feature=\"default\"",
+    "--edition=2018",
+    "-Cmetadata=b1d2ef593bc9f55f",
+    "-Cextra-filename=-b1d2ef593bc9f55f",
+    "--cfg=feature=\"arrays\"",
     "--cfg=feature=\"legacy\"",
     "--cfg=feature=\"std\"",
+    "--cfg=feature=\"zdict_builder\"",
   ]
 
   visibility = [ ":*" ]
 }
 
-rust_library("zstd-sys-v1_5_0+zstd_1_4_9") {
+rust_library("zstd-sys-v2_0_1+zstd_1_5_2") {
   crate_name = "zstd_sys"
   crate_root = "//third_party/rust_crates/forks/zstd-sys/src/lib.rs"
-  output_name = "zstd_sys-f55a42cf5076e22d"
+  output_name = "zstd_sys-5bd6a773923f5de5"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -12845,10 +12844,11 @@ rust_library("zstd-sys-v1_5_0+zstd_1_4_9") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=f55a42cf5076e22d",
-    "-Cextra-filename=-f55a42cf5076e22d",
+    "-Cmetadata=5bd6a773923f5de5",
+    "-Cextra-filename=-5bd6a773923f5de5",
     "--cfg=feature=\"legacy\"",
     "--cfg=feature=\"std\"",
+    "--cfg=feature=\"zdict_builder\"",
   ]
 
   visibility = [ ":*" ]

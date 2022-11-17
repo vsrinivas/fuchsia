@@ -4,16 +4,21 @@
 
 [package]
 name = "zstd-sys"
-version = "1.5.0+zstd.1.4.9"
+version = "2.0.1+zstd.1.5.2"
 authors = ["The Fuchsia Authors"]
 
 [dependencies]
-libc = "0.2.88"
+libc = "0.2.45"
 
 [features]
-default = ["legacy"]
-experimental = []
-legacy = []
-non-cargo = []
-std = []
-zstdmt = []
+default = ["legacy", "zdict_builder"]
+
+debug = [] # Enable zstd debug logs
+experimental = [] # Expose experimental ZSTD API
+legacy = [] # Enable legacy ZSTD support (for versions < zstd-0.8)
+non-cargo = [] # Silence cargo-specific build flags
+std = [] # Use std types instead of libc in bindgen
+zstdmt = [] # Enable multi-thread support (with pthread)
+thin = [] # Optimize binary by size
+no_asm = [] # Disable ASM files (only on amd64 for decompression)
+zdict_builder = []

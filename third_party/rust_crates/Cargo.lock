@@ -1507,7 +1507,6 @@ dependencies = [
  "zerocopy",
  "zip",
  "zstd",
- "zstd-safe",
 ]
 
 [[package]]
@@ -4881,18 +4880,18 @@ dependencies = [
 
 [[package]]
 name = "zstd"
-version = "0.8.0+zstd.1.4.9"
+version = "0.11.2+zstd.1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afab5e288c9e10bcd910b16ad82cb8028b74b09eccaa5ecd90621f99d3380735"
+checksum = "20cc960326ece64f010d2d2107537f26dc589a6573a316bd5b1dba685fa5fde4"
 dependencies = [
  "zstd-safe",
 ]
 
 [[package]]
 name = "zstd-safe"
-version = "4.0.0+zstd.1.4.9"
+version = "5.0.2+zstd.1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81f02c0811d5455aa82c6bc400cffd8c882f3a2813f5e2245e2b264443305ab2"
+checksum = "1d2a5585e04f9eea4b2a3d1eca508c4dee9592a89ef6f450c11719da0726f4db"
 dependencies = [
  "libc",
  "zstd-sys",
@@ -4900,7 +4899,7 @@ dependencies = [
 
 [[package]]
 name = "zstd-sys"
-version = "1.5.0+zstd.1.4.9"
+version = "2.0.1+zstd.1.5.2"
 dependencies = [
  "libc",
 ]

@@ -116,6 +116,4 @@ skip_updating = [
     "webpki",
     "xml-rs",
     "zip",
-    "zstd",
-    "zstd-safe",
 ]
