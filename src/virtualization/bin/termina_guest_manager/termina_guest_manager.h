@@ -34,6 +34,8 @@ class TerminaGuestManager : GuestManager, public fuchsia::virtualization::LinuxM
   void OnGuestStopped() override;
 
  private:
+  std::unique_ptr<Guest> CreateGuest();
+
   // |fuchsia::virtualization::LinuxManager|
   void StartAndGetLinuxGuestInfo(std::string label,
                                  StartAndGetLinuxGuestInfoCallback callback) override;
@@ -51,6 +53,7 @@ class TerminaGuestManager : GuestManager, public fuchsia::virtualization::LinuxM
   fuchsia::virtualization::GuestPtr guest_controller_;
   std::unique_ptr<Guest> guest_;
   fit::function<void()> stop_manager_callback_;
+  async_dispatcher_t* dispatcher_;
 };
 
 }  // namespace termina_guest_manager

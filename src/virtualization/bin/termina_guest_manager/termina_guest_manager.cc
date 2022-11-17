@@ -4,6 +4,7 @@
 
 #include "src/virtualization/bin/termina_guest_manager/termina_guest_manager.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -62,10 +63,9 @@ TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
     : GuestManager(dispatcher, context.get()),
       context_(std::move(context)),
       structured_config_(std::move(structured_config)),
-      stop_manager_callback_(std::move(stop_manager_callback)) {
-  guest_ = std::make_unique<Guest>(structured_config_,
-                                   fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged),
-                                   [this] { return QueryGuestNetworkState(); });
+      stop_manager_callback_(std::move(stop_manager_callback)),
+      dispatcher_(dispatcher) {
+  guest_ = CreateGuest();
   context_->outgoing()->AddPublicService<fuchsia::virtualization::LinuxManager>(
       [this](auto request) {
         manager_bindings_.AddBinding(this, std::move(request));
@@ -74,6 +74,20 @@ TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
           NotifyClient(*manager_bindings_.bindings().back(), *info_);
         }
       });
+}
+
+std::unique_ptr<Guest> TerminaGuestManager::CreateGuest() {
+  return std::make_unique<Guest>(
+      structured_config_,
+      [this](GuestInfo guest_info) {
+        // OnGuestInfoChanged must be called on the FIDL thread from which it originates since
+        // StartAndGetLinuxGuestInfo responses must be sent on the same thread as they were
+        // dispatched, while Guest can use this callback from other (e.g. grpc) threads.
+        async::PostTask(dispatcher_, [this, guest_info = std::move(guest_info)]() {
+          OnGuestInfoChanged(std::move(guest_info));
+        });
+      },
+      [this] { return QueryGuestNetworkState(); });
 }
 
 fit::result<GuestManagerError, GuestConfig> TerminaGuestManager::GetDefaultGuestConfig() {
@@ -137,9 +151,7 @@ void TerminaGuestManager::OnGuestLaunched() {
 
 void TerminaGuestManager::OnGuestStopped() {
   info_ = std::nullopt;
-  guest_ = std::make_unique<Guest>(structured_config_,
-                                   fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged),
-                                   [this] { return QueryGuestNetworkState(); });
+  guest_ = CreateGuest();
 
   if (structured_config_.stateful_partition_type() == "fvm") {
     // The termina guest manager is dropping access to /dev preventing further accesses, so we
