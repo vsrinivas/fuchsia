@@ -76,11 +76,6 @@ class WlanSoftmacDevice : public ddk::Device<WlanSoftmacDevice, ddk::Initializab
   // Helper function
   bool IsValidChannel(const fuchsia_wlan_common::wire::WlanChannel* channel);
 
-  // Exposing for tests, initializing server end dispatcher for WlanSoftmacIfc protocol.
-  zx_status_t InitServerDispatcher();
-  // Exposing for tests, initializing server end dispatcher for WlanSoftmac protocol.
-  zx_status_t InitClientDispatcher();
-
  protected:
   struct iwl_mvm_vif* mvmvif_;
 
@@ -95,17 +90,8 @@ class WlanSoftmacDevice : public ddk::Device<WlanSoftmacDevice, ddk::Initializab
   // mode, we have only one peer (the AP), which simplifies things.
   std::unique_ptr<MvmSta> ap_mvm_sta_;
 
-  // Dispatcher for FIDL client of WlanSoftmacIfc protocol.
-  fdf::Dispatcher client_dispatcher_;
-
-  // Dispatcher for FIDL server of WlanSoftmac protocol.
-  fdf::Dispatcher server_dispatcher_;
-
   // The FIDL client to communicate with Wlan device.
-  fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmacIfc> client_;
-
-  // Store unbind txn for async reply.
-  std::optional<::ddk::UnbindTxn> unbind_txn_;
+  fdf::WireSyncClient<fuchsia_wlan_softmac::WlanSoftmacIfc> client_;
 };
 
 }  // namespace wlan::iwlwifi

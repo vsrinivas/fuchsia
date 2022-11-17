@@ -5,6 +5,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlan-softmac-device.h"
 
 #include <fidl/fuchsia.wlan.ieee80211/cpp/wire_types.h>
+#include <lib/async/cpp/task.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/zx/channel.h>
@@ -63,12 +64,24 @@ class WlanSoftmacDeviceTest : public SingleApTest,
     auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_softmac::WlanSoftmac>();
     ASSERT_FALSE(endpoints.is_error());
 
-    // Create a dispatcher for the client end of Wlansoftmac protocol to wait on the runtime
-    // channel.
-    auto dispatcher = fdf::Dispatcher::Create(
-        0, "wlansoftmac_client_test", [&](fdf_dispatcher_t*) { client_completion_.Signal(); });
+    auto dispatcher =
+        fdf::Dispatcher::Create(0, "wlan-softmac-device-test-driver-dispatcher",
+                                [&](fdf_dispatcher_t*) { driver_completion_.Signal(); });
     ASSERT_FALSE(dispatcher.is_error());
-    client_dispatcher_ = *std::move(dispatcher);
+    driver_dispatcher_ = *std::move(dispatcher);
+
+    // `DdkServiceConnect` starts a FIDL server that bounds to the dispatcher of
+    // the caller. The FIDL protocol that is being served uses driver transport
+    // and so it must be bound to an fdf dispatcher.
+    libsync::Completion connected;
+    async::PostTask(driver_dispatcher_.async_dispatcher(), [&]() {
+      ASSERT_EQ(device_->DdkServiceConnect(
+                    fidl::DiscoverableProtocolName<fuchsia_wlan_softmac::WlanSoftmac>,
+                    endpoints->server.TakeHandle()),
+                ZX_OK);
+      connected.Signal();
+    });
+    connected.Wait();
 
     // Create a dispatcher for the server end of WlansoftmacIfc protocol to wait on the runtime
     // channel.
@@ -77,21 +90,11 @@ class WlanSoftmacDeviceTest : public SingleApTest,
     ASSERT_FALSE(dispatcher.is_error());
     server_dispatcher_ = *std::move(dispatcher);
 
-    client_ = fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmac>(std::move(endpoints->client),
-                                                                       client_dispatcher_.get());
+    client_ = fdf::WireSyncClient<fuchsia_wlan_softmac::WlanSoftmac>(std::move(endpoints->client));
 
     // TODO(fxbug.dev/106669): Increase test fidelity. Call mac_init() here as what DdkInit() in
     // real case does, instead of manually initialize mvmvif above to meet the minimal requirements
     // of the test cases. Note: device_->zxdev()->InitOp() will invoke DdkInit().
-
-    // Create the server dispatcher of WlanSoftmac protocol for wlan-softmac-device.
-    device_->InitServerDispatcher();
-
-    // Create the client dispatcher of WlanSoftmacIfc protocol for wlan-softmac-device.
-    device_->InitClientDispatcher();
-
-    device_->DdkServiceConnect(fidl::DiscoverableProtocolName<fuchsia_wlan_softmac::WlanSoftmac>,
-                               endpoints->server.TakeHandle());
 
     // Create test arena.
     auto arena = fdf::Arena::Create(0, 0);
@@ -104,10 +107,10 @@ class WlanSoftmacDeviceTest : public SingleApTest,
     if (!release_called_) {
       mock_ddk::ReleaseFlaggedDevices(device_->zxdev());
     }
-    client_dispatcher_.ShutdownAsync();
+    driver_dispatcher_.ShutdownAsync();
     server_dispatcher_.ShutdownAsync();
 
-    client_completion_.Wait();
+    driver_completion_.Wait();
     server_completion_.Wait();
   }
 
@@ -140,11 +143,11 @@ class WlanSoftmacDeviceTest : public SingleApTest,
   struct iwl_mvm_vif* mvmvif_;
   ::wlan::iwlwifi::WlanSoftmacDevice* device_;
 
-  fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmac> client_;
-  fdf::Dispatcher client_dispatcher_;
+  fdf::WireSyncClient<fuchsia_wlan_softmac::WlanSoftmac> client_;
+  fdf::Dispatcher driver_dispatcher_;
   fdf::Dispatcher server_dispatcher_;
   fdf::Arena test_arena_;
-  libsync::Completion client_completion_;
+  libsync::Completion driver_completion_;
   libsync::Completion server_completion_;
   // mock_ddk::ReleaseFlaggedDevices() cannot be called twice, but it's required to be called in
   // come test cases.
@@ -254,7 +257,7 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityListOnly5GHz) {
 }
 
 TEST_F(WlanSoftmacDeviceTest, Query) {
-  auto result = client_.sync().buffer(test_arena_)->Query();
+  auto result = client_.buffer(test_arena_)->Query();
   auto& info = result->value()->info;
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->is_error());
@@ -278,7 +281,7 @@ TEST_F(WlanSoftmacDeviceTest, Query) {
 }
 
 TEST_F(WlanSoftmacDeviceTest, DiscoveryFeatureQuery) {
-  auto result = client_.sync().buffer(test_arena_)->QueryDiscoverySupport();
+  auto result = client_.buffer(test_arena_)->QueryDiscoverySupport();
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->is_error());
   EXPECT_TRUE(result->value()->resp.scan_offload.supported);
@@ -286,7 +289,7 @@ TEST_F(WlanSoftmacDeviceTest, DiscoveryFeatureQuery) {
 }
 
 TEST_F(WlanSoftmacDeviceTest, MacSublayerFeatureQuery) {
-  auto result = client_.sync().buffer(test_arena_)->QueryMacSublayerSupport();
+  auto result = client_.buffer(test_arena_)->QueryMacSublayerSupport();
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->is_error());
   EXPECT_FALSE(result->value()->resp.rate_selection_offload.supported);
@@ -298,7 +301,7 @@ TEST_F(WlanSoftmacDeviceTest, MacSublayerFeatureQuery) {
 }
 
 TEST_F(WlanSoftmacDeviceTest, SecurityFeatureQuery) {
-  auto result = client_.sync().buffer(test_arena_)->QuerySecuritySupport();
+  auto result = client_.buffer(test_arena_)->QuerySecuritySupport();
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->is_error());
   EXPECT_TRUE(result->value()->resp.mfp.supported);
@@ -307,7 +310,7 @@ TEST_F(WlanSoftmacDeviceTest, SecurityFeatureQuery) {
 }
 
 TEST_F(WlanSoftmacDeviceTest, SpectrumManagementFeatureQuery) {
-  auto result = client_.sync().buffer(test_arena_)->QuerySpectrumManagementSupport();
+  auto result = client_.buffer(test_arena_)->QuerySpectrumManagementSupport();
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->is_error());
   EXPECT_TRUE(result->value()->resp.dfs.supported);
@@ -324,7 +327,7 @@ TEST_F(WlanSoftmacDeviceTest, MacStart) {
 
   // This FIDL call should invoke mac_start() and pass the pointer of WlanSoftmacDeviceTest to it,
   // the pointer will be copied to mvmvif_->ifc.ctx.
-  auto result = client_.sync().buffer(test_arena_)->Start(std::move(endpoints->client));
+  auto result = client_.buffer(test_arena_)->Start(std::move(endpoints->client));
   EXPECT_TRUE(result.ok());
   EXPECT_FALSE(result->is_error());
 }
@@ -343,7 +346,7 @@ TEST_F(WlanSoftmacDeviceTest, MacStartOnlyOneMlmeChannelAllowed) {
 
     ASSERT_FALSE(endpoints.is_error());
 
-    auto result = client_.sync().buffer(test_arena_)->Start(std::move(endpoints->client));
+    auto result = client_.buffer(test_arena_)->Start(std::move(endpoints->client));
     EXPECT_TRUE(result.ok());
     EXPECT_FALSE(result->is_error());
     // Verify the channel returned.
@@ -356,7 +359,7 @@ TEST_F(WlanSoftmacDeviceTest, MacStartOnlyOneMlmeChannelAllowed) {
     auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_softmac::WlanSoftmacIfc>();
 
     // Since the driver no longer owns the handle, the start should fail.
-    auto result = client_.sync().buffer(test_arena_)->Start(std::move(endpoints->client));
+    auto result = client_.buffer(test_arena_)->Start(std::move(endpoints->client));
     EXPECT_TRUE(result.ok());
     EXPECT_TRUE(result->is_error());
     EXPECT_EQ(ZX_ERR_ALREADY_BOUND, result->error_value());
@@ -374,7 +377,7 @@ TEST_F(WlanSoftmacDeviceTest, SingleRxPacket) {
 
   // This FIDL call should invoke mac_start() and pass the pointer of WlanSoftmacDeviceTest to it,
   // the pointer will be copied to mvmvif_->ifc.ctx.
-  auto result = client_.sync().buffer(test_arena_)->Start(std::move(endpoints->client));
+  auto result = client_.buffer(test_arena_)->Start(std::move(endpoints->client));
 
   EXPECT_TRUE(result.ok());
   EXPECT_FALSE(result->is_error());
@@ -438,7 +441,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
 
     // This FIDL call should invoke mac_start() and pass the pointer of WlanSoftmacDeviceTest to it,
     // the pointer will be copied to mvmvif_->ifc.ctx.
-    auto result = client_.sync().buffer(test_arena_)->Start(std::move(endpoints->client));
+    auto result = client_.buffer(test_arena_)->Start(std::move(endpoints->client));
 
     ASSERT_TRUE(result.ok());
     EXPECT_FALSE(result->is_error());
@@ -457,7 +460,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
     // Stop the MAC to free resources we allocated.
     // This must be called after we verify the expected commands and restore the mock command
     // callback so that the stop command doesn't mess up the test case expectation.
-    auto result = client_.sync().buffer(test_arena_)->Stop();
+    auto result = client_.buffer(test_arena_)->Stop();
     ASSERT_TRUE(result.ok());
 
     // Deallocate the client station at id 0.
@@ -510,7 +513,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
   }
 
   zx_status_t SetChannel(const fuchsia_wlan_common::wire::WlanChannel* channel) {
-    auto result = client_.sync().buffer(test_arena_)->SetChannel(*channel);
+    auto result = client_.buffer(test_arena_)->SetChannel(*channel);
     EXPECT_TRUE(result.ok());
     if (result->is_error()) {
       return result->error_value();
@@ -519,7 +522,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
   }
 
   zx_status_t ConfigureBss(const fuchsia_wlan_internal::wire::BssConfig* config) {
-    auto result = client_.sync().buffer(test_arena_)->ConfigureBss(*config);
+    auto result = client_.buffer(test_arena_)->ConfigureBss(*config);
     EXPECT_TRUE(result.ok());
     if (result->is_error()) {
       return result->error_value();
@@ -528,7 +531,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
   }
 
   zx_status_t ConfigureAssoc(const fuchsia_hardware_wlan_associnfo::wire::WlanAssocCtx* ctx) {
-    auto result = client_.sync().buffer(test_arena_)->ConfigureAssoc(*ctx);
+    auto result = client_.buffer(test_arena_)->ConfigureAssoc(*ctx);
     EXPECT_TRUE(result.ok());
     if (result->is_error()) {
       return result->error_value();
@@ -539,7 +542,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
   zx_status_t ClearAssoc() {
     // Not used since all info were saved in mvmvif_sta_ already.
     fidl::Array<uint8_t, fuchsia_wlan_ieee80211::wire::kMacAddrLen> fidl_peer_addr;
-    auto result = client_.sync().buffer(test_arena_)->ClearAssoc(fidl_peer_addr);
+    auto result = client_.buffer(test_arena_)->ClearAssoc(fidl_peer_addr);
     EXPECT_TRUE(result.ok());
     if (result->is_error()) {
       return result->error_value();
@@ -548,7 +551,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
   }
 
   zx_status_t StartPassiveScan(fuchsia_wlan_softmac::wire::WlanSoftmacPassiveScanArgs* args) {
-    auto result = client_.sync().buffer(test_arena_)->StartPassiveScan(*args);
+    auto result = client_.buffer(test_arena_)->StartPassiveScan(*args);
     EXPECT_TRUE(result.ok());
     if (result->is_error()) {
       return result->error_value();
@@ -557,7 +560,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
   }
 
   zx_status_t StartActiveScan(fuchsia_wlan_softmac::wire::WlanSoftmacActiveScanArgs* args) {
-    auto result = client_.sync().buffer(test_arena_)->StartActiveScan(*args);
+    auto result = client_.buffer(test_arena_)->StartActiveScan(*args);
     EXPECT_TRUE(result.ok());
     if (result->is_error()) {
       return result->error_value();
@@ -567,7 +570,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
 
   zx_status_t SetKey(const fuchsia_wlan_softmac::wire::WlanKeyConfig* key_config) {
     IWL_INFO(nullptr, "Calling set_key");
-    auto result = client_.sync().buffer(test_arena_)->SetKey(*key_config);
+    auto result = client_.buffer(test_arena_)->SetKey(*key_config);
     EXPECT_TRUE(result.ok());
     if (result->is_error()) {
       return result->error_value();
@@ -1369,7 +1372,7 @@ TEST_F(MacInterfaceTest, TxPktTooLong) {
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_FROM_MLME), 0);
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_TO_FW), 0);
 
-  auto result = client_.sync().buffer(test_arena_)->QueueTx(fidl_packet);
+  auto result = client_.buffer(test_arena_)->QueueTx(fidl_packet);
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_FROM_MLME), 1);
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_TO_FW), 0);
   ASSERT_TRUE(result.ok());
@@ -1391,7 +1394,7 @@ TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   fuchsia_wlan_softmac::wire::WlanTxPacket fidl_packet = wlan_pkt->wlan_pkt();
 
-  auto result = client_.sync().buffer(test_arena_)->QueueTx(fidl_packet);
+  auto result = client_.buffer(test_arena_)->QueueTx(fidl_packet);
   ASSERT_TRUE(result.ok());
   EXPECT_TRUE(result->is_error());
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, result->error_value());
@@ -1413,7 +1416,7 @@ TEST_F(MacInterfaceTest, TxPkt) {
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_FROM_MLME), 0);
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_TO_FW), 0);
 
-  auto result = client_.sync().buffer(test_arena_)->QueueTx(fidl_packet);
+  auto result = client_.buffer(test_arena_)->QueueTx(fidl_packet);
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_FROM_MLME), 1);
   EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_TO_FW), 1);
   ASSERT_TRUE(result.ok());

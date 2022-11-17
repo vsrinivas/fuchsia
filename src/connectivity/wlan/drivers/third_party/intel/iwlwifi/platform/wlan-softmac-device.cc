@@ -108,8 +108,7 @@ void WlanSoftmacDevice::Start(StartRequestView request, fdf::Arena& arena,
   CHECK_DELETE_IN_PROGRESS_WITH_ERRSYNTAX(mvmvif_);
   zx::channel out_mlme_channel;
 
-  client_ = fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmacIfc>(std::move(request->ifc),
-                                                                        client_dispatcher_.get());
+  client_ = fdf::WireSyncClient<fuchsia_wlan_softmac::WlanSoftmacIfc>(std::move(request->ifc));
 
   zx_status_t status = mac_start(mvmvif_, this, (zx_handle_t*)(&out_mlme_channel));
   if (status != ZX_OK) {
@@ -250,8 +249,7 @@ void WlanSoftmacDevice::ConfigureBss(ConfigureBssRequestView request, fdf::Arena
     IWL_INFO(this, "AP sta already exist.  Unassociate it first.\n");
 
     if ((status = mac_unconfigure_bss(mvmvif_)) != ZX_OK) {
-      IWL_ERR(this, "failed mac unconfigure bss: %s\n",
-              zx_status_get_string(status));
+      IWL_ERR(this, "failed mac unconfigure bss: %s\n", zx_status_get_string(status));
       completer.buffer(arena).ReplyError(status);
       return;
     }
@@ -408,47 +406,7 @@ void WlanSoftmacDevice::UpdateWmmParams(UpdateWmmParamsRequestView request, fdf:
   completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx_status_t WlanSoftmacDevice::InitClientDispatcher() {
-  // Create dispatcher for FIDL client of WlanSoftmacIfc protocol.
-  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
-                                            "wlansoftmacifc_client", [&](fdf_dispatcher_t*) {
-                                              if (unbind_txn_)
-                                                unbind_txn_->Reply();
-                                            });
-
-  if (dispatcher.is_error()) {
-    IWL_ERR(this, "%s(): Dispatcher created failed%s\n", __func__,
-            zx_status_get_string(dispatcher.status_value()));
-    return dispatcher.status_value();
-  }
-
-  client_dispatcher_ = *std::move(dispatcher);
-
-  return ZX_OK;
-}
-
-zx_status_t WlanSoftmacDevice::InitServerDispatcher() {
-  // Create dispatcher for FIDL server of WlanSoftmac protocol.
-  auto dispatcher =
-      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "wlansoftmac_server",
-                              [&](fdf_dispatcher_t*) { client_dispatcher_.ShutdownAsync(); });
-  if (dispatcher.is_error()) {
-    IWL_ERR(this, "%s(): Dispatcher created failed%s\n", __func__,
-            zx_status_get_string(dispatcher.status_value()));
-    return dispatcher.status_value();
-  }
-  server_dispatcher_ = *std::move(dispatcher);
-
-  return ZX_OK;
-}
-
 void WlanSoftmacDevice::DdkInit(ddk::InitTxn txn) {
-  zx_status_t ret = InitServerDispatcher();
-  ZX_ASSERT_MSG(ret == ZX_OK, "Creating dispatcher error: %s\n", zx_status_get_string(ret));
-
-  ret = InitClientDispatcher();
-  ZX_ASSERT_MSG(ret == ZX_OK, "Creating dispatcher error: %s\n", zx_status_get_string(ret));
-
   txn.Reply(mac_init(mvmvif_, drvdata_, zxdev(), iface_id_));
 }
 
@@ -464,13 +422,8 @@ void WlanSoftmacDevice::DdkRelease() {
 
 void WlanSoftmacDevice::DdkUnbind(ddk::UnbindTxn txn) {
   IWL_DEBUG_INFO(this, "Unbinding iwlwifi mac-device\n");
-  // Saving the input UnbindTxn to the device, ::ddk::UnbindTxn::Reply() will be called with this
-  // UnbindTxn in the shutdown callback of client_dispatcher_, and the ShutdownAsync() for
-  // client_dispatcher_ is called in the shutdown callback of server_dispatcher_,  so that we can
-  // make sure DdkUnbind() won't end before the dispatchers' shutdown.
-  unbind_txn_ = std::move(txn);
   mac_unbind(mvmvif_);
-  server_dispatcher_.ShutdownAsync();
+  txn.Reply();
 }
 
 zx_status_t WlanSoftmacDevice::DdkServiceConnect(const char* service_name, fdf::Channel channel) {
@@ -480,8 +433,8 @@ zx_status_t WlanSoftmacDevice::DdkServiceConnect(const char* service_name, fdf::
     return ZX_ERR_NOT_SUPPORTED;
   }
   fdf::ServerEnd<fuchsia_wlan_softmac::WlanSoftmac> server_end(std::move(channel));
-  fdf::BindServer<fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmac>>(server_dispatcher_.get(),
-                                                                      std::move(server_end), this);
+  fdf::BindServer<fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmac>>(
+      fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), this);
   return ZX_OK;
 }
 
@@ -491,7 +444,7 @@ void WlanSoftmacDevice::Recv(fuchsia_wlan_softmac::wire::WlanRxPacket* rx_packet
     IWL_ERR(this, "Failed to create Arena in WlanSoftmacDevice::Recv().\n");
     return;
   }
-  auto result = client_.sync().buffer(*std::move(arena))->Recv(*rx_packet);
+  auto result = client_.buffer(*std::move(arena))->Recv(*rx_packet);
   if (!result.ok()) {
     IWL_ERR(this, "Failed to send rx frames up in WlanSoftmacDevice::Recv(). Status: %d\n",
             result.status());
@@ -508,7 +461,7 @@ void WlanSoftmacDevice::ScanComplete(const zx_status_t status, const uint64_t sc
     return;
   }
 
-  auto result = client_.sync().buffer(*std::move(arena))->ScanComplete(status, scan_id);
+  auto result = client_.buffer(*std::move(arena))->ScanComplete(status, scan_id);
   if (!result.ok()) {
     IWL_ERR(this,
             "Failed to send scan complete notification up in WlanSoftmacDevice::ScanComplete(). "
