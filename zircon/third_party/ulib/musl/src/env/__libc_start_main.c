@@ -25,6 +25,7 @@ struct start_params {
   uint32_t* handle_info;
   uint32_t nbytes, nhandles;
   zx_handle_t utc_reference;
+  int* runtime;
 };
 
 // See dynlink.c for the full explanation.  The compiler generates calls to
@@ -62,6 +63,10 @@ static void start_main(const struct start_params* p) {
   // globals before actually calling __hwasan_init to prevent any more false
   // positives from globals in between now and when __hwasan_init is called.
   _dl_iterate_loaded_libs();
+
+  // Now that the thread descriptor is set up, it's safe to use the
+  // dlerror machinery.
+  *(p->runtime) = 1;
 
   uint32_t argc = p->procargs->args_num;
   uint32_t envc = p->procargs->environ_num;
@@ -207,7 +212,9 @@ __EXPORT NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t boo
     atomic_store(&libc.thread_count, 1);
 
     // This consumes the thread handle and sets up the thread pointer.
-    p.td = __init_main_thread(main_thread_handle);
+    thrd_info_t thrd_info = __init_main_thread(main_thread_handle);
+    p.td = thrd_info.thread;
+    p.runtime = thrd_info.runtime;
 
     // Switch to the allocated stack and call start_main(&p) there.  The
     // original stack stays around just to hold the message buffer and handles

@@ -313,7 +313,13 @@ thrd_t __allocate_thread(size_t guard_size, size_t stack_size, const char* threa
                          char default_name[ZX_MAX_NAME_LEN])
     __attribute__((nonnull(3))) ATTR_LIBC_VISIBILITY;
 
-pthread_t __init_main_thread(zx_handle_t thread_self) ATTR_LIBC_VISIBILITY;
+typedef struct {
+  pthread_t thread;  // The main thread pointer.
+  int* runtime;      // Pointer to the `runtime` switch indicating the
+                     // new stack is setup and we can use dlerror machinery.
+} thrd_info_t;
+
+thrd_info_t __init_main_thread(zx_handle_t thread_self) ATTR_LIBC_VISIBILITY;
 
 int __clock_gettime(clockid_t, struct timespec*) ATTR_LIBC_VISIBILITY;
 

@@ -1565,7 +1565,7 @@ __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
   return mem + v[1] + DTP_OFFSET;
 }
 
-__NO_SAFESTACK struct pthread* __init_main_thread(zx_handle_t thread_self) {
+__NO_SAFESTACK thrd_info_t __init_main_thread(zx_handle_t thread_self) {
   pthread_attr_t attr = DEFAULT_PTHREAD_ATTR;
 
   char thread_self_name[ZX_MAX_NAME_LEN];
@@ -1584,11 +1584,8 @@ __NO_SAFESTACK struct pthread* __init_main_thread(zx_handle_t thread_self) {
 
   zxr_tp_set(thread_self, pthread_to_tp(td));
 
-  // Now that the thread descriptor is set up, it's safe to use the
-  // dlerror machinery.
-  runtime = 1;
-
-  return td;
+  thrd_info_t info = {td, &runtime};
+  return info;
 }
 
 __NO_SAFESTACK static void update_tls_size(void) {
