@@ -8,7 +8,9 @@ use {
         PackagePath, PackageVariant,
     },
     anyhow::Result,
+    fuchsia_archive::{self, Utf8Reader},
     fuchsia_hash::Hash,
+    fuchsia_merkle::from_slice,
     fuchsia_url::{RepositoryUrl, UnpinnedAbsolutePackageUrl},
     serde::{Deserialize, Serialize},
     std::{
@@ -17,6 +19,7 @@ use {
         io,
         io::{Read, Seek, SeekFrom, Write},
         path::Path,
+        str,
     },
 };
 
@@ -171,6 +174,38 @@ impl PackageManifest {
         }
 
         Ok(builder.build())
+    }
+
+    /// Extract the package blobs from `archive_path` into the `out_dir` directory and
+    /// returns a `PackageManifest` for these files.
+    pub fn from_archive(archive_path: &Path, out_dir: &Path) -> Result<Self, PackageManifestError> {
+        let archive_file = File::open(archive_path)?;
+        let mut archive_reader = Utf8Reader::new(&archive_file)?;
+        let meta_far = archive_reader.read_file("meta.far")?;
+        let meta_far_hash = from_slice(&meta_far[..]).root();
+
+        let output_meta_far_read = std::io::Cursor::new(&meta_far);
+        let mut meta_far_reader = Utf8Reader::new(output_meta_far_read)?;
+        let meta_contents = meta_far_reader.read_file("meta/contents")?;
+        let file_list = MetaContents::deserialize(meta_contents.as_slice())?.into_contents();
+
+        let meta_far_path = out_dir.join(meta_far_hash.to_string());
+        std::fs::write(meta_far_path, &meta_far)?;
+
+        for (file, hash) in file_list {
+            let hash = hash.to_string();
+            let contents = match archive_reader.read_file(&hash) {
+                Ok(contents) => contents,
+                Err(fuchsia_archive::Error::PathNotPresent(_)) => {
+                    archive_reader.read_file(&file)?
+                }
+                Err(err) => {
+                    return Err(err.into());
+                }
+            };
+            std::fs::write(out_dir.join(hash), contents)?;
+        }
+        PackageManifest::from_blobs_dir(out_dir, meta_far_hash)
     }
 
     pub fn from_package(
@@ -742,10 +777,11 @@ mod tests {
 #[cfg(all(test, not(target_os = "fuchsia")))]
 mod host_tests {
     use super::*;
+    use crate::{path_to_string::PathToStringExt, PackageBuilder};
     use camino::Utf8Path;
     use serde_json::Value;
-    use std::fs::File;
-    use tempfile::TempDir;
+    use std::{collections::HashMap, fs::File};
+    use tempfile::{NamedTempFile, TempDir};
 
     #[test]
     fn test_load_from_simple() {
@@ -929,5 +965,86 @@ mod host_tests {
         let source_path = source_path_value.as_str().unwrap();
 
         assert_eq!(source_path, "../data_source/p2");
+    }
+
+    #[test]
+    fn test_from_package_archive_bogus() {
+        let temp = TempDir::new().unwrap();
+        let temp_out_dir = temp.into_path();
+
+        let temp_archive = TempDir::new().unwrap();
+        let temp_archive_dir = temp_archive.path();
+
+        let result = PackageManifest::from_archive(temp_archive_dir, &temp_out_dir);
+        assert!(result.is_err())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_from_package_manifest_archive_manifest() {
+        let outdir = TempDir::new().unwrap();
+        let metafar_path = outdir.path().join("meta.far");
+
+        // Create a file to write to the package metafar
+        let far_source_file_path = NamedTempFile::new_in(&outdir).unwrap();
+        std::fs::write(&far_source_file_path, "some data for far").unwrap();
+
+        // Create a file to include as a blob
+        let blob_source_file_path = outdir.path().join("some_blob");
+        let blob_contents = "some data for blob";
+        std::fs::write(&blob_source_file_path, blob_contents).unwrap();
+
+        // Create a file to include as a blob
+        let blob_source_file_path2 = outdir.path().join("another_blob");
+        let blob_contents = "some data for blob2";
+        std::fs::write(&blob_source_file_path2, blob_contents).unwrap();
+
+        // Create the builder
+        let mut builder = PackageBuilder::new("some_pkg_name");
+        builder
+            .add_file_as_blob(
+                "some_blob",
+                blob_source_file_path.as_path().path_to_string().unwrap(),
+            )
+            .unwrap();
+        builder
+            .add_file_as_blob(
+                "another_blob",
+                blob_source_file_path2.as_path().path_to_string().unwrap(),
+            )
+            .unwrap();
+        builder
+            .add_file_to_far(
+                "meta/some/file",
+                far_source_file_path.path().path_to_string().unwrap(),
+            )
+            .unwrap();
+
+        // Build the package
+        let manifest = builder.build(&outdir, &metafar_path).unwrap();
+
+        let archive_outdir = TempDir::new().unwrap();
+        let archive_path = archive_outdir.path().join("test.far");
+        let archive_file = File::create(archive_path.clone()).unwrap();
+        manifest.clone().archive(&outdir, &archive_file).await.unwrap();
+
+        let result_outdir = TempDir::new().unwrap().into_path();
+        let manifest_2 = PackageManifest::from_archive(&archive_path, &result_outdir).unwrap();
+        assert_eq!(manifest_2.package_path(), manifest.package_path());
+
+        let manifest1_blobs =
+            manifest.blobs().iter().map(|blob| (blob.merkle, blob)).collect::<HashMap<_, _>>();
+
+        let mut manifest2_blobs =
+            manifest_2.blobs().iter().map(|blob| (blob.merkle, blob)).collect::<HashMap<_, _>>();
+
+        for (merkle, blob1) in manifest1_blobs {
+            let blob2 = manifest2_blobs.remove_entry(&merkle).unwrap().1;
+            assert_eq!(
+                std::fs::read(&blob1.source_path).unwrap(),
+                std::fs::read(&blob2.source_path).unwrap(),
+            );
+        }
+
+        assert!(manifest2_blobs.is_empty());
     }
 }

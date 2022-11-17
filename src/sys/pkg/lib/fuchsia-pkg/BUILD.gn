@@ -28,6 +28,7 @@ lib_deps = [
 ]
 
 test_deps = [
+  "//src/lib/fuchsia-async",
   "//third_party/rust_crates:assert_matches",
   "//third_party/rust_crates:lazy_static",
   "//third_party/rust_crates:maplit",
@@ -36,9 +37,6 @@ test_deps = [
   "//third_party/rust_crates:regex",
   "//third_party/rust_crates:tempfile",
 ]
-if (is_fuchsia) {
-  test_deps += [ "//src/lib/fuchsia-async" ]
-}
 
 lib_sources = [
   "src/build.rs",
