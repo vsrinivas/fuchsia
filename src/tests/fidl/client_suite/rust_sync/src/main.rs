@@ -279,7 +279,7 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                     std::thread::spawn(move || {
                         loop {
                             let report_result = match client.wait_for_event(zx::Time::INFINITE) {
-                                Ok(AjarTargetEvent::_UnknownEvent { ordinal }) => reporter
+                                Ok(AjarTargetEvent::_UnknownEvent { ordinal, .. }) => reporter
                                     .report_event(&mut AjarTargetEventReport::UnknownEvent(
                                         UnknownEvent { ordinal },
                                     )),
@@ -342,7 +342,7 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                                     .report_event(&mut OpenTargetEventReport::StrictEvent(Empty)),
                                 Ok(OpenTargetEvent::FlexibleEvent {}) => reporter
                                     .report_event(&mut OpenTargetEventReport::FlexibleEvent(Empty)),
-                                Ok(OpenTargetEvent::_UnknownEvent { ordinal }) => reporter
+                                Ok(OpenTargetEvent::_UnknownEvent { ordinal, .. }) => reporter
                                     .report_event(&mut OpenTargetEventReport::UnknownEvent(
                                         UnknownEvent { ordinal },
                                     )),

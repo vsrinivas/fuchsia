@@ -135,7 +135,7 @@ async fn run_ajar_target_server(
         .map(|result| result.context("failed request"))
         .try_for_each(|request| async move {
             match request {
-                AjarTargetRequest::_UnknownMethod { ordinal, control_handle: _ } => {
+                AjarTargetRequest::_UnknownMethod { ordinal, control_handle: _, .. } => {
                     reporter_proxy
                         .received_unknown_method(ordinal, DynsuiteUnknownMethodType::OneWay)
                         .expect("failed to report unknown method call");
@@ -221,6 +221,7 @@ async fn run_open_target_server(
                     ordinal,
                     unknown_method_type,
                     control_handle: _,
+                    ..
                 } => {
                     let unknown_method_type = match unknown_method_type {
                         UnknownMethodType::OneWay => DynsuiteUnknownMethodType::OneWay,
@@ -317,6 +318,7 @@ async fn run_large_message_target_server(
                     ordinal,
                     unknown_method_type,
                     control_handle: _,
+                    ..
                 } => {
                     let unknown_method_type = match unknown_method_type {
                         UnknownMethodType::OneWay => DynsuiteUnknownMethodType::OneWay,

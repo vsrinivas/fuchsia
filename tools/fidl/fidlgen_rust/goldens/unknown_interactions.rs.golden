@@ -3601,36 +3601,68 @@ impl futures::Stream for UnknownInteractionsAjarProtocolEventStream {
 pub enum UnknownInteractionsAjarProtocolEvent {
     StrictEvent {},
 
-    StrictEventFields { some_field: i32 },
+    StrictEventFields {
+        some_field: i32,
+    },
 
-    StrictEventUnion { payload: UnknownInteractionsAjarProtocolStrictEventUnionRequest },
+    StrictEventUnion {
+        payload: UnknownInteractionsAjarProtocolStrictEventUnionRequest,
+    },
 
-    StrictEventTable { payload: UnknownInteractionsAjarProtocolStrictEventTableRequest },
+    StrictEventTable {
+        payload: UnknownInteractionsAjarProtocolStrictEventTableRequest,
+    },
 
-    StrictEventErr { result: UnknownInteractionsAjarProtocolStrictEventErrResult },
+    StrictEventErr {
+        result: UnknownInteractionsAjarProtocolStrictEventErrResult,
+    },
 
-    StrictEventFieldsErr { result: UnknownInteractionsAjarProtocolStrictEventFieldsErrResult },
+    StrictEventFieldsErr {
+        result: UnknownInteractionsAjarProtocolStrictEventFieldsErrResult,
+    },
 
-    StrictEventUnionErr { result: UnknownInteractionsAjarProtocolStrictEventUnionErrResult },
+    StrictEventUnionErr {
+        result: UnknownInteractionsAjarProtocolStrictEventUnionErrResult,
+    },
 
-    StrictEventTableErr { result: UnknownInteractionsAjarProtocolStrictEventTableErrResult },
+    StrictEventTableErr {
+        result: UnknownInteractionsAjarProtocolStrictEventTableErrResult,
+    },
 
     FlexibleEvent {},
 
-    FlexibleEventFields { some_field: i32 },
+    FlexibleEventFields {
+        some_field: i32,
+    },
 
-    FlexibleEventUnion { payload: UnknownInteractionsAjarProtocolFlexibleEventUnionRequest },
+    FlexibleEventUnion {
+        payload: UnknownInteractionsAjarProtocolFlexibleEventUnionRequest,
+    },
 
-    FlexibleEventTable { payload: UnknownInteractionsAjarProtocolFlexibleEventTableRequest },
+    FlexibleEventTable {
+        payload: UnknownInteractionsAjarProtocolFlexibleEventTableRequest,
+    },
 
-    FlexibleEventErr { result: UnknownInteractionsAjarProtocolFlexibleEventErrResult },
+    FlexibleEventErr {
+        result: UnknownInteractionsAjarProtocolFlexibleEventErrResult,
+    },
 
-    FlexibleEventFieldsErr { result: UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult },
+    FlexibleEventFieldsErr {
+        result: UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult,
+    },
 
-    FlexibleEventUnionErr { result: UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult },
+    FlexibleEventUnionErr {
+        result: UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult,
+    },
 
-    FlexibleEventTableErr { result: UnknownInteractionsAjarProtocolFlexibleEventTableErrResult },
-    _UnknownEvent { ordinal: u64 },
+    FlexibleEventTableErr {
+        result: UnknownInteractionsAjarProtocolFlexibleEventTableErrResult,
+    },
+    #[non_exhaustive]
+    _UnknownEvent {
+        /// Ordinal of the event that was sent.
+        ordinal: u64,
+    },
 }
 
 impl UnknownInteractionsAjarProtocolEvent {
@@ -4266,7 +4298,9 @@ pub enum UnknownInteractionsAjarProtocolRequest {
         responder: UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponder,
     },
     /// An interaction was received which does not match any known method.
+    #[non_exhaustive]
     _UnknownMethod {
+        /// Ordinal of the method that was called.
         ordinal: u64,
         control_handle: UnknownInteractionsAjarProtocolControlHandle,
     },
@@ -8544,36 +8578,68 @@ impl futures::Stream for UnknownInteractionsProtocolEventStream {
 pub enum UnknownInteractionsProtocolEvent {
     StrictEvent {},
 
-    StrictEventFields { some_field: i32 },
+    StrictEventFields {
+        some_field: i32,
+    },
 
-    StrictEventUnion { payload: UnknownInteractionsProtocolStrictEventUnionRequest },
+    StrictEventUnion {
+        payload: UnknownInteractionsProtocolStrictEventUnionRequest,
+    },
 
-    StrictEventTable { payload: UnknownInteractionsProtocolStrictEventTableRequest },
+    StrictEventTable {
+        payload: UnknownInteractionsProtocolStrictEventTableRequest,
+    },
 
-    StrictEventErr { result: UnknownInteractionsProtocolStrictEventErrResult },
+    StrictEventErr {
+        result: UnknownInteractionsProtocolStrictEventErrResult,
+    },
 
-    StrictEventFieldsErr { result: UnknownInteractionsProtocolStrictEventFieldsErrResult },
+    StrictEventFieldsErr {
+        result: UnknownInteractionsProtocolStrictEventFieldsErrResult,
+    },
 
-    StrictEventUnionErr { result: UnknownInteractionsProtocolStrictEventUnionErrResult },
+    StrictEventUnionErr {
+        result: UnknownInteractionsProtocolStrictEventUnionErrResult,
+    },
 
-    StrictEventTableErr { result: UnknownInteractionsProtocolStrictEventTableErrResult },
+    StrictEventTableErr {
+        result: UnknownInteractionsProtocolStrictEventTableErrResult,
+    },
 
     FlexibleEvent {},
 
-    FlexibleEventFields { some_field: i32 },
+    FlexibleEventFields {
+        some_field: i32,
+    },
 
-    FlexibleEventUnion { payload: UnknownInteractionsProtocolFlexibleEventUnionRequest },
+    FlexibleEventUnion {
+        payload: UnknownInteractionsProtocolFlexibleEventUnionRequest,
+    },
 
-    FlexibleEventTable { payload: UnknownInteractionsProtocolFlexibleEventTableRequest },
+    FlexibleEventTable {
+        payload: UnknownInteractionsProtocolFlexibleEventTableRequest,
+    },
 
-    FlexibleEventErr { result: UnknownInteractionsProtocolFlexibleEventErrResult },
+    FlexibleEventErr {
+        result: UnknownInteractionsProtocolFlexibleEventErrResult,
+    },
 
-    FlexibleEventFieldsErr { result: UnknownInteractionsProtocolFlexibleEventFieldsErrResult },
+    FlexibleEventFieldsErr {
+        result: UnknownInteractionsProtocolFlexibleEventFieldsErrResult,
+    },
 
-    FlexibleEventUnionErr { result: UnknownInteractionsProtocolFlexibleEventUnionErrResult },
+    FlexibleEventUnionErr {
+        result: UnknownInteractionsProtocolFlexibleEventUnionErrResult,
+    },
 
-    FlexibleEventTableErr { result: UnknownInteractionsProtocolFlexibleEventTableErrResult },
-    _UnknownEvent { ordinal: u64 },
+    FlexibleEventTableErr {
+        result: UnknownInteractionsProtocolFlexibleEventTableErrResult,
+    },
+    #[non_exhaustive]
+    _UnknownEvent {
+        /// Ordinal of the event that was sent.
+        ordinal: u64,
+    },
 }
 
 impl UnknownInteractionsProtocolEvent {
@@ -9403,7 +9469,9 @@ pub enum UnknownInteractionsProtocolRequest {
         responder: UnknownInteractionsProtocolFlexibleTwoWayTableErrResponder,
     },
     /// An interaction was received which does not match any known method.
+    #[non_exhaustive]
     _UnknownMethod {
+        /// Ordinal of the method that was called.
         ordinal: u64,
         control_handle: UnknownInteractionsProtocolControlHandle,
         unknown_method_type: fidl::endpoints::UnknownMethodType,

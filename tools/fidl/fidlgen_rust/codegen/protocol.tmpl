@@ -380,7 +380,9 @@ pub enum {{ $protocol.Name }}Event {
     {{- end -}}
 
     {{- if $protocol.OneWayUnknownInteractions }}
+    #[non_exhaustive]
     _UnknownEvent {
+        /// Ordinal of the event that was sent.
         ordinal: u64,
     },
     {{- end }}
@@ -686,7 +688,9 @@ pub enum {{ $protocol.Name }}Request {
 
     {{- if $protocol.OneWayUnknownInteractions }}
     /// An interaction was received which does not match any known method.
+    #[non_exhaustive]
     _UnknownMethod {
+        /// Ordinal of the method that was called.
         ordinal: u64,
         control_handle: {{ $protocol.Name}}ControlHandle,
         {{- if $protocol.TwoWayUnknownInteractions }}

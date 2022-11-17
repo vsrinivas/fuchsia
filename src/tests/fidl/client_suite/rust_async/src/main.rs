@@ -247,7 +247,7 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                             reporter.into_proxy().expect("creating reporter proxy failed");
                         while let Some(event) = client.take_event_stream().next().await {
                             let report_result = match event {
-                                Ok(AjarTargetEvent::_UnknownEvent { ordinal }) => reporter
+                                Ok(AjarTargetEvent::_UnknownEvent { ordinal, .. }) => reporter
                                     .report_event(&mut AjarTargetEventReport::UnknownEvent(
                                         UnknownEvent { ordinal },
                                     )),
@@ -282,7 +282,7 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                                     .report_event(&mut OpenTargetEventReport::StrictEvent(Empty)),
                                 Ok(OpenTargetEvent::FlexibleEvent {}) => reporter
                                     .report_event(&mut OpenTargetEventReport::FlexibleEvent(Empty)),
-                                Ok(OpenTargetEvent::_UnknownEvent { ordinal }) => reporter
+                                Ok(OpenTargetEvent::_UnknownEvent { ordinal, .. }) => reporter
                                     .report_event(&mut OpenTargetEventReport::UnknownEvent(
                                         UnknownEvent { ordinal },
                                     )),

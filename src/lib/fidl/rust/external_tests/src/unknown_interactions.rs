@@ -416,7 +416,7 @@ fn recieve_unknown_event_flexible_sync() {
 
     assert_matches!(
         event,
-        UnknownInteractionsProtocolEvent::_UnknownEvent { ordinal: 0xff10ff10ff10ff10 }
+        UnknownInteractionsProtocolEvent::_UnknownEvent { ordinal: 0xff10ff10ff10ff10, .. }
     );
 }
 
@@ -469,7 +469,7 @@ fn recieve_unknown_event_flexible_ajar_sync() {
 
     assert_matches!(
         event,
-        UnknownInteractionsAjarProtocolEvent::_UnknownEvent { ordinal: 0xff10ff10ff10ff10 }
+        UnknownInteractionsAjarProtocolEvent::_UnknownEvent { ordinal: 0xff10ff10ff10ff10, .. }
     );
 }
 
@@ -919,7 +919,7 @@ async fn receive_unknown_event_flexible_async() {
 
     assert_matches!(
         event,
-        UnknownInteractionsProtocolEvent::_UnknownEvent { ordinal: 0xff10ff10ff10ff10 }
+        UnknownInteractionsProtocolEvent::_UnknownEvent { ordinal: 0xff10ff10ff10ff10, .. }
     );
 }
 
@@ -980,7 +980,7 @@ async fn receive_unknown_event_flexible_ajar_async() {
 
     assert_matches!(
         event,
-        UnknownInteractionsAjarProtocolEvent::_UnknownEvent { ordinal: 0xff10ff10ff10ff10 }
+        UnknownInteractionsAjarProtocolEvent::_UnknownEvent { ordinal: 0xff10ff10ff10ff10, .. }
     );
 }
 
@@ -1436,6 +1436,7 @@ async fn receive_unknown_one_way_flexible() {
             ordinal: 0xff10ff10ff10ff10,
             unknown_method_type: fidl::endpoints::UnknownMethodType::OneWay,
             control_handle: _,
+            ..
         }
     );
 }
@@ -1486,6 +1487,7 @@ async fn receive_unknown_two_way_flexible() {
                     ordinal: 0xff10ff10ff10ff10,
                     unknown_method_type: fidl::endpoints::UnknownMethodType::TwoWay,
                     control_handle: _,
+                    ..
                 }
             );
         },
@@ -1564,6 +1566,7 @@ async fn receive_unknown_one_way_ajar_flexible() {
         UnknownInteractionsAjarProtocolRequest::_UnknownMethod {
             ordinal: 0xff10ff10ff10ff10,
             control_handle: _,
+            ..
         }
     );
 }
