@@ -22,4 +22,8 @@ modified or improved.
 
 <<_add_line_metered_tutorial.md>>
 
+### Clients explicitly request draw operations {#client_requested_draw}
+
+<<_client_requested_draw_tutorial.md>>
+
 <!-- /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->

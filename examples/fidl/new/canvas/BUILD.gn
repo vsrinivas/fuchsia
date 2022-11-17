@@ -8,6 +8,7 @@ group("tests") {
     # DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
     "add_line_metered:tests",
     "baseline:tests",
+    "client_requested_draw:tests",
 
     # /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
   ]
