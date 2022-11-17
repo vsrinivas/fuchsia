@@ -59,12 +59,6 @@ class WlanphyImplDevice : public ::ddk::Device<WlanphyImplDevice, ::ddk::Initial
  protected:
   // Only derived classes are allowed to create this object.
   explicit WlanphyImplDevice(zx_device_t* parent);
-
-  // Store unbind txn for async reply.
-  std::optional<::ddk::UnbindTxn> unbind_txn_;
-
-  // Dispatcher for FIDL server.
-  fdf::Dispatcher dispatcher_;
 };
 
 }  // namespace wlan::iwlwifi

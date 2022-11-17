@@ -21,16 +21,7 @@ namespace wlanphyimpl_fidl = fuchsia_wlan_wlanphyimpl::wire;
 
 WlanphyImplDevice::WlanphyImplDevice(zx_device_t* parent)
     : ::ddk::Device<WlanphyImplDevice, ::ddk::Initializable, ::ddk::Unbindable,
-                    ddk::ServiceConnectable>(parent) {
-  auto dispatcher = fdf::Dispatcher::Create(0, "iwlwifi", [&](fdf_dispatcher_t*) {
-    if (unbind_txn_)
-      unbind_txn_->Reply();
-  });
-  ZX_ASSERT_MSG(!dispatcher.is_error(), "%s(): Dispatcher created failed: %s\n", __func__,
-                zx_status_get_string(dispatcher.status_value()));
-
-  dispatcher_ = std::move(*dispatcher);
-}
+                    ddk::ServiceConnectable>(parent) {}
 
 WlanphyImplDevice::~WlanphyImplDevice() = default;
 
@@ -45,7 +36,7 @@ zx_status_t WlanphyImplDevice::DdkServiceConnect(const char* service_name, fdf::
   }
   fdf::ServerEnd<fuchsia_wlan_wlanphyimpl::WlanphyImpl> server_end(std::move(channel));
   fdf::BindServer<fdf::WireServer<fuchsia_wlan_wlanphyimpl::WlanphyImpl>>(
-      dispatcher_.get(), std::move(server_end), this);
+      fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), this);
   return ZX_OK;
 }
 

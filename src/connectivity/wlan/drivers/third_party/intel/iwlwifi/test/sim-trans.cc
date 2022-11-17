@@ -53,16 +53,12 @@ class SimTransDevice : public ::wlan::iwlwifi::WlanphyImplDevice {
       : WlanphyImplDevice(parent), drvdata_(drvdata) {}
   void DdkInit(::ddk::InitTxn txn) override { txn.Reply(ZX_OK); }
   void DdkUnbind(::ddk::UnbindTxn txn) override {
-    // Saving the input UnbindTxn to the device, ::ddk::UnbindTxn::Reply() will be called with this
-    // UnbindTxn in the shutdown callback of the dispatcher, so that we can make sure DdkUnbind()
-    // won't end before the dispatcher shutdown.
-    unbind_txn_ = std::move(txn);
     struct iwl_trans* trans = drvdata_;
     if (trans->drv) {
       iwl_drv_stop(trans->drv);
     }
     free(trans);
-    dispatcher_.ShutdownAsync();
+    txn.Reply();
   }
 
   iwl_trans* drvdata() override { return drvdata_; }
