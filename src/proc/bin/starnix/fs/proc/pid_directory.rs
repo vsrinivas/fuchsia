@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use crate::fs::*;
 use crate::lock::Mutex;
-use crate::mm::{ProcMapsFile, ProcStatFile};
+use crate::mm::{ProcMapsFile, ProcStatFile, ProcStatusFile};
 use crate::task::{CurrentTask, Task, ThreadGroup};
 use crate::types::*;
 
@@ -42,6 +42,7 @@ fn static_directory_builder_with_common_task_entries<'a>(
         .entry(b"fdinfo", FdInfoDirectory::new(task), mode!(IFDIR, 0o777))
         .entry(b"maps", ProcMapsFile::new_node(task), mode!(IFREG, 0o444))
         .entry(b"stat", ProcStatFile::new_node(task), mode!(IFREG, 0o444))
+        .entry(b"status", ProcStatusFile::new_node(task), mode!(IFREG, 0o444))
         .entry(b"cmdline", CmdlineFile::new_node(task), mode!(IFREG, 0o444))
         .entry(b"comm", CommFile::new_node(task), mode!(IFREG, 0o444))
         .node(b"attr", attr_directory(task, fs))

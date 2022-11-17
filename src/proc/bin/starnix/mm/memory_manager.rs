@@ -1562,6 +1562,56 @@ impl FileOps for ProcStatFile {
     }
 }
 
+pub struct ProcStatusFile {
+    task: Arc<Task>,
+    seq: Mutex<SeqFileState<()>>,
+}
+
+impl ProcStatusFile {
+    pub fn new_node(task: &Arc<Task>) -> impl FsNodeOps {
+        let task = Arc::clone(task);
+        SimpleFileNode::new(move || {
+            Ok(ProcStatusFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
+        })
+    }
+}
+
+impl FileOps for ProcStatusFile {
+    fileops_impl_seekable!();
+    fileops_impl_nonblocking!();
+
+    fn read_at(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        offset: usize,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        let creds = self.task.creds();
+        let iter = move |_cursor, sink: &mut SeqFileBuf| {
+            // TODO(tbodt): the fourth one is supposed to be fsuid, but we haven't implemented
+            // fsuid
+            writeln!(
+                sink,
+                "Uid:\t{} {} {} {}",
+                creds.uid, creds.euid, creds.saved_uid, creds.euid
+            )?;
+            Ok(None)
+        };
+        self.seq.lock().read_at(current_task, iter, offset, data)
+    }
+
+    fn write_at(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _offset: usize,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        error!(ENOSYS)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
