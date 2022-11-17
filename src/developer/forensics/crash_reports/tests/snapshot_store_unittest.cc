@@ -188,6 +188,26 @@ TEST_F(SnapshotStoreTest, Check_Delete) {
                                                }));
 }
 
+TEST_F(SnapshotStoreTest, Check_DeleteAll) {
+  SetUpSnapshotStore(/*max_archives_size=*/StorageSize::Megabytes(1),
+                     /*max_tmp_size=*/StorageSize::Bytes(0),
+                     /*max_cache_size=*/StorageSize::Megabytes(1));
+
+  AddDefaultSnapshot();
+  snapshot_store_->MoveToPersistence(kTestUuid, /*only_consider_tmp=*/false);
+
+  const SnapshotUuid kTestUuid2 = kTestUuid + "2";
+  AddDefaultSnapshot(kTestUuid2);
+
+  ASSERT_EQ(snapshot_store_->SnapshotLocation(kTestUuid), ItemLocation::kCache);
+  ASSERT_EQ(snapshot_store_->SnapshotLocation(kTestUuid2), ItemLocation::kMemory);
+
+  snapshot_store_->DeleteAll();
+
+  EXPECT_FALSE(snapshot_store_->SnapshotExists(kTestUuid));
+  EXPECT_FALSE(snapshot_store_->SnapshotExists(kTestUuid2));
+}
+
 TEST_F(SnapshotStoreTest, Check_GarbageCollected) {
   auto snapshot = AsMissing(snapshot_store_->GetSnapshot(kGarbageCollectedSnapshotUuid));
   EXPECT_THAT(snapshot.PresenceAnnotations(),

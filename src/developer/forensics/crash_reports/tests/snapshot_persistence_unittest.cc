@@ -273,6 +273,30 @@ TEST_F(SnapshotPersistenceTest, Succeed_Delete) {
   EXPECT_FALSE(Read(GetCacheDir(), kTestUuid, archive));
 }
 
+TEST_F(SnapshotPersistenceTest, Check_DeleteAll) {
+  const SnapshotUuid kTestUuid = "test uuid";
+  const SnapshotUuid kTestUuid2 = "test uuid 2";
+  const std::string kArchiveValue = "snapshot.data";
+
+  auto archive_size = StorageSize::Bytes(sizeof(feedback_data::kSnapshotFilename));
+  archive_size += StorageSize::Bytes(kArchiveValue.size());
+
+  // Make /cache only have room for 1 archive.
+  MakeNewPersistence(/*max_tmp_size=*/StorageSize::Megabytes(1),
+                     /*max_cache_size=*/archive_size);
+
+  ASSERT_TRUE(AddArchive(kTestUuid, kArchiveValue));
+  ASSERT_EQ(persistence_->SnapshotLocation(kTestUuid), ItemLocation::kCache);
+
+  ASSERT_TRUE(AddArchive(kTestUuid2, kArchiveValue));
+  ASSERT_EQ(persistence_->SnapshotLocation(kTestUuid2), ItemLocation::kTmp);
+
+  persistence_->DeleteAll();
+
+  EXPECT_FALSE(persistence_->Contains(kTestUuid));
+  EXPECT_FALSE(persistence_->Contains(kTestUuid2));
+}
+
 TEST_F(SnapshotPersistenceTest, Succeed_MoveToTmp) {
   const SnapshotUuid kTestUuid = "test uuid";
   const std::string kArchiveValue = "snapshot.data";

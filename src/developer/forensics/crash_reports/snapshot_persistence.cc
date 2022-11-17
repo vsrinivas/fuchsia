@@ -251,6 +251,26 @@ bool SnapshotPersistence::Delete(const SnapshotUuid& uuid) {
   return true;
 }
 
+void SnapshotPersistence::DeleteAll() {
+  auto DeleteAll = [](const std::string& root_dir) {
+    if (!DeletePath(root_dir)) {
+      FX_LOGS(ERROR) << "Failed to delete all snapshots from " << root_dir;
+    }
+    files::CreateDirectory(root_dir);
+  };
+
+  // /tmp must be usable if snapshot persistence is enabled there.
+  if (tmp_metadata_.has_value()) {
+    DeleteAll(tmp_metadata_->RootDir());
+    FX_CHECK(tmp_metadata_->RecreateFromFilesystem());
+  }
+
+  if (cache_metadata_.has_value() && cache_metadata_->IsDirectoryUsable()) {
+    DeleteAll(cache_metadata_->RootDir());
+    cache_metadata_->RecreateFromFilesystem();
+  }
+}
+
 SnapshotPersistenceMetadata& SnapshotPersistence::RootFor(const SnapshotUuid& uuid) {
   FX_CHECK(SnapshotPersistenceEnabled()) << "Snapshot persistence not enabled";
 

@@ -53,6 +53,9 @@ class SnapshotPersistence {
   // Deletes the snapshot for |uuid| from persistence. Returns true if successful.
   bool Delete(const SnapshotUuid& uuid);
 
+  // Deletes all snapshots from persistence.
+  void DeleteAll();
+
  private:
   // Adds a snapshot to persistence. Returns true if successful.
   bool AddToRoot(const SnapshotUuid& uuid, const ManagedSnapshot::Archive& archive,

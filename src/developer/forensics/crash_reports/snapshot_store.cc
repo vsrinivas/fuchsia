@@ -135,6 +135,19 @@ void SnapshotStore::DeleteSnapshot(const SnapshotUuid& uuid) {
                          insertion_order_.end());
 }
 
+void SnapshotStore::DeleteAll() {
+  // The iterator in a range-based for loop would be invalidated by calls to |data_.erase|, causing
+  // bad behavior or even a crash. Use a while loop instead that grabs a new, valid iterator for
+  // each iteration.
+  while (data_.begin() != data_.end()) {
+    // Grab copy of uuid to avoid asan failure when DeleteSnapshot erases |data_.begin()|.
+    const SnapshotUuid uuid = data_.begin()->first;
+    DeleteSnapshot(uuid);
+  }
+
+  persistence_.DeleteAll();
+}
+
 void SnapshotStore::AddSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Attachment archive) {
   FX_CHECK(!SnapshotExists(uuid)) << "Duplicate snapshot uuid '" << uuid << "' added to store";
 

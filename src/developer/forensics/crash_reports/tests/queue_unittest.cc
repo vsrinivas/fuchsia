@@ -300,6 +300,32 @@ TEST_F(QueueTest, Add_ReportingPolicyUpload) {
   EXPECT_EQ(queue_->Size(), 3u);
 }
 
+TEST_F(QueueTest, ReportingPolicyChangedToDoNotFileAndDelete_DeletesSnapshots) {
+  SetUpQueue();
+
+  const auto report_id = AddNewReport(/*is_hourly_report=*/false);
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = kAttachmentKey;
+  FX_CHECK(fsl::VmoFromString("", &snapshot.value));
+
+  GetSnapshotStore()->AddSnapshot(kSnapshotUuidValue, std::move(snapshot));
+  ASSERT_TRUE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+
+  ASSERT_TRUE(*report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kDoNotFileAndDelete);
+
+  EXPECT_FALSE(queue_->Contains(*report_id));
+  EXPECT_FALSE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          cobalt::Event(cobalt::CrashState::kDeleted),
+                                      }));
+}
+
 TEST_F(QueueTest, Upload) {
   SetUpQueue({kUploadSuccessful, kUploadFailed, kUploadSuccessful, kUploadFailed});
 

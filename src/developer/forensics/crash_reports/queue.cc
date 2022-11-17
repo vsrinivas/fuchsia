@@ -435,7 +435,8 @@ void Queue::UnblockAll() {
 }
 
 void Queue::DeleteAll() {
-  FX_LOGS(INFO) << fxl::StringPrintf("Deleting all %zu pending reports", Size());
+  FX_LOGS(INFO) << fxl::StringPrintf("Deleting all %zu pending reports and associated snapshots",
+                                     Size());
 
   for (auto& pending_report : ready_reports_) {
     Retire(std::move(pending_report), RetireReason::kDelete);
@@ -455,6 +456,7 @@ void Queue::DeleteAll() {
   }
 
   report_store_->RemoveAll();
+  report_store_->GetSnapshotStore()->DeleteAll();
 }
 
 // The queue is inheritly conservative with uploading crash reports meaning that a report that is
