@@ -138,5 +138,51 @@ TEST_F(DirCompatibilityTest, DirDepthTestFuchsiaToLinux) {
   }
 }
 
+TEST_F(DirCompatibilityTest, DirRemoveTestLinuxToFuchsia) {
+  std::vector<std::string> dir_paths = {"/d_a", "/d_a/d_b", "/d_c"};
+
+  std::vector<std::string> remove_fail = {"/d_a"};
+  std::vector<std::string> remove_success = {"/d_a/d_b", "/d_c"};
+  {
+    GetEnclosedGuest().GetLinuxOperator().Mkfs();
+    GetEnclosedGuest().GetLinuxOperator().Mount();
+
+    auto umount = fit::defer([&] { GetEnclosedGuest().GetLinuxOperator().Umount(); });
+
+    for (auto dir_name : dir_paths) {
+      GetEnclosedGuest().GetLinuxOperator().Mkdir(linux_path_prefix + dir_name, 0644);
+    }
+
+    for (auto dir_name : remove_fail) {
+      ASSERT_NE(GetEnclosedGuest().GetLinuxOperator().Rmdir(linux_path_prefix + dir_name), 0);
+    }
+
+    for (auto dir_name : remove_success) {
+      ASSERT_EQ(GetEnclosedGuest().GetLinuxOperator().Rmdir(linux_path_prefix + dir_name), 0);
+    }
+  }
+
+  {
+    GetEnclosedGuest().GetFuchsiaOperator().Fsck();
+    GetEnclosedGuest().GetFuchsiaOperator().Mount();
+
+    auto umount = fit::defer([&] { GetEnclosedGuest().GetFuchsiaOperator().Umount(); });
+
+    // Check deleted
+    for (auto dir_name : remove_success) {
+      auto file =
+          GetEnclosedGuest().GetFuchsiaOperator().Open(dir_name, O_RDONLY | O_DIRECTORY, 0644);
+      ASSERT_FALSE(file->IsValid());
+    }
+
+    // Check remained
+    for (auto dir_name : remove_fail) {
+      auto file =
+          GetEnclosedGuest().GetFuchsiaOperator().Open(dir_name, O_RDONLY | O_DIRECTORY, 0644);
+      ASSERT_TRUE(file->IsValid());
+    }
+  }
+}
+
 }  // namespace
 }  // namespace f2fs

@@ -124,7 +124,7 @@ class LinuxOperator : public CompatibilityTestOperator {
   void Umount() final;
 
   void Mkdir(std::string_view path, mode_t mode) final;
-  int Rmdir(std::string_view path) final { return -1; }
+  int Rmdir(std::string_view path) final;
   std::unique_ptr<TestFile> Open(std::string_view path, int flags, mode_t mode) final;
   void Rename(std::string_view oldpath, std::string_view newpath) final {}
 

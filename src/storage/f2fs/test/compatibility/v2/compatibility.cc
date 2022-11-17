@@ -111,6 +111,12 @@ void LinuxOperator::Mkdir(std::string_view path, mode_t mode) {
   ExecuteWithAssert({"mkdir", "-m", ConvertModeString(mode), ConvertPath(path)});
 }
 
+int LinuxOperator::Rmdir(std::string_view path) {
+  std::string result;
+  ExecuteWithAssert({"rmdir", ConvertPath(path)}, &result);
+  return (result.length() == 0) ? 0 : -1;
+}
+
 std::unique_ptr<TestFile> LinuxOperator::Open(std::string_view path, int flags, mode_t mode) {
   if (flags & O_CREAT) {
     if (flags & O_DIRECTORY) {
