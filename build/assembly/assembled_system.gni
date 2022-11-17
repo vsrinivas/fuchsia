@@ -297,7 +297,8 @@ template("assembled_system") {
     } else {
       product_assembly_config_deps = []
     }
-    image_assembly_config = "${image_name}.image_assembly_config"
+    generated_config_for_legacy_bundle =
+        "${image_name}.legacy_image_assembly_config"
     image_assembly_inputs = "${image_name}.image_assembly_inputs"
     images_config = "${image_name}.images_config"
     product_assembler = "${image_name}.product_assembler"
@@ -346,8 +347,8 @@ template("assembled_system") {
     } else {
       product_assembly_config = "//build/assembly/empty_product_config.json"
     }
-    image_assembly_config =
-        "$target_out_dir/${image_name}.image_assembly_config.json"
+    generated_config_for_legacy_bundle =
+        "$target_out_dir/${image_name}.legacy_image_assembly_config.json"
     image_assembly_inputs =
         "$target_out_dir/${image_name}.image_assembly_inputs"
 
@@ -582,14 +583,14 @@ template("assembled_system") {
   # Build the images using the Image Assembler.
   #
 
-  generated_image_assembly_config(labels.image_assembly_config) {
+  generated_image_assembly_config(labels.generated_config_for_legacy_bundle) {
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
                            ])
 
-    output_path = files.image_assembly_config
+    output_path = files.generated_config_for_legacy_bundle
     kernel_image = kernel_zbi
     kernel_image_name = kernel_name
 
@@ -1189,8 +1190,8 @@ template("assembled_system") {
     # public_deps is used, so that the outputs of these dependencies are
     # available to external targets.
     public_deps = [
+      ":${labels.generated_config_for_legacy_bundle}",
       ":${labels.image_assembler}",
-      ":${labels.image_assembly_config}",
       ":${labels.images_config}",
     ]
     if (defined(invoker.output_dir)) {
