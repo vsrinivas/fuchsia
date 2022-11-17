@@ -171,13 +171,10 @@ pub(super) enum RecognizedGesture {
     /// special value `Unrecognized` for when no recognizer
     /// claims the gesture.
     _Unrecognized,
-    Click,
     PrimaryTap,
     SecondaryTap,
     Motion,
     Scroll,
-    OneFingerDrag,
-    #[allow(dead_code)]
     OneButtonDown,
 }
 
@@ -234,6 +231,9 @@ pub(super) trait MatchedContender: std::fmt::Debug + AsAny {
 
 #[derive(Debug, PartialEq)]
 pub(super) enum EndGestureEvent {
+    // It still possible to use EndGestureEvent::GeneratedEvent when
+    // we support scroll phase, keep it and related tests.
+    #[allow(dead_code)]
     GeneratedEvent(MouseEvent),
     UnconsumedEvent(TouchpadEvent),
     NoEvent,
@@ -407,12 +407,10 @@ impl RecognizedGesture {
     fn to_str(&self) -> &'static str {
         match self {
             RecognizedGesture::_Unrecognized => "_unrecognized",
-            RecognizedGesture::Click => "click",
             RecognizedGesture::PrimaryTap => "primary_tap",
             RecognizedGesture::SecondaryTap => "secondary_tap",
             RecognizedGesture::Motion => "motion",
             RecognizedGesture::Scroll => "scroll",
-            RecognizedGesture::OneFingerDrag => "one_finger_drag",
             RecognizedGesture::OneButtonDown => "one_button_down",
         }
     }
@@ -2475,7 +2473,7 @@ mod tests {
                         },
                     ],
                     winner: winner.map(std::convert::From::<StubWinner>::from),
-                    recognized_gesture: RecognizedGesture::Click,
+                    recognized_gesture: RecognizedGesture::Motion,
                 },
             );
             assert_matches!(
@@ -3659,7 +3657,7 @@ mod tests {
                 ProcessBufferedEventsResult {
                     generated_events: vec![],
                     winner: None,
-                    recognized_gesture: RecognizedGesture::Click,
+                    recognized_gesture: RecognizedGesture::Motion,
                 },
             );
             gesture_matching_contender
@@ -3760,14 +3758,14 @@ mod tests {
                     },
                     "8": {
                         gesture_start: {
-                          gesture_name: "click",
+                          gesture_name: "motion",
                           latency_event_count: 1u64,
                           latency_micros: 17_987i64,  // 18_000_000 - 12_300 = 17_987_700
                         }
                     },
                     "9": {
                         gesture_end: {
-                          gesture_name: "click",
+                          gesture_name: "motion",
                           contender: "utils::StubMatchedContender",
                           event_count: 0u64,
                           duration_micros: 0i64,
@@ -3803,7 +3801,7 @@ mod tests {
                 ProcessBufferedEventsResult {
                     generated_events: vec![],
                     winner: None,
-                    recognized_gesture: RecognizedGesture::Click,
+                    recognized_gesture: RecognizedGesture::Motion,
                 },
             );
             gesture_matching_contender
