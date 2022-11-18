@@ -73,18 +73,12 @@ if (target_cpu == "x64") {
     manifest = "meta/state_pool_no_free.cml"
   }
 
-  fuchsia_test_component("block_pool_no_free_component") {
-    deps = [ "//third_party/mesa/src/intel/vulkan/tests:block_pool_no_free" ]
-    manifest = "meta/block_pool_no_free.cml"
-  }
-
   fuchsia_test_package("mesa_unit_tests") {
     test_components = [
       ":mesa_unit_tests_component",
       ":state_pool_component",
       ":state_pool_free_list_only_component",
       ":state_pool_no_free_component",
-      ":block_pool_no_free_component",
     ]
   }
 
