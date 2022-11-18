@@ -1268,6 +1268,34 @@ build_api_module("product_bundles") {
   }
 }
 
+# licenses.json enumerates the output artifacts of //tools/check-licenses
+# which need to be saved after completion of a check-licenses run.
+#
+#
+# Type: list(scope)
+#
+#   compliance_file
+#     - Required: Path to the generated compliance file.
+#     - Type: string
+#
+#   license_files
+#     - Optional: Path to a root folder containing license text files.
+#     - Type: string
+#
+#   run_files_archive
+#     - Optional: Path to a root folder containing check-licenses output files.
+#     - Type: string
+#
+build_api_module("licenses") {
+  testonly = true
+  data_keys = [ "licenses" ]
+
+  # No need to save license artifacts for SDK-only builds.
+  if (has_board) {
+    deps = [ "//build/images:default-images" ]
+  }
+}
+
 ###
 ### Top-level targets.
 ###

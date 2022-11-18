@@ -35,6 +35,7 @@ type Modules struct {
 	productSizeCheckerOutput []ProductSizeCheckerOutput
 	generatedSources         []string
 	images                   []Image
+	licenses                 []License
 	packageManifestsLocation []string
 	packageRepositories      []PackageRepo
 	platforms                []DimensionSet
@@ -64,6 +65,7 @@ func NewModules(buildDir string) (*Modules, error) {
 		"clippy_target_mapping.json":       &m.clippyTargets,
 		"generated_sources.json":           &m.generatedSources,
 		imageManifestName:                  &m.images,
+		"licenses.json":                    &m.licenses,
 		"all_package_manifest_paths.json":  &m.packageManifestsLocation,
 		"package-repositories.json":        &m.packageRepositories,
 		"platforms.json":                   &m.platforms,
@@ -138,6 +140,10 @@ func (m Modules) GeneratedSources() []string {
 
 func (m Modules) Images() []Image {
 	return m.images
+}
+
+func (m Modules) Licenses() []License {
+	return m.licenses
 }
 
 func (m Modules) PackageManifestsLocation() []string {

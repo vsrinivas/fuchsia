@@ -38,6 +38,7 @@ const (
 	debugDirName                    = "debug"
 	hostTestDirName                 = "host_tests"
 	imageDirName                    = "images"
+	licenseDirName                  = "licenses"
 	packageDirName                  = "packages"
 	sdkArchivesDirName              = "sdk"
 	toolDirName                     = "tools"
@@ -122,6 +123,12 @@ Emits a GCS upload manifest for a build with the following structure:
 │   │   │   ├── tools
 │   │   │   │   └── <OS>-<CPU>
 │   │   │   │       └── <tool names>
+│   │   │   ├── licenses
+│   │   │   │   ├── texts/
+│   │   │   │   │   └── <License text files>
+│   │   │   │   ├── compliance.csv
+│   │   │   │   └── runfiles.tar.gz (zipped check-licenses configs & artifacts)
+
 
 Where $GCS_BUCKET is defined by the infrastructure.
 
@@ -169,6 +176,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	targetDir := path.Join(metadataDir, targetDirName)
 	packageNamespaceDir := path.Join(cmd.namespace, packageDirName)
 	imageNamespaceDir := path.Join(cmd.namespace, imageDirName)
+	licenseNamespaceDir := path.Join(cmd.namespace, licenseDirName)
 
 	uploads := []artifactory.Upload{
 		{
@@ -231,6 +239,12 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	if productBundle != nil {
 		uploads = append(uploads, *productBundle)
 	}
+
+	licenses, err := artifactory.LicenseUploads(m, licenseNamespaceDir)
+	if err != nil {
+		return err
+	}
+	uploads = append(uploads, licenses...)
 
 	// Upload the product bundles.
 	pbUploads, err := artifactory.ProductBundle2Uploads(m, blobDirName, cmd.namespace)

@@ -111,9 +111,10 @@ template("license_data") {
     metadata = {
       licenses = [
         {
-          target = product_board
-          licenseFiles = rebase_path(temp_out_licenses_dir, root_build_dir)
-          runFiles = rebase_path("$temp_out_dir/$path_prefix", root_build_dir)
+          license_files = rebase_path(temp_out_licenses_dir, root_build_dir)
+          compliance_file =
+              rebase_path("$temp_out_dir/$path_prefix/out/$compliance_output",
+                          root_build_dir)
         },
       ]
     }

@@ -37,6 +37,7 @@ go_library("build") {
     "checkout_artifacts.go",
     "clippy.go",
     "images.go",
+    "licenses.go",
     "modules.go",
     "package_manifest_list.go",
     "package_repositories.go",
