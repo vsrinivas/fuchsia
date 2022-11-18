@@ -19,6 +19,8 @@ ffx_plugin("ffx_audio_gen") {
   deps = [
     "//src/developer/ffx/lib/errors:lib",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:hound",
+    "//third_party/rust_crates:rand",
   ]
   args_sources = [ "src/args.rs" ]
 

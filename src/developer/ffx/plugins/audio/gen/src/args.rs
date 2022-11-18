@@ -10,6 +10,7 @@ use {
     std::{str::FromStr, time::Duration},
 };
 
+/// TODO(fxbug.dev/109807) - Add support for writing infinite files.
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(
@@ -27,12 +28,11 @@ pub struct GenCommand {
 #[argh(subcommand)]
 pub enum SubCommand {
     Sine(SineCommand),
-    // TODO(fxbug.dev/106704) Add other signal types
-    // Square,
-    // Sawtooth,
-    // Triangle,
-    // PinkNoise,
-    // WhiteNoise
+    Square(SquareCommand),
+    Sawtooth(SawtoothCommand),
+    Triangle(TriangleCommand),
+    PinkNoise(PinkNoiseCommand),
+    WhiteNoise(WhiteNoiseCommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -48,19 +48,107 @@ pub struct SineCommand {
     #[argh(option, description = "frequency of output wave in Hz.")]
     pub frequency: u64,
 
-    #[argh(option, description = "signal amplitude in range (0, 1.0]. Default: 1.0.")]
-    pub amplitude: Option<f32>,
+    #[argh(option, description = "signal amplitude in range [0, 1.0]. Default: 1.0.")]
+    pub amplitude: Option<f64>,
 
+    #[argh(option, description = "output format (see 'ffx audio help' for more information).")]
+    pub format: AudioOutputFormat,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "square", description = "Generate a square wave signal.")]
+pub struct SquareCommand {
     #[argh(
         option,
-        description = "
-            output format parameters: <SampleRate>,<SampleType>,<Channels>
-            SampleRate: Integer 
-            SampleType options: uint8, int16, int32, float32
-            Channels: <uint>ch
-
-            example: --format=48000,float32,2ch"
+        description = "duration of output signal. Examples: 5ms or 3s.",
+        from_str_fn(parse_duration)
     )]
+    pub duration: Duration,
+
+    #[argh(option, description = "frequency of output wave in Hz.")]
+    pub frequency: u64,
+
+    #[argh(option, description = "signal amplitude in range [0, 1.0]. Default: 1.0.")]
+    pub amplitude: Option<f64>,
+
+    #[argh(option, default = "0.5", description = "duty cycle in range [0, 1.0]. Default: 0.5.")]
+    pub duty_cycle: f64,
+
+    #[argh(option, description = "output format (see 'ffx audio help' for more information).")]
+    pub format: AudioOutputFormat,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "sawtooth", description = "Generate a sawtooth wave signal.")]
+pub struct SawtoothCommand {
+    #[argh(
+        option,
+        description = "duration of output signal. Examples: 5ms or 3s.",
+        from_str_fn(parse_duration)
+    )]
+    pub duration: Duration,
+
+    #[argh(option, description = "frequency of output wave in Hz.")]
+    pub frequency: u64,
+
+    #[argh(option, description = "signal amplitude in range [0, 1.0]. Default: 1.0.")]
+    pub amplitude: Option<f64>,
+
+    #[argh(option, description = "output format (see 'ffx audio help' for more information).")]
+    pub format: AudioOutputFormat,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "triangle", description = "Generate a triangle wave signal.")]
+pub struct TriangleCommand {
+    #[argh(
+        option,
+        description = "duration of output signal. Examples: 5ms or 3s.",
+        from_str_fn(parse_duration)
+    )]
+    pub duration: Duration,
+
+    #[argh(option, description = "frequency of output wave in Hz.")]
+    pub frequency: u64,
+
+    #[argh(option, description = "signal amplitude in range [0, 1.0]. Default: 1.0.")]
+    pub amplitude: Option<f64>,
+
+    #[argh(option, description = "output format (see 'ffx audio help' for more information).")]
+    pub format: AudioOutputFormat,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "white-noise", description = "Generate white noise.")]
+pub struct WhiteNoiseCommand {
+    #[argh(
+        option,
+        description = "duration of output signal. Examples: 5ms or 3s.",
+        from_str_fn(parse_duration)
+    )]
+    pub duration: Duration,
+
+    #[argh(option, description = "signal amplitude in range [0, 1.0]. Default: 1.0.")]
+    pub amplitude: Option<f64>,
+
+    #[argh(option, description = "output format (see 'ffx audio help' for more information).")]
+    pub format: AudioOutputFormat,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "pink-noise", description = "Generate pink noise.")]
+pub struct PinkNoiseCommand {
+    #[argh(
+        option,
+        description = "duration of output signal. Examples: 5ms or 3s.",
+        from_str_fn(parse_duration)
+    )]
+    pub duration: Duration,
+
+    #[argh(option, description = "signal amplitude in range [0, 1.0]. Default: 1.0.")]
+    pub amplitude: Option<f64>,
+
+    #[argh(option, description = "output format (see 'ffx audio help' for more information).")]
     pub format: AudioOutputFormat,
 }
 
