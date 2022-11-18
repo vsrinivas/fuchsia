@@ -716,7 +716,7 @@ macro_rules! repo_add_tests {
                             "1" => StaticResponse::ok_body(V1_LEGACY_TEST_REPO_JSON),
                             _ => StaticResponse::ok_body(serde_json::to_string(&repo_config).unwrap()),
                         };
-                        let server = TestServer::builder().handler(response).start();
+                        let server = TestServer::builder().handler(response).start().await;
                         let local_url = server.local_url_for_path("some/path").to_owned();
                         let args = if $name == "" {
                             vec!["repo", "add", $source, "-f", $version, &local_url]
@@ -755,7 +755,7 @@ async fn test_repo_add_persistent_v1_url() {
 
     let repo_config = make_v1_legacy_expected_test_repo_config(true);
     let response = StaticResponse::ok_body(V1_LEGACY_TEST_REPO_JSON);
-    let server = TestServer::builder().handler(response).start();
+    let server = TestServer::builder().handler(response).start().await;
     let local_url = server.local_url_for_path("some/path").to_owned();
     let args = vec!["repo", "add", "url", "-p", "-f", "1", &local_url];
     let output = env.run_pkgctl(args).await;

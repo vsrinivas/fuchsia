@@ -958,10 +958,8 @@ if (current_os == "fuchsia") {
   }
 }
 
-if (current_os == "fuchsia") {
-  group("tokio-rustls") {
-    public_deps = [ ":tokio-rustls-v0_22_0" ]
-  }
+group("tokio-rustls") {
+  public_deps = [ ":tokio-rustls-v0_22_0" ]
 }
 
 group("toml") {

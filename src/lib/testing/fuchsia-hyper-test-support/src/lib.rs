@@ -18,7 +18,7 @@
 use {
     anyhow::Error,
     chrono::Utc,
-    fuchsia_async::{self as fasync, net::TcpListener, Task},
+    fuchsia_async::{self as fasync, Task},
     fuchsia_hyper,
     futures::{future::BoxFuture, prelude::*},
     hyper::{
@@ -139,27 +139,36 @@ impl TestServerBuilder {
     }
 
     /// Spawn the server on the current executor, returning a handle to manage the server.
-    pub fn start(self) -> TestServer {
-        let (listener, addr) = {
+    pub async fn start(self) -> TestServer {
+        let (mut listener, addr) = {
             let addr = SocketAddr::new(Ipv6Addr::UNSPECIFIED.into(), 0);
-            let listener = TcpListener::bind(&addr).unwrap();
+            let listener = bind_listener(&addr).await;
             let local_addr = listener.local_addr().unwrap();
             (listener, local_addr)
         };
 
-        let listener = listener
-            .accept_stream()
-            .map_err(Error::from)
-            .map_ok(|(conn, _addr)| fuchsia_hyper::TcpStream { stream: conn });
+        let (stop, rx_stop) = futures::channel::oneshot::channel();
 
-        let (connections, use_https) = if let Some((cert_chain, private_key)) = self.https_certs {
+        let (tls_acceptor, use_https) = if let Some((cert_chain, private_key)) = self.https_certs {
             // build a server configuration using a test CA and cert chain
             let mut tls_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
             tls_config.set_single_cert(cert_chain, private_key).unwrap();
             let tls_acceptor = tokio_rustls::TlsAcceptor::from(Arc::new(tls_config));
 
-            // wrap incoming tcp streams
-            (
+            (Some(tls_acceptor), true)
+        } else {
+            (None, false)
+        };
+
+        let task = fasync::Task::spawn(async move {
+            let listener = accept_stream(&mut listener);
+
+            let listener = listener
+                .map_err(Error::from)
+                .map_ok(|conn| fuchsia_hyper::TcpStream { stream: conn });
+
+            let connections = if let Some(tls_acceptor) = tls_acceptor {
+                // wrap incoming tcp streams
                 listener
                     .and_then(move |conn| {
                         tls_acceptor.accept(conn).map(|res| match res {
@@ -169,61 +178,99 @@ impl TestServerBuilder {
                             Err(e) => Err(Error::from(e)),
                         })
                     })
-                    .boxed(), // connections
-                true, // use_https
-            )
-        } else {
-            (
+                    .boxed() // connections
+            } else {
                 listener
                     .map_ok(|conn| Pin::new(Box::new(conn)) as Pin<Box<dyn AsyncReadWrite>>)
-                    .boxed(), // connections
-                false, // use_https
-            )
-        };
+                    .boxed() // connections
+            };
 
-        // This is the root Arc<Vec<Arc<dyn Handler>>>.
-        let handlers = Arc::new(self.handlers);
+            // This is the root Arc<Vec<Arc<dyn Handler>>>.
+            let handlers = Arc::new(self.handlers);
 
-        let make_svc = make_service_fn(move |_socket| {
-            // Each connection to the server receives a separate service_fn instance, and so needs
-            // it's own copy of the handlers, this is a factory of sorts.
-            let handlers = Arc::clone(&handlers);
+            let make_svc = make_service_fn(move |_socket| {
+                // Each connection to the server receives a separate service_fn instance, and so
+                // needs it's own copy of the handlers, this is a factory of sorts.
+                let handlers = Arc::clone(&handlers);
 
-            async move {
-                Ok::<_, Infallible>(service_fn(move |req| {
-                    // Each request made by a connection is serviced by the service_fn created from
-                    // this scope, which is why there is another cloning of the Arc of Handlers.
-                    let method = req.method().to_owned();
-                    let path = req.uri().path().to_owned();
-                    TestServer::handle_request(Arc::clone(&handlers), req)
-                        .inspect(move |x| {
-                            println!(
-                                "{} [test http] {} {} => {}",
-                                Utc::now().format("%T.%6f"),
-                                method,
-                                path,
-                                x.status()
-                            )
-                        })
-                        .map(Ok::<_, Infallible>)
-                }))
-            }
+                async move {
+                    Ok::<_, Infallible>(service_fn(move |req| {
+                        // Each request made by a connection is serviced by the service_fn created from
+                        // this scope, which is why there is another cloning of the Arc of Handlers.
+                        let method = req.method().to_owned();
+                        let path = req.uri().path().to_owned();
+                        TestServer::handle_request(Arc::clone(&handlers), req)
+                            .inspect(move |x| {
+                                println!(
+                                    "{} [test http] {} {} => {}",
+                                    Utc::now().format("%T.%6f"),
+                                    method,
+                                    path,
+                                    x.status()
+                                )
+                            })
+                            .map(Ok::<_, Infallible>)
+                    }))
+                }
+            });
+
+            Server::builder(from_stream(connections))
+                .executor(fuchsia_hyper::Executor)
+                .serve(make_svc)
+                .with_graceful_shutdown(
+                    rx_stop.map(|res| res.unwrap_or_else(|futures::channel::oneshot::Canceled| ())),
+                )
+                .unwrap_or_else(|e| panic!("error serving repo over http: {}", e))
+                .await;
         });
-
-        let (stop, rx_stop) = futures::channel::oneshot::channel();
-
-        let server = Server::builder(from_stream(connections))
-            .executor(fuchsia_hyper::Executor)
-            .serve(make_svc)
-            .with_graceful_shutdown(
-                rx_stop.map(|res| res.unwrap_or_else(|futures::channel::oneshot::Canceled| ())),
-            )
-            .unwrap_or_else(|e| panic!("error serving repo over http: {}", e));
-
-        let task = fasync::Task::spawn(server);
 
         TestServer { stop, addr, use_https, task }
     }
+}
+
+#[cfg(target_os = "fuchsia")]
+async fn bind_listener(addr: &SocketAddr) -> fuchsia_async::net::TcpListener {
+    fuchsia_async::net::TcpListener::bind(addr).unwrap()
+}
+
+#[cfg(not(target_os = "fuchsia"))]
+async fn bind_listener(&addr: &SocketAddr) -> async_net::TcpListener {
+    async_net::TcpListener::bind(addr).await.unwrap()
+}
+
+#[cfg(target_os = "fuchsia")]
+fn accept_stream<'a>(
+    listener: &'a mut fuchsia_async::net::TcpListener,
+) -> impl Stream<Item = std::io::Result<fuchsia_async::net::TcpStream>> + 'a {
+    use std::task::{Context, Poll};
+
+    #[pin_project::pin_project]
+    struct AcceptStream<'a> {
+        #[pin]
+        listener: &'a mut fuchsia_async::net::TcpListener,
+    }
+
+    impl<'a> Stream for AcceptStream<'a> {
+        type Item = std::io::Result<fuchsia_async::net::TcpStream>;
+
+        fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+            let mut this = self.project();
+            match this.listener.async_accept(cx) {
+                Poll::Ready(Ok((conn, _addr))) => Poll::Ready(Some(Ok(conn))),
+                Poll::Ready(Err(err)) => Poll::Ready(Some(Err(err))),
+                Poll::Pending => Poll::Pending,
+            }
+        }
+    }
+
+    AcceptStream { listener }
+}
+
+#[cfg(not(target_os = "fuchsia"))]
+fn accept_stream<'a>(
+    listener: &'a mut async_net::TcpListener,
+) -> impl Stream<Item = std::io::Result<async_net::TcpStream>> + 'a {
+    listener.incoming()
 }
 
 fn parse_cert_chain(mut bytes: &[u8]) -> Vec<rustls::Certificate> {
@@ -289,13 +336,13 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_start_stop() {
-        let server = TestServer::builder().start();
+        let server = TestServer::builder().start().await;
         server.stop().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_empty_server_404s() {
-        let server = TestServer::builder().start();
+        let server = TestServer::builder().start().await;
         let result = get(server.local_url()).await;
         assert_eq!(result.unwrap().status(), StatusCode::NOT_FOUND);
     }
@@ -307,7 +354,8 @@ mod tests {
         let server = TestServer::builder()
             .handler(ForPath::new("/a", Arc::clone(&shared)))
             .handler(shared)
-            .start();
+            .start()
+            .await;
 
         assert_eq!(get_body_as_string(server.local_url_for_path("/a")).await.unwrap(), "shared");
         assert_eq!(get_body_as_string(server.local_url_for_path("/foo")).await.unwrap(), "shared");
@@ -315,7 +363,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_simple_responder() {
-        let server = TestServer::builder().handler(StaticResponse::ok_body("some data")).start();
+        let server =
+            TestServer::builder().handler(StaticResponse::ok_body("some data")).start().await;
         assert_eq!(
             get_body_as_string(server.local_url_for_path("ignored")).await.unwrap(),
             "some data"
@@ -326,7 +375,8 @@ mod tests {
     async fn test_simple_path() {
         let server = TestServer::builder()
             .handler(ForPath::new("/some/path", StaticResponse::ok_body("some data")))
-            .start();
+            .start()
+            .await;
         assert_eq!(
             get_body_as_string(server.local_url_for_path("/some/path")).await.unwrap(),
             "some data"
@@ -337,7 +387,8 @@ mod tests {
     async fn test_simple_path_doesnt_respond_to_wrong_path() {
         let server = TestServer::builder()
             .handler(ForPath::new("/some/path", StaticResponse::ok_body("some data")))
-            .start();
+            .start()
+            .await;
         // make sure a non-matching path fails
         let result = get(server.local_url_for_path("/other/path")).await;
         assert_eq!(result.unwrap().status(), StatusCode::NOT_FOUND);
@@ -345,7 +396,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_hang() {
-        let server = TestServer::builder().handler(Hang).start();
+        let server = TestServer::builder().handler(Hang).start().await;
         let result = get(server.local_url_for_path("ignored"))
             .on_timeout(std::time::Duration::from_secs(1), || Err(anyhow!("timed out")))
             .await;
@@ -354,7 +405,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_hang_body() {
-        let server = TestServer::builder().handler(HangBody::content_length(500)).start();
+        let server = TestServer::builder().handler(HangBody::content_length(500)).start().await;
         let result = get_body_as_string(server.local_url_for_path("ignored"))
             .on_timeout(std::time::Duration::from_secs(1), || Err(anyhow!("timed out")))
             .await;

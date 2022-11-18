@@ -62,7 +62,8 @@ mod tests {
     /// the expected response body.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_simple_request() {
-        let server = TestServer::builder().handler(StaticResponse::ok_body("some data")).start();
+        let server =
+            TestServer::builder().handler(StaticResponse::ok_body("some data")).start().await;
         let mut client = FuchsiaHyperHttpRequest::using_timeout(Duration::from_secs(5));
         let response = client.request(make_request_for(&server, "some/path")).await.unwrap();
         let string = String::from_utf8(response.into_body()).unwrap();
@@ -73,7 +74,7 @@ mod tests {
     /// a response over the socket after accepting the connection.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_hang() {
-        let server = TestServer::builder().handler(Hang).start();
+        let server = TestServer::builder().handler(Hang).start().await;
         let mut client = FuchsiaHyperHttpRequest::using_timeout(Duration::from_secs(1));
         let response = client.request(make_request_for(&server, "some/path")).await;
         assert!(response.unwrap_err().is_timeout());
@@ -83,7 +84,7 @@ mod tests {
     /// a the entire body that's expected (after returning a response header).
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_hang_body() {
-        let server = TestServer::builder().handler(HangBody::content_length(500)).start();
+        let server = TestServer::builder().handler(HangBody::content_length(500)).start().await;
         let mut client = FuchsiaHyperHttpRequest::using_timeout(Duration::from_secs(1));
         let response = client.request(make_request_for(&server, "some/path")).await;
         assert!(response.unwrap_err().is_timeout());

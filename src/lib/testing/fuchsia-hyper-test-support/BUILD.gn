@@ -23,6 +23,12 @@ rustc_library("fuchsia-hyper-test-support") {
     "//third_party/rust_crates:tokio-rustls",
   ]
 
+  if (is_fuchsia) {
+    deps += [ "//third_party/rust_crates:pin-project" ]
+  } else {
+    deps += [ "//third_party/rust_crates:async-net" ]
+  }
+
   sources = [
     "src/fault_injection.rs",
     "src/handler.rs",
@@ -41,5 +47,8 @@ fuchsia_unittest_package("fuchsia-hyper-test-support-tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fuchsia-hyper-test-support-tests" ]
+  deps = [
+    ":fuchsia-hyper-test-support-tests",
+    ":fuchsia-hyper-test-support_test($host_toolchain)",
+  ]
 }
