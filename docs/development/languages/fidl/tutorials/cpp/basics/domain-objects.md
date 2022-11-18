@@ -301,6 +301,19 @@ Using the [`fuchsia.examples/User`][fidl-file] FIDL type as an example:
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-to-natural" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
+## Persist natural and wire domain objects
+
+You may use `fidl::Persist` to serialize a natural or wire domain object into
+a byte vector, the primary use case being long term data persistence.
+
+`fidl::Unpersist` deserializes and copies a sequence of bytes into some instance
+of natural domain object.
+
+`fidl::InplaceUnpersist` deserializes a sequence of bytes into some instance of
+wire domain object, mutating the bytes in the process.
+
+<<../../../widgets/_persistence.md>>
+
 <!-- xrefs -->
 [build-components]: /docs/development/components/build.md#unit-tests
 [generated-code]: /docs/development/languages/fidl/guides/generated-code.md#c-family
