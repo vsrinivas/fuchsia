@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [
     {
@@ -133,6 +134,7 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": []
     },
@@ -208,11 +210,13 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 8904504160365833729,
           "name": "SendHandles",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
             "line": 25,

@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [
     {
@@ -77,6 +78,7 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [
         {
           "name": "test.middle/Middle",
@@ -92,6 +94,7 @@
         {
           "ordinal": 2618685789258237543,
           "name": "GetFoo",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
             "line": 14,

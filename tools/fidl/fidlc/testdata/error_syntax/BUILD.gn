@@ -7,12 +7,16 @@ import("//build/fidl/fidl.gni")
 fidl("test.errorsyntax.parent") {
   testonly = true
   sources = [ "parent.test.fidl" ]
+  experimental_flags = [ "unknown_interactions_migration" ]
   golden_fuzzer = true
 }
 
 fidl("test.errorsyntax") {
   testonly = true
-  experimental_flags = [ "output_index_json" ]
+  experimental_flags = [
+    "output_index_json",
+    "unknown_interactions_migration",
+  ]
   sources = [ "child.test.fidl" ]
   public_deps = [ ":test.errorsyntax.parent" ]
   golden_fuzzer = true

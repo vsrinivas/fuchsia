@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [
     {
@@ -44,6 +45,7 @@
         "column": 10,
         "length": 23
       },
+      "openness": "closed",
       "composed_protocols": [
         {
           "name": "test.errorsyntax.parent/ParentUsesErrorSyntax",
@@ -59,6 +61,7 @@
         {
           "ordinal": 3565108794310607393,
           "name": "ComposedCallWhichMayFail",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/error_syntax/parent.test.fidl",
             "line": 8,
@@ -197,6 +200,7 @@
         {
           "ordinal": 3757408930698888354,
           "name": "CallWhichMayFail",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
             "line": 11,

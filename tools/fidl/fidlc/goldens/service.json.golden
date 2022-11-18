@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [],
   "bits_declarations": [],
@@ -19,11 +20,13 @@
         "column": 10,
         "length": 13
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 6352548393671797041,
           "name": "MethodOnFirst",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
             "line": 9,
@@ -45,11 +48,13 @@
         "column": 10,
         "length": 14
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 8121179205110225988,
           "name": "MethodOnSecond",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
             "line": 17,

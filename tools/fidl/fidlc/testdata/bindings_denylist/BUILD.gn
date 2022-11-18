@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("test.dependent") {
   testonly = true
   sources = [ "dependent.test.fidl" ]
+  experimental_flags = [ "unknown_interactions_migration" ]
   golden_fuzzer = true
 }
 
@@ -14,6 +15,9 @@ fidl("test.bindingsdenylist") {
   testonly = true
   sources = [ "example.test.fidl" ]
   public_deps = [ ":test.dependent" ]
-  experimental_flags = [ "output_index_json" ]
+  experimental_flags = [
+    "output_index_json",
+    "unknown_interactions_migration",
+  ]
   golden_fuzzer = true
 }

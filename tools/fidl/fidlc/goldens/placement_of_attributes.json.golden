@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [
     {
@@ -241,11 +242,13 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 6023439637367187273,
           "name": "Method",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
             "line": 24,

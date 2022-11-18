@@ -36,7 +36,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [],
   "bits_declarations": [
@@ -530,6 +531,7 @@
         "column": 10,
         "length": 13
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": []
     },
@@ -594,6 +596,7 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [
         {
           "name": "test.versions/OtherProtocol",
@@ -662,6 +665,7 @@
         {
           "ordinal": 6231434419097198905,
           "name": "Foo",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
             "line": 52,

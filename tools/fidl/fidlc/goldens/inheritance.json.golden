@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [],
   "bits_declarations": [],
@@ -19,6 +20,7 @@
         "column": 10,
         "length": 3
       },
+      "openness": "closed",
       "composed_protocols": [
         {
           "name": "test.inheritance/super",
@@ -67,6 +69,7 @@
         {
           "ordinal": 7540745593380780216,
           "name": "foo",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
             "line": 4,
@@ -138,11 +141,13 @@
         "column": 10,
         "length": 5
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 7540745593380780216,
           "name": "foo",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
             "line": 4,

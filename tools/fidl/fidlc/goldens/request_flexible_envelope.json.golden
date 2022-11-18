@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [],
   "bits_declarations": [],
@@ -19,11 +20,13 @@
         "column": 10,
         "length": 8
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 700529454616207123,
           "name": "RequestStrictResponseFlexible",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
             "line": 14,
@@ -88,6 +91,7 @@
         {
           "ordinal": 5191655763393883319,
           "name": "RequestFlexibleResponseStrict",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
             "line": 19,

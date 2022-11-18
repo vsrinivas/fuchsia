@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [
     {
@@ -48,6 +49,7 @@
         "column": 10,
         "length": 12
       },
+      "openness": "closed",
       "composed_protocols": [
         {
           "name": "test.protocolpayloads.imported/ComposedProtocol",
@@ -63,6 +65,7 @@
         {
           "ordinal": 2602591870026304272,
           "name": "OneWayComposed",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/imported.test.fidl",
             "line": 8,
@@ -102,6 +105,7 @@
         {
           "ordinal": 2542459230546612144,
           "name": "TwoWayComposed",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/imported.test.fidl",
             "line": 9,
@@ -166,6 +170,7 @@
         {
           "ordinal": 7681984876526769495,
           "name": "TwoWayComposedWithError",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/imported.test.fidl",
             "line": 10,
@@ -304,6 +309,7 @@
         {
           "ordinal": 1872339328378152762,
           "name": "OnComposed",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/imported.test.fidl",
             "line": 11,
@@ -343,6 +349,7 @@
         {
           "ordinal": 7167282778061495960,
           "name": "OnComposedWithError",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/imported.test.fidl",
             "line": 12,
@@ -456,6 +463,7 @@
         {
           "ordinal": 7755175439334311701,
           "name": "OneWayLocal",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 15,
@@ -495,6 +503,7 @@
         {
           "ordinal": 8374292137648566031,
           "name": "TwoWayLocal",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 16,
@@ -559,6 +568,7 @@
         {
           "ordinal": 2898559119954589948,
           "name": "TwoWayLocalWithError",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 17,
@@ -697,6 +707,7 @@
         {
           "ordinal": 5135782819583756313,
           "name": "OnLocal",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 18,
@@ -736,6 +747,7 @@
         {
           "ordinal": 5678277415565140399,
           "name": "OnLocalWithError",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 19,
@@ -849,6 +861,7 @@
         {
           "ordinal": 3344777159365288972,
           "name": "OneWayImport",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 22,
@@ -888,6 +901,7 @@
         {
           "ordinal": 2374708679656510579,
           "name": "TwoWayImport",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 23,
@@ -952,6 +966,7 @@
         {
           "ordinal": 4286143084949642173,
           "name": "TwoWayImportWithError",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 24,
@@ -1090,6 +1105,7 @@
         {
           "ordinal": 1996489653379631369,
           "name": "OnImport",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 25,
@@ -1129,6 +1145,7 @@
         {
           "ordinal": 7102941407914553861,
           "name": "OnImportWithError",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 26,
@@ -1242,6 +1259,7 @@
         {
           "ordinal": 811587311021806764,
           "name": "OneWayAnon",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 30,
@@ -1281,6 +1299,7 @@
         {
           "ordinal": 629880979996923737,
           "name": "TwoWayAnon",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 34,
@@ -1345,6 +1364,7 @@
         {
           "ordinal": 6368863385719175734,
           "name": "TwoWayAnonWithError",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 41,
@@ -1483,6 +1503,7 @@
         {
           "ordinal": 4815229650203439104,
           "name": "OnAnon",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 48,
@@ -1522,6 +1543,7 @@
         {
           "ordinal": 5024931894357412354,
           "name": "OnAnonWithError",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 52,

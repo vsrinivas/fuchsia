@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [
     {
@@ -74,6 +75,7 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [
         {
           "name": "test.middle/Middle",
@@ -89,6 +91,7 @@
         {
           "ordinal": 4619180266423108403,
           "name": "GetFoo",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
             "line": 6,

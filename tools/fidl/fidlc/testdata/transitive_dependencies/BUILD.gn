@@ -7,7 +7,10 @@ import("//build/fidl/fidl.gni")
 fidl("test.transitivedependencies") {
   testonly = true
   sources = [ "top.test.fidl" ]
-  experimental_flags = [ "output_index_json" ]
+  experimental_flags = [
+    "output_index_json",
+    "unknown_interactions_migration",
+  ]
   public_deps = [
     ":test.bottom",
     ":test.middle",
@@ -19,11 +22,13 @@ fidl("test.middle") {
   testonly = true
   sources = [ "middle.test.fidl" ]
   public_deps = [ ":test.bottom" ]
+  experimental_flags = [ "unknown_interactions_migration" ]
   golden_fuzzer = true
 }
 
 fidl("test.bottom") {
   testonly = true
   sources = [ "bottom.test.fidl" ]
+  experimental_flags = [ "unknown_interactions_migration" ]
   golden_fuzzer = true
 }

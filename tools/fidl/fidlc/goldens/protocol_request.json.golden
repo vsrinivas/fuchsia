@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [],
   "bits_declarations": [],
@@ -19,6 +20,7 @@
         "column": 10,
         "length": 5
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": []
     },
@@ -30,11 +32,13 @@
         "column": 10,
         "length": 6
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 881818649151440699,
           "name": "GetChild",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
             "line": 6,
@@ -74,6 +78,7 @@
         {
           "ordinal": 1096855814967598201,
           "name": "GetChildRequest",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
             "line": 9,
@@ -113,6 +118,7 @@
         {
           "ordinal": 4470101341872267920,
           "name": "TakeChild",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
             "line": 12,
@@ -152,6 +158,7 @@
         {
           "ordinal": 2333981071306416007,
           "name": "TakeChildRequest",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
             "line": 15,

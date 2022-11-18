@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [],
   "bits_declarations": [],
@@ -19,11 +20,13 @@
         "column": 10,
         "length": 7
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 1107623248440401476,
           "name": "foo",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
             "line": 4,

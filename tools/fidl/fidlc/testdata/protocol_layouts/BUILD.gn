@@ -7,13 +7,17 @@ import("//build/fidl/fidl.gni")
 fidl("test.protocollayouts.imported") {
   testonly = true
   sources = [ "imported.test.fidl" ]
+  experimental_flags = [ "unknown_interactions_migration" ]
   golden_fuzzer = true
 }
 
 fidl("test.protocollayouts") {
   testonly = true
   sources = [ "example.test.fidl" ]
-  experimental_flags = [ "output_index_json" ]
+  experimental_flags = [
+    "output_index_json",
+    "unknown_interactions_migration",
+  ]
   public_deps = [ ":test.protocollayouts.imported" ]
   golden_fuzzer = true
 }

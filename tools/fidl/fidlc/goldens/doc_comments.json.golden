@@ -36,7 +36,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [],
   "bits_declarations": [
@@ -825,11 +826,13 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 5017051197196532121,
           "name": "Method",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 116,
@@ -877,6 +880,7 @@
         {
           "ordinal": 28780186509098736,
           "name": "OnEvent",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
             "line": 121,

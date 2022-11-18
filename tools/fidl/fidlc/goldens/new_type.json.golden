@@ -4,7 +4,8 @@
     "allow_new_types",
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [],
   "bits_declarations": [
@@ -136,11 +137,13 @@
         "column": 10,
         "length": 10
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 7893336915889044876,
           "name": "Add",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
             "line": 20,

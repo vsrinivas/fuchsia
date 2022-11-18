@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [],
   "bits_declarations": [],
@@ -19,11 +20,13 @@
         "column": 10,
         "length": 12
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 582913180652179677,
           "name": "StrictXUnionHenceResponseMayBeStackAllocated",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 125,
@@ -63,6 +66,7 @@
         {
           "ordinal": 7698084639218919941,
           "name": "FlexibleXUnionHenceResponseMustBeHeapAllocated",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
             "line": 128,

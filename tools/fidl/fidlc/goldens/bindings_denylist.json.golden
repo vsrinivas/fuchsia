@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [
     {
@@ -278,11 +279,13 @@
         "column": 10,
         "length": 7
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 3826178105137551123,
           "name": "Denied",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "line": 114,
@@ -469,6 +472,7 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": []
     },
@@ -513,11 +517,13 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 5338181991150205725,
           "name": "ShouldNeverAppearInAnyBinding",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "line": 99,
@@ -564,11 +570,13 @@
         "column": 10,
         "length": 15
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 2957648440141224850,
           "name": "OnlyDenyCpp",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "line": 53,
@@ -740,6 +748,7 @@
         {
           "ordinal": 8446571910689294295,
           "name": "OnlyDenyDart",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "line": 60,
@@ -911,6 +920,7 @@
         {
           "ordinal": 7311125300308839833,
           "name": "OnlyDenyGo",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "line": 67,
@@ -1082,6 +1092,7 @@
         {
           "ordinal": 2184115815603862302,
           "name": "OnlyDenyLibfuzzer",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "line": 74,
@@ -1253,6 +1264,7 @@
         {
           "ordinal": 3719805222870932662,
           "name": "OnlyDenyRust",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "line": 81,
@@ -1424,6 +1436,7 @@
         {
           "ordinal": 2319043834522757514,
           "name": "OnlyDenySyzkaller",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "line": 88,
@@ -1602,6 +1615,7 @@
         "column": 10,
         "length": 22
       },
+      "openness": "closed",
       "composed_protocols": [
         {
           "name": "test.dependent/ContainsDenied",
@@ -1626,6 +1640,7 @@
         {
           "ordinal": 6808317417318106526,
           "name": "AlwaysDenied",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
             "line": 12,
@@ -1698,6 +1713,7 @@
         {
           "ordinal": 475191379775102607,
           "name": "Unattributed",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
             "line": 15,
@@ -1712,6 +1728,7 @@
         {
           "ordinal": 2914965219653596920,
           "name": "AlwaysAppearsInImportingLibrary",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
             "line": 19,
@@ -1766,6 +1783,7 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": []
     },
@@ -1810,6 +1828,7 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": []
     }

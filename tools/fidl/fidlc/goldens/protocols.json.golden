@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [
     {
@@ -188,6 +189,7 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": []
     },
@@ -232,11 +234,13 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 3155008840945527714,
           "name": "MethodA",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 48,
@@ -276,6 +280,7 @@
         {
           "ordinal": 2220452875311597006,
           "name": "EventA",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 52,
@@ -315,6 +320,7 @@
         {
           "ordinal": 8903004957800778182,
           "name": "MethodB",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 56,
@@ -379,6 +385,7 @@
         {
           "ordinal": 591935489944717925,
           "name": "TakeHandle",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 62,
@@ -418,6 +425,7 @@
         {
           "ordinal": 7411742788430590287,
           "name": "MutateSocket",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 65,
@@ -501,11 +509,13 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 3455873048082739435,
           "name": "Method",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 101,
@@ -527,11 +537,13 @@
         "column": 10,
         "length": 20
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 1155044649514904573,
           "name": "NoResponseMethod",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 108,
@@ -571,6 +583,7 @@
         {
           "ordinal": 5956276128041940295,
           "name": "ResponseMethod",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 111,
@@ -635,6 +648,7 @@
         {
           "ordinal": 476727631355490611,
           "name": "AnEvent",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 116,
@@ -681,11 +695,13 @@
         "column": 10,
         "length": 14
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 6423043252952467815,
           "name": "Fifteen",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 149,
@@ -765,11 +781,13 @@
         "column": 10,
         "length": 15
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 4124874338266649112,
           "name": "UnionMethod",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 173,
@@ -874,11 +892,13 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 1468025868259603279,
           "name": "MethodC",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 74,
@@ -925,11 +945,13 @@
         "column": 10,
         "length": 12
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 5849263021838298888,
           "name": "Request",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 82,
@@ -1006,6 +1028,7 @@
         {
           "ordinal": 4336658926562441191,
           "name": "OneWay",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 89,
@@ -1057,6 +1080,7 @@
         {
           "ordinal": 8507647465196374081,
           "name": "Event",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 94,
@@ -1115,11 +1139,13 @@
         "column": 10,
         "length": 29
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 5413654872775949227,
           "name": "NoRequestNoResponse",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 6,
@@ -1134,6 +1160,7 @@
         {
           "ordinal": 1631193469798418024,
           "name": "NoRequestEmptyResponse",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 7,
@@ -1148,6 +1175,7 @@
         {
           "ordinal": 9037369643591427517,
           "name": "NoRequestWithResponse",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 8,
@@ -1187,6 +1215,7 @@
         {
           "ordinal": 7326057319832554103,
           "name": "WithRequestNoResponse",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 11,
@@ -1226,6 +1255,7 @@
         {
           "ordinal": 2877322062572412767,
           "name": "WithRequestEmptyResponse",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 14,
@@ -1265,6 +1295,7 @@
         {
           "ordinal": 6417226585456833969,
           "name": "WithRequestWithResponse",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 17,
@@ -1329,6 +1360,7 @@
         {
           "ordinal": 5397663296507358806,
           "name": "OnEmptyResponse",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 22,
@@ -1343,6 +1375,7 @@
         {
           "ordinal": 5811598563493228968,
           "name": "OnWithResponse",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 23,
@@ -1389,11 +1422,13 @@
         "column": 10,
         "length": 15
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 268248568430741139,
           "name": "ResponseAsStruct",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 34,
@@ -1507,6 +1542,7 @@
         {
           "ordinal": 6930994461233198567,
           "name": "ErrorAsPrimitive",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 39,
@@ -1620,6 +1656,7 @@
         {
           "ordinal": 5491891352371277635,
           "name": "ErrorAsEnum",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 40,
@@ -1734,6 +1771,7 @@
         {
           "ordinal": 1371676333068455103,
           "name": "HandleInResult",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 41,
@@ -1854,11 +1892,13 @@
         "column": 10,
         "length": 16
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 5870448041025163330,
           "name": "ClientEnds",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 129,
@@ -1923,6 +1963,7 @@
         {
           "ordinal": 8115535094437022259,
           "name": "ServerEnds",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 134,
@@ -1987,6 +2028,7 @@
         {
           "ordinal": 4076866772260025813,
           "name": "StructContainingEnds",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
             "line": 139,

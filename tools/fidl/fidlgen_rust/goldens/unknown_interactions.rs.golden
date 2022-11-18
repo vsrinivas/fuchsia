@@ -4,6 +4,7 @@
 // experiment = output_index_json
 // experiment = simple_empty_response_syntax
 // experiment = unknown_interactions
+// experiment = unknown_interactions_migration
 
 #![allow(
     unused_parens, // one-element-tuple-case is not a tuple

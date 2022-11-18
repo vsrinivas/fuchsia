@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [],
   "bits_declarations": [],
@@ -52,11 +53,13 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 7942965975761529343,
           "name": "Send",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl",
             "line": 13,

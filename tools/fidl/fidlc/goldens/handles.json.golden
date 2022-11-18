@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [
     {
@@ -144,6 +145,7 @@
           }
         }
       ],
+      "openness": "closed",
       "composed_protocols": [],
       "methods": []
     },
@@ -155,6 +157,7 @@
         "column": 10,
         "length": 12
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": []
     }

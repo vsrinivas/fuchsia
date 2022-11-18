@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [
     {
@@ -100,11 +101,13 @@
         "column": 10,
         "length": 14
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 9142761280038437494,
           "name": "Add",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
             "line": 18,

@@ -3,7 +3,8 @@
   "experiments": [
     "no_optional_structs",
     "output_index_json",
-    "simple_empty_response_syntax"
+    "simple_empty_response_syntax",
+    "unknown_interactions_migration"
   ],
   "library_dependencies": [],
   "bits_declarations": [],
@@ -19,11 +20,13 @@
         "column": 10,
         "length": 13
       },
+      "openness": "closed",
       "composed_protocols": [],
       "methods": [
         {
           "ordinal": 1378773277029173000,
           "name": "Send",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
             "line": 6,
@@ -63,6 +66,7 @@
         {
           "ordinal": 2301564782476583487,
           "name": "Receive",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
             "line": 9,
@@ -102,6 +106,7 @@
         {
           "ordinal": 534401212734647530,
           "name": "SendAndReceive",
+          "strict": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
             "line": 12,

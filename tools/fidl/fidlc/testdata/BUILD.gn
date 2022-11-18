@@ -60,7 +60,7 @@ foreach(filename, standalone_libraries) {
       public_deps += [ "//sdk/fidl/fdf" ]
     }
 
-    experimental_flags = []
+    experimental_flags = [ "unknown_interactions_migration" ]
     if (filename == "unknown_interactions.test.fidl") {
       experimental_flags += [ "unknown_interactions" ]
     }
