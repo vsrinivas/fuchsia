@@ -36,11 +36,11 @@ pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
     }
 
     let deps_set = match &cmd.subcommand {
-        SubCommand::Bootfs(subcommand) => bootfs::verify(subcommand, tmp_dir).await,
+        SubCommand::Bootfs(subcommand) => bootfs::verify(subcommand).await,
         SubCommand::ComponentResolvers(subcommand) => {
             component_resolvers::verify(subcommand, tmp_dir).await
         }
-        SubCommand::KernelCmdline(subcommand) => kernel_cmdline::verify(subcommand, tmp_dir).await,
+        SubCommand::KernelCmdline(subcommand) => kernel_cmdline::verify(subcommand).await,
         SubCommand::RouteSources(subcommand) => route_sources::verify(subcommand, tmp_dir).await,
         SubCommand::Routes(subcommand) => routes::verify(subcommand, tmp_dir).await,
         SubCommand::StaticPkgs(subcommand) => static_pkgs::verify(subcommand).await,

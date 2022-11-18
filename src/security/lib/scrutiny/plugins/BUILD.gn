@@ -2,10 +2,101 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/assembly/assembled_system.gni")
+import("//build/assembly/generated_partitions_config.gni")
+import("//build/config.gni")
 import("//build/host.gni")
+import("//build/images/vbmeta.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/sdk/product_bundle.gni")
+import("//build/testing/host_test_data.gni")
+
+if (is_fuchsia) {
+  files = {
+    partitions = "$target_out_dir/partitions.json"
+
+    assembly_outdir = "$target_out_dir/assembly"
+    assembly_manifest = "$assembly_outdir/images.json"
+    vbmeta = "$assembly_outdir/assembly.vbmeta"
+    zbi = "$assembly_outdir/assembly.zbi"
+    if (target_cpu == "x64") {
+      qemu_kernel = "$root_build_dir/multiboot.bin"
+    } else {
+      qemu_kernel = "$root_build_dir/qemu-boot-shim.bin"
+    }
+
+    version = "$target_out_dir/version"
+  }
+
+  generated_partitions_config("partitions") {
+    testonly = true
+    hw_revision = "board"
+    output_path = files.partitions
+  }
+
+  generated_file("version") {
+    testonly = true
+    contents = "0.0.0.1"
+    outputs = [ files.version ]
+  }
+
+  resource("bootfs") {
+    sources = [ files.version ]
+    outputs = [ "path/to/version" ]
+  }
+
+  assembled_system("assembly") {
+    testonly = true
+    generate_fvm = false
+    bootfs_labels = [ ":bootfs" ]
+    ramdisk_fvm_in_zbi = true
+    base_packages = []
+    cmdline = [
+      "abc",
+      "def",
+    ]
+  }
+
+  product_bundle("product_bundle") {
+    testonly = true
+    deps = [
+      ":assembly",
+      ":partitions",
+      ":version",
+    ]
+    partitions = files.partitions
+    system_a = files.assembly_manifest
+    system_a_contents = [
+      files.qemu_kernel,
+      files.zbi,
+    ]
+    if (use_vbmeta) {
+      system_a_contents += [ files.vbmeta ]
+    }
+    update = {
+      version_file = files.version
+      epoch = "1"
+    }
+  }
+}
 
 if (is_host) {
+  files = {
+    outdir =
+        get_label_info(":product_bundle($target_toolchain)", "target_out_dir")
+    product_bundle = "$outdir/product_bundle"
+  }
+
+  host_test_data("testdata") {
+    deps = [ ":product_bundle($target_toolchain)" ]
+    sources = [ files.product_bundle ]
+  }
+
+  config("test_config") {
+    rustenv = [ "PRODUCT_BUNDLE_PATH=" +
+                rebase_path(files.product_bundle, root_build_dir) ]
+  }
+
   rustc_library("plugins") {
     name = "scrutiny_plugins"
     with_unit_tests = true
@@ -20,6 +111,8 @@ if (is_host) {
     ]
 
     configs += [
+      ":test_config",
+
       # TODO(fxbug.dev/92670): Needed by test.  Remove when fixed.
       "//build/config/rust:output_dir_sensitive",
     ]
@@ -62,6 +155,7 @@ if (is_host) {
     non_rust_deps = [ "//src/lib/chunked-compression" ]
 
     test_deps = [
+      ":testdata",
       "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
       "//src/lib/fuchsia",
       "//src/security/lib/scrutiny/testing",
@@ -133,6 +227,10 @@ if (is_host) {
       "src/verify/controller/route_sources.rs",
       "src/verify/controller/structured_config.rs",
       "src/verify/mod.rs",
+      "src/zbi/collection.rs",
+      "src/zbi/collector.rs",
+      "src/zbi/controller.rs",
+      "src/zbi/mod.rs",
     ]
   }
 }
