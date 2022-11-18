@@ -45,7 +45,19 @@ constexpr StorageSize kReportStoreMaxSize = StorageSize::Megabytes(5u);
 constexpr StorageSize kReportStoreMaxCacheSize = StorageSize::Kilobytes(512);
 constexpr StorageSize kReportStoreMaxTmpSize = kReportStoreMaxSize - kReportStoreMaxCacheSize;
 
-// TODO(fxbug.dev/102479): Document implementation details.
+// If a crash report is moved from memory to disk, the associated snapshot will do the same. To
+// prevent the possibility of a stranded snapshot, if the first report moved to disk that's
+// associated with a snapshot is placed in /tmp, the snapshot will also be placed in /tmp. If the
+// snapshot had been placed in /cache, a device reboot would delete the report but not the
+// snapshot.
+//
+// When a report is uploaded, the associated snapshot will be deleted if no remaining reports are
+// associated with it or if the snapshot would become stranded if the device rebooted.
+//
+// Unlike crash reports, there is no garbage collection for snapshots on disk at this time.
+//
+// The amount of space that snapshots can take up in each respective location is defined in the
+// configs at //src/developer/forensics/feedback/configs/board.
 constexpr const char* kSnapshotStoreTmpPath = "/tmp/snapshots";
 constexpr const char* kSnapshotStoreCachePath = "/cache/snapshots";
 

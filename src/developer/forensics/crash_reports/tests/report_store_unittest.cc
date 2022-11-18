@@ -841,6 +841,51 @@ TEST_F(ReportStoreDeathTest, AddDuplicateAnnotation) {
                HasSubstr("already exists"));
 }
 
+TEST_F(ReportStoreTest, Succeed_MoveSnapshotToPersistence) {
+  report_store_ = std::make_unique<ReportStore>(
+      &tags_, info_context_, &annotation_manager_,
+      /*temp_reports_root=*/
+      ReportStore::Root{GetTmpReportsDir(), StorageSize::Bytes(0)},
+      /*persistent_reports_root=*/
+      ReportStore::Root{GetCacheReportsDir(), StorageSize::Megabytes(1)},
+      /*temp_snapshots_root=*/
+      std::nullopt,
+      /*persistent_snapshots_root=*/
+      SnapshotPersistence::Root{files::JoinPath(cache_dir_.path(), "snapshots"),
+                                StorageSize::Megabytes(1)},
+      files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"),
+      /*max_archives_size=*/StorageSize::Megabytes(1));
+
+  const std::string expected_program_shortname = "program_shortname";
+
+  const std::map<std::string, std::string> expected_annotations = {
+      {"annotation0.cc", "annotation_value0"},
+  };
+
+  const std::map<std::string, std::string> expected_attachments = {
+      {"attachment_key0", "attachment_value0"},
+  };
+
+  const std::string expected_snapshot_uuid = "snapshot_uuid";
+  const std::string expected_minidump = "mindump";
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = "snapshot.key";
+  FX_CHECK(fsl::VmoFromString("", &snapshot.value));
+
+  report_store_->GetSnapshotStore()->AddSnapshot(expected_snapshot_uuid, std::move(snapshot));
+  ASSERT_EQ(report_store_->GetSnapshotStore()->SnapshotLocation(expected_snapshot_uuid),
+            ItemLocation::kMemory);
+
+  std::vector<ReportId> garbage_collected_reports;
+  const auto id = Add(expected_program_shortname, expected_annotations, expected_attachments,
+                      expected_snapshot_uuid, expected_minidump, &garbage_collected_reports);
+  ASSERT_TRUE(id.has_value());
+
+  EXPECT_EQ(report_store_->GetSnapshotStore()->SnapshotLocation(expected_snapshot_uuid),
+            ItemLocation::kCache);
+}
+
 }  // namespace
 }  // namespace crash_reports
 }  // namespace forensics

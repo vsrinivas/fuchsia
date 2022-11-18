@@ -198,24 +198,35 @@ bool ReportStore::Add(Report report, std::vector<ReportId>* garbage_collected_re
 
   auto& root_metadata = PickRootForStorage(report_size);
 
-  return AddToRoot(report.Id(), report.ProgramShortname(), report_size, attachments, root_metadata,
-                   garbage_collected_reports);
+  const auto report_location = AddToRoot(report.Id(), report.ProgramShortname(), report_size,
+                                         attachments, root_metadata, garbage_collected_reports);
+
+  const auto snapshot_location = snapshot_store_.SnapshotLocation(report.SnapshotUuid());
+  if (report_location.has_value() && snapshot_location == ItemLocation::kMemory) {
+    // Moving the associated snapshot to persistence for the first time - do not put the snapshot in
+    // /cache if the report was put in /tmp. Doing so could cause a stranded snapshot if the
+    // device were to reboot.
+    const bool only_consider_tmp = report_location == ItemLocation::kTmp;
+    snapshot_store_.MoveToPersistence(report.SnapshotUuid(), only_consider_tmp);
+  }
+
+  return report_location.has_value();
 }
 
-bool ReportStore::AddToRoot(const ReportId report_id, const std::string& program_shortname,
-                            const StorageSize report_size,
-                            const std::map<std::string, SizedData>& attachments,
-                            ReportStoreMetadata& store_root,
-                            std::vector<ReportId>* garbage_collected_reports) {
+std::optional<ItemLocation> ReportStore::AddToRoot(
+    const ReportId report_id, const std::string& program_shortname, const StorageSize report_size,
+    const std::map<std::string, SizedData>& attachments, ReportStoreMetadata& store_root,
+    std::vector<ReportId>* garbage_collected_reports) {
   // Delete the persisted files and attempt to store the report under a new directory.
   auto on_error = [this, &store_root, report_id, program_shortname, report_size, &attachments,
-                   garbage_collected_reports](const std::optional<std::string>& report_dir) {
+                   garbage_collected_reports](
+                      const std::optional<std::string>& report_dir) -> std::optional<ItemLocation> {
     if (report_dir.has_value()) {
       DeletePath(*report_dir);
     }
 
     if (!HasFallbackRoot(store_root)) {
-      return false;
+      return std::nullopt;
     }
 
     auto& fallback_root = FallbackRoot(store_root);
@@ -253,7 +264,7 @@ bool ReportStore::AddToRoot(const ReportId report_id, const std::string& program
 
   store_root.Add(report_id, program_shortname, std::move(attachment_keys), report_size);
 
-  return true;
+  return &store_root == &cache_metadata_ ? ItemLocation::kCache : ItemLocation::kTmp;
 }
 
 void ReportStore::AddAnnotation(ReportId id, const std::string& key, const std::string& value) {

@@ -74,10 +74,12 @@ class ReportStore {
 
  private:
   // Adds a report to |store_root| and returns the ReportIds of any report garbage collected in the
-  // process. Returns true if successful.
-  bool AddToRoot(ReportId report_id, const std::string& program_shortname, StorageSize report_size,
-                 const std::map<std::string, SizedData>& attachments,
-                 ReportStoreMetadata& store_root, std::vector<ReportId>* garbage_collected_reports);
+  // process. Returns the location of the stored report, if it was stored.
+  std::optional<ItemLocation> AddToRoot(ReportId report_id, const std::string& program_shortname,
+                                        StorageSize report_size,
+                                        const std::map<std::string, SizedData>& attachments,
+                                        ReportStoreMetadata& store_root,
+                                        std::vector<ReportId>* garbage_collected_reports);
 
   // Recreates |store_root| from the filesystem and initializes necessary state.
   bool RecreateFromFilesystem(ReportStoreMetadata& store_root);
