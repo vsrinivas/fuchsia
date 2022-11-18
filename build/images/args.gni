@@ -39,6 +39,17 @@ declare_args() {
   # package.
   update_kernels = []
 
+  # The epoch to use in the update (OTA) package.
+  # Before applying an update, Fuchsia confirms that the epoch in the update
+  # package is not smaller than the epoch installed on the system. This prevents
+  # Fuchsia from downloading an update that may not boot.
+  #
+  # The product epoch is added to the platform epoch before placed in the update
+  # package. Having a separate platform epoch ensures that every time the
+  # platform introduces a backwards-incompatible change, each product gets their
+  # epoch increased.
+  update_product_epoch = 0
+
   # List of prebuilt firmware blobs to include in update packages.
   #
   # Each entry in the list is a scope containing:
@@ -176,3 +187,8 @@ assert(custom_signing_script == "" || !use_vboot,
 
 # Whether to sign the system ZBI.
 sign_zbi = custom_signing_script != "" || use_vboot
+
+# The platform epoch that is added to every product.
+# Increment this number if the platform has introduced a backwards-incompatible
+# change. See: src/sys/pkg/bin/system-updater/epoch/playbook.md
+update_platform_epoch = 1

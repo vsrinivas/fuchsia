@@ -332,6 +332,7 @@ if (is_fuchsia) {
     _partitions_contents += [ files.esp_image_path ]
   }
 
+  update_epoch = update_platform_epoch + update_product_epoch
   update_package("update") {
     testonly = fuchsia_zbi_testonly
     deps = [
@@ -346,7 +347,7 @@ if (is_fuchsia) {
     system_r = files.recovery_images_json
     board_name = board_name
     version_file = build_info_files.version
-    epoch = "1"
+    epoch = "${update_epoch}"
   }
 
   product_bundle("product_bundle") {
@@ -360,7 +361,7 @@ if (is_fuchsia) {
 
     update = {
       version_file = build_info_files.version
-      epoch = "1"
+      epoch = "${update_epoch}"
     }
 
     partitions = files.partitions_config
@@ -467,7 +468,7 @@ if (is_fuchsia) {
     system_r = files.recovery_images_json
     board_name = board_name
     version_file = build_info_files.version
-    epoch = "1"
+    epoch = "${update_epoch}"
   }
 
   # The `:fuchsia` target assembles the main Fuchsia image, for all non-bringup
