@@ -218,7 +218,7 @@ func (t *QEMUTarget) SSHClient() (*sshutil.Client, error) {
 // Start starts the QEMU target.
 func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args []string) (err error) {
 	// TODO(fxbug.dev/91352): Remove experimental condition once stable.
-	useFFX := t.UseFFXExperimental(2)
+	useFFX := (t.UseFFXExperimental(1) && t.config.Target == "x64") || t.UseFFXExperimental(2)
 
 	if t.process != nil {
 		return fmt.Errorf("a process has already been started with PID %d", t.process.Pid)
