@@ -107,6 +107,10 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 	if err != nil {
 		return nil, err
 	}
+	if mac := tcpip.LinkAddress(info.Mac.Octets[:]); !header.IsValidUnicastEthernetAddress(mac) {
+		return nil, fmt.Errorf("MAC address is not unicast: %s", mac)
+
+	}
 	status, fifos, err := device.GetFifos(context.Background())
 	if err != nil {
 		return nil, err

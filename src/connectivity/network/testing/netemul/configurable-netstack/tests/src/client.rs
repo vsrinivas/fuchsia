@@ -121,7 +121,7 @@ async fn default_gateway() {
     assert!(found, "could not find default route to gateway {:?}", GATEWAY);
 }
 
-const IPV4_FWD_ENABLED_MAC_ADDR: fnet::MacAddress = fidl_mac!("bb:cc:dd:ee:ff:aa");
+const IPV4_FWD_ENABLED_MAC_ADDR: fnet::MacAddress = fidl_mac!("88:99:aa:bb:cc:dd");
 const IPV6_FWD_ENABLED_MAC_ADDR: fnet::MacAddress = fidl_mac!("cc:dd:ee:ff:aa:bb");
 
 #[test_case(

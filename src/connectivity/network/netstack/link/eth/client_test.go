@@ -129,7 +129,9 @@ func TestClient(t *testing.T) {
 	for i := 0; i < bits.Len(maxDepth); i++ {
 		depth := uint32(1 << i)
 		t.Run(fmt.Sprintf("depth=%d", depth), func(t *testing.T) {
-			deviceImpl, deviceFifos := fifotestutil.MakeEthernetDevice(t, fidlethernet.Info{}, depth)
+			deviceImpl, deviceFifos := fifotestutil.MakeEthernetDevice(t, fidlethernet.Info{
+				Mac: fidlethernet.MacAddress{Octets: [6]uint8{0, 1, 2, 3, 4, 5}},
+			}, depth)
 
 			var device struct {
 				iob       eth.IOBuffer

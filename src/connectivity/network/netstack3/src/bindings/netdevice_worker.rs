@@ -193,7 +193,7 @@ impl DeviceHandler {
                 })?;
             let mac = net_types::ethernet::Mac::new(octets);
             net_types::UnicastAddr::new(mac).ok_or_else(|| {
-                log::error!("{} is not a valid unicast address", mac);
+                log::warn!("{} is not a valid unicast address", mac);
                 Error::MacNotUnicast { mac, port }
             })?
         };

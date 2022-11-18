@@ -20,7 +20,7 @@
                     { name: "server-ep" },
                     {
                         name: "client-ipv4-fwd",
-                        mac: "bb:cc:dd:ee:ff:aa",
+                        mac: "88:99:aa:bb:cc:dd",
                     },
                     {
                         name: "client-ipv6-fwd",

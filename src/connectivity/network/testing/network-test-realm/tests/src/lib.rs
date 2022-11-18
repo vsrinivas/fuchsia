@@ -32,7 +32,7 @@ use std::convert::TryInto as _;
 use test_case::test_case;
 
 const INTERFACE1_MAC_ADDRESS: fnet::MacAddress = fidl_mac!("02:03:04:05:06:07");
-const INTERFACE2_MAC_ADDRESS: fnet::MacAddress = fidl_mac!("05:06:07:08:09:10");
+const INTERFACE2_MAC_ADDRESS: fnet::MacAddress = fidl_mac!("06:07:08:09:10:11");
 const INTERFACE1_NAME: &'static str = "iface1";
 const INTERFACE2_NAME: &'static str = "iface2";
 const EXPECTED_INTERFACE_NAME: &'static str = "added-interface";

@@ -666,16 +666,24 @@ func (c *Client) NewPort(ctx context.Context, portId network.PortId) (*Port, err
 		return nil, fmt.Errorf("failed to get mac: %w", err)
 	}
 
-	linkAddress, mac := func() (tcpip.LinkAddress, *network.MacAddressingWithCtxInterface) {
+	linkAddress, mac, err := func() (tcpip.LinkAddress, *network.MacAddressingWithCtxInterface, error) {
 		macAddr, err := mac.GetUnicastAddress(ctx)
 		if err != nil {
 			// MAC is not supported.
 			_ = mac.Close()
-			return emptyLinkAddress, nil
-		} else {
-			return tcpip.LinkAddress(macAddr.Octets[:]), mac
+			return emptyLinkAddress, nil, nil
 		}
+		linkMacAddr := tcpip.LinkAddress(macAddr.Octets[:])
+		if !header.IsValidUnicastEthernetAddress(linkMacAddr) {
+			_ = mac.Close()
+			return emptyLinkAddress, nil, fmt.Errorf("MAC address is not unicast: %s", linkMacAddr)
+		}
+		return linkMacAddr, mac, nil
 	}()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get MAC address: %w", err)
+	}
 
 	if mac != nil {
 		// Set device to multicast promiscuous to match current behavior. When

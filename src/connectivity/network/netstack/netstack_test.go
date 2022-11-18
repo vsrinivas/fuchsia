@@ -963,7 +963,9 @@ func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
 	ns, _ := newNetstack(t, netstackTestOptions{})
 
 	multicastPromiscuousModeEnabled := false
-	eth, _ := testutil.MakeEthernetDevice(t, ethernet.Info{}, 1)
+	eth, _ := testutil.MakeEthernetDevice(t, ethernet.Info{
+		Mac: ethernet.MacAddress{Octets: [6]uint8{0, 1, 2, 3, 4, 5}},
+	}, 1)
 	eth.ConfigMulticastSetPromiscuousModeImpl = func(enabled bool) (int32, error) {
 		multicastPromiscuousModeEnabled = enabled
 		return int32(zx.ErrOk), nil
@@ -1023,6 +1025,7 @@ func TestStaticIPConfiguration(t *testing.T) {
 			d, _ := testutil.MakeEthernetDevice(t, ethernet.Info{
 				Features: test.features,
 				Mtu:      1400,
+				Mac:      ethernet.MacAddress{Octets: [6]uint8{0, 1, 2, 3, 4, 5}},
 			}, 1)
 			ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: t.Name()}, &d)
 			if err != nil {

@@ -819,6 +819,7 @@ func TestEthInfoInspectImpl(t *testing.T) {
 		GetInfoImpl: func() (ethernet.Info, error) {
 			return ethernet.Info{
 				Features: features,
+				Mac:      ethernet.MacAddress{Octets: [6]uint8{0, 1, 2, 3, 4, 5}},
 			}, nil
 		},
 		GetFifosImpl: func() (int32, *ethernet.Fifos, error) {

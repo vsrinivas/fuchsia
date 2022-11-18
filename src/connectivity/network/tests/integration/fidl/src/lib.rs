@@ -13,7 +13,7 @@ use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
-use net_declare::{fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr};
+use net_declare::{fidl_mac, fidl_subnet, net_mac, std_ip_v4, std_ip_v6, std_socket_addr};
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
     get_component_moniker,
@@ -340,6 +340,28 @@ async fn disable_interface_loopback<N: Netstack>(name: &str) {
     .next()
     .await
     .expect("interface watcher stream ended unexpectedly")
+}
+
+#[variants_test]
+async fn reject_multicast_mac_address<N: Netstack, E: netemul::Endpoint>(name: &str) {
+    const BAD_MAC_ADDRESS: net_types::ethernet::Mac = net_mac!("CF:AA:BB:CC:DD:EE");
+    assert_eq!(net_types::UnicastAddr::new(BAD_MAC_ADDRESS), None);
+
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let net = sandbox.create_network("net").await.expect("created network");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let result = realm
+        .join_network_with(
+            &net,
+            "host",
+            E::make_config(
+                netemul::DEFAULT_MTU,
+                Some(fnet::MacAddress { octets: BAD_MAC_ADDRESS.bytes() }),
+            ),
+            Default::default(),
+        )
+        .await;
+    assert_matches::assert_matches!(result, Err(_));
 }
 
 enum ForwardingConfiguration {
