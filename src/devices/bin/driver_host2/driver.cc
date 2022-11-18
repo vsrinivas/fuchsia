@@ -192,7 +192,7 @@ zx::result<> Driver::Start(fuchsia_driver_framework::DriverStartArgs start_args,
 
   // We convert the outgoing message into an incoming message to provide to the
   // driver on start.
-  fidl::OutgoingToIncomingMessage converted_message{encoded.message()};
+  fidl::OutgoingToEncodedMessage converted_message{encoded.message()};
   if (!converted_message.ok()) {
     LOGF(ERROR, "Failed to start driver, could not convert start args: %s",
          converted_message.FormatDescription().data());
@@ -201,8 +201,7 @@ zx::result<> Driver::Start(fuchsia_driver_framework::DriverStartArgs start_args,
 
   // After calling |record_->start|, we assume it has taken ownership of
   // the handles from |start_args|, and can therefore relinquish ownership.
-  fidl_incoming_msg_t c_msg =
-      std::move(converted_message.incoming_message()).ReleaseToEncodedCMessage();
+  fidl_incoming_msg_t c_msg = std::move(converted_message.message()).ReleaseToEncodedCMessage();
   void* opaque = nullptr;
   zx_status_t status =
       record_->v1.start({&c_msg, wire_format_metadata}, initial_dispatcher, &opaque);

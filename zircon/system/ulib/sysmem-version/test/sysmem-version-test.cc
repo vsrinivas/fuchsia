@@ -185,10 +185,10 @@ class LinearSnap {
                              outgoing_message.handle_metadata<fidl::internal::ChannelTransport>() +
                                  outgoing_message.handle_actual()};
 
-    fidl::OutgoingToIncomingMessage outgoing_to_incoming_result_{outgoing_message};
-    ZX_ASSERT(outgoing_to_incoming_result_.ok());
+    fidl::OutgoingToEncodedMessage outgoing_to_encoded_result_{outgoing_message};
+    ZX_ASSERT(outgoing_to_encoded_result_.ok());
     fit::result decoded = fidl::Decode<NaturalType>(
-        std::move(outgoing_to_incoming_result_.incoming_message()), encoded.wire_format_metadata());
+        std::move(outgoing_to_encoded_result_.message()), encoded.wire_format_metadata());
     ZX_ASSERT(decoded.is_ok());
 
     if constexpr (std::is_same_v<FidlType, WireType>) {

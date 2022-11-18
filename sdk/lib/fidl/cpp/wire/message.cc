@@ -22,15 +22,15 @@
 
 namespace fidl {
 
-OutgoingToIncomingMessage::OutgoingToIncomingMessage(OutgoingMessage& input)
-    : incoming_message_(
+OutgoingToEncodedMessage::OutgoingToEncodedMessage(OutgoingMessage& input)
+    : encoded_message_(
           ConversionImpl(input, buf_bytes_, buf_handles_, buf_handle_metadata_, status_)) {}
 
-[[nodiscard]] std::string OutgoingToIncomingMessage::FormatDescription() const {
+[[nodiscard]] std::string OutgoingToEncodedMessage::FormatDescription() const {
   return status_.FormatDescription();
 }
 
-EncodedMessage OutgoingToIncomingMessage::ConversionImpl(
+EncodedMessage OutgoingToEncodedMessage::ConversionImpl(
     OutgoingMessage& input, OutgoingMessage::CopiedBytes& buf_bytes,
     std::unique_ptr<zx_handle_t[]>& buf_handles,
     // TODO(fxbug.dev/85734) Remove channel-specific logic.

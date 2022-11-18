@@ -220,14 +220,17 @@ class DecodedMessage<FidlType, Transport,
 
 }  // namespace unstable
 
-// Holds the result of converting an outgoing message to an incoming message.
+// Holds the result of converting an outgoing message to an encoded message.
 //
-// |OutgoingToIncomingMessage| objects own the bytes and handles resulting from
+// |fidl::Encode| defers handle rights and type validation to the transport.
+// This converter completes the encoding by performing those validation, without
+// necessarily writing the message to a transport.
+//
+// |OutgoingToEncodedMessage| objects own the bytes and handles resulting from
 // conversion.
-// TODO(fxbug.dev/107222): Rename to |OutgoingToEncodedMessage|.
-class OutgoingToIncomingMessage {
+class OutgoingToEncodedMessage {
  public:
-  // Converts an outgoing message to an incoming message.
+  // Converts an outgoing message to an encoded message.
   //
   // The provided |OutgoingMessage| must use the Zircon channel transport.
   // It also must be a non-transactional outgoing message (i.e. from standalone
@@ -237,15 +240,15 @@ class OutgoingToIncomingMessage {
   // information of any provided handles. The caller is responsible for ensuring
   // that returned handle rights and object types are checked appropriately.
   //
-  // The constructed |OutgoingToIncomingMessage| will take ownership over
+  // The constructed |OutgoingToEncodedMessage| will take ownership over
   // handles from the input |OutgoingMessage|.
-  explicit OutgoingToIncomingMessage(OutgoingMessage& input);
+  explicit OutgoingToEncodedMessage(OutgoingMessage& input);
 
-  ~OutgoingToIncomingMessage() = default;
+  ~OutgoingToEncodedMessage() = default;
 
-  fidl::EncodedMessage& incoming_message() & {
+  fidl::EncodedMessage& message() & {
     ZX_DEBUG_ASSERT(ok());
-    return incoming_message_;
+    return encoded_message_;
   }
 
   [[nodiscard]] fidl::Error error() const {
@@ -267,7 +270,7 @@ class OutgoingToIncomingMessage {
   OutgoingMessage::CopiedBytes buf_bytes_;
   std::unique_ptr<zx_handle_t[]> buf_handles_ = {};
   std::unique_ptr<fidl_channel_handle_metadata_t[]> buf_handle_metadata_ = {};
-  fidl::EncodedMessage incoming_message_;
+  fidl::EncodedMessage encoded_message_;
 };
 
 }  // namespace fidl

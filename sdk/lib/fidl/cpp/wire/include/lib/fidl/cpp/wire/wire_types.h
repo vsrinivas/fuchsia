@@ -270,7 +270,7 @@ class OwnedEncodeResult {
   //
   // Note that as an optimization, handle types and rights are not validated.
   // Validation happens when writing to the transport. To proactively perform
-  // validation, consult |OutgoingToIncomingMessage|.
+  // validation, consult |OutgoingToEncodedMessage|.
   ::fidl::OutgoingMessage& message() { return result_->message(); }
 
   // The format and revision of the encoded FIDL message.

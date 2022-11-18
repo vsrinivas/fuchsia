@@ -11,8 +11,8 @@
 
 #include <gtest/gtest.h>
 
-// Test that |OutgoingToIncomingMessage| concatenates iovec elements correctly.
-TEST(OutgoingToIncomingMessage, IovecMessage) {
+// Test that |OutgoingToEncodedMessage| concatenates iovec elements correctly.
+TEST(OutgoingToEncodedMessage, IovecMessage) {
   uint8_t bytes1[8] = {
       0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
   };
@@ -32,16 +32,15 @@ TEST(OutgoingToIncomingMessage, IovecMessage) {
           },
   };
   auto msg = fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
-  auto result = fidl::OutgoingToIncomingMessage(msg);
+  auto result = fidl::OutgoingToEncodedMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
-  ASSERT_EQ(std::size(bytes1) + std::size(bytes2), result.incoming_message().bytes().size());
-  EXPECT_EQ(0, memcmp(result.incoming_message().bytes().data(), bytes1, std::size(bytes1)));
-  EXPECT_EQ(
-      0, memcmp(&result.incoming_message().bytes()[std::size(bytes1)], bytes2, std::size(bytes2)));
-  ASSERT_EQ(0u, result.incoming_message().handle_actual());
+  ASSERT_EQ(std::size(bytes1) + std::size(bytes2), result.message().bytes().size());
+  EXPECT_EQ(0, memcmp(result.message().bytes().data(), bytes1, std::size(bytes1)));
+  EXPECT_EQ(0, memcmp(&result.message().bytes()[std::size(bytes1)], bytes2, std::size(bytes2)));
+  ASSERT_EQ(0u, result.message().handle_actual());
 }
 
-TEST(OutgoingToIncomingMessage, LargeMessage) {
+TEST(OutgoingToEncodedMessage, LargeMessage) {
   constexpr uint32_t kLargeMessageSize = 1024 * 1024;  // 1 MiB
   std::vector<uint8_t> bytes(kLargeMessageSize);
   for (size_t i = 0; i < kLargeMessageSize; i++) {
@@ -56,15 +55,14 @@ TEST(OutgoingToIncomingMessage, LargeMessage) {
           },
   };
   auto msg = fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
-  auto result = fidl::OutgoingToIncomingMessage(msg);
+  auto result = fidl::OutgoingToEncodedMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
-  EXPECT_EQ(bytes, std::vector(result.incoming_message().bytes().begin(),
-                               result.incoming_message().bytes().end()));
+  EXPECT_EQ(bytes, std::vector(result.message().bytes().begin(), result.message().bytes().end()));
 }
 
 #ifdef __Fuchsia__
-// Test that |OutgoingToIncomingMessage| converts handle metadata.
-TEST(OutgoingToIncomingMessage, Handles) {
+// Test that |OutgoingToEncodedMessage| converts handle metadata.
+TEST(OutgoingToEncodedMessage, Handles) {
   uint8_t bytes[8] = {
       0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
   };
@@ -90,9 +88,9 @@ TEST(OutgoingToIncomingMessage, Handles) {
           },
   };
   auto msg = fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
-  auto result = fidl::OutgoingToIncomingMessage(msg);
+  auto result = fidl::OutgoingToEncodedMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
-  fidl::EncodedMessage& output = result.incoming_message();
+  fidl::EncodedMessage& output = result.message();
   EXPECT_EQ(output.bytes().size(), std::size(bytes));
   EXPECT_EQ(0, memcmp(output.bytes().data(), bytes, output.bytes().size()));
   EXPECT_EQ(output.handle_actual(), 1u);
@@ -103,8 +101,8 @@ TEST(OutgoingToIncomingMessage, Handles) {
   EXPECT_EQ(out_handle_metadata[0].rights, handle_metadata.rights);
 }
 
-// Test that |OutgoingToIncomingMessage| rejects handles with wrong type.
-TEST(OutgoingToIncomingMessage, HandlesWrongType) {
+// Test that |OutgoingToEncodedMessage| rejects handles with wrong type.
+TEST(OutgoingToEncodedMessage, HandlesWrongType) {
   uint8_t bytes[16];
   memset(bytes, 0, std::size(bytes));
   zx::event ev;
@@ -129,13 +127,13 @@ TEST(OutgoingToIncomingMessage, HandlesWrongType) {
           },
   };
   auto msg = fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
-  auto result = fidl::OutgoingToIncomingMessage(msg);
+  auto result = fidl::OutgoingToEncodedMessage(msg);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, result.status());
   ASSERT_EQ(fidl::Reason::kEncodeError, result.error().reason());
 }
 
-// Test that |OutgoingToIncomingMessage| rejects handles with too few rights.
-TEST(OutgoingToIncomingMessage, HandlesWrongRights) {
+// Test that |OutgoingToEncodedMessage| rejects handles with too few rights.
+TEST(OutgoingToEncodedMessage, HandlesWrongRights) {
   uint8_t bytes[16];
   memset(bytes, 0, std::size(bytes));
   zx::event ev;
@@ -160,7 +158,7 @@ TEST(OutgoingToIncomingMessage, HandlesWrongRights) {
           },
   };
   auto msg = fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
-  auto result = fidl::OutgoingToIncomingMessage(msg);
+  auto result = fidl::OutgoingToEncodedMessage(msg);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, result.status());
   ASSERT_EQ(fidl::Reason::kEncodeError, result.error().reason());
 }

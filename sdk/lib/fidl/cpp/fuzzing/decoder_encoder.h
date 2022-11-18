@@ -43,7 +43,7 @@ enum DecoderEncoderProgress {
   // First attempt to re-encode decoded message succeeded.
   FirstEncodeSuccess,
 
-  // Additional checks on handle rights triggered by `::fidl::OutgoingToIncomingMessage` succeeded.
+  // Additional checks on handle rights triggered by `::fidl::OutgoingToEncodedMessage` succeeded.
   FirstEncodeVerified,
 
   // Second attempt to decode (decode what was just encoded and verified) succeeded.
@@ -173,7 +173,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
 
   // TODO(fxbug.dev/72895): Add handles for koid check.
 
-  auto conversion = ::fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
+  auto conversion = ::fidl::OutgoingToEncodedMessage(encoded.GetOutgoingMessage());
 
   if (!conversion.ok()) {
     status.status = conversion.error();
@@ -183,7 +183,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
 
   std::optional<fit::result<fidl::Error, fidl::DecodedValue<Body>>> decoded2_initialize_later;
   decoded2_initialize_later.emplace(
-      fidl::InplaceDecode<Body>(std::move(conversion.incoming_message()), wire_format_metadata));
+      fidl::InplaceDecode<Body>(std::move(conversion.message()), wire_format_metadata));
   fit::result<fidl::Error, fidl::DecodedValue<Body>>& decoded2 = decoded2_initialize_later.value();
 
   if (!decoded2.is_ok()) {

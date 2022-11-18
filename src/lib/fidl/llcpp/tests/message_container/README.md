@@ -10,7 +10,7 @@ for them:
   - `fidl::OutgoingIovecMessage`
   - `fidl::unstable::OwnedEncodedMessage<Foo>`
   - `fidl::internal::UnownedEncodedMessage<Foo>`
-  - `fidl::OutgoingToIncomingMessage`
+  - `fidl::OutgoingToEncodedMessage`
   - ...
 
 In addition, the `fidl::Status` result/error types are also tested here, since

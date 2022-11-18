@@ -209,10 +209,10 @@ TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
     ASSERT_TRUE(encoded_with_iovecs->ok());
   }
 
-  fidl::OutgoingToIncomingMessage converted(encoded->GetOutgoingMessage());
+  fidl::OutgoingToEncodedMessage converted(encoded->GetOutgoingMessage());
   ASSERT_TRUE(converted.ok());
   fit::result decoded = fidl::InplaceDecode<VectorStruct>(
-      std::move(converted.incoming_message()),
+      std::move(converted.message()),
       fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2));
   ASSERT_TRUE(decoded.is_ok());
   ASSERT_EQ(vector_view_count, decoded->v.count());

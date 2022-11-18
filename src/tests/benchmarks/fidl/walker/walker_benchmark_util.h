@@ -29,10 +29,10 @@ bool WalkerBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     fidl::unstable::OwnedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV2,
                                                           &aligned_value);
     ZX_ASSERT(encoded.ok());
-    auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
+    auto converted = fidl::OutgoingToEncodedMessage(encoded.GetOutgoingMessage());
     ZX_ASSERT(converted.ok());
-    auto decoded = fidl::unstable::DecodedMessage<FidlType>(
-        fidl::internal::WireFormatVersion::kV2, std::move(converted.incoming_message()));
+    auto decoded = fidl::unstable::DecodedMessage<FidlType>(fidl::internal::WireFormatVersion::kV2,
+                                                            std::move(converted.message()));
     ZX_ASSERT_MSG(decoded.ok(), "%s", decoded.FormatDescription().c_str());
 
     while (state->KeepRunning()) {

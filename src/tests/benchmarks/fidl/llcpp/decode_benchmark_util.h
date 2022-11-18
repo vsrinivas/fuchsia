@@ -44,14 +44,14 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     // This may involve expensive allocations and copies.
     // This step does not happen in production (we would receive an incoming message
     // from the channel), hence not counted as part of decode time.
-    auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
+    auto converted = fidl::OutgoingToEncodedMessage(encoded.GetOutgoingMessage());
     ZX_ASSERT(converted.ok());
 
     state->NextStep();  // End: Setup. Begin: Decode.
 
     {
       auto decoded = fidl::unstable::DecodedMessage<FidlType>(
-          fidl::internal::WireFormatVersion::kV2, std::move(converted.incoming_message()));
+          fidl::internal::WireFormatVersion::kV2, std::move(converted.message()));
       ZX_ASSERT_MSG(decoded.ok(), "%s", decoded.FormatDescription().c_str());
       // Include time taken to close handles in |FidlType|.
     }
