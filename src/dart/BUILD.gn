@@ -17,18 +17,22 @@ group("dart") {
 
 prebuilt_package("dart_aot_runner") {
   archive = "//prebuilt/third_party/flutter/$target_cpu/profile/aot/dart_aot_runner-0.far"
+  visibility = [ ":dart_aot" ]
 }
 
 prebuilt_package("dart_aot_product_runner") {
   archive = "//prebuilt/third_party/flutter/$target_cpu/release/aot/dart_aot_product_runner-0.far"
+  visibility = [ ":dart_aot_product" ]
 }
 
 prebuilt_package("dart_jit_runner") {
   archive = "//prebuilt/third_party/flutter/$target_cpu/debug/jit/dart_jit_runner-0.far"
+  visibility = [ ":dart_jit" ]
 }
 
 prebuilt_package("dart_jit_product_runner") {
   archive = "//prebuilt/third_party/flutter/$target_cpu/release/jit/dart_jit_product_runner-0.far"
+  visibility = [ ":dart_jit_product" ]
 }
 
 group("dart_aot") {

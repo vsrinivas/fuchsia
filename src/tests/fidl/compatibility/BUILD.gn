@@ -166,11 +166,8 @@ fuchsia_test_package("fidl_compatibility_test_package") {
 
 group("compatibility") {
   testonly = true
-  deps = [ ":fidl_compatibility_test_package" ]
-
-  if (dart_default_build_cfg.is_aot) {
-    deps += [ "//src/dart:dart_aot_runner" ]
-  } else {
-    deps += [ "//src/dart:dart_jit_runner" ]
-  }
+  deps = [
+    ":fidl_compatibility_test_package",
+    "//src/dart",
+  ]
 }
