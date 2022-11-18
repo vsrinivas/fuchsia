@@ -37,7 +37,7 @@ rustc_staticlib("lib") {
     "//third_party/rust_crates:tracing",
   ]
   non_rust_deps = [
-    "${icu_root}:icu",
+    "//src/lib/icu:lib",
     "//zircon/system/ulib/zx",
   ]
   test_deps = [

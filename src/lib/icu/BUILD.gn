@@ -1,7 +1,11 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-import("//src/lib/icu/third_party_icu_headers.gni")
+
+# This import must be here before "version.gni" below.
+import("config.gni")
+
+import("//build/dist/resource.gni")
 import("${icu_root}/version.gni")
 
 # Automatically declares the correct ICU library major version number
@@ -32,4 +36,25 @@ group("tests") {
 group("tools") {
   testonly = true
   deps = [ "tools:tools" ]
+}
+
+# Depend on this library instead of //third_party/icu directly.
+group("lib") {
+  public_deps = [ "${icu_root}:icu" ]
+}
+
+# Depend on this library instead of //third_party/icu:icudata directly.
+group("data") {
+  public_deps = [ "${icu_root}:icudata" ]
+}
+
+resource("icudtl") {
+  sources = [ "${icu_root}/common/icudtl.dat" ]
+  outputs = [ "data/icudtl.dat" ]
+}
+
+# TODO(fmil): Is there a way to unify with above?
+resource("icudtl_root") {
+  sources = [ "${icu_root}/common/icudtl.dat" ]
+  outputs = [ "icudtl.dat" ]
 }

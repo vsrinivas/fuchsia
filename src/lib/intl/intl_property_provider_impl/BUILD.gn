@@ -101,9 +101,9 @@ source_set("locale_util") {
   ]
 
   public_deps = [
-    "${icu_root}:icu",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
     "//sdk/lib/fit-promise",
+    "//src/lib/icu:lib",
   ]
 }
 

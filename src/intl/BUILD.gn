@@ -28,13 +28,10 @@ group("tests") {
   ]
 }
 
-resource("icudtl") {
-  sources = [ "${icu_root}/common/icudtl.dat" ]
-  outputs = [ "data/icudtl.dat" ]
+group("icudtl") {
+  public_deps = [ "//src/lib/icu:icudtl" ]
 }
 
-# TODO(fmil): Is there a way to unify with above?
-resource("icudtl_root") {
-  sources = [ "${icu_root}/common/icudtl.dat" ]
-  outputs = [ "icudtl.dat" ]
+group("icudtl_root") {
+  public_deps = [ "//src/lib/icu:icudtl_root" ]
 }

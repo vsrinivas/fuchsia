@@ -1,12 +1,7 @@
 # Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
-declare_args() {
-  # The GN files for the ICU library are located in this directory.
-  # Some Fuchsia builds use a different value here.
-  icu_root = "//third_party/icu/default"
-}
+import("config.gni")
 
 # Generates an include file that includes all needed third_party/icu
 # headers, and presents them as a build target.
@@ -87,6 +82,6 @@ template("third_party_icu_headers") {
     sources = [ _header_name ]
 
     # This dep will be inherited by all users.
-    public_deps = [ "${icu_root}:icu" ]
+    public_deps = [ "//src/lib/icu:lib" ]
   }
 }

@@ -5,7 +5,7 @@
 import("//build/host.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/host_test_data.gni")
-import("//src/lib/icu/third_party_icu_headers.gni")
+import("//src/lib/icu/config.gni")
 import("//src/lib/icu/tzdata/icu_tzres_source.gni")
 
 if (is_host) {

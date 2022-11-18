@@ -43,8 +43,8 @@ source_set("time-zone-info-service-lib") {
   ]
 
   public_deps = [
-    "${icu_root}:icu",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl_hlcpp",
+    "//src/lib/icu:lib",
   ]
 }
 

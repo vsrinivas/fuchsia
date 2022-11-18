@@ -40,11 +40,11 @@ executable("intl_wisdom_client") {
 
   deps = [
     ":lib",
-    "${icu_root}:icu",
     "//examples/intl/wisdom/fidl:wisdom_hlcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/icu:lib",
     "//src/lib/icu_data/cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

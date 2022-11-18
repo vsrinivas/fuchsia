@@ -1,0 +1,9 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # The GN files for the ICU library are located in this directory.
+  # Some Fuchsia builds use a different value here.
+  icu_root = "//third_party/icu/default"
+}
