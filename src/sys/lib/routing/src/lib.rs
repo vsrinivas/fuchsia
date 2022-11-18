@@ -89,6 +89,16 @@ pub enum RouteRequest {
     UseProtocol(UseProtocolDecl),
     UseService(UseServiceDecl),
     UseStorage(UseStorageDecl),
+
+    // Route a capability from an OfferDecl.
+    OfferDirectory(OfferDirectoryDecl),
+    OfferEvent(OfferEventDecl),
+    OfferEventStream(OfferEventStreamDecl),
+    OfferProtocol(OfferProtocolDecl),
+    OfferService(OfferServiceDecl),
+    OfferStorage(OfferStorageDecl),
+    OfferRunner(OfferRunnerDecl),
+    OfferResolver(OfferResolverDecl),
 }
 
 impl RouteRequest {
@@ -107,12 +117,23 @@ impl RouteRequest {
                 *availability == Availability::Optional
             }
 
-            ExposeDirectory(_)
+            OfferRunner(_)
+            | OfferResolver(_)
+            | ExposeDirectory(_)
             | ExposeProtocol(_)
             | ExposeService(_)
             | Resolver(_)
             | Runner(_)
             | StorageBackingDirectory(_) => false,
+
+            OfferDirectory(OfferDirectoryDecl { availability, .. })
+            | OfferEvent(OfferEventDecl { availability, .. })
+            | OfferEventStream(OfferEventStreamDecl { availability, .. })
+            | OfferProtocol(OfferProtocolDecl { availability, .. })
+            | OfferService(OfferServiceDecl { availability, .. })
+            | OfferStorage(OfferStorageDecl { availability, .. }) => {
+                *availability == Availability::Optional
+            }
         }
     }
 }
@@ -227,6 +248,32 @@ where
         RouteRequest::UseStorage(use_storage_decl) => {
             route_storage(use_storage_decl, target, &mut mapper).await?
         }
+
+        // Route from a OfferDecl
+        RouteRequest::OfferProtocol(offer_protocol_decl) => {
+            route_protocol_from_offer(offer_protocol_decl, target, &mut mapper).await?
+        }
+        RouteRequest::OfferDirectory(offer_directory_decl) => {
+            route_directory_from_offer(offer_directory_decl, target, &mut mapper).await?
+        }
+        RouteRequest::OfferStorage(offer_storage_decl) => {
+            route_storage_from_offer(offer_storage_decl, target, &mut mapper).await?
+        }
+        RouteRequest::OfferService(offer_service_decl) => {
+            route_service_from_offer(offer_service_decl, target, &mut mapper).await?
+        }
+        RouteRequest::OfferEvent(offer_event_decl) => {
+            route_event_from_offer(offer_event_decl, target, &mut mapper).await?
+        }
+        RouteRequest::OfferEventStream(offer_event_stream_decl) => {
+            route_event_stream_from_offer(offer_event_stream_decl, target, &mut mapper).await?
+        }
+        RouteRequest::OfferRunner(offer_runner_decl) => {
+            route_runner_from_offer(offer_runner_decl, target, &mut mapper).await?
+        }
+        RouteRequest::OfferResolver(offer_resolver_decl) => {
+            route_resolver_from_offer(offer_resolver_decl, target, &mut mapper).await?
+        }
     };
     Ok((source, mapper.get_route()))
 }
@@ -242,6 +289,216 @@ pub struct RouteInfo<C, O, E> {
 
     /// The expose decl in the route.
     pub expose: Option<E>,
+}
+
+/// Routes a Protocol capability from `target` to its source, starting from `offer_decl`.
+async fn route_protocol_from_offer<C>(
+    offer_decl: OfferProtocolDecl,
+    target: &Arc<C>,
+    mapper: &mut C::DebugRouteMapper,
+) -> Result<RouteSource<C>, RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let mut availability_visitor = AvailabilityProtocolVisitor::new_from_offer(&offer_decl);
+    let allowed_sources = AllowedSourcesBuilder::new()
+        .framework(InternalCapability::Protocol)
+        .builtin()
+        .namespace()
+        .component()
+        .capability();
+    let source = RoutingStrategy::new()
+        .use_::<UseProtocolDecl>()
+        .offer::<OfferProtocolDecl>()
+        .expose::<ExposeProtocolDecl>()
+        .route_from_offer(
+            offer_decl,
+            target.clone(),
+            allowed_sources,
+            &mut availability_visitor,
+            mapper,
+        )
+        .await?;
+    Ok(RouteSource::Protocol(source))
+}
+
+/// Routes a Directory capability from `target` to its source, starting from `offer_decl`.
+/// Returns the capability source, along with a `DirectoryState` accumulated from traversing
+/// the route.
+async fn route_directory_from_offer<C>(
+    offer_decl: OfferDirectoryDecl,
+    target: &Arc<C>,
+    mapper: &mut C::DebugRouteMapper,
+) -> Result<RouteSource<C>, RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let mut state = DirectoryState {
+        rights: WalkState::new(),
+        subdir: PathBuf::new(),
+        availability_state: offer_decl.availability.clone().into(),
+    };
+    let allowed_sources = AllowedSourcesBuilder::new()
+        .framework(InternalCapability::Directory)
+        .namespace()
+        .component();
+    let source = RoutingStrategy::new()
+        .use_::<UseDirectoryDecl>()
+        .offer::<OfferDirectoryDecl>()
+        .expose::<ExposeDirectoryDecl>()
+        .route_from_offer(offer_decl, target.clone(), allowed_sources, &mut state, mapper)
+        .await?;
+    Ok(RouteSource::Directory(source, state))
+}
+
+async fn route_service_from_offer<C>(
+    offer_decl: OfferServiceDecl,
+    target: &Arc<C>,
+    mapper: &mut C::DebugRouteMapper,
+) -> Result<RouteSource<C>, RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let mut availability_visitor = AvailabilityServiceVisitor::new_from_offer(&offer_decl);
+    let allowed_sources = AllowedSourcesBuilder::new().component().collection();
+    let source = RoutingStrategy::new()
+        .use_::<UseServiceDecl>()
+        .offer::<OfferServiceDecl>()
+        .expose::<ExposeServiceDecl>()
+        .route_from_offer(
+            offer_decl,
+            target.clone(),
+            allowed_sources,
+            &mut availability_visitor,
+            mapper,
+        )
+        .await?;
+    Ok(RouteSource::Service(source))
+}
+
+/// Routes an EventStream capability from `target` to its source, starting from `offer_decl`.
+async fn route_event_stream_from_offer<C>(
+    offer_decl: OfferEventStreamDecl,
+    target: &Arc<C>,
+    mapper: &mut C::DebugRouteMapper,
+) -> Result<RouteSource<C>, RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let allowed_sources = AllowedSourcesBuilder::new().builtin();
+
+    let mut availability_visitor = AvailabilityEventStreamVisitor::new_from_offer(&offer_decl);
+    let source = RoutingStrategy::new()
+        .use_::<UseEventStreamDecl>()
+        .offer::<OfferEventStreamDecl>()
+        .expose::<ExposeEventStreamDecl>()
+        .route_from_offer(
+            offer_decl,
+            target.clone(),
+            allowed_sources,
+            &mut availability_visitor,
+            mapper,
+        )
+        .await?;
+    Ok(RouteSource::EventStream(source))
+}
+
+async fn route_storage_from_offer<C>(
+    offer_decl: OfferStorageDecl,
+    target: &Arc<C>,
+    mapper: &mut C::DebugRouteMapper,
+) -> Result<RouteSource<C>, RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let mut availability_visitor = AvailabilityStorageVisitor::new_from_offer(&offer_decl);
+    let allowed_sources = AllowedSourcesBuilder::new().component();
+
+    let mut route = vec![];
+
+    let source = RoutingStrategy::new()
+        .use_::<UseStorageDecl>()
+        .offer::<OfferStorageDecl>()
+        .route_from_offer(
+            offer_decl,
+            target.clone(),
+            allowed_sources,
+            &mut availability_visitor,
+            mapper,
+            &mut route,
+        )
+        .await?;
+    Ok(RouteSource::Storage(source))
+}
+
+async fn route_event_from_offer<C>(
+    offer_decl: OfferEventDecl,
+    target: &Arc<C>,
+    mapper: &mut C::DebugRouteMapper,
+) -> Result<RouteSource<C>, RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let allowed_sources =
+        AllowedSourcesBuilder::new().framework(InternalCapability::Event).builtin();
+    let mut state = EventState {
+        filter_state: WalkState::at(EventFilter::new(offer_decl.filter.clone())),
+        availability_state: AvailabilityState(offer_decl.availability.clone().into()),
+    };
+
+    let mut route = vec![];
+
+    let source = RoutingStrategy::new()
+        .use_::<UseEventDecl>()
+        .offer::<OfferEventDecl>()
+        .route_from_offer(
+            offer_decl,
+            target.clone(),
+            allowed_sources,
+            &mut state,
+            mapper,
+            &mut route,
+        )
+        .await?;
+    Ok(RouteSource::Event(source))
+}
+
+async fn route_runner_from_offer<C>(
+    offer_decl: OfferRunnerDecl,
+    target: &Arc<C>,
+    mapper: &mut C::DebugRouteMapper,
+) -> Result<RouteSource<C>, RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let allowed_sources = AllowedSourcesBuilder::new().builtin().component();
+
+    let source = RoutingStrategy::new()
+        .registration::<RunnerRegistration>()
+        .offer::<OfferRunnerDecl>()
+        .expose::<ExposeRunnerDecl>()
+        .route_from_offer(offer_decl, target.clone(), allowed_sources, &mut RunnerVisitor, mapper)
+        .await?;
+    Ok(RouteSource::Runner(source))
+}
+
+async fn route_resolver_from_offer<C>(
+    offer_decl: OfferResolverDecl,
+    target: &Arc<C>,
+    mapper: &mut C::DebugRouteMapper,
+) -> Result<RouteSource<C>, RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let allowed_sources = AllowedSourcesBuilder::new().builtin().component();
+
+    let source = RoutingStrategy::new()
+        .registration::<ResolverRegistration>()
+        .offer::<OfferResolverDecl>()
+        .expose::<ExposeResolverDecl>()
+        .route_from_offer(offer_decl, target.clone(), allowed_sources, &mut ResolverVisitor, mapper)
+        .await?;
+    Ok(RouteSource::Resolver(source))
 }
 
 /// Routes a capability to its source.

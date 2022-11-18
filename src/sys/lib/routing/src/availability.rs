@@ -20,9 +20,6 @@ pub struct AvailabilityState(pub Availability);
 /// Allows creating the availability walker from Availability
 impl From<Availability> for AvailabilityState {
     fn from(availability: Availability) -> Self {
-        // The only entry point should be to this from a use declaration, in which validation will
-        // prevent any SameAsTarget values.
-        assert_ne!(availability, Availability::SameAsTarget, "availability must be known");
         AvailabilityState(availability)
     }
 }
@@ -56,8 +53,9 @@ impl AvailabilityState {
         next_availability: &Availability,
     ) -> Result<(), AvailabilityRoutingError> {
         match (&self.0, &next_availability) {
-            (Availability::SameAsTarget, _) =>
-                panic!("we should never have an unknown availability"),
+            // Offer declarations can have availability of `SameAsTarget`. For availability walking,
+            // inherit the parent availability because the target's availability is unknown.
+            (Availability::SameAsTarget, _) => self.0 = next_availability.clone(),
             // If our availability doesn't change, there's nothing to do.
             (Availability::Required, Availability::Required)
             | (Availability::Optional, Availability::Optional)
@@ -107,6 +105,10 @@ macro_rules! make_availability_visitor {
         impl $name {
             pub fn new<U>(use_decl: &U) -> Self where U: UseDeclCommon {
                 Self(use_decl.availability().clone().into())
+            }
+
+            pub fn new_from_offer<O>(offer_decl: &O) -> Self where O: OfferDeclCommon {
+                Self(offer_decl.availability().unwrap_or(&Availability::Required).clone().into())
             }
 
             pub fn required() -> Self {

@@ -2558,4 +2558,63 @@ mod tests {
             route_maps.get(&CapabilityTypeName::Protocol).expect("expected protocol results");
         assert_eq!(protocols, &vec![]);
     }
+
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// a: Offers protocol "fuchsia.examples.Echo" from c (non-existent) to b
+    #[fuchsia::test]
+    async fn route_from_offer_decl_fails() {
+        let a_url = make_test_url("a");
+        let b_url = "base://b/".to_string();
+
+        let offer_protocol_decl = OfferDecl::Protocol(OfferProtocolDecl {
+            source: OfferSource::static_child("c".to_string()),
+            source_name: "fuchsia.examples.Echo".into(),
+            target_name: "fuchsia.examples.Echo".into(),
+            target: OfferTarget::static_child("b".to_string()),
+            dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
+        });
+
+        let components = vec![
+            (
+                a_url.clone(),
+                ComponentDeclBuilder::new()
+                    .add_child(ChildDeclBuilder::new().name("b").url(&b_url))
+                    .offer(offer_protocol_decl.clone())
+                    .build(),
+            ),
+            (b_url, ComponentDeclBuilder::new_empty_component().add_program("dwarf").build()),
+        ];
+
+        let test =
+            RoutingTestBuilderForAnalyzer::new_with_custom_urls(a_url, components).build().await;
+        let root_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
+
+        let route_maps = test.model.check_routes_for_instance(
+            &root_component,
+            &HashSet::from_iter(vec![CapabilityTypeName::Protocol].into_iter()),
+        );
+        assert_eq!(route_maps.len(), 1);
+        let protocols =
+            route_maps.get(&CapabilityTypeName::Protocol).expect("expected protocol results");
+        assert_eq!(
+            protocols,
+            &vec![VerifyRouteResult {
+                using_node: NodePath::absolute_from_vec(vec![]),
+                capability: "fuchsia.examples.Echo".into(),
+                result: Err(CapabilityRouteError::AnalyzerModelError(
+                    AnalyzerModelError::RoutingError(
+                        RoutingError::OfferFromChildInstanceNotFound {
+                            capability_id: "fuchsia.examples.Echo".to_string(),
+                            child_moniker: "c".into(),
+                            moniker: root_component.abs_moniker().clone(),
+                        },
+                    )
+                )),
+            }]
+        );
+    }
 }

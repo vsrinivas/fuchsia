@@ -554,6 +554,32 @@ impl SourceName for OfferDecl {
     }
 }
 
+impl UseDeclCommon for UseDecl {
+    fn source(&self) -> &UseSource {
+        match &self {
+            UseDecl::Service(u) => u.source(),
+            UseDecl::Protocol(u) => u.source(),
+            UseDecl::Directory(u) => u.source(),
+            UseDecl::Storage(u) => u.source(),
+            UseDecl::Event(u) => u.source(),
+            UseDecl::EventStream(u) => u.source(),
+            UseDecl::EventStreamDeprecated(_) => unimplemented!(),
+        }
+    }
+
+    fn availability(&self) -> &Availability {
+        match &self {
+            UseDecl::Service(u) => u.availability(),
+            UseDecl::Protocol(u) => u.availability(),
+            UseDecl::Directory(u) => u.availability(),
+            UseDecl::Storage(u) => u.availability(),
+            UseDecl::Event(u) => u.availability(),
+            UseDecl::EventStream(u) => u.availability(),
+            UseDecl::EventStreamDeprecated(_) => unimplemented!(),
+        }
+    }
+}
+
 impl OfferDeclCommon for OfferDecl {
     fn target_name(&self) -> &CapabilityName {
         match &self {
@@ -1714,6 +1740,21 @@ impl From<&UseDecl> for CapabilityTypeName {
             UseDecl::Event(_) => Self::Event,
             UseDecl::EventStreamDeprecated(_) => Self::EventStreamDeprecated,
             UseDecl::EventStream(_) => Self::EventStream,
+        }
+    }
+}
+
+impl From<&OfferDecl> for CapabilityTypeName {
+    fn from(offer_decl: &OfferDecl) -> Self {
+        match offer_decl {
+            OfferDecl::Service(_) => Self::Service,
+            OfferDecl::Protocol(_) => Self::Protocol,
+            OfferDecl::Directory(_) => Self::Directory,
+            OfferDecl::Storage(_) => Self::Storage,
+            OfferDecl::Event(_) => Self::Event,
+            OfferDecl::Runner(_) => Self::Runner,
+            OfferDecl::Resolver(_) => Self::Resolver,
+            OfferDecl::EventStream(_) => Self::EventStream,
         }
     }
 }

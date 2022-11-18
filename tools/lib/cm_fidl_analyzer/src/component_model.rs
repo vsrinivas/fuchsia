@@ -14,8 +14,9 @@ use {
     cm_moniker::InstancedRelativeMoniker,
     cm_rust::{
         CapabilityDecl, CapabilityPath, CapabilityTypeName, ComponentDecl, ExposeDecl,
-        ExposeDeclCommon, ExposeEventStreamDecl, OfferEventStreamDecl, ProgramDecl,
-        ResolverRegistration, UseDecl, UseEventStreamDecl, UseStorageDecl,
+        ExposeDeclCommon, ExposeEventStreamDecl, OfferDecl, OfferDeclCommon, OfferEventStreamDecl,
+        OfferTarget, ProgramDecl, ResolverRegistration, SourceName, UseDecl, UseDeclCommon,
+        UseEventStreamDecl, UseStorageDecl,
     },
     config_encoder::ConfigFields,
     fidl::prelude::*,
@@ -539,6 +540,156 @@ impl ComponentModelForAnalyzer {
         }
     }
 
+    fn does_child_reference_offer(
+        self: &Arc<Self>,
+        offer: &OfferDecl,
+        child: AbsoluteMoniker,
+    ) -> bool {
+        let instance = if let Ok(i) = self.get_instance(&child.clone().into()) {
+            i
+        } else {
+            // We couldn't find the instance that references this offer.
+            return false;
+        };
+
+        // Look for a use from parent
+        for use_ in &instance.decl.uses {
+            if use_.source_name() == offer.target_name() {
+                match use_.source() {
+                    cm_rust::UseSource::Parent => return true,
+                    _ => {}
+                }
+            }
+        }
+
+        // Look for a next offer from parent
+        for next_offer in &instance.decl.offers {
+            if next_offer.source_name() == offer.target_name() {
+                match next_offer.source() {
+                    cm_rust::OfferSource::Parent => return true,
+                    _ => {}
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// For this offer decl, if the offer target does not reference the capability in its manifest,
+    /// attempt to route it and report any errors.
+    ///
+    /// In other words, this will only verify offer decls that terminate the route chain.
+    fn try_check_offer_capability(
+        self: &Arc<Self>,
+        offer_decl: &OfferDecl,
+        target: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Vec<VerifyRouteResult> {
+        let target_moniker = target.abs_moniker();
+
+        let offer_target = offer_decl.target();
+        let should_check_offer = match offer_target {
+            OfferTarget::Child(c) => {
+                let child = ChildMoniker::parse(&c.name).unwrap();
+                let offer_target_moniker = target_moniker.child(child);
+
+                // This offer should be checked if there is no reference to it in the child.
+                !self.does_child_reference_offer(offer_decl, offer_target_moniker)
+            }
+            OfferTarget::Collection(_) => {
+                // Offering to a collection should always cause an offer check.
+                true
+            }
+        };
+
+        if should_check_offer {
+            self.check_offer_capability(offer_decl, target)
+        } else {
+            // This offer decl doesn't need to be checked.
+            vec![]
+        }
+    }
+
+    pub fn check_offer_capability(
+        self: &Arc<Self>,
+        offer_decl: &OfferDecl,
+        target: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Vec<VerifyRouteResult> {
+        let mut results = Vec::new();
+        let (capability, route_request) = match offer_decl.clone() {
+            OfferDecl::Protocol(offer_decl) => {
+                let capability = offer_decl.source_name.clone();
+                let route_request = RouteRequest::OfferProtocol(offer_decl);
+                (capability, route_request)
+            }
+            OfferDecl::Directory(offer_decl) => {
+                let capability = offer_decl.source_name.clone();
+                let route_request = RouteRequest::OfferDirectory(offer_decl);
+                (capability, route_request)
+            }
+            OfferDecl::Storage(offer_decl) => {
+                let capability = offer_decl.source_name.clone();
+                let route_request = RouteRequest::OfferStorage(offer_decl);
+                (capability, route_request)
+            }
+            OfferDecl::Service(offer_decl) => {
+                let capability = offer_decl.source_name.clone();
+                let route_request = RouteRequest::OfferService(offer_decl);
+                (capability, route_request)
+            }
+            OfferDecl::Event(offer_decl) => {
+                let capability = offer_decl.source_name.clone();
+                let route_request = RouteRequest::OfferEvent(offer_decl);
+                (capability, route_request)
+            }
+            OfferDecl::EventStream(offer_decl) => {
+                let capability = offer_decl.source_name.clone();
+                let route_request = RouteRequest::OfferEventStream(offer_decl);
+                (capability, route_request)
+            }
+            OfferDecl::Runner(offer_decl) => {
+                let capability = offer_decl.source_name.clone();
+                let route_request = RouteRequest::OfferRunner(offer_decl);
+                (capability, route_request)
+            }
+            OfferDecl::Resolver(offer_decl) => {
+                let capability = offer_decl.source_name.clone();
+                let route_request = RouteRequest::OfferResolver(offer_decl);
+                (capability, route_request)
+            }
+        };
+
+        match Self::route_capability_sync(route_request, target) {
+            Ok((source, route)) => match self.check_use_source(&source) {
+                Ok(()) => {
+                    results.push(VerifyRouteResult {
+                        using_node: target.node_path(),
+                        capability: capability.clone(),
+                        result: Ok(route.into()),
+                    });
+                }
+                Err(err) => {
+                    results.push(VerifyRouteResult {
+                        using_node: target.node_path(),
+                        capability: capability.clone(),
+                        result: Err(err.into()),
+                    });
+                }
+            },
+            // Ignore any route that failed due to a void offer to a target with an
+            // optional dependency on the capability.
+            Err(RoutingError::AvailabilityRoutingError(
+                AvailabilityRoutingError::OfferFromVoidToOptionalTarget,
+            )) => return vec![],
+            Err(err) => results.push(VerifyRouteResult {
+                using_node: target.node_path(),
+                capability: capability.clone(),
+                result: Err(AnalyzerModelError::from(err).into()),
+            }),
+        };
+
+        results
+    }
+
     /// Checks the routing for all capabilities of the specified types that are `used` by `target`.
     pub fn check_routes_for_instance(
         self: &Arc<Self>,
@@ -566,6 +717,17 @@ impl ComponentModelForAnalyzer {
                 .get_mut(&CapabilityTypeName::from(expose_decl))
                 .expect("expected results for capability type");
             if let Some(result) = self.check_use_exposed_capability(expose_decl, &target) {
+                type_results.push(result);
+            }
+        }
+
+        for offer_decl in
+            target.decl.offers.iter().filter(|&o| capability_types.contains(&o.into()))
+        {
+            let type_results = results
+                .get_mut(&CapabilityTypeName::from(offer_decl))
+                .expect("expected results for capability type");
+            for result in self.try_check_offer_capability(offer_decl, &target) {
                 type_results.push(result);
             }
         }
