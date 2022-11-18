@@ -9,7 +9,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <unistd.h>
 
-#include <examples/canvas/baseline/cpp/fidl.h>
+#include <examples/canvas/clientrequesteddraw/cpp/fidl.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 
@@ -18,20 +18,23 @@
 struct CanvasState {
   // Tracks whether there has been a change since the last send, to prevent redundant updates.
   bool changed = true;
-  examples::canvas::baseline::BoundingBox bounding_box;
+  // [START diff_1]
+  // Tracks whether or not the client has declared itself ready to receive more updated.
+  bool ready = true;
+  // [END diff_1]
+  examples::canvas::clientrequesteddraw::BoundingBox bounding_box;
 };
 
-using Line = ::std::array<::examples::canvas::baseline::Point, 2>;
+using Line = ::std::array<::examples::canvas::clientrequesteddraw::Point, 2>;
 
-// [START server-impl-short]
 // An implementation of the |Instance| protocol.
-class InstanceImpl final : public examples::canvas::baseline::Instance {
-  // [END server-impl-short]
+class InstanceImpl final : public examples::canvas::clientrequesteddraw::Instance {
  public:
   // Bind this implementation to an |InterfaceRequest|.
   InstanceImpl(async_dispatcher_t* dispatcher,
-               fidl::InterfaceRequest<examples::canvas::baseline::Instance> request)
-      : binding_(fidl::Binding<examples::canvas::baseline::Instance>(this)), weak_factory_(this) {
+               fidl::InterfaceRequest<examples::canvas::clientrequesteddraw::Instance> request)
+      : binding_(fidl::Binding<examples::canvas::clientrequesteddraw::Instance>(this)),
+        weak_factory_(this) {
     binding_.Bind(std::move(request), dispatcher);
 
     // Gracefully handle abrupt shutdowns.
@@ -46,37 +49,57 @@ class InstanceImpl final : public examples::canvas::baseline::Instance {
     ScheduleOnDrawnEvent(dispatcher, zx::sec(1));
   }
 
-  // [START addline-impl-short]
-  void AddLine(Line line) override {
-    // [END addline-impl-short]
-    FX_LOGS(INFO) << "AddLine request received: [Point { x: " << line[1].x << ", y: " << line[1].y
-                  << " }, Point { x: " << line[0].x << ", y: " << line[0].y << " }]";
+  // [START diff_2]
+  void AddLines(std::vector<Line> lines) override {
+    FX_LOGS(INFO) << "AddLines request received";
+    for (const auto& points : lines) {
+      FX_LOGS(INFO) << "AddLines printing line: [Point { x: " << points[1].x
+                    << ", y: " << points[1].y << " }, Point { x: " << points[0].x
+                    << ", y: " << points[0].y << " }]";
+      // [END diff_2]
 
-    // Update the bounding box to account for the new line we've just "added" to the canvas.
-    auto& bounds = state_.bounding_box;
-    for (const auto& point : line) {
-      if (point.x < bounds.top_left.x) {
-        bounds.top_left.x = point.x;
-      }
-      if (point.y > bounds.top_left.y) {
-        bounds.top_left.y = point.y;
-      }
-      if (point.x > bounds.bottom_right.x) {
-        bounds.bottom_right.x = point.x;
-      }
-      if (point.y < bounds.bottom_right.y) {
-        bounds.bottom_right.y = point.y;
+      // Update the bounding box to account for the new line we've just "added" to the canvas.
+      auto& bounds = state_.bounding_box;
+      for (const auto& point : points) {
+        if (point.x < bounds.top_left.x) {
+          bounds.top_left.x = point.x;
+        }
+        if (point.y > bounds.top_left.y) {
+          bounds.top_left.y = point.y;
+        }
+        if (point.x > bounds.bottom_right.x) {
+          bounds.bottom_right.x = point.x;
+        }
+        if (point.y < bounds.bottom_right.y) {
+          bounds.bottom_right.y = point.y;
+        }
       }
     }
 
-    // Mark the state as "dirty", so that an update is sent back to the client on the next |OnDrawn|
-    // event.
+    // Mark the state as "dirty", so that an update is sent back to the client on the next
+    // |OnDrawn| event.
     state_.changed = true;
   }
 
+  // [START diff_3]
+  void Ready(ReadyCallback callback) override {
+    FX_LOGS(INFO) << "Ready request received";
+
+    // The client must only call `Ready() -> ();` after receiving an `-> OnDrawn();` event; if
+    // two "consecutive" `Ready() -> ();` calls are received, this interaction has entered an
+    // invalid state, and should be aborted immediately.
+    if (state_.ready == true) {
+      FX_LOGS(ERROR) << "Invalid back-to-back `Ready` requests received";
+    }
+
+    state_.ready = true;
+    callback();
+  }
+  // [END diff_3]
+
  private:
-  // Each scheduled update waits for the allotted amount of time, sends an update if something has
-  // changed, and schedules the next update.
+  // Each scheduled update waits for the allotted amount of time, sends an update if something
+  // has changed, and schedules the next update.
   void ScheduleOnDrawnEvent(async_dispatcher_t* dispatcher, zx::duration after) {
     async::PostDelayedTask(
         dispatcher,
@@ -89,10 +112,13 @@ class InstanceImpl final : public examples::canvas::baseline::Instance {
           // Schedule the next update if the binding still exists.
           weak->ScheduleOnDrawnEvent(dispatcher, after);
 
-          // No need to send an update if nothing has changed since the last one.
-          if (!weak->state_.changed) {
+          // [START diff_4]
+          // No need to send an update if nothing has changed since the last one, or the client
+          // has not yet informed us that it is ready for more updates.
+          if (!weak->state_.changed || !weak->state_.ready) {
             return;
           }
+          // [END diff_4]
 
           // This is where we would draw the actual lines. Since this is just an example, we'll
           // avoid doing the actual rendering, and simply send the bounding box to the client
@@ -105,13 +131,16 @@ class InstanceImpl final : public examples::canvas::baseline::Instance {
                         << " }, bottom_right: Point { x: " << bottom_right.x
                         << ", y: " << bottom_right.y << " }";
 
-          // Reset the change tracker.
+          // [START diff_5]
+          // Reset the change and ready trackers.
+          state_.ready = false;
+          // [END diff_5]
           state_.changed = false;
         },
         after);
   }
 
-  fidl::Binding<examples::canvas::baseline::Instance> binding_;
+  fidl::Binding<examples::canvas::clientrequesteddraw::Instance> binding_;
   CanvasState state_ = CanvasState{};
 
   // Generates weak references to this object, which are appropriate to pass into asynchronous
@@ -123,12 +152,12 @@ class InstanceImpl final : public examples::canvas::baseline::Instance {
 int main(int argc, char** argv) {
   FX_LOGS(INFO) << "Started";
 
-  // The event loop is used to asynchronously listen for incoming connections and requests from the
-  // client. The following initializes the loop, and obtains the dispatcher, which will be used when
-  // binding the server implementation to a channel.
+  // The event loop is used to asynchronously listen for incoming connections and requests from
+  // the client. The following initializes the loop, and obtains the dispatcher, which will be
+  // used when binding the server implementation to a channel.
   //
-  // Note that unlike the new C++ bindings, HLCPP bindings rely on the async loop being attached to
-  // the current thread via the |kAsyncLoopConfigAttachToCurrentThread| configuration.
+  // Note that unlike the new C++ bindings, HLCPP bindings rely on the async loop being attached
+  // to the current thread via the |kAsyncLoopConfigAttachToCurrentThread| configuration.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
@@ -139,10 +168,12 @@ int main(int argc, char** argv) {
   // provided to other components.
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  // Register a handler for components trying to connect to |examples.canvas.baseline.Instance|.
+  // Register a handler for components trying to connect to
+  // |examples.canvas.clientrequesteddraw.Instance|.
   context->outgoing()->AddPublicService(
-      fidl::InterfaceRequestHandler<examples::canvas::baseline::Instance>(
-          [dispatcher](fidl::InterfaceRequest<examples::canvas::baseline::Instance> request) {
+      fidl::InterfaceRequestHandler<examples::canvas::clientrequesteddraw::Instance>(
+          [dispatcher](
+              fidl::InterfaceRequest<examples::canvas::clientrequesteddraw::Instance> request) {
             // Create an instance of our |InstanceImpl| that destroys itself when the connection
             // closes.
             new InstanceImpl(dispatcher, std::move(request));
