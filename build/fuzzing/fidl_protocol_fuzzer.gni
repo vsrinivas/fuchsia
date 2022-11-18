@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/cpp/fidl_cpp.gni")
-import("//build/fuzzing/fuzzer.gni")
+import("//build/fuzzing/fuchsia_library_fuzzer.gni")
 
 # Defines service provider for a generated FIDL fuzzer
 #
@@ -56,70 +56,19 @@ template("fidl_protocol_fuzzer") {
       }
     }
 
-    if (defined(invoker.deps)) {
-      fuzzer_deps = invoker.deps
-    } else {
-      fuzzer_deps = []
-    }
-    fuzzer_deps += [
-      "${invoker.fidl}_libfuzzer_${protocol_suffix}",
-      "//sdk/lib/fidl/cpp/fuzzing",
-    ]
-
-    fuzzer(target_name) {
+    fuchsia_library_fuzzer(target_name) {
+      deps = []
       forward_variables_from(invoker,
+                             "*",
                              [
-                               "aliased_deps",
-                               "all_dependent_configs",
-                               "asmflags",
-                               "cflags_c",
-                               "cflags_cc",
-                               "cflags_objc",
-                               "cflags_objcc",
-                               "cflags",
-                               "check_includes",
-                               "manifest",
-                               "configs",
-                               "crate_name",
-                               "crate_root",
-                               "data_deps",
-                               "data",
-                               "dictionary",
-                               "edition",
-                               "friend",
-                               "include_dirs",
-                               "inputs",
-                               "inputs",
-                               "ldflags",
-                               "lib_dirs",
-                               "libs",
-                               "metadata",
-                               "options",
-                               "output_extension",
-                               "output_name",
-                               "precompiled_header",
-                               "precompiled_source",
-                               "public_configs",
-                               "public_deps",
-                               "public",
-                               "rustenv",
-                               "rustflags",
-                               "sources",
-                               "testonly",
-                               "visibility",
+                               "protocol",
+                               "fidl",
+                               "methods",
                              ])
-      deps = fuzzer_deps
+      deps += [
+        "${invoker.fidl}_libfuzzer_${protocol_suffix}",
+        "//sdk/lib/fidl/cpp/fuzzing",
+      ]
     }
-  } else {
-    # Dummy targets for host toolchains. These match the expectations `fuzzer_package`.
-    #
-    # TODO(fxbug.dev/106057): Remove these once the transition to v2 GN templates is complete.
-    group(target_name) {
-    }
-    group("${target_name}_executable") {
-    }
-    group("${target_name}_test_executable") {
-    }
-    not_needed(invoker, "*")
   }
 }
