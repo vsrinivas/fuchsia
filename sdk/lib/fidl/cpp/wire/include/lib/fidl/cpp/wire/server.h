@@ -20,6 +20,9 @@ class AsyncServerBinding;
 class ServerBindingRefBase;
 std::weak_ptr<AsyncServerBinding> BorrowBinding(const ServerBindingRefBase&);
 
+template <typename FidlProtocol>
+class ServerBindingBase;
+
 // |ServerBindingRefBase| controls a server binding that does not have
 // threading restrictions.
 class ServerBindingRefBase {
@@ -70,17 +73,19 @@ class UniqueServerBindingOwner {
   ServerBindingRefBase ref_;
 };
 
+using SimpleErrorHandler = fit::callback<void(UnbindInfo)>;
+using SimpleCloseHandler = fit::callback<void(UnbindInfo)>;
+template <typename Impl>
+using InstanceCloseHandler = fit::callback<void(Impl*, UnbindInfo)>;
+
 template <typename FidlProtocol>
 class ServerBindingBase {
  public:
   template <typename Impl, typename CloseHandler>
   static void CloseHandlerRequirement() {
-    // TODO(fxbug.dev/112648): Cannot use |std::is_invocable_v| as that fails
-    // on the latest clang.
-    using SimpleCloseHandler = fit::callback<void(UnbindInfo)>;
-    using InstanceCloseHandler = fit::callback<void(Impl*, UnbindInfo)>;
+    // TODO(fxbug.dev/112648): Cannot use |std::is_invocable_v| as that fails on the latest clang.
     static_assert(std::is_convertible_v<CloseHandler, SimpleCloseHandler> ||
-                      std::is_convertible_v<CloseHandler, InstanceCloseHandler>,
+                      std::is_convertible_v<CloseHandler, InstanceCloseHandler<Impl>>,
                   "The close handler must have a signature of "
                   "void(fidl::UnbindInfo) or void(Impl*, fidl::UnbindInfo)");
   }
@@ -102,7 +107,6 @@ class ServerBindingBase {
             // calling into a destructed server.
             return;
           }
-          using SimpleErrorHandler = fit::callback<void(UnbindInfo)>;
           if constexpr (std::is_convertible_v<CloseHandler, SimpleErrorHandler>) {
             error_handler(info);
           } else {

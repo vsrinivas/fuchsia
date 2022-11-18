@@ -1,0 +1,17 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fidl.cpp.wire.bindinggroup.test;
+
+/// A protocol specifically designed to test the binding group interface.
+protocol Testable {
+    /// Echos a string.
+    Echo(struct {
+        str string;
+    }) -> (struct {
+        str string;
+    });
+
+    /// Causes the other end to close and execute its close handler.
+    Close();
+};
