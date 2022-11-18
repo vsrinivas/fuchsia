@@ -147,12 +147,12 @@ pub async fn new_access_token(refresh_token: &str) -> Result<String, GcsError> {
 
 pub(crate) struct AuthCode(pub String);
 pub(crate) struct CodeVerifier(pub String);
-pub(crate) struct EncodedRedirect(pub String);
+pub(crate) struct RedirectUrl(pub String);
 
 /// Ask the user to approve auth.
 ///
 /// Returns (auth_code, code_verifier).
-async fn get_auth_code() -> Result<(AuthCode, CodeVerifier, EncodedRedirect)> {
+async fn get_auth_code() -> Result<(AuthCode, CodeVerifier, RedirectUrl)> {
     tracing::debug!("get_auth_code");
     let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
     let listener = TcpListener::bind(&addr).context("TcpListener::bind")?;
@@ -166,17 +166,18 @@ async fn get_auth_code() -> Result<(AuthCode, CodeVerifier, EncodedRedirect)> {
     let local_addr = listener.local_addr().context("getting local address")?;
     let redirect_uri = format!("http://{}/", local_addr);
     tracing::info!("redirect URI: {:?}", redirect_uri);
-    let encoded_redirect = form_urlencoded::Serializer::new(redirect_uri).finish();
 
     // OAuth2 URL.
-    let authorization_request = format!(
-        "{}\
-        ?response_type=code\
-        &scope={}\
-        &redirect_uri={}&client_id={}&state={}&code_challenge={}\
-        &code_challenge_method=S256",
-        AUTHORIZATION_ENDPOINT, AUTH_SCOPE, encoded_redirect, CLIENT_ID, state, code_challenge,
-    );
+    let mut authorization_request = url::Url::parse(AUTHORIZATION_ENDPOINT)?;
+    authorization_request
+        .query_pairs_mut()
+        .append_pair("response_type", "code")
+        .append_pair("scope", AUTH_SCOPE)
+        .append_pair("redirect_uri", &redirect_uri)
+        .append_pair("client_id", CLIENT_ID)
+        .append_pair("state", &state)
+        .append_pair("code_challenge", &code_challenge)
+        .append_pair("code_challenge_method", "S256");
 
     // Simple background listener.
     let handle = std::thread::spawn(move || {
@@ -195,7 +196,7 @@ async fn get_auth_code() -> Result<(AuthCode, CodeVerifier, EncodedRedirect)> {
         }
     });
 
-    browser_open(&authorization_request)?;
+    browser_open(&authorization_request.as_str())?;
 
     tracing::debug!("Joining background thread");
     let auth_code = handle.join().expect("handling thread join")?;
@@ -204,7 +205,7 @@ async fn get_auth_code() -> Result<(AuthCode, CodeVerifier, EncodedRedirect)> {
     assert!(!auth_code.is_empty(), "auth_code must not be empty");
     assert!(!code_verifier.is_empty(), "code_verifier must not be empty");
     tracing::debug!("get_auth_code success");
-    Ok((AuthCode(auth_code), CodeVerifier(code_verifier), EncodedRedirect(encoded_redirect)))
+    Ok((AuthCode(auth_code), CodeVerifier(code_verifier), RedirectUrl(redirect_uri)))
 }
 
 fn handle_connection(mut stream: TcpStream, state: &str) -> Result<String> {
@@ -327,7 +328,7 @@ fn browser_open(url: &str) -> Result<()> {
 pub(crate) async fn auth_code_to_refresh(
     auth_code: &AuthCode,
     code_verifier: &CodeVerifier,
-    redirect_uri: &EncodedRedirect,
+    redirect_url: &RedirectUrl,
 ) -> Result<(String, Option<String>), GcsError> {
     tracing::debug!("auth_code_to_refresh");
     assert!(!auth_code.0.is_empty(), "The auth code must not be empty");
@@ -337,7 +338,7 @@ pub(crate) async fn auth_code_to_refresh(
     let body = form_urlencoded::Serializer::new(String::new())
         .append_pair("code", &auth_code.0)
         .append_pair("code_verifier", &code_verifier.0)
-        .append_pair("redirect_uri", &redirect_uri.0)
+        .append_pair("redirect_uri", &redirect_url.0)
         .append_pair("client_id", CLIENT_ID)
         .append_pair("client_secret", CLIENT_SECRET)
         .append_pair("scope", "")

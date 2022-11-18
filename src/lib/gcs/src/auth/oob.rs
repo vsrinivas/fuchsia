@@ -8,7 +8,7 @@
 use {
     crate::auth::{
         info::CLIENT_ID,
-        pkce::{auth_code_to_refresh, AuthCode, CodeVerifier, EncodedRedirect},
+        pkce::{auth_code_to_refresh, AuthCode, CodeVerifier, RedirectUrl},
     },
     anyhow::{Context, Result},
     std::{
@@ -32,7 +32,7 @@ pub async fn new_refresh_token() -> Result<String> {
     tracing::debug!("oob_new_refresh_token");
     let auth_code = AuthCode(oob_get_auth_code().context("getting auth code")?);
     let verifier = CodeVerifier("".to_string());
-    let redirect = EncodedRedirect("urn:ietf:wg:oauth:2.0:oob".to_string());
+    let redirect = RedirectUrl("urn:ietf:wg:oauth:2.0:oob".to_string());
     let (refresh_token, _) = auth_code_to_refresh(&auth_code, &verifier, &redirect)
         .await
         .context("get refresh token")?;
