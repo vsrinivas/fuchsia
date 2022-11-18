@@ -10,9 +10,7 @@
         "fuchsia.test": {
             "deprecated-allowed-packages": [
                 "debian_guest",
-                "debian_guest_manager",
                 "zircon_guest",
-                "zircon_guest_manager",
             ],
         },
     },
