@@ -20,7 +20,7 @@ use ffx_config::SshKeyFiles;
 use ffx_emulator_common::{
     config,
     config::EMU_START_TIMEOUT,
-    dump_log_to_out, get_local_network_interface, host_is_mac, process,
+    dump_log_to_out, host_is_mac, process,
     target::{add_target, is_active, remove_target, TargetAddress},
     tuntap::{tap_ready, TAP_INTERFACE_NAME},
 };
@@ -333,16 +333,11 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         if emu_config.host.networking == NetworkingMode::User {
             finalize_port_mapping(emu_config).context("Problem with port mapping")?;
 
-            let local_v4_interface = get_local_network_interface()?;
-
-            if let Some(local_interface) = local_v4_interface {
-                emu_config.host.local_ip_addr = local_interface.ip().to_string();
-                mdns_service_info = Some(MDNSInfo::new(&emu_config.host, &local_interface.ip()));
-            } else {
-                // This really should not happen, so much leading up to
-                //this point requires network access.
-                bail!("Cannot find local network interface.")
-            }
+            // For user mode networking always use 127.0.0.1. This avoids any firewall
+            // configurations that could interfere and use IPv4 since there is issues with
+            // QEMU and IPv6.
+            let local_v4_interface = IpAddr::new_v4(127, 0, 0, 1);
+            mdns_service_info = Some(MDNSInfo::new(&emu_config.host, &local_v4_interface));
         }
 
         emu_config.guest = Self::stage_image_files(&name, emu_config, &mdns_service_info, reuse)
@@ -409,13 +404,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             // We only need to do this if we're running in user net mode.
             let timeout = self.emu_config().runtime.startup_timeout;
             if let Some(ssh_port) = ssh_port {
-                let local_ip = if !self.emu_config().host.local_ip_addr.is_empty() {
-                    TargetAddress::Ipv4(
-                        self.emu_config().host.local_ip_addr.parse::<std::net::Ipv4Addr>()?,
-                    )
-                } else {
-                    TargetAddress::Loopback
-                };
+                let local_ip = TargetAddress::Loopback;
 
                 // TODO(fxbug.dev/114597): Remove manually added target when obsolete.
                 add_target(proxy, local_ip, ssh_port, timeout)
@@ -495,15 +484,8 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                             // We only need to do this if we're running in user net mode.
                             if let Some(ssh_port) = ssh_port {
                                 // TODO(fxbug.dev/114597): Remove manually added target when obsolete.
-                                if let Err(e) = remove_target(
-                                    proxy,
-                                    &format!(
-                                        "{}:{}",
-                                        self.emu_config().host.local_ip_addr,
-                                        ssh_port
-                                    ),
-                                )
-                                .await
+                                if let Err(e) =
+                                    remove_target(proxy, &format!("127.0.0.1:{}", ssh_port)).await
                                 {
                                     // A failure here probably means it was never added.
                                     // Just log the error and quit.
