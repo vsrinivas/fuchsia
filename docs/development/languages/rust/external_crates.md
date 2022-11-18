@@ -25,7 +25,7 @@ Generally, adding or updating an external crate involves the following:
    Gerrit that adds an external crate. Do not request a code review for adding an
    external crate until you have approval from the OSRB.
 
--  Uploading the change for code review.
+-  Uploading the change for [code review](external_crates/review.md).
 
 ## Adding an external crate
 

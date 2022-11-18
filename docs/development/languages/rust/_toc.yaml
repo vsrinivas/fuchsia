@@ -28,6 +28,8 @@ toc:
   path: /docs/development/languages/rust/bloat.md
 - title: "External Rust crates"
   path: /docs/development/languages/rust/external_crates.md
+- title: "External Rust crate Reviews"
+  path: /docs/development/languages/rust/external_crates/review.md
 - title: "Unsafe code in Rust"
   path: /docs/development/languages/rust/unsafe.md
 - title: "Unstable Rust features"
