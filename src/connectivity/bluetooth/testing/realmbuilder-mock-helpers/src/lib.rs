@@ -22,7 +22,6 @@ use {
 
 /// Process requests received in the `stream` and relay them to the provided `sender`.
 /// Logs incoming requests prefixed with the `tag`.
-#[track_caller]
 pub async fn process_request_stream<S, Event>(
     mut stream: S::RequestStream,
     mut sender: mpsc::Sender<Event>,

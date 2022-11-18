@@ -115,7 +115,6 @@ pub trait TestHarness: Sized {
 }
 
 /// We can run any test which is an async function from some harness `H` to a result
-#[track_caller]
 pub async fn run_with_harness<H, F, Fut>(test_func: F)
 where
     H: TestHarness,

@@ -585,7 +585,6 @@ async fn one_way_flexible_async_send() {
 ///     excluding the transaction ID which will be checked automatically.
 /// -   `server_reply`: the data the server should send back to the client,
 ///     excluding the transaction ID which will be added automatically.
-#[track_caller]
 async fn run_two_way_async<C, F, R>(
     client_runner: C,
     expected_client_message: &'static [u8],
@@ -1156,7 +1155,6 @@ async fn send_flexible_err_event_error() {
 ///     handling. Must include the transaction ID.
 /// -   `expected_server_reply`: Message to expect back from the server. Must
 ///     include the expected transaction ID.
-#[track_caller]
 async fn run_two_way_response<S, F>(
     server_runner: S,
     client_message: &'static [u8],

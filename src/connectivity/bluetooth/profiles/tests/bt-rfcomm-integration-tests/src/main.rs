@@ -80,7 +80,6 @@ async fn add_rfcomm_component(
 
 /// Builds the test topology for the RFCOMM integration tests. Returns the test realm, an observer
 /// for bt-rfcomm, and a piconet member which can be driven by the test.
-#[track_caller]
 async fn setup_test_topology() -> (RealmInstance, BtProfileComponent, PiconetMember) {
     let mut test_harness = PiconetHarness::new().await;
 
@@ -105,7 +104,6 @@ async fn setup_test_topology() -> (RealmInstance, BtProfileComponent, PiconetMem
 /// Returns an SppClient that uses the `Profile` capability exposed by the RFCOMM component in the
 /// test `topology`.
 /// For the purposes of the integration tests, the RFCOMM client advertises SPP.
-#[track_caller]
 async fn setup_spp_client(
     topology: &RealmInstance,
     rfcomm_component: &BtProfileComponent,
@@ -117,7 +115,6 @@ async fn setup_spp_client(
     ProfileClient::advertise(profile, &vec![spp], bredr::ChannelParameters::EMPTY).unwrap()
 }
 
-#[track_caller]
 async fn expect_peer_advertising(
     search_results: &mut bredr::SearchResultsRequestStream,
     expected_id: PeerId,
@@ -186,7 +183,6 @@ async fn multiple_rfcomm_clients_can_register_advertisements() {
 
 /// Verifies that the `send` RFCOMM channel can be written to and that the `data` is received by the
 /// `receive` RFCOMM channel.
-#[track_caller]
 async fn send_and_expect_data(send: &Channel, receive: &Channel, data: Vec<u8>) {
     let n = data.len();
     assert_eq!(send.as_ref().write(&data[..]), Ok(n));

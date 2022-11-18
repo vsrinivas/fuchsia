@@ -87,7 +87,6 @@ where
     s.join().unwrap();
 }
 
-#[track_caller]
 async fn run_client_async<C, F>(expected_str: &'static str, client_runner: C)
 where
     C: 'static + FnOnce(OverflowingProtocolProxy) -> F + Send,

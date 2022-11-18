@@ -307,7 +307,6 @@ async fn test_hfp_ag_service_advertisement(tf: HfpAgIntegrationTest) {
 
 /// Expects a connection request on the `connect_requests` stream from the `other` peer.
 /// Returns the Channel.
-#[track_caller]
 async fn expect_connection(
     connect_requests: &mut bredr::ConnectionReceiverRequestStream,
     other: PeerId,
@@ -350,7 +349,6 @@ async fn test_hfp_search_and_connect(tf: HfpAgIntegrationTest) {
 
 /// Expects data on the provided `channel` and verifies the contents with the `expected` AT
 /// messages.
-#[track_caller]
 async fn expect_data(channel: &mut Channel, expected: Vec<at::Response>) {
     let expected_bytes: Vec<u8> = expected
         .into_iter()
@@ -382,7 +380,6 @@ async fn expect_data(channel: &mut Channel, expected: Vec<at::Response>) {
 
 /// Serializes and sends the provided AT `command` using the `channel` and then
 /// expects the `expected` response.
-#[track_caller]
 async fn send_command_and_expect_response(
     channel: &mut Channel,
     command: at::Command,

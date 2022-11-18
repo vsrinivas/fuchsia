@@ -97,7 +97,6 @@ fn connect_di_client(
     (fut, token_client)
 }
 
-#[track_caller]
 async fn expect_di_service_found(
     results_requests: &mut bredr::SearchResultsRequestStream,
     expected_id: PeerId,
