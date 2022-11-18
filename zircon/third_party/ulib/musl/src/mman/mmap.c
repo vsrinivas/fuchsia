@@ -5,6 +5,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -14,9 +15,69 @@
 #include "threads_impl.h"
 #include "zircon_impl.h"
 
-static const char kMmapAnonymousVmoName[] = "mmap-anonymous";
+static zx_status_t mmap_inner(uintptr_t start, size_t len, int prot, int flags, int fd,
+                              off_t fd_off, uintptr_t* ptr) {
+  zx_vm_option_t zx_options = 0;
+  zx_options |= (prot & PROT_READ) ? ZX_VM_PERM_READ : 0;
+  zx_options |= (prot & PROT_WRITE) ? ZX_VM_PERM_WRITE : 0;
+  zx_options |= (prot & PROT_EXEC) ? ZX_VM_PERM_EXECUTE : 0;
 
-static inline void* mmap_error(zx_status_t status);
+  size_t offset;
+  if (flags & MAP_FIXED) {
+    zx_options |= ZX_VM_SPECIFIC_OVERWRITE;
+    zx_info_vmar_t info;
+    zx_status_t status =
+        _zx_object_get_info(_zx_vmar_root_self(), ZX_INFO_VMAR, &info, sizeof(info), NULL, NULL);
+    if (status != ZX_OK) {
+      return status;
+    }
+    if (start < info.base) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    offset = start - info.base;
+  } else {
+    offset = 0;
+  }
+
+  // Either create a new VMO if this is an anonymous mapping, or obtain one from the backing fd.
+  zx_handle_t vmo;
+  if (flags & MAP_ANON) {
+    zx_status_t status = _zx_vmo_create(len, 0, &vmo);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    static const char kMmapAnonymousVmoName[] = "mmap-anonymous";
+    {
+      zx_status_t status = _zx_object_set_property(vmo, ZX_PROP_NAME, kMmapAnonymousVmoName,
+                                                   (sizeof(kMmapAnonymousVmoName)) - 1);
+      ZX_ASSERT_MSG(status == ZX_OK, "failed to set_property(ZX_PROP_NAME): %s",
+                    _zx_status_get_string(status));
+    }
+    if (flags & MAP_JIT) {
+      zx_status_t status = _zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo);
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+  } else {
+    zx_options |= ZX_VM_ALLOW_FAULTS;
+    zx_status_t status = _mmap_get_vmo_from_fd(prot, flags, fd, &vmo);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  // Map the VMO with the specified options.
+  zx_status_t status =
+      _zx_vmar_map(_zx_vmar_root_self(), zx_options, offset, vmo, fd_off, len, ptr);
+  // The VMAR keeps an internal handle to the mapped VMO, so we can close the existing handle.
+  {
+    zx_status_t status = _zx_handle_close(vmo);
+    ZX_ASSERT_MSG(status == ZX_OK, "failed to handle_close(): %s", _zx_status_get_string(status));
+  }
+  return status;
+}
 
 // mmap implementation
 void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t fd_off) {
@@ -48,73 +109,11 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t fd_off)
   // round up to page size
   len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
-  zx_vm_option_t zx_options = 0;
-  zx_options |= (prot & PROT_READ) ? ZX_VM_PERM_READ : 0;
-  zx_options |= (prot & PROT_WRITE) ? ZX_VM_PERM_WRITE : 0;
-  zx_options |= (prot & PROT_EXEC) ? ZX_VM_PERM_EXECUTE : 0;
-
-  size_t offset = 0;
-  if (flags & MAP_FIXED) {
-    zx_options |= ZX_VM_SPECIFIC_OVERWRITE;
-    zx_info_vmar_t info;
-    zx_status_t status =
-        _zx_object_get_info(_zx_vmar_root_self(), ZX_INFO_VMAR, &info, sizeof(info), NULL, NULL);
-    if (status != ZX_OK || (uintptr_t)start < info.base) {
-      return mmap_error(status);
-    }
-    offset = (uintptr_t)start - info.base;
-  }
-
-  // Either create a new VMO if this is an anonymous mapping, or obtain one from the backing fd.
-  zx_handle_t vmo;
-  if (flags & MAP_ANON) {
-    zx_status_t status = _zx_vmo_create(len, 0, &vmo);
-    if (status != ZX_OK) {
-      return mmap_error(status);
-    }
-
-    status = _zx_object_set_property(vmo, ZX_PROP_NAME, kMmapAnonymousVmoName,
-                                     (sizeof kMmapAnonymousVmoName) - 1);
-    if (status != ZX_OK) {
-      zx_status_t close_status = _zx_handle_close(vmo);
-      ZX_ASSERT_MSG(close_status == ZX_OK, "Failed to close VMO: %s",
-                    _zx_status_get_string(close_status));
-      return mmap_error(status);
-    }
-
-    if (flags & MAP_JIT) {
-      status = _zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo);
-      if (status != ZX_OK) {
-        return mmap_error(status);
-      }
-    }
-  } else {
-    zx_options |= ZX_VM_ALLOW_FAULTS;
-    zx_status_t status = _mmap_get_vmo_from_fd(prot, flags, fd, &vmo);
-    if (status != ZX_OK) {
-      return mmap_error(status);
-    }
-  }
-
-  // Map the VMO with the specified options.
-  uintptr_t ptr = 0;
-  zx_status_t status =
-      _zx_vmar_map(_zx_vmar_root_self(), zx_options, offset, vmo, fd_off, len, &ptr);
-  // The VMAR keeps an internal handle to the mapped VMO, so we can close the existing handle.
-  zx_status_t close_status = _zx_handle_close(vmo);
-  ZX_ASSERT_MSG(close_status == ZX_OK, "Failed to close VMO: %s",
-                _zx_status_get_string(close_status));
-  // TODO: map this as shared if we ever implement forking
-  if (status != ZX_OK) {
-    return mmap_error(status);
-  }
-
-  return (void*)ptr;
-}
-
-// Set errno based on the given status and return MAP_FAILED.
-static inline void* mmap_error(zx_status_t status) {
+  uintptr_t ptr;
+  zx_status_t status = mmap_inner((uintptr_t)start, len, prot, flags, fd, fd_off, &ptr);
   switch (status) {
+    case ZX_OK:
+      return (void*)ptr;
     case ZX_ERR_BAD_HANDLE:
       errno = EBADF;
       break;
@@ -131,6 +130,7 @@ static inline void* mmap_error(zx_status_t status) {
     case ZX_ERR_BAD_STATE:
     default:
       errno = EINVAL;
+      break;
   }
   return MAP_FAILED;
 }
