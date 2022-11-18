@@ -71,12 +71,13 @@ class Driver : public driver::DriverBase {
   zx::result<> Start() override;
 
  private:
-  zx::result<> Serve(std::string_view name);
+  zx::result<> Serve(std::string_view name, bool is_input);
   zx::result<fidl::ClientEnd<fuchsia_hardware_i2c::Device>> GetI2cClient() const;
   zx::result<zx::interrupt> GetIrq() const;
 
   std::shared_ptr<Core> core_;
   std::shared_ptr<ServerConnector> server_output_;
+  std::shared_ptr<ServerConnector> server_input_;
   std::unique_ptr<compat::Context> compat_context_;
 };
 

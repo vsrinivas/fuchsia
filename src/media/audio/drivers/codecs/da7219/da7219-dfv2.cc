@@ -67,10 +67,16 @@ zx::result<> Driver::Start() {
     return zx::error(status);
   }
 
-  zx::result<> output = Serve(std::string(name()).append("-output"));
+  zx::result<> output = Serve(std::string(name()).append("-output"), false);
   if (!output.is_ok()) {
     FDF_SLOG(ERROR, "Could not serve output server", KV("status", output.status_string()));
     return zx::error(output.status_value());
+  }
+
+  zx::result<> input = Serve(std::string(name()).append("-input"), true);
+  if (!input.is_ok()) {
+    FDF_SLOG(ERROR, "Could not serve input server", KV("status", input.status_string()));
+    return zx::error(input.status_value());
   }
 
   FDF_SLOG(INFO, "Started");
@@ -78,7 +84,7 @@ zx::result<> Driver::Start() {
   return zx::ok();
 }
 
-zx::result<> Driver::Serve(std::string_view name) {
+zx::result<> Driver::Serve(std::string_view name, bool is_input) {
   // Serve the fuchsia.hardware.audio/CodecConnector protocol to clients through the
   // fuchsia.hardware.audio/CodecConnectorService wrapper.
   component::ServiceInstanceHandler handler;
@@ -90,9 +96,13 @@ zx::result<> Driver::Serve(std::string_view name) {
   // Since the framework requires allowing and keeping this connection in addition to the connection
   // from a client, we allow multiple bindings of ServerConnector but share the instance.
   // ServerConnector limits the actual usage to one client at the time.
-  server_output_ = std::make_shared<ServerConnector>(logger_.get(), core_, false);
+  if (is_input) {
+    server_input_ = std::make_shared<ServerConnector>(logger_.get(), core_, true);
+  } else {
+    server_output_ = std::make_shared<ServerConnector>(logger_.get(), core_, false);
+  }
   auto result = service.add_codec_connector(
-      [this](fidl::ServerEnd<fuchsia_hardware_audio::CodecConnector> request) -> void {
+      [this, is_input](fidl::ServerEnd<fuchsia_hardware_audio::CodecConnector> request) -> void {
         auto on_unbound =
             [this](fidl::WireServer<fuchsia_hardware_audio::CodecConnector>*, fidl::UnbindInfo info,
                    fidl::ServerEnd<fuchsia_hardware_audio::CodecConnector> server_end) {
@@ -104,12 +114,13 @@ zx::result<> Driver::Serve(std::string_view name) {
               }
             };
         fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::CodecConnector>>(
-            dispatcher(), std::move(request), server_output_.get(), std::move(on_unbound));
+            dispatcher(), std::move(request), is_input ? server_input_.get() : server_output_.get(),
+            std::move(on_unbound));
       });
   ZX_ASSERT(result.is_ok());
 
   result = context().outgoing()->AddService<fuchsia_hardware_audio::CodecConnectorService>(
-      std::move(handler));
+      std::move(handler), name);
   if (result.is_error()) {
     FDF_SLOG(ERROR, "Failed to add service", KV("status", result.status_string()));
     return result.take_error();
@@ -129,7 +140,7 @@ zx::result<> Driver::Serve(std::string_view name) {
         compat_context_ = std::move(result.value());
         auto devfs_path = compat_context_->TopologicalPath(name_copy);
         auto service_path = std::string(fuchsia_hardware_audio::CodecConnectorService::Name) + "/" +
-                            component::kDefaultInstance + "/" +
+                            name_copy + "/" +
                             fuchsia_hardware_audio::CodecConnectorService::CodecConnector::Name;
 
         auto status = compat_context_->devfs_exporter().ExportSync(
