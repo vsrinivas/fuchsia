@@ -7,13 +7,16 @@
 ### start fuchsia in qemu with a FVM disk
 ## start fuchsia in qemu with a FVM disk
 ##
-## usage: fx qemu [--no-build] [-z <zbi_image>] [--archive <tgt>]
+## usage: fx qemu [--no-build] [-z <zbi_image>] [--uefi <image>] [--archive <tgt>]
 ##
 ##      -z <zbi_image>   use <zbi_image> instead of the default.
+##      --uefi <image>   Boot through UEFI and do so with the supplied UEFI filesystem or disk
+##                       image. Mutually exclusive with '-z' and '-t'.
 ##      --no-build       do not attempt to build the fvm and the default zbi images.
 ##                       A custom zbi image passed by a '-z' flag is never built.
 ##      --archive <tgt>  Don't actually run QEMU.  Instead, create a compressed tarball archive
 ##                       named "<tgt>.tgz" which contains all of the images needed to run QEMU.
+##
 ##
 ## When generating an archive, either two or three files are typically included in the
 ## archive.  They are:
@@ -57,6 +60,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fvm.s
 
 build_flag=true
 ZBI_IMAGE=
+UEFI_IMG=
 PKG_TARGET=
 run_zircon_args=()
 while [[ $# -gt 0 ]]; do
@@ -77,6 +81,10 @@ while [[ $# -gt 0 ]]; do
       shift
       ZBI_IMAGE="$1"
       ;;
+    --uefi)
+      shift
+      UEFI_IMG="$1"
+      ;;
     --)
       # Stop processing args if we hit a "--" argument.
       break
@@ -96,14 +104,6 @@ qemu_dir="${PREBUILT_QEMU_DIR}/bin"
 
 build_targets=()
 
-KERNEL_IMAGE="$(fx-command-run list-build-artifacts --type kernel --name qemu-kernel images)"
-build_targets+=( "${KERNEL_IMAGE}" )
-if [[ -z "${ZBI_IMAGE}" ]]; then
-  ZBI_IMAGE="$(fx-command-run list-build-artifacts --type zbi --name zircon-a images)"
-  build_targets+=( "${ZBI_IMAGE}" )
-  ZBI_IMAGE="${FUCHSIA_BUILD_DIR}/${ZBI_IMAGE}"
-fi
-
 # Not all builds use an FVM so failing to find a source FVM is OK.
 fvm_source="$(fx-fvm-find-raw-source)"
 [[ -n "${fvm_source}" ]] && build_targets+=( "${fvm_source}" )
@@ -111,14 +111,7 @@ fvm_source="$(fx-fvm-find-raw-source)"
 args=(
   -a "${FUCHSIA_ARCH}"
   -q "${qemu_dir}"
-  -t "${FUCHSIA_BUILD_DIR}/${KERNEL_IMAGE}"
 )
-
-if $build_flag; then
-  _targets="$(printf ", %s" "${build_targets[@]}")"
-  echo >&2 "Building ${_targets:2}"
-  fx-command-run build "${build_targets[@]}"
-fi
 
 # Construction of a qcow image prevents qemu from writing back to the
 # build-produced image file, which could cause timestamp issues with that file.
@@ -131,12 +124,32 @@ if [[ ! -d "${imgdir}" ]]; then
 fi
 CLEANUP_LIST+=("$imgdir")
 
-kernelzbi="${imgdir}/fuchsia-ssh.zbi"
-args+=(-z "${kernelzbi}")
-fx-zbi -o "${kernelzbi}" \
-  "${ZBI_IMAGE}" \
-  --entry "data/ssh/authorized_keys=${authkeys_path}" \
-  --type=entropy:64 /dev/urandom
+if [[ -n $UEFI_IMG ]]; then
+  args+=("--uefi=${UEFI_IMG}")
+else
+  KERNEL_IMAGE="$(fx-command-run list-build-artifacts --type kernel --name qemu-kernel images)"
+  build_targets+=( "${KERNEL_IMAGE}" )
+  if [[ -z "${ZBI_IMAGE}" ]]; then
+    ZBI_IMAGE="$(fx-command-run list-build-artifacts --type zbi --name zircon-a images)"
+    build_targets+=( "${ZBI_IMAGE}" )
+    ZBI_IMAGE="${FUCHSIA_BUILD_DIR}/${ZBI_IMAGE}"
+  fi
+
+  args+=(-t "${FUCHSIA_BUILD_DIR}/${KERNEL_IMAGE}")
+
+  if $build_flag; then
+    _targets="$(printf ", %s" "${build_targets[@]}")"
+    echo >&2 "Building ${_targets:2}"
+    fx-command-run build "${build_targets[@]}"
+  fi
+
+  kernelzbi="${imgdir}/fuchsia-ssh.zbi"
+  args+=(-z "${kernelzbi}")
+  fx-zbi -o "${kernelzbi}" \
+    "${ZBI_IMAGE}" \
+    --entry "data/ssh/authorized_keys=${authkeys_path}" \
+    --type=entropy:64 /dev/urandom
+fi
 
 fvm_raw=
 if [[ -n "${fvm_source}" ]]; then

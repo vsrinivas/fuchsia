@@ -11,8 +11,8 @@ function HELP {
     echo "-a <arch>            : arm64 or x64"
     echo "-c <text>            : append item to kernel commandline"
     echo "-d                   : run with emulated disk"
-    echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
-    echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme, virtio-scsi), default is ahci"
+    echo "-D <disk file|device>: specify disk file or device path on host"
+    echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme, virtio-scsi, usb), default is ahci"
     echo "--diskfmt[=<format>] : disk format (raw, qcow2, etc), default is raw"
     echo "-g                   : use graphical console"
     echo "-H, --hvf            : use HVF (macOS hosts only); defaults to true if supported."
@@ -30,11 +30,15 @@ function HELP {
     echo "-V                   : try to use virtio devices"
     echo "-z <zbi>             : boot specified ZBI via trampoline"
     echo "--audio[=<host_drv>] : use Intel HD Audio"
-    echo "                     : <host_drv> should be one of (alsa, oss, pa, wav, none)"
+    echo "                       <host_drv> should be one of (alsa, oss, pa, wav, none)"
     echo "--ahci=<disk image>  : run with disk image file as raw ahci drive"
     echo "--debugger           : Enable gdb stub and wait for connection"
     echo "--gic=<version>      : use GIC 2, 3, or max supported. default is max"
     echo "--no-serial          : Disable writing out to the guest's serial port"
+    echo "--uefi=<image>       : Specify a UEFI filesystem or disk image, which entails booting"
+    echo "                       through UEFI. If -d is set, then this image will be placed in an"
+    echo "                       emulated disk of type --disktype; else, a USB drive. This option"
+    echo "                       is mutually exclusive with -t and -z."
     echo "--vnc=<display>      : use vnc based display"
     echo "--wavfile=<file>     : When audio host_drv == wav, output to the specified WAV file"
     echo "-h for help"
@@ -75,8 +79,8 @@ AUDIO=
 AUDIO_WAVFILE="/tmp/qemu.wav"
 DEBUGGER=0
 DISK=0
-DISKFILE="blk.bin"
-DISKTYPE=
+DISKFILE=
+DISKTYPE="ahci"
 DISKFMT="raw"
 GIC=max
 GRAPHICS=0
@@ -85,6 +89,7 @@ DO_KVM=
 MEMSIZE=$MEMSIZE_DEFAULT
 NET=0
 QEMUDIR=
+UEFI_IMG=
 UPSCRIPT=no
 VNC=
 VIRTIO=0
@@ -122,6 +127,66 @@ abspath() {
       /*) echo "$path";;
       *) echo "`pwd`/$path";;
   esac
+}
+
+# The QEMU command-line arguments to be built up below.
+ARGS=""
+
+# The running number of certain disks by type.
+AHCI_NUM=0
+VIRTIO_SCSI_NUM=0
+USB_NUM=0
+
+#######################################
+# Append disk-related arguments to ARGS.
+#
+# Globals:
+#   ARGS
+#   AHCI_NUM
+#   VIRTIO_SCSI_NUM
+#   USB_NUM
+#
+# Arguments:
+#   Disk type, a string.
+#   Disk file, a path.
+#   Disk format, a string.
+#   Disk ID, a string.
+#   Extra -device argunents, a string.
+#######################################
+function append-disk-args {
+   local type="$1"
+   local file="$2"
+   local fmt="$3"
+   local id="$4"
+   local extra_args="$5"
+   ARGS+=" -drive if=none,format=${fmt},file=${file},id=${id}"
+    if [[ "${type}" == "virtio" ]]; then
+        ARGS+=" -device virtio-blk-pci,drive=${id}"
+    elif [[ "${type}" == "ahci" ]]; then
+        if [[ $AHCI_NUM -eq 0 ]]; then
+            ARGS+=" -device ich9-ahci,id=ahci0"
+        fi
+        ARGS+=" -device ide-hd,drive=${id},bus=ahci0.${AHCI_NUM}"
+        AHCI_NUM=$((AHCI_NUM + 1))
+    elif [[ "${type}" == "nvme" ]]; then
+        ARGS+=" -device nvme,drive=${id},serial=zircon"
+    elif [[ "${type}" == "virtio-scsi" ]]; then
+        if [[ $VIRTIO_SCSI_NUM -eq 0 ]]; then
+            ARGS+=" -device virtio-scsi-pci,id=scsi0"
+        fi
+        ARGS+=" -device scsi-hd,drive=${id},scsi-id=${VIRTIO_SCSI_NUM},lun=1"
+        VIRTIO_SCSI_NUM=$((VIRTIO_SCSI_NUM + 1))
+    elif [[ "${type}" == "usb" ]]; then
+        if [[ $USB_NUM -eq 0 ]]; then
+            ARGS+=" -device nec-usb-xhci,id=xhci0"
+        fi
+        ARGS+=" -device usb-storage,bus=xhci0.0,removable=on,drive=${id}"
+        USB_NUM=$((USB_NUM + 1))
+    else
+        echo unrecognized disk type "${type}"
+        exit
+    fi
+    ARGS+="$extra_args"
 }
 
 while getopts "a:c:dD:gHI:km:nNq:s:t::u:Vz:h-:" FLAG; do
@@ -170,7 +235,12 @@ while getopts "a:c:dD:gHI:km:nNq:s:t::u:Vz:h-:" FLAG; do
         s) SMP=$OPTARG;;
         t) QEMU_KERNEL="$(abspath "$OPTARG")";;
         u) UPSCRIPT="$(abspath "$OPTARG")";;
-        V) VIRTIO=1;;
+        V)
+            VIRTIO=1
+            if [[ -z $DISKTYPE ]]; then
+              DISKTYPE="virtio"
+            fi
+            ;;
         z) QEMU_INITRD="$(abspath "$OPTARG")";;
         h) HELP;;
         \?)
@@ -193,8 +263,9 @@ while getopts "a:c:dD:gHI:km:nNq:s:t::u:Vz:h-:" FLAG; do
             kvm) DO_KVM=1;;
             no-hvf) DO_HVF=0;;
             hvf) DO_HVF=1;;
+            uefi=*) UEFI_IMG="$(abspath "${OPTARG#*=}")";;
             *)
-                echo unrecognized long option
+                echo unrecognized long option "$OPTARG"
                 HELP
                 ;;
             esac
@@ -216,18 +287,62 @@ if [[ -z $QEMUDIR && -d "$DIR/../prebuilt/downloads/qemu/bin" ]]; then
     QEMUDIR="$DIR/../prebuilt/downloads/qemu/bin/"
 fi
 
-if [[ -z "$QEMU_INITRD" ]]; then
-    echo -z switch is mandatory
-    HELP
-fi
+readonly EDK2DIR="$DIR/../../prebuilt/third_party/edk2/qemu-${ARCH}"
+case $ARCH in
+  x64)
+  readonly UEFI_FIRMWARE="${EDK2DIR}/OVMF.fd"
+  readonly UEFI_VARS="${EDK2DIR}/OVMF_VARS.fd"
+  ;;
+  arm64)
+  readonly UEFI_FIRMWARE="${EDK2DIR}/QEMU_EFI.fd"
+  readonly UEFI_VARS="${EDK2DIR}/QEMU_VARS.fd"
+  ;;
+esac
 
-if [[ -z "$QEMU_KERNEL" ]]; then
-    echo -t switch is mandatory
-    HELP
+if [[ -n "$UEFI_IMG" ]]; then
+  if [[ -n "$QEMU_INITRD" ]]; then
+      echo "-z and --uefi are mutually exclusive"
+      HELP
+  fi
+
+  if [[ -n "$QEMU_KERNEL" ]]; then
+      echo "-t and --uefi are mutually exclusive"
+      HELP
+  fi
+
+  if [[ -n "$OPT_CMDLINE" ]]; then
+      echo "-c and --uefi are mutually exclusive"
+      HELP
+  fi
+
+  ARGS+=" -drive if=pflash,format=raw,readonly=on,file=${UEFI_FIRMWARE}"
+  # The UEFI variable store. Without 'snapshot=true' this file would need to be
+  # writable and state would persist across invocations; with it, the image
+  # will be copy-on-write and state should persist across reboots.
+  ARGS+=" -drive if=pflash,format=raw,snapshot=true,file=${UEFI_VARS}"
+
+  # `bootindex=0` ensures that this is the highest priority boot option.
+  if (( $DISK )); then
+      readonly UEFI_MEDIA_TYPE="${DISKTYPE}"
+  else
+      readonly UEFI_MEDIA_TYPE="usb"
+  fi
+  append-disk-args "${UEFI_MEDIA_TYPE}" "${UEFI_IMG}" raw uefi ",bootindex=0"
+else
+  if [[ -z "$QEMU_INITRD" ]]; then
+      echo "-z switch is mandatory if --uefi is unset"
+      HELP
+  fi
+
+  if [[ -z "$QEMU_KERNEL" ]]; then
+      echo "-t switch is mandatory if --uefi is unset"
+      HELP
+  fi
+  ARGS+="-kernel $QEMU_KERNEL -initrd $QEMU_INITRD"
 fi
 
 # construct the args for qemu
-ARGS=" -m $MEMSIZE"
+ARGS+=" -m $MEMSIZE"
 if [[ -n $VNC ]]; then
     ARGS+=" -vnc $VNC"
 fi
@@ -249,37 +364,16 @@ else
     fi
 fi
 
-if (( $DISK )); then
-    # if disktype wasn't set on the command line, default to ahci unless VIRTIO is set
-    if [[ -z $DISKTYPE ]]; then
-        if (( $VIRTIO )); then
-            DISKTYPE="virtio"
-        else
-            DISKTYPE="ahci"
-        fi
-    fi
-
-    ARGS+=" -drive file=${DISKFILE},format=${DISKFMT},if=none,id=mydisk"
-    if [[ "$DISKTYPE" == "virtio" ]]; then
-        ARGS+=" -device virtio-blk-pci,drive=mydisk"
-    elif [[ "$DISKTYPE" == "ahci" ]]; then
-        ARGS+=" -device ich9-ahci,id=ahci -device ide-hd,drive=mydisk,bus=ahci.0"
-    elif [[ "$DISKTYPE" == "nvme" ]]; then
-        ARGS+=" -device nvme,drive=mydisk,serial=zircon"
-    elif [[ "$DISKTYPE" == "virtio-scsi" ]]; then
-        ARGS+=" -device virtio-scsi-pci,id=scsi -device scsi-hd,drive=mydisk,scsi-id=1,lun=1"
-    else
-        echo unrecognized disk type \"$DISKTYPE\"
-        exit
-    fi
+if (( $DISK )) && [[ ! -z $DISKFILE ]]; then
+  append-disk-args "${DISKTYPE}" "${DISKFILE}" "${DISKFMT}" mydisk
 fi
 
-ahcinum=1
+
 for ahcifile in ${AHCI[@]}; do
-    ARGS+=" -drive file=${ahcifile},format=raw,if=none,id=ahcidisk${ahcinum}"
-    ARGS+=" -device ich9-ahci,id=ahci${ahcinum}"
-    ARGS+=" -device ide-hd,drive=ahcidisk${ahcinum},bus=ahci.${ahcinum}"
-    ahcinum=$((ahcinum + 1))
+    ARGS+=" -drive file=${ahcifile},format=raw,if=none,id=ahcidisk${AHCI_NUM}"
+    ARGS+=" -device ich9-ahci,id=ahci${AHCI_NUM}"
+    ARGS+=" -device ide-hd,drive=ahcidisk${AHCI_NUM},bus=ahci.${AHCI_NUM}"
+    AHCI_NUM=$((AHCI_NUM + 1))
 done
 
 if (( !$NET )); then
@@ -455,9 +549,14 @@ CMDLINE+="kernel.halt-on-panic=true "
 # they can override others since "last value wins".
 CMDLINE+=$OPT_CMDLINE
 
-# run qemu
-echo CMDLINE: $CMDLINE
 cd /
 set -x
-exec $QEMU -kernel "$QEMU_KERNEL" -initrd "$QEMU_INITRD" \
-     	   $ARGS -append "$CMDLINE" "$@"
+
+# TODO(joshuaseaton): this and other command-line building logic above can be
+# tidied up in having $ARGS be an array.
+if [[ -z $UEFI_IMG ]]; then
+    echo CMDLINE: $CMDLINE
+    exec $QEMU $ARGS -append "$CMDLINE" "$@"
+else
+    exec $QEMU $ARGS "$@"
+fi
