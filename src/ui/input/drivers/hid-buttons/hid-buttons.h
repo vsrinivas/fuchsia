@@ -11,7 +11,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/wire/server.h>
-#include <lib/sync/completion.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
@@ -122,6 +122,7 @@ class HidButtonsDevice : public DeviceType {
   bool MatrixScan(uint32_t row, uint32_t col, zx_duration_t delay);
 
   thrd_t thread_;
+  libsync::Completion thread_started_;
   fbl::Mutex client_lock_;
   ddk::HidbusIfcProtocolClient client_ TA_GUARDED(client_lock_);
   fbl::Array<buttons_button_config_t> buttons_;

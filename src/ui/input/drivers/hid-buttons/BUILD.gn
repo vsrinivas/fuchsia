@@ -22,10 +22,7 @@ fuchsia_driver("hid-buttons-driver") {
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   sources = []
-  deps = [
-    ":common",
-    "//src/devices/lib/driver",
-  ]
+  deps = [ ":common" ]
 }
 
 fuchsia_driver_component("hid-buttons") {
@@ -44,6 +41,7 @@ source_set("common") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
     "//sdk/fidl/fuchsia.buttons:fuchsia.buttons_cpp_wire",
+    "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
@@ -53,7 +51,7 @@ source_set("common") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/hid",
-    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
@@ -74,9 +72,7 @@ test("hid-buttons-test") {
   deps = [
     ":common",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
-
-    # TODO(fxb/115091): Migrate from fake_ddk to mock-ddk.
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
   ]

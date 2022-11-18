@@ -112,6 +112,7 @@ void HidButtonsDevice::Notify(uint32_t button_index) {
 }
 
 int HidButtonsDevice::Thread() {
+  thread_started_.Signal();
   if (poll_period_ != zx::duration::infinite()) {
     poll_timer_.set(zx::deadline_after(poll_period_), zx::duration(0));
     poll_timer_.wait_async(port_, kPortKeyPollTimer, ZX_TIMER_SIGNALED, 0);
@@ -481,6 +482,7 @@ void HidButtonsDevice::ShutDown() {
   zx_port_packet packet = {kPortKeyShutDown, ZX_PKT_TYPE_USER, ZX_OK, {}};
   zx_status_t status = port_.queue(&packet);
   ZX_ASSERT(status == ZX_OK);
+  thread_started_.Wait();
   thrd_join(thread_, NULL);
   for (uint32_t i = 0; i < gpios_.size(); ++i) {
     gpios_[i].irq.destroy();
