@@ -787,16 +787,23 @@ void VkRenderer::Render(const ImageMetadata& render_target,
 void VkRenderer::SetColorConversionValues(const std::array<float, 9>& coefficients,
                                           const std::array<float, 3>& preoffsets,
                                           const std::array<float, 3>& postoffsets) {
+  // Coefficients are ordered like this:
+  // | c0 c1 c2 0 |
+  // | c3 c4 c5 0 |
+  // | c6 c7 c8 0 |
+  // | 0  0   0 1 |
+  //
+  // Note: GLM uses column-major memory layout.
   float values[16] = {coefficients[0],
-                      coefficients[1],
-                      coefficients[2],
-                      0,
                       coefficients[3],
-                      coefficients[4],
-                      coefficients[5],
-                      0,
                       coefficients[6],
+                      0,
+                      coefficients[1],
+                      coefficients[4],
                       coefficients[7],
+                      0,
+                      coefficients[2],
+                      coefficients[5],
                       coefficients[8],
                       0,
                       0,

@@ -23,7 +23,9 @@
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "zircon/system/ulib/fbl/include/fbl/algorithm.h"
 
+#include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
 
 namespace flatland {
@@ -1674,9 +1676,9 @@ VK_TEST_F(VulkanRendererTest, ColorCorrectionTest) {
   renderer.WaitIdle();
 
   // Calculate expected color.
-  const glm::mat4 glm_matrix(.288299, 0.052709, -0.257912, 0.00000, 0.711701, 0.947291, 0.257912,
-                             0.00000, 0.000000, -0.000000, 1.000000, 0.00000, 0.000000, 0.000000,
-                             0.00000, 1.00000);
+  float values[16] = {matrix[0], matrix[3], matrix[6], 0, matrix[1], matrix[4], matrix[7], 0,
+                      matrix[2], matrix[5], matrix[8], 0, 0,         0,         0,         1};
+  glm::mat4 glm_matrix = glm::make_mat4(values);
   auto expected_color_float = glm_matrix * glm::vec4(1, 0, 0, 1);
 
   // Order needs to be BGRA.
@@ -1705,7 +1707,13 @@ VK_TEST_F(VulkanRendererTest, ColorCorrectionTest) {
                    for (uint32_t i = 6; i < 6 + kRenderableWidth; i++) {
                      for (uint32_t j = 3; j < 3 + kRenderableHeight; j++) {
                        auto pixel = GetPixel(linear_vals, kTargetWidth, i, j);
-                       EXPECT_TRUE(pixel == expected_color);
+                       for (uint32_t k = 0; k < 4; k++) {
+                         // Due to different GPU floating point implementations, and other rounding
+                         // issues with converting between linear and sRGB, the pixel values may be
+                         // off by 1.
+                         EXPECT_TRUE(pixel[k] == expected_color[k] ||
+                                     pixel[k] == expected_color[k] - 1);
+                       }
                      }
                    }
 
