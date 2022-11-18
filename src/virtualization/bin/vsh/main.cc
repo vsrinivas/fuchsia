@@ -84,6 +84,9 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
 }
 
 int main(int argc, const char** argv) {
+  std::cerr << "WARNING: This tool has been replaced by `guest vsh` and will soon be removed.\n"
+            << "If there are any concerns with its removable please reach out to jonathanbailey@\n";
+
   fit::function<zx_status_t()> func;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
