@@ -16,15 +16,22 @@
 #include <algorithm>
 #include <functional>
 
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include "lib/trace-engine/context.h"
 #include "lib/trace-engine/instrumentation.h"
+#include "lib/trace-provider/provider.h"
 #include "perfetto/ext/tracing/core/trace_packet.h"
-#include "protos/perfetto/config/track_event/track_event_config.gen.h"
+#include "perfetto/tracing/core/forward_decls.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/perfetto/protos/perfetto/common/trace_stats.gen.h"
+#include "third_party/perfetto/protos/perfetto/config/chrome/chrome_config.gen.h"
 #include "third_party/perfetto/protos/perfetto/config/data_source_config.gen.h"
 #include "third_party/perfetto/protos/perfetto/config/trace_config.gen.h"
 #include "third_party/perfetto/protos/perfetto/config/track_event/track_event_config.gen.h"
+#include "third_party/rapidjson/include/rapidjson/document.h"
 
 namespace {
 // The size of the consumer buffer.
@@ -63,6 +70,42 @@ void LogTraceStats(const perfetto::TraceStats& stats) {
   }
 }
 
+// TODO(fxbug.dev/115525): Remove this once the migration to track_event_config is complete.
+std::string GetChromeTraceConfigString(
+    const perfetto::protos::gen::TrackEventConfig& track_event_config) {
+  rapidjson::Document chrome_trace_config(rapidjson::kObjectType);
+  auto& allocator = chrome_trace_config.GetAllocator();
+
+  rapidjson::Value included_categories(rapidjson::kArrayType);
+  for (const auto& enabled_category : track_event_config.enabled_categories()) {
+    included_categories.PushBack(rapidjson::StringRef(enabled_category), allocator);
+  }
+  chrome_trace_config.AddMember("included_categories", included_categories, allocator);
+
+  rapidjson::Value excluded_categories(rapidjson::kArrayType);
+  for (const auto& disabled_category : track_event_config.disabled_categories()) {
+    excluded_categories.PushBack(rapidjson::StringRef(disabled_category), allocator);
+  }
+  chrome_trace_config.AddMember("excluded_categories", excluded_categories, allocator);
+
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer writer(buffer);
+  chrome_trace_config.Accept(writer);
+  return std::string(buffer.GetString(), buffer.GetSize());
+}
+
+perfetto::protos::gen::TrackEventConfig GetTrackEventConfig(
+    const trace::ProviderConfig& provider_config) {
+  perfetto::protos::gen::TrackEventConfig track_event_config;
+  if (!provider_config.categories.empty()) {
+    // Disable all categories that aren't added to `enabled_categories`
+    track_event_config.add_disabled_categories("*");
+  }
+  for (const auto& enabled_category : provider_config.categories) {
+    track_event_config.add_enabled_categories(enabled_category);
+  }
+  return track_event_config;
+}
 }  // namespace
 
 // Prolongs the lifetime of a trace session when set.
@@ -82,10 +125,14 @@ class ConsumerAdapter::ScopedProlongedTraceContext {
 };
 
 ConsumerAdapter::ConsumerAdapter(perfetto::TracingService* perfetto_service,
-                                 perfetto::base::TaskRunner* perfetto_task_runner)
-    : perfetto_task_runner_(perfetto_task_runner), perfetto_service_(perfetto_service) {
+                                 perfetto::base::TaskRunner* perfetto_task_runner,
+                                 trace::TraceProviderWithFdio* trace_provider)
+    : perfetto_task_runner_(perfetto_task_runner),
+      perfetto_service_(perfetto_service),
+      trace_provider_(trace_provider) {
   FX_DCHECK(perfetto_service_);
   FX_DCHECK(perfetto_task_runner_);
+  FX_DCHECK(trace_provider_);
 
   trace_observer_.Start(async_get_default_dispatcher(), [this] { OnTraceStateUpdate(); });
 }
@@ -207,13 +254,18 @@ void ConsumerAdapter::OnStartTracing() {
   // bad state in the event of consumer buffer saturation (e.g. if there is a burst of data).
   buffer_config->set_fill_policy(perfetto::TraceConfig::BufferConfig::RING_BUFFER);
 
-  perfetto::TraceConfig::DataSource* data_source_config = trace_config.add_data_sources();
+  perfetto::protos::gen::DataSourceConfig* data_source_config =
+      trace_config.add_data_sources()->mutable_config();
   // The data source name is necessary and hardcoded for now, but it should
   // be sourced from FXT somehow.
-  data_source_config->mutable_config()->set_name("org.chromium.trace_event");
-  perfetto::protos::gen::TrackEventConfig track_event_config;
-  data_source_config->mutable_config()->set_track_event_config_raw(
-      track_event_config.SerializeAsString());
+  data_source_config->set_name("org.chromium.trace_event");
+
+  const auto track_event_config = GetTrackEventConfig(trace_provider_->GetProviderConfig());
+  data_source_config->set_track_event_config_raw(track_event_config.SerializeAsString());
+
+  // TODO(fxbug.dev/115525): Remove this once the migration to track_event_config is complete.
+  data_source_config->mutable_chrome_config()->set_trace_config(
+      GetChromeTraceConfigString(track_event_config));
 
   FX_CHECK(!consumer_endpoint_);
   consumer_endpoint_ = perfetto_service_->ConnectConsumer(this, 0);

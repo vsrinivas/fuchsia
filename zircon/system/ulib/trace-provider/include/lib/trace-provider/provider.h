@@ -11,6 +11,7 @@
 
 #include <assert.h>
 #include <lib/async/dispatcher.h>
+#include <lib/trace-engine/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -140,8 +141,17 @@ __END_CDECLS
 #include <lib/zx/channel.h>
 
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace trace {
+
+struct ProviderConfig {
+  trace_buffering_mode_t buffering_mode;
+  std::vector<std::string> categories;
+};
+
+const ProviderConfig& GetProviderConfig(trace_provider_t* provider);
 
 // Convenience RAII wrapper for creating and destroying a trace provider.
 class TraceProvider {
@@ -178,6 +188,9 @@ class TraceProvider {
 
   // Returns true if the trace provider was created successfully.
   bool is_valid() const { return provider_ != nullptr; }
+
+  // Returns the most recent provider config passed to `Initialize`.
+  ProviderConfig GetProviderConfig() const { return ::trace::GetProviderConfig(provider_); }
 
  protected:
   explicit TraceProvider(trace_provider_t* provider) : provider_(provider) {}

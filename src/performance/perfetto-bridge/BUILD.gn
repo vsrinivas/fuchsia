@@ -29,8 +29,9 @@ source_set("perfetto_bridge_lib") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//third_party/perfetto/protos/perfetto/config:lite",
+    "//third_party/perfetto/protos/perfetto/config:cpp",
     "//third_party/perfetto/protos/perfetto/trace:non_minimal_cpp",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

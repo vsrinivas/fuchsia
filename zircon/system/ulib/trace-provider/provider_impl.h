@@ -32,10 +32,13 @@ class TraceProviderImpl final : public trace_provider_t,
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
+  const ProviderConfig& GetProviderConfig() const;
+
  private:
   static void OnClose();
 
   async_dispatcher_t* const dispatcher_;
+  ProviderConfig provider_config_;
 
   TraceProviderImpl(const TraceProviderImpl&) = delete;
   TraceProviderImpl(TraceProviderImpl&&) = delete;

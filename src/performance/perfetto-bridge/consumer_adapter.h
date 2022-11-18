@@ -6,6 +6,7 @@
 #define SRC_PERFORMANCE_PERFETTO_BRIDGE_CONSUMER_ADAPTER_H_
 
 #include <lib/trace-engine/instrumentation.h>
+#include <lib/trace-provider/provider.h>
 #include <lib/trace/observer.h>
 
 #include <memory>
@@ -25,7 +26,8 @@
 class ConsumerAdapter : public perfetto::Consumer {
  public:
   ConsumerAdapter(perfetto::TracingService* perfetto_service,
-                  perfetto::base::TaskRunner* perfetto_task_runner);
+                  perfetto::base::TaskRunner* perfetto_task_runner,
+                  trace::TraceProviderWithFdio* trace_provider);
   ~ConsumerAdapter() override;
 
   ConsumerAdapter(const ConsumerAdapter& other) = delete;
@@ -101,6 +103,8 @@ class ConsumerAdapter : public perfetto::Consumer {
 
   std::atomic<State> state_ FXL_GUARDED_BY(state_mutex_) = State::INACTIVE;
   std::mutex state_mutex_;
+
+  trace::TraceProviderWithFdio* trace_provider_;
 };
 
 #endif  // SRC_PERFORMANCE_PERFETTO_BRIDGE_CONSUMER_ADAPTER_H_
