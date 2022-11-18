@@ -48,6 +48,7 @@ class MainServiceTest : public UnitTestFixture {
                               .oom_crash_reporting_delay = zx::sec(1),
                           },
                           CrashReports::Options{
+                              .build_type_config = BuildTypeConfig{},
                               .config = {},
                               .snapshot_store_max_archives_size = StorageSize::Bytes(0),
                               .snapshot_collector_window_duration = zx::sec(0),

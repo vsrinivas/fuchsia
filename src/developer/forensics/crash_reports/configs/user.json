@@ -1,5 +1,4 @@
 {
     "daily_per_product_quota": 100,
-    "crash_report_upload_policy": "read_from_privacy_settings",
-    "hourly_snapshot": false
+    "crash_report_upload_policy": "read_from_privacy_settings"
 }

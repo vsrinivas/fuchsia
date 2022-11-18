@@ -144,12 +144,16 @@ const char kBuildTypeConfigSchema[] = R"({
     "enable_data_redaction": {
       "type": "boolean"
     },
+    "enable_hourly_snapshots": {
+      "type": "boolean"
+    },
     "enable_limit_inspect_data": {
       "type": "boolean"
     }
   },
   "required": [
     "enable_data_redaction",
+    "enable_hourly_snapshots",
     "enable_limit_inspect_data"
   ],
   "additionalProperties": false
@@ -158,6 +162,7 @@ const char kBuildTypeConfigSchema[] = R"({
 std::optional<BuildTypeConfig> ParseBuildTypeConfig(const rapidjson::Document& json) {
   return BuildTypeConfig{
       .enable_data_redaction = json["enable_data_redaction"].GetBool(),
+      .enable_hourly_snapshots = json["enable_hourly_snapshots"].GetBool(),
       .enable_limit_inspect_data = json["enable_limit_inspect_data"].GetBool(),
   };
 }
