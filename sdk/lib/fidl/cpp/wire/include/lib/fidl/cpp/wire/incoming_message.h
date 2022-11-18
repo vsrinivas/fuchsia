@@ -98,7 +98,7 @@ class EncodedMessage {
   }
 
   fidl_handle_t* handles() const { return message_.handles; }
-  uint32_t handle_actual() const { return message_.num_handles; }
+  uint32_t num_handles() const { return message_.num_handles; }
   fidl_handle_metadata_t* raw_handle_metadata() const { return message_.handle_metadata; }
 
   template <typename Transport>
@@ -270,7 +270,7 @@ class IncomingHeaderAndMessage : public ::fidl::Status {
   uint32_t byte_actual() const { return static_cast<uint32_t>(bytes_.size()); }
 
   fidl_handle_t* handles() const { return body_.handles(); }
-  uint32_t handle_actual() const { return body_.handle_actual(); }
+  uint32_t handle_actual() const { return body_.num_handles(); }
   fidl_handle_metadata_t* raw_handle_metadata() const { return body_.raw_handle_metadata(); }
 
   template <typename Transport>

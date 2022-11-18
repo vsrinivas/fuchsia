@@ -17,7 +17,7 @@ fidl::Status NaturalDecode(::fidl::WireFormatMetadata metadata, bool contains_en
   }
 
   size_t message_byte_actual = message.bytes().size();
-  uint32_t message_handle_actual = message.handle_actual();
+  uint32_t message_handle_actual = message.num_handles();
   ::fidl::internal::NaturalDecoder decoder(std::move(message), metadata.wire_format_version());
   size_t offset;
   if (unlikely(!decoder.Alloc(inline_size, &offset))) {

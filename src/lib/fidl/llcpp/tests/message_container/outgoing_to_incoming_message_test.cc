@@ -37,7 +37,7 @@ TEST(OutgoingToEncodedMessage, IovecMessage) {
   ASSERT_EQ(std::size(bytes1) + std::size(bytes2), result.message().bytes().size());
   EXPECT_EQ(0, memcmp(result.message().bytes().data(), bytes1, std::size(bytes1)));
   EXPECT_EQ(0, memcmp(&result.message().bytes()[std::size(bytes1)], bytes2, std::size(bytes2)));
-  ASSERT_EQ(0u, result.message().handle_actual());
+  ASSERT_EQ(0u, result.message().num_handles());
 }
 
 TEST(OutgoingToEncodedMessage, LargeMessage) {
@@ -93,7 +93,7 @@ TEST(OutgoingToEncodedMessage, Handles) {
   fidl::EncodedMessage& output = result.message();
   EXPECT_EQ(output.bytes().size(), std::size(bytes));
   EXPECT_EQ(0, memcmp(output.bytes().data(), bytes, output.bytes().size()));
-  EXPECT_EQ(output.handle_actual(), 1u);
+  EXPECT_EQ(output.num_handles(), 1u);
   EXPECT_EQ(output.handles()[0], ev.get());
   fidl_channel_handle_metadata_t* out_handle_metadata =
       output.handle_metadata<fidl::internal::ChannelTransport>();

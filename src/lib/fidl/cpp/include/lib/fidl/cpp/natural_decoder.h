@@ -96,7 +96,7 @@ class NaturalDecoder final {
     zx_handle_t* handle = GetPtr<zx_handle_t>(offset);
     switch (*handle) {
       case FIDL_HANDLE_PRESENT: {
-        if (handle_index_ >= body_.handle_actual()) {
+        if (handle_index_ >= body_.num_handles()) {
           SetError(kCodingErrorTooManyHandlesConsumed);
           return;
         }

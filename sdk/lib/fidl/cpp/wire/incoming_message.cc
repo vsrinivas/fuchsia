@@ -42,7 +42,7 @@ EncodedMessage::~EncodedMessage() { std::move(*this).CloseHandles(); }
 
 void EncodedMessage::CloseHandles() && {
   if (transport_vtable_) {
-    transport_vtable_->encoding_configuration->close_many(handles(), handle_actual());
+    transport_vtable_->encoding_configuration->close_many(handles(), num_handles());
   }
   std::move(*this).ReleaseHandles();
 }

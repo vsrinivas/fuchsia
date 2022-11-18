@@ -14,7 +14,7 @@ namespace {
     return ::fit::error(
         ::fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNotAllBytesConsumed));
   }
-  if (unlikely(body.handle_actual() > 0)) {
+  if (unlikely(body.num_handles() > 0)) {
     return ::fit::error(
         ::fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNotAllHandlesConsumed));
   }

@@ -75,7 +75,7 @@ fidl::Status WireDecode(::fidl::WireFormatMetadata metadata, bool contains_envel
   size_t num_bytes = message.bytes().size();
   fidl_handle_t* handles = message.handles();
   fidl_handle_metadata_t* handle_metadata = message.raw_handle_metadata();
-  size_t num_handles = message.handle_actual();
+  size_t num_handles = message.num_handles();
   const internal::CodingConfig* coding_config =
       message.transport_vtable() ? message.transport_vtable()->encoding_configuration
                                  : &internal::kNullCodingConfig;
