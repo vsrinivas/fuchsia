@@ -17,7 +17,7 @@ use fuchsia_component::server;
 use futures::{StreamExt, TryStreamExt};
 use tracing::*;
 
-use crate::wm::{get_first_view_creation_token, WMEvent, WindowManager};
+use crate::wm::{get_first_view_creation_token, WindowManager};
 
 // A fun picture to print to the log when gazelle launches. This is derived from
 // a drawing in the public domain, found at
@@ -70,7 +70,7 @@ async fn main() -> Result<(), Error> {
     info!("{}", WELCOME_LOG);
 
     // Create an event sender receiver pair.
-    let (sender, mut receiver) = EventSender::<WMEvent>::new();
+    let (sender, mut receiver) = EventSender::new();
 
     // Start listening to incoming services.
     start_services(sender.clone());
@@ -90,7 +90,7 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn start_services(sender: EventSender<WMEvent>) {
+fn start_services(sender: EventSender) {
     fasync::Task::local(async move {
         let mut fs = server::ServiceFs::new();
         fs.dir("svc").add_fidl_service(IncomingService::GraphicalPresenter);
@@ -116,17 +116,15 @@ fn start_services(sender: EventSender<WMEvent>) {
 
 async fn serve_view_provider(
     mut request_stream: ui_app::ViewProviderRequestStream,
-    sender: EventSender<WMEvent>,
+    sender: EventSender,
 ) -> Result<(), Error> {
     while let Some(request) = request_stream.next().await {
         match request {
             Ok(ui_app::ViewProviderRequest::CreateView2 { args, .. }) => {
                 if let Some(view_creation_token) = args.view_creation_token {
-                    sender
-                        .send(Event::SystemEvent {
-                            event: SystemEvent::ViewCreationToken { token: view_creation_token },
-                        })
-                        .expect("failed to send SystemEvent::ViewCreationToken");
+                    sender.send(Event::SystemEvent {
+                        event: SystemEvent::ViewCreationToken { token: view_creation_token },
+                    });
                 } else {
                     error!("CreateView2() missing view_creation_token field");
                 }
@@ -140,7 +138,7 @@ async fn serve_view_provider(
 
 async fn serve_graphical_presenter(
     mut request_stream: felement::GraphicalPresenterRequestStream,
-    sender: EventSender<WMEvent>,
+    sender: EventSender,
 ) -> Result<(), Error> {
     while let Ok(Some(request)) = request_stream.try_next().await {
         match request {
@@ -150,18 +148,16 @@ async fn serve_graphical_presenter(
                 view_controller_request,
                 responder,
             } => {
-                sender
-                    .send(Event::SystemEvent {
-                        event: SystemEvent::PresentViewSpec {
-                            view_spec_holder: ViewSpecHolder {
-                                view_spec,
-                                annotation_controller,
-                                view_controller_request,
-                                responder: Some(responder),
-                            },
+                sender.send(Event::SystemEvent {
+                    event: SystemEvent::PresentViewSpec {
+                        view_spec_holder: ViewSpecHolder {
+                            view_spec,
+                            annotation_controller,
+                            view_controller_request,
+                            responder: Some(responder),
                         },
-                    })
-                    .expect("failed to send SystemEvent::PresentViewSpec");
+                    },
+                });
             }
         }
     }

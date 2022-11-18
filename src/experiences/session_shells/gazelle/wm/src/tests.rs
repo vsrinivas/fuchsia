@@ -27,17 +27,18 @@ use tracing::{error, info};
 
 use crate::{
     shortcuts::ShortcutAction,
-    wm::{get_first_view_creation_token, WMEvent, WindowManager},
+    wm::{get_first_view_creation_token, WindowManager},
 };
 
 async fn set_up(
-    sender: EventSender<WMEvent>,
-    receiver: &mut UnboundedReceiver<Event<WMEvent>>,
+    sender: EventSender,
+    receiver: &mut UnboundedReceiver<Event>,
 ) -> Result<(WindowManager, TestProtocolConnector, ui_geometry::ViewTreeWatcherProxy), Error> {
     let test_protocol_connector = TestProtocolConnector::new(build_realm().await?);
 
     let (view_tree_watcher, view_tree_watcher_request) =
         create_proxy::<ui_geometry::ViewTreeWatcherMarker>()?;
+
     let _services_task = fasync::Task::spawn(start_view_provider(
         sender.clone(),
         test_protocol_connector.connect_to_test_scene_controller()?,
@@ -54,15 +55,13 @@ async fn set_up(
     Ok((wm, test_protocol_connector, view_tree_watcher))
 }
 
-fn loggable_event_receiver(
-    receiver: UnboundedReceiver<Event<WMEvent>>,
-) -> impl Stream<Item = Event<WMEvent>> {
+fn loggable_event_receiver(receiver: UnboundedReceiver<Event>) -> impl Stream<Item = Event> {
     receiver.inspect(|event| info!("Parent event: {:?}", event))
 }
 
 #[fuchsia::test]
 async fn test_wm() -> Result<(), Error> {
-    let (sender, mut receiver) = EventSender::<WMEvent>::new();
+    let (sender, mut receiver) = EventSender::new();
     let (mut wm, test_protocol_connector, _) = set_up(sender.clone(), &mut receiver).await?;
     let receiver = loggable_event_receiver(receiver);
 
@@ -143,7 +142,7 @@ async fn test_wm() -> Result<(), Error> {
         assert!(window_has_focus(focus_event));
         info!("Focused on child_view2: {:?}", child_window2.id());
 
-        sender.send(Event::Exit).expect("Failed to send");
+        sender.send(Event::Exit);
     }
     .boxed();
 
@@ -159,7 +158,7 @@ async fn test_wm() -> Result<(), Error> {
 //     let realm = build_realm().await?;
 //     let test_protocol_connector = TestProtocolConnector::new(realm);
 
-//     let (sender, mut receiver) = EventSender::<WMEvent>::new();
+//     let (sender, mut receiver) = EventSender::new();
 
 //     let scene_provider = test_protocol_connector.connect_to_test_scene_controller()?;
 //     let (_view_tree_watcher, view_tree_watcher_request) =
@@ -171,7 +170,7 @@ async fn test_wm() -> Result<(), Error> {
 //     let (_view_creation_token, _view_spec_holders) =
 //         get_first_view_creation_token(&mut receiver).await;
 
-//     sender.send(Event::Exit).expect("Failed to send");
+//     sender.send(Event::Exit);
 
 //     test_protocol_connector.release().await?;
 //     Ok(())
@@ -179,7 +178,7 @@ async fn test_wm() -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn test_dismiss_window_in_background() -> Result<(), Error> {
-    let (sender, mut receiver) = EventSender::<WMEvent>::new();
+    let (sender, mut receiver) = EventSender::new();
     let (mut wm, test_protocol_connector, _) = set_up(sender.clone(), &mut receiver).await?;
     let receiver = loggable_event_receiver(receiver);
 
@@ -232,7 +231,7 @@ async fn test_dismiss_window_in_background() -> Result<(), Error> {
         child_view_controller1.dismiss().expect("Failed to dismiss ChildView1");
 
         // Nothing should crash.
-        sender.send(Event::Exit).expect("Failed to send");
+        sender.send(Event::Exit);
     }
     .boxed();
 
@@ -245,7 +244,7 @@ async fn test_dismiss_window_in_background() -> Result<(), Error> {
 // TODO(https://fxbug.dev/114716): Enable after test scene controller stops reporting FATAL error.
 // #[fuchsia::test]
 // async fn test_immediately_close() -> Result<(), Error> {
-//     let (sender, mut receiver) = EventSender::<WMEvent>::new();
+//     let (sender, mut receiver) = EventSender::new();
 //     let (mut wm, test_protocol_connector, _) = set_up(sender.clone(), &mut receiver).await?;
 //     let receiver = loggable_event_receiver(receiver);
 
@@ -257,7 +256,7 @@ async fn test_dismiss_window_in_background() -> Result<(), Error> {
 //         info!("Add child_view1");
 //         create_child_view(sender.clone(), Box::new(test_protocol_connector.clone())).await;
 
-//         sender.send(Event::Exit).expect("Failed to send");
+//         sender.send(Event::Exit);
 //     }
 //     .boxed();
 
@@ -269,7 +268,7 @@ async fn test_dismiss_window_in_background() -> Result<(), Error> {
 // TODO(https://fxbug.dev/114716): Enable after test scene controller stops reporting FATAL error.
 // #[fuchsia::test]
 // async fn test_dismiss_before_attach() -> Result<(), Error> {
-//     let (sender, mut receiver) = EventSender::<WMEvent>::new();
+//     let (sender, mut receiver) = EventSender::new();
 //     let (mut wm, test_protocol_connector, _) = set_up(sender.clone(), &mut receiver).await?;
 //     let receiver = loggable_event_receiver(receiver);
 
@@ -283,7 +282,7 @@ async fn test_dismiss_window_in_background() -> Result<(), Error> {
 //             create_child_view(sender.clone(), Box::new(test_protocol_connector.clone())).await;
 //         child_view_controller1.dismiss().expect("Failed to dismiss childview1");
 
-//         sender.send(Event::Exit).expect("Failed to send");
+//         sender.send(Event::Exit);
 //     }
 //     .boxed();
 
@@ -293,7 +292,7 @@ async fn test_dismiss_window_in_background() -> Result<(), Error> {
 // }
 
 async fn start_view_provider(
-    event_sender: EventSender<WMEvent>,
+    event_sender: EventSender,
     scene_provider: ui_test_scene::ControllerProxy,
     _view_tree_watcher_request: ServerEnd<ui_geometry::ViewTreeWatcherMarker>,
 ) {
@@ -320,15 +319,13 @@ async fn start_view_provider(
             .expect("Failed to read ViewProvider request stream")
         {
             Ok(ui_app::ViewProviderRequest::CreateView2 { args, .. }) => {
-                event_sender
-                    .send(Event::SystemEvent {
-                        event: SystemEvent::ViewCreationToken {
-                            token: args.view_creation_token.expect(
-                                "ViewCreationToken missing in ViewProvider.CreateView2 request",
-                            ),
-                        },
-                    })
-                    .expect("Failed to send SystemEvent::ViewCreationToken event");
+                event_sender.send(Event::SystemEvent {
+                    event: SystemEvent::ViewCreationToken {
+                        token: args.view_creation_token.expect(
+                            "ViewCreationToken missing in ViewProvider.CreateView2 request",
+                        ),
+                    },
+                });
             }
             // Panic for all other CreateView requests and errors to fail the test.
             _ => panic!("ViewProvider impl only handles CreateView2()"),
@@ -339,13 +336,9 @@ async fn start_view_provider(
 }
 
 async fn create_child_view(
-    parent_sender: EventSender<WMEvent>,
+    parent_sender: EventSender,
     protocol_connector: Box<dyn ProtocolConnector>,
-) -> (
-    Window<WMEvent>,
-    futures::channel::mpsc::UnboundedReceiver<Event<WMEvent>>,
-    felement::ViewControllerProxy,
-) {
+) -> (Window, futures::channel::mpsc::UnboundedReceiver<Event>, felement::ViewControllerProxy) {
     let ViewCreationTokenPair { view_creation_token, viewport_creation_token } =
         ViewCreationTokenPair::new().expect("Fidl error");
     let (view_controller_proxy, view_controller_request) =
@@ -354,20 +347,18 @@ async fn create_child_view(
         viewport_creation_token: Some(viewport_creation_token),
         ..felement::ViewSpec::EMPTY
     };
-    parent_sender
-        .send(Event::SystemEvent {
-            event: SystemEvent::PresentViewSpec {
-                view_spec_holder: ViewSpecHolder {
-                    view_spec,
-                    annotation_controller: None,
-                    view_controller_request: Some(view_controller_request),
-                    responder: None,
-                },
+    parent_sender.send(Event::SystemEvent {
+        event: SystemEvent::PresentViewSpec {
+            view_spec_holder: ViewSpecHolder {
+                view_spec,
+                annotation_controller: None,
+                view_controller_request: Some(view_controller_request),
+                responder: None,
             },
-        })
-        .expect("Failed to send SystemEvent::PresentViewSpec event");
+        },
+    });
 
-    let (child_sender, child_receiver) = EventSender::<WMEvent>::new();
+    let (child_sender, child_receiver) = EventSender::new();
     let mut window = Window::new(child_sender)
         .with_view_creation_token(view_creation_token)
         .with_protocol_connector(protocol_connector);
@@ -376,8 +367,8 @@ async fn create_child_view(
 }
 
 async fn wait_for_resize_event(
-    receiver: &mut futures::channel::mpsc::UnboundedReceiver<Event<WMEvent>>,
-) -> Event<WMEvent> {
+    receiver: &mut futures::channel::mpsc::UnboundedReceiver<Event>,
+) -> Event {
     wait_for_event(
         move |event| match event {
             Event::WindowEvent { event: WindowEvent::Resized { .. }, .. } => true,
@@ -389,8 +380,8 @@ async fn wait_for_resize_event(
 }
 
 async fn wait_for_focus_event(
-    receiver: &mut futures::channel::mpsc::UnboundedReceiver<Event<WMEvent>>,
-) -> Event<WMEvent> {
+    receiver: &mut futures::channel::mpsc::UnboundedReceiver<Event>,
+) -> Event {
     wait_for_event(
         move |event| match event {
             Event::WindowEvent { event: WindowEvent::Focused { .. }, .. } => true,
@@ -402,9 +393,9 @@ async fn wait_for_focus_event(
 }
 
 async fn wait_for_event(
-    mut callback: impl FnMut(&Event<WMEvent>) -> bool,
-    receiver: &mut futures::channel::mpsc::UnboundedReceiver<Event<WMEvent>>,
-) -> Event<WMEvent> {
+    mut callback: impl FnMut(&Event) -> bool,
+    receiver: &mut futures::channel::mpsc::UnboundedReceiver<Event>,
+) -> Event {
     while let Some(child_event) = receiver.next().await {
         info!("Child event: {:?}", child_event);
         if callback(&child_event) {
@@ -415,17 +406,17 @@ async fn wait_for_event(
 }
 
 /// Removes events that may have accumulated since last checked and test does not care about.
-fn _drain_events(receiver: &mut futures::channel::mpsc::UnboundedReceiver<Event<WMEvent>>) {
+fn _drain_events(receiver: &mut futures::channel::mpsc::UnboundedReceiver<Event>) {
     while let Ok(Some(_)) = receiver.try_next() {}
 }
 
 async fn _drain_events_until_closed(
-    receiver: &mut futures::channel::mpsc::UnboundedReceiver<Event<WMEvent>>,
+    receiver: &mut futures::channel::mpsc::UnboundedReceiver<Event>,
 ) {
     while let Some(_) = receiver.next().await {}
 }
 
-fn window_has_size(event: Event<WMEvent>) -> bool {
+fn window_has_size(event: Event) -> bool {
     match event {
         Event::WindowEvent { event: WindowEvent::Resized { width, height, .. }, .. } => {
             width > 0 && height > 0
@@ -434,17 +425,14 @@ fn window_has_size(event: Event<WMEvent>) -> bool {
     }
 }
 
-fn window_has_focus(event: Event<WMEvent>) -> bool {
+fn window_has_focus(event: Event) -> bool {
     match event {
         Event::WindowEvent { event: WindowEvent::Focused { focused }, .. } => focused,
         _ => false,
     }
 }
 
-async fn invoke_shortcut(
-    action: ShortcutAction,
-    sender: EventSender<WMEvent>,
-) -> ui_shortcut2::Handled {
+async fn invoke_shortcut(action: ShortcutAction, sender: EventSender) -> ui_shortcut2::Handled {
     let (listener_request, mut listener_stream) =
         create_proxy_and_stream::<ui_shortcut2::ListenerMarker>()
             .expect("Failed to create proxy and stream");
@@ -453,12 +441,10 @@ async fn invoke_shortcut(
         if let Some(request) = listener_stream.next().await {
             match request {
                 Ok(ui_shortcut2::ListenerRequest::OnShortcut { id, responder }) => {
-                    sender
-                        .send(Event::WindowEvent {
-                            window_id: WindowId(0),
-                            event: WindowEvent::Shortcut { id, responder },
-                        })
-                        .expect("Failed to send WindowEvent::Shortcut event");
+                    sender.send(Event::WindowEvent {
+                        window_id: WindowId(0),
+                        event: WindowEvent::Shortcut { id, responder },
+                    });
                 }
                 Err(fidl::Error::ClientChannelClosed { .. }) => {
                     error!("Shortcut listener connection closed.");

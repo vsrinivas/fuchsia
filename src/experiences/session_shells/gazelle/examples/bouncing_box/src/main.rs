@@ -62,21 +62,15 @@ impl Bouncer {
     }
 }
 
-#[derive(Debug)]
-enum BouncerEvent {}
-
-struct App<T> {
+struct App {
     bouncer: Option<Bouncer>,
     image_data: ImageData,
-    event_sender: EventSender<T>,
-    windows: HashMap<WindowId, Window<T>>,
+    event_sender: EventSender,
+    windows: HashMap<WindowId, Window>,
 }
 
-impl<T> App<T> {
-    fn handle_event(&mut self, event: Event<T>) -> Result<(), Error>
-    where
-        T: 'static + Sync + Send,
-    {
+impl App {
+    fn handle_event(&mut self, event: Event) -> Result<(), Error> {
         match event {
             Event::Init => {
                 // Create the application's window.
@@ -120,9 +114,7 @@ impl<T> App<T> {
                         }
                     }
                     WindowEvent::Closed => {
-                        self.event_sender
-                            .send(Event::Exit)
-                            .expect("Failed to send Event::Exit event");
+                        self.event_sender.send(Event::Exit);
                     }
                     _ => {}
                 }
@@ -142,8 +134,8 @@ async fn main() -> Result<(), Error> {
     let (bytes, width, height) = load_png(Cursor::new(IMAGE_DATA))?;
     let image_data = load_image_from_bytes(&bytes, width, height).await?;
 
-    let (event_sender, mut receiver) = EventSender::<BouncerEvent>::new();
-    let mut app = App::<BouncerEvent> {
+    let (event_sender, mut receiver) = EventSender::new();
+    let mut app = App {
         bouncer: None,
         image_data,
         event_sender: event_sender.clone(),

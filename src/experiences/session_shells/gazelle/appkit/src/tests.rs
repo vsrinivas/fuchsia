@@ -45,18 +45,15 @@ use crate::{
     window::{Window, WindowId},
 };
 
-#[derive(Debug)]
-enum TestEvent {}
-
-struct TestApp<T> {
+struct TestApp {
     width: u32,
     height: u32,
     active_window: Option<WindowId>,
-    windows: HashMap<WindowId, Window<T>>,
-    child_views: HashMap<ChildViewId, ChildView<T>>,
+    windows: HashMap<WindowId, Window>,
+    child_views: HashMap<ChildViewId, ChildView>,
 }
 
-impl<T> TestApp<T> {
+impl TestApp {
     pub fn new() -> Self {
         TestApp {
             width: 0,
@@ -73,7 +70,7 @@ async fn test_appkit() -> Result<(), Error> {
     let realm = build_realm().await?;
     let test_protocol_connector = TestProtocolConnector::new(realm);
 
-    let (event_sender, mut receiver) = EventSender::<TestEvent>::new();
+    let (event_sender, mut receiver) = EventSender::new();
 
     let (graphical_presenter_proxy, graphical_presenter_request_stream) =
         create_proxy_and_stream::<felement::GraphicalPresenterMarker>()?;
@@ -163,7 +160,7 @@ async fn test_appkit() -> Result<(), Error> {
                             ui_comp::ContentId { value: 0 },
                         );
                         window.redraw();
-                        event_sender.send(Event::Exit).expect("Failed to send Event::Exit event");
+                        event_sender.send(Event::Exit);
                     }
                 }
             }
@@ -190,7 +187,7 @@ async fn test_appkit() -> Result<(), Error> {
 }
 
 async fn start_services(
-    event_sender: EventSender<TestEvent>,
+    event_sender: EventSender,
     scene_controller: ui_test_scene::ControllerProxy,
     graphical_presenter_request_stream: felement::GraphicalPresenterRequestStream,
 ) {
@@ -202,7 +199,7 @@ async fn start_services(
 }
 
 async fn start_view_provider(
-    event_sender: EventSender<TestEvent>,
+    event_sender: EventSender,
     scene_controller: ui_test_scene::ControllerProxy,
 ) {
     let (view_provider, mut view_provider_request_stream) =
@@ -226,13 +223,11 @@ async fn start_view_provider(
             .expect("Failed to read ViewProvider request stream")
         {
             Ok(ui_app::ViewProviderRequest::CreateView2 { args, .. }) => {
-                event_sender
-                    .send(Event::SystemEvent {
-                        event: SystemEvent::ViewCreationToken {
-                            token: args.view_creation_token.unwrap(),
-                        },
-                    })
-                    .expect("Failed to send SystemEvent::ViewCreationToken event");
+                event_sender.send(Event::SystemEvent {
+                    event: SystemEvent::ViewCreationToken {
+                        token: args.view_creation_token.unwrap(),
+                    },
+                });
             }
             // Panic for all other CreateView requests and errors to fail the test.
             _ => panic!("ViewProvider impl only handles CreateView2()"),
@@ -243,7 +238,7 @@ async fn start_view_provider(
 }
 
 async fn start_graphical_presenter(
-    event_sender: EventSender<TestEvent>,
+    event_sender: EventSender,
     mut request_stream: felement::GraphicalPresenterRequestStream,
 ) {
     while let Some(request) = request_stream
@@ -258,18 +253,16 @@ async fn start_graphical_presenter(
                 view_controller_request,
                 responder,
             } => {
-                event_sender
-                    .send(Event::SystemEvent {
-                        event: SystemEvent::PresentViewSpec {
-                            view_spec_holder: ViewSpecHolder {
-                                view_spec,
-                                annotation_controller,
-                                view_controller_request,
-                                responder: Some(responder),
-                            },
+                event_sender.send(Event::SystemEvent {
+                    event: SystemEvent::PresentViewSpec {
+                        view_spec_holder: ViewSpecHolder {
+                            view_spec,
+                            annotation_controller,
+                            view_controller_request,
+                            responder: Some(responder),
                         },
-                    })
-                    .expect("Failed to send SystemEvent::PresentViewSpec event");
+                    },
+                });
             }
         }
     }
@@ -331,11 +324,11 @@ async fn create_child_view_spec(
     .await?;
 
     fasync::Task::local(async move {
-        let (sender, mut receiver) = futures::channel::mpsc::unbounded::<Event<TestEvent>>();
-        let event_sender = EventSender::<TestEvent>(sender);
-        event_sender.send(Event::Init).expect("Failed to send Event::Init event");
+        let (sender, mut receiver) = futures::channel::mpsc::unbounded::<Event>();
+        let event_sender = EventSender(sender);
+        event_sender.send(Event::Init);
 
-        let mut window_holder: Option<Window<TestEvent>> = None;
+        let mut window_holder: Option<Window> = None;
         let mut view_creation_token = Some(view_creation_token);
         while let Some(event) = receiver.next().await {
             info!("------ChildView  {:?}", event);

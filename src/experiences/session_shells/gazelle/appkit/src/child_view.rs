@@ -30,16 +30,16 @@ impl ChildViewId {
 
 /// Defines a struct to hold state for ChildView.
 #[derive(Debug)]
-pub struct ChildView<T> {
+pub struct ChildView {
     flatland: ui_comp::FlatlandProxy,
     viewport_content_id: ui_comp::ContentId,
     view_ref: Option<ui_views::ViewRef>,
     _window_id: WindowId,
-    _event_sender: EventSender<T>,
+    _event_sender: EventSender,
     _running_tasks: Vec<fasync::Task<()>>,
 }
 
-impl<T> ChildView<T> {
+impl ChildView {
     pub(crate) fn new(
         flatland: ui_comp::FlatlandProxy,
         window_id: WindowId,
@@ -47,11 +47,8 @@ impl<T> ChildView<T> {
         mut view_spec_holder: ViewSpecHolder,
         width: u32,
         height: u32,
-        event_sender: EventSender<T>,
-    ) -> Result<Self, Error>
-    where
-        T: 'static + Sync + Send,
-    {
+        event_sender: EventSender,
+    ) -> Result<Self, Error> {
         let mut viewport_creation_token = match view_spec_holder.view_spec.viewport_creation_token {
             Some(token) => token,
             None => {
@@ -144,26 +141,22 @@ impl<T> ChildView<T> {
         child_view_watcher_proxy: ui_comp::ChildViewWatcherProxy,
         child_view_id: ChildViewId,
         window_id: WindowId,
-        event_sender: EventSender<T>,
+        event_sender: EventSender,
     ) {
         match child_view_watcher_proxy.get_status().await {
-            Ok(_) => event_sender
-                .send(Event::ChildViewEvent {
-                    child_view_id,
-                    window_id,
-                    event: ChildViewEvent::Available,
-                })
-                .expect("Failed to send ChildView::Available event"),
+            Ok(_) => event_sender.send(Event::ChildViewEvent {
+                child_view_id,
+                window_id,
+                event: ChildViewEvent::Available,
+            }),
             Err(err) => error!("ChildViewWatcher.get_status return error: {:?}", err),
         }
         match child_view_watcher_proxy.get_view_ref().await {
-            Ok(view_ref) => event_sender
-                .send(Event::ChildViewEvent {
-                    child_view_id,
-                    window_id,
-                    event: ChildViewEvent::Attached { view_ref },
-                })
-                .expect("Failed to send ChildView::Attached event"),
+            Ok(view_ref) => event_sender.send(Event::ChildViewEvent {
+                child_view_id,
+                window_id,
+                event: ChildViewEvent::Attached { view_ref },
+            }),
             Err(err) => error!("ChildViewWatcher.get_view_ref returned error: {:?}", err),
         }
 
@@ -171,31 +164,27 @@ impl<T> ChildView<T> {
         // useful signal when the child view's component exits or crashes or does not use
         // [felement::ViewController]'s dismiss method.
         let _ = child_view_watcher_proxy.on_closed().await;
-        event_sender
-            .send(Event::ChildViewEvent {
-                child_view_id,
-                window_id,
-                event: ChildViewEvent::Detached,
-            })
-            .expect("Failed to send ChildView::Detached event");
+        event_sender.send(Event::ChildViewEvent {
+            child_view_id,
+            window_id,
+            event: ChildViewEvent::Detached,
+        });
     }
 
     async fn serve_view_controller(
         mut request_stream: felement::ViewControllerRequestStream,
         child_view_id: ChildViewId,
         window_id: WindowId,
-        event_sender: EventSender<T>,
+        event_sender: EventSender,
     ) {
         if let Ok(Some(request)) = request_stream.try_next().await {
             match request {
                 felement::ViewControllerRequest::Dismiss { .. } => {
-                    event_sender
-                        .send(Event::ChildViewEvent {
-                            child_view_id,
-                            window_id,
-                            event: ChildViewEvent::Dismissed,
-                        })
-                        .expect("Failed to send ChildView::Detached event");
+                    event_sender.send(Event::ChildViewEvent {
+                        child_view_id,
+                        window_id,
+                        event: ChildViewEvent::Dismissed,
+                    });
                 }
             }
         }

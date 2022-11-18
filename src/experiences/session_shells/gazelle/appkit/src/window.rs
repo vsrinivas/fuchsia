@@ -101,7 +101,7 @@ pub(crate) struct WindowAttributes {
 const ROOT_TRANSFORM_ID: ui_comp::TransformId = ui_comp::TransformId { value: 1 };
 
 /// Defines a struct to hold [Window] state.
-pub struct Window<T> {
+pub struct Window {
     attributes: WindowAttributes,
     id: WindowId,
     id_generator: IdGenerator,
@@ -113,14 +113,14 @@ pub struct Window<T> {
     view_controller_proxy: Option<felement::ViewControllerProxy>,
     focuser: Option<ui_views::FocuserProxy>,
     shortcut_task: Option<fasync::Task<()>>,
-    event_sender: EventSender<T>,
+    event_sender: EventSender,
     running_tasks: Vec<fasync::Task<()>>,
     presenter: Option<Arc<Mutex<Presenter>>>,
     protocol_connector: Box<dyn ProtocolConnector>,
 }
 
-impl<T> Window<T> {
-    pub fn new(event_sender: EventSender<T>) -> Window<T> {
+impl Window {
+    pub fn new(event_sender: EventSender) -> Window {
         let id_generator = IdGenerator::new_with_first_id(ROOT_TRANSFORM_ID.value);
         let id = WindowId(0);
         let attributes = WindowAttributes::default();
@@ -151,12 +151,12 @@ impl<T> Window<T> {
         }
     }
 
-    pub fn with_title(mut self, title: String) -> Window<T> {
+    pub fn with_title(mut self, title: String) -> Window {
         self.attributes.title = Some(title);
         self
     }
 
-    pub fn with_view_creation_token(mut self, token: ui_views::ViewCreationToken) -> Window<T> {
+    pub fn with_view_creation_token(mut self, token: ui_views::ViewCreationToken) -> Window {
         self.attributes.view_creation_token = Some(token);
         self
     }
@@ -164,7 +164,7 @@ impl<T> Window<T> {
     pub fn with_protocol_connector(
         mut self,
         protocol_connector: Box<dyn ProtocolConnector>,
-    ) -> Window<T> {
+    ) -> Window {
         self.protocol_connector = protocol_connector;
         self
     }
@@ -221,10 +221,7 @@ impl<T> Window<T> {
         }
     }
 
-    pub fn register_shortcuts(&mut self, shortcuts: Vec<ui_shortcut2::Shortcut>)
-    where
-        T: 'static + Sync + Send,
-    {
+    pub fn register_shortcuts(&mut self, shortcuts: Vec<ui_shortcut2::Shortcut>) {
         let mut view_ref_for_shortcuts = fuchsia_scenic::duplicate_view_ref(&self.view_ref)
             .expect("Failed to duplicate ViewRef");
         let window_id = self.id();
@@ -255,12 +252,10 @@ impl<T> Window<T> {
             while let Some(request) = listener_stream.next().await {
                 match request {
                     Ok(ui_shortcut2::ListenerRequest::OnShortcut { id, responder }) => {
-                        event_sender
-                            .send(Event::WindowEvent {
-                                window_id,
-                                event: WindowEvent::Shortcut { id, responder },
-                            })
-                            .expect("Failed to send WindowEvent::Shortcut event");
+                        event_sender.send(Event::WindowEvent {
+                            window_id,
+                            event: WindowEvent::Shortcut { id, responder },
+                        });
                     }
                     Err(fidl::Error::ClientChannelClosed { .. }) => {
                         error!("Shortcut listener connection closed.");
@@ -292,10 +287,7 @@ impl<T> Window<T> {
             .expect("Failed to lock presenter");
     }
 
-    pub fn create_view(&mut self) -> Result<(), Error>
-    where
-        T: 'static + Sync + Send,
-    {
+    pub fn create_view(&mut self) -> Result<(), Error> {
         // `create_view` can be called only once!
         if self.id != WindowId(0) {
             return Err(anyhow!("create_view already called!"));
@@ -436,19 +428,15 @@ impl<T> Window<T> {
             let pixel_ratio = match result {
                 Ok(layout_info) => {
                     let (width, height, pixel_ratio) = dimensions_from_layout_info(layout_info);
-                    event_sender
-                        .send(Event::WindowEvent {
-                            window_id,
-                            event: WindowEvent::Resized { width, height, pixel_ratio },
-                        })
-                        .expect("Failed to send WindowEvent::Resized event");
+                    event_sender.send(Event::WindowEvent {
+                        window_id,
+                        event: WindowEvent::Resized { width, height, pixel_ratio },
+                    });
                     pixel_ratio
                 }
                 Err(fidl::Error::ClientChannelClosed { .. }) => {
                     warn!("ParentViewportWatcher connection closed.");
-                    event_sender
-                        .send(Event::WindowEvent { window_id, event: WindowEvent::Closed })
-                        .expect("Failed to send WindowEvent::Closed event");
+                    event_sender.send(Event::WindowEvent { window_id, event: WindowEvent::Closed });
                     return;
                 }
                 Err(fidl_error) => {
@@ -489,11 +477,8 @@ impl<T> Window<T> {
         view_spec_holder: ViewSpecHolder,
         width: u32,
         height: u32,
-        event_sender: EventSender<T>,
-    ) -> Result<ChildView<T>, Error>
-    where
-        T: 'static + Sync + Send,
-    {
+        event_sender: EventSender,
+    ) -> Result<ChildView, Error> {
         let viewport_content_id = self.next_content_id();
         let child_view = ChildView::new(
             self.get_flatland(),
@@ -513,11 +498,8 @@ impl<T> Window<T> {
         viewport_creation_token: ui_views::ViewportCreationToken,
         width: u32,
         height: u32,
-        event_sender: EventSender<T>,
-    ) -> Result<ChildView<T>, Error>
-    where
-        T: 'static + Sync + Send,
-    {
+        event_sender: EventSender,
+    ) -> Result<ChildView, Error> {
         self.create_child_view(
             ViewSpecHolder {
                 view_spec: felement::ViewSpec {
@@ -542,11 +524,11 @@ impl<T> Window<T> {
     }
 }
 
-async fn serve_flatland_events<T>(
+async fn serve_flatland_events(
     window_id: WindowId,
     flatland: ui_comp::FlatlandProxy,
     presenter: Arc<Mutex<Presenter>>,
-    event_sender: EventSender<T>,
+    event_sender: EventSender,
 ) {
     let flatland_event_stream = flatland.take_event_stream();
     let event_sender = &event_sender;
@@ -564,12 +546,10 @@ async fn serve_flatland_events<T>(
                         .try_lock()
                         .map(|mut presenter| presenter.on_next_frame(values))
                         .expect("Failed to call on_next_frame on presenter");
-                    event_sender
-                        .send(Event::WindowEvent {
-                            window_id,
-                            event: WindowEvent::NeedsRedraw { next_present_time },
-                        })
-                        .expect("Failed to send WindowEvent::NeedsRedraw event");
+                    event_sender.send(Event::WindowEvent {
+                        window_id,
+                        event: WindowEvent::NeedsRedraw { next_present_time },
+                    });
                 }
                 ui_comp::FlatlandEvent::OnFramePresented { .. } => {}
                 ui_comp::FlatlandEvent::OnError { error } => {
@@ -582,10 +562,10 @@ async fn serve_flatland_events<T>(
         .await;
 }
 
-async fn serve_layout_info_watcher<T>(
+async fn serve_layout_info_watcher(
     window_id: WindowId,
     parent_viewport_watcher: ui_comp::ParentViewportWatcherProxy,
-    event_sender: EventSender<T>,
+    event_sender: EventSender,
 ) {
     let mut layout_info_stream = HangingGetStream::new(
         parent_viewport_watcher,
@@ -597,18 +577,14 @@ async fn serve_layout_info_watcher<T>(
             Ok(layout_info) => {
                 let (width, height, pixel_ratio) = dimensions_from_layout_info(layout_info);
 
-                event_sender
-                    .send(Event::WindowEvent {
-                        window_id,
-                        event: WindowEvent::Resized { width, height, pixel_ratio },
-                    })
-                    .expect("Failed to send WindowEvent::Resized event");
+                event_sender.send(Event::WindowEvent {
+                    window_id,
+                    event: WindowEvent::Resized { width, height, pixel_ratio },
+                });
             }
             Err(fidl::Error::ClientChannelClosed { .. }) => {
                 info!("ParentViewportWatcher connection closed.");
-                event_sender
-                    .send(Event::WindowEvent { window_id, event: WindowEvent::Closed })
-                    .expect("Failed to send WindowEvent::Closed event");
+                event_sender.send(Event::WindowEvent { window_id, event: WindowEvent::Closed });
                 break;
             }
             Err(fidl_error) => {
@@ -618,18 +594,19 @@ async fn serve_layout_info_watcher<T>(
     }
 }
 
-async fn serve_view_ref_focused_watcher<T>(
+async fn serve_view_ref_focused_watcher(
     window_id: WindowId,
     focused: ui_views::ViewRefFocusedProxy,
-    event_sender: EventSender<T>,
+    event_sender: EventSender,
 ) {
     let mut focused_stream = HangingGetStream::new(focused, ui_views::ViewRefFocusedProxy::watch);
     while let Some(result) = focused_stream.next().await {
         match result {
             Ok(ui_views::FocusState { focused: Some(focused), .. }) => {
-                event_sender
-                    .send(Event::WindowEvent { window_id, event: WindowEvent::Focused { focused } })
-                    .expect("Failed to send WindowEvent::Focused event");
+                event_sender.send(Event::WindowEvent {
+                    window_id,
+                    event: WindowEvent::Focused { focused },
+                });
             }
             Ok(ui_views::FocusState { focused: None, .. }) => {
                 error!("Missing required field FocusState.focused");
@@ -750,15 +727,13 @@ async fn serve_touch_source_watcher(
     }
 }
 
-async fn serve_pointer_events<T>(
+async fn serve_pointer_events(
     window_id: WindowId,
     mut stream: impl Stream<Item = PointerEvent> + std::marker::Unpin,
-    event_sender: EventSender<T>,
+    event_sender: EventSender,
 ) {
     while let Some(event) = stream.next().await {
-        event_sender
-            .send(Event::WindowEvent { window_id, event: WindowEvent::Pointer { event } })
-            .expect("failed to send Message.");
+        event_sender.send(Event::WindowEvent { window_id, event: WindowEvent::Pointer { event } });
     }
 }
 
@@ -788,24 +763,22 @@ async fn present_to_graphical_presenter(
         .expect("Failed to present view to GraphicalPresenter");
 }
 
-async fn wait_for_view_controller_close<T>(
+async fn wait_for_view_controller_close(
     window_id: WindowId,
     view_controller_proxy: felement::ViewControllerProxy,
-    event_sender: EventSender<T>,
+    event_sender: EventSender,
 ) {
     // Waits for view_controller_proxy.on_closed().
     let stream = view_controller_proxy.take_event_stream();
     let _ = stream.collect::<Vec<_>>().await;
-    event_sender
-        .send(Event::WindowEvent { window_id, event: WindowEvent::Closed })
-        .expect("Failed to send WindowEvent::Closed event");
+    event_sender.send(Event::WindowEvent { window_id, event: WindowEvent::Closed });
 }
 
-async fn serve_keyboard_listener<T>(
+async fn serve_keyboard_listener(
     window_id: WindowId,
     mut view_ref: ui_views::ViewRef,
     keyboard: ui_input3::KeyboardProxy,
-    event_sender: EventSender<T>,
+    event_sender: EventSender,
 ) {
     let (listener_client_end, mut listener_stream) =
         create_request_stream::<ui_input3::KeyboardListenerMarker>()
@@ -815,12 +788,10 @@ async fn serve_keyboard_listener<T>(
         Ok(()) => {
             while let Some(Ok(event)) = listener_stream.next().await {
                 let ui_input3::KeyboardListenerRequest::OnKeyEvent { event, responder, .. } = event;
-                event_sender
-                    .send(Event::WindowEvent {
-                        window_id,
-                        event: WindowEvent::Keyboard { event, responder },
-                    })
-                    .expect("Failed to send WindowEvent::Keyboard event");
+                event_sender.send(Event::WindowEvent {
+                    window_id,
+                    event: WindowEvent::Keyboard { event, responder },
+                });
             }
         }
         Err(e) => {

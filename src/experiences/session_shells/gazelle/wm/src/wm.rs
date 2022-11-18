@@ -23,10 +23,6 @@ const BACKGROUND_COLOR: ui_comp::ColorRgba =
 // Height of the app launcher used to subtract from fullscreen height for child views.
 const APP_LAUNCHER_HEIGHT: u32 = 40;
 
-/// Defines an enumeration of events used to implement the window manager.
-#[derive(Debug)]
-pub enum WMEvent {}
-
 /// Defines a type for holding the state of the window manager.
 ///
 /// The window manager holds child views from applications provided to it by GraphicalPresenter and
@@ -40,14 +36,14 @@ pub enum WMEvent {}
 ///
 pub(crate) struct WindowManager {
     // The event sender used to route events.
-    event_sender: EventSender<WMEvent>,
+    event_sender: EventSender,
     // The main application [Window] of the Window Manager.
-    window: Window<WMEvent>,
+    window: Window,
     // The map of all launched [ChildView] views by their [ChildViewId].
-    child_views: IndexMap<ChildViewId, ChildView<WMEvent>>,
+    child_views: IndexMap<ChildViewId, ChildView>,
     // The map of all incoming [ChildView]s views by their [ChildViewId] that are not assigned a
     // flatland transform yet.
-    pending_child_views: IndexMap<ChildViewId, ChildView<WMEvent>>,
+    pending_child_views: IndexMap<ChildViewId, ChildView>,
     // The flatland transforms that hold the [ChildView]'s content. The transforms always stay in
     // back-to-front order, so when child_views gets rearranged, the child-to-transform mapping
     // changes.
@@ -70,7 +66,7 @@ pub(crate) struct WindowManager {
 
 impl WindowManager {
     pub fn new(
-        event_sender: EventSender<WMEvent>,
+        event_sender: EventSender,
         view_creation_token: ui_views::ViewCreationToken,
         pending_child_view_present_specs: Vec<ViewSpecHolder>,
         protocol_connector: Box<dyn ProtocolConnector>,
@@ -141,7 +137,7 @@ impl WindowManager {
 
     pub async fn run(
         &mut self,
-        mut receiver: impl Stream<Item = Event<WMEvent>> + std::marker::Unpin,
+        mut receiver: impl Stream<Item = Event> + std::marker::Unpin,
     ) -> Result<(), Error> {
         while let Some(event) = receiver.next().await {
             debug!("{:?}", event);
@@ -184,11 +180,9 @@ impl WindowManager {
                             // Handle any pending childview specs.
                             for view_spec_holder in self.pending_child_view_present_specs.drain(..)
                             {
-                                self.event_sender
-                                    .send(Event::SystemEvent {
-                                        event: SystemEvent::PresentViewSpec { view_spec_holder },
-                                    })
-                                    .expect("failed to send SystemEvent::PresentViewSpec");
+                                self.event_sender.send(Event::SystemEvent {
+                                    event: SystemEvent::PresentViewSpec { view_spec_holder },
+                                });
                             }
                         }
 
@@ -427,7 +421,7 @@ impl WindowManager {
 /// Returns the first ViewCreationToken received by ViewProvider service and all requests to
 /// present a view to the GraphicalPresenter service, while consuming all other events.
 pub async fn get_first_view_creation_token(
-    receiver: &mut UnboundedReceiver<Event<WMEvent>>,
+    receiver: &mut UnboundedReceiver<Event>,
 ) -> (ui_views::ViewCreationToken, Vec<ViewSpecHolder>) {
     let mut view_spec_holders = vec![];
     while let Some(event) = receiver.next().await {
