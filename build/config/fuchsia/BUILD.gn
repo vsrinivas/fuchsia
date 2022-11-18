@@ -15,12 +15,6 @@ import("//build/toolchain/rbe.gni")
 import("//src/lib/icu/third_party_icu_headers.gni")
 import("//zircon/public/sysroot/rust.gni")
 
-# Deprecated.
-# TODO(fxbug.dev/44795): Remove once none of the petals depend on this.
-config("werror") {
-  configs = [ "//build/config:werror" ]
-}
-
 # ccache, at least in some configurations, caches preprocessed content. This
 # means that by the time the compiler sees it, macros are unrolled. A number
 # of gcc and clang diagnostics are conditioned on whether the source is part
