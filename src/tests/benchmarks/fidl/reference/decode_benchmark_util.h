@@ -25,7 +25,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
 
   fidl::Arena<65536> allocator;
   FidlType aligned_value = builder(allocator);
-  fidl::unstable::OwnedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV2,
+  fidl::internal::OwnedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV2,
                                                         &aligned_value);
   ZX_ASSERT(encoded.ok());
 
@@ -49,7 +49,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   }
 
   // Reencode the decoded result and compare against the initial (expected) encode_result.
-  fidl::unstable::OwnedEncodedMessage<FidlType> reencoded(
+  fidl::internal::OwnedEncodedMessage<FidlType> reencoded(
       fidl::internal::WireFormatVersion::kV2, reinterpret_cast<FidlType*>(bytes.data()));
   if (!reencoded.ok()) {
     std::cout << "fidl::Encode failed with error: " << reencoded.error() << std::endl;

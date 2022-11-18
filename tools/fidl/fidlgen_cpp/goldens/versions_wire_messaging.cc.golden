@@ -63,7 +63,7 @@ namespace test_versions {
     ::fidl::UnownedClientEnd<::test_versions::Protocol> client,
     ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
@@ -104,7 +104,7 @@ namespace test_versions {
 ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>::Foo() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo> _request_object{};
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>, ::fidl::internal::ChannelTransport> _request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>, ::fidl::internal::ChannelTransport> _request_message(
       ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }

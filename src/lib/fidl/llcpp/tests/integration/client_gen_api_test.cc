@@ -419,7 +419,7 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
   // Set up an Values.OnEvent() message but send it without the payload. This should trigger a
   // decoding error.
   fidl::internal::TransactionalEvent<Values::OnValueEvent> resp(fidl::StringView(""));
-  fidl::unstable::OwnedEncodedMessage<fidl::internal::TransactionalEvent<Values::OnValueEvent>>
+  fidl::internal::OwnedEncodedMessage<fidl::internal::TransactionalEvent<Values::OnValueEvent>>
       encoded(&resp);
   ASSERT_TRUE(encoded.ok());
   auto bytes = encoded.GetOutgoingMessage().CopyBytes();

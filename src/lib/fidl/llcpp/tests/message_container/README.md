@@ -4,13 +4,11 @@ These cover the various LLCPP "message" classes and utilities, which are
 responsible for encoding/decoding FIDL values and sometimes allocating storage
 for them:
 
-  - `fidl::IncomingMessage`
+  - `fidl::EncodedMessage`
   - `fidl::OutgoingMessage`
-  - `fidl::OutgoingMessage`
-  - `fidl::OutgoingIovecMessage`
-  - `fidl::unstable::OwnedEncodedMessage<Foo>`
-  - `fidl::internal::UnownedEncodedMessage<Foo>`
   - `fidl::OutgoingToEncodedMessage`
+  - `fidl::internal::OwnedEncodedMessage<Foo>`
+  - `fidl::internal::UnownedEncodedMessage<Foo>`
   - ...
 
 In addition, the `fidl::Status` result/error types are also tested here, since

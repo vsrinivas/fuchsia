@@ -162,7 +162,7 @@ class EncodedMessage {
 //
 // |IncomingHeaderAndMessage| relinquishes the ownership of the handles
 // after decoding. Instead, callers must adopt the decoded content into another
-// RAII class, such as |fidl::unstable::DecodedMessage<FidlType>|.
+// RAII class, such as |fidl::DecodedValue<FidlType>|.
 //
 // Functions that take |IncomingHeaderAndMessage&| conditionally take
 // ownership of the message. For functions in the public API, they must then

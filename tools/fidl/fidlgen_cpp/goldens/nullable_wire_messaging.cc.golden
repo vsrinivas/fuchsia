@@ -20,7 +20,7 @@ extern "C" const fidl_type_t test_nullable_SimpleProtocolAddResponseTable;
     ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> handle_storage;
@@ -163,7 +163,7 @@ void fidl::internal::WireCompleterImpl<::test_nullable::SimpleProtocol::Add>::Re
 void fidl::internal::WireCompleterImpl<::test_nullable::SimpleProtocol::Add>::MakeReply(int32_t sum) {
   ::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add> _response{sum};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>, ::fidl::internal::ChannelTransport>
       _response_message{
           ::fidl::internal::AllowUnownedInputRef{}, &_response};

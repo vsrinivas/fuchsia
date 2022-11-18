@@ -2042,7 +2042,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::O
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::OneWayAnonComposed,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2080,7 +2080,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::O
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::OneWayNamedComposed,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2118,7 +2118,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::O
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::OneWayImport,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayImport>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2156,7 +2156,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::O
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::OneWayLocal,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayLocal>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2194,7 +2194,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::O
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::OneWayAnon,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnon>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2232,7 +2232,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::TwoWayAnonComposed,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2273,7 +2273,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2311,7 +2311,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::TwoWayNamedComposed,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2352,7 +2352,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2390,7 +2390,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::TwoWayImport,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2431,7 +2431,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::TwoWayImportWithError,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2469,7 +2469,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::TwoWayLocal,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2510,7 +2510,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::TwoWayLocalWithError,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2548,7 +2548,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::TwoWayAnon,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2589,7 +2589,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_protocollayouts::MainProtocol::TwoWayAnonWithError,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::fidl::internal::ChannelTransport
       >
   >;

@@ -1668,7 +1668,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport
       >
   >;
@@ -1706,7 +1706,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>, ::fidl::internal::DriverTransport
       >
   >;
@@ -1744,7 +1744,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>, ::fidl::internal::DriverTransport
       >
   >;
@@ -1782,7 +1782,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>, ::fidl::internal::DriverTransport
       >
   >;
@@ -1820,7 +1820,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>, ::fidl::internal::DriverTransport
       >
   >;
@@ -1858,7 +1858,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>, ::fidl::internal::DriverTransport
       >
   >;
@@ -1899,7 +1899,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -1940,7 +1940,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -1981,7 +1981,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -2022,7 +2022,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -2060,7 +2060,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>, ::fidl::internal::DriverTransport
       >
   >;
@@ -2098,7 +2098,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>, ::fidl::internal::DriverTransport
       >
   >;
@@ -2136,7 +2136,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>, ::fidl::internal::DriverTransport
       >
   >;
@@ -2174,7 +2174,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>, ::fidl::internal::DriverTransport
       >
   >;
@@ -2215,7 +2215,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -2256,7 +2256,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -2297,7 +2297,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -2338,7 +2338,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -6136,7 +6136,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport
       >
   >;
@@ -6174,7 +6174,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>, ::fidl::internal::DriverTransport
       >
   >;
@@ -6212,7 +6212,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>, ::fidl::internal::DriverTransport
       >
   >;
@@ -6250,7 +6250,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>, ::fidl::internal::DriverTransport
       >
   >;
@@ -6288,7 +6288,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>, ::fidl::internal::DriverTransport
       >
   >;
@@ -6326,7 +6326,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>, ::fidl::internal::DriverTransport
       >
   >;
@@ -6367,7 +6367,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -6408,7 +6408,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -6449,7 +6449,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -6490,7 +6490,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -8884,7 +8884,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport
       >
   >;
@@ -8922,7 +8922,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>, ::fidl::internal::DriverTransport
       >
   >;
@@ -8960,7 +8960,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>, ::fidl::internal::DriverTransport
       >
   >;
@@ -8998,7 +8998,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>, ::fidl::internal::DriverTransport
       >
   >;
@@ -9036,7 +9036,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>, ::fidl::internal::DriverTransport
       >
   >;
@@ -9077,7 +9077,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -9118,7 +9118,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -9159,7 +9159,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>, ::fidl::internal::DriverTransport
       >
   >;
@@ -9200,7 +9200,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>, ::fidl::internal::DriverTransport
       >
   >;

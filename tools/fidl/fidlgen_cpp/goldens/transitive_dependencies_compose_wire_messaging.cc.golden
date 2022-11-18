@@ -18,7 +18,7 @@ extern "C" const fidl_type_t test_bottom_BottomGetFooResponseTable;
     ::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top> client,
     ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>> handle_storage;
@@ -160,7 +160,7 @@ void fidl::internal::WireCompleterImpl<::test_transitivedependenciescompose::Top
 void fidl::internal::WireCompleterImpl<::test_transitivedependenciescompose::Top::GetFoo>::MakeReply(const ::test_bottom::wire::Foo& foo) {
   ::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo> _response{foo};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::internal::ChannelTransport>
       _response_message{
           ::fidl::internal::AllowUnownedInputRef{}, &_response};

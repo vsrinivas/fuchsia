@@ -31,7 +31,7 @@ struct {{ .WireMethodTypes }} {
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       {{ .Marker }},
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           {{ .WireTransactionalRequest }}, {{ .Transport.Type }}
       >
   >;

@@ -113,7 +113,7 @@ struct ::fidl::internal::WireMethodTypes<::test_placementofattributes::ExamplePr
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_placementofattributes::ExampleProtocol::Method,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<

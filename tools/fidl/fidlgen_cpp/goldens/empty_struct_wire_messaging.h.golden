@@ -281,7 +281,7 @@ struct ::fidl::internal::WireMethodTypes<::test_emptystruct::EmptyProtocol::Send
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_emptystruct::EmptyProtocol::Send,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
@@ -304,7 +304,7 @@ struct ::fidl::internal::WireMethodTypes<::test_emptystruct::EmptyProtocol::Send
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_emptystruct::EmptyProtocol::SendAndReceive,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<

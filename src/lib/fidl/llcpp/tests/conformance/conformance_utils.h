@@ -81,7 +81,7 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
                    bool check_handle_rights) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
-  ::fidl::unstable::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{},
+  ::fidl::internal::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{},
                                                           wire_format_version, value);
   if (!encoded.ok()) {
     std::cout << "Encoding failed: " << encoded.error() << std::endl;
@@ -143,7 +143,7 @@ bool EncodeFailure(fidl::internal::WireFormatVersion wire_format_version, FidlTy
                    zx_status_t expected_error_code) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
-  ::fidl::unstable::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{},
+  ::fidl::internal::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{},
                                                           wire_format_version, value);
   if (encoded.ok()) {
     std::cout << "Encoding unexpectedly succeeded" << std::endl;

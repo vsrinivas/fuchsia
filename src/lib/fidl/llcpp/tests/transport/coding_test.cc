@@ -101,7 +101,7 @@ struct fidl::IsFidlObject<Input> : public std::true_type {};
 
 TEST(Coding, EncodedDecode) {
   Input input{.h = kTestHandleValue};
-  fidl::unstable::OwnedEncodedMessage<Input, TestTransport> encoded(
+  fidl::internal::OwnedEncodedMessage<Input, TestTransport> encoded(
       fidl::internal::WireFormatVersion::kV2, &input);
   ASSERT_OK(encoded.status());
   auto& msg = encoded.GetOutgoingMessage();

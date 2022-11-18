@@ -176,7 +176,7 @@ struct ::fidl::internal::WireMethodTypes<::test_anonymous::SomeProtocol::SomeMet
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_anonymous::SomeProtocol::SomeMethod,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_anonymous::SomeProtocol::SomeMethod>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<

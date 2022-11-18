@@ -188,7 +188,7 @@ class TestClient {
       fit::callback<void(TwoWayResponseBody)> callback;
     };
     auto* context = new TwoWayResponseContext(std::move(callback));
-    fidl::unstable::OwnedEncodedMessage<TwoWayRequest, fidl::internal::SocketTransport> encoded(
+    fidl::internal::OwnedEncodedMessage<TwoWayRequest, fidl::internal::SocketTransport> encoded(
         &request);
     client_controller_.get().SendTwoWay(encoded.GetOutgoingMessage(), context);
   }
@@ -218,7 +218,7 @@ class TestServer : public fidl::internal::IncomingMessageDispatcher {
     TwoWayResponse response{.body = {.payload = kResponsePayload}};
     fidl::InitTxnHeader(&response.header, kTwoWayTxid, kTwoWayOrdinal,
                         fidl::MessageDynamicFlags::kStrictMethod);
-    fidl::unstable::OwnedEncodedMessage<TwoWayResponse, fidl::internal::SocketTransport> encoded(
+    fidl::internal::OwnedEncodedMessage<TwoWayResponse, fidl::internal::SocketTransport> encoded(
         &response);
     txn->Reply(&encoded.GetOutgoingMessage());
   }

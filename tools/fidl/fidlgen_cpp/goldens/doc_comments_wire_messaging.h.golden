@@ -139,7 +139,7 @@ struct ::fidl::internal::WireMethodTypes<::test_doccomments::Interface::Method> 
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_doccomments::Interface::Method,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<

@@ -164,7 +164,7 @@ struct ::fidl::internal::WireMethodTypes<::test_foreigntypeinresponseusedthrough
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<

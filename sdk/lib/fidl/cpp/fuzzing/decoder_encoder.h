@@ -158,7 +158,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   // By specifying |AllowUnownedInputRef|, we fuzz the code paths used in production message
   // passing, which uses multiple iovecs referencing input objects instead of copying.
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::unstable::OwnedEncodedMessage<Body> encoded(::fidl::internal::AllowUnownedInputRef{},
+  fidl::internal::OwnedEncodedMessage<Body> encoded(::fidl::internal::AllowUnownedInputRef{},
                                                     fidl::internal::WireFormatVersion::kV2, value);
 
   if (!encoded.ok()) {
@@ -197,7 +197,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   // in-process messaging.
   Body* value2 = decoded2.value().pointer();
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::unstable::OwnedEncodedMessage<Body> encoded2(fidl::internal::WireFormatVersion::kV2,
+  fidl::internal::OwnedEncodedMessage<Body> encoded2(fidl::internal::WireFormatVersion::kV2,
                                                      value2);
 
   if (!encoded2.ok()) {

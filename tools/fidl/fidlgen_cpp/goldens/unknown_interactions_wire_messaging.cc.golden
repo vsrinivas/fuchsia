@@ -374,7 +374,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     outgoing.Write(client.handle());
@@ -416,7 +416,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     outgoing.Write(client.handle());
@@ -458,7 +458,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> handle_storage;
@@ -512,7 +512,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> handle_storage;
@@ -574,7 +574,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>> handle_storage;
@@ -636,7 +636,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>> handle_storage;
@@ -698,7 +698,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> handle_storage;
@@ -760,7 +760,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> handle_storage;
@@ -822,7 +822,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> handle_storage;
@@ -884,7 +884,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>> handle_storage;
@@ -946,7 +946,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> handle_storage;
@@ -1008,7 +1008,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> handle_storage;
@@ -1070,7 +1070,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> handle_storage;
@@ -1132,7 +1132,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> handle_storage;
@@ -1194,7 +1194,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> handle_storage;
@@ -1256,7 +1256,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> handle_storage;
@@ -1318,7 +1318,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> handle_storage;
@@ -1380,7 +1380,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> handle_storage;
@@ -1442,14 +1442,14 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictOneWay() {
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> _request_object{  };
-    ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> _request_message(
+    ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> _request_message(
         ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
     return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
   }
   ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleOneWay() {
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> _request_object{  };
-    ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport> _request_message(
+    ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport> _request_message(
         ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
     return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
   }
@@ -2434,7 +2434,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::MakeReply() {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> _response{  };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -2478,7 +2478,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>::MakeReply(int32_t some_field) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> _response{ some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -2522,7 +2522,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionResponse UnknownInteractionsProtocolStrictTwoWayUnionResponse) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> _response{ UnknownInteractionsProtocolStrictTwoWayUnionResponse };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -2566,7 +2566,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableResponse UnknownInteractionsProtocolStrictTwoWayTableResponse) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> _response{ UnknownInteractionsProtocolStrictTwoWayTableResponse };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -2613,7 +2613,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -2681,7 +2681,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -2755,7 +2755,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -2825,7 +2825,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -2892,7 +2892,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -2939,7 +2939,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -2987,7 +2987,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -3033,7 +3033,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -3081,7 +3081,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -3149,7 +3149,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -3223,7 +3223,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -3293,7 +3293,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -3688,7 +3688,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEvent() {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> _response{ };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -3712,7 +3712,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEvent() {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> _response{ };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -3739,7 +3739,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventFields(int32_t some_field) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields> _response{some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -3763,7 +3763,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventFields(int32_t some_field) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields> _response{some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -3790,7 +3790,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventUnion(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest UnknownInteractionsProtocolStrictEventUnionRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion> _response{UnknownInteractionsProtocolStrictEventUnionRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -3814,7 +3814,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventUnion(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest UnknownInteractionsProtocolStrictEventUnionRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion> _response{UnknownInteractionsProtocolStrictEventUnionRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -3841,7 +3841,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventTable(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest UnknownInteractionsProtocolStrictEventTableRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable> _response{UnknownInteractionsProtocolStrictEventTableRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -3865,7 +3865,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventTable(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest UnknownInteractionsProtocolStrictEventTableRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable> _response{UnknownInteractionsProtocolStrictEventTableRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -3892,7 +3892,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -3916,7 +3916,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -3943,7 +3943,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventFieldsErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -3967,7 +3967,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventFieldsErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -3994,7 +3994,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventUnionErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -4018,7 +4018,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventUnionErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -4045,7 +4045,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventTableErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -4069,7 +4069,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictEventTableErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -4096,7 +4096,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEvent() {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> _response{ };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -4120,7 +4120,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEvent() {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> _response{ };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -4147,7 +4147,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventFields(int32_t some_field) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields> _response{some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -4171,7 +4171,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventFields(int32_t some_field) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields> _response{some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -4198,7 +4198,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventUnion(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest UnknownInteractionsProtocolFlexibleEventUnionRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion> _response{UnknownInteractionsProtocolFlexibleEventUnionRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -4222,7 +4222,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventUnion(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest UnknownInteractionsProtocolFlexibleEventUnionRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion> _response{UnknownInteractionsProtocolFlexibleEventUnionRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -4249,7 +4249,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventTable(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest UnknownInteractionsProtocolFlexibleEventTableRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable> _response{UnknownInteractionsProtocolFlexibleEventTableRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -4273,7 +4273,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventTable(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest UnknownInteractionsProtocolFlexibleEventTableRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable> _response{UnknownInteractionsProtocolFlexibleEventTableRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -4300,7 +4300,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -4324,7 +4324,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -4351,7 +4351,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventFieldsErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -4375,7 +4375,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventFieldsErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -4402,7 +4402,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventUnionErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -4426,7 +4426,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventUnionErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -4453,7 +4453,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventTableErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -4477,7 +4477,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleEventTableErr(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -4786,7 +4786,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     outgoing.Write(client.handle());
@@ -4828,7 +4828,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     outgoing.Write(client.handle());
@@ -4870,7 +4870,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> handle_storage;
@@ -4924,7 +4924,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> handle_storage;
@@ -4986,7 +4986,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>> handle_storage;
@@ -5048,7 +5048,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>> handle_storage;
@@ -5110,7 +5110,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> handle_storage;
@@ -5172,7 +5172,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> handle_storage;
@@ -5234,7 +5234,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> handle_storage;
@@ -5296,7 +5296,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> handle_storage;
@@ -5358,14 +5358,14 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictOneWay() {
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> _request_object{  };
-    ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> _request_message(
+    ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> _request_message(
         ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
     return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
   }
   ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleOneWay() {
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> _request_object{  };
-    ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport> _request_message(
+    ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>, ::fidl::internal::ChannelTransport> _request_message(
         ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
     return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
   }
@@ -6044,7 +6044,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::MakeReply() {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> _response{  };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -6088,7 +6088,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>::MakeReply(int32_t some_field) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> _response{ some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -6132,7 +6132,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> _response{ UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -6176,7 +6176,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse UnknownInteractionsAjarProtocolStrictTwoWayTableResponse) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> _response{ UnknownInteractionsAjarProtocolStrictTwoWayTableResponse };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -6223,7 +6223,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -6291,7 +6291,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -6365,7 +6365,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -6435,7 +6435,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -6734,7 +6734,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEvent() {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> _response{ };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -6758,7 +6758,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEvent() {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> _response{ };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -6785,7 +6785,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventFields(int32_t some_field) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields> _response{some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -6809,7 +6809,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventFields(int32_t some_field) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields> _response{some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -6836,7 +6836,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventUnion(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest UnknownInteractionsAjarProtocolStrictEventUnionRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion> _response{UnknownInteractionsAjarProtocolStrictEventUnionRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -6860,7 +6860,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventUnion(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest UnknownInteractionsAjarProtocolStrictEventUnionRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion> _response{UnknownInteractionsAjarProtocolStrictEventUnionRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -6887,7 +6887,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventTable(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest UnknownInteractionsAjarProtocolStrictEventTableRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable> _response{UnknownInteractionsAjarProtocolStrictEventTableRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -6911,7 +6911,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventTable(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest UnknownInteractionsAjarProtocolStrictEventTableRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable> _response{UnknownInteractionsAjarProtocolStrictEventTableRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -6938,7 +6938,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -6962,7 +6962,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -6989,7 +6989,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventFieldsErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -7013,7 +7013,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventFieldsErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -7040,7 +7040,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventUnionErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -7064,7 +7064,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventUnionErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -7091,7 +7091,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventTableErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -7115,7 +7115,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictEventTableErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -7142,7 +7142,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEvent() {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> _response{ };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -7166,7 +7166,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEvent() {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> _response{ };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -7193,7 +7193,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventFields(int32_t some_field) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields> _response{some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -7217,7 +7217,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventFields(int32_t some_field) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields> _response{some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -7244,7 +7244,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventUnion(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest UnknownInteractionsAjarProtocolFlexibleEventUnionRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion> _response{UnknownInteractionsAjarProtocolFlexibleEventUnionRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -7268,7 +7268,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventUnion(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest UnknownInteractionsAjarProtocolFlexibleEventUnionRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion> _response{UnknownInteractionsAjarProtocolFlexibleEventUnionRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -7295,7 +7295,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventTable(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest UnknownInteractionsAjarProtocolFlexibleEventTableRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable> _response{UnknownInteractionsAjarProtocolFlexibleEventTableRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -7319,7 +7319,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventTable(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest UnknownInteractionsAjarProtocolFlexibleEventTableRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable> _response{UnknownInteractionsAjarProtocolFlexibleEventTableRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -7346,7 +7346,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -7370,7 +7370,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -7397,7 +7397,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventFieldsErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -7421,7 +7421,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventFieldsErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -7448,7 +7448,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventUnionErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -7472,7 +7472,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventUnionErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -7499,7 +7499,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventTableErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -7523,7 +7523,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleEventTableErr(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -7739,7 +7739,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     outgoing.Write(client.handle());
@@ -7781,7 +7781,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> handle_storage;
@@ -7835,7 +7835,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> handle_storage;
@@ -7897,7 +7897,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>> handle_storage;
@@ -7959,7 +7959,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>> handle_storage;
@@ -8021,7 +8021,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> handle_storage;
@@ -8083,7 +8083,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> handle_storage;
@@ -8145,7 +8145,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> handle_storage;
@@ -8207,7 +8207,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> handle_storage;
@@ -8269,7 +8269,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictOneWay() {
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> _request_object{  };
-    ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> _request_message(
+    ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>, ::fidl::internal::ChannelTransport> _request_message(
         ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
     return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
   }
@@ -8786,7 +8786,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::MakeReply() {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> _response{  };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -8830,7 +8830,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>::MakeReply(int32_t some_field) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> _response{ some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -8874,7 +8874,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> _response{ UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -8918,7 +8918,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse UnknownInteractionsClosedProtocolStrictTwoWayTableResponse) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> _response{ UnknownInteractionsClosedProtocolStrictTwoWayTableResponse };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -8965,7 +8965,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -9033,7 +9033,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -9107,7 +9107,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -9177,7 +9177,7 @@ void
 fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>::MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> _response{ result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
@@ -9406,7 +9406,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEvent() {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> _response{ };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -9430,7 +9430,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEvent() {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> _response{ };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -9457,7 +9457,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventFields(int32_t some_field) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields> _response{some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -9481,7 +9481,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventFields(int32_t some_field) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields> _response{some_field };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -9508,7 +9508,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventUnion(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest UnknownInteractionsClosedProtocolStrictEventUnionRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion> _response{UnknownInteractionsClosedProtocolStrictEventUnionRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -9532,7 +9532,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventUnion(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest UnknownInteractionsClosedProtocolStrictEventUnionRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion> _response{UnknownInteractionsClosedProtocolStrictEventUnionRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -9559,7 +9559,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventTable(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest UnknownInteractionsClosedProtocolStrictEventTableRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable> _response{UnknownInteractionsClosedProtocolStrictEventTableRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -9583,7 +9583,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventTable(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest UnknownInteractionsClosedProtocolStrictEventTableRequest) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable> _response{UnknownInteractionsClosedProtocolStrictEventTableRequest };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -9610,7 +9610,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -9634,7 +9634,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventErr(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -9661,7 +9661,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventFieldsErr(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -9685,7 +9685,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventFieldsErr(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -9712,7 +9712,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventUnionErr(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -9736,7 +9736,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventUnionErr(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -9763,7 +9763,7 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
 fidl::Status fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventTableErr(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -9787,7 +9787,7 @@ fidl::Status fidl::internal::WireWeakBufferEventSender<::test_unknowninteraction
 fidl::Status fidl::internal::WireEventSender<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictEventTableErr(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResult result) {
   ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> _response{result };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>, ::fidl::internal::ChannelTransport> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();

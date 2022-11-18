@@ -981,7 +981,7 @@ struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBindin
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -1022,7 +1022,7 @@ struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBindin
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -1063,7 +1063,7 @@ struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBindin
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -1104,7 +1104,7 @@ struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBindin
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -1145,7 +1145,7 @@ struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBindin
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2676,7 +2676,7 @@ struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::ImportsSameNam
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_bindingsdenylist::ImportsSameNameContext::Unattributed,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::internal::ChannelTransport
       >
   >;
@@ -2714,7 +2714,7 @@ struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::ImportsSameNam
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::internal::ChannelTransport
       >
   >;

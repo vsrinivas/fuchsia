@@ -254,7 +254,7 @@ struct ::fidl::internal::WireMethodTypes<::test_union::TestProtocol::StrictXUnio
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<
@@ -277,7 +277,7 @@ struct ::fidl::internal::WireMethodTypes<::test_union::TestProtocol::FlexibleXUn
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<

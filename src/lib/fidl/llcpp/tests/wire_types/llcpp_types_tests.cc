@@ -43,7 +43,7 @@ TEST(LlcppTypesTests, EncodedMessageTest) {
   EXPECT_EQ(zx::channel::create(0, &msg.channel, &channel_1), ZX_OK);
 
   {
-    fidl::unstable::OwnedEncodedMessage<NonNullableChannelRequest> encoded(&msg);
+    fidl::internal::OwnedEncodedMessage<NonNullableChannelRequest> encoded(&msg);
 
     HelperExpectPeerValid(channel_1);
   }
@@ -111,7 +111,7 @@ TEST(LlcppTypesTests, RoundTripTest) {
     NonNullableChannelTransactionalRequest request;
     request.header = header;
     request.body = std::move(decoded.value().value());
-    fidl::unstable::OwnedEncodedMessage<NonNullableChannelTransactionalRequest> encoded2(&request);
+    fidl::internal::OwnedEncodedMessage<NonNullableChannelTransactionalRequest> encoded2(&request);
     EXPECT_TRUE(encoded2.ok());
 
     // Byte-level comparison
@@ -188,7 +188,7 @@ TEST(LlcppTypesTests, VectorView) {
 // point directly into its body. This behavior could change, however, but is verified in the test.
 TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
   constexpr uint32_t vector_view_count = 100;
-  std::unique_ptr<fidl::unstable::OwnedEncodedMessage<VectorStruct>> encoded;
+  std::unique_ptr<fidl::internal::OwnedEncodedMessage<VectorStruct>> encoded;
 
   {
     fidl::Arena<vector_view_count * sizeof(uint32_t)> allocator;
@@ -199,11 +199,11 @@ TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
       vector_struct.v[i] = i;
     }
 
-    encoded = std::make_unique<fidl::unstable::OwnedEncodedMessage<VectorStruct>>(
+    encoded = std::make_unique<fidl::internal::OwnedEncodedMessage<VectorStruct>>(
         fidl::internal::WireFormatVersion::kV2, &vector_struct);
     ASSERT_TRUE(encoded->ok());
 
-    auto encoded_with_iovecs = std::make_unique<fidl::unstable::OwnedEncodedMessage<VectorStruct>>(
+    auto encoded_with_iovecs = std::make_unique<fidl::internal::OwnedEncodedMessage<VectorStruct>>(
         fidl::internal::AllowUnownedInputRef{}, fidl::internal::WireFormatVersion::kV2,
         &vector_struct);
     ASSERT_TRUE(encoded_with_iovecs->ok());

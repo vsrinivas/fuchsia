@@ -40,7 +40,7 @@ TEST(MessageBufferSize, ResponseStorageAllocationStrategy) {
 
   // The stored message is expected to be smaller than the array size, since the array is heap
   // allocated (though the actual size of the object is not specified).
-  static_assert(sizeof(fidl::unstable::OwnedEncodedMessage<
+  static_assert(sizeof(fidl::internal::OwnedEncodedMessage<
                        fidl_llcpp_buffersize_test::wire::Array4096Elements>) < 4096);
 }
 

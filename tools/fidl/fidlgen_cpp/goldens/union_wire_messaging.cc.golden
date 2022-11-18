@@ -24,7 +24,7 @@ extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseM
     ::fidl::UnownedClientEnd<::test_union::TestProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> handle_storage;
@@ -83,7 +83,7 @@ namespace test_union {
     ::fidl::UnownedClientEnd<::test_union::TestProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>, ::fidl::internal::ChannelTransport> request_message(
+  ::fidl::internal::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> handle_storage;
@@ -261,7 +261,7 @@ void fidl::internal::WireCompleterImpl<::test_union::TestProtocol::StrictXUnionH
 void fidl::internal::WireCompleterImpl<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::MakeReply(::test_union::wire::StrictBoundedXUnion xu) {
   ::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> _response{xu};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>, ::fidl::internal::ChannelTransport>
       _response_message{
           ::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -300,7 +300,7 @@ void fidl::internal::WireCompleterImpl<::test_union::TestProtocol::FlexibleXUnio
 void fidl::internal::WireCompleterImpl<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::MakeReply(::test_union::wire::OlderSimpleUnion xu) {
   ::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> _response{xu};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       ::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>, ::fidl::internal::ChannelTransport>
       _response_message{
           ::fidl::internal::AllowUnownedInputRef{}, &_response};

@@ -50,7 +50,7 @@ class [[nodiscard]] {{ .WireResult }} final : public {{ .BaseWireResult }} {
     {{ .WireTransactionalRequest }}* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<{{ .WireTransactionalRequest }}, {{ .Transport.Type }}> request_message(
+  ::fidl::internal::OwnedEncodedMessage<{{ .WireTransactionalRequest }}, {{ .Transport.Type }}> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
 

@@ -100,7 +100,7 @@ class AsyncTearDownVnode : public FdCountVnode {
 void SendSync(fidl::UnownedClientEnd<fuchsia_io::Node> client) {
   FIDL_ALIGNDECL
   fidl::internal::TransactionalRequest<fuchsia_io::Node::Sync> request;
-  fidl::unstable::OwnedEncodedMessage<fidl::internal::TransactionalRequest<fuchsia_io::Node::Sync>>
+  fidl::internal::OwnedEncodedMessage<fidl::internal::TransactionalRequest<fuchsia_io::Node::Sync>>
       encoded(&request);
   ASSERT_OK(encoded.status());
   encoded.GetOutgoingMessage().set_txid(5);

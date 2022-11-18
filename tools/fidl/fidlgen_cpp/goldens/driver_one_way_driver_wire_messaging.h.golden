@@ -111,7 +111,7 @@ struct ::fidl::internal::WireMethodTypes<::test_driveroneway::OneWay::Send> {
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_driveroneway::OneWay::Send,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>, ::fidl::internal::DriverTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<

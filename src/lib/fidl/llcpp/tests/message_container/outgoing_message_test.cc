@@ -424,7 +424,7 @@ TEST(OutgoingMessage, OutgoingMessageCopiedBytes) {
 
 TEST(OutgoingMessage, SettingTxIdRequiresTransactionalMessageNegative) {
   fidl_llcpp_linearized_test::wire::NoOpLinearizedStruct value{.x = 42};
-  fidl::unstable::OwnedEncodedMessage<fidl_llcpp_linearized_test::wire::NoOpLinearizedStruct>
+  fidl::internal::OwnedEncodedMessage<fidl_llcpp_linearized_test::wire::NoOpLinearizedStruct>
       encoded(fidl::internal::WireFormatVersion::kV2, &value);
   ASSERT_EQ(ZX_OK, encoded.status());
   ASSERT_DEATH({ encoded.GetOutgoingMessage().set_txid(1); }, "transactional");
@@ -433,7 +433,7 @@ TEST(OutgoingMessage, SettingTxIdRequiresTransactionalMessageNegative) {
 TEST(OutgoingMessage, SettingTxIdRequiresTransactionalMessagePositive) {
   using Request = fidl::internal::TransactionalRequest<fidl_test_misc::Echo::EchoString>;
   Request request{fidl::StringView("")};
-  fidl::unstable::OwnedEncodedMessage<Request> encoded(fidl::internal::WireFormatVersion::kV2,
+  fidl::internal::OwnedEncodedMessage<Request> encoded(fidl::internal::WireFormatVersion::kV2,
                                                        &request);
   ASSERT_EQ(ZX_OK, encoded.status());
   encoded.GetOutgoingMessage().set_txid(1);

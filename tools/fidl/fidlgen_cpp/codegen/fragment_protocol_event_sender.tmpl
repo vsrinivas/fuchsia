@@ -78,7 +78,7 @@ fidl::Status {{ $.WireWeakEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) {
   {{ .WireTransactionalEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<{{ .WireTransactionalEvent }}, {{ .Transport.Type }}> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<{{ .WireTransactionalEvent }}, {{ .Transport.Type }}> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -108,7 +108,7 @@ fidl::Status {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) {
   {{ .WireTransactionalEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<{{ .WireTransactionalEvent }}, {{ .Transport.Type }}> _response_message{
+  ::fidl::internal::OwnedEncodedMessage<{{ .WireTransactionalEvent }}, {{ .Transport.Type }}> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();

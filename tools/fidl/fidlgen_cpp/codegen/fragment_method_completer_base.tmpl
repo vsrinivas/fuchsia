@@ -83,7 +83,7 @@ void
 {{ .WireCompleterImpl.NoLeading }}::MakeReply({{ RenderParams .ResponseArgs }}) {
   {{ .WireTransactionalResponse }} _response{ {{ RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<
+  ::fidl::internal::OwnedEncodedMessage<
       {{ .WireTransactionalResponse }}, {{ .Transport.Type }}> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),

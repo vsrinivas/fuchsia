@@ -84,9 +84,7 @@ IncomingHeaderAndMessage MessageRead(
   return MessageRead(std::forward<TransportObject>(transport), storage, {});
 }
 
-// TODO(fxbug.dev/82681): Re-introduce stable APIs for standalone use of the
-// FIDL wire format.
-namespace unstable {
+namespace internal {
 
 // This class owns a message of |FidlType| and encodes the message automatically upon construction
 // into a byte buffer.
@@ -218,7 +216,7 @@ class DecodedMessage<FidlType, Transport,
   ::fidl::DecodedValue<FidlType> value_;
 };
 
-}  // namespace unstable
+}  // namespace internal
 
 // Holds the result of converting an outgoing message to an encoded message.
 //

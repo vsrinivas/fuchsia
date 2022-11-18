@@ -262,7 +262,7 @@ Config Config::TakeFromStartupHandle() noexcept {
 
   // TODO(https://fxbug.dev/100147) use fidl::Unpersist(header_and_struct_bytes)
   // instead Decode the FIDL struct
-  fidl::unstable::DecodedMessage<::my_config_lib::wire::Config> decoded(
+  fidl::internal::DecodedMessage<::my_config_lib::wire::Config> decoded(
       fidl::internal::WireFormatVersion::kV2, fidl_struct.get(),
       static_cast<uint32_t>(fidl_struct_size));
   ZX_ASSERT_MSG(decoded.ok(), "Could not decode Config FIDL structure");

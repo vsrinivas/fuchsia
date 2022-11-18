@@ -26,12 +26,12 @@ bool WalkerBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
     // Linearize the object by encoding and then decoding it.
     // TODO(fxbug.dev/53743) Change the walker to walk encoded bytes.
-    fidl::unstable::OwnedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV2,
+    fidl::internal::OwnedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV2,
                                                           &aligned_value);
     ZX_ASSERT(encoded.ok());
     auto converted = fidl::OutgoingToEncodedMessage(encoded.GetOutgoingMessage());
     ZX_ASSERT(converted.ok());
-    auto decoded = fidl::unstable::DecodedMessage<FidlType>(fidl::internal::WireFormatVersion::kV2,
+    auto decoded = fidl::internal::DecodedMessage<FidlType>(fidl::internal::WireFormatVersion::kV2,
                                                             std::move(converted.message()));
     ZX_ASSERT_MSG(decoded.ok(), "%s", decoded.FormatDescription().c_str());
 

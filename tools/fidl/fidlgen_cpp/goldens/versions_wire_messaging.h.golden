@@ -250,7 +250,7 @@ struct ::fidl::internal::WireMethodTypes<::test_versions::Protocol::Foo> {
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_versions::Protocol::Foo,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<

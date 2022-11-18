@@ -164,7 +164,7 @@ struct ::fidl::internal::WireMethodTypes<::test_transitivedependenciescompose::T
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_transitivedependenciescompose::Top::GetFoo,
-      ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::OwnedEncodedMessage<
           ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::internal::ChannelTransport>>;
 
   using BufferThenable = ::fidl::internal::WireThenableImpl<

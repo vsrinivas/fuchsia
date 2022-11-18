@@ -20,7 +20,7 @@ TEST(FidlHost, Request) {
   // The request.
   fidl::internal::TransactionalRequest<test_types::Baz::Foo> foo(req);
   // Serialized version of the request.
-  fidl::unstable::OwnedEncodedMessage<fidl::internal::TransactionalRequest<test_types::Baz::Foo>>
+  fidl::internal::OwnedEncodedMessage<fidl::internal::TransactionalRequest<test_types::Baz::Foo>>
       message(&foo);
   EXPECT_EQ(message.status(), ZX_OK);
   // Linear byte buffer for the request.
@@ -43,7 +43,7 @@ TEST(FidlHost, Response) {
   // The response.
   fidl::internal::TransactionalResponse<test_types::Baz::Foo> foo(res);
   // Serialized version of the response.
-  fidl::unstable::OwnedEncodedMessage<fidl::internal::TransactionalResponse<test_types::Baz::Foo>>
+  fidl::internal::OwnedEncodedMessage<fidl::internal::TransactionalResponse<test_types::Baz::Foo>>
       message(&foo);
   EXPECT_EQ(message.status(), ZX_OK);
   // Linear byte buffer for the response.

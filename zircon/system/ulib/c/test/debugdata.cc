@@ -137,20 +137,9 @@ TEST(DebugDataTests, PublishDataWithoutSvc) {
 // instead defines a local set of a few constants and structure definition in
 // fuchsia-io-constants.h to call fuchsia.io.Directory/Open(). Confirm that the
 // local copy matches the canonical definition here.
-TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
-  namespace fio = fuchsia_io;
-
-  static_assert(fuchsia_io_DirectoryOpenOrdinal ==
-                fidl::internal::WireOrdinal<fio::Directory::Open>::value);
-
-  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
-  ASSERT_OK(endpoints.status_value());
-  fidl::internal::TransactionalRequest<fio::Directory::Open> request{
-      {}, 0, fidl::StringView(), std::move(endpoints->server)};
-  fidl::unstable::OwnedEncodedMessage<fidl::internal::TransactionalRequest<fio::Directory::Open>>
-      msg{&request};
-  ASSERT_OK(msg.status());
-  ASSERT_EQ(sizeof(fuchsia_io_DirectoryOpenRequest), msg.GetOutgoingMessage().CopyBytes().size());
-}
+static_assert(fuchsia_io_DirectoryOpenOrdinal ==
+              fidl::internal::WireOrdinal<fuchsia_io::Directory::Open>::value);
+static_assert(fidl::TypeTraits<fidl::internal::TransactionalRequest<fuchsia_io::Directory::Open>>::
+                  kPrimarySize == sizeof(fuchsia_io_DirectoryOpenRequest));
 
 }  // anonymous namespace
