@@ -29,6 +29,7 @@ use {
     std::{
         collections::HashMap,
         convert::TryInto,
+        fmt,
         io::{Read, Write},
         ops::{Bound, Range},
         sync::{Arc, Mutex},
@@ -106,7 +107,7 @@ impl SuperBlockInstance {
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, TypeHash, Versioned)]
 pub struct SuperBlock {
     /// The globally unique identifier for the filesystem.
-    guid: [u8; 16],
+    guid: UuidWrapper,
 
     /// There are two super-blocks which are used in an A/B configuration. The super-block with the
     /// greatest generation number is what is used when mounting an Fxfs image; the other is
@@ -151,6 +152,37 @@ pub struct SuperBlock {
     ///
     /// Note: structs in the filesystem may had been made with various different versions of Fxfs.
     pub earliest_version: Version,
+}
+
+#[derive(Clone, Default, Eq, PartialEq)]
+struct UuidWrapper(Uuid);
+
+impl fmt::Debug for UuidWrapper {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // The UUID uniquely identifies the filesystem, so we should redact it so that we don't leak
+        // it in logs.
+        f.write_str("<redacted>")
+    }
+}
+
+impl type_hash::TypeHash for UuidWrapper {
+    fn write_hash(hasher: &mut impl std::hash::Hasher) {
+        <[u8; 16]>::write_hash(hasher);
+    }
+}
+
+// Uuid serializes like a slice, but SuperBlock used to contain [u8; 16] and we want to remain
+// compatible.
+impl Serialize for UuidWrapper {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.as_bytes().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for UuidWrapper {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        <[u8; 16]>::deserialize(deserializer).map(|bytes| UuidWrapper(Uuid::from_bytes(bytes)))
+    }
 }
 
 #[derive(Serialize, Deserialize, TypeHash, Versioned)]
@@ -281,9 +313,8 @@ impl SuperBlock {
         journal_checkpoint: JournalCheckpoint,
         earliest_version: Version,
     ) -> Self {
-        let uuid = Uuid::new_v4();
         SuperBlock {
-            guid: *uuid.as_bytes(),
+            guid: UuidWrapper(Uuid::new_v4()),
             generation: 1u64,
             root_parent_store_object_id,
             root_parent_graveyard_directory_object_id,
@@ -403,9 +434,8 @@ impl SuperBlock {
             cursor.position() as usize
         });
         // If guid is zeroed (e.g. in a newly imaged system), assign one randomly.
-        if super_block.guid == [0; 16] {
-            let uuid = Uuid::new_v4();
-            super_block.guid = *uuid.as_bytes();
+        if super_block.guid.0.is_nil() {
+            super_block.guid = UuidWrapper(Uuid::new_v4());
         }
         reader.set_version(super_block_version);
         Ok((super_block, ItemReader { reader }))
@@ -532,7 +562,9 @@ impl ItemReader {
 #[cfg(test)]
 mod tests {
     use {
-        super::{SuperBlock, SuperBlockInstance, SuperBlockItem, MIN_SUPER_BLOCK_SIZE},
+        super::{
+            SuperBlock, SuperBlockInstance, SuperBlockItem, UuidWrapper, MIN_SUPER_BLOCK_SIZE,
+        },
         crate::{
             filesystem::{Filesystem, FxFilesystem},
             lsm_tree::types::LayerIterator,
@@ -548,6 +580,7 @@ mod tests {
         fuchsia_async as fasync,
         std::{ops::Bound, sync::Arc},
         storage_device::{fake_device::FakeDevice, DeviceHolder},
+        uuid::Uuid,
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
@@ -651,7 +684,7 @@ mod tests {
         super_block_b.generation += 1;
 
         // Check that a non-zero GUID has been assigned.
-        assert_ne!(super_block_a.guid, [0; 16]);
+        assert!(!super_block_a.guid.0.is_nil());
 
         let layer_set = fs.object_manager().root_parent_store().tree().layer_set();
         let mut merger = layer_set.merger();
@@ -719,7 +752,7 @@ mod tests {
             /* earliest_version: */ LATEST_VERSION,
         );
         // Ensure the superblock has no set GUID.
-        super_block_a.guid = [0; 16];
+        super_block_a.guid = UuidWrapper(Uuid::nil());
         super_block_a
             .write(fs.object_manager().root_parent_store().as_ref(), handle_a)
             .await
@@ -727,7 +760,7 @@ mod tests {
         let super_block =
             SuperBlock::read_header(fs.device(), SuperBlockInstance::A).await.expect("read failed");
         // Ensure a GUID has been assigned.
-        assert_ne!(super_block.0.guid, [0; 16]);
+        assert!(!super_block.0.guid.0.is_nil());
     }
 
     #[fasync::run_singlethreaded(test)]
