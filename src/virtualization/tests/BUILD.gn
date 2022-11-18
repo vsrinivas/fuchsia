@@ -29,6 +29,7 @@ guest_packages = [
   "//src/virtualization/bin/guest_manager:zircon_guest_manager",
   "//src/virtualization/bin/termina_guest_manager:termina_guest_manager_cmp",
   "//src/virtualization/packages",
+  "//src/ui/wayland/bin/bridge:wayland_bridge",
 ]
 
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"

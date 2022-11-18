@@ -17,7 +17,7 @@
         },
         {
             name: "wayland_bridge",
-            url: "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cm",
+            url: "#meta/wayland_bridge.cm",
         },
     ],
     capabilities: [

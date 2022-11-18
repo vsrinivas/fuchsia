@@ -22,7 +22,6 @@ group("all_guests") {
 group("termina") {
   testonly = true
   deps = [
-    "//src/ui/wayland/bin/bridge",
     "//src/virtualization/bin/guest",
     "//src/virtualization/bin/termina_guest_manager",
     "//src/virtualization/bin/vmm",

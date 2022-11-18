@@ -13,7 +13,6 @@
                 "debian_guest_manager",
                 "termina_guest",
                 "vmm",
-                "wayland_bridge",
                 "zircon_guest",
                 "zircon_guest_manager",
             ],
