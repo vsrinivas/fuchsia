@@ -31,6 +31,9 @@ declare_args() {
 
   # Controls whether to use the ML inliner in Clang to reduce size.
   clang_ml_inliner = true
+
+  # Controls whether to promote warnings to errors.
+  deny_warnings = true
 }
 
 # No frame pointers for host compiles.
@@ -1053,7 +1056,16 @@ config("werror") {
       ldflags = [ "-Wl,/WX" ]
     }
   }
-  rustflags = [ "-Dwarnings" ]
+
+  # Set a few lints to always be denied, regardless of the deny_warnings build arg.
+  rustflags = [
+    "-Dderef-nullptr",
+    "-Dinvalid-value",
+    "-Dunused-must-use",
+  ]
+  if (deny_warnings) {
+    rustflags += [ "-Dwarnings" ]
+  }
 }
 
 # Please use //build/config/sanitizers:suppress-ubsan.DO-NOT-USE-THIS instead

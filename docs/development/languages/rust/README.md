@@ -57,8 +57,8 @@ By default our build configuration makes all Rust warnings into errors. This req
 onerous during development, and on your local machine you may wish to see warnings as warnings and
 let CQ enforce the hard boundary.
 
-The `rust_cap_lints` GN arg allows you to control this behavior in your development environment.
-Setting `rust_cap_lints = "warn"` in `fx args` or adding `--args='rust_cap_lints = "warn"'` to
+The `deny_warnings` GN arg allows you to control this behavior in your development environment.
+Setting `deny_warnings = false` in `fx args` or adding `--args=deny_warnings=false` to
 your `fx set` will allow you to develop locally without being blocked by warnings.
 
 ## Style
