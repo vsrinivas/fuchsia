@@ -1221,7 +1221,6 @@ mod tests {
     }
 
     #[fasync::run(10, test)]
-    #[ignore]
     async fn test_unlink_with_open_race() {
         let fixture = Arc::new(TestFixture::new().await);
         let fixture1 = fixture.clone();

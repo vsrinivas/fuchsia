@@ -17,18 +17,21 @@ use {
         serialized_types::Versioned,
     },
     anyhow::Error,
-    assert_matches::assert_matches,
     async_trait::async_trait,
     either::{Either, Left, Right},
-    futures::future::poll_fn,
+    futures::{future::poll_fn, pin_mut},
+    scopeguard::ScopeGuard,
     serde::{Deserialize, Serialize},
     std::{
+        cell::UnsafeCell,
         cmp::Ordering,
         collections::{
             hash_map::{Entry, HashMap},
             BTreeSet,
         },
         convert::{From, Into},
+        fmt,
+        marker::PhantomPinned,
         ops::{Deref, DerefMut, Range},
         sync::{Arc, Mutex},
         task::{Poll, Waker},
@@ -612,69 +615,64 @@ impl std::fmt::Debug for Transaction<'_> {
 /// a _transaction_ lock.  When first acquired, these block other writes but do not block reads.
 /// When it is time to commit a transaction, these locks are upgraded to full write locks and then
 /// dropped after committing (unless commit_and_continue is used).  This way, reads are only blocked
-/// for the shortest possible time.  It follows that write locks should be used sparingly.
+/// for the shortest possible time.  It follows that write locks should be used sparingly.  Locks
+/// are granted in order with one exception: when a lock is in the initial _transaction_ lock state
+/// (LockState::Locked), all read locks are allowed even if there are other tasks waiting for the
+/// lock.  The reason for this is because we allow read locks to be taken by tasks that have taken a
+/// _transaction_ lock (i.e. recursion is allowed).  In other cases, such as when a writer is
+/// waiting and there are only readers, readers will queue up behind the writer.
 pub struct LockManager {
     locks: Mutex<Locks>,
 }
 
 struct Locks {
-    sequence: u64,
     keys: HashMap<LockKey, LockEntry>,
 }
 
 impl Locks {
-    fn drop_read_locks(&mut self, lock_keys: Vec<LockKey>) {
-        for lock in lock_keys {
-            match self.keys.entry(lock) {
-                Entry::Vacant(_) => unreachable!(),
-                Entry::Occupied(mut occupied) => {
-                    let entry = occupied.get_mut();
+    fn drop_lock(&mut self, key: LockKey, state: LockState) {
+        if let Entry::Occupied(mut occupied) = self.keys.entry(key) {
+            let entry = occupied.get_mut();
+            let wake = match state {
+                LockState::ReadLock => {
                     entry.read_count -= 1;
-                    if entry.read_count == 0 {
-                        match entry.state {
-                            LockState::ReadLock => {
-                                occupied.remove_entry();
-                            }
-                            LockState::Locked => {}
-                            LockState::WantWrite(ref waker) => waker.wake_by_ref(),
-                            LockState::WriteLock => unreachable!(),
-                        }
-                    }
+                    entry.read_count == 0
+                }
+                // drop_write_locks currently depends on us treating Locked and WriteLock the same.
+                LockState::Locked | LockState::WriteLock => {
+                    entry.state = LockState::ReadLock;
+                    true
+                }
+                LockState::Upgrade => {
+                    entry.state = LockState::Locked;
+                    true
+                }
+            };
+            if wake {
+                // SAFETY: The lock in `LockManager::locks` is held.
+                unsafe {
+                    entry.wake();
+                }
+                if entry.can_remove() {
+                    occupied.remove_entry();
                 }
             }
+        } else {
+            unreachable!();
+        }
+    }
+
+    fn drop_read_locks(&mut self, lock_keys: Vec<LockKey>) {
+        for lock in lock_keys {
+            self.drop_lock(lock, LockState::ReadLock);
         }
     }
 
     fn drop_write_locks(&mut self, lock_keys: Vec<LockKey>) {
         for lock in lock_keys {
-            match self.keys.entry(lock) {
-                Entry::Vacant(_) => unreachable!(),
-                Entry::Occupied(mut occupied) => {
-                    let entry = occupied.get_mut();
-                    let wakers = std::mem::take(&mut entry.wakers);
-                    match entry.state {
-                        LockState::WriteLock => {
-                            occupied.remove_entry();
-                        }
-                        LockState::Locked | LockState::WantWrite(_) => {
-                            // There might be active readers referencing the same lock key, so we
-                            // shouldn't remove it from the lock-set yet.  The last reader will
-                            // remove the entry (See Guard::drop).
-                            if entry.read_count == 0 {
-                                occupied.remove_entry();
-                            } else {
-                                entry.state = LockState::ReadLock;
-                                self.sequence += 1;
-                                entry.sequence = self.sequence;
-                            }
-                        }
-                        LockState::ReadLock => unreachable!(),
-                    }
-                    for waker in wakers {
-                        waker.wake();
-                    }
-                }
-            }
+            // This is a bit hacky, but this works for locks in either the Locked or WriteLock
+            // states.
+            self.drop_lock(lock, LockState::WriteLock);
         }
     }
 
@@ -682,15 +680,11 @@ impl Locks {
     fn downgrade_locks(&mut self, lock_keys: &[LockKey]) {
         for lock in lock_keys {
             let entry = self.keys.get_mut(lock).unwrap();
-            let wakers = std::mem::take(&mut entry.wakers);
-            assert_matches!(entry.state, LockState::WriteLock);
+            assert_eq!(entry.state, LockState::WriteLock);
             entry.state = LockState::Locked;
-            self.sequence += 1;
-            entry.sequence = self.sequence;
-            // This will wake up writers as well as readers, even though the writers will be
-            // blocked.  That's unavoidable unless we separate out readers from writers.
-            for waker in wakers {
-                waker.wake();
+            // SAFETY: The lock in `LockManager::locks` is held.
+            unsafe {
+                entry.wake();
             }
         }
     }
@@ -698,24 +692,102 @@ impl Locks {
 
 #[derive(Debug)]
 struct LockEntry {
-    // `sequence` should be different every time `wakers` is emptied.  Any waiter that has inserted
-    // an entry into wakers can use this value to know whether it should add a new entry to `wakers`
-    // or if it can just update the entry that it inserted previously.
-    sequence: u64,
-
-    // In the states that allow readers (ReadLock, Locked and WantWrite), this count can be non-zero
+    // In the states that allow readers (ReadLock, Locked), this count can be non-zero
     // to indicate the number of active readers.
     read_count: u64,
 
     // The state of the lock (see below).
     state: LockState,
 
-    // A list of wakers that should be woken when the lock changes state so that they can try and
-    // progress (although there is no guarantee that they will).
-    wakers: Vec<Waker>,
+    // A doubly-linked list of wakers that should be woken when they have been granted the lock.
+    // New wakers are usually chained on to tail, with the exception being the case where a lock in
+    // state Locked is to be upgraded to WriteLock, but can't because there are readers.  It might
+    // be possible to use intrusive-collections in the future.
+    head: *const LockWaker,
+    tail: *const LockWaker,
 }
 
-#[derive(Clone, Debug)]
+unsafe impl Send for LockEntry {}
+
+// Represents a node in the waker list.  It is only safe to access the members wrapped by UnsafeCell
+// when LockManager's `locks` member is locked.
+struct LockWaker {
+    // The next and previous pointers in the doubly-linked list.
+    next: UnsafeCell<*const LockWaker>,
+    prev: UnsafeCell<*const LockWaker>,
+
+    // Holds the lock key for this waker.  This is required so that we can find the associated
+    // `LockEntry`.
+    key: LockKey,
+
+    // The underlying waker that should be used to wake the task.
+    waker: UnsafeCell<WakerState>,
+
+    // The target state for this waker.
+    target_state: LockState,
+
+    // We need to be pinned because these form part of the linked list.
+    _pin: PhantomPinned,
+}
+
+enum WakerState {
+    // This is the initial state before the waker has been first polled.
+    Pending,
+
+    // Once polled, this contains the actual waker.
+    Registered(Waker),
+
+    // The waker has been woken and has been granted the lock.
+    Woken,
+}
+
+impl WakerState {
+    fn is_woken(&self) -> bool {
+        matches!(self, WakerState::Woken)
+    }
+}
+
+unsafe impl Send for LockWaker {}
+unsafe impl Sync for LockWaker {}
+
+impl LockWaker {
+    // Waits for the waker to be woken.
+    async fn wait(&self, manager: &LockManager) {
+        // We must guard against the future being dropped.
+        let waker_guard = scopeguard::guard((), |_| {
+            let mut locks = manager.locks.lock().unwrap();
+            // SAFETY: We've acquired the lock.
+            unsafe {
+                if (*self.waker.get()).is_woken() {
+                    // We were woken, but didn't actually run, so we must drop the lock.
+                    locks.drop_lock(self.key.clone(), self.target_state);
+                } else {
+                    // We haven't been woken but we've been dropped so we must remove ourself from
+                    // the waker list.
+                    locks.keys.get_mut(&self.key).unwrap().remove_waker(self);
+                }
+            }
+        });
+
+        poll_fn(|cx| {
+            let _locks = manager.locks.lock().unwrap();
+            // SAFETY: We've acquired the lock.
+            unsafe {
+                if (*self.waker.get()).is_woken() {
+                    Poll::Ready(())
+                } else {
+                    *self.waker.get() = WakerState::Registered(cx.waker().clone());
+                    Poll::Pending
+                }
+            }
+        })
+        .await;
+
+        ScopeGuard::into_inner(waker_guard);
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
 enum LockState {
     // In this state, there are only readers.
     ReadLock,
@@ -723,17 +795,18 @@ enum LockState {
     // This state is used for transactions to lock other writers, but it still allows readers.
     Locked,
 
-    // This state is used to block new readers.  When all existing readers are done, the lock
-    // should be promoted to a write lock.
-    WantWrite(Waker),
-
     // A writer has exclusive access; all other readers and writers are blocked.
     WriteLock,
+
+    // An upgrade from Locked to WriteLock.  This is only used within a waker so that we know we
+    // want to upgrade from Locked to WriteLock.  When the lock is actually upgraded, the state is
+    // set to WriteLock.
+    Upgrade,
 }
 
 impl LockManager {
     pub fn new() -> Self {
-        LockManager { locks: Mutex::new(Locks { sequence: 0, keys: HashMap::new() }) }
+        LockManager { locks: Mutex::new(Locks { keys: HashMap::new() }) }
     }
 
     /// Acquires the locks.  It is the caller's responsibility to ensure that drop_transaction is
@@ -755,7 +828,7 @@ impl LockManager {
             LockState::Locked | LockState::WriteLock => {
                 Right(WriteGuard { manager: self, lock_keys: Vec::new() })
             }
-            LockState::WantWrite(_) => panic!("Use LockState::WriteLocked"),
+            LockState::Upgrade => unreachable!(),
         };
         let guard_keys = match &mut guard {
             Left(g) => &mut g.lock_keys,
@@ -765,17 +838,13 @@ impl LockManager {
         lock_keys.sort_unstable();
         lock_keys.dedup();
         for lock in lock_keys {
-            let mut waker_sequence = 0;
-            let mut waker_index = 0;
-            let mut want_write = false;
-            poll_fn(|cx| {
+            let lock_waker = None;
+            pin_mut!(lock_waker);
+            {
                 let mut locks = self.locks.lock().unwrap();
-                let Locks { sequence, keys } = &mut *locks;
-                match keys.entry(lock.clone()) {
+                match locks.keys.entry(lock.clone()) {
                     Entry::Vacant(vacant) => {
-                        *sequence += 1;
                         vacant.insert(LockEntry {
-                            sequence: *sequence,
                             read_count: if let LockState::ReadLock = target_state {
                                 guard_keys.push(lock.clone());
                                 1
@@ -783,56 +852,73 @@ impl LockManager {
                                 guard_keys.push(lock.clone());
                                 0
                             },
-                            state: target_state.clone(),
-                            wakers: Vec::new(),
+                            state: target_state,
+                            head: std::ptr::null(),
+                            tail: std::ptr::null(),
                         });
-                        Poll::Ready(())
                     }
                     Entry::Occupied(mut occupied) => {
                         let entry = occupied.get_mut();
-                        if want_write {
-                            if entry.read_count == 0 {
-                                entry.state = LockState::WriteLock;
-                                Poll::Ready(())
+                        let allow = match entry.state {
+                            LockState::ReadLock => {
+                                // Allow ReadLock and Locked so long as nothing else is waiting.
+                                (target_state == LockState::Locked
+                                    || target_state == LockState::ReadLock)
+                                    && entry.head.is_null()
+                            }
+                            LockState::Locked => {
+                                // Always allow reads unless there's an upgrade waiting.  We have to
+                                // always allow reads in this state because tasks that have locks in
+                                // the Locked state can later try and acquire ReadLock.
+                                target_state == LockState::ReadLock
+                                    && (entry.head.is_null()
+                                        // SAFETY: We've acquired the lock.
+                                        || unsafe {
+                                            (*entry.head).target_state != LockState::Upgrade
+                                        })
+                            }
+                            LockState::WriteLock => false,
+                            LockState::Upgrade => unreachable!(),
+                        };
+                        if allow {
+                            if let LockState::ReadLock = target_state {
+                                entry.read_count += 1;
+                                guard_keys.push(lock.clone());
                             } else {
-                                entry.state = LockState::WantWrite(cx.waker().clone());
-                                Poll::Pending
+                                entry.state = target_state;
+                                guard_keys.push(lock.clone());
                             }
                         } else {
-                            match (&entry.state, &target_state) {
-                                (LockState::ReadLock, LockState::WriteLock) => {
-                                    entry.state = LockState::WantWrite(cx.waker().clone());
-                                    want_write = true;
-                                    guard_keys.push(lock.clone());
-                                    Poll::Pending
-                                }
-                                (LockState::ReadLock, _)
-                                | (LockState::Locked, LockState::ReadLock) => {
-                                    if let LockState::ReadLock = target_state {
-                                        entry.read_count += 1;
-                                        guard_keys.push(lock.clone());
-                                    } else {
-                                        entry.state = target_state.clone();
-                                        guard_keys.push(lock.clone());
-                                    }
-                                    Poll::Ready(())
-                                }
-                                _ => {
-                                    if entry.sequence == waker_sequence {
-                                        entry.wakers[waker_index] = cx.waker().clone();
-                                    } else {
-                                        waker_index = entry.wakers.len();
-                                        waker_sequence = *sequence;
-                                        entry.wakers.push(cx.waker().clone());
-                                    }
-                                    Poll::Pending
+                            // Initialise a waker and push it on the tail of the list.
+                            // SAFETY: `lock_waker` isn't used prior to this point.
+                            unsafe {
+                                *lock_waker.as_mut().get_unchecked_mut() = Some(LockWaker {
+                                    next: UnsafeCell::new(std::ptr::null()),
+                                    prev: UnsafeCell::new(entry.tail),
+                                    key: lock.clone(),
+                                    waker: UnsafeCell::new(WakerState::Pending),
+                                    target_state: target_state,
+                                    _pin: PhantomPinned,
+                                });
+                            }
+                            let waker = (*lock_waker).as_ref().unwrap();
+                            if entry.tail.is_null() {
+                                entry.head = waker;
+                            } else {
+                                // SAFETY: We've acquired the lock.
+                                unsafe {
+                                    *(*entry.tail).next.get() = waker;
                                 }
                             }
+                            entry.tail = waker;
                         }
                     }
                 }
-            })
-            .await;
+            }
+            if let Some(waker) = &*lock_waker {
+                waker.wait(self).await;
+                guard_keys.push(lock);
+            }
         }
         guard
     }
@@ -851,18 +937,44 @@ impl LockManager {
 
     async fn commit_prepare_keys(&self, lock_keys: &[LockKey]) {
         for lock in lock_keys {
-            poll_fn(|cx| {
+            let lock_waker = None;
+            pin_mut!(lock_waker);
+            {
                 let mut locks = self.locks.lock().unwrap();
-                let entry = locks.keys.get_mut(&lock).expect("key missing!");
-                if entry.read_count > 0 {
-                    entry.state = LockState::WantWrite(cx.waker().clone());
-                    Poll::Pending
-                } else {
+                let entry = locks.keys.get_mut(lock).unwrap();
+                assert_eq!(entry.state, LockState::Locked);
+
+                if entry.read_count == 0 {
                     entry.state = LockState::WriteLock;
-                    Poll::Ready(())
+                } else {
+                    // Initialise a waker and push it on the head of the list.
+                    // SAFETY: `lock_waker` isn't used prior to this point.
+                    unsafe {
+                        *lock_waker.as_mut().get_unchecked_mut() = Some(LockWaker {
+                            next: UnsafeCell::new(entry.head),
+                            prev: UnsafeCell::new(std::ptr::null()),
+                            key: lock.clone(),
+                            waker: UnsafeCell::new(WakerState::Pending),
+                            target_state: LockState::Upgrade,
+                            _pin: PhantomPinned,
+                        });
+                    }
+                    let waker = (*lock_waker).as_ref().unwrap();
+                    if entry.head.is_null() {
+                        entry.tail = (*lock_waker).as_ref().unwrap();
+                    } else {
+                        // SAFETY: We've acquired the lock.
+                        unsafe {
+                            *(*entry.head).prev.get() = waker;
+                        }
+                    }
+                    entry.head = waker;
                 }
-            })
-            .await;
+            }
+
+            if let Some(waker) = &*lock_waker {
+                waker.wait(self).await;
+            }
         }
     }
 
@@ -881,6 +993,98 @@ impl LockManager {
     }
 }
 
+// These unsafe functions require that `locks` in LockManager is locked.
+impl LockEntry {
+    unsafe fn wake(&mut self) {
+        // If the lock's state is WriteLock, or there's nothing waiting, return early.
+        if self.head.is_null() || self.state == LockState::WriteLock {
+            return;
+        }
+
+        let waker = &*self.head;
+
+        match self.state {
+            LockState::ReadLock => {
+                if self.read_count > 0 && waker.target_state == LockState::WriteLock {
+                    return;
+                }
+            }
+            LockState::Locked => {
+                if waker.target_state != LockState::ReadLock
+                    && waker.target_state != LockState::Upgrade
+                {
+                    return;
+                }
+            }
+            LockState::WriteLock | LockState::Upgrade => unreachable!(),
+        }
+
+        self.pop_and_wake();
+
+        // If the waker was a write lock, there's no point waking any more up, but otherwise, we
+        // can keep waking up readers.
+        if waker.target_state == LockState::WriteLock {
+            return;
+        }
+
+        while !self.head.is_null() && (*self.head).target_state == LockState::ReadLock {
+            self.pop_and_wake();
+        }
+    }
+
+    unsafe fn pop_and_wake(&mut self) {
+        let waker = &*self.head;
+
+        // Pop the waker.
+        self.head = *waker.next.get();
+        if self.head.is_null() {
+            self.tail = std::ptr::null()
+        } else {
+            *(*self.head).prev.get() = std::ptr::null();
+        }
+
+        // Adjust our state accordingly.
+        if waker.target_state == LockState::ReadLock {
+            self.read_count += 1;
+        } else {
+            self.state = if waker.target_state == LockState::Upgrade {
+                LockState::WriteLock
+            } else {
+                waker.target_state
+            };
+        }
+
+        // Now wake the task.
+        if let WakerState::Registered(waker) =
+            std::mem::replace(&mut *waker.waker.get(), WakerState::Woken)
+        {
+            waker.wake();
+        }
+    }
+
+    fn can_remove(&self) -> bool {
+        self.state == LockState::ReadLock && self.read_count == 0
+    }
+
+    unsafe fn remove_waker(&mut self, waker: &LockWaker) {
+        let is_first = (*waker.prev.get()).is_null();
+        if is_first {
+            self.head = *waker.next.get();
+        } else {
+            *(**waker.prev.get()).next.get() = *waker.next.get();
+        }
+        if (*waker.next.get()).is_null() {
+            self.tail = *waker.prev.get();
+        } else {
+            *(**waker.next.get()).prev.get() = *waker.prev.get();
+        }
+        if is_first {
+            // We must call wake in case we erased a pending write lock and readers can now proceed.
+            self.wake();
+        }
+    }
+}
+
 #[must_use]
 pub struct ReadGuard<'a> {
     manager: &'a LockManager,
@@ -891,6 +1095,15 @@ impl Drop for ReadGuard<'_> {
     fn drop(&mut self) {
         let mut locks = self.manager.locks.lock().unwrap();
         locks.drop_read_locks(std::mem::take(&mut self.lock_keys));
+    }
+}
+
+impl fmt::Debug for ReadGuard<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ReadGuard")
+            .field("manager", &(&self.manager as *const _))
+            .field("lock_keys", &self.lock_keys)
+            .finish()
     }
 }
 
@@ -907,14 +1120,25 @@ impl Drop for WriteGuard<'_> {
     }
 }
 
+impl fmt::Debug for WriteGuard<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("WriteGuard")
+            .field("manager", &(&self.manager as *const _))
+            .field("lock_keys", &self.lock_keys)
+            .finish()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::{LockKey, LockManager, LockState, Mutation, Options, TransactionHandler},
         crate::filesystem::FxFilesystem,
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         futures::{
-            channel::oneshot::channel, future::FutureExt, join, stream::FuturesUnordered, StreamExt,
+            channel::oneshot::channel, future::FutureExt, join, pin_mut, stream::FuturesUnordered,
+            StreamExt,
         },
         std::{sync::Mutex, task::Poll, time::Duration},
         storage_device::{fake_device::FakeDevice, DeviceHolder},
@@ -1122,11 +1346,54 @@ mod tests {
         let mut read_lock: FuturesUnordered<_> = std::iter::once(manager.read_lock(keys)).collect();
 
         // Trying to acquire a read lock now should be blocked.
-        assert!(matches!(futures::poll!(read_lock.next()), Poll::Pending));
+        assert_matches!(futures::poll!(read_lock.next()), Poll::Pending);
 
         manager.downgrade_locks(keys);
 
         // After downgrading, it should be possible to take a read lock.
-        assert!(matches!(futures::poll!(read_lock.next()), Poll::Ready(_)));
+        assert_matches!(futures::poll!(read_lock.next()), Poll::Ready(_));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_dropped_write_lock_wakes() {
+        let manager = LockManager::new();
+        let keys = &[LockKey::object(1, 1)];
+        let _guard = manager.lock(keys, LockState::ReadLock).await;
+        let read_lock = manager.lock(keys, LockState::ReadLock);
+        pin_mut!(read_lock);
+
+        {
+            let write_lock = manager.lock(keys, LockState::WriteLock);
+            pin_mut!(write_lock);
+
+            // The write lock should be blocked because of the read lock.
+            assert_matches!(futures::poll!(write_lock), Poll::Pending);
+
+            // Another read lock should be blocked because of the write lock.
+            assert_matches!(futures::poll!(read_lock.as_mut()), Poll::Pending);
+        }
+
+        // Dropping the write lock should allow the read lock to proceed.
+        assert_matches!(futures::poll!(read_lock), Poll::Ready(_));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_drop_upgrade() {
+        let manager = LockManager::new();
+        let keys = &[LockKey::object(1, 1)];
+        let _guard = manager.lock(keys, LockState::Locked).await;
+
+        {
+            let commit_prepare = manager.commit_prepare_keys(keys);
+            pin_mut!(commit_prepare);
+            let _read_guard = manager.lock(keys, LockState::ReadLock).await;
+            assert_matches!(futures::poll!(commit_prepare), Poll::Pending);
+
+            // Now we test dropping read_guard which should wake commit_prepare and
+            // then dropping commit_prepare.
+        }
+
+        // We should be able to still commit_prepare.
+        manager.commit_prepare_keys(keys).await;
     }
 }
