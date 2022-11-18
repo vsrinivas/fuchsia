@@ -45,10 +45,7 @@ class ShellService {
 
   /// A DirectoryProxy for forwarding felement.Manager connections (among
   /// others) to the application shell, once it's running.
-  final DirectoryProxy _shellExposedDir = DirectoryProxy();
-
-  /// "Request" end of `_shellExposedDir`, to pass to the shell on startup.
-  late InterfaceRequest<Directory> _shellExposedDirRequest;
+  DirectoryProxy _shellExposedDir = DirectoryProxy();
 
   _ErmineViewConnection? _ermine;
   var _loadedCompleter = Completer();
@@ -66,8 +63,8 @@ class ShellService {
     File file = File(kApplicationShellConfigPath);
     final shellConfig = json.decode(file.readAsStringSync());
     assert(shellConfig is Map);
-    assert(shellConfig["url"] is String);
-    _shellComponentUrl = shellConfig["url"];
+    assert(shellConfig['url'] is String);
+    _shellComponentUrl = shellConfig['url'];
   }
 
   void serve(ComponentContext componentContext) {
@@ -100,7 +97,7 @@ class ShellService {
   FuchsiaViewConnection launchErmineShell() {
     assert(_ermine == null, 'Instance of ermine shell already exists.');
 
-    _shellExposedDirRequest = _shellExposedDir.ctrl.request();
+    _shellExposedDir = DirectoryProxy();
 
     _ermine = _ErmineViewConnection(
       useFlatland: _useFlatland,
@@ -112,7 +109,7 @@ class ShellService {
       onExit: onShellExit,
       componentUrl: _shellComponentUrl,
       exposedDir: _shellExposedDir,
-      exposedDirRequest: _shellExposedDirRequest,
+      exposedDirRequest: _shellExposedDir.ctrl.request(),
     );
     return _ermine!.fuchsiaViewConnection;
   }
