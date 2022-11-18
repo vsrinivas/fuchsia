@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_zircon as zx;
+
 use crate::logging::{log_trace, log_warn};
 use crate::mm::MemoryAccessor;
 use crate::signals::*;
 use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::*;
-
-use fuchsia_zircon as zx;
 
 /// The size of the red zone.
 ///
@@ -87,7 +87,8 @@ fn misalign_stack_pointer(pointer: u64) -> u64 {
 /// This function stores the state required to restore after the signal handler on the stack.
 // TODO(lindkvist): Honor the flags in `sa_flags`.
 fn dispatch_signal_handler(
-    current_task: &mut CurrentTask,
+    task: &Task,
+    registers: &mut RegisterState,
     signal_state: &mut SignalState,
     siginfo: SignalInfo,
     action: sigaction_t,
@@ -96,24 +97,24 @@ fn dispatch_signal_handler(
         &siginfo,
         ucontext {
             uc_mcontext: sigcontext {
-                r8: current_task.registers.r8,
-                r9: current_task.registers.r9,
-                r10: current_task.registers.r10,
-                r11: current_task.registers.r11,
-                r12: current_task.registers.r12,
-                r13: current_task.registers.r13,
-                r14: current_task.registers.r14,
-                r15: current_task.registers.r15,
-                rdi: current_task.registers.rdi,
-                rsi: current_task.registers.rsi,
-                rbp: current_task.registers.rbp,
-                rbx: current_task.registers.rbx,
-                rdx: current_task.registers.rdx,
-                rax: current_task.registers.rax,
-                rcx: current_task.registers.rcx,
-                rsp: current_task.registers.rsp,
-                rip: current_task.registers.rip,
-                eflags: current_task.registers.rflags,
+                r8: registers.r8,
+                r9: registers.r9,
+                r10: registers.r10,
+                r11: registers.r11,
+                r12: registers.r12,
+                r13: registers.r13,
+                r14: registers.r14,
+                r15: registers.r15,
+                rdi: registers.rdi,
+                rsi: registers.rsi,
+                rbp: registers.rbp,
+                rbx: registers.rbx,
+                rdx: registers.rdx,
+                rax: registers.rax,
+                rcx: registers.rcx,
+                rsp: registers.rsp,
+                rip: registers.rip,
+                eflags: registers.rflags,
                 oldmask: signal_state.mask(),
                 ..Default::default()
             },
@@ -143,31 +144,27 @@ fn dispatch_signal_handler(
                 // "bottom" of the stack.
                 (sigaltstack.ss_sp.ptr() + sigaltstack.ss_size) as u64
             }
-            None => current_task.registers.rsp - RED_ZONE_SIZE,
+            None => registers.rsp - RED_ZONE_SIZE,
         }
     } else {
-        current_task.registers.rsp - RED_ZONE_SIZE
+        registers.rsp - RED_ZONE_SIZE
     };
     stack_pointer -= SIG_STACK_SIZE as u64;
     stack_pointer = misalign_stack_pointer(stack_pointer);
 
     // Write the signal stack frame at the updated stack pointer.
-    current_task
-        .mm
-        .write_memory(UserAddress::from(stack_pointer), signal_stack_frame.as_bytes())
-        .unwrap();
+    task.mm.write_memory(UserAddress::from(stack_pointer), signal_stack_frame.as_bytes()).unwrap();
 
     signal_state.set_mask(action.sa_mask);
 
-    current_task.registers.rsp = stack_pointer;
-    current_task.registers.rdi = siginfo.signal.number() as u64;
+    registers.rsp = stack_pointer;
+    registers.rdi = siginfo.signal.number() as u64;
     if (action.sa_flags & SA_SIGINFO as u64) != 0 {
-        current_task.registers.rsi =
+        registers.rsi =
             stack_pointer + memoffset::offset_of!(SignalStackFrame, siginfo_bytes) as u64;
-        current_task.registers.rdx =
-            stack_pointer + memoffset::offset_of!(SignalStackFrame, context) as u64;
+        registers.rdx = stack_pointer + memoffset::offset_of!(SignalStackFrame, context) as u64;
     }
-    current_task.registers.rip = action.sa_handler.ptr() as u64;
+    registers.rip = action.sa_handler.ptr() as u64;
 }
 
 pub fn restore_from_signal_handler(current_task: &mut CurrentTask) -> Result<(), Errno> {
@@ -334,35 +331,45 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
         current_task,
         siginfo.as_ref().map(|siginfo| task.thread_group.signal_actions.get(siginfo.signal)),
     );
+
+    // Drop the task state before actually setting up any signal handler.
+    std::mem::drop(task_state);
+
     if let Some(siginfo) = siginfo {
-        let sigaction = task.thread_group.signal_actions.get(siginfo.signal);
-        let action = action_for_signal(&siginfo, sigaction);
-        log_trace!(current_task, "handling signal {:?} with action {:?}", siginfo, action);
-        match action {
-            DeliveryAction::Ignore => {}
-            DeliveryAction::CallHandler => {
-                dispatch_signal_handler(current_task, &mut task_state.signals, siginfo, sigaction);
-            }
-            DeliveryAction::Terminate => {
-                // Release the signals lock. [`ThreadGroup::exit`] sends signals to threads which
-                // will include this one and cause a deadlock re-acquiring the signals lock.
-                drop(task_state);
-                current_task.thread_group.exit(ExitStatus::Kill(siginfo));
-            }
-            DeliveryAction::CoreDump => {
-                task_state.dump_on_exit = true;
-                drop(task_state);
-                current_task.thread_group.exit(ExitStatus::CoreDump(siginfo));
-            }
-            DeliveryAction::Stop => {
-                drop(task_state);
-                current_task.thread_group.set_stopped(true, siginfo);
-            }
-            DeliveryAction::Continue => {
-                // Nothing to do. Effect already happened when the signal was raised.
-            }
-        };
+        deliver_signal(&current_task.task, siginfo, &mut current_task.registers);
     }
+}
+
+pub fn deliver_signal(task: &Task, siginfo: SignalInfo, registers: &mut RegisterState) {
+    let mut task_state = task.write();
+
+    let sigaction = task.thread_group.signal_actions.get(siginfo.signal);
+    let action = action_for_signal(&siginfo, sigaction);
+    log_trace!(task, "handling signal {:?} with action {:?}", siginfo, action);
+    match action {
+        DeliveryAction::Ignore => {}
+        DeliveryAction::CallHandler => {
+            dispatch_signal_handler(task, registers, &mut task_state.signals, siginfo, sigaction);
+        }
+        DeliveryAction::Terminate => {
+            // Release the signals lock. [`ThreadGroup::exit`] sends signals to threads which
+            // will include this one and cause a deadlock re-acquiring the signals lock.
+            drop(task_state);
+            task.thread_group.exit(ExitStatus::Kill(siginfo));
+        }
+        DeliveryAction::CoreDump => {
+            task_state.dump_on_exit = true;
+            drop(task_state);
+            task.thread_group.exit(ExitStatus::CoreDump(siginfo));
+        }
+        DeliveryAction::Stop => {
+            drop(task_state);
+            task.thread_group.set_stopped(true, siginfo);
+        }
+        DeliveryAction::Continue => {
+            // Nothing to do. Effect already happened when the signal was raised.
+        }
+    };
 }
 
 pub fn sys_restart_syscall(current_task: &mut CurrentTask) -> Result<SyscallResult, Errno> {

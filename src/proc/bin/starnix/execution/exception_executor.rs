@@ -7,9 +7,8 @@
 use anyhow::Error;
 use fuchsia_zircon as zx;
 use fuchsia_zircon::sys::{
-    zx_exception_info_t, ZX_EXCEPTION_STATE_HANDLED, ZX_EXCEPTION_STATE_THREAD_EXIT,
-    ZX_EXCEPTION_STATE_TRY_NEXT, ZX_EXCP_FATAL_PAGE_FAULT, ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
-    ZX_EXCP_POLICY_ERROR,
+    ZX_EXCEPTION_STATE_HANDLED, ZX_EXCEPTION_STATE_THREAD_EXIT, ZX_EXCEPTION_STATE_TRY_NEXT,
+    ZX_EXCP_FATAL_PAGE_FAULT, ZX_EXCP_POLICY_CODE_BAD_SYSCALL, ZX_EXCP_POLICY_ERROR,
 };
 use fuchsia_zircon::{AsHandleRef, Task as zxTask};
 use std::mem;
@@ -217,30 +216,4 @@ pub fn create_zircon_process(
         ThreadGroup::new(kernel.clone(), process, parent, pid, process_group, signal_actions);
 
     Ok(TaskInfo { thread: Some(thread), thread_group, memory_manager })
-}
-
-/// Converts a `zx::MessageBuf` into an exception info by transmuting a copy of the bytes.
-// TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
-// for exception channels.
-fn as_exception_info(buffer: &zx::MessageBuf) -> zx_exception_info_t {
-    let mut tmp = [0; mem::size_of::<zx_exception_info_t>()];
-    tmp.clone_from_slice(buffer.bytes());
-    unsafe { mem::transmute(tmp) }
-}
-
-/// Reads from `chan` into `buf`.
-///
-/// If the initial read returns `SHOULD_WAIT`, the function waits for the channel to be readable and
-/// tries again (once).
-fn read_channel_sync(chan: &zx::Channel, buf: &mut zx::MessageBuf) -> Result<(), zx::Status> {
-    let res = chan.read(buf);
-    if let Err(zx::Status::SHOULD_WAIT) = res {
-        chan.wait_handle(
-            zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED,
-            zx::Time::INFINITE,
-        )?;
-        chan.read(buf)
-    } else {
-        res
-    }
 }

@@ -10,7 +10,7 @@ use fidl_fuchsia_starnix_developer as fstardev;
 #[cfg(feature = "syscall_stats")]
 use fuchsia_inspect::NumericProperty;
 use fuchsia_runtime::{HandleInfo, HandleType};
-use fuchsia_zircon::{self as zx, sys::ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET};
+use fuchsia_zircon::{self as zx, sys::ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET, AsHandleRef};
 use process_builder::elf_parse;
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -445,4 +445,30 @@ mod tests {
         // The task should not be blocked because it is stopped.
         block_while_stopped(&task);
     }
+}
+
+/// Reads from `chan` into `buf`.
+///
+/// If the initial read returns `SHOULD_WAIT`, the function waits for the channel to be readable and
+/// tries again (once).
+pub fn read_channel_sync(chan: &zx::Channel, buf: &mut zx::MessageBuf) -> Result<(), zx::Status> {
+    let res = chan.read(buf);
+    if let Err(zx::Status::SHOULD_WAIT) = res {
+        chan.wait_handle(
+            zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED,
+            zx::Time::INFINITE,
+        )?;
+        chan.read(buf)
+    } else {
+        res
+    }
+}
+
+/// Converts a `zx::MessageBuf` into an exception info by transmuting a copy of the bytes.
+// TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
+// for exception channels.
+pub fn as_exception_info(buffer: &zx::MessageBuf) -> zx::sys::zx_exception_info_t {
+    let mut tmp = [0; std::mem::size_of::<zx::sys::zx_exception_info_t>()];
+    tmp.clone_from_slice(buffer.bytes());
+    unsafe { std::mem::transmute(tmp) }
 }
