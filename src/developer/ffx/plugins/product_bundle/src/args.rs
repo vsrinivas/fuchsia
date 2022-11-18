@@ -51,8 +51,13 @@ pub struct GetCommand {
     pub cached: bool,
 
     /// force a download even if the bundle is already stored locally.
-    #[argh(switch)]
+    #[argh(switch, short = 'f')]
     pub force: bool,
+
+    /// add a package repository for this bundle even if one is already
+    /// registered with the same name.
+    #[argh(switch, short = 'R')]
+    pub force_repo: bool,
 
     /// use specific auth flow for oauth2.
     #[argh(option, default = "AuthFlowChoice::Default")]

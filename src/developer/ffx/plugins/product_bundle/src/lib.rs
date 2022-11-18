@@ -413,7 +413,7 @@ async fn get_repository_name(
 
     // If a repo with the selected name already exists, that's an error.
     let repo_list = get_repos(&repos).await?;
-    if repo_list.iter().any(|r| r.name == repo_name) {
+    if !cmd.force_repo && repo_list.iter().any(|r| r.name == repo_name) {
         bail!(
             "A package repository already exists with the name '{}'. \
             Specify an alternative name using the --repository flag.",
