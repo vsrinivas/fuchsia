@@ -931,6 +931,24 @@ void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
   }
 }
 
+void Coordinator::GetNodeGroups(GetNodeGroupsRequestView request,
+                                GetNodeGroupsCompleter::Sync& completer) {
+  auto driver_index_client = component::Connect<fuchsia_driver_development::DriverIndex>();
+  if (driver_index_client.is_error()) {
+    LOGF(WARNING, "Failed to connect to fuchsia_driver_development::DriverIndex");
+    return;
+  }
+
+  fidl::WireSyncClient driver_index{std::move(*driver_index_client)};
+  auto info_result =
+      driver_index->GetNodeGroups(request->name_filter, std::move(request->iterator));
+
+  // There are still some environments where we can't connect to DriverIndex.
+  if (!info_result.ok()) {
+    LOGF(INFO, "DriverIndex:GetNodeGroups failed: %d", info_result.status());
+  }
+}
+
 void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
                                 GetDeviceInfoCompleter::Sync& completer) {
   std::vector<fbl::RefPtr<const Device>> device_list;

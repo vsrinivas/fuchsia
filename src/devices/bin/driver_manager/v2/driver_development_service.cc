@@ -210,6 +210,25 @@ void DriverDevelopmentService::GetDriverInfo(GetDriverInfoRequestView request,
   }
 }
 
+void DriverDevelopmentService::GetNodeGroups(GetNodeGroupsRequestView request,
+                                             GetNodeGroupsCompleter::Sync& completer) {
+  auto driver_index_client = component::Connect<fdd::DriverIndex>();
+  if (driver_index_client.is_error()) {
+    LOGF(ERROR, "Failed to connect to service '%s': %s",
+         fidl::DiscoverableProtocolName<fdd::DriverIndex>, driver_index_client.status_string());
+    request->iterator.Close(driver_index_client.status_value());
+    return;
+  }
+
+  fidl::WireSyncClient driver_index{std::move(*driver_index_client)};
+  auto info_result =
+      driver_index->GetNodeGroups(request->name_filter, std::move(request->iterator));
+  if (!info_result.ok()) {
+    LOGF(ERROR, "Failed to call DriverIndex::GetNodeGroups: %s\n",
+         info_result.error().FormatDescription().data());
+  }
+}
+
 void DriverDevelopmentService::RestartDriverHosts(RestartDriverHostsRequestView request,
                                                   RestartDriverHostsCompleter::Sync& completer) {
   // TODO(fxbug.dev/90735): Implement RestartDriverHost

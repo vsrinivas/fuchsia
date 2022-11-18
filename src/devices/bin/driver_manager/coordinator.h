@@ -250,6 +250,8 @@ class Coordinator : public CompositeManagerBridge,
                           RestartDriverHostsCompleter::Sync& completer) override;
   void GetDriverInfo(GetDriverInfoRequestView request,
                      GetDriverInfoCompleter::Sync& completer) override;
+  void GetNodeGroups(GetNodeGroupsRequestView request,
+                     GetNodeGroupsCompleter::Sync& completer) override;
   void GetDeviceInfo(GetDeviceInfoRequestView request,
                      GetDeviceInfoCompleter::Sync& completer) override;
   void BindAllUnboundNodes(BindAllUnboundNodesCompleter::Sync& completer) override;

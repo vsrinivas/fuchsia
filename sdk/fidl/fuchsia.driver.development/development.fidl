@@ -145,6 +145,33 @@ protocol DriverInfoIterator {
     });
 };
 
+type NodeGroupInfo = table {
+    /// The name of the node group.
+    1: name string:MAX;
+
+    /// The url of the driver that has matched this node group. Empty if no driver has matched
+    /// to this node group.
+    2: driver string:MAX;
+
+    /// The primary node index, this comes from the matched driver. Empty if no driver has matched
+    /// to this node group.
+    3: primary_index uint32;
+
+    /// A list of all the node names for this node group. Empty if no driver has matched to this
+    /// node group. These are ordered according to index.
+    4: node_names vector<string:MAX>:MAX;
+
+    /// The nodes in the node group.
+    5: nodes vector<fuchsia.driver.framework.DeviceGroupNode>:MAX;
+};
+
+protocol NodeGroupsIterator {
+    /// Return empty when no more node groups are left.
+    GetNext() -> (struct {
+        node_groups vector<NodeGroupInfo>:MAX;
+    });
+};
+
 /// Interface for developing and debugging drivers.
 /// This interface should only be used for development and disabled in release builds.
 @discoverable
@@ -161,6 +188,18 @@ protocol DriverIndex {
     GetDriverInfo(resource struct {
         driver_filter vector<string:MAX>:MAX;
         iterator server_end:DriverInfoIterator;
+    });
+
+    /// Returns a list of all node groups that are known to the system.
+    /// If a |name_filter| is provided, the returned list will only include 1 node group,
+    /// the one with that exact name.
+    ///
+    /// |iterator| is closed with following epitaphs on error:
+    /// ZX_ERR_NOT_FOUND indicates that there are no node groups or if a |name_filter| is provided,
+    /// that there are no node groups with that name.
+    GetNodeGroups(resource struct {
+        name_filter string:<MAX, optional>;
+        iterator server_end:NodeGroupsIterator;
     });
 };
 

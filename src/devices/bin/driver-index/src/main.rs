@@ -421,6 +421,34 @@ async fn run_driver_info_iterator_server(
     Ok(())
 }
 
+async fn run_node_groups_iterator_server(
+    node_groups: Arc<Mutex<Vec<fdd::NodeGroupInfo>>>,
+    stream: fdd::NodeGroupsIteratorRequestStream,
+) -> Result<(), anyhow::Error> {
+    stream
+        .map(|result| result.context("failed request"))
+        .try_for_each(|request| async {
+            let node_groups_clone = node_groups.clone();
+            match request {
+                fdd::NodeGroupsIteratorRequest::GetNext { responder } => {
+                    let result = {
+                        let mut node_groups = node_groups_clone.lock().unwrap();
+                        let len = node_groups.len();
+                        node_groups.split_off(len - std::cmp::min(10, len))
+                    };
+
+                    responder
+                        .send(&mut result.into_iter())
+                        .or_else(ignore_peer_closed)
+                        .context("error responding to GetNodeGroups")?;
+                }
+            }
+            Ok(())
+        })
+        .await?;
+    Ok(())
+}
+
 async fn run_driver_development_server(
     indexer: Rc<Indexer>,
     stream: fdd::DriverIndexRequestStream,
@@ -442,6 +470,22 @@ async fn run_driver_development_server(
                         run_driver_info_iterator_server(driver_info, iterator)
                             .await
                             .expect("Failed to run driver info iterator");
+                    })
+                    .detach();
+                }
+                fdd::DriverIndexRequest::GetNodeGroups { name_filter, iterator, .. } => {
+                    let device_group_manager = indexer.device_group_manager.borrow();
+                    let node_groups = device_group_manager.get_node_groups(name_filter);
+                    if node_groups.is_empty() {
+                        iterator.close_with_epitaph(Status::NOT_FOUND)?;
+                        return Ok(());
+                    }
+                    let node_groups = Arc::new(Mutex::new(node_groups));
+                    let iterator = iterator.into_stream()?;
+                    fasync::Task::spawn(async move {
+                        run_node_groups_iterator_server(node_groups, iterator)
+                            .await
+                            .expect("Failed to run node groups iterator");
                     })
                     .detach();
                 }

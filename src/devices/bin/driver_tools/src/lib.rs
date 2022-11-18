@@ -7,6 +7,7 @@
 extern crate lazy_static;
 
 pub mod args;
+mod common;
 mod subcommands;
 
 use {
@@ -91,6 +92,20 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
             subcommands::list_hosts::list_hosts(subcmd, driver_development_proxy)
                 .await
                 .context("List-hosts subcommand failed")?;
+        }
+        DriverSubCommand::ListNodeGroups(subcmd) => {
+            let mut writer = io::stdout();
+            let driver_development_proxy = driver_connector
+                .get_driver_development_proxy(subcmd.select)
+                .await
+                .context("Failed to get driver development proxy")?;
+            subcommands::list_node_groups::list_node_groups(
+                subcmd,
+                &mut writer,
+                driver_development_proxy,
+            )
+            .await
+            .context("List-node-groups subcommand failed")?;
         }
         #[cfg(not(target_os = "fuchsia"))]
         DriverSubCommand::Lsblk(subcmd) => {

@@ -5,10 +5,11 @@
 pub mod args;
 
 use {
+    crate::common::{node_property_key_to_string, node_property_value_to_string},
     anyhow::Result,
     args::ListDevicesCommand,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_device_manager as fdm,
-    fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_framework as fdf,
+    fidl_fuchsia_driver_development as fdd,
     fuchsia_driver_dev::{self, DFv1Device, DFv2Node, Device},
 };
 
@@ -114,28 +115,12 @@ impl DevicePrinter for DFv2Node {
                     node_property
                         .key
                         .as_ref()
-                        .map(|key| match key {
-                            fdf::NodePropertyKey::IntValue(value) => {
-                                bind::compiler::get_deprecated_key_identifiers()
-                                    .get(value)
-                                    .map(std::clone::Clone::clone)
-                                    .unwrap_or_else(|| format!("{:#08}", value))
-                            }
-                            fdf::NodePropertyKey::StringValue(ref value) =>
-                                format!("\"{}\"", value),
-                        })
+                        .map(|key| node_property_key_to_string(key))
                         .unwrap_or("None".to_owned()),
                     node_property
                         .value
                         .as_ref()
-                        .map(|value| match value {
-                            fdf::NodePropertyValue::IntValue(value) => format!("{:#08x}", value),
-                            fdf::NodePropertyValue::StringValue(ref value) =>
-                                format!("\"{}\"", value),
-                            fdf::NodePropertyValue::BoolValue(value) => value.to_string(),
-                            fdf::NodePropertyValue::EnumValue(ref value) =>
-                                format!("Enum({})", value),
-                        })
+                        .map(|value| node_property_value_to_string(value))
                         .unwrap_or("None".to_owned()),
                 );
             }

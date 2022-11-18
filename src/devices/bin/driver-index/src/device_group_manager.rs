@@ -8,7 +8,8 @@ use {
     bind::compiler::symbol_table::{get_deprecated_key_identifier, get_deprecated_key_value},
     bind::compiler::Symbol,
     bind::interpreter::match_bind::{match_bind, DeviceProperties, MatchBindData, PropertyKey},
-    fidl_fuchsia_driver_framework as fdf, fidl_fuchsia_driver_index as fdi,
+    fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_framework as fdf,
+    fidl_fuchsia_driver_index as fdi,
     fuchsia_zircon::{zx_status_t, Status},
     regex::Regex,
     std::collections::{BTreeMap, HashMap, HashSet},
@@ -180,6 +181,23 @@ impl DeviceGroupManager {
         }
     }
 
+    pub fn get_node_groups(&self, name_filter: Option<String>) -> Vec<fdd::NodeGroupInfo> {
+        if let Some(name) = name_filter {
+            match self.device_group_list.get(&name) {
+                Some(item) => return vec![to_node_group_info(&name, item)],
+                None => return vec![],
+            }
+        };
+
+        let node_groups = self
+            .device_group_list
+            .iter()
+            .map(|(name, device_group_info)| to_node_group_info(name, device_group_info))
+            .collect::<Vec<_>>();
+
+        return node_groups;
+    }
+
     fn device_group_add_composite_info(
         &self,
         mut info: fdi::MatchedDeviceGroupInfo,
@@ -199,6 +217,30 @@ impl DeviceGroupManager {
         }
 
         return None;
+    }
+}
+
+fn to_node_group_info(name: &str, device_group_info: &DeviceGroupInfo) -> fdd::NodeGroupInfo {
+    match &device_group_info.matched {
+        Some(matched_driver) => {
+            let driver = match &matched_driver.info.driver_info {
+                Some(driver_info) => driver_info.url.clone().or(driver_info.driver_url.clone()),
+                None => None,
+            };
+            fdd::NodeGroupInfo {
+                name: Some(name.to_string()),
+                driver,
+                primary_index: Some(matched_driver.primary_index),
+                node_names: Some(matched_driver.names.clone()),
+                nodes: Some(device_group_info.nodes.clone()),
+                ..fdd::NodeGroupInfo::EMPTY
+            }
+        }
+        None => fdd::NodeGroupInfo {
+            name: Some(name.to_string()),
+            nodes: Some(device_group_info.nodes.clone()),
+            ..fdd::NodeGroupInfo::EMPTY
+        },
     }
 }
 
@@ -554,27 +596,36 @@ mod tests {
             ..fdf::NodeProperty::EMPTY
         }];
 
+        let nodes = Some(vec![
+            fdf::DeviceGroupNode { bind_rules: bind_rules_1, bind_properties: bind_properties_1 },
+            fdf::DeviceGroupNode { bind_rules: bind_rules_2, bind_properties: bind_properties_2 },
+        ]);
+
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Err(Status::NOT_FOUND.into_raw()),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
                     name: Some("test_group".to_string()),
-                    nodes: Some(vec![
-                        fdf::DeviceGroupNode {
-                            bind_rules: bind_rules_1,
-                            bind_properties: bind_properties_1,
-                        },
-                        fdf::DeviceGroupNode {
-                            bind_rules: bind_rules_2,
-                            bind_properties: bind_properties_2,
-                        },
-                    ]),
+                    nodes: nodes.clone(),
                     ..fdf::DeviceGroup::EMPTY
                 },
                 vec![]
             )
         );
+
+        assert_eq!(1, device_group_manager.get_node_groups(None).len());
+        assert_eq!(0, device_group_manager.get_node_groups(Some("not_there".to_string())).len());
+        let node_groups = device_group_manager.get_node_groups(Some("test_group".to_string()));
+        assert_eq!(1, node_groups.len());
+        let node_group = &node_groups[0];
+        let expected_node_group = fdd::NodeGroupInfo {
+            name: Some("test_group".to_string()),
+            nodes,
+            ..fdd::NodeGroupInfo::EMPTY
+        };
+
+        assert_eq!(&expected_node_group, node_group);
 
         // Match node 1.
         let mut device_properties_1: DeviceProperties = HashMap::new();
@@ -1683,6 +1734,12 @@ mod tests {
             vec![],
         );
 
+        let nodes = Some(vec![
+            primary_device_group_node,
+            additional_device_group_node_b,
+            additional_device_group_node_a,
+        ]);
+
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Ok((
@@ -1703,16 +1760,32 @@ mod tests {
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
                     name: Some("test_group".to_string()),
-                    nodes: Some(vec![
-                        primary_device_group_node,
-                        additional_device_group_node_b,
-                        additional_device_group_node_a,
-                    ]),
+                    nodes: nodes.clone(),
                     ..fdf::DeviceGroup::EMPTY
                 },
                 vec![&composite_driver]
             )
         );
+
+        assert_eq!(1, device_group_manager.get_node_groups(None).len());
+        assert_eq!(0, device_group_manager.get_node_groups(Some("not_there".to_string())).len());
+        let node_groups = device_group_manager.get_node_groups(Some("test_group".to_string()));
+        assert_eq!(1, node_groups.len());
+        let node_group = &node_groups[0];
+        let expected_node_group = fdd::NodeGroupInfo {
+            name: Some("test_group".to_string()),
+            driver: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
+            primary_index: Some(0),
+            node_names: Some(vec![
+                primary_name.to_string(),
+                additional_b_name.to_string(),
+                additional_a_name.to_string(),
+            ]),
+            nodes,
+            ..fdd::NodeGroupInfo::EMPTY
+        };
+
+        assert_eq!(&expected_node_group, node_group);
 
         // Match additional node A, the last node in the device group at index 2.
         let mut device_properties_1: DeviceProperties = HashMap::new();
@@ -1851,6 +1924,12 @@ mod tests {
             vec![],
         );
 
+        let nodes = Some(vec![
+            additional_device_group_node_b,
+            additional_device_group_node_a,
+            primary_device_group_node,
+        ]);
+
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Ok((
@@ -1871,16 +1950,32 @@ mod tests {
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
                     name: Some("test_group".to_string()),
-                    nodes: Some(vec![
-                        additional_device_group_node_b,
-                        additional_device_group_node_a,
-                        primary_device_group_node,
-                    ]),
+                    nodes: nodes.clone(),
                     ..fdf::DeviceGroup::EMPTY
                 },
                 vec![&composite_driver]
             )
         );
+
+        assert_eq!(1, device_group_manager.get_node_groups(None).len());
+        assert_eq!(0, device_group_manager.get_node_groups(Some("not_there".to_string())).len());
+        let node_groups = device_group_manager.get_node_groups(Some("test_group".to_string()));
+        assert_eq!(1, node_groups.len());
+        let node_group = &node_groups[0];
+        let expected_node_group = fdd::NodeGroupInfo {
+            name: Some("test_group".to_string()),
+            driver: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
+            primary_index: Some(2),
+            node_names: Some(vec![
+                additional_b_name.to_string(),
+                additional_a_name.to_string(),
+                primary_name.to_string(),
+            ]),
+            nodes,
+            ..fdd::NodeGroupInfo::EMPTY
+        };
+
+        assert_eq!(&expected_node_group, node_group);
 
         // Match additional node A, the last node in the device group at index 2.
         let mut device_properties_1: DeviceProperties = HashMap::new();
