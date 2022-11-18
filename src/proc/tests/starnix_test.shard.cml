@@ -10,6 +10,10 @@
             name: "scenic",
             url: "#meta/scenic_realm.cm",
         },
+        {
+            name: "netstack",
+            url: "#meta/netstack.cm",
+        },
     ],
 
     // This collection will contain the starnix runner that will run the linux
@@ -37,8 +41,6 @@
             protocol: [
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.LogSink",
-                "fuchsia.posix.socket.Provider",
-                "fuchsia.posix.socket.raw.Provider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",
@@ -55,6 +57,14 @@
             ],
             from: "#scenic",
             to: [ "#runners" ],
+        },
+        {
+            protocol: [
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.posix.socket.raw.Provider",
+            ],
+            from: "#netstack",
+            to: "#runners",
         },
         {
             directory: "dev-gpu",

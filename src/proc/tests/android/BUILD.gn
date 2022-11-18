@@ -52,7 +52,10 @@ fuchsia_test_component("binder_test") {
 
 fuchsia_test_component("adbd_test") {
   manifest = "meta/adbd_test.cml"
-  deps = [ "//src/proc/tests:starnix_test" ]
+  deps = [
+    "//src/connectivity/network/netstack:component",
+    "//src/proc/tests:starnix_test",
+  ]
 }
 
 fuchsia_test_component("libutils_test") {

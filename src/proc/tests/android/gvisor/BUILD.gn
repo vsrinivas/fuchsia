@@ -336,7 +336,10 @@ zip_resource("gvisor_runfiles") {
 }
 
 starbionic_test_package("starnix_gvisor_tests") {
-  deps = [ ":gvisor_runfiles" ]
+  deps = [
+    ":gvisor_runfiles",
+    "//src/connectivity/network/netstack:component",
+  ]
 
   test_components = []
 
