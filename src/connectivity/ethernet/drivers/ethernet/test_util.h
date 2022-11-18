@@ -7,13 +7,13 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/process.h>
 
 #include <memory>
 #include <thread>
 
 #include "ethernet.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace ethernet_testing {
 
@@ -21,8 +21,8 @@ class FakeEthernetImplProtocol
     : public ddk::Device<FakeEthernetImplProtocol, ddk::GetProtocolable>,
       public ddk::EthernetImplProtocol<FakeEthernetImplProtocol, ddk::base_protocol> {
  public:
-  FakeEthernetImplProtocol()
-      : ddk::Device<FakeEthernetImplProtocol, ddk::GetProtocolable>(fake_ddk::kFakeDevice),
+  explicit FakeEthernetImplProtocol(MockDevice* parent)
+      : ddk::Device<FakeEthernetImplProtocol, ddk::GetProtocolable>(parent),
         proto_({&ethernet_impl_protocol_ops_, this}) {}
 
   const ethernet_impl_protocol_t* proto() const { return &proto_; }
@@ -75,8 +75,9 @@ class FakeEthernetImplProtocol
   int32_t TestPromiscuous() const { return promiscuous_; }
 
   bool TestIfc() {
-    if (!client_)
+    if (!client_) {
       return false;
+    }
     // Use the provided client to test the ifc client.
     client_->Status(0);
     client_->Recv(nullptr, 0, 0);
@@ -119,37 +120,19 @@ class FakeEthernetImplProtocol
   uint32_t features_ = 0;
 };
 
-class EthernetTester : public fake_ddk::Bind {
+class EthernetTester {
  public:
-  EthernetTester() : fake_ddk::Bind() { SetProtocol(ZX_PROTOCOL_ETHERNET_IMPL, ethernet_.proto()); }
-  explicit EthernetTester(FakeEthernetImplProtocol ethernet)
-      : fake_ddk::Bind(), ethernet_(std::move(ethernet)) {
-    SetProtocol(ZX_PROTOCOL_ETHERNET_IMPL, ethernet_.proto());
+  EthernetTester() {
+    parent_->AddProtocol(ZX_PROTOCOL_ETHERNET_IMPL, ethernet_.proto()->ops, ethernet_.proto()->ctx);
   }
 
-  fake_ddk::Bind& ddk() { return *this; }
   FakeEthernetImplProtocol& ethmac() { return ethernet_; }
-  eth::EthDev0* eth0() { return eth0_; }
-  const std::vector<eth::EthDev*>& instances() { return instances_; }
-
- protected:
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    zx_status_t ret = Bind::DeviceAdd(drv, parent, args, out);
-    if (ret == ZX_OK) {
-      if (parent == fake_ddk::kFakeParent) {
-        eth0_ = static_cast<eth::EthDev0*>(args->ctx);
-      } else {
-        instances_.push_back(static_cast<eth::EthDev*>(args->ctx));
-      }
-    }
-    return ret;
-  }
+  eth::EthDev0* eth0() { return parent_->GetLatestChild()->GetDeviceContext<eth::EthDev0>(); }
+  const std::shared_ptr<MockDevice>& parent() { return parent_; }
 
  private:
-  FakeEthernetImplProtocol ethernet_;
-  eth::EthDev0* eth0_;
-  std::vector<eth::EthDev*> instances_;
+  const std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
+  FakeEthernetImplProtocol ethernet_ = FakeEthernetImplProtocol(parent_.get());
 };
 
 }  // namespace ethernet_testing

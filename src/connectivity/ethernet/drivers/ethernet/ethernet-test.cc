@@ -4,6 +4,8 @@
 
 #include "ethernet.h"
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include <zxtest/zxtest.h>
 
 #include "test_util.h"
@@ -12,29 +14,30 @@ namespace ethernet_testing {
 
 TEST(EthernetTest, BindTest) {
   EthernetTester tester;
-  EXPECT_OK(eth::EthDev0::EthBind(nullptr, fake_ddk::kFakeParent), "Bind failed");
-  tester.eth0()->DdkRelease();
+  EXPECT_OK(eth::EthDev0::EthBind(nullptr, tester.parent().get()), "Bind failed");
+
+  device_async_remove(tester.eth0()->zxdev());
+  mock_ddk::ReleaseFlaggedDevices(tester.parent().get());
 }
 
 TEST(EthernetTest, DdkLifecycleTest) {
   EthernetTester tester;
-  eth::EthDev0* eth(new eth::EthDev0(fake_ddk::kFakeParent));
+  eth::EthDev0* eth(new eth::EthDev0(tester.parent().get()));
   EXPECT_OK(eth->AddDevice(), "AddDevice Failed");
-  eth->DdkAsyncRemove();
-  EXPECT_TRUE(tester.ddk().Ok());
-  eth->DdkRelease();
+
+  device_async_remove(eth->zxdev());
+  mock_ddk::ReleaseFlaggedDevices(tester.parent().get());
 }
 
 TEST(EthernetTest, OpenTest) {
   EthernetTester tester;
-  eth::EthDev0* eth(new eth::EthDev0(fake_ddk::kFakeParent));
+  eth::EthDev0* eth(new eth::EthDev0(tester.parent().get()));
   EXPECT_OK(eth->AddDevice(), "AddDevice Failed");
   zx_device_t* eth_instance;
   EXPECT_OK(eth->DdkOpen(&eth_instance, 0), "Open Failed");
-  eth->DdkAsyncRemove();
-  EXPECT_OK(tester.ddk().WaitUntilRemove());
-  eth->DdkRelease();
-  tester.instances()[0]->DdkRelease();
+
+  device_async_remove(eth->zxdev());
+  mock_ddk::ReleaseFlaggedDevices(tester.parent().get());
 }
 
 class EthDev0ForTest : public eth::EthDev0 {
@@ -45,18 +48,21 @@ class EthDev0ForTest : public eth::EthDev0 {
 
 class EthernetDeviceTest {
  public:
-  explicit EthernetDeviceTest(FakeEthernetImplProtocol ethernet) : tester(std::move(ethernet)) {
+  explicit EthernetDeviceTest(uint32_t features) {
+    tester.ethmac().SetFeatures(features);
     Initialize();
   }
 
-  EthernetDeviceTest() { Initialize(); }
+  EthernetDeviceTest() : EthernetDeviceTest(0 /* features */) {}
 
-  ~EthernetDeviceTest() { edev0->DestroyAllEthDev(); }
+  ~EthernetDeviceTest() {
+    device_async_remove(edev0->zxdev());
+    mock_ddk::ReleaseFlaggedDevices(tester.parent().get());
 
-  auto FidlClient() {
-    return fidl::WireCall(
-        fidl::UnownedClientEnd<fuchsia_hardware_ethernet::Device>(tester.ddk().FidlClient().get()));
+    loop_.Shutdown();
   }
+
+  auto FidlClient() { return client_.sync(); }
 
   void Start() {
     {
@@ -88,17 +94,26 @@ class EthernetDeviceTest {
   zx::fifo& ReceiveFifo() { return rx_fifo_; }
 
   EthernetTester tester;
-  std::unique_ptr<EthDev0ForTest> edev0;
-  fbl::RefPtr<eth::EthDev> edev;
+  // Unowned references as mock-ddk owns the devices through tester.parent().
+  EthDev0ForTest* edev0;
+  eth::EthDev* edev;
 
  private:
   void Initialize() {
-    edev0 = std::make_unique<EthDev0ForTest>(fake_ddk::kFakeParent);
+    edev0 = new EthDev0ForTest(tester.parent().get());
     ASSERT_OK(edev0->AddDevice());
 
-    edev = fbl::MakeRefCounted<eth::EthDev>(fake_ddk::kFakeParent, edev0.get());
-    zx_device_t* out;
-    ASSERT_OK(edev->AddDevice(&out));
+    edev = new eth::EthDev(tester.parent().get(), edev0);
+    edev->Adopt();
+    // mock-ddk now takes ownership of the device and will release edev.
+    ASSERT_OK(edev->AddDevice(nullptr));
+
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_ethernet::Device>();
+    ASSERT_OK(endpoints.status_value());
+
+    ASSERT_OK(loop_.StartThread("ethernet-thread"));
+    binding_ = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), edev);
+    client_.Bind(std::move(endpoints->client), loop_.dispatcher());
   }
 
   zx::fifo tx_fifo_;
@@ -106,6 +121,10 @@ class EthernetDeviceTest {
   uint32_t rx_fifo_depth_;
   uint32_t tx_fifo_depth_;
   zx::vmo buf_;
+
+  async::Loop loop_ = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
+  fidl::WireSharedClient<fuchsia_hardware_ethernet::Device> client_;
+  std::optional<fidl::ServerBindingRef<fuchsia_hardware_ethernet::Device>> binding_;
 };
 
 TEST(EthernetTest, MultipleOpenTest) {
@@ -408,11 +427,7 @@ class EthernetGetFeaturesTest
 TEST_P(EthernetGetFeaturesTest, BanjoToFIDLTest) {
   const auto [banjo_features, fidl_features] = GetParam();
 
-  FakeEthernetImplProtocol ethernet_impl;
-  ethernet_impl.SetFeatures(banjo_features);
-
-  EthernetDeviceTest test(std::move(ethernet_impl));
-  test.tester.ethmac().SetFeatures(banjo_features);
+  EthernetDeviceTest test(banjo_features);
   auto result = test.FidlClient()->GetInfo();
   ASSERT_OK(result.status());
   EXPECT_EQ(result->info.features, fidl_features);
