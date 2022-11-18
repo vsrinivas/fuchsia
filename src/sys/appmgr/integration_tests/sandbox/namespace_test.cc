@@ -50,7 +50,7 @@ void NamespaceTest::ExpectDoesNotExist(const char* path) {
 }
 
 void NamespaceTest::ExpectPathSupportsRights(const char* path, fio::wire::OpenFlags rights) {
-  ASSERT_FALSE(rights & ~fio::wire::kOpenRights)
+  ASSERT_FALSE(rights - fio::wire::kOpenRights)
       << "Unsupported rights in ExpectPathSupportsRights call";
 
   fbl::unique_fd fd;

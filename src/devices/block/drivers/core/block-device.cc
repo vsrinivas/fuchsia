@@ -181,7 +181,7 @@ void BlockDevice::GetInfo(GetInfoCompleter::Sync& completer) {
   if (has_bootpart_) {
     info.flags |= fuchsia_hardware_block::wire::Flag::kBootpart;
   } else {
-    info.flags &= ~fuchsia_hardware_block::wire::Flag::kBootpart;
+    info.flags -= fuchsia_hardware_block::wire::Flag::kBootpart;
   }
 
   completer.Reply(ZX_OK, fidl::ObjectView<decltype(info)>::FromExternal(&info));

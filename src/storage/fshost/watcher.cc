@@ -56,7 +56,7 @@ zx_status_t Watcher::ReinitWatcher() {
 
   auto mask = fio::wire::WatchMask::kMask;
   if (ignore_existing_) {
-    mask &= ~fio::wire::WatchMask::kExisting;
+    mask -= fio::wire::WatchMask::kExisting;
   }
   auto result = fidl::WireCall(caller_.borrow_as<fio::Directory>())
                     ->Watch(mask, 0, std::move(server_end.value()));

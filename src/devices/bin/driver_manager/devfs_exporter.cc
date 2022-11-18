@@ -48,7 +48,7 @@ zx_status_t ExportWatcher::MakeVisible() {
     if (*options != fuchsia_device_fs::wire::ExportOptions::kInvisible) {
       return ZX_ERR_BAD_STATE;
     }
-    *options &= ~fuchsia_device_fs::wire::ExportOptions::kInvisible;
+    *options -= fuchsia_device_fs::wire::ExportOptions::kInvisible;
     node->publish();
   }
 

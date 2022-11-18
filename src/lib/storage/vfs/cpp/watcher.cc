@@ -26,7 +26,7 @@ WatcherContainer::~WatcherContainer() = default;
 WatcherContainer::VnodeWatcher::VnodeWatcher(
     fidl::ServerEnd<fuchsia_io::DirectoryWatcher> server_end, fuchsia_io::wire::WatchMask mask)
     : server_end(std::move(server_end)),
-      mask(mask & ~(fio::wire::WatchMask::kExisting | fio::wire::WatchMask::kIdle)) {}
+      mask(mask - (fio::wire::WatchMask::kExisting | fio::wire::WatchMask::kIdle)) {}
 
 WatcherContainer::VnodeWatcher::~VnodeWatcher() = default;
 

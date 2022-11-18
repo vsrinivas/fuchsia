@@ -63,7 +63,7 @@ zx::result<VnodeRepresentation> Describe(const fbl::RefPtr<Vnode>& vnode, VnodeP
 bool PrevalidateFlags(fio::wire::OpenFlags flags) {
   if (flags & fio::wire::OpenFlags::kNodeReference) {
     // Explicitly reject VNODE_REF_ONLY together with any invalid flags.
-    if (flags & ~fio::wire::kOpenFlagsAllowedWithNodeReference) {
+    if (flags - fio::wire::kOpenFlagsAllowedWithNodeReference) {
       return false;
     }
   }
