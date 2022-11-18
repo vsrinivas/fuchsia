@@ -78,7 +78,7 @@ std::optional<T> GetConfig(const std::string& schema_str,
   return config;
 }
 
-constexpr char kBoardConfigSchema[] = R"({
+constexpr char kProductConfigSchema[] = R"({
     "type": "object",
     "properties": {
        "persisted_logs_num_files": {
@@ -103,8 +103,8 @@ constexpr char kBoardConfigSchema[] = R"({
     "additionalProperties": false
 })";
 
-std::optional<BoardConfig> ParseBoardConfig(const rapidjson::Document& json) {
-  BoardConfig config;
+std::optional<ProductConfig> ParseProductConfig(const rapidjson::Document& json) {
+  ProductConfig config;
   if (const int64_t num_files = json["persisted_logs_num_files"].GetInt64(); num_files > 0) {
     config.persisted_logs_num_files = num_files;
   } else {
@@ -169,10 +169,10 @@ std::optional<BuildTypeConfig> ParseBuildTypeConfig(const rapidjson::Document& j
 
 }  // namespace
 
-std::optional<BoardConfig> GetBoardConfig(const std::string& default_path,
-                                          const std::string& override_path) {
-  return GetConfig<BoardConfig>(kBoardConfigSchema, ParseBoardConfig, "board", default_path,
-                                override_path);
+std::optional<ProductConfig> GetProductConfig(const std::string& default_path,
+                                              const std::string& override_path) {
+  return GetConfig<ProductConfig>(kProductConfigSchema, ParseProductConfig, "product", default_path,
+                                  override_path);
 }
 
 std::optional<BuildTypeConfig> GetBuildTypeConfig(const std::string& default_path,

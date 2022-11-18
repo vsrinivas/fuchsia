@@ -53,9 +53,9 @@ int main() {
     return EXIT_FAILURE;
   }
 
-  const std::optional<feedback::BoardConfig> board_config = feedback::GetBoardConfig();
-  if (!board_config.has_value()) {
-    FX_LOGS(FATAL) << "Failed to parse board config";
+  const std::optional<feedback::ProductConfig> product_config = feedback::GetProductConfig();
+  if (!product_config.has_value()) {
+    FX_LOGS(FATAL) << "Failed to parse product config";
     return EXIT_FAILURE;
   }
 
@@ -76,8 +76,8 @@ int main() {
           .period = kWritePeriod,
           .max_write_size = kMaxWriteSize,
           .logs_dir = kCurrentLogsDir,
-          .max_num_files = board_config->persisted_logs_num_files,
-          .total_log_size = board_config->persisted_logs_total_size,
+          .max_num_files = product_config->persisted_logs_num_files,
+          .total_log_size = product_config->persisted_logs_total_size,
       },
       // Don't set up Inspect because all messages in the previous boot log
       // are in the current boot log and counted in Inspect.

@@ -31,10 +31,10 @@ class ConfigTest : public testing::Test {
   files::ScopedTempDir temp_dir_;
 };
 
-class BoardConfigTest : public ConfigTest {
+class ProductConfigTest : public ConfigTest {
  protected:
-  std::optional<BoardConfig> ParseConfig(const std::string& config) {
-    return GetBoardConfig(WriteConfig(config));
+  std::optional<ProductConfig> ParseConfig(const std::string& config) {
+    return GetProductConfig(WriteConfig(config));
   }
 };
 
@@ -45,8 +45,8 @@ class BuildTypeConfigTest : public ConfigTest {
   }
 };
 
-TEST_F(BoardConfigTest, MissingPersistedLogsNumFiles) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, MissingPersistedLogsNumFiles) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
   "snapshot_persistence_max_cache_size_mib": 1
@@ -55,8 +55,8 @@ TEST_F(BoardConfigTest, MissingPersistedLogsNumFiles) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, MissingPersistedLogsTotalSizeKib) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, MissingPersistedLogsTotalSizeKib) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
   "snapshot_persistence_max_cache_size_mib": 1
@@ -65,8 +65,8 @@ TEST_F(BoardConfigTest, MissingPersistedLogsTotalSizeKib) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, MissingSnapshotPersistenceMaxTmpSizeMib) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, MissingSnapshotPersistenceMaxTmpSizeMib) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_cache_size_mib": 1
@@ -75,8 +75,8 @@ TEST_F(BoardConfigTest, MissingSnapshotPersistenceMaxTmpSizeMib) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, MissingSnapshotPersistenceMaxCacheSizeMib) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, MissingSnapshotPersistenceMaxCacheSizeMib) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1
@@ -85,8 +85,8 @@ TEST_F(BoardConfigTest, MissingSnapshotPersistenceMaxCacheSizeMib) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, SpuriousField) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, SpuriousField) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -97,8 +97,8 @@ TEST_F(BoardConfigTest, SpuriousField) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, PersistedLogsNumFilesPositive) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, PersistedLogsNumFilesPositive) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -109,8 +109,8 @@ TEST_F(BoardConfigTest, PersistedLogsNumFilesPositive) {
   EXPECT_EQ(config->persisted_logs_num_files, 1u);
 }
 
-TEST_F(BoardConfigTest, PersistedLogsNumFilesZero) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, PersistedLogsNumFilesZero) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 0,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -120,8 +120,8 @@ TEST_F(BoardConfigTest, PersistedLogsNumFilesZero) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, PersistedLogsNumFilesNegative) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, PersistedLogsNumFilesNegative) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": -1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -131,8 +131,8 @@ TEST_F(BoardConfigTest, PersistedLogsNumFilesNegative) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, PersistedLogsNumFilesNotNumber) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, PersistedLogsNumFilesNotNumber) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": "",
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -142,8 +142,8 @@ TEST_F(BoardConfigTest, PersistedLogsNumFilesNotNumber) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, PersistedLogsTotalSizeKibPositive) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, PersistedLogsTotalSizeKibPositive) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -154,8 +154,8 @@ TEST_F(BoardConfigTest, PersistedLogsTotalSizeKibPositive) {
   EXPECT_EQ(config->persisted_logs_total_size, StorageSize::Kilobytes(1));
 }
 
-TEST_F(BoardConfigTest, PersistedLogsTotalSizeKibZero) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, PersistedLogsTotalSizeKibZero) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 0,,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -165,8 +165,8 @@ TEST_F(BoardConfigTest, PersistedLogsTotalSizeKibZero) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, PersistedLogsTotalSizeKibNegative) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, PersistedLogsTotalSizeKibNegative) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": -1,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -176,8 +176,8 @@ TEST_F(BoardConfigTest, PersistedLogsTotalSizeKibNegative) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, PersistedLogsTotalSizeKibNotNumber) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, PersistedLogsTotalSizeKibNotNumber) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": "",
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -187,8 +187,8 @@ TEST_F(BoardConfigTest, PersistedLogsTotalSizeKibNotNumber) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, SnapshotPersistenceMaxTmpSizeMibPositive) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, SnapshotPersistenceMaxTmpSizeMibPositive) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -199,8 +199,8 @@ TEST_F(BoardConfigTest, SnapshotPersistenceMaxTmpSizeMibPositive) {
   EXPECT_EQ(config->snapshot_persistence_max_tmp_size, StorageSize::Megabytes(1));
 }
 
-TEST_F(BoardConfigTest, SnapshotPersistenceMaxTmpSizeMibZero) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, SnapshotPersistenceMaxTmpSizeMibZero) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 0,
@@ -211,8 +211,8 @@ TEST_F(BoardConfigTest, SnapshotPersistenceMaxTmpSizeMibZero) {
   EXPECT_FALSE(config->snapshot_persistence_max_tmp_size.has_value());
 }
 
-TEST_F(BoardConfigTest, SnapshotPersistenceMaxTmpSizeMibNegative) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, SnapshotPersistenceMaxTmpSizeMibNegative) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": -1,
@@ -223,8 +223,8 @@ TEST_F(BoardConfigTest, SnapshotPersistenceMaxTmpSizeMibNegative) {
   EXPECT_FALSE(config->snapshot_persistence_max_tmp_size.has_value());
 }
 
-TEST_F(BoardConfigTest, SnapshotPersistenceMaxTmpSizeMibNotNumber) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, SnapshotPersistenceMaxTmpSizeMibNotNumber) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": "",
@@ -234,8 +234,8 @@ TEST_F(BoardConfigTest, SnapshotPersistenceMaxTmpSizeMibNotNumber) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, SnapshotPersistenceMaxCacheSizeMibPositive) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, SnapshotPersistenceMaxCacheSizeMibPositive) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -246,8 +246,8 @@ TEST_F(BoardConfigTest, SnapshotPersistenceMaxCacheSizeMibPositive) {
   EXPECT_EQ(config->snapshot_persistence_max_cache_size, StorageSize::Megabytes(1));
 }
 
-TEST_F(BoardConfigTest, SnapshotPersistenceMaxCacheSizeMibZero) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, SnapshotPersistenceMaxCacheSizeMibZero) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -258,8 +258,8 @@ TEST_F(BoardConfigTest, SnapshotPersistenceMaxCacheSizeMibZero) {
   EXPECT_FALSE(config->snapshot_persistence_max_cache_size.has_value());
 }
 
-TEST_F(BoardConfigTest, SnapshotPersistenceMaxCacheSizeMibNegative) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, SnapshotPersistenceMaxCacheSizeMibNegative) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -270,8 +270,8 @@ TEST_F(BoardConfigTest, SnapshotPersistenceMaxCacheSizeMibNegative) {
   EXPECT_FALSE(config->snapshot_persistence_max_cache_size.has_value());
 }
 
-TEST_F(BoardConfigTest, SnapshotPersistenceMaxCacheSizeMibNotNumber) {
-  const std::optional<BoardConfig> config = ParseConfig(R"({
+TEST_F(ProductConfigTest, SnapshotPersistenceMaxCacheSizeMibNotNumber) {
+  const std::optional<ProductConfig> config = ParseConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
   "snapshot_persistence_max_tmp_size_mib": 1,
@@ -281,7 +281,7 @@ TEST_F(BoardConfigTest, SnapshotPersistenceMaxCacheSizeMibNotNumber) {
   EXPECT_FALSE(config.has_value());
 }
 
-TEST_F(BoardConfigTest, UseOverrideConfig) {
+TEST_F(ProductConfigTest, UseOverrideConfig) {
   const std::string override_path = WriteConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
@@ -289,7 +289,7 @@ TEST_F(BoardConfigTest, UseOverrideConfig) {
   "snapshot_persistence_max_cache_size_mib": 1
 })");
 
-  const std::optional<BoardConfig> config = GetBoardConfig(override_path, "/bad/path");
+  const std::optional<ProductConfig> config = GetProductConfig(override_path, "/bad/path");
 
   ASSERT_TRUE(config.has_value());
   EXPECT_EQ(config->persisted_logs_num_files, 1u);
@@ -298,7 +298,7 @@ TEST_F(BoardConfigTest, UseOverrideConfig) {
   EXPECT_EQ(config->snapshot_persistence_max_cache_size, StorageSize::Megabytes(1));
 }
 
-TEST_F(BoardConfigTest, UseDefaultConfig) {
+TEST_F(ProductConfigTest, UseDefaultConfig) {
   const std::string default_path = WriteConfig(R"({
   "persisted_logs_num_files": 1,
   "persisted_logs_total_size_kib": 1,
@@ -306,7 +306,7 @@ TEST_F(BoardConfigTest, UseDefaultConfig) {
   "snapshot_persistence_max_cache_size_mib": 1
 })");
 
-  const std::optional<BoardConfig> config = GetBoardConfig("/bad/path", default_path);
+  const std::optional<ProductConfig> config = GetProductConfig("/bad/path", default_path);
 
   ASSERT_TRUE(config.has_value());
   EXPECT_EQ(config->persisted_logs_num_files, 1u);
@@ -315,8 +315,8 @@ TEST_F(BoardConfigTest, UseDefaultConfig) {
   EXPECT_EQ(config->snapshot_persistence_max_cache_size, StorageSize::Megabytes(1));
 }
 
-TEST_F(BoardConfigTest, MissingOverrideAndDefaultConfigs) {
-  const std::optional<BoardConfig> config = GetBoardConfig("/bad/path", "/bad/path");
+TEST_F(ProductConfigTest, MissingOverrideAndDefaultConfigs) {
+  const std::optional<ProductConfig> config = GetProductConfig("/bad/path", "/bad/path");
 
   EXPECT_FALSE(config.has_value());
 }

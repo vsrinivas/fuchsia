@@ -19,8 +19,8 @@ constexpr char kUseRemoteDeviceIdProviderPath[] = "/config/data/feedback/remote_
 const char kDefaultBuildTypeConfigPath[] = "/pkg/data/build_type/default_config.json";
 const char kOverrideBuildTypeConfigPath[] = "/config/data/build_type/override_config.json";
 
-const char kDefaultBoardConfigPath[] = "/pkg/data/board/default_config.json";
-const char kOverrideBoardConfigPath[] = "/config/data/board/override_config.json";
+const char kDefaultProductConfigPath[] = "/pkg/data/product/default_config.json";
+const char kOverrideProductConfigPath[] = "/config/data/product/override_config.json";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Reboot reporting

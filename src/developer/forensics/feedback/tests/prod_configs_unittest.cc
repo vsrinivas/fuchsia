@@ -16,8 +16,8 @@ namespace {
 
 class ProdConfigTest : public testing::Test {
  public:
-  static std::optional<BoardConfig> ReadBoardConfig(const std::string& config_filename) {
-    return GetBoardConfig(files::JoinPath("/pkg/data/board/configs", config_filename));
+  static std::optional<ProductConfig> ReadProductConfig(const std::string& config_filename) {
+    return GetProductConfig(files::JoinPath("/pkg/data/product/configs", config_filename));
   }
 
   static std::optional<BuildTypeConfig> ReadBuildTypeConfig(const std::string& config_filename) {
@@ -25,8 +25,8 @@ class ProdConfigTest : public testing::Test {
   }
 };
 
-TEST_F(ProdConfigTest, DefaultBoard) {
-  const std::optional<BoardConfig> config = ReadBoardConfig("default.json");
+TEST_F(ProdConfigTest, DefaultProduct) {
+  const std::optional<ProductConfig> config = ReadProductConfig("default.json");
   ASSERT_TRUE(config.has_value());
 
   EXPECT_EQ(config->persisted_logs_num_files, 8u);

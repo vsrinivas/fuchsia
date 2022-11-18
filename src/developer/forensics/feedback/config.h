@@ -15,7 +15,7 @@
 
 namespace forensics::feedback {
 
-struct BoardConfig {
+struct ProductConfig {
   uint64_t persisted_logs_num_files;
   StorageSize persisted_logs_total_size;
   std::optional<StorageSize> snapshot_persistence_max_tmp_size;
@@ -28,9 +28,9 @@ struct BuildTypeConfig {
   bool enable_limit_inspect_data;
 };
 
-std::optional<BoardConfig> GetBoardConfig(
-    const std::string& default_path = kDefaultBoardConfigPath,
-    const std::string& override_path = kOverrideBoardConfigPath);
+std::optional<ProductConfig> GetProductConfig(
+    const std::string& default_path = kDefaultProductConfigPath,
+    const std::string& override_path = kOverrideProductConfigPath);
 
 std::optional<BuildTypeConfig> GetBuildTypeConfig(
     const std::string& default_path = kDefaultBuildTypeConfigPath,

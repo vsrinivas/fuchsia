@@ -52,15 +52,15 @@ int main() {
     return EXIT_FAILURE;
   }
 
-  const std::optional<feedback::BoardConfig> board_config = feedback::GetBoardConfig();
-  if (!board_config.has_value()) {
-    FX_LOGS(FATAL) << "Failed to parse board config";
+  const std::optional<feedback::ProductConfig> product_config = feedback::GetProductConfig();
+  if (!product_config.has_value()) {
+    FX_LOGS(FATAL) << "Failed to parse product config";
     return EXIT_FAILURE;
   }
 
   // TODO(fxbug.dev/102479): Remove check once enabled outside of unit tests.
-  FX_CHECK(!board_config->snapshot_persistence_max_tmp_size.has_value() &&
-           !board_config->snapshot_persistence_max_cache_size.has_value())
+  FX_CHECK(!product_config->snapshot_persistence_max_tmp_size.has_value() &&
+           !product_config->snapshot_persistence_max_cache_size.has_value())
       << "Snapshot persistence not supposed to be enabled yet";
 
   // TODO(fxbug.dev/100847): stop deleting migration file once all devices are running F8+.
@@ -111,9 +111,10 @@ int main() {
               .build_type_config = *build_type_config,
               .config = *crash_reports_config,
               .snapshot_store_max_archives_size = kSnapshotArchivesMaxSize,
-              .snapshot_persistence_max_tmp_size = board_config->snapshot_persistence_max_tmp_size,
+              .snapshot_persistence_max_tmp_size =
+                  product_config->snapshot_persistence_max_tmp_size,
               .snapshot_persistence_max_cache_size =
-                  board_config->snapshot_persistence_max_cache_size,
+                  product_config->snapshot_persistence_max_cache_size,
               .snapshot_collector_window_duration = kSnapshotSharedRequestWindow,
           },
           FeedbackData::Options{

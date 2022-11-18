@@ -505,12 +505,6 @@ executable("ui_state_provider_unittest_exe") {
 ###############################################################################
 # RESOURCES
 ###############################################################################
-resource("prod_board_configs") {
-  sources = [ "//src/developer/forensics/feedback/configs/board/default.json" ]
-
-  outputs = [ "data/board/configs/{{source_file_part}}" ]
-}
-
 resource("prod_build_type_configs") {
   sources = [
     "//src/developer/forensics/feedback/configs/build_type/default.json",
@@ -519,6 +513,13 @@ resource("prod_build_type_configs") {
   ]
 
   outputs = [ "data/build_type/configs/{{source_file_part}}" ]
+}
+
+resource("prod_product_configs") {
+  sources =
+      [ "//src/developer/forensics/feedback/configs/product/default.json" ]
+
+  outputs = [ "data/product/configs/{{source_file_part}}" ]
 }
 
 ###############################################################################
@@ -630,9 +631,9 @@ fuchsia_unittest_component("namespace_init_unittest") {
 
 fuchsia_unittest_component("prod_configs_unittest") {
   deps = [
-    ":prod_board_configs",
     ":prod_build_type_configs",
     ":prod_configs_unittest_exe",
+    ":prod_product_configs",
   ]
 }
 
