@@ -21,6 +21,7 @@
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_stacktrace.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_step_in.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_step_out.h"
+#include "src/developer/debug/zxdb/debug_adapter/handlers/request_terminate.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_threads.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_variables.h"
 #include "src/developer/debug/zxdb/debug_adapter/server.h"
@@ -94,6 +95,7 @@ void DebugAdapterContext::DidResolveConnection(const Err& err) {
   response.supportsFunctionBreakpoints = false;
   response.supportsConfigurationDoneRequest = true;
   response.supportsEvaluateForHovers = false;
+  response.supportsTerminateRequest = true;
   send_initialize_response_(response);
 }
 
@@ -187,6 +189,13 @@ void DebugAdapterContext::Init() {
              std::function<void(dap::ResponseOrError<dap::EvaluateResponse>)> callback) {
         DEBUG_LOG(DebugAdapter) << "EvaluateRequest received";
         OnRequestEvaluate(this, req, callback);
+      });
+
+  dap_->registerHandler(
+      [this](const dap::TerminateRequest& req,
+             std::function<void(dap::ResponseOrError<dap::TerminateResponse>)> callback) {
+        DEBUG_LOG(DebugAdapter) << "TerminateRequest received";
+        OnRequestTerminate(this, req, callback);
       });
 
   dap_->registerHandler([this](const dap::DisconnectRequest& req) {

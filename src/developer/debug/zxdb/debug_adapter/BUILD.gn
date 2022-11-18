@@ -30,6 +30,8 @@ static_library("debug_adapter") {
     "handlers/request_step_in.h",
     "handlers/request_step_out.cc",
     "handlers/request_step_out.h",
+    "handlers/request_terminate.cc",
+    "handlers/request_terminate.h",
     "handlers/request_threads.cc",
     "handlers/request_threads.h",
     "handlers/request_variables.cc",
