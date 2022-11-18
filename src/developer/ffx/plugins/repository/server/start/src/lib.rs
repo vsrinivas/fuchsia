@@ -7,13 +7,32 @@ use {
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_repository_server_start_args::StartCommand,
+    ffx_writer::Writer,
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::RepositoryError,
     fidl_fuchsia_net_ext::SocketAddress,
+    std::io::Write as _,
 };
 
 #[ffx_plugin(RepositoryRegistryProxy = "daemon::protocol")]
-pub async fn start(_cmd: StartCommand, repos: RepositoryRegistryProxy) -> Result<()> {
+pub async fn start(
+    cmd: StartCommand,
+    repos: RepositoryRegistryProxy,
+    #[ffx(machine = SocketAddress)] mut writer: Writer,
+) -> Result<()> {
+    start_impl(cmd, repos, &mut writer).await
+}
+
+#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+struct ServerInfo {
+    address: std::net::SocketAddr,
+}
+
+async fn start_impl(
+    _cmd: StartCommand,
+    repos: RepositoryRegistryProxy,
+    writer: &mut Writer,
+) -> Result<()> {
     match repos
         .server_start()
         .await
@@ -22,7 +41,11 @@ pub async fn start(_cmd: StartCommand, repos: RepositoryRegistryProxy) -> Result
     {
         Ok(address) => {
             let address = SocketAddress::from(address);
-            println!("ffx repository server is listening on {}\n", address);
+            if writer.is_machine() {
+                writer.machine(&ServerInfo { address: address.0 })?;
+            } else {
+                writeln!(writer, "Repository server is listening on {}\n", address)?;
+            }
 
             Ok(())
         }
@@ -50,6 +73,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_start() {
+        let mut writer = Writer::new_test(None);
+
         let (sender, receiver) = channel();
         let mut sender = Some(sender);
         let repos = setup_fake_repos(move |req| match req {
@@ -61,12 +86,38 @@ mod tests {
             other => panic!("Unexpected request: {:?}", other),
         });
 
-        start(StartCommand {}, repos).await.unwrap();
+        start_impl(StartCommand {}, repos, &mut writer).await.unwrap();
         assert_eq!(receiver.await, Ok(()));
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_start_machine() {
+        let mut writer = Writer::new_test(Some(ffx_writer::Format::Json));
+
+        let address = (Ipv4Addr::LOCALHOST, 1234).into();
+
+        let (sender, receiver) = channel();
+        let mut sender = Some(sender);
+        let repos = setup_fake_repos(move |req| match req {
+            RepositoryRegistryRequest::ServerStart { responder } => {
+                sender.take().unwrap().send(()).unwrap();
+                let address = SocketAddress(address).into();
+                responder.send(&mut Ok(address)).unwrap()
+            }
+            other => panic!("Unexpected request: {:?}", other),
+        });
+
+        start_impl(StartCommand {}, repos, &mut writer).await.unwrap();
+        assert_eq!(receiver.await, Ok(()));
+
+        let info: ServerInfo = serde_json::from_str(&writer.test_output().unwrap()).unwrap();
+        assert_eq!(info, ServerInfo { address },);
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_start_failed() {
+        let mut writer = Writer::new_test(None);
+
         let (sender, receiver) = channel();
         let mut sender = Some(sender);
         let repos = setup_fake_repos(move |req| match req {
@@ -77,7 +128,7 @@ mod tests {
             other => panic!("Unexpected request: {:?}", other),
         });
 
-        assert!(start(StartCommand {}, repos).await.is_err());
+        assert!(start_impl(StartCommand {}, repos, &mut writer).await.is_err());
         assert_eq!(receiver.await, Ok(()));
     }
 }

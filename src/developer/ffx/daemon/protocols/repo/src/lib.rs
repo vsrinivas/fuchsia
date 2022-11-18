@@ -4,7 +4,6 @@
 
 use {
     crate::tunnel::TunnelManager,
-    anyhow::{Context as _, Result},
     async_lock::RwLock,
     async_trait::async_trait,
     ffx_daemon_core::events::{EventHandler, Status as EventStatus},
@@ -61,14 +60,14 @@ struct ServerInfo {
 }
 
 impl ServerInfo {
-    async fn new(listen_addr: SocketAddr, manager: Arc<RepositoryManager>) -> Result<Self> {
+    async fn new(
+        listen_addr: SocketAddr,
+        manager: Arc<RepositoryManager>,
+    ) -> std::io::Result<Self> {
         tracing::info!("Starting repository server on {}", listen_addr);
 
         let (server_fut, sink, server) =
-            RepositoryServer::builder(listen_addr, Arc::clone(&manager))
-                .start()
-                .await
-                .context("starting repository server")?;
+            RepositoryServer::builder(listen_addr, Arc::clone(&manager)).start().await?;
 
         tracing::info!("Started repository server on {}", server.local_addr());
 
@@ -89,7 +88,7 @@ enum ServerState {
 }
 
 impl ServerState {
-    async fn start_tunnel(&self, cx: &Context, target_nodename: &str) -> Result<()> {
+    async fn start_tunnel(&self, cx: &Context, target_nodename: &str) -> anyhow::Result<()> {
         match self {
             ServerState::Running(ref server_info) => {
                 server_info.tunnel_manager.start_tunnel(cx, target_nodename.to_string()).await
@@ -98,7 +97,7 @@ impl ServerState {
         }
     }
 
-    async fn stop(&mut self) {
+    async fn stop(&mut self) -> Result<(), ffx::RepositoryError> {
         match std::mem::replace(self, ServerState::Disabled) {
             ServerState::Running(server_info) => {
                 *self = ServerState::Stopped;
@@ -115,9 +114,13 @@ impl ServerState {
                         tracing::error!("Timed out waiting for the repository server to shut down");
                     },
                 }
+
+                Ok(())
             }
             state => {
                 *self = state;
+
+                Err(ffx::RepositoryError::ServerNotRunning)
             }
         }
     }
@@ -181,7 +184,7 @@ async fn start_tunnel(
     cx: &Context,
     inner: &Arc<RwLock<RepoInner>>,
     target_nodename: &str,
-) -> Result<()> {
+) -> anyhow::Result<()> {
     inner.read().await.server.start_tunnel(&cx, &target_nodename).await
 }
 
@@ -505,9 +508,14 @@ async fn create_aliases(
 }
 
 impl RepoInner {
-    async fn start_server(&mut self) -> Result<Option<SocketAddr>, anyhow::Error> {
+    async fn start_server(&mut self) -> Result<Option<SocketAddr>, ffx::RepositoryError> {
         // Exit early if the server is disabled.
-        if !pkg_config::get_repository_server_enabled().await? {
+        let server_enabled = pkg_config::get_repository_server_enabled().await.map_err(|err| {
+            tracing::error!("failed to read save server enabled flag: {:#?}", err);
+            ffx::RepositoryError::InternalError
+        })?;
+
+        if !server_enabled {
             return Ok(None);
         }
 
@@ -544,9 +552,15 @@ impl RepoInner {
                 Ok(Some(local_addr))
             }
             Err(err) => {
-                tracing::error!("failed to start server: {:#?}", err);
+                tracing::error!("failed to start repository server: {:#?}", err);
                 metrics::server_failed_to_start_event(&err.to_string()).await;
-                Err(err)
+
+                match err.kind() {
+                    std::io::ErrorKind::AddrInUse => {
+                        Err(ffx::RepositoryError::ServerAddressAlreadyInUse)
+                    }
+                    _ => Err(ffx::RepositoryError::IoError),
+                }
             }
         }
     }
@@ -557,15 +571,17 @@ impl RepoInner {
         }
     }
 
-    async fn stop_server(&mut self) {
+    async fn stop_server(&mut self) -> Result<(), ffx::RepositoryError> {
         tracing::info!("Stopping repository protocol");
 
-        self.server.stop().await;
+        self.server.stop().await?;
 
         // Drop all repositories.
         self.manager.clear();
 
         tracing::info!("Repository protocol has been stopped");
+
+        Ok(())
     }
 }
 
@@ -614,7 +630,9 @@ impl<T: EventHandlerProvider> Repo<T> {
         let ret = inner.manager.remove(repo_name);
 
         if inner.manager.repositories().next().is_none() {
-            inner.stop_server().await;
+            if let Err(err) = inner.stop_server().await {
+                tracing::error!("failed to stop server: {:#?}", err);
+            }
         }
 
         ret
@@ -840,18 +858,20 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                             tracing::warn!("Not starting server because the server is disabled");
                             Err(ffx::RepositoryError::ServerNotRunning)
                         }
-                        Err(err) => {
-                            tracing::error!("Failed to start repository server: {:#?}", err);
-                            Err(ffx::RepositoryError::ServerNotRunning)
-                        }
+                        Err(err) => Err(err),
                     }
                 }
                 .await;
 
                 // If we started the server, make sure we've registered all the repositories on our
-                // targets.
+                // targets in the background.
                 if res.is_ok() {
-                    load_registrations_from_config(cx, &self.inner, None).await;
+                    let cx = cx.clone();
+                    let inner = Arc::clone(&self.inner);
+                    fasync::Task::local(async move {
+                        load_registrations_from_config(&cx, &inner, None).await;
+                    })
+                    .detach();
                 }
 
                 responder.send(&mut res)?;
@@ -868,7 +888,7 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                         ffx::RepositoryError::InternalError
                     })?;
 
-                    self.inner.write().await.stop_server().await;
+                    self.inner.write().await.stop_server().await?;
 
                     Ok(())
                 }
@@ -1057,7 +1077,10 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
     }
 
     async fn stop(&mut self, _cx: &Context) -> Result<(), anyhow::Error> {
-        self.inner.write().await.stop_server().await;
+        if let Err(err) = self.inner.write().await.stop_server().await {
+            tracing::error!("Failed to stop the server: {:#?}", err);
+        }
+
         Ok(())
     }
 }
@@ -1161,7 +1184,7 @@ impl DaemonEventHandler {
 
 #[async_trait(?Send)]
 impl EventHandler<DaemonEvent> for DaemonEventHandler {
-    async fn on_event(&self, event: DaemonEvent) -> Result<EventStatus> {
+    async fn on_event(&self, event: DaemonEvent) -> anyhow::Result<EventStatus> {
         match event {
             DaemonEvent::NewTarget(info) => {
                 let matcher = if let Some(s) = Self::build_matcher(info) {
@@ -1194,7 +1217,7 @@ impl TargetEventHandler {
 
 #[async_trait(?Send)]
 impl EventHandler<TargetEvent> for TargetEventHandler {
-    async fn on_event(&self, event: TargetEvent) -> Result<EventStatus> {
+    async fn on_event(&self, event: TargetEvent) -> anyhow::Result<EventStatus> {
         if !matches!(event, TargetEvent::RcsActivated) {
             return Ok(EventStatus::Waiting);
         }

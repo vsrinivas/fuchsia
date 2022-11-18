@@ -13,23 +13,33 @@ use {
 pub async fn stop(_cmd: StopCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     match repos.server_stop().await {
         Ok(Ok(())) => {
-            println!("server stopped");
+            println!("Stopped the repository server");
 
             Ok(())
         }
         Ok(Err(err)) => {
-            // If we failed to communicate with the daemon, disable the server so it doesn't start
-            // next time the daemon starts.
-            let _ = pkg_config::set_repository_server_enabled(false).await;
+            let err = RepositoryError::from(err);
+            match err {
+                RepositoryError::ServerNotRunning => {
+                    eprintln!("No repository server is running");
 
-            ffx_bail!("failed to stop the server: {}", RepositoryError::from(err))
+                    Ok(())
+                }
+                err => {
+                    // If we failed to communicate with the daemon, disable the server so it doesn't start
+                    // next time the daemon starts.
+                    let _ = pkg_config::set_repository_server_enabled(false).await;
+
+                    ffx_bail!("Failed to stop the server: {}", RepositoryError::from(err))
+                }
+            }
         }
         Err(err) => {
             // If we failed to communicate with the daemon, disable the server so it doesn't start
             // next time the daemon starts.
             let _ = pkg_config::set_repository_server_enabled(false).await;
 
-            ffx_bail!("failed to communicate with the daemon: {}", err)
+            ffx_bail!("Failed to communicate with the daemon: {}", err)
         }
     }
 }

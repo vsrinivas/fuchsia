@@ -235,6 +235,9 @@ pub enum RepositoryError {
 
     #[error("invalid url")]
     InvalidUrl,
+
+    #[error("repository server address already in use")]
+    ServerAddressAlreadyInUse,
 }
 
 impl From<fidl::RepositoryError> for RepositoryError {
@@ -263,6 +266,9 @@ impl From<fidl::RepositoryError> for RepositoryError {
             }
             fidl::RepositoryError::ServerNotRunning => RepositoryError::ServerNotRunning,
             fidl::RepositoryError::InvalidUrl => RepositoryError::InvalidUrl,
+            fidl::RepositoryError::ServerAddressAlreadyInUse => {
+                RepositoryError::ServerAddressAlreadyInUse
+            }
         }
     }
 }
@@ -293,6 +299,9 @@ impl From<RepositoryError> for fidl::RepositoryError {
             }
             RepositoryError::ServerNotRunning => fidl::RepositoryError::ServerNotRunning,
             RepositoryError::InvalidUrl => fidl::RepositoryError::InvalidUrl,
+            RepositoryError::ServerAddressAlreadyInUse => {
+                fidl::RepositoryError::ServerAddressAlreadyInUse
+            }
         }
     }
 }

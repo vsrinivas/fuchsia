@@ -7,7 +7,7 @@ use {
         manager::RepositoryManager,
         range::Range,
         repo_client::RepoClient,
-        repository::{Error, RepoProvider},
+        repository::{Error as RepoError, RepoProvider},
     },
     anyhow::Result,
     async_lock::RwLock as AsyncRwLock,
@@ -92,7 +92,7 @@ impl RepositoryServerBuilder {
     /// [RepositoryServer], and return a handle to manaserver and the web server task.
     pub async fn start(
         self,
-    ) -> Result<(
+    ) -> std::io::Result<(
         impl Future<Output = ()>,
         futures::channel::mpsc::UnboundedSender<Result<ConnectionStream>>,
         RepositoryServer,
@@ -400,15 +400,15 @@ async fn handle_request(
 
             match res {
                 Ok(file) => file,
-                Err(Error::NotFound) => {
+                Err(RepoError::NotFound) => {
                     warn!("could not find resource: {}", resource_path);
                     return status_response(StatusCode::NOT_FOUND);
                 }
-                Err(Error::InvalidPath(path)) => {
+                Err(RepoError::InvalidPath(path)) => {
                     warn!("invalid path: {}", path);
                     return status_response(StatusCode::BAD_REQUEST);
                 }
-                Err(Error::RangeNotSatisfiable) => {
+                Err(RepoError::RangeNotSatisfiable) => {
                     warn!("invalid range: {:?}", range);
                     return status_response(StatusCode::RANGE_NOT_SATISFIABLE);
                 }

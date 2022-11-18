@@ -17,10 +17,13 @@ ffx_plugin("ffx_repository_server_start") {
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
     "//src/developer/ffx/lib/pkg",
+    "//src/developer/ffx/lib/writer:lib",
     "//src/lib/network/fidl_fuchsia_net_ext",
+    "//third_party/rust_crates:serde",
   ]
   test_deps = [
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:serde_json",
   ]
 }

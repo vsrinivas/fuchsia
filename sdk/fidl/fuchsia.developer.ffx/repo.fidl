@@ -241,4 +241,6 @@ type RepositoryError = strict enum : uint32 {
     SERVER_NOT_RUNNING = 12;
     /// The provided URL was invalid.
     INVALID_URL = 13;
+    /// The repository server address is already in use.
+    SERVER_ADDRESS_ALREADY_IN_USE = 14;
 };
