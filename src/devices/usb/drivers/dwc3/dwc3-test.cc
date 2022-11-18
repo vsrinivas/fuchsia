@@ -18,7 +18,7 @@ class TestFixture : public zxtest::Test {
   TestFixture();
   void SetUp() override;
 
-  fake_pdev::FakePDev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
+  fake_pdev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
   fdf::MmioBuffer mmio() { return fdf::MmioBuffer(reg_region_.GetMmioBuffer()); }
 
  protected:

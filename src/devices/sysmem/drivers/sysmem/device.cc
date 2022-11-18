@@ -527,11 +527,15 @@ zx_status_t Device::Bind() {
   heaps_ = sysmem_root_.CreateChild("heaps");
   collections_node_ = sysmem_root_.CreateChild("collections");
 
-  zx_status_t status = ddk::PDevProtocolClient::CreateFromDevice(parent_, &pdev_);
-  if (status != ZX_OK) {
-    DRIVER_ERROR("Failed device_get_protocol() ZX_PROTOCOL_PDEV - status: %d", status);
-    return status;
+  auto pdev_client = DdkConnectFidlProtocol<fuchsia_hardware_platform_device::Service::Device>();
+  if (pdev_client.is_error()) {
+    DRIVER_ERROR(
+        "Failed device_connect_fidl_protocol() for fuchsia.hardware.platform.device - status: %s",
+        pdev_client.status_string());
+    return pdev_client.status_value();
   }
+
+  pdev_ = fidl::SyncClient(std::move(*pdev_client));
 
   int64_t protected_memory_size = kDefaultProtectedMemorySize;
   int64_t contiguous_memory_size = kDefaultContiguousMemorySize;
@@ -539,7 +543,8 @@ zx_status_t Device::Bind() {
   sysmem_metadata_t metadata;
 
   size_t metadata_actual;
-  status = DdkGetMetadata(SYSMEM_METADATA_TYPE, &metadata, sizeof(metadata), &metadata_actual);
+  zx_status_t status =
+      DdkGetMetadata(SYSMEM_METADATA_TYPE, &metadata, sizeof(metadata), &metadata_actual);
   if (status == ZX_OK && metadata_actual == sizeof(metadata)) {
     pdev_device_info_vid_ = metadata.vid;
     pdev_device_info_pid_ = metadata.pid;
@@ -589,11 +594,18 @@ zx_status_t Device::Bind() {
   allocators_[fuchsia_sysmem2::HeapType::kSystemRam] =
       std::make_unique<SystemRamMemoryAllocator>(this);
 
-  status = pdev_.GetBti(0, &bti_);
-  if (status != ZX_OK) {
-    DRIVER_ERROR("Failed pdev_get_bti() - status: %d", status);
-    return status;
+  auto result = pdev_.wire()->GetBti(0);
+  if (!result.ok()) {
+    DRIVER_ERROR("Transport error for PDev::GetBti() - status: %s", result.status_string());
+    return result.status();
   }
+
+  if (result->is_error()) {
+    DRIVER_ERROR("Failed PDev::GetBti() - status: %s", zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
+
+  bti_ = std::move(result->value()->bti);
 
   zx::bti bti_copy;
   status = bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, &bti_copy);

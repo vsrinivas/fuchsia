@@ -1,0 +1,20 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/driver/compat/compat.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "driver",
+        bind: "meta/bind/sysmem.bindbc",
+        colocate: "false",
+        compat: "driver/sysmem.so",
+    },
+    use: [
+        { protocol: "fuchsia.boot.RootResource" },
+        { service: "fuchsia.hardware.platform.device.Service" },
+    ],
+}

@@ -5,11 +5,10 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 
+#include <fidl/fuchsia.hardware.platform.device/cpp/fidl.h>
 #include <fidl/fuchsia.hardware.sysmem/cpp/fidl.h>
 #include <fidl/fuchsia.sysmem/cpp/fidl.h>
 #include <fidl/fuchsia.sysmem2/cpp/fidl.h>
-#include <fuchsia/hardware/platform/device/c/banjo.h>
-#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -194,7 +193,7 @@ class Device final : public DdkDeviceType,
 
   inspect::Node collections_node_;
 
-  ddk::PDevProtocolClient pdev_;
+  fidl::SyncClient<fuchsia_hardware_platform_device::Device> pdev_;
   zx::bti bti_;
 
   // Initialize these to a value that won't be mistaken for a real vid or pid.

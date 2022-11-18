@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 
+#include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 #include "src/graphics/display/drivers/fake/fake-display.h"
 
@@ -15,12 +16,17 @@ namespace display {
 MockDisplayDeviceTree::MockDisplayDeviceTree(std::shared_ptr<zx_device> mock_root,
                                              std::unique_ptr<SysmemDeviceWrapper> sysmem,
                                              bool start_vsync)
-    : mock_root_(mock_root), sysmem_(std::move(sysmem)) {
-  pdev_.UseFakeBti();
+    : mock_root_(mock_root),
+      sysmem_(std::move(sysmem)),
+      outgoing_(component::OutgoingDirectory::Create(pdev_loop_.dispatcher())) {
+  pdev_fidl_.UseFakeBti();
+  pdev_banjo_.UseFakeBti();
   mock_root_->SetMetadata(SYSMEM_METADATA_TYPE, &sysmem_metadata_, sizeof(sysmem_metadata_));
 
   // Protocols for sysmem
-  mock_root_->AddProtocol(ZX_PROTOCOL_PDEV, pdev_.proto()->ops, pdev_.proto()->ctx);
+  fidl::ClientEnd<fuchsia_io::Directory> client = SetUpPDevFidlServer();
+  mock_root_->AddFidlService(fuchsia_hardware_platform_device::Service::Name, std::move(client));
+  pdev_loop_.StartThread("pdev-server-thread");
 
   if (auto result = sysmem_->Bind(); result != ZX_OK) {
     ZX_PANIC("sysmem_.Bind() return status was not ZX_OK. Error: %s.",
@@ -35,7 +41,8 @@ MockDisplayDeviceTree::MockDisplayDeviceTree(std::shared_ptr<zx_device> mock_roo
       fidl::WireSyncClient<fuchsia_sysmem::DriverConnector>(std::move(sysmem_endpoints->client));
 
   // Fragment for fake-display
-  mock_root_->AddProtocol(ZX_PROTOCOL_PDEV, pdev_.proto()->ops, pdev_.proto()->ctx, "pdev");
+  mock_root_->AddProtocol(ZX_PROTOCOL_PDEV, pdev_banjo_.proto()->ops, pdev_banjo_.proto()->ctx,
+                          "pdev");
   mock_root_->AddProtocol(ZX_PROTOCOL_SYSMEM, sysmem_->proto()->ops, sysmem_->proto()->ctx,
                           "sysmem");
 
@@ -72,6 +79,26 @@ MockDisplayDeviceTree::MockDisplayDeviceTree(std::shared_ptr<zx_device> mock_roo
 MockDisplayDeviceTree::~MockDisplayDeviceTree() {
   // AsyncShutdown() must be called before ~MockDisplayDeviceTree().
   ZX_ASSERT(shutdown_);
+}
+
+fidl::ClientEnd<fuchsia_io::Directory> MockDisplayDeviceTree::SetUpPDevFidlServer() {
+  component::ServiceInstanceHandler handler;
+  fuchsia_hardware_platform_device::Service::Handler service(&handler);
+
+  auto device_handler = [this](fidl::ServerEnd<fuchsia_hardware_platform_device::Device> request) {
+    fidl::BindServer(pdev_loop_.dispatcher(), std::move(request), &pdev_fidl_);
+  };
+  auto service_result = service.add_device(device_handler);
+  ZX_ASSERT((service_result.is_ok()));
+  service_result =
+      outgoing_.AddService<fuchsia_hardware_platform_device::Service>(std::move(handler));
+  ZX_ASSERT(service_result.is_ok());
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ZX_ASSERT(endpoints.is_ok());
+  ZX_ASSERT(outgoing_.Serve(std::move(endpoints->server)).is_ok());
+
+  return std::move(endpoints->client);
 }
 
 zx::unowned_channel MockDisplayDeviceTree::display_client() {

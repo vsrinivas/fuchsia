@@ -21,7 +21,10 @@ driver_bind_rules("sysmem_bind") {
   header_output = "sysmem-bind.h"
   bind_output = "sysmem.bindbc"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/fuchsia.platform" ]
+  deps = [
+    "//src/devices/bind/fuchsia.hardware.platform.device",
+    "//src/devices/bind/fuchsia.platform",
+  ]
 }
 
 source_set("sysmem_common_srcs") {
@@ -47,10 +50,10 @@ source_set("sysmem_common_srcs") {
     "utils.cc",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_hlcpp",
+    "//sdk/fidl/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_cpp_wire",
@@ -117,8 +120,7 @@ fuchsia_driver_component("sysmem") {
   info = "sysmem-info.json"
   component_name = "sysmem"
   deps = [ ":sysmem-driver" ]
-  colocate = true
-  root_resource = true
+  manifest = "meta/sysmem.cml"
 }
 
 test("sysmem-unittest-bin") {

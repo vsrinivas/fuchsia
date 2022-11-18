@@ -208,7 +208,7 @@ class FakeDevice {
     // Control register
   }
 
-  fake_pdev::FakePDev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
+  fake_pdev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
 
   fdf::MmioBuffer mmio() { return fdf::MmioBuffer(region_->GetMmioBuffer()); }
 

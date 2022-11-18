@@ -5,10 +5,9 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_SYSMEM_PROXY_DEVICE_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_SYSMEM_PROXY_DEVICE_H_
 
+#include <fidl/fuchsia.hardware.platform.device/cpp/fidl.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
-#include <fuchsia/hardware/platform/device/c/banjo.h>
-#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -85,7 +84,7 @@ class SysmemProxyDevice final : public DdkDeviceType2,
   async::Loop loop_;
   thrd_t loop_thrd_;
 
-  ddk::PDevProtocolClient pdev_;
+  fidl::SyncClient<fuchsia_hardware_platform_device::Device> pdev_;
 
   // In-proc sysmem interface.  Essentially an in-proc version of
   // fuchsia.sysmem.DriverConnector.

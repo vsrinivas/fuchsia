@@ -10,6 +10,7 @@ source_set("fake-pdev") {
   sources = [ "fake-pdev.cc" ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_cpp_wire",
     "//zircon/system/ulib/fbl",
   ]
   deps = [

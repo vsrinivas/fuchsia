@@ -44,9 +44,14 @@ class MockDisplayDeviceTree {
   void AsyncShutdown();
 
  private:
+  fidl::ClientEnd<fuchsia_io::Directory> SetUpPDevFidlServer();
+
   std::shared_ptr<zx_device> mock_root_;
 
-  fake_pdev::FakePDev pdev_;
+  // Display device tree needs two platform-device nodes, one as the parent of sysmem and one as a
+  // fragment of the composite parent of display. The latter uses Banjo while the former uses FIDL.
+  fake_pdev::FakePDevFidl pdev_fidl_;
+  fake_pdev::FakePDev pdev_banjo_;
 
   std::unique_ptr<SysmemDeviceWrapper> sysmem_;
 
@@ -66,6 +71,9 @@ class MockDisplayDeviceTree {
 
   async::Loop display_loop_{&kAsyncLoopConfigNeverAttachToThread};
   async::Loop sysmem_loop_{&kAsyncLoopConfigNeverAttachToThread};
+  async::Loop pdev_loop_{&kAsyncLoopConfigNeverAttachToThread};
+  component::OutgoingDirectory outgoing_;
+
   fidl::WireSyncClient<fuchsia_hardware_display::Provider> display_provider_client_;
   fidl::WireSyncClient<fuchsia_sysmem::DriverConnector> sysmem_client_;
 };

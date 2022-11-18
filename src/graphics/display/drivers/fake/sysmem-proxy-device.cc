@@ -78,15 +78,18 @@ zx_status_t SysmemProxyDevice::SysmemUnregisterSecureMem() {
 }
 
 zx_status_t SysmemProxyDevice::Bind() {
-  zx_status_t status = ddk::PDevProtocolClient::CreateFromDevice(parent_, &pdev_);
-  if (status != ZX_OK) {
-    LOG(ERROR, "Failed device_get_protocol() ZX_PROTOCOL_PDEV - status: %d", status);
-    return status;
+  auto pdev_client = DdkConnectFidlProtocol<fuchsia_hardware_platform_device::Service::Device>();
+  if (pdev_client.is_error()) {
+    LOG(ERROR, "Failed DdkConnectFidlProtocol() for fuchsia.hardware.platform.device - status: %s",
+        pdev_client.status_string());
+    return pdev_client.status_value();
   }
 
-  status = DdkAdd(ddk::DeviceAddArgs("sysmem")
-                      .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
-                      .set_inspect_vmo(inspector_.DuplicateVmo()));
+  pdev_ = fidl::SyncClient(std::move(*pdev_client));
+
+  zx_status_t status = DdkAdd(ddk::DeviceAddArgs("sysmem")
+                                  .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
+                                  .set_inspect_vmo(inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     LOG(ERROR, "Failed to bind device");
     return status;

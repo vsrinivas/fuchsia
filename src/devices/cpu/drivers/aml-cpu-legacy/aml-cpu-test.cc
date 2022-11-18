@@ -62,7 +62,7 @@ class FakeMmio {
     (*mmio_)[kCpuVersionOffset].SetReadCallback([]() { return kCpuVersion; });
   }
 
-  fake_pdev::FakePDev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
+  fake_pdev::MmioInfo mmio_info() { return {.offset = reinterpret_cast<size_t>(this)}; }
 
   fdf::MmioBuffer mmio() { return fdf::MmioBuffer(mmio_->GetMmioBuffer()); }
 

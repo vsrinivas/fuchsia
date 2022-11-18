@@ -4,6 +4,7 @@
 #ifndef SRC_DEVICES_BUS_TESTING_FAKE_PDEV_FAKE_PDEV_H_
 #define SRC_DEVICES_BUS_TESTING_FAKE_PDEV_FAKE_PDEV_H_
 
+#include <fidl/fuchsia.hardware.platform.device/cpp/wire_test_base.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 
 #include <atomic>
@@ -15,18 +16,18 @@
 
 namespace fake_pdev {
 
+struct MmioInfo {
+  zx::vmo vmo;
+  zx_off_t offset;
+  size_t size;
+};
+
 // This class is thread-safe.
 class FakePDev : public ddk::PDevProtocol<FakePDev> {
  public:
   FakePDev() : proto_({&pdev_protocol_ops_, this}) {}
 
   const pdev_protocol_t* proto() const { return &proto_; }
-
-  struct MmioInfo {
-    zx::vmo vmo;
-    zx_off_t offset;
-    size_t size;
-  };
 
   void set_mmio(uint32_t idx, MmioInfo mmio) {
     fbl::AutoLock al(&lock_);
@@ -85,6 +86,26 @@ class FakePDev : public ddk::PDevProtocol<FakePDev> {
 
   std::optional<pdev_device_info_t> device_info_ __TA_GUARDED(lock_);
   std::optional<pdev_board_info_t> board_info_ __TA_GUARDED(lock_);
+};
+
+class FakePDevFidl : public fidl::testing::WireTestBase<fuchsia_hardware_platform_device::Device> {
+ public:
+  // Generates a fake bti lazily if true.
+  void UseFakeBti(bool use_fake_bti = true) { use_fake_bti_ = use_fake_bti; }
+
+  void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override;
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    ZX_DEBUG_ASSERT(false);
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+ private:
+  fbl::Mutex lock_;
+
+  std::map<uint32_t, zx::bti> btis_ __TA_GUARDED(lock_);
+
+  std::atomic<bool> use_fake_bti_ = false;
 };
 
 }  // namespace fake_pdev

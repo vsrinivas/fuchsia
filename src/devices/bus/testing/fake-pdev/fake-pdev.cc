@@ -87,4 +87,24 @@ zx_status_t FakePDev::PDevGetBoardInfo(pdev_board_info_t* out_info) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+void FakePDevFidl::GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) {
+  fbl::AutoLock al(&lock_);
+  auto bti = btis_.find(request->index);
+  if (bti == btis_.end()) {
+    if (use_fake_bti_) {
+      zx::bti out_bti;
+      zx_status_t status = fake_bti_create(out_bti.reset_and_get_address());
+      if (status == ZX_OK) {
+        completer.ReplySuccess(std::move(out_bti));
+      } else {
+        completer.ReplyError(status);
+      }
+      return;
+    }
+    completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
+    return;
+  }
+  completer.ReplySuccess(std::move(bti->second));
+}
+
 }  // namespace fake_pdev
