@@ -17,16 +17,15 @@ use futures::channel::mpsc::UnboundedSender;
 use futures::future::join_all;
 use futures::StreamExt;
 use std::convert::TryInto;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 pub struct EventSource {
     dispatcher: Dispatcher,
-    legacy_proxy: Option<fsys::EventSourceProxy>,
     event_streams: Option<Vec<EventStream2Proxy>>,
 }
 
 impl EventSource {
-    pub async fn new(legacy_proxy: fsys::EventSourceProxy) -> Result<Self, Error> {
+    pub async fn new() -> Result<Self, Error> {
         // Connect to /events/event_stream which contains our newer FIDL protocol
         let event_streams = vec![
             connect_to_protocol_at_path::<fsys::EventStream2Marker>(
@@ -41,44 +40,13 @@ impl EventSource {
             // Once we remove the legacy fallback, we should handle the potential error.
             let _ = event_stream.wait_for_ready().await;
         }
-        Ok(Self {
-            event_streams: Some(event_streams),
-            dispatcher: Dispatcher::default(),
-            legacy_proxy: Some(legacy_proxy),
-        })
+        Ok(Self { event_streams: Some(event_streams), dispatcher: Dispatcher::default() })
     }
 
     #[cfg(test)]
     async fn new_for_test(event_stream: EventStream2Proxy) -> Result<Self, EventError> {
         // Connect to /events/event_stream which contains our newer FIDL protocol
-        Ok(Self {
-            event_streams: Some(vec![event_stream]),
-            dispatcher: Dispatcher::default(),
-            legacy_proxy: None,
-        })
-    }
-
-    async fn spawn_legacy(mut self, mut stream: fsys::EventStreamRequestStream) {
-        while let Some(request) = stream.next().await {
-            match request {
-                Ok(fsys::EventStreamRequest::OnEvent { event, .. }) => match event.try_into() {
-                    Ok(event) => {
-                        if let Err(err) = self.dispatcher.emit(event).await {
-                            if err.is_disconnected() {
-                                break;
-                            }
-                        }
-                    }
-                    Err(err) => {
-                        warn!(?err, "Failed to interpret event");
-                    }
-                },
-                other => {
-                    debug!(?other, "Unexpected EventStream request");
-                }
-            }
-        }
-        warn!("Legacy EventSource stream server closed.");
+        Ok(Self { event_streams: Some(vec![event_stream]), dispatcher: Dispatcher::default() })
     }
 
     pub async fn spawn(mut self) -> Result<(), Error> {
@@ -107,16 +75,7 @@ impl EventSource {
                 }
             }
         }
-        info!("Attempting legacy fallback");
-        if let Some(event_source) = self.legacy_proxy.take() {
-            match event_source.take_static_event_stream("EventStream").await {
-                Ok(Ok(event_stream)) => self.spawn_legacy(event_stream.into_stream()?).await,
-                Ok(Err(err)) => warn!(?err, "Error taking legacy event stream"),
-                Err(err) => warn!(?err, "Error taking legacy event stream"),
-            }
-        } else {
-            warn!("Legacy fallback failed (no capability)");
-        }
+        info!("Unable to acquire event stream");
 
         Ok(())
     }

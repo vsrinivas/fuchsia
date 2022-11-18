@@ -271,35 +271,6 @@ type EventSubscription = table {
 
 /// Subscribe to events in component manager.
 @discoverable
-protocol EventSource {
-    /// Subscribes to the events of the provided EventTypes.
-    ///
-    /// Returns a EventStreamSync which can be used
-    /// to expect the registered types.
-    ///
-    /// Errors:
-    /// - `RESOURCE_UNAVAILABLE` when the component hasn't been granted the capability to subscribe
-    ///   to some event in the requested `events`.
-    Subscribe(resource struct {
-        events vector<EventSubscription>:fuchsia.component.MAX_SUBSCRIPTION_REQUESTS;
-        stream client_end:EventStream;
-    }) -> () error fuchsia.component.Error;
-
-    /// Returns the server end of a static EventStream of the provided path if it exists.
-    /// If this stream is discarded afterward then all `sync` events on the channel will be
-    /// immediately canceled.
-    /// Errors:
-    /// - `RESOURCE_UNAVAILABLE` when an event stream at the requested path is unavailable
-    /// or has already been taken.
-    TakeStaticEventStream(struct {
-        path string:fuchsia.io.MAX_PATH;
-    }) -> (resource struct {
-        server_end server_end:EventStream;
-    }) error fuchsia.component.Error;
-};
-
-/// Subscribe to events in component manager.
-@discoverable
 protocol EventSource2 {
     /// Subscribes to the events of the provided EventTypes.
     ///
@@ -326,13 +297,4 @@ protocol EventStream2 {
     /// completed. This is needed for non-static streams to verify
     /// that subscribe has completed before components are started.
     WaitForReady() -> ();
-};
-
-/// Listener for events on the component hierarchy. The server won't wait for the client
-/// to handle the request before sending more events.
-@discoverable
-protocol EventStream {
-    OnEvent(resource struct {
-        event Event;
-    });
 };

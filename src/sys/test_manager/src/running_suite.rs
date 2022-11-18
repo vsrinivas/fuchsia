@@ -611,7 +611,6 @@ async fn get_realm(
     builder
         .add_route(
             Route::new()
-                .capability(Capability::protocol::<fsys::EventSourceMarker>())
                 .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                 .from(Ref::parent())
                 .to(&wrapper_realm),
@@ -640,7 +639,6 @@ async fn get_realm(
     wrapper_realm
         .add_route(
             Route::new()
-                .capability(Capability::protocol::<fsys::EventSourceMarker>())
                 .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                 .from(Ref::parent())
                 .to(&archivist),
