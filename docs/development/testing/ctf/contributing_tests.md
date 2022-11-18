@@ -1,6 +1,6 @@
 # Contributing Tests to CTF
 
-<!-- 
+<!--
 TODO(113454): Turn this doc into an index of guides for writing CTF tests
 for different plasa elements (fidls, C++ libraries, tools, etc...)
 -->
@@ -45,7 +45,7 @@ SDK category, please see this section.
 
 ### 1. Setup
 
-First create a directory for the test. The directory name should match the name of the 
+First create a directory for the test. The directory name should match the name of the
 FIDL library. You can copy these commands to generate some scaffolding:
 
 {% set test_root = "sdk/ctf/tests/fidl/" + fidl_library %}
@@ -65,7 +65,7 @@ FIDL library. You can copy these commands to generate some scaffolding:
 
     ```sh
     mkdir {{ test_root }}
-    mkdir {{ test_root }}/meta/    
+    mkdir {{ test_root }}/meta/
     touch {{ test_root }}/meta/{{ test_component_name }}.cml
     touch {{ test_root }}/BUILD.gn
     touch {{ test_root }}/main.rs
@@ -73,9 +73,13 @@ FIDL library. You can copy these commands to generate some scaffolding:
 
 ### 2. Create the test realm
 
-Remember, the test realm provides the test's dependencies. For convenience, the test realm
-component can be defined anywhere in the source tree but we prefer if all realms are
-defined in `//sdk/ctf/test_realm/BUILD.gn.`
+The test realm is a component whose sole purpose is to `expose` the FIDL API that we want to test.
+The test realm component is always built from the HEAD of the current Fuchsia branch. This is what
+makes the CTF test a compatibility test: The test and the FIDL capability it's testing are built at
+different versions.
+
+For convenience, the test realm component can be defined anywhere in the source tree but we prefer
+if all realms are defined in `//sdk/ctf/test_realm/BUILD.gn.`
 
 To create the realm, add contents like the following to `//sdk/ctf/test_realm/BUILD.gn`:
 
@@ -167,11 +171,11 @@ Follow the insructions for each tab, from left to right:
     ```
 
   * {Run the emulator}
-  
+
     ```devsite-terminal
     ffx emu start --headless
     ```
-  
+
   * {Serve packages}
 
     ```devsite-terminal
