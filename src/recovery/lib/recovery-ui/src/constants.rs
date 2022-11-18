@@ -25,6 +25,8 @@ pub mod constants {
 
     const UX_SCALING_FACTOR: f32 = 1.0;
 
+    pub const MIN_SPACE: f32 = 1.0;
+
     pub const BACKGROUND_WHITE: Color = Color { r: 0xff, g: 0xff, b: 0xff, a: 0xff };
     pub const BACKGROUND_GREY: Color = Color { r: 0xf8, g: 0xf9, b: 0xfa, a: 0xff };
 

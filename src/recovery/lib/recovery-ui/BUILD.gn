@@ -29,6 +29,7 @@ rustc_library("recovery-ui") {
     "src/lib.rs",
     "src/progress_bar.rs",
     "src/proxy_view_assistant.rs",
+    "src/text_field.rs",
   ]
 
   # test_deps = [
