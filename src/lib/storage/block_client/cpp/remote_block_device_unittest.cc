@@ -29,16 +29,23 @@ constexpr uint64_t kBlockCount = 10;
 
 // Emulate the non-standard behavior of the block device which implements both the block device APIs
 // and the Node API.
-class MockBlockDevice : public fidl::testing::WireTestBase<fuchsia_hardware_block::BlockAndNode> {
+class MockBlockDevice final
+    : public fidl::testing::WireTestBase<fuchsia_hardware_block::BlockAndNode> {
  public:
-  explicit MockBlockDevice(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
+  explicit MockBlockDevice() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     // Create buffer for read / write calls
     buffer_.resize(kBlockSize * kBlockCount);
+    ZX_ASSERT(loop_.StartThread() == ZX_OK);
+  }
+
+  ~MockBlockDevice() {
+    // Shutting down the loop will force all the unbind callbacks to run.
+    loop_.Shutdown();
   }
 
   void Bind(fidl::ServerEnd<fuchsia_hardware_block::Block> server_end) {
     fidl::BindServer(
-        dispatcher_,
+        loop_.dispatcher(),
         fidl::ServerEnd<fuchsia_hardware_block::BlockAndNode>(server_end.TakeChannel()), this);
   }
 
@@ -65,7 +72,7 @@ class MockBlockDevice : public fidl::testing::WireTestBase<fuchsia_hardware_bloc
 
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
     fidl::BindServer(
-        dispatcher_,
+        loop_.dispatcher(),
         fidl::ServerEnd<fuchsia_hardware_block::BlockAndNode>(request->object.TakeChannel()), this);
   }
 
@@ -93,7 +100,7 @@ class MockBlockDevice : public fidl::testing::WireTestBase<fuchsia_hardware_bloc
       request->session.Close(status);
       return;
     }
-    fidl::BindServer(dispatcher_, std::move(request->session), &session_,
+    fidl::BindServer(loop_.dispatcher(), std::move(request->session), &session_,
                      [](MockSession* session, fidl::UnbindInfo,
                         fidl::ServerEnd<fuchsia_hardware_block::Session>) {
                        session->fifo_.reset();
@@ -142,9 +149,9 @@ class MockBlockDevice : public fidl::testing::WireTestBase<fuchsia_hardware_bloc
     fzl::fifo<block_fifo_request_t, block_fifo_response_t> peer_fifo_;
   };
 
-  async_dispatcher_t* dispatcher_;
   MockSession session_;
   std::vector<uint8_t> buffer_;
+  async::Loop loop_;
 };
 
 // Tests that the RemoteBlockDevice can be created and immediately destroyed.
@@ -153,10 +160,7 @@ TEST(RemoteBlockDeviceTest, Constructor) {
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
   auto& [client, server] = endpoints.value();
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-  MockBlockDevice mock_device(loop.dispatcher());
+  MockBlockDevice mock_device;
   mock_device.Bind(std::move(server));
 
   std::unique_ptr<RemoteBlockDevice> device;
@@ -170,10 +174,7 @@ TEST(RemoteBlockDeviceTest, FifoClosedOnDestruction) {
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
   auto& [client, server] = endpoints.value();
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-  MockBlockDevice mock_device(loop.dispatcher());
+  MockBlockDevice mock_device;
   mock_device.Bind(std::move(server));
 
   EXPECT_FALSE(mock_device.FifoAttached());
@@ -192,10 +193,7 @@ TEST(RemoteBlockDeviceTest, WriteTransactionReadResponse) {
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
   auto& [client, server] = endpoints.value();
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-  MockBlockDevice mock_device(loop.dispatcher());
+  MockBlockDevice mock_device;
   mock_device.Bind(std::move(server));
 
   std::unique_ptr<RemoteBlockDevice> device;
@@ -244,10 +242,7 @@ TEST(RemoteBlockDeviceTest, WriteReadBlock) {
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
   auto& [client, server] = endpoints.value();
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-  MockBlockDevice mock_device(loop.dispatcher());
+  MockBlockDevice mock_device;
   mock_device.Bind(std::move(server));
 
   constexpr size_t max_count = 3;
@@ -287,10 +282,7 @@ TEST(RemoteBlockDeviceTest, VolumeManagerOrdinals) {
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
   auto& [client, server] = endpoints.value();
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-  MockBlockDevice mock_device(loop.dispatcher());
+  MockBlockDevice mock_device;
   mock_device.Bind(std::move(server));
 
   std::unique_ptr<RemoteBlockDevice> device;
@@ -320,10 +312,7 @@ TEST(RemoteBlockDeviceTest, LargeThreadCountSuceeds) {
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
   auto& [client, server] = endpoints.value();
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-  MockBlockDevice mock_device(loop.dispatcher());
+  MockBlockDevice mock_device;
   mock_device.Bind(std::move(server));
 
   std::unique_ptr<RemoteBlockDevice> device;
@@ -393,14 +382,12 @@ TEST(RemoteBlockDeviceTest, NoHangForErrorsWithMultipleThreads) {
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
   auto& [client, server] = endpoints.value();
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
   std::unique_ptr<RemoteBlockDevice> device;
   constexpr int kThreadCount = 4 * MAX_TXN_GROUP_COUNT;
   std::thread threads[kThreadCount];
 
   {
-    MockBlockDevice mock_device(loop.dispatcher());
+    MockBlockDevice mock_device;
     mock_device.Bind(std::move(server));
 
     ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
@@ -431,9 +418,6 @@ TEST(RemoteBlockDeviceTest, NoHangForErrorsWithMultipleThreads) {
       ASSERT_EQ(mock_device.ReadFifoRequests(requests, &count), ZX_OK);
       request_count += count;
     }
-
-    // Allow MockBlockDevice to go out of scope which should close the fifo.
-    loop.Shutdown();
   }
 
   // We should be able to join all the threads.
