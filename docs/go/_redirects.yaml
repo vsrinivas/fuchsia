@@ -7,6 +7,9 @@
 # team as a reviewer.
 # Using ? or * is not supported in the redirect links.
 redirects:
+- from: /docs/go/rust-external-reviews
+  to: /docs/development/languages/rust/external_crates/review.md
+
 # Component Framework links
 - from: /docs/go/components/build
   to: /docs/development/components/build.md
