@@ -1,0 +1,212 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.test.conformance;
+
+using fuchsia.math;
+using fuchsia.ui.test.input;
+using fuchsia.ui.views;
+
+/// Maximum number of filled rects a client can draw in a given image.
+const MAX_RECTS_PER_IMAGE uint32 = 1024;
+
+/// Result of a puppet operation.
+type Result = flexible enum {
+    /// The puppet does not support the requested operation. This situation
+    /// may arise in several cases:
+    ///
+    /// 1. The runtime supports this operation, but the puppet has not yet
+    ///    implemented it.
+    /// 2. The runtime does not support this operation, and the puppet will
+    ///    never implement it.
+    /// 3. The puppet does not recognize this operation; this case may arise
+    ///    when new fields or methods are added to the Puppet protocol.
+    ///
+    /// A test will pass if the puppet returns UNSUPPORTED from any requested
+    /// operations.
+    UNSUPPORTED = 0;
+
+    /// The puppet successfully completed the requested operation.
+    SUCCESS = 1;
+
+    /// The puppet failed to complete the requested operation.
+    ERROR = 2;
+};
+
+/// Defines the color of a piece of visual content.
+///
+/// We limit the palette to fully saturated colors to simplify verification
+/// with screenshots.
+type Color = flexible enum {
+    /// 0x000000
+    BLACK = 1;
+
+    /// 0xFF0000
+    RED = 2;
+
+    /// 0x00FF00
+    GREEN = 3;
+
+    /// 0x0000FF
+    BLUE = 4;
+
+    /// 0xFFFF00
+    YELLOW = 5;
+
+    /// 0xFF00FF
+    MAGENTA = 6;
+
+    /// 0x00FFFF
+    CYAN = 7;
+
+    /// 0xFFFFFF
+    WHITE = 8;
+};
+
+/// Defines the size and position of a piece of graphical content.
+///
+/// The bounds of the content are assumed to be rectangular.
+type ContentBounds = table {
+    /// The size of the content, defined in its parent view's coordinate space.
+    ///
+    /// For example, a parent view with size 1280x800 is assumed to have a
+    /// useful coordinate space from (0, 0) to (1280, 800). A piece of content
+    /// that's one-fourth the area of the parent view would have size 640x400.
+    1: size fuchsia.math.SizeU;
+
+    /// The location of the top-left corner of the content's origin, defined in
+    /// the parent view's coordinate space.
+    ///
+    /// Returning to the example above, we could position the content to cover
+    /// the bottom-right quadrant of the parent by assigning an origin of
+    /// (640, 400).
+    2: origin fuchsia.math.Vec;
+};
+
+/// Describes a rectangle with a solid, monochrome fill.
+type FilledRect = table {
+    /// The color of the rectangle's fill.
+    1: color Color;
+
+    /// The rectangle's bounds, defined in the parent view's coordinate space.
+    2: bounds ContentBounds;
+};
+
+/// Describes an embedded view.
+type EmbeddedViewProperties = table {
+    /// The embedded view's bounds, defined in the parent view's coordinate
+    /// space.
+    1: bounds ContentBounds;
+};
+
+/// Describes a piece of visual content.
+type ImageProperties = table {
+    /// The image's bounds, defined in the parent view's coordinate space.
+    1: bounds ContentBounds;
+
+    /// Describes the contents of the image. Rects are considered to be in
+    /// reverse z-order, i.e. successive elements are drawn on top of their
+    /// predecessors.
+    2: filled_rects vector<FilledRect>:MAX_RECTS_PER_IMAGE;
+};
+
+/// ******************************* PLEASE READ *******************************
+///
+/// A tool to help developers write generalizable tests against a well-defined
+/// client application ("the puppet"). This API is not intended to cover every
+/// possible UI platform API use case.
+///
+/// TOPOLOGY
+///
+/// Each puppet is assumed to own exactly one view.
+///
+/// Each piece of content added is assumed to be a "direct child" of this view;
+/// and a sibling of the rest of the view's contents. In other words, all
+/// embedded views, filled rects, etc. are considered to have "sibling" semantics;
+/// for example, repositioning or resizing one piece of content should not
+/// reposition/resize any other piece of content.
+///
+/// Z-ORDERING
+///
+/// The contents of a puppet's view are z-ordered according to the order in which
+/// they were created. The first piece of content created appears at the "bottom",
+/// and the last piece of content created appears at the "top".
+///
+/// IDS
+///
+/// All ids must be globally unique, e.g. a "filled rect" id belongs to the same
+/// id space as an "embedded view" id.
+///
+/// SYNCHRONIZATION
+///
+/// All methods should block until the frame containing the requested changes has
+/// rendered to the display, if a new frame is required.
+///
+/// RETURN VALUES
+///
+/// See documentation on the `Result` enum above.
+///
+/// UNKNOWN INTERACTIONS
+///
+/// Puppet implementations may live outside of fuchsia.git, so they will encounter
+/// unknown methods and/or fields any time we extend the puppet API. In these cases,
+/// the puppet should always return `UNSUPPORTED`.
+protocol Puppet {
+    // Graphics methods
+
+    /// Embeds a view owned elsewhere.
+    ///
+    /// The puppet should create a (ViewportCreationToken, ViewCreationToken) pair
+    /// and use the former to create a viewport with the specified `properties`.
+    /// Once the puppet has presented a frame containing the new viewport, it should
+    /// return the view creation token to the caller.
+    EmbedRemoteView(table {
+        1: id uint64;
+        2: properties EmbeddedViewProperties;
+    }) -> (resource table {
+        1: result Result;
+        2: view_creation_token fuchsia.ui.views.ViewCreationToken;
+    });
+
+    /// Updates the properties of an embedded view.
+    SetEmbeddedViewProperties(table {
+        1: id uint64;
+        2: properties EmbeddedViewProperties;
+    }) -> (table {
+        1: result Result;
+    });
+
+    /// Draws an image composed of solid, monochrome-filled rectangles.
+    DrawImage(table {
+        1: id uint64;
+        2: properties ImageProperties;
+    }) -> (table {
+        1: result Result;
+    });
+
+    /// Updates the properties of an image.
+    SetImageProperties(table {
+        1: id uint64;
+        2: properties ImageProperties;
+    }) -> (table {
+        1: result Result;
+    });
+};
+
+/// A helper to spawn a puppet instance, which will own a view created with a specific
+/// token.
+@discoverable
+protocol PuppetFactory {
+    /// Spawns a puppet instance, which will own a view created using `view_token`, and
+    /// binds `puppet_server` to it.
+    Create(resource table {
+        1: view_token fuchsia.ui.views.ViewCreationToken;
+        2: puppet_server server_end:<Puppet>;
+        3: touch_listener client_end:fuchsia.ui.test.input.TouchInputListener;
+        4: mouse_listener client_end:fuchsia.ui.test.input.MouseInputListener;
+        5: keyboard_listener client_end:fuchsia.ui.test.input.KeyboardInputListener;
+    }) -> (table {
+        1: result Result;
+    });
+};
