@@ -37,9 +37,9 @@ class USBMonitor {
   USBMonitorStats GetStats() const;
 
  private:
-  bool started_ __TA_GUARDED(mutex_);
-  std::atomic_uint num_records_ __TA_GUARDED(mutex_);
-  fbl::Mutex mutex_;
+  bool started_ __TA_GUARDED(mutex_){false};
+  std::atomic_uint num_records_{0};
+  mutable fbl::Mutex mutex_;
 };
 
 #endif  // __cplusplus
