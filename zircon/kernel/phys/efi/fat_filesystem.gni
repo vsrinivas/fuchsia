@@ -1,0 +1,79 @@
+# Copyright 2022 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/compiled_action.gni")
+import("//build/dist/distribution_manifest.gni")
+
+# Defines a FAT filesystem image.
+#
+# The image will be constructed as relatively minimal, given the size of the
+# the input files; whether the FAT12, FAT16, or FAT32 layout is used is a part
+# of this determination.
+#
+# Subtargets
+#
+#   * $target_name.manifest
+#     - The associated distribution_manifest() target, aggregating across the
+#       provided dependencies.
+#
+# Parameters
+#
+#   * outputs
+#     - Required: A singleton list containing the output path at which to write
+#       the image.
+#     - Type: list(path)
+#
+#   * deps
+#     - Optional: Filesystem entries, as determined by reachable
+#       `distribution_entries` metadata.
+#     - Type: list(label)
+#
+#   * testonly, visibility
+#     - Optional: Usual GN meanings.
+#
+template("fat_filesystem") {
+  assert(defined(invoker.outputs),
+         "fat_filesystem(\"$target_name\") must define `outputs`")
+
+  manifest_target = "$target_name.manifest"
+  main_target = target_name
+
+  manifest = "$target_gen_dir/$target_name.fat_filesystem.json"
+  distribution_manifest(manifest_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    if (defined(visibility)) {
+      visibility += [ ":main_target" ]
+    }
+    outputs = [ manifest ]
+  }
+
+  compiled_action(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "outputs",
+                             "metadata",
+                             "testonly",
+                             "visibility",
+                           ])
+    tool = "//zircon/kernel/phys/efi/mkfatfs"
+    depfile = "$target_gen_dir/$target_name.d"
+    sources = [ manifest ]
+    args = [
+             "--manifest",
+             rebase_path(manifest, root_build_dir),
+             "--depfile",
+             rebase_path(depfile, root_build_dir),
+             "--output",
+           ] + rebase_path(outputs, root_build_dir)
+    deps = [ ":$manifest_target" ]
+  }
+}

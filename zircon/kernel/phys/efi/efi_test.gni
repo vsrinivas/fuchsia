@@ -1,0 +1,57 @@
+# Copyright 2022 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("efi_executable.gni")
+import("fat_filesystem.gni")
+
+# Defines a UEFI test application.
+#
+# Subtargets
+#
+#   * $target_name.executable
+#     - The associated efi_executable() target.
+#
+# Parameters
+#
+#   * data_deps
+#     - Optional: `resource()`s that should present in the UEFI application's
+#       local filesystem at runtime.
+#     - Type: list(label)
+#
+# See efi_executable() for other parameters.
+#
+template("efi_test") {
+  executable_target = "$target_name.executable"
+  main_target = target_name
+
+  efi_executable(executable_target) {
+    testonly = true
+
+    # By default, this ensures that UEFI recognizes the filesystem image as a
+    # boot option that boots this executable.
+    install_path = "efi/boot/boot${efi_cpu}.efi"
+
+    forward_variables_from(invoker, "*", [ "testonly" ])
+    if (defined(visibility)) {
+      visibility += [ ":$main_target" ]
+    }
+    if (!defined(output_name)) {
+      output_name = main_target
+    }
+  }
+
+  fat_filesystem(main_target) {
+    testonly = true
+    forward_variables_from(invoker, [ "visibility" ])
+
+    # The metadata collection for the manifest will reach the data deps of the
+    # executable.
+    deps = [ ":$executable_target" ]
+    outputs = [ "$target_out_dir/$target_name.raw" ]
+  }
+
+  # TODO(fxbug.dev/113961): Define a boot_test().
+}

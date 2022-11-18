@@ -10,6 +10,7 @@ import("//build/zbi/zbi_input.gni")
 import("//src/bringup/lib/mexec/testing/zbi_test.gni")
 import("//zircon/kernel/lib/code-patching/code-patching.gni")
 import("//zircon/kernel/phys/efi/efi_executable.gni")
+import("//zircon/kernel/phys/efi/efi_test.gni")
 import("//zircon/kernel/phys/qemu.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
 import("phys_zbi_test.gni")
@@ -108,10 +109,8 @@ if (current_toolchain != default_toolchain) {
       forward_variables_from(invoker, "*", [ "target_name" ])
     }
 
-    # TODO(mcgrathr): wire this up to get run as a zbi_test() somehow
-    efi_executable("efi-$target_name") {
+    efi_test("efi-$target_name") {
       visibility = [ ":*" ]
-      testonly = true
       deps = []
       forward_variables_from(invoker,
                              "*",

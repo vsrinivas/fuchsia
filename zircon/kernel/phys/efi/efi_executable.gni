@@ -25,9 +25,13 @@ if (current_cpu == "arm64") {
 # This just defines an executable() target, but it's always in the toolchain
 # for the kernel.efi environment for $current_cpu.
 #
-# TODO(mcgrathr): images metadata?
-#
 # Parameters
+#
+#   * install_path
+#     - Optional: If set, this specifies in the destination in FAT filesystem
+#       when aggregated as a dependency of `fat_filesystem()` - at which this
+#       executable should be installed
+#     - Type: relative path
 #
 #   * output_extension
 #     - Optional: See executable(), but defaults to "efi".
@@ -48,13 +52,42 @@ template("efi_executable") {
     not_needed(invoker, "*")
   } else {
     executable(target_name) {
-      forward_variables_from(invoker, "*")
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "install_path",
+                               "metadata",
+                             ])
       if (defined(visibility)) {
         # Make sure it's visible to the redirector group above.
         visibility += [ ":$target_name" ]
       }
       if (!defined(output_extension)) {
         output_extension = "efi"
+      }
+      if (!defined(output_name)) {
+        output_name = target_name
+      }
+
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+
+        if (defined(invoker.install_path)) {
+          if (!defined(distribution_entries)) {
+            distribution_entries = []
+          }
+          distribution_entries += [
+            {
+              source = rebase_path(
+                      "${root_out_dir}/${output_name}.${output_extension}",
+                      root_build_dir)
+              destination = invoker.install_path
+              label = get_label_info(":$target_name", "label_with_toolchain")
+            },
+          ]
+        }
       }
     }
   }
