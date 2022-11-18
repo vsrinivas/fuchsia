@@ -15,61 +15,39 @@
 
 namespace zxdb {
 
-SourceFileProviderImpl::SourceFileProviderImpl(std::vector<std::string> build_dirs)
-    : build_dir_prefs_(std::move(build_dirs)) {}
+SourceFileProviderImpl::SourceFileProviderImpl(const std::vector<std::string>& source_map) {
+  for (const auto& entry : source_map) {
+    size_t pos = entry.find('=');
+    if (pos == std::string::npos || pos == 0 || pos == entry.size() - 1)
+      continue;  // Invalid entry.
+    source_map_.emplace_back(entry.substr(0, pos), entry.substr(pos + 1));
+  }
+}
 
 SourceFileProviderImpl::SourceFileProviderImpl(const SettingStore& settings)
-    : build_dir_prefs_(settings.GetList(ClientSettings::Target::kBuildDirs)) {}
+    : SourceFileProviderImpl(settings.GetList(ClientSettings::Target::kSourceMap)) {}
 
 ErrOr<SourceFileProvider::FileData> SourceFileProviderImpl::GetFileData(
     const std::string& file_name, const std::string& file_build_dir) const {
+  std::string full_path = std::filesystem::path(file_build_dir) / file_name;
   std::string contents;
 
-  // Search for the source file. If it's relative, try to find it relative to the build dir, and if
-  // that doesn't exist, try relative to the current directory).
-  if (IsPathAbsolute(file_name)) {
-    // Absolute path, expect it to be readable or fail.
-    if (files::ReadFileToString(file_name, &contents))
-      return FileData(std::move(contents), file_name, GetFileModificationTime(file_name));
-    return Err("Source file not found: " + file_name);
-  }
-
-  // Search the build directory preferences in order.
-  for (const auto& cur : build_dir_prefs_) {
-    std::string cur_path = CatPathComponents(cur, file_name);
-    if (files::ReadFileToString(cur_path, &contents))
-      return FileData(std::move(contents), cur_path, GetFileModificationTime(cur_path));
-  }
-
-  // Try to find relative to the build directory given in the symbols.
-  if (!file_build_dir.empty()) {
-    if (!IsPathAbsolute(file_build_dir)) {
-      // Relative build directory.
-      //
-      // Try to apply the prefs combined with the file build directory. As of this writing the
-      // Fuchsia build produces relative build directories from the symbols. This normally maps back
-      // to the same place as the preference but will be different when shelling out to the separate
-      // Zircon build). Even when we fix the multiple build mess in Fuchsia, this relative directory
-      // feature can be useful for projects building in different parts.
-      for (const auto& cur : build_dir_prefs_) {
-        std::string cur_path = CatPathComponents(cur, CatPathComponents(file_build_dir, file_name));
-        if (files::ReadFileToString(cur_path, &contents))
-          return FileData(std::move(contents), cur_path, GetFileModificationTime(cur_path));
-      }
+  // Try to apply source_map_ first so it could override.
+  for (const auto& [base, replaced] : source_map_) {
+    if (PathStartsWith(full_path, base)) {
+      std::string replaced_path = replaced / PathRelativeTo(full_path, base);
+      if (files::ReadFileToString(replaced_path, &contents))
+        return FileData(std::move(contents), replaced_path, GetFileModificationTime(replaced_path));
     }
-
-    // Try to find relative to the file build dir. Even do this if the file build dir is relative to
-    // search relative to the current working directory.
-    std::string cur_path = CatPathComponents(file_build_dir, file_name);
-    if (files::ReadFileToString(cur_path, &contents))
-      return FileData(std::move(contents), cur_path, GetFileModificationTime(cur_path));
   }
 
-  // Fall back on reading relative to the working directory.
-  if (files::ReadFileToString(file_name, &contents))
-    return FileData(std::move(contents), file_name, GetFileModificationTime(file_name));
+  if (files::ReadFileToString(full_path, &contents))
+    return FileData(std::move(contents), full_path, GetFileModificationTime(full_path));
 
-  return Err("Source file not found: " + file_name);
+  return Err(
+      "Source file %s not found. You might want to adjust the source file remap setting. "
+      "See \"get source-map\".",
+      full_path.c_str());
 }
 
 }  // namespace zxdb

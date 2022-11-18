@@ -298,7 +298,7 @@ TEST(CommandParser, Completions) {
 
   // Verb with no argument prefix
   comp = GetCommandCompletions("set ", FillCommandContextCallback());
-  EXPECT_TRUE(CompletionContains(comp, "set build-dirs"));
+  EXPECT_TRUE(CompletionContains(comp, "set source-map"));
   EXPECT_TRUE(CompletionContains(comp, "set language"));
 
   // Verb with argument prefix

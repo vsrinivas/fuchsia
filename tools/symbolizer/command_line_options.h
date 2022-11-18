@@ -25,7 +25,6 @@ struct CommandLineOptions {
   std::vector<std::string> ids_txts;
   std::vector<std::string> symbol_servers;
   std::optional<std::string> symbol_cache;
-  std::vector<std::string> build_dirs;
   std::optional<std::string> dumpfile_output;
 
   bool auth_mode = false;

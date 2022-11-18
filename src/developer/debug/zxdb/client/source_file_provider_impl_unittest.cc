@@ -38,17 +38,16 @@ TEST(SourceUtil, SourceFileProviderImpl) {
   ASSERT_FALSE(result.has_error()) << result.err().msg();
   EXPECT_EQ(expected, result.value().contents);
 
-  // With symbol search path it should be found.
-  SourceFileProviderImpl provider_tmp_build_dir({"/tmp"});
-  result = provider_tmp_build_dir.GetFileData(file_part, "");
+  // With source file remap it should be found.
+  SourceFileProviderImpl provider_tmp_build_dir({".=/tmp"});
+  result = provider_tmp_build_dir.GetFileData(file_part, ".");
   ASSERT_FALSE(result.has_error()) << result.err().msg();
   EXPECT_EQ(expected, result.value().contents);
 
-  // Combination of preference and relative search path.
-  SourceFileProviderImpl provider_slash_build_dir({"/"});
-  result = provider_slash_build_dir.GetFileData(file_part, "tmp");
-  ASSERT_FALSE(result.has_error()) << result.err().msg();
-  EXPECT_EQ(expected, result.value().contents);
+  // Source file remap should be able to override.
+  SourceFileProviderImpl provider_slash_build_dir({"/tmp=/nonexist"});
+  result = provider_slash_build_dir.GetFileData(file_part, "");
+  ASSERT_TRUE(result.has_error());
 }
 
 }  // namespace zxdb
