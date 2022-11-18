@@ -22,6 +22,8 @@ template("engine_library") {
   source_set(target_name) {
     forward_variables_from(invoker, "*")
     sources = [
+      "color_conversion_state_machine.cc",
+      "color_conversion_state_machine.h",
       "color_converter.cc",
       "color_converter.h",
       "display_compositor.cc",

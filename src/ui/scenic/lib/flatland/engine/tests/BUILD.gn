@@ -12,6 +12,7 @@ executable("unittests") {
   output_name = "flatland_engine_unittests"
   testonly = true
   sources = [
+    "color_conversion_state_machine_unittest.cc",
     "common.cc",
     "common.h",
     "display_compositor_unittest.cc",
