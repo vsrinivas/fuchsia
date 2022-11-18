@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("example") {
+  deps = [ ":package" ]
+}
+
+executable("bin") {
+  output_name = "hello-memory-profiler"
+  sources = [ "main.cc" ]
+  deps = [ "//src/performance/memory/profile:memory_trace" ]
+}
+
+fuchsia_component("component") {
+  component_name = "hello-memory-profiler"
+  manifest = "meta/hello_memory_profiler.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("package") {
+  package_name = "hello-memory-profiler"
+  deps = [ ":component" ]
+}
