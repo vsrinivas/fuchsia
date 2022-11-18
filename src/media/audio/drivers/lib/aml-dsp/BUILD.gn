@@ -1,0 +1,22 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # The name of the HW DSP FW that handles Tdm audio data.
+  board_tdm_firmware_name = ""
+}
+
+static_library("aml-dsp") {
+  sources = [
+    "dsp.cc",
+    "dsp.h",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.dsp:fuchsia.hardware.dsp_cpp",
+    "//sdk/fidl/fuchsia.hardware.mailbox:fuchsia.hardware.mailbox_cpp",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+  ]
+  defines = [ "TDM_DSP_FIRMWARE_NAME=\"${board_tdm_firmware_name}\"" ]
+}
