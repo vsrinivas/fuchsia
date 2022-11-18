@@ -13,6 +13,7 @@ rustc_binary("bin") {
 
   deps = [
     ":fastpair_provider_config",
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
     "//sdk/fidl/fuchsia.bluetooth.fastpair:fuchsia.bluetooth.fastpair_rust",
     "//sdk/fidl/fuchsia.bluetooth.gatt2:fuchsia.bluetooth.gatt2_rust",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_rust",
@@ -20,6 +21,7 @@ rustc_binary("bin") {
     "//src/connectivity/bluetooth/lib/async-helpers",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/lib/packet-encoding",
+    "//src/connectivity/bluetooth/lib/profile-client",
     "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -35,6 +37,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:hmac",
     "//third_party/rust_crates:lru-cache",
     "//third_party/rust_crates:p256",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:sha2",
@@ -58,6 +61,7 @@ rustc_binary("bin") {
     "src/gatt_service.rs",
     "src/host_watcher.rs",
     "src/main.rs",
+    "src/message_stream.rs",
     "src/pairing.rs",
     "src/provider.rs",
     "src/types/error.rs",

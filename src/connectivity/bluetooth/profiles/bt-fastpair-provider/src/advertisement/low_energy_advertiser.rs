@@ -106,7 +106,7 @@ impl LowEnergyAdvertisement {
         // Resolves when the remote peer disconnects.
         let closed_fut = Box::pin(async move {
             let _ = connection.on_closed().await;
-            debug!("{:?} disconnected", id);
+            debug!("{} disconnected", id);
             id
         });
         Some((id, closed_fut))

@@ -121,16 +121,16 @@ impl std::fmt::Debug for GattRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let output = match &self {
             Self::KeyBasedPairing { peer_id, .. } => {
-                format!("KeyBasedPairing({:?})", peer_id)
+                format!("KeyBasedPairing({})", peer_id)
             }
             Self::WriteAccountKey { peer_id, .. } => {
-                format!("WriteAccountKey({:?})", peer_id)
+                format!("WriteAccountKey({})", peer_id)
             }
             Self::VerifyPasskey { peer_id, .. } => {
-                format!("VerifyPasskey({:?})", peer_id)
+                format!("VerifyPasskey({})", peer_id)
             }
             Self::AdditionalData { peer_id, .. } => {
-                format!("AdditionalData({:?})", peer_id)
+                format!("AdditionalData({})", peer_id)
             }
         };
         write!(f, "{}", output)

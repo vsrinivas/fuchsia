@@ -316,6 +316,24 @@ impl PairingManager {
         Ok(())
     }
 
+    /// Attempts to initiate a new retroactive Fast Pair pairing procedure with the provided peer.
+    pub fn new_retroactive_pairing_procedure(
+        &mut self,
+        le_id: PeerId,
+        key: SharedSecret,
+    ) -> Result<(), Error> {
+        if self.procedures.contains_key(&le_id) {
+            return Err(Error::internal(&format!("Pairing with {le_id:?} already in progress")));
+        }
+
+        // Classic/LE pairing has already completed so there is no need to claim the Pairing
+        // Delegate nor go through the regular pairing stages of the Procedure.
+        let mut procedure = Procedure::new(le_id, key);
+        let _ = procedure.transition(ProcedureState::PairingComplete);
+        let _ = self.procedures.insert(le_id, procedure);
+        Ok(())
+    }
+
     /// Attempts to compare the provided `gatt_passkey` with the passkey saved in the ongoing
     /// pairing procedure with the peer.
     /// If the comparison is made, responds to the in-progress pairing request with the result of
@@ -329,7 +347,7 @@ impl PairingManager {
     // pairing request before `compare_passkey` is called with the GATT passkey. While the GFPS
     // does specify this ordering, this may not always be the case in practice.
     pub fn compare_passkey(&mut self, le_id: PeerId, gatt_passkey: u32) -> Result<u32, Error> {
-        debug!(?le_id, %gatt_passkey, "Comparing passkey");
+        debug!(%le_id, %gatt_passkey, "Comparing passkey");
         let procedure = self
             .procedures
             .inner()
@@ -354,7 +372,7 @@ impl PairingManager {
     // { success = true }) before `account_key_write` is called. While the GFPS does specify this
     // ordering, this may not always be the case in practice.
     pub fn account_key_write(&mut self, le_id: PeerId) -> Result<(), Error> {
-        debug!(?le_id, "Processing account key write");
+        debug!(%le_id, "Processing account key write");
         let procedure = self
             .procedures
             .inner()
@@ -444,7 +462,7 @@ impl PairingManager {
                     self.procedures.inner().iter_mut().find(|(_le_id, p)| p.is_started());
                 if procedure.is_none() {
                     warn!(
-                        ?le_or_bredr_id,
+                        %le_or_bredr_id,
                         "Couldn't match pairing request with inflight Fast Pair procedure"
                     );
                     // TODO(fxbug.dev/101721): Consider relaying upstream if I/O capabilities are
@@ -460,7 +478,7 @@ impl PairingManager {
             // state. Error.
             Some(p) => {
                 warn!(
-                    ?le_or_bredr_id, ?p.state,
+                    %le_or_bredr_id, ?p.state,
                     "Received unexpected pairing request",
                 );
                 // The current pairing procedure is no longer valid.
@@ -482,7 +500,7 @@ impl PairingManager {
         le_or_bredr_id: PeerId,
         success: bool,
     ) -> Result<Option<PeerId>, Error> {
-        debug!(?le_or_bredr_id, success, "pairing complete");
+        debug!(%le_or_bredr_id, success, "pairing complete");
         // Try to match the request to the peer's LE or BR/EDR PeerId.
         let procedure = self
             .procedures
@@ -490,7 +508,7 @@ impl PairingManager {
             .iter_mut()
             .find(|(id, p)| **id == le_or_bredr_id || p.bredr_id == Some(le_or_bredr_id));
         if procedure.is_none() {
-            debug!(?le_or_bredr_id, "Pairing complete for non-Fast Pair peer. Ignoring..");
+            debug!(%le_or_bredr_id, "Pairing complete for non-Fast Pair peer. Ignoring..");
             // TODO(fxbug.dev/101721): Consider relaying upstream if I/O capabilities are defined
             // per peer.
             return Ok(None);
@@ -505,11 +523,11 @@ impl PairingManager {
         }
 
         if success {
-            warn!(?le_id, ?procedure.state, "Unexpected pairing success for Fast Pair procedure");
+            warn!(%le_id, ?procedure.state, "Unexpected pairing success for Fast Pair procedure");
             // TODO(fxbug.dev/103204): This indicates Fast Pair pairing was completed in an
             // non spec-compliant manner. We should remove the bond via sys.Access/Forget.
         } else {
-            info!(?le_id, "Pairing failure");
+            info!(%le_id, "Pairing failure");
         }
 
         let id = *le_id;
@@ -554,7 +572,7 @@ impl PairingManager {
         }
 
         if let Poll::Ready(Some(id)) = self.procedures.poll_next_unpin(cx) {
-            info!(?id, "Deadline reached for Fast Pair procedure. Canceling");
+            info!(%id, "Deadline reached for Fast Pair procedure. Canceling");
             // Deadline was reached (e.g no updates within the expected time). Procedure is no
             // longer valid.
             let _ = self.cancel_pairing_procedure(&id);
@@ -1385,5 +1403,27 @@ pub(crate) mod tests {
         // name.
         assert_matches!(manager.complete_pairing_procedure(id), Ok(_));
         assert_matches!(manager.key_for_procedure(&id), None);
+    }
+
+    #[fuchsia::test]
+    async fn retroactive_pairing_procedure() {
+        let (mut manager, mut mock) = MockPairing::new_with_manager().await;
+
+        let le_id = PeerId(123);
+        assert_matches!(
+            manager.new_retroactive_pairing_procedure(le_id, keys::tests::example_aes_key()),
+            Ok(_)
+        );
+        // We don't expect the pairing delegate to be claimed since pairing is already complete.
+        assert_matches!(mock.expect_set_pairing_delegate().now_or_never(), None);
+        // Shared secret should be accessible.
+        assert_matches!(manager.key_for_procedure(&le_id), Some(_));
+
+        // No need for passkey comparison.
+        assert_matches!(manager.compare_passkey(le_id, 123456), Err(_));
+        // When the peer writes an Account Key, the retroactive pairing flow is complete.
+        assert_matches!(manager.account_key_write(le_id), Ok(_));
+        assert_matches!(manager.complete_pairing_procedure(le_id), Ok(_));
+        assert_matches!(manager.key_for_procedure(&le_id), None);
     }
 }

@@ -5,6 +5,7 @@
 use anyhow::format_err;
 use fidl_fuchsia_bluetooth_gatt2 as gatt;
 use fidl_fuchsia_bluetooth_le as le;
+use profile_client::Error as ProfileClientError;
 use thiserror::Error;
 
 /// Errors that occur during the operation of the Fast Pair Provider component.
@@ -25,6 +26,10 @@ pub enum Error {
     /// Error encountered when trying to advertise via `le.Peripheral`.
     #[error("Error trying to advertise over LE: {:?}", .0)]
     AdvertiseError(le::PeripheralError),
+
+    /// Error encountered when using the `ProfileClient` library.
+    #[error("Profile Error: {:?}", .0)]
+    Profile(#[from] ProfileClientError),
 
     /// An invalid Model ID was provided to the component.
     #[error("Invalid device Model ID: {0}")]

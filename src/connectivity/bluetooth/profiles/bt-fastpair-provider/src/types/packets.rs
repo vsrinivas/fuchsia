@@ -6,12 +6,14 @@ use bitfield::bitfield;
 use fuchsia_bluetooth::types::Address;
 use hmac::{Hmac, Mac, NewMac};
 use packet_encoding::decodable_enum;
+use packet_encoding::Encodable as PacketEncodable;
+use rand::Rng;
 use sha2::Sha256;
 use std::convert::{TryFrom, TryInto};
 use tracing::debug;
 
 use crate::types::keys::public_key_from_bytes;
-use crate::types::{AccountKey, Error, SharedSecret};
+use crate::types::{AccountKey, Error, ModelId, SharedSecret};
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -237,7 +239,7 @@ pub fn key_based_pairing_response(key: &SharedSecret, local_address: Address) ->
     local_address_bytes.reverse();
     response[1..7].copy_from_slice(&local_address_bytes);
     // Final 9 bytes is a randomly generated salt value.
-    fuchsia_zircon::cprng_draw(&mut response[7..16]);
+    rand::thread_rng().fill(&mut response[7..16]);
     key.encrypt(&response).to_vec()
 }
 
@@ -251,7 +253,7 @@ pub fn passkey_response(key: &SharedSecret, passkey: u32) -> Vec<u8> {
     // Next 3 bytes is the passkey in Big Endian.
     response[1..4].copy_from_slice(&passkey.to_be_bytes()[1..4]);
     // Final 12 bytes is a randomly generated salt value.
-    fuchsia_zircon::cprng_draw(&mut response[4..16]);
+    rand::thread_rng().fill(&mut response[4..16]);
     key.encrypt(&response).to_vec()
 }
 
@@ -259,7 +261,7 @@ pub fn passkey_response(key: &SharedSecret, passkey: u32) -> Vec<u8> {
 /// Defined in https://developers.google.com/nearby/fast-pair/specifications/characteristics#AdditionalData
 pub fn personalized_name_response(key: &SharedSecret, name: String) -> Vec<u8> {
     let mut nonce = [0; 8];
-    fuchsia_zircon::cprng_draw(&mut nonce[..]);
+    rand::thread_rng().fill(&mut nonce[..]);
     personalized_name_response_internal(key, name, nonce)
 }
 
@@ -333,6 +335,85 @@ pub fn decrypt_personalized_name_request(
         decrypted_blocks.append(&mut combined_decrypted_block);
     }
     String::from_utf8(decrypted_blocks).map_err(|_| Error::internal("invalid personalized name"))
+}
+
+decodable_enum! {
+    /// The event type of the Message Stream request.
+    pub enum MessageGroupName<u8, Error, Packet> {
+        Bluetooth = 0x01,
+        CompanionApp = 0x02,
+        DeviceInformation = 0x03,
+        DeviceAction = 0x04,
+        Acknowledgement = 0xFF,
+    }
+}
+
+decodable_enum! {
+    /// The event code for a Device Information Message Stream request.
+    pub enum DeviceInformationCode<u8, Error, Packet> {
+        ModelId = 0x01,
+        BleAddressUpdated = 0x02,
+        BatteryUpdated = 0x03,
+        RemainingBattery = 0x04,
+        ActiveComponentsRequest = 0x05,
+        ActiveComponentsResponse = 0x06,
+        Capabilities = 0x07,
+        PlatformType = 0x08,
+    }
+}
+
+/// A packet that is sent over the RFCOMM Message Stream.
+pub struct MessageStreamPacket {
+    group: MessageGroupName,
+    // TODO(fxbug.dev/111268): This should be encapsulated in a wrapper type for all
+    // MessageGroupName types. This is scoped to MessageGroupName::DeviceInformation requests
+    // because that is what we currently support.
+    code: DeviceInformationCode,
+    additional_data: Vec<u8>,
+}
+
+impl MessageStreamPacket {
+    pub fn new_model_id(model_id: ModelId) -> Self {
+        let model_id_bytes: [u8; 3] = model_id.into();
+        Self {
+            group: MessageGroupName::DeviceInformation,
+            code: DeviceInformationCode::ModelId,
+            additional_data: model_id_bytes.to_vec(),
+        }
+    }
+
+    pub fn new_address(address: Address) -> Self {
+        let mut address_bytes = address.bytes().to_vec();
+        // Address is locally saved in LE but is sent over network in BE.
+        address_bytes.reverse();
+        Self {
+            group: MessageGroupName::DeviceInformation,
+            code: DeviceInformationCode::BleAddressUpdated,
+            additional_data: address_bytes,
+        }
+    }
+}
+
+impl PacketEncodable for MessageStreamPacket {
+    type Error = Error;
+
+    fn encoded_len(&self) -> usize {
+        // 1 byte for `group`, 1 byte for `code`, 2 bytes for length, n bytes for `additional_data`.
+        4 + self.additional_data.len()
+    }
+
+    fn encode(&self, buf: &mut [u8]) -> Result<(), Error> {
+        if buf.len() < self.encoded_len() {
+            return Err(Error::internal("Invalid buffer size"));
+        }
+
+        buf[0] = u8::from(&self.group);
+        buf[1] = u8::from(&self.code);
+        let length: u16 = self.additional_data.len() as u16;
+        buf[2..4].copy_from_slice(&length.to_be_bytes());
+        buf[4..].copy_from_slice(&self.additional_data[..]);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -564,10 +645,13 @@ pub(crate) mod tests {
         assert_eq!(parsed_passkey, 0x123456);
     }
 
-    pub const ACCOUNT_KEY_REQUEST: [u8; 16] = [
-        0x04, // All Account Keys start with 0x04.
-        0x01, 0x02, 0x03, 0x04, 0x05, 0x01, 0x02, 0x03, 0x04, 0x05, 0x01, 0x02, 0x03, 0x04, 0x05,
-    ];
+    /// Builds and returns the raw bytes of a random new Account Key.
+    pub fn random_account_key() -> AccountKey {
+        let mut bytes = [0; 16];
+        bytes[0] = 0x04;
+        rand::thread_rng().fill(&mut bytes[1..16]);
+        AccountKey::new(bytes)
+    }
 
     #[test]
     fn decrypt_account_key_request_too_small() {
@@ -585,16 +669,15 @@ pub(crate) mod tests {
 
     #[test]
     fn parse_invalid_account_key_request() {
-        let mut buf = ACCOUNT_KEY_REQUEST;
-        buf[0] = 0x00;
-        let encrypted_buf = encrypt_message(&buf);
+        let invalid_key_bytes = [0; 16];
+        let encrypted_buf = encrypt_message(&invalid_key_bytes);
         let result = decrypt_account_key_request(encrypted_buf.to_vec(), &example_aes_key());
         assert_matches!(result, Err(Error::Packet));
     }
 
     #[test]
     fn parse_valid_account_key_request() {
-        let encrypted_buf = encrypt_message(&ACCOUNT_KEY_REQUEST);
+        let encrypted_buf = encrypt_message(random_account_key().as_bytes());
         let result = decrypt_account_key_request(encrypted_buf.to_vec(), &example_aes_key());
         assert_matches!(result, Ok(_));
     }

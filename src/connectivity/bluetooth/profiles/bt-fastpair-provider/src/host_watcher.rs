@@ -114,6 +114,14 @@ impl HostWatcher {
             .flatten()
     }
 
+    /// Returns the BLE address of the active Host, or None if not set.
+    pub fn ble_address(&self) -> Option<Address> {
+        self.addresses()
+            .map(|addrs| addrs.into_iter().find(|addr| matches!(addr, Address::Random(_))))
+            .flatten()
+            .or_else(|| self.public_address())
+    }
+
     /// Returns the current discoverable state of the active Host, or None if not set.
     pub fn pairing_mode(&self) -> Option<bool> {
         self.active_host.as_ref().map(|h| h.discoverable)

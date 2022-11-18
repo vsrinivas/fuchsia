@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use async_helpers::maybe_stream::MaybeStream;
+use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
 use fidl_fuchsia_bluetooth_fastpair::{ProviderEnableResponder, ProviderWatcherProxy};
 use fidl_fuchsia_bluetooth_gatt2 as gatt;
 use fidl_fuchsia_bluetooth_sys::{HostWatcherMarker, PairingMarker, PairingProxy};
@@ -16,12 +17,14 @@ use crate::config::Config;
 use crate::fidl_client::FastPairConnectionManager;
 use crate::gatt_service::{GattRequest, GattService, GattServiceResponder};
 use crate::host_watcher::{HostEvent, HostWatcher};
+use crate::message_stream::MessageStream;
 use crate::pairing::{PairingArgs, PairingManager};
 use crate::types::keys::aes_from_anti_spoofing_and_public;
 use crate::types::packets::{
     decrypt_account_key_request, decrypt_key_based_pairing_request, decrypt_passkey_request,
     decrypt_personalized_name_request, key_based_pairing_response, parse_key_based_pairing_request,
     passkey_response, personalized_name_response, KeyBasedPairingAction, KeyBasedPairingRequest,
+    MessageStreamPacket,
 };
 use crate::types::{AccountKey, AccountKeyList, Error, SharedSecret};
 
@@ -63,6 +66,8 @@ pub struct Provider {
     /// Manages Fast Pair pairing procedures and proxies non-FP requests to the upstream
     /// `sys.Pairing` client.
     pairing: MaybeStream<PairingManager>,
+    /// Message Stream connection (RFCOMM) to the remote peer.
+    message_stream: MessageStream,
 }
 
 impl Provider {
@@ -72,6 +77,7 @@ impl Provider {
         let watcher = fuchsia_component::client::connect_to_protocol::<HostWatcherMarker>()?;
         let host_watcher = HostWatcher::new(watcher);
         let pairing_svc = fuchsia_component::client::connect_to_protocol::<PairingMarker>()?;
+        let profile = fuchsia_component::client::connect_to_protocol::<ProfileMarker>()?;
         Ok(Self {
             state: State { config, personalized_name: None },
             upstream: FastPairConnectionManager::new(),
@@ -81,6 +87,7 @@ impl Provider {
             host_watcher,
             pairing_svc,
             pairing: MaybeStream::default(),
+            message_stream: MessageStream::new(profile),
         })
     }
 
@@ -169,7 +176,7 @@ impl Provider {
                 }
                 Err(e) => {
                     // Errors here are not fatal. We will simply try the next available key.
-                    debug!("Key failed to decrypt message: {:?}", e);
+                    debug!("Key failed to decrypt message: {e:?}");
                 }
             }
         }
@@ -183,56 +190,51 @@ impl Provider {
         peer_id: PeerId,
         encrypted_request: Vec<u8>,
         response: GattServiceResponder,
-    ) {
+    ) -> Result<(), Error> {
         // If we were able to match the request with an Account Key, notify the GATT characteristic
         // and temporarily save the key. Steps 3-6 in the Pairing Procedure.
         let (key, request) = match self.find_key_for_encrypted_request(encrypted_request) {
             Ok((key, request)) => (key, request),
             Err(e) => {
-                info!("Couldn't find a key for the request: {:?}", e);
                 response(Err(gatt::Error::WriteRequestRejected));
-                return;
+                return Err(e);
             }
         };
 
         let name = self.local_name();
         // There must be an active local Host and PairingManager to facilitate pairing.
-        let local_public_address = if let Some(addr) = self.host_watcher.public_address() {
-            addr
-        } else {
-            warn!("No active local Host available to start key-based pairing");
+        let Some(local_public_address) = self.host_watcher.public_address() else {
             response(Err(gatt::Error::UnlikelyError));
-            return;
+            return Err(Error::internal("No active host"));
         };
-        let pairing = if let Some(p) = self.pairing.inner_mut() {
-            p
-        } else {
-            warn!("No Pairing Manager available to start key-based pairing");
+
+        let Some(pairing) =  self.pairing.inner_mut() else {
             response(Err(gatt::Error::UnlikelyError));
-            return;
+            return Err(Error::internal("No pairing manager"));
         };
 
         // Some key-based pairing requests require additional steps.
         // TODO(fxbug.dev/96217): Track the salt in `request` to prevent replay attacks.
+        let mut retroactive = false;
         match request.action {
             KeyBasedPairingAction::SeekerInitiatesPairing { received_provider_address }
             | KeyBasedPairingAction::PersonalizedNameWrite { received_provider_address } => {
                 // We already check the HostWatcher for the existence of an active Host.
                 let addresses = self.host_watcher.addresses().expect("active host");
                 if !addresses.iter().any(|addr| addr.bytes() == &received_provider_address) {
-                    warn!(
-                        "Received address ({:?}) doesn't match any local ({:?})",
-                        received_provider_address, addresses,
-                    );
+                    let error = format!("Received address ({received_provider_address:?}) doesn't match any local ({addresses:?})");
                     response(Err(gatt::Error::WriteRequestRejected));
-                    return;
+                    return Err(Error::internal(&error));
                 }
             }
             KeyBasedPairingAction::ProviderInitiatesPairing { .. } => {
                 // TODO(fxbug.dev96222): Use `sys.Access/Pair` to pair to peer.
             }
-            KeyBasedPairingAction::RetroactiveWrite { .. } => {
-                // TODO(fxbug.dev/99731): Support retroactive account key writes.
+            KeyBasedPairingAction::RetroactiveWrite { seeker_address: _ } => {
+                // TODO(fxbug.dev/115567): This can be improved by using a timeout after an
+                // OnPairingComplete signal is received. A retroactive write can only occur within
+                // some finite period of time.
+                retroactive = true;
             }
         }
 
@@ -241,22 +243,22 @@ impl Provider {
 
         let encrypted_response = key_based_pairing_response(&key, local_public_address);
         if let Err(e) = self.gatt.notify_key_based_pairing(peer_id, encrypted_response) {
-            warn!("Error notifying Key-based Pairing characteristic: {:?}", e);
-            return;
+            return Err(Error::internal(&format!("key-based pairing characteristic: {e:?}")));
         }
 
         // Notify the Seeker with the current local host name if known.
         if request.notify_name && name.is_some() {
-            debug!(?peer_id, "Notifying local name (name={:?})", name);
+            debug!(%peer_id, "Notifying local name (name={name:?})");
             let encrypted_response = personalized_name_response(&key, name.unwrap());
             if let Err(e) = self.gatt.notify_additional_data(peer_id, encrypted_response) {
-                warn!("Error notifying Additional Data characteristic: {:?}", e);
+                warn!("Error notifying Additional Data characteristic: {e:?}");
             }
         }
 
-        match pairing.new_pairing_procedure(peer_id, key) {
-            Ok(_) => info!("Successfully started key-based pairing"),
-            Err(e) => warn!("Couldn't start key-based pairing: {:?}", e),
+        if retroactive {
+            pairing.new_retroactive_pairing_procedure(peer_id, key)
+        } else {
+            pairing.new_pairing_procedure(peer_id, key)
         }
     }
 
@@ -368,12 +370,12 @@ impl Provider {
         };
         let result = match parse_fn() {
             Ok(name) => {
-                debug!(?peer_id, "Received request to save personalized name: {}", name);
+                debug!(%peer_id, "Received request to save personalized name: {}", name);
                 self.state.personalized_name = Some(name);
                 Ok(())
             }
             Err(e) => {
-                warn!(?peer_id, "Couldn't process additional data request: {:?}", e);
+                warn!(%peer_id, "Couldn't process additional data request: {:?}", e);
                 Err(gatt::Error::UnlikelyError)
             }
         };
@@ -391,7 +393,10 @@ impl Provider {
 
         match update {
             GattRequest::KeyBasedPairing { peer_id, encrypted_request, response } => {
-                self.handle_key_based_pairing_request(peer_id, encrypted_request, response);
+                match self.handle_key_based_pairing_request(peer_id, encrypted_request, response) {
+                    Ok(_) => info!(%peer_id, "Successfully started key-based pairing"),
+                    Err(e) => warn!(%peer_id, "Couldn't start key-based pairing: {e:?}"),
+                }
             }
             GattRequest::VerifyPasskey { peer_id, encrypted_passkey, response } => {
                 self.handle_verify_passkey_request(peer_id, encrypted_passkey, response);
@@ -402,6 +407,25 @@ impl Provider {
             GattRequest::AdditionalData { peer_id, encrypted_data, response } => {
                 self.handle_additional_data_request(peer_id, encrypted_data, response);
             }
+        }
+    }
+
+    fn handle_message_stream_update(&mut self, id: PeerId) {
+        debug!(%id, "Incoming Message Stream connection");
+        // Send the Model Id and current BLE address to the connected Seeker.
+        let Some(address) = self.host_watcher.ble_address() else {
+            return;
+        };
+
+        let model_id_packet = MessageStreamPacket::new_model_id(self.state.config.model_id);
+        if let Err(e) = self.message_stream.send(model_id_packet) {
+            warn!(%id, "Couldn't send Model ID over message stream: {e:?}");
+            return;
+        }
+
+        let address_packet = MessageStreamPacket::new_address(address);
+        if let Err(e) = self.message_stream.send(address_packet) {
+            warn!(%id, "Couldn't send Address over message stream: {e:?}");
         }
     }
 
@@ -421,9 +445,10 @@ impl Provider {
                         if let Some(discoverable) = self.host_watcher.pairing_mode() {
                             self.advertise(discoverable).await?;
                         }
+                        info!("Enabled Fast Pair");
                     }
                     Err(e) => {
-                        info!("Couldn't enable Fast Pair: {:?}", e);
+                        info!("Couldn't enable Fast Pair: {e:?}");
                         let _ = responder
                             .send(&mut Err(fuchsia_zircon::Status::ALREADY_BOUND.into_raw()));
                     }
@@ -444,10 +469,10 @@ impl Provider {
                 // to ignore cases where the stream is exhausted. It can always be set again if
                 // needed.
                 advertise_update = self.advertiser.select_next_some() => {
-                    debug!("Low energy event: {:?}", advertise_update);
+                    debug!("Low energy event: {advertise_update:?}");
                 }
                 gatt_update = self.gatt.next() => {
-                    debug!("GATT event: {:?}", gatt_update);
+                    debug!("GATT event: {gatt_update:?}");
                     // Unexpected termination of the GATT service is a fatal error.
                     match gatt_update {
                         Some(update) => self.handle_gatt_update(update),
@@ -455,7 +480,7 @@ impl Provider {
                     }
                 }
                 watcher_update = self.host_watcher.next() => {
-                    debug!("HostWatcher event: {:?}", watcher_update);
+                    debug!("HostWatcher event: {watcher_update:?}");
                     // Unexpected termination of the Host Watcher is a fatal error.
                     match watcher_update {
                         Some(update) => self.handle_host_watcher_update(update).await?,
@@ -463,7 +488,7 @@ impl Provider {
                     }
                 }
                 pairing_update = self.pairing.next() => {
-                    debug!("Pairing event: {:?}", pairing_update);
+                    debug!("Pairing event: {pairing_update:?}");
                     match pairing_update {
                         None => {
                             // Either upstream `sys.Pairing` client or downstream host server
@@ -472,7 +497,7 @@ impl Provider {
                         }
                         Some(id) => {
                             // Pairing completed for peer.
-                            info!("Fast Pair pairing completed with peer: {:?}", id);
+                            info!(%id, "Fast Pair pairing completed");
                             self.upstream.notify_pairing_complete(id);
                         }
                     }
@@ -482,6 +507,11 @@ impl Provider {
                         None => return Err(Error::internal("FIDL service handler unexpectedly terminated")),
                         Some(request) => self.handle_fidl_request(request).await?,
                     }
+                }
+                message_stream_update = self.message_stream.select_next_some() => {
+                    // It's OK if the Message Stream terminates for any reason. `select_next_some`
+                    // will ignore the case where the stream is exhausted.
+                    self.handle_message_stream_update(message_stream_update);
                 }
                 _ = upstream_client_closed_fut => {
                     info!("Upstream client disabled Fast Pair");
@@ -527,7 +557,7 @@ mod tests {
     use crate::pairing::tests::MockPairing;
     use crate::types::keys::tests::{encrypt_message, encrypt_message_include_public_key};
     use crate::types::packets::tests::{
-        key_based_pairing_request, ACCOUNT_KEY_REQUEST, DEVICE_ACTION_PERSONALIZED_NAME_REQUEST,
+        key_based_pairing_request, random_account_key, DEVICE_ACTION_PERSONALIZED_NAME_REQUEST,
         PASSKEY_REQUEST,
     };
     use crate::types::tests::expect_keys_at_path;
@@ -559,6 +589,9 @@ mod tests {
         let (mock_upstream, c) = MockUpstreamClient::new();
         let upstream = FastPairConnectionManager::new_with_upstream(c);
 
+        let (profile, _profile_server) = create_proxy_and_stream::<ProfileMarker>().unwrap();
+        let message_stream = MessageStream::new(profile);
+
         let this = Provider {
             state,
             upstream,
@@ -568,6 +601,7 @@ mod tests {
             host_watcher,
             pairing_svc: mock_pairing.pairing_svc.clone(),
             pairing: Some(pairing).into(),
+            message_stream,
         };
 
         (this, peripheral_server, local_service_proxy, watcher_server, mock_pairing, mock_upstream)
@@ -870,6 +904,7 @@ mod tests {
             mut mock_upstream,
         ) = exec.run_singlethreaded(&mut setup_fut);
 
+        let key_file_path = provider.account_keys.path();
         // To avoid a bunch of unnecessary boilerplate involving the `host_watcher`, set the active
         // host with a known address.
         provider.host_watcher.set_active_host(
@@ -883,7 +918,7 @@ mod tests {
         let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
 
         // Before starting the pairing procedure, there should be no saved Account Keys.
-        expect_keys_at_path(AccountKeyList::TEST_PERSISTED_ACCOUNT_KEYS_FILEPATH, vec![]);
+        expect_keys_at_path(key_file_path.clone(), vec![]);
 
         // Initiating a Key-based pairing request should succeed. The buffer is encrypted by the key
         // defined in the GFPS.
@@ -932,19 +967,17 @@ mod tests {
         let _ = exec.run_until_stalled(&mut server_fut).expect_pending("main loop still active");
 
         // After pairing succeeds, the peer will request to write an Account Key.
+        let key = random_account_key();
         let write_fut = gatt_write_results_in_expected_notification(
             &gatt,
             ACCOUNT_KEY_CHARACTERISTIC_HANDLE,
-            encrypt_message(&ACCOUNT_KEY_REQUEST),
+            encrypt_message(key.as_bytes()),
             Ok(()),
             /* expect_item= */ false,
         );
         let (_, server_fut) = run_while(&mut exec, server_fut, write_fut);
         // Account Key should be saved to persistent storage.
-        expect_keys_at_path(
-            AccountKeyList::TEST_PERSISTED_ACCOUNT_KEYS_FILEPATH,
-            vec![AccountKey::new(ACCOUNT_KEY_REQUEST)],
-        );
+        expect_keys_at_path(key_file_path, vec![key]);
 
         // The peer can optionally request to set a personalized name.
         let new_name = "myfuchsia123".to_string();
@@ -1297,11 +1330,60 @@ mod tests {
         let write_fut = gatt_write_results_in_expected_notification(
             &gatt,
             ACCOUNT_KEY_CHARACTERISTIC_HANDLE,
-            encrypt_message(&ACCOUNT_KEY_REQUEST),
+            encrypt_message(random_account_key().as_bytes()),
             Err(gatt::Error::WriteRequestRejected),
             /* expect_item= */ false,
         );
         let (_, _server_fut) = run_while(&mut exec, server_fut, write_fut);
+    }
+
+    #[fuchsia::test]
+    fn retroactive_account_key_write_procedure() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let setup_fut = setup_provider();
+        pin_mut!(setup_fut);
+        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
+            exec.run_singlethreaded(&mut setup_fut);
+
+        let key_file_path = provider.account_keys.path();
+        // To avoid a bunch of unnecessary boilerplate involving the `host_watcher`, set the active
+        // host with a known address.
+        provider.host_watcher.set_active_host(
+            example_host(HostId(1), /* active= */ true, /* discoverable= */ true)
+                .try_into()
+                .unwrap(),
+        );
+        let (_sender, receiver) = mpsc::channel(0);
+        let server_fut = provider.run(receiver);
+        pin_mut!(server_fut);
+        let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
+
+        // Before starting the pairing procedure, there should be no saved Account Keys.
+        expect_keys_at_path(key_file_path.clone(), vec![]);
+
+        // Initiating a Key-based pairing request should succeed. The buffer is encrypted by the key
+        // defined in the GFPS and contains flags indicating a retroactive write (0x10).
+        let write_fut = gatt_write_results_in_expected_notification(
+            &gatt,
+            KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
+            encrypt_message_include_public_key(&key_based_pairing_request(0x10)),
+            Ok(()),
+            /* expect_item= */ true,
+        );
+        let (_, server_fut) = run_while(&mut exec, server_fut, write_fut);
+
+        // After receiving the GATT notification, the peer will request to write an Account Key.
+        let key = random_account_key();
+        let write_fut = gatt_write_results_in_expected_notification(
+            &gatt,
+            ACCOUNT_KEY_CHARACTERISTIC_HANDLE,
+            encrypt_message(key.as_bytes()),
+            Ok(()),
+            /* expect_item= */ false,
+        );
+        let (_, _server_fut) = run_while(&mut exec, server_fut, write_fut);
+        // Account Key should be saved to persistent storage.
+        expect_keys_at_path(key_file_path, vec![key]);
     }
 
     /// Makes a key-based pairing request with the notify personalized name flag set.

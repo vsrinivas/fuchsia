@@ -96,6 +96,11 @@
             from: "#bt-gap",
             to: [ "#bt-fastpair-provider" ],
         },
+        {
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            from: "self",
+            to: [ "#bt-fastpair-provider" ],
+        },
     ],
     expose: [
         {

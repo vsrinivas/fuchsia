@@ -13,6 +13,7 @@ mod fidl_client;
 mod fidl_service;
 mod gatt_service;
 mod host_watcher;
+mod message_stream;
 mod pairing;
 mod provider;
 mod types;

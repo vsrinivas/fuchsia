@@ -5,6 +5,7 @@
 use aes::cipher::generic_array::GenericArray;
 use aes::{Aes128, BlockDecrypt, BlockEncrypt, NewBlockCipher};
 use lru_cache::LruCache;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 use std::{fs, io, path};
@@ -132,20 +133,24 @@ impl AccountKeyList {
         Self::load_from_path(Self::PERSISTED_ACCOUNT_KEYS_FILEPATH)
     }
 
+    /// Builds an AccountKey list with the provided `keys`.
+    /// A random test file path is used to avoid concurrently running tests from reading/writing
+    /// from/to the same file.
     #[cfg(test)]
     pub fn with_capacity_and_keys(capacity: usize, keys: Vec<AccountKey>) -> Self {
         let mut cache = LruCache::new(capacity);
         keys.into_iter().for_each(|k| {
             let _ = cache.insert(k, ());
         });
-        Self { keys: cache, path: path::PathBuf::from(Self::TEST_PERSISTED_ACCOUNT_KEYS_FILEPATH) }
+
+        let val = rand::thread_rng().gen::<u64>();
+        let path = format!("data/test_account_keys{}.json", val);
+        Self { keys: cache, path: path::PathBuf::from(path) }
     }
 
-    /// Test-only hook to override the file path of the isolated persistent storage. Useful to avoid
-    /// multiple tests concurrently writing to the same place.
     #[cfg(test)]
-    fn set_path(&mut self, path: String) {
-        self.path = path::PathBuf::from(path);
+    pub fn path(&self) -> String {
+        self.path.clone().into_os_string().into_string().expect("valid path string")
     }
 
     /// Returns an Iterator over the saved Account Keys.
@@ -180,9 +185,8 @@ impl AccountKeyList {
             return Ok(vec![0x0]);
         }
 
-        let mut salt = [0; 1];
-        fuchsia_zircon::cprng_draw(&mut salt[..]);
-        self.service_data_internal(salt[0])
+        let salt = rand::thread_rng().gen::<u8>();
+        self.service_data_internal(salt)
     }
 
     fn service_data_internal(&self, salt: u8) -> Result<Vec<u8>, Error> {
@@ -215,11 +219,6 @@ impl AccountKeyList {
 
     // Default file path for Account Keys written to isolated persistent storage.
     const PERSISTED_ACCOUNT_KEYS_FILEPATH: &'static str = "/data/account_keys.json";
-
-    // Default file path for Account Keys written to isolated persistent storage. Test only.
-    #[cfg(test)]
-    pub(crate) const TEST_PERSISTED_ACCOUNT_KEYS_FILEPATH: &'static str =
-        "data/test_account_keys.json";
 
     /// Attempts to read and parse the contents of the persistent storage at the provided `path`.
     /// Returns an `AccountKeyList` on success, Error otherwise.
@@ -434,49 +433,41 @@ pub(crate) mod tests {
 
     #[fuchsia::test]
     fn commit_and_load_keys_to_and_from_a_file() {
-        const EXAMPLE_FILEPATH: &str = "/data/test_account_keys1.json";
-
         let key1 = AccountKey::new([1; 16]);
         let key2 = AccountKey::new([2; 16]);
         let key3 = AccountKey::new([3; 16]);
         let example_keys = vec![key1, key2, key3];
-        let mut keys = AccountKeyList::with_capacity_and_keys(5, example_keys.clone());
-        // Override the file path with a test-local path so that tests don't access/overwrite the
-        // same data file.
-        keys.set_path(EXAMPLE_FILEPATH.to_string());
+        let keys = AccountKeyList::with_capacity_and_keys(5, example_keys.clone());
 
         keys.store().expect("can store Account Keys");
-        expect_keys_at_path(EXAMPLE_FILEPATH, example_keys);
+        expect_keys_at_path(keys.path(), example_keys);
     }
 
     #[fuchsia::test]
     fn lru_eviction_from_storage() {
-        const EXAMPLE_FILEPATH: &str = "/data/test_account_keys2.json";
-
         let key1 = AccountKey::new([1; 16]);
         let key2 = AccountKey::new([2; 16]);
         let key3 = AccountKey::new([3; 16]);
         // New collection with maximum capacity of 2 keys.
         let mut keys = AccountKeyList::with_capacity_and_keys(2, vec![]);
-        keys.set_path(EXAMPLE_FILEPATH.to_string());
 
         // Because this key has never been written before, it should be saved to persistent storage.
         keys.save(key1.clone());
-        expect_keys_at_path(EXAMPLE_FILEPATH, vec![key1.clone()]);
+        expect_keys_at_path(keys.path(), vec![key1.clone()]);
 
         // Because this key has never been written before, it should be saved to persistent storage.
         keys.save(key2.clone());
-        expect_keys_at_path(EXAMPLE_FILEPATH, vec![key1.clone(), key2.clone()]);
+        expect_keys_at_path(keys.path(), vec![key1.clone(), key2.clone()]);
 
         // Because `key1` already exists in the collection, we expect a cache "refresh" so the key
         // ordering in storage should change.
         keys.save(key1.clone());
         // e.g The LRU order should change whereby `key2` is now the LRU.
-        expect_keys_at_path(EXAMPLE_FILEPATH, vec![key2, key1.clone()]);
+        expect_keys_at_path(keys.path(), vec![key2, key1.clone()]);
 
         // The collection is at max capacity so `key2` (LRU) should be evicted. Local storage
         // should be updated.
         keys.save(key3.clone());
-        expect_keys_at_path(EXAMPLE_FILEPATH, vec![key1, key3]);
+        expect_keys_at_path(keys.path(), vec![key1, key3]);
     }
 }
