@@ -17,6 +17,7 @@
 #include <fidl/fuchsia.wlan.wlanphyimpl/cpp/driver/wire.h>
 #include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
 #include <lib/ddk/device.h>
+#include <lib/fit/function.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -46,7 +47,7 @@ class WlanInterface : public wlan::drivers::components::NetworkPort,
   wireless_dev* take_wdev();
 
   // Device operations.
-  void DdkAsyncRemove();
+  void DdkAsyncRemove(fit::callback<void()>&& on_remove);
   void DdkRelease();
 
   static zx_status_t GetSupportedMacRoles(
@@ -108,7 +109,8 @@ class WlanInterface : public wlan::drivers::components::NetworkPort,
 
   zx_device_t* zx_device_;
   std::shared_mutex lock_;
-  wireless_dev* wdev_;  // lock_ is used as a RW lock on wdev_
+  wireless_dev* wdev_;               // lock_ is used as a RW lock on wdev_
+  fit::callback<void()> on_remove_;  // lock_ is also used as a RW lock on on_remove_
   Device* device_;
 };
 }  // namespace brcmfmac

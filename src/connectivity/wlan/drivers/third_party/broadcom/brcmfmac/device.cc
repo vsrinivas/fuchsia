@@ -300,27 +300,36 @@ void Device::DestroyIface(DestroyIfaceRequestView request, fdf::Arena& arena,
     return;
   }
 
-  zx_status_t status = ZX_OK;
   uint16_t iface_id = request->iface_id();
   BRCMF_DBG(WLANPHY, "Destroying interface %d", iface_id);
   switch (iface_id) {
     case kClientInterfaceId: {
-      if ((status = DestroyIface(&client_interface_)) != ZX_OK) {
-        BRCMF_ERR("Device::DestroyIface() Error destroying Client interface : %s",
-                  zx_status_get_string(status));
-        completer.buffer(arena).ReplyError(status);
-        return;
-      }
-      break;
+      DestroyIface(&client_interface_, [completer = completer.ToAsync(), arena = std::move(arena),
+                                        iface_id](auto status) mutable {
+        if (status != ZX_OK) {
+          BRCMF_ERR("Device::DestroyIface() Error destroying Client interface : %s",
+                    zx_status_get_string(status));
+          completer.buffer(arena).ReplyError(status);
+        } else {
+          BRCMF_DBG(WLANPHY, "Interface %d destroyed successfully", iface_id);
+          completer.buffer(arena).ReplySuccess();
+        }
+      });
+      return;
     }
     case kApInterfaceId: {
-      if ((status = DestroyIface(&ap_interface_)) != ZX_OK) {
-        BRCMF_ERR("Device::DestroyIface() Error destroying AP interface : %s",
-                  zx_status_get_string(status));
-        completer.buffer(arena).ReplyError(status);
-        return;
-      }
-      break;
+      DestroyIface(&ap_interface_, [completer = completer.ToAsync(), arena = std::move(arena),
+                                    iface_id](auto status) mutable {
+        if (status != ZX_OK) {
+          BRCMF_ERR("Device::DestroyIface() Error destroying AP interface : %s",
+                    zx_status_get_string(status));
+          completer.buffer(arena).ReplyError(status);
+        } else {
+          BRCMF_DBG(WLANPHY, "Interface %d destroyed successfully", iface_id);
+          completer.buffer(arena).ReplySuccess();
+        }
+      });
+      return;
     }
     default: {
       BRCMF_ERR("Device::DestroyIface() Unknown interface id: %d", iface_id);
@@ -328,8 +337,6 @@ void Device::DestroyIface(DestroyIfaceRequestView request, fdf::Arena& arena,
       return;
     }
   }
-  BRCMF_DBG(WLANPHY, "Interface %d destroyed successfully", iface_id);
-  completer.buffer(arena).ReplySuccess();
 }
 
 void Device::SetCountry(SetCountryRequestView request, fdf::Arena& arena,
@@ -515,23 +522,27 @@ void Device::ShutdownDispatcher() {
 }
 
 void Device::DestroyAllIfaces(void) {
-  zx_status_t status;
-  if ((status = DestroyIface(&client_interface_)) != ZX_OK) {
-    BRCMF_ERR("Device::DestroyAllIfaces() : Failed destroying client interface : %s",
-              zx_status_get_string(status));
-  }
-  if ((status = DestroyIface(&ap_interface_)) != ZX_OK) {
-    BRCMF_ERR("Device::DestroyAllIfaces() : Failed destroying AP interface : %s",
-              zx_status_get_string(status));
-  }
+  DestroyIface(&client_interface_, [](auto status) {
+    if (status != ZX_OK) {
+      BRCMF_ERR("Device::DestroyAllIfaces() : Failed destroying client interface : %s",
+                zx_status_get_string(status));
+    }
+  });
+  DestroyIface(&ap_interface_, [](auto status) {
+    if (status != ZX_OK) {
+      BRCMF_ERR("Device::DestroyAllIfaces() : Failed destroying AP interface : %s",
+                zx_status_get_string(status));
+    }
+  });
 }
 
-zx_status_t Device::DestroyIface(WlanInterface** iface_ptr) {
+void Device::DestroyIface(WlanInterface** iface_ptr, fit::callback<void(zx_status_t)> respond) {
   WlanInterface* iface = *iface_ptr;
   zx_status_t status = ZX_OK;
   if (iface == nullptr) {
     BRCMF_ERR("Invalid interface");
-    return ZX_ERR_NOT_FOUND;
+    respond(ZX_ERR_NOT_FOUND);
+    return;
   }
 
   wireless_dev* wdev = iface->take_wdev();
@@ -539,12 +550,12 @@ zx_status_t Device::DestroyIface(WlanInterface** iface_ptr) {
   if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, wdev)) != ZX_OK) {
     BRCMF_ERR("Failed to del iface, status: %s", zx_status_get_string(status));
     iface->set_wdev(wdev);
-    return status;
+    respond(status);
+    return;
   }
 
-  iface->DdkAsyncRemove();
+  iface->DdkAsyncRemove([status, respond = std::move(respond)]() mutable { respond(status); });
   *iface_ptr = nullptr;
-  return status;
 }
 
 }  // namespace brcmfmac

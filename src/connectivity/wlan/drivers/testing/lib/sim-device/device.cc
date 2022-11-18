@@ -290,16 +290,20 @@ bool FakeDevMgr::DeviceUnreference(zx_device_t* device) {
   device->Release();
   if (device->RefCount() == 0) {
     const auto args = device->DevArgs();
-    if (args.ops && args.ops->release) {
-      (*args.ops->release)(args.ctx);
+    for (size_t i = 0; i < devices_.size(); i++) {
+      if (devices_[i].get() == device) {
+        auto dev = std::move(devices_[i]);
+        // Remove element from the vector before calling `args.ops->release`. Otherwise tests
+        // would sporadically fail because they check whether the device still exists before
+        // FakeDevMgr removes them from `devices_`
+        devices_.erase(devices_.begin() + i);
+        if (args.ops && args.ops->release) {
+          (*args.ops->release)(args.ctx);
+        }
+        // Device released
+        return true;
+      }
     }
-    auto it = std::remove_if(devices_.begin(), devices_.end(),
-                             [&](const auto& dev) { return dev.get() == device; });
-    // This should only ever erase one device, otherwise there's a bug in the device manager.
-    ZX_ASSERT(std::distance(it, devices_.end()) == 1);
-    devices_.erase(it, devices_.end());
-    // Device released
-    return true;
   }
   // Just decrease ref_count, not actually released
   return false;

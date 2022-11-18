@@ -23,6 +23,7 @@
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/vector_view.h>
+#include <lib/fit/function.h>
 #include <lib/sync/cpp/completion.h>
 #include <zircon/types.h>
 
@@ -139,7 +140,7 @@ class Device : public DeviceType,
 
   // Helpers
   void ShutdownDispatcher();
-  zx_status_t DestroyIface(WlanInterface** iface_ptr);
+  void DestroyIface(WlanInterface** iface_ptr, fit::callback<void(zx_status_t)> respond);
 };
 
 }  // namespace brcmfmac

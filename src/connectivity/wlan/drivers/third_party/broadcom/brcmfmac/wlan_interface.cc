@@ -221,16 +221,33 @@ wireless_dev* WlanInterface::take_wdev() {
   return wdev;
 }
 
-void WlanInterface::DdkAsyncRemove() {
+void WlanInterface::DdkAsyncRemove(fit::callback<void()>&& on_remove) {
   zx_device_t* const device = zx_device_;
   if (device == nullptr) {
+    on_remove();
     return;
   }
   zx_device_ = nullptr;
+  {
+    std::lock_guard lock(lock_);
+    on_remove_ = std::move(on_remove);
+  }
   device_->DeviceAsyncRemove(device);
 }
 
-void WlanInterface::DdkRelease() { delete this; }
+void WlanInterface::DdkRelease() {
+  fit::callback<void()> on_remove;
+  {
+    std::lock_guard lock(lock_);
+    if (on_remove_) {
+      on_remove = std::move(on_remove_);
+    }
+  }
+  delete this;
+  if (on_remove) {
+    on_remove();
+  }
+}
 
 // static
 zx_status_t WlanInterface::GetSupportedMacRoles(
