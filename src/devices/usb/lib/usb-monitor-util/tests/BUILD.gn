@@ -14,7 +14,6 @@ test("usb-monitor-util-test-bin") {
   output_name = "usb-monitor-util-test"
   sources = [ "usb-monitor-util-test.cc" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
     "//src/devices/usb/lib/usb-monitor-util",
     "//zircon/system/ulib/zxtest",
   ]

@@ -9,7 +9,7 @@
 
 #include <atomic>
 
-#include "zircon/system/ulib/fbl/include/fbl/mutex.h"
+#include <fbl/mutex.h>
 
 #ifdef __cplusplus
 

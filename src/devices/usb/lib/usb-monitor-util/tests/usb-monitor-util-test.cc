@@ -2,12 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/usb/request/c/banjo.h>
-
-#include <src/devices/usb/lib/usb-monitor-util/include/usb-monitor-util/usb-monitor-util.h>
+#include <usb-monitor-util/usb-monitor-util.h>
 #include <zxtest/zxtest.h>
 
-#include "zircon/system/ulib/zxtest/include/zxtest/zxtest.h"
 namespace {
 TEST(UsbMonitorUtilTest, StartStop) {
   USBMonitor test_monitor;

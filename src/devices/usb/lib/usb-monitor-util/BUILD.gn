@@ -2,14 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/library_headers.gni")
+
 group("tests") {
   testonly = true
   deps = [ "tests" ]
 }
 
+library_headers("usb-monitor-util-headers") {
+  headers = [ "usb-monitor-util/usb-monitor-util.h" ]
+  public_deps = [ "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_c" ]
+}
+
 source_set("usb-monitor-util") {
-  include_dirs = [ "./include" ]
   sources = [ "usb-monitor-util.cc" ]
-  public_deps = [ "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp" ]
-  deps = []
+  public_deps = [ ":usb-monitor-util-headers" ]
+  deps = [
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/trace",
+  ]
 }
