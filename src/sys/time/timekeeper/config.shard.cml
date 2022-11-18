@@ -27,5 +27,9 @@
         // monotonic time on the device. Value greater than 1*10^6 means that the device oscillator
         // is slower than the real time.
         initial_frequency_ppm: { type: "uint32" },
+
+        // Flag for enabling usage of `PullSource` API for the monitor track.
+        // If set to false, monitor track is not used.
+        monitor_uses_pull: { type: "bool" },
     },
 }

@@ -527,6 +527,7 @@ mod tests {
         crate::{
             diagnostics::{FakeDiagnostics, ANY_DURATION},
             enums::{FrequencyDiscardReason, Role, WriteRtcOutcome},
+            make_test_config,
             rtc::FakeRtc,
             time_source::{Event as TimeSourceEvent, FakePushTimeSource, Sample},
         },
@@ -603,16 +604,6 @@ mod tests {
             error_bound_at_offset: 2 * std_dev.into_nanos() as u64,
             error_bound_growth_ppm: ERROR_GROWTH_PPM,
         }
-    }
-
-    fn make_test_config() -> Arc<Config> {
-        Arc::new(Config::from(timekeeper_config::Config {
-            disable_delays: true,
-            oscillator_error_std_dev_ppm: 15,
-            max_frequency_error_ppm: 10,
-            primary_time_source_url: "".to_string(),
-            initial_frequency_ppm: 1_000_000,
-        }))
     }
 
     #[fuchsia::test]

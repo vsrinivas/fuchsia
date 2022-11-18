@@ -14,4 +14,7 @@
 
     // Default value is 1Hz, i.e. one million parts per million.
     initial_frequency_ppm: 1000000,
+
+    // Don't use monitor track by default.
+    monitor_uses_pull: false,
 }

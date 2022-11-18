@@ -166,7 +166,7 @@ impl KalmanFilter {
 
 #[cfg(test)]
 mod test {
-    use {super::*, test_util::assert_near, zx::DurationNum};
+    use {super::*, crate::make_test_config, test_util::assert_near, zx::DurationNum};
 
     const TIME_1: zx::Time = zx::Time::from_nanos(10_000_000_000);
     const TIME_2: zx::Time = zx::Time::from_nanos(20_000_000_000);
@@ -175,16 +175,6 @@ mod test {
     const STD_DEV_1: zx::Duration = zx::Duration::from_millis(22);
     const ZERO_DURATION: zx::Duration = zx::Duration::from_nanos(0);
     const SQRT_COV_1: u64 = STD_DEV_1.into_nanos() as u64;
-
-    fn make_test_config() -> Arc<Config> {
-        Arc::new(Config::from(timekeeper_config::Config {
-            disable_delays: true,
-            oscillator_error_std_dev_ppm: 15,
-            max_frequency_error_ppm: 10,
-            primary_time_source_url: "".to_string(),
-            initial_frequency_ppm: 1_000_000,
-        }))
-    }
 
     #[fuchsia::test]
     fn initialize() {

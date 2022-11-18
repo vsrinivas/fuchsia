@@ -231,7 +231,10 @@ impl FrequencyEstimator {
 
 #[cfg(test)]
 mod test {
-    use {super::*, chrono::DateTime, test_util::assert_near, zx::DurationNum};
+    use {
+        super::*, crate::make_test_config, chrono::DateTime, test_util::assert_near,
+        zx::DurationNum,
+    };
 
     const INITIAL_MONO: zx::Time = zx::Time::from_nanos(7_000_000_000);
     const STD_DEV: zx::Duration = zx::Duration::from_millis(88);
@@ -296,16 +299,6 @@ mod test {
             .expect("update did not lead to an updated frequency");
         assert_near!(frequency, expected_frequency, 0.0000001);
         assert_eq!(window_count, expected_window_count);
-    }
-
-    fn make_test_config() -> Arc<Config> {
-        Arc::new(Config::from(timekeeper_config::Config {
-            disable_delays: true,
-            oscillator_error_std_dev_ppm: 15,
-            max_frequency_error_ppm: 10,
-            primary_time_source_url: "".to_string(),
-            initial_frequency_ppm: 1_000_000,
-        }))
     }
 
     #[fuchsia::test]

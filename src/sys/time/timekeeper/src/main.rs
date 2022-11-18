@@ -77,6 +77,12 @@ impl Config {
     fn get_initial_frequency(&self) -> f64 {
         self.source_config.initial_frequency_ppm as f64 / MILLION as f64
     }
+
+    // TODO(fxb/115021): Implement.
+    #[allow(dead_code)]
+    fn get_monitor_uses_pull(&self) -> bool {
+        self.source_config.monitor_uses_pull
+    }
 }
 
 /// A definition which time sources to install, along with the URL for each.
@@ -302,6 +308,10 @@ async fn maintain_utc<R: 'static, D: 'static>(
     future::join(fut1, fut2).await;
 }
 
+// Reexport test config creation to be used in other tests.
+#[cfg(test)]
+use tests::make_test_config;
+
 #[cfg(test)]
 mod tests {
     use {
@@ -338,13 +348,14 @@ mod tests {
         (Arc::new(clock), initial_update_ticks)
     }
 
-    fn make_test_config() -> Arc<Config> {
+    pub fn make_test_config() -> Arc<Config> {
         Arc::new(Config::from(timekeeper_config::Config {
             disable_delays: true,
             oscillator_error_std_dev_ppm: 15,
             max_frequency_error_ppm: 10,
             primary_time_source_url: "".to_string(),
             initial_frequency_ppm: 1_000_000,
+            monitor_uses_pull: false,
         }))
     }
 

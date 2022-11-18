@@ -143,7 +143,7 @@ impl<D: Diagnostics> Estimator<D> {
 mod test {
     use {
         super::*,
-        crate::diagnostics::FakeDiagnostics,
+        crate::{diagnostics::FakeDiagnostics, make_test_config},
         fuchsia_zircon::{self as zx, DurationNum},
         test_util::assert_near,
     };
@@ -173,16 +173,6 @@ mod test {
 
     fn create_window_discard_event(reason: FrequencyDiscardReason) -> Event {
         Event::FrequencyWindowDiscarded { track: TEST_TRACK, reason }
-    }
-
-    fn make_test_config() -> Arc<Config> {
-        Arc::new(Config::from(timekeeper_config::Config {
-            disable_delays: true,
-            oscillator_error_std_dev_ppm: 15,
-            max_frequency_error_ppm: 10,
-            primary_time_source_url: "".to_string(),
-            initial_frequency_ppm: 1_000_000,
-        }))
     }
 
     #[fuchsia::test]
