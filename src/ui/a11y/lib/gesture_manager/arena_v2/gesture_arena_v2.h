@@ -73,7 +73,15 @@ class InteractionTracker {
 
   // Handle a new touch event, keeping track of which interactions are "open" or
   // "on hold".
-  void OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
+  //
+  // Return `true` if this event is "valid". That is, either:
+  // * it is an ADD event, or
+  // * it is an event for a currently open interaction.
+  //
+  // It's possible to receive "stale" (not valid) events for rejected
+  // interactions from past contests, because of the batching done in the
+  // TouchSource API.
+  bool OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
 
   // What is the consumption status of the current contest?
   ConsumptionStatus Status();

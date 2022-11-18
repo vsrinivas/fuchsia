@@ -54,12 +54,10 @@ void InteractionTracker::RejectInteractions() {
   // We must clear the open interactions, because the TouchSource API may stop
   // sending us events for those interactions once we reject them. (It also may
   // continue in some cases, since the events are sent in batches.)
-  //
-  // TODO(fxbug.dev/113881): investigate possible issues.
   open_interactions_.clear();
 }
 
-void InteractionTracker::OnEvent(
+bool InteractionTracker::OnEvent(
     const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) {
   FX_CHECK(event.touch_event.has_pointer_sample());
   FX_CHECK(event.touch_event.has_trace_flow_id());
@@ -74,9 +72,16 @@ void InteractionTracker::OnEvent(
       open_interactions_.insert(triple);
       break;
     case fuchsia::ui::pointer::EventPhase::CHANGE:
+      if (open_interactions_.count(triple) == 0) {
+        return false;
+      }
       break;
     case fuchsia::ui::pointer::EventPhase::REMOVE:
     case fuchsia::ui::pointer::EventPhase::CANCEL:
+      if (open_interactions_.count(triple) == 0) {
+        return false;
+      }
+
       // If the consumption status of the current contest is undecided, put this
       // interaction "on hold", and fire a callback for it later, when the
       // status is decided.
@@ -89,6 +94,8 @@ void InteractionTracker::OnEvent(
       open_interactions_.erase(triple);
       break;
   }
+
+  return true;
 }
 
 InteractionTracker::ConsumptionStatus InteractionTracker::Status() { return status_; }
@@ -188,12 +195,19 @@ InteractionTracker::ConsumptionStatus GestureArenaV2::OnEvent(
   FX_CHECK(event.touch_event.has_pointer_sample());
   FX_CHECK(!recognizers_.empty()) << "The a11y Gesture arena is listening for pointer events "
                                      "but has no added gesture recognizer.";
+
   if (IsIdle()) {
-    // An idle arena received a new event. Starts a new contest.
     StartNewContest();
   }
 
-  interactions_.OnEvent(event);
+  auto is_valid = interactions_.OnEvent(event);
+  if (!is_valid) {
+    // Stale events should only happen because of rejected interactions from a
+    // past contest, in which case we simply reject (without dispatching to
+    // recognizers).
+    return InteractionTracker::ConsumptionStatus::kReject;
+  }
+
   DispatchEvent(event);
 
   return interactions_.Status();

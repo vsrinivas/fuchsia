@@ -545,5 +545,70 @@ TEST(GestureArenaTest, PoisonWinnerEvent) {
   FX_CHECK(!recognizer.participation_token());
 }
 
+TEST(GestureArenaTest, DiscardStaleEvents) {
+  a11y::GestureArenaV2 arena;
+  MockGestureRecognizer recognizer;
+  arena.Add(&recognizer);
+
+  // First contest.
+  {
+    EXPECT_EQ(recognizer.num_events(), 0u);
+
+    SendPointerEvent(&arena, {1, Phase::ADD, {}}, 0);
+
+    EXPECT_EQ(recognizer.num_events(), 1u);
+    recognizer.participation_token()->Reject();
+  }
+
+  // Second contest.
+  {
+    recognizer.Reset();
+    EXPECT_EQ(recognizer.num_events(), 0u);
+
+    // Stale events from the rejected interaction.
+    SendPointerEvent(&arena, {1, Phase::MOVE, {}}, 0);
+    SendPointerEvent(&arena, {1, Phase::REMOVE, {}}, 0);
+
+    // The recognizer should not see the stale events.
+    EXPECT_EQ(recognizer.num_events(), 0u);
+  }
+}
+
+TEST(GestureArenaTest, DiscardStaleEventsTwoInteractions) {
+  a11y::GestureArenaV2 arena;
+  MockGestureRecognizer recognizer;
+  arena.Add(&recognizer);
+
+  // First contest.
+  {
+    EXPECT_EQ(recognizer.num_events(), 0u);
+
+    SendPointerEvent(&arena, {1, Phase::ADD, {}}, 0);
+
+    SendPointerEvent(&arena, {1, Phase::MOVE, {}}, 0);
+    recognizer.participation_token()->Reject();
+
+    EXPECT_EQ(recognizer.num_events(), 2u);
+  }
+
+  // Second contest.
+  {
+    recognizer.Reset();
+    EXPECT_EQ(recognizer.num_events(), 0u);
+
+    SendPointerEvent(&arena, {1, Phase::ADD, {}}, 1);
+
+    SendPointerEvent(&arena, {1, Phase::MOVE, {}}, 1);
+
+    EXPECT_EQ(recognizer.num_events(), 2u);
+
+    // Stale event, from the interaction in the first contest.
+    SendPointerEvent(&arena, {1, Phase::REMOVE, {}}, 0);
+
+    // The recognizer should not see the stale event.
+    EXPECT_EQ(recognizer.num_events(), 2u);
+  }
+}
+
 }  // namespace
 }  // namespace accessibility_test
