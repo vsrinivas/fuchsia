@@ -394,6 +394,8 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
 
   bool launch_callback_called = false;
   fuchsia::virtualization::GuestConfig user_guest_config;
+  user_guest_config.set_default_net(true);
+
   fuchsia::virtualization::GuestPtr guest;
   manager.Launch(std::move(user_guest_config), guest.NewRequest(),
                  [&launch_callback_called](auto res) {
@@ -406,37 +408,43 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
   fuchsia::virtualization::GuestConfig finalized_config =
       fake_guest_lifecycle_->take_guest_config();
 
-  get_callback_called = false;
-  manager.GetInfo([&finalized_config, &get_callback_called](auto info) {
-    ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::RUNNING);
-    ASSERT_GT(info.uptime(), 0);
-    ASSERT_FALSE(info.has_stop_error());
-
-    const GuestDescriptor& guest_descriptor = info.guest_descriptor();
-    ASSERT_EQ(guest_descriptor.guest_memory(), finalized_config.guest_memory());
-    ASSERT_EQ(guest_descriptor.num_cpus(), finalized_config.cpus());
-
-    ASSERT_EQ(guest_descriptor.wayland(), finalized_config.has_wayland_device());
-    ASSERT_EQ(guest_descriptor.magma(), finalized_config.has_magma_device());
-
-    ASSERT_EQ(guest_descriptor.has_networks() && !guest_descriptor.networks().empty(),
-              finalized_config.has_default_net() && finalized_config.default_net());
-    ASSERT_EQ(guest_descriptor.balloon(),
-              finalized_config.has_virtio_balloon() && finalized_config.virtio_balloon());
-    ASSERT_EQ(guest_descriptor.console(),
-              finalized_config.has_virtio_console() && finalized_config.virtio_console());
-    ASSERT_EQ(guest_descriptor.gpu(),
-              finalized_config.has_virtio_gpu() && finalized_config.virtio_gpu());
-    ASSERT_EQ(guest_descriptor.rng(),
-              finalized_config.has_virtio_rng() && finalized_config.virtio_rng());
-    ASSERT_EQ(guest_descriptor.vsock(),
-              finalized_config.has_virtio_vsock() && finalized_config.virtio_vsock());
-    ASSERT_EQ(guest_descriptor.sound(),
-              finalized_config.has_virtio_sound() && finalized_config.virtio_sound());
-
-    get_callback_called = true;
+  std::optional<fuchsia::virtualization::GuestInfo> info;
+  auto handle = std::async(std::launch::async, [&manager, &info] {
+    manager.GetInfo([&info](auto guest_info) { info = std::move(guest_info); });
   });
-  ASSERT_TRUE(get_callback_called);
+
+  RunLoopUntil([&info]() { return info.has_value(); });
+
+  ASSERT_EQ(info->guest_status(), fuchsia::virtualization::GuestStatus::RUNNING);
+  ASSERT_GT(info->uptime(), 0);
+  ASSERT_FALSE(info->has_stop_error());
+
+  ASSERT_TRUE(info->has_detected_problems());
+  ASSERT_EQ(info->detected_problems().size(), 1u);
+  ASSERT_EQ(info->detected_problems()[0], GuestManager::GuestNetworkStateToStringExplanation(
+                                              GuestNetworkState::NO_HOST_NETWORKING));
+
+  const GuestDescriptor& guest_descriptor = info->guest_descriptor();
+  ASSERT_EQ(guest_descriptor.guest_memory(), finalized_config.guest_memory());
+  ASSERT_EQ(guest_descriptor.num_cpus(), finalized_config.cpus());
+
+  ASSERT_EQ(guest_descriptor.wayland(), finalized_config.has_wayland_device());
+  ASSERT_EQ(guest_descriptor.magma(), finalized_config.has_magma_device());
+
+  ASSERT_EQ(guest_descriptor.has_networks() && !guest_descriptor.networks().empty(),
+            finalized_config.has_default_net() && finalized_config.default_net());
+  ASSERT_EQ(guest_descriptor.balloon(),
+            finalized_config.has_virtio_balloon() && finalized_config.virtio_balloon());
+  ASSERT_EQ(guest_descriptor.console(),
+            finalized_config.has_virtio_console() && finalized_config.virtio_console());
+  ASSERT_EQ(guest_descriptor.gpu(),
+            finalized_config.has_virtio_gpu() && finalized_config.virtio_gpu());
+  ASSERT_EQ(guest_descriptor.rng(),
+            finalized_config.has_virtio_rng() && finalized_config.virtio_rng());
+  ASSERT_EQ(guest_descriptor.vsock(),
+            finalized_config.has_virtio_vsock() && finalized_config.virtio_vsock());
+  ASSERT_EQ(guest_descriptor.sound(),
+            finalized_config.has_virtio_sound() && finalized_config.virtio_sound());
 }
 
 TEST_F(GuestManagerTest, Connect) {

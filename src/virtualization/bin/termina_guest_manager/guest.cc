@@ -746,38 +746,8 @@ void Guest::PostContainerFailure(std::string failure_reason) {
 }
 
 void Guest::PostContainerFailureWithNetworkStatus(std::string failure_reason) {
-  std::string network_info;
-  switch (get_network_state_()) {
-    case GuestNetworkState::OK:
-      network_info =
-          "Guest network likely configured correctly; "
-          "check host connectivity if suspected network failure";
-      break;
-    case GuestNetworkState::NO_NETWORK_DEVICE:
-      network_info = "Guest not configured with a network device; check guest configuration";
-      break;
-    case GuestNetworkState::FAILED_TO_QUERY:
-      network_info = "Failed to query guest network status";
-      break;
-    case GuestNetworkState::NO_HOST_NETWORKING:
-      network_info = "Host has no network interfaces; guest networking will not work";
-      break;
-    case GuestNetworkState::MISSING_VIRTUAL_INTERFACES:
-      network_info = "Fewer than expected virtual interfaces; guest failed network device startup";
-      break;
-    case GuestNetworkState::NO_BRIDGE_CREATED:
-      network_info =
-          "No bridge between guest and host network interaces; "
-          "this may be transient so retrying is recommended";
-      break;
-    case GuestNetworkState::ATTEMPTED_TO_BRIDGE_WITH_WLAN:
-      network_info =
-          "Cannot create bridged guest network when host is using WiFi; "
-          "disconnect WiFi and connect via ethernet";
-      break;
-  }
-
-  failure_reason += " !!NOTE: " + network_info;
+  failure_reason +=
+      " !!NOTE: " + GuestManager::GuestNetworkStateToStringExplanation(get_network_state_());
   PostContainerFailure(failure_reason);
 }
 

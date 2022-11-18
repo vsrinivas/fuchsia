@@ -26,17 +26,15 @@ class MemoryPressureHandler
 
   zx_status_t Start(sys::ComponentContext* context);
 
+  fuchsia_memorypressure::Level get_latest_memory_pressure_event() const {
+    return latest_memory_pressure_event_;
+  }
+
  private:
   enum class TargetBalloonState {
     Inflated,
     Deflated,
   };
-  async_dispatcher_t* dispatcher_;
-  fidl::Client<fuchsia_virtualization::BalloonController> balloon_controller_;
-  std::optional<fidl::ServerBindingRef<fuchsia_memorypressure::Watcher>> memory_pressure_server_;
-  bool delayed_task_scheduled_ = false;
-  zx::time last_inflate_time_;
-  TargetBalloonState target_balloon_state_ = TargetBalloonState::Deflated;
 
   void on_fidl_error(fidl::UnbindInfo error) override;
   // |fuchsia::memorypressure::Watcher|
@@ -44,6 +42,15 @@ class MemoryPressureHandler
                       OnLevelChangedCompleter::Sync& completer) override;
 
   void UpdateTargetBalloonSize();
+
+  async_dispatcher_t* dispatcher_ = nullptr;  // Unowned.
+  fidl::Client<fuchsia_virtualization::BalloonController> balloon_controller_;
+  std::optional<fidl::ServerBindingRef<fuchsia_memorypressure::Watcher>> memory_pressure_server_;
+  bool delayed_task_scheduled_ = false;
+  zx::time last_inflate_time_;
+  TargetBalloonState target_balloon_state_ = TargetBalloonState::Deflated;
+  fuchsia_memorypressure::Level latest_memory_pressure_event_ =
+      fuchsia_memorypressure::Level::kNormal;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_MEMORY_PRESSURE_HANDLER_H_

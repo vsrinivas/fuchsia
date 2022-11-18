@@ -138,7 +138,29 @@ pub async fn get_detailed_information(
         table.add_row(row!["Inactive devices:", inactive]);
     }
 
-    Ok(table.to_string())
+    let mut table_string = table.to_string();
+
+    if let Some(problems) = guest_info.detected_problems {
+        if !problems.is_empty() {
+            let mut problem_table = Table::new();
+            problem_table.set_format(*FORMAT_CLEAN);
+            problem_table.add_empty_row();
+            problem_table.add_row(row![
+                format!(
+                    "{} problem{} detected:",
+                    problems.len(),
+                    if problems.len() > 1 { "s" } else { "" }
+                ),
+                " "
+            ]);
+            for problem in problems {
+                problem_table.add_row(row![format!("* {}", problem), " "]);
+            }
+            table_string += &problem_table.to_string();
+        }
+    }
+
+    Ok(table_string)
 }
 
 pub async fn get_enviornment_summary(
@@ -321,6 +343,10 @@ mod test {
                 sound: Some(false),
                 ..GuestDescriptor::EMPTY
             }),
+            detected_problems: Some(vec![
+                "Host is experiencing heavy memory pressure".to_string(),
+                "No bridge between guest and host network interaces".to_string(),
+            ]),
             ..GuestInfo::EMPTY
         }));
 
@@ -342,7 +368,11 @@ mod test {
             " Inactive devices:   wayland  \n",
             "                     magma  \n",
             "                     gpu  \n",
-            "                     sound  \n"
+            "                     sound  \n",
+            "                                                        \n",
+            " 2 problems detected:                                    \n",
+            " * Host is experiencing heavy memory pressure            \n",
+            " * No bridge between guest and host network interaces    \n",
         );
 
         assert_eq!(actual, expected);

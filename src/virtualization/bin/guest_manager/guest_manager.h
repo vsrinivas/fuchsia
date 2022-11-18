@@ -66,6 +66,10 @@ class GuestManager : public fuchsia::virtualization::GuestManager {
 
   // Attempt to query the guest network state by iterating over the host network interfaces.
   GuestNetworkState QueryGuestNetworkState();
+  static std::string GuestNetworkStateToStringExplanation(GuestNetworkState state);
+
+  // Check for suspected problems with a running guest.
+  std::vector<std::string> CheckForProblems();
 
   // Returns true if the guest was started, but hasn't stopped.
   bool is_guest_started() const;

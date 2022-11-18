@@ -84,6 +84,13 @@ type GuestInfo = table {
 
     /// Contains the last value reported to the guest manager if stopped due to an error.
     4: stop_error GuestError;
+
+    /// Possible problems with a running guest flagged by the guest manager. These are not fatal
+    /// errors, and should be actionable by a user.
+    ///
+    /// Note that these strings are for diagnostic purposes only. Consumers should not take any
+    /// action based on specific strings as they are subject to change without warning.
+    5: detected_problems vector<string:MAX>:8;
 };
 
 @discoverable

@@ -68,6 +68,7 @@ void MemoryPressureHandler::UpdateTargetBalloonSize() {
 
 void MemoryPressureHandler::OnLevelChanged(OnLevelChangedRequest& request,
                                            OnLevelChangedCompleter::Sync& completer) {
+  latest_memory_pressure_event_ = request.level();
   TargetBalloonState new_balloon_state =
       (request.level() == fuchsia_memorypressure::Level::kWarning ||
        request.level() == fuchsia_memorypressure::Level::kCritical)

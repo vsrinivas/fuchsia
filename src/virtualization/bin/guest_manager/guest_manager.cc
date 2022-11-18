@@ -313,6 +313,30 @@ GuestNetworkState GuestManager::QueryGuestNetworkState() {
   return GuestNetworkState::OK;
 }
 
+// Static.
+std::string GuestManager::GuestNetworkStateToStringExplanation(GuestNetworkState state) {
+  switch (state) {
+    case GuestNetworkState::OK:
+      return "Guest network likely configured correctly; "
+             "check host connectivity if suspected network failure";
+    case GuestNetworkState::NO_NETWORK_DEVICE:
+      return "Guest not configured with a network device; "
+             "check guest configuration if networking is required";
+    case GuestNetworkState::FAILED_TO_QUERY:
+      return "Failed to query guest network status";
+    case GuestNetworkState::NO_HOST_NETWORKING:
+      return "Host has no network interfaces; guest networking will not work";
+    case GuestNetworkState::MISSING_VIRTUAL_INTERFACES:
+      return "Fewer than expected virtual interfaces; guest failed network device startup";
+    case GuestNetworkState::NO_BRIDGE_CREATED:
+      return "No bridge between guest and host network interaces; "
+             "this may be transient so retrying is recommended";
+    case GuestNetworkState::ATTEMPTED_TO_BRIDGE_WITH_WLAN:
+      return "Cannot create bridged guest network when host is using WiFi; "
+             "disconnect WiFi and connect via ethernet";
+  }
+}
+
 void GuestManager::Connect(fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
                            fuchsia::virtualization::GuestManager::ConnectCallback callback) {
   if (is_guest_started()) {
@@ -322,6 +346,41 @@ void GuestManager::Connect(fidl::InterfaceRequest<fuchsia::virtualization::Guest
     FX_LOGS(ERROR) << "Failed to connect to guest. Guest is not running";
     callback(fpromise::error(GuestManagerError::NOT_RUNNING));
   }
+}
+
+std::vector<std::string> GuestManager::CheckForProblems() {
+  std::vector<std::string> problems;
+
+  GuestNetworkState network_state = QueryGuestNetworkState();
+  switch (network_state) {
+    case GuestNetworkState::OK:
+    case GuestNetworkState::NO_NETWORK_DEVICE:
+      // Do nothing.
+      break;
+    case GuestNetworkState::FAILED_TO_QUERY:
+    case GuestNetworkState::NO_HOST_NETWORKING:
+    case GuestNetworkState::MISSING_VIRTUAL_INTERFACES:
+    case GuestNetworkState::NO_BRIDGE_CREATED:
+    case GuestNetworkState::ATTEMPTED_TO_BRIDGE_WITH_WLAN:
+      problems.push_back(GuestNetworkStateToStringExplanation(network_state));
+      break;
+  }
+
+  if (memory_pressure_handler_ != nullptr) {
+    switch (memory_pressure_handler_->get_latest_memory_pressure_event()) {
+      case fuchsia_memorypressure::Level::kNormal:
+        // Do nothing.
+        break;
+      case fuchsia_memorypressure::Level::kWarning:
+        problems.push_back("Host is experiencing moderate memory pressure");
+        break;
+      case fuchsia_memorypressure::Level::kCritical:
+        problems.push_back("Host is experiencing severe memory pressure");
+        break;
+    }
+  }
+
+  return problems;
 }
 
 void GuestManager::GetInfo(GetInfoCallback callback) {
@@ -346,11 +405,12 @@ void GuestManager::GetInfo(GetInfoCallback callback) {
       break;
     }
     case GuestStatus::VMM_UNEXPECTED_TERMINATION:
-    case GuestStatus::NOT_STARTED: {
+    case GuestStatus::NOT_STARTED:
       // Do nothing.
       break;
-    }
   }
+
+  *info.mutable_detected_problems() = CheckForProblems();
 
   callback(std::move(info));
 }
