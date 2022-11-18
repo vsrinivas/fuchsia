@@ -789,8 +789,8 @@ impl<'parent, W: io::Write + io::Seek> SampleWriter16<'parent, W> {
         // Write a sample in little-endian to the buffer, independent of the
         // endianness of the architecture we are running on.
         let idx = self.index as usize;
-        *self.buffer.get_unchecked_mut(idx) = value as u8;
-        *self.buffer.get_unchecked_mut(idx + 1) = (value >> 8) as u8;
+        *self.buffer.get_unchecked_mut(idx) = MaybeUninit::<u8>::new(value as u8);
+        *self.buffer.get_unchecked_mut(idx + 1) = MaybeUninit::<u8>::new((value >> 8) as u8);
     }
 
     /// Like `write_sample()`, but does not perform a bounds check when writing
