@@ -139,8 +139,7 @@ mod tests {
     use super::*;
     use crate::{
         logs::{
-            container::LogsArtifactsContainer, multiplex::PinStream, stats::LogStreamStats,
-            stored_message::StoredMessage,
+            container::LogsArtifactsContainer, multiplex::PinStream, stored_message::StoredMessage,
         },
         testing::TEST_IDENTITY,
     };
@@ -173,7 +172,7 @@ mod tests {
             LogsArtifactsContainer::new(
                 TEST_IDENTITY.clone(),
                 &[],
-                LogStreamStats::default(),
+                fuchsia_inspect::component::inspector().root(),
                 manager.handle(),
             )
             .await,
@@ -182,7 +181,7 @@ mod tests {
             LogsArtifactsContainer::new(
                 TEST_IDENTITY.clone(),
                 &[],
-                LogStreamStats::default(),
+                fuchsia_inspect::component::inspector().root(),
                 manager.handle(),
             )
             .await,

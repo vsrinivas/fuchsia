@@ -96,7 +96,6 @@ rustc_library("lib") {
     "src/component_lifecycle.rs",
     "src/configs.rs",
     "src/constants.rs",
-    "src/container.rs",
     "src/diagnostics.rs",
     "src/error.rs",
     "src/events/error.rs",

@@ -4,7 +4,7 @@
 
 use crate::logs::stored_message::StoredMessage;
 use diagnostics_data::Severity;
-use fuchsia_inspect::{IntProperty, Node, NumericProperty, Property, UintProperty};
+use fuchsia_inspect::{IntProperty, Node, NumericProperty, Property, StringProperty, UintProperty};
 use fuchsia_inspect_derive::Inspect;
 
 #[derive(Debug, Default, Inspect)]
@@ -20,11 +20,16 @@ pub struct LogStreamStats {
     info: LogCounter,
     debug: LogCounter,
     trace: LogCounter,
+    url: StringProperty,
 
     inspect_node: Node,
 }
 
 impl LogStreamStats {
+    pub fn set_url(&self, url: &str) {
+        self.url.set(url);
+    }
+
     pub fn open_socket(&self) {
         self.sockets_opened.add(1);
     }

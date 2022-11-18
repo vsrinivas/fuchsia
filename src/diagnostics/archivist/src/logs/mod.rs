@@ -91,45 +91,43 @@ mod tests {
         assert_data_tree!(
             log_stats_tree,
             root: contains {
-                sources: {
+                log_sources: {
                     "UNKNOWN": {
                         url: "fuchsia-pkg://UNKNOWN",
-                        logs: {
-                            last_timestamp: AnyProperty,
-                            sockets_closed: 1u64,
-                            sockets_opened: 1u64,
-                            total: {
-                                number: 5u64,
-                                bytes: AnyProperty,
-                            },
-                            rolled_out: {
-                                number: 0u64,
-                                bytes: 0u64,
-                            },
-                            trace: {
-                                number: 0u64,
-                                bytes: 0u64,
-                            },
-                            debug: {
-                                number: 0u64,
-                                bytes: 0u64,
-                            },
-                            info: {
-                                number: 2u64,
-                                bytes: AnyProperty,
-                            },
-                            warn: {
-                                number: 2u64,
-                                bytes: AnyProperty,
-                            },
-                            error: {
-                                number: 1u64,
-                                bytes: AnyProperty,
-                            },
-                            fatal: {
-                                number: 0u64,
-                                bytes: 0u64,
-                            },
+                        last_timestamp: AnyProperty,
+                        sockets_closed: 1u64,
+                        sockets_opened: 1u64,
+                        total: {
+                            number: 5u64,
+                            bytes: AnyProperty,
+                        },
+                        rolled_out: {
+                            number: 0u64,
+                            bytes: 0u64,
+                        },
+                        trace: {
+                            number: 0u64,
+                            bytes: 0u64,
+                        },
+                        debug: {
+                            number: 0u64,
+                            bytes: 0u64,
+                        },
+                        info: {
+                            number: 2u64,
+                            bytes: AnyProperty,
+                        },
+                        warn: {
+                            number: 2u64,
+                            bytes: AnyProperty,
+                        },
+                        error: {
+                            number: 1u64,
+                            bytes: AnyProperty,
+                        },
+                        fatal: {
+                            number: 0u64,
+                            bytes: 0u64,
                         },
                     },
                 }
@@ -171,85 +169,81 @@ mod tests {
             assert_data_tree!(
                 log_stats_tree,
                 root: contains {
-                    sources: {
+                    log_sources: {
                         $foo_moniker: {
                             url: "http://foo.com",
-                            logs: {
-                                last_timestamp: AnyProperty,
-                                sockets_closed: 1u64,
-                                sockets_opened: 1u64,
-                                total: {
-                                    number: 1u64,
-                                    bytes: AnyProperty,
-                                },
-                                rolled_out: {
-                                    number: 0u64,
-                                    bytes: 0u64,
-                                },
-                                trace: {
-                                    number: 0u64,
-                                    bytes: 0u64,
-                                },
-                                debug: {
-                                    number: 0u64,
-                                    bytes: 0u64,
-                                },
-                                info: {
-                                    number: 0u64,
-                                    bytes: 0u64,
-                                },
-                                warn: {
-                                    number: 1u64,
-                                    bytes: AnyProperty,
-                                },
-                                error: {
-                                    number: 0u64,
-                                    bytes: 0u64,
-                                },
-                                fatal: {
-                                    number: 0u64,
-                                    bytes: 0u64,
-                                },
+                            last_timestamp: AnyProperty,
+                            sockets_closed: 1u64,
+                            sockets_opened: 1u64,
+                            total: {
+                                number: 1u64,
+                                bytes: AnyProperty,
+                            },
+                            rolled_out: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            trace: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            debug: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            info: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            warn: {
+                                number: 1u64,
+                                bytes: AnyProperty,
+                            },
+                            error: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            fatal: {
+                                number: 0u64,
+                                bytes: 0u64,
                             },
                         },
                         $bar_moniker: {
                             url: "http://bar.com",
-                            logs: {
-                                last_timestamp: AnyProperty,
-                                sockets_closed: 1u64,
-                                sockets_opened: 1u64,
-                                total: {
-                                    number: 1u64,
-                                    bytes: AnyProperty,
-                                },
-                                rolled_out: {
-                                    number: 0u64,
-                                    bytes: 0u64,
-                                },
-                                trace: {
-                                    number: 0u64,
-                                    bytes: 0u64,
-                                },
-                                debug: {
-                                    number: 0u64,
-                                    bytes: 0u64,
-                                },
-                                info: {
-                                    number: 0u64,
-                                    bytes: 0u64,
-                                },
-                                warn: {
-                                    number: 0u64,
-                                    bytes: 0u64,
-                                },
-                                error: {
-                                    number: 1u64,
-                                    bytes: AnyProperty,
-                                },
-                                fatal: {
-                                    number: 0u64,
-                                    bytes: 0u64,
-                                },
+                            last_timestamp: AnyProperty,
+                            sockets_closed: 1u64,
+                            sockets_opened: 1u64,
+                            total: {
+                                number: 1u64,
+                                bytes: AnyProperty,
+                            },
+                            rolled_out: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            trace: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            debug: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            info: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            warn: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            error: {
+                                number: 1u64,
+                                bytes: AnyProperty,
+                            },
+                            fatal: {
+                                number: 0u64,
+                                bytes: 0u64,
                             },
                         },
                     },
@@ -636,45 +630,43 @@ mod tests {
         assert_data_tree!(
             klog_stats_tree,
             root: contains {
-                "sources": {
-                    "klog": {
+                log_sources: {
+                    klog: {
                         url: "fuchsia-boot://kernel",
-                        logs: {
-                            last_timestamp: AnyProperty,
-                            sockets_closed: 0u64,
-                            sockets_opened: 0u64,
-                            total: {
-                                number: 3u64,
-                                bytes: AnyProperty,
-                            },
-                            rolled_out: {
-                                number: 0u64,
-                                bytes: 0u64,
-                            },
-                            trace: {
-                                number: 0u64,
-                                bytes: 0u64,
-                            },
-                            debug: {
-                                number: 0u64,
-                                bytes: 0u64,
-                            },
-                            info: {
-                                number: 3u64,
-                                bytes: AnyProperty,
-                            },
-                            warn: {
-                                number: 0u64,
-                                bytes: 0u64,
-                            },
-                            error: {
-                                number: 0u64,
-                                bytes: 0u64,
-                            },
-                            fatal: {
-                                number: 0u64,
-                                bytes: 0u64,
-                            },
+                        last_timestamp: AnyProperty,
+                        sockets_closed: 0u64,
+                        sockets_opened: 0u64,
+                        total: {
+                            number: 3u64,
+                            bytes: AnyProperty,
+                        },
+                        rolled_out: {
+                            number: 0u64,
+                            bytes: 0u64,
+                        },
+                        trace: {
+                            number: 0u64,
+                            bytes: 0u64,
+                        },
+                        debug: {
+                            number: 0u64,
+                            bytes: 0u64,
+                        },
+                        info: {
+                            number: 3u64,
+                            bytes: AnyProperty,
+                        },
+                        warn: {
+                            number: 0u64,
+                            bytes: 0u64,
+                        },
+                        error: {
+                            number: 0u64,
+                            bytes: 0u64,
+                        },
+                        fatal: {
+                            number: 0u64,
+                            bytes: 0u64,
                         },
                     },
                 }

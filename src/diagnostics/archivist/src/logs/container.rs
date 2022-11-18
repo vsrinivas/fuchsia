@@ -24,6 +24,8 @@ use fidl_fuchsia_logger::{
     LogSinkWaitForInterestChangeResponder,
 };
 use fuchsia_async::Task;
+use fuchsia_inspect as inspect;
+use fuchsia_inspect_derive::WithInspect;
 use fuchsia_trace as ftrace;
 use fuchsia_zircon as zx;
 use futures::{
@@ -95,9 +97,13 @@ impl LogsArtifactsContainer {
     pub async fn new(
         identity: Arc<ComponentIdentity>,
         interest_selectors: &[LogInterestSelector],
-        stats: LogStreamStats,
+        parent_node: &inspect::Node,
         budget: BudgetHandle,
     ) -> Self {
+        let stats = LogStreamStats::default()
+            .with_inspect(parent_node, identity.relative_moniker.join("/"))
+            .expect("failed to attach component log stats");
+        stats.set_url(&identity.url);
         let new = Self {
             identity,
             budget,
@@ -652,7 +658,7 @@ mod tests {
                     "fuchsia-pkg://test",
                 )),
                 &[],
-                LogStreamStats::default(),
+                inspect::component::inspector().root(),
                 budget_manager.handle(),
             )
             .await,

@@ -9,7 +9,6 @@ pub mod archivist;
 mod component_lifecycle;
 mod configs;
 pub mod constants;
-mod container;
 mod diagnostics;
 mod error;
 pub mod events;
