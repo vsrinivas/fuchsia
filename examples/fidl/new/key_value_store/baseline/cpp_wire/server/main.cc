@@ -30,9 +30,8 @@ class StoreImpl final : public fidl::WireServer<examples_keyvaluestore_baseline:
 
   void WriteItem(WriteItemRequestView request, WriteItemCompleter::Sync& completer) override {
     FX_LOGS(INFO) << "WriteItem request received";
-    std::string key = request->attempt.key.data();
-    const auto value =
-        std::vector<uint8_t>(request->attempt.value.begin(), request->attempt.value.end());
+    std::string key{request->attempt.key.get()};
+    std::vector<uint8_t> value{request->attempt.value.begin(), request->attempt.value.end()};
 
     // Validate the key.
     if (!RE2::FullMatch(key, "^[A-Za-z]\\w+[A-Za-z0-9]$")) {
