@@ -26,13 +26,13 @@ bt::DeviceAddress LeAddressFromFidl(const fbt::Address& address) {
 bt::hci_spec::ConnectionRole ConnectionRoleFromFidl(fbt::ConnectionRole role) {
   switch (role) {
     case fbt::ConnectionRole::LEADER:
-      return bt::hci_spec::ConnectionRole::kCentral;
+      return bt::hci_spec::ConnectionRole::CENTRAL;
     case fbt::ConnectionRole::FOLLOWER:
       [[fallthrough]];
     default:
       break;
   }
-  return bt::hci_spec::ConnectionRole::kPeripheral;
+  return bt::hci_spec::ConnectionRole::PERIPHERAL;
 }
 
 }  // namespace
