@@ -324,22 +324,20 @@ fn translate_debug_registration_policy(
     }
 }
 
-macro_rules! extend_if_unset {
-    ( $($target:expr, $value:expr, $field:ident)+ ) => {
-        $(
-            $target.$field = match (&$target.$field, &$value.$field) {
-                (Some(_), Some(_)) => {
-                    return Err(Error::parse(
-                        format!("Conflicting field found: {:?}", stringify!($field)),
-                        None,
-                        None,
-                    ))
-                }
-                (None, Some(_)) => $value.$field,
-                (Some(_), None) => $target.$field,
-                (&None, &None) => None,
-            };
-        )+
+macro_rules! merge_field {
+    ($target:ident, $other:expr, $field:ident) => {
+        match ($target.$field, $other.$field) {
+            (Some(_), Some(_)) => {
+                return Err(Error::parse(
+                    format!("Conflicting field found: {:?}", stringify!($field)),
+                    None,
+                    None,
+                ))
+            }
+            (None, Some(other)) => Some(other),
+            (Some(target), None) => Some(target),
+            (None, None) => None,
+        }
     };
 }
 
@@ -353,24 +351,29 @@ impl Config {
         })
     }
 
-    fn extend(mut self, another: Config) -> Result<Self, Error> {
-        extend_if_unset!(self, another, debug);
-        extend_if_unset!(self, another, enable_introspection);
-        extend_if_unset!(self, another, use_builtin_process_launcher);
-        extend_if_unset!(self, another, maintain_utc_clock);
-        extend_if_unset!(self, another, list_children_batch_size);
-        extend_if_unset!(self, another, security_policy);
-        extend_if_unset!(self, another, namespace_capabilities);
-        extend_if_unset!(self, another, builtin_capabilities);
-        extend_if_unset!(self, another, num_threads);
-        extend_if_unset!(self, another, root_component_url);
-        extend_if_unset!(self, another, component_id_index_path);
-        extend_if_unset!(self, another, log_destination);
-        extend_if_unset!(self, another, log_all_events);
-        extend_if_unset!(self, another, builtin_boot_resolver);
-        extend_if_unset!(self, another, reboot_on_terminate_enabled);
-        extend_if_unset!(self, another, realm_builder_resolver_and_runner);
-        Ok(self)
+    fn merge(self, another: Config) -> Result<Self, Error> {
+        Ok(Config {
+            debug: merge_field!(self, another, debug),
+            enable_introspection: merge_field!(self, another, enable_introspection),
+            use_builtin_process_launcher: merge_field!(self, another, use_builtin_process_launcher),
+            maintain_utc_clock: merge_field!(self, another, maintain_utc_clock),
+            list_children_batch_size: merge_field!(self, another, list_children_batch_size),
+            security_policy: merge_field!(self, another, security_policy),
+            namespace_capabilities: merge_field!(self, another, namespace_capabilities),
+            builtin_capabilities: merge_field!(self, another, builtin_capabilities),
+            num_threads: merge_field!(self, another, num_threads),
+            root_component_url: merge_field!(self, another, root_component_url),
+            component_id_index_path: merge_field!(self, another, component_id_index_path),
+            log_destination: merge_field!(self, another, log_destination),
+            log_all_events: merge_field!(self, another, log_all_events),
+            builtin_boot_resolver: merge_field!(self, another, builtin_boot_resolver),
+            reboot_on_terminate_enabled: merge_field!(self, another, reboot_on_terminate_enabled),
+            realm_builder_resolver_and_runner: merge_field!(
+                self,
+                another,
+                realm_builder_resolver_and_runner
+            ),
+        })
     }
 
     fn validate_namespace_capability(
@@ -463,7 +466,7 @@ fn compile(args: Args) -> Result<(), Error> {
     let configs =
         args.input.iter().map(Config::from_json_file).collect::<Result<Vec<Config>, _>>()?;
     let config_json =
-        configs.into_iter().try_fold(Config::default(), |acc, next| acc.extend(next))?;
+        configs.into_iter().try_fold(Config::default(), |acc, next| acc.merge(next))?;
 
     let mut config_fidl: component_internal::Config = config_json.try_into()?;
     let bytes = encode_persistent_with_context(
