@@ -340,16 +340,6 @@ struct FragmentCacheData {
     /// `missing_blocks` to a list with a single element representing all
     /// blocks, (0, MAX_VALUE). In this case, MAX_VALUE will be set to
     /// `core::u16::MAX`.
-    // TODO(ghanan): Consider a different data structure? With the BTreeSet,
-    //               searches will be O(n) and inserts/removals may be
-    //               O(log(n)). If we use a linked list, searches will be O(n)
-    //               but inserts/removals will be O(1). For now, a `BTreeSet` is
-    //               used since Rust provides one and it does the job of keeping
-    //               the list of gaps in increasing order when searching,
-    //               inserting and removing. How many fragments for a packet
-    //               will we get in practice though?
-    // TODO(fxbug.dev/50830): O(n) complexity per fragment is a DDOS
-    //              vulnerability: this should be refactored to be O(log(n)).
     missing_blocks: BTreeSet<BlockRange>,
 
     /// Received fragment blocks.
@@ -396,41 +386,32 @@ impl FragmentCacheData {
     /// Returns `Some(o)` if a valid gap is found where `o` is the gap's offset
     /// range; otherwise, returns `None`. `fragment_blocks_range` is an
     /// inclusive range of fragment block offsets.
-    fn find_gap(&self, fragment_blocks_range: BlockRange) -> Option<BlockRange> {
-        for potential_gap in self.missing_blocks.iter() {
-            if fragment_blocks_range.end < potential_gap.start
-                || fragment_blocks_range.start > potential_gap.end
-            {
-                // Either:
-                // - Our packet's ending offset is less than the start of
-                //   `potential_gap` so move on to the next gap. That is,
-                //   `fragment_blocks_range` ends before `potential_gap`.
-                // - Our packet's starting offset is more than `potential_gap`'s
-                //   ending offset so move on to the next gap. That is,
-                //   `fragment_blocks_range` starts after `potential_gap`.
-                continue;
-            }
+    fn find_gap(&self, BlockRange { start, end }: BlockRange) -> Option<BlockRange> {
+        use core::ops::Bound::{Included, Unbounded};
 
-            // Make sure that `fragment_blocks_range` belongs purely within
-            // `potential_gap`.
-            //
-            // If `fragment_blocks_range` does not fit purely within
-            // `potential_gap`, then at least one block in
-            // `fragment_blocks_range` overlaps with an already received block.
-            // We should never receive overlapping fragments from non-malicious
-            // nodes.
-            if (fragment_blocks_range.start < potential_gap.start)
-                || (fragment_blocks_range.end > potential_gap.end)
-            {
-                break;
-            }
+        // Find a gap that starts earlier or at the same point as a fragment.
+        let possible_free_place = self.missing_blocks.range((
+            Unbounded,
+            Included(BlockRange {
+                start,
+                end: u16::MAX,
+            }),
+        ));
 
-            // Found a gap where `fragment_blocks_range` fits in!
-            return Some(*potential_gap);
-        }
-
-        // Unable to find a valid gap so return `None`.
-        None
+        // Make sure that `fragment` belongs purely within
+        // `potential_gap`.
+        //
+        // If `fragment` does not fit purely within
+        // `potential_gap`, then at least one block in
+        // `fragment` overlaps with an already received block.
+        // We should never receive overlapping fragments from non-malicious
+        // nodes.
+        possible_free_place
+            .last()
+            .filter(|&range| {
+                // range.start <= start must be always true here - so comparing only ending part
+                return end <= range.end;
+            }).copied()
     }
 }
 
@@ -1437,6 +1418,45 @@ mod tests {
             0,
             true,
             ExpectedResult::NeedMore,
+        );
+    }
+
+    #[ip_test]
+    fn test_unordered_fragments<I: Ip + TestIpExt>() {
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<I>::with_sync_ctx(FakeSyncCtxImpl::<I>::default());
+        let fragment_id = 5;
+
+        // Test that we error on overlapping/duplicate fragments.
+
+        // Process fragment #0
+        process_ip_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
+
+        // Process fragment #2
+        process_ip_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            fragment_id,
+            2,
+            false,
+            ExpectedResult::NeedMore,
+        );
+
+        // Process fragment #1
+        process_ip_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            fragment_id,
+            1,
+            true,
+            ExpectedResult::Ready { total_body_len: 24 },
         );
     }
 
