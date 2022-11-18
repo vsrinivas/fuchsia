@@ -15,9 +15,6 @@ group("sys") {
 group("tests") {
   testonly = true
   deps = [
-    # TODO(fxbug.dev/102390): remove this once we've switched private builders
-    # to include this explicitly
-    ":legacy_tests",
     "activity:tests",
     "base-resolver:tests",
     "component_manager:tests",
