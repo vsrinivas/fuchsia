@@ -29,9 +29,13 @@
 // Evaluates to true if tracing is enabled for the given level.
 #define VM_KTRACE_LEVEL_ENABLED(level) ((VM_TRACING_LEVEL) >= (level))
 
+#define VM_MAKE_UNIQUE_TOKEN3(a, b) a##b
+#define VM_MAKE_UNIQUE_TOKEN2(a, b) VM_MAKE_UNIQUE_TOKEN3(a, b)
+#define VM_MAKE_UNIQUE_TOKEN(a) VM_MAKE_UNIQUE_TOKEN2(a, __LINE__)
+
 #define VM_KTRACE_DURATION(level, string, args...)                                                 \
   TraceDuration<TraceEnabled<VM_KTRACE_LEVEL_ENABLED(level)>, KTRACE_GRP_VM, TraceContext::Thread> \
-      duration{KTRACE_STRING_REF(string), ##args};
+      VM_MAKE_UNIQUE_TOKEN(_duration_){KTRACE_STRING_REF(string), ##args};
 
 #define VM_KTRACE_DURATION_BEGIN(level, string, args...)                                  \
   ktrace_begin_duration(LocalTrace<VM_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Thread, \
