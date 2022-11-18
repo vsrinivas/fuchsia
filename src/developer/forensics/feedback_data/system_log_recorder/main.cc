@@ -12,6 +12,8 @@
 #include <lib/zx/time.h>
 #include <zircon/processargs.h>
 
+#include <optional>
+
 #include "src/developer/forensics/feedback/config.h"
 #include "src/developer/forensics/feedback/redactor_factory.h"
 #include "src/developer/forensics/feedback_data/constants.h"
@@ -45,6 +47,12 @@ int main() {
     return EXIT_FAILURE;
   }
 
+  const std::optional<feedback::BuildTypeConfig> build_type_config = feedback::GetBuildTypeConfig();
+  if (!build_type_config.has_value()) {
+    FX_LOGS(FATAL) << "Failed to read build type config";
+    return EXIT_FAILURE;
+  }
+
   const std::optional<feedback::BoardConfig> board_config = feedback::GetBoardConfig();
   if (!board_config.has_value()) {
     FX_LOGS(FATAL) << "Failed to parse board config";
@@ -62,18 +70,19 @@ int main() {
 
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  SystemLogRecorder recorder(main_loop.dispatcher(), write_loop.dispatcher(), context->svc(),
-                             SystemLogRecorder::WriteParameters{
-                                 .period = kWritePeriod,
-                                 .max_write_size = kMaxWriteSize,
-                                 .logs_dir = kCurrentLogsDir,
-                                 .max_num_files = board_config->persisted_logs_num_files,
-                                 .total_log_size = board_config->persisted_logs_total_size,
-                             },
-                             // Don't set up Inspect because all messages in the previous boot log
-                             // are in the current boot log and counted in Inspect.
-                             feedback::RedactorFromConfig(nullptr /*no inspect*/),
-                             std::unique_ptr<Encoder>(new ProductionEncoder()));
+  SystemLogRecorder recorder(
+      main_loop.dispatcher(), write_loop.dispatcher(), context->svc(),
+      SystemLogRecorder::WriteParameters{
+          .period = kWritePeriod,
+          .max_write_size = kMaxWriteSize,
+          .logs_dir = kCurrentLogsDir,
+          .max_num_files = board_config->persisted_logs_num_files,
+          .total_log_size = board_config->persisted_logs_total_size,
+      },
+      // Don't set up Inspect because all messages in the previous boot log
+      // are in the current boot log and counted in Inspect.
+      feedback::RedactorFromConfig(nullptr /*no inspect*/, *build_type_config),
+      std::unique_ptr<Encoder>(new ProductionEncoder()));
 
   // Set up the controller to shut down or flush the buffers of the system log recorder when it gets
   // the signal to do so.

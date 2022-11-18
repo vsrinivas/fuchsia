@@ -10,7 +10,7 @@
 
 #include <memory>
 
-#include "src/developer/forensics/feedback/constants.h"
+#include "src/developer/forensics/feedback/config.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
 
 namespace forensics::feedback {
@@ -23,7 +23,7 @@ int DefaultCacheIdFn();
 // Returns an IdentityRedactor if the file at |enable_flag_file| doesn't exist, otherwise return a
 // Redactor.
 std::unique_ptr<RedactorBase> RedactorFromConfig(
-    inspect::Node* root_node, const std::string& enable_flag_file = kEnableRedactDataPath,
+    inspect::Node* root_node, const BuildTypeConfig& config,
     ::fit::function<int()> seed_cache_id = DefaultCacheIdFn);
 
 }  // namespace forensics::feedback

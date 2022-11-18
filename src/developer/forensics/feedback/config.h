@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_CONFIG_H_
 
 #include <optional>
+#include <string>
 
 #include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/feedback/constants.h"
@@ -21,9 +22,18 @@ struct BoardConfig {
   std::optional<StorageSize> snapshot_persistence_max_cache_size;
 };
 
+struct BuildTypeConfig {
+  bool enable_data_redaction;
+  bool enable_limit_inspect_data;
+};
+
 std::optional<BoardConfig> GetBoardConfig(
     const std::string& default_path = kDefaultBoardConfigPath,
     const std::string& override_path = kOverrideBoardConfigPath);
+
+std::optional<BuildTypeConfig> GetBuildTypeConfig(
+    const std::string& default_path = kDefaultBuildTypeConfigPath,
+    const std::string& override_path = kOverrideBuildTypeConfigPath);
 
 std::optional<crash_reports::Config> GetCrashReportsConfig(
     const std::string& default_path = kDefaultCrashReportsConfigPath,

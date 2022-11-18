@@ -19,6 +19,65 @@
 namespace forensics::feedback {
 namespace {
 
+template <typename T>
+std::optional<T> ReadConfig(const std::string& schema_str,
+                            std::function<std::optional<T>(const rapidjson::Document&)> convert_fn,
+                            const std::string& filepath) {
+  std::string config_str;
+  if (!files::ReadFileToString(filepath, &config_str)) {
+    FX_LOGS(ERROR) << "Error reading config file at " << filepath;
+    return std::nullopt;
+  }
+
+  rapidjson::Document config;
+  if (const rapidjson::ParseResult result = config.Parse(config_str.c_str()); !result) {
+    FX_LOGS(ERROR) << "Error parsing config as JSON at offset " << result.Offset() << " "
+                   << rapidjson::GetParseError_En(result.Code());
+    return std::nullopt;
+  }
+
+  rapidjson::Document schema;
+  if (const rapidjson::ParseResult result = schema.Parse(schema_str); !result) {
+    FX_LOGS(ERROR) << "Error parsing config schema at offset " << result.Offset() << " "
+                   << rapidjson::GetParseError_En(result.Code());
+    return std::nullopt;
+  }
+
+  rapidjson::SchemaDocument schema_doc(schema);
+  if (rapidjson::SchemaValidator validator(schema_doc); !config.Accept(validator)) {
+    rapidjson::StringBuffer buf;
+    validator.GetInvalidSchemaPointer().StringifyUriFragment(buf);
+    FX_LOGS(ERROR) << "Config does not match schema, violating '"
+                   << validator.GetInvalidSchemaKeyword() << "' rule";
+    return std::nullopt;
+  }
+
+  return convert_fn(config);
+}
+
+template <typename T>
+std::optional<T> GetConfig(const std::string& schema_str,
+                           std::function<std::optional<T>(const rapidjson::Document&)> convert_fn,
+                           const std::string& config_type, const std::string& default_path,
+                           const std::string& override_path) {
+  std::optional<T> config;
+  if (files::IsFile(override_path)) {
+    if (config = ReadConfig<T>(schema_str, convert_fn, override_path); !config.has_value()) {
+      FX_LOGS(ERROR) << "Failed to read override " << config_type << " config file at "
+                     << override_path;
+    }
+  }
+
+  if (!config.has_value()) {
+    if (config = ReadConfig<T>(schema_str, convert_fn, default_path); !config.has_value()) {
+      FX_LOGS(ERROR) << "Failed to read default " << config_type << " config file at "
+                     << default_path;
+    }
+  }
+
+  return config;
+}
+
 constexpr char kBoardConfigSchema[] = R"({
     "type": "object",
     "properties": {
@@ -44,90 +103,77 @@ constexpr char kBoardConfigSchema[] = R"({
     "additionalProperties": false
 })";
 
-std::optional<BoardConfig> ReadBoardConfig(const std::string& filepath) {
-  std::string config_str;
-  if (!files::ReadFileToString(filepath, &config_str)) {
-    FX_LOGS(ERROR) << "Error reading build type config file at " << filepath;
-    return std::nullopt;
-  }
-
-  rapidjson::Document config;
-  if (const rapidjson::ParseResult result = config.Parse(config_str.c_str()); !result) {
-    FX_LOGS(ERROR) << "Error parsing build type config as JSON at offset " << result.Offset() << " "
-                   << rapidjson::GetParseError_En(result.Code());
-    return std::nullopt;
-  }
-
-  rapidjson::Document schema;
-  if (const rapidjson::ParseResult result = schema.Parse(kBoardConfigSchema); !result) {
-    FX_LOGS(ERROR) << "Error parsing build type config schema at offset " << result.Offset() << " "
-                   << rapidjson::GetParseError_En(result.Code());
-    return std::nullopt;
-  }
-
-  rapidjson::SchemaDocument schema_doc(schema);
-  if (rapidjson::SchemaValidator validator(schema_doc); !config.Accept(validator)) {
-    rapidjson::StringBuffer buf;
-    validator.GetInvalidSchemaPointer().StringifyUriFragment(buf);
-    FX_LOGS(ERROR) << "Build type config does not match schema, violating '"
-                   << validator.GetInvalidSchemaKeyword() << "' rule";
-    return std::nullopt;
-  }
-
-  BoardConfig device_config;
-  if (const int64_t num_files = config["persisted_logs_num_files"].GetInt64(); num_files > 0) {
-    device_config.persisted_logs_num_files = num_files;
+std::optional<BoardConfig> ParseBoardConfig(const rapidjson::Document& json) {
+  BoardConfig config;
+  if (const int64_t num_files = json["persisted_logs_num_files"].GetInt64(); num_files > 0) {
+    config.persisted_logs_num_files = num_files;
   } else {
     FX_LOGS(ERROR) << "Can't use non-positive number of files for system log persistence: "
                    << num_files;
     return std::nullopt;
   }
 
-  if (const int64_t total_size_kib = config["persisted_logs_total_size_kib"].GetInt64();
+  if (const int64_t total_size_kib = json["persisted_logs_total_size_kib"].GetInt64();
       total_size_kib > 0) {
-    device_config.persisted_logs_total_size = StorageSize::Kilobytes(total_size_kib);
+    config.persisted_logs_total_size = StorageSize::Kilobytes(total_size_kib);
   } else {
     FX_LOGS(ERROR) << "Can't use non-positive size for system log persistence: " << total_size_kib;
     return std::nullopt;
   }
 
-  if (const int64_t max_tmp_size_mib = config["snapshot_persistence_max_tmp_size_mib"].GetInt64();
+  if (const int64_t max_tmp_size_mib = json["snapshot_persistence_max_tmp_size_mib"].GetInt64();
       max_tmp_size_mib > 0) {
-    device_config.snapshot_persistence_max_tmp_size = StorageSize::Megabytes(max_tmp_size_mib);
+    config.snapshot_persistence_max_tmp_size = StorageSize::Megabytes(max_tmp_size_mib);
   } else {
-    device_config.snapshot_persistence_max_tmp_size = std::nullopt;
+    config.snapshot_persistence_max_tmp_size = std::nullopt;
   }
 
-  if (const int64_t max_cache_size_mib =
-          config["snapshot_persistence_max_cache_size_mib"].GetInt64();
+  if (const int64_t max_cache_size_mib = json["snapshot_persistence_max_cache_size_mib"].GetInt64();
       max_cache_size_mib > 0) {
-    device_config.snapshot_persistence_max_cache_size = StorageSize::Megabytes(max_cache_size_mib);
+    config.snapshot_persistence_max_cache_size = StorageSize::Megabytes(max_cache_size_mib);
   } else {
-    device_config.snapshot_persistence_max_cache_size = std::nullopt;
+    config.snapshot_persistence_max_cache_size = std::nullopt;
   }
 
-  return device_config;
+  return config;
+}
+
+const char kBuildTypeConfigSchema[] = R"({
+  "type": "object",
+  "properties": {
+    "enable_data_redaction": {
+      "type": "boolean"
+    },
+    "enable_limit_inspect_data": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "enable_data_redaction",
+    "enable_limit_inspect_data"
+  ],
+  "additionalProperties": false
+})";
+
+std::optional<BuildTypeConfig> ParseBuildTypeConfig(const rapidjson::Document& json) {
+  return BuildTypeConfig{
+      .enable_data_redaction = json["enable_data_redaction"].GetBool(),
+      .enable_limit_inspect_data = json["enable_limit_inspect_data"].GetBool(),
+  };
 }
 
 }  // namespace
 
 std::optional<BoardConfig> GetBoardConfig(const std::string& default_path,
                                           const std::string& override_path) {
-  std::optional<BoardConfig> config;
-  if (files::IsFile(override_path)) {
-    if (config = ReadBoardConfig(override_path); !config.has_value()) {
-      FX_LOGS(ERROR) << "Failed to read override board config file at " << override_path
-                     << " - falling back to default";
-    }
-  }
+  return GetConfig<BoardConfig>(kBoardConfigSchema, ParseBoardConfig, "board", default_path,
+                                override_path);
+}
 
-  if (!config.has_value()) {
-    if (config = ReadBoardConfig(default_path); !config.has_value()) {
-      FX_LOGS(ERROR) << "Failed to read default board config file at " << default_path;
-    }
-  }
-
-  return config;
+std::optional<BuildTypeConfig> GetBuildTypeConfig(const std::string& default_path,
+                                                  const std::string& override_path) {
+  return GetConfig<BuildTypeConfig>(kBuildTypeConfigSchema, ParseBuildTypeConfig, "build type",
+                                    default_path, override_path);
 }
 
 std::optional<crash_reports::Config> GetCrashReportsConfig(const std::string& default_path,

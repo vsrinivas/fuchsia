@@ -505,10 +505,20 @@ executable("ui_state_provider_unittest_exe") {
 ###############################################################################
 # RESOURCES
 ###############################################################################
-resource("prod_configs") {
+resource("prod_board_configs") {
   sources = [ "//src/developer/forensics/feedback/configs/board/default.json" ]
 
-  outputs = [ "data/configs/{{source_file_part}}" ]
+  outputs = [ "data/board/configs/{{source_file_part}}" ]
+}
+
+resource("prod_build_type_configs") {
+  sources = [
+    "//src/developer/forensics/feedback/configs/build_type/default.json",
+    "//src/developer/forensics/feedback/configs/build_type/user.json",
+    "//src/developer/forensics/feedback/configs/build_type/userdebug.json",
+  ]
+
+  outputs = [ "data/build_type/configs/{{source_file_part}}" ]
 }
 
 ###############################################################################
@@ -620,7 +630,8 @@ fuchsia_unittest_component("namespace_init_unittest") {
 
 fuchsia_unittest_component("prod_configs_unittest") {
   deps = [
-    ":prod_configs",
+    ":prod_board_configs",
+    ":prod_build_type_configs",
     ":prod_configs_unittest_exe",
   ]
 }
@@ -630,10 +641,7 @@ fuchsia_unittest_component("product_info_provider_unittest") {
 }
 
 fuchsia_unittest_component("redactor_factory_unittest") {
-  deps = [
-    ":redactor_factory_unittest_exe",
-    "//src/sys/test_runners:tmp_storage",
-  ]
+  deps = [ ":redactor_factory_unittest_exe" ]
 }
 
 fuchsia_unittest_component("startup_annotations_unittest") {
