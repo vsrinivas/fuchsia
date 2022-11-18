@@ -93,7 +93,10 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
     ZX_ASSERT_MSG(bno_count <= max_blocks, "Block count:%u more than max block count:%u", bno_count,
                   max_blocks);
 
-    // Since we reserved enough space ahead of time, this should not fail.
+    // Since we reserved enough space ahead of time, this should not fail due to lack of space.  It
+    // can fail if there's an I/O error, but if that happens we will potentially be in an
+    // inconsistent state and fixing that is not worth the effort; crashing will lead to the same
+    // end result for the user.
     ZX_ASSERT_MSG(
         BlocksSwap(transaction.get(), bno_start, bno_count, allocated_blocks.data()).is_ok(),
         "Failed to reserve blocks.");

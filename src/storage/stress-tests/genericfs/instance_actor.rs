@@ -42,10 +42,17 @@ impl Actor for InstanceActor {
                 assert!(count < 100);
                 fasync::Timer::new(Duration::from_millis(100)).await;
             }
+            // Ignore errors: we've yanked the underlying device, and filesystems have different
+            // ways of handling that, and it doesn't really matter how they handle it i.e. crashing
+            // is fine.
             match fs {
-                Either::Left(fs) => fs.kill().await.expect("Could not kill fs instance"),
+                Either::Left(fs) => {
+                    let _ = fs.kill().await;
+                }
                 // TODO(fxbug.dev/105888): Make termination more abrupt.
-                Either::Right(fs) => fs.shutdown().await.expect("Could not kill fs instance"),
+                Either::Right(fs) => {
+                    let _ = fs.shutdown().await;
+                }
             };
         } else {
             panic!("Instance was already killed!")
