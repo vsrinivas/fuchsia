@@ -15,12 +15,58 @@
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
+#include "src/ui/testing/ui_test_realm/ui_test_realm.h"
+#include "src/ui/testing/util/flatland_test_view.h"
 #include "src/ui/testing/util/gfx_test_view.h"
 
 namespace integration_tests {
 namespace {
 
 constexpr auto kViewProvider = "view-provider";
+
+std::vector<ui_testing::UITestRealm::Config> UIConfigurationsToTest(
+    std::vector<int> display_rotations) {
+  std::vector<ui_testing::UITestRealm::Config> configs;
+
+  // // GFX x root presenter
+  {
+    ui_testing::UITestRealm::Config config;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
+    config.device_pixel_ratio = ui_testing::kDefaultDevicePixelRatio;
+    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+    for (const auto rotation : display_rotations) {
+      config.display_rotation = rotation;
+      configs.push_back(config);
+    }
+  }
+
+  // GFX x scene manager
+  {
+    ui_testing::UITestRealm::Config config;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
+    config.device_pixel_ratio = ui_testing::kDefaultDevicePixelRatio;
+    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+    for (const auto rotation : display_rotations) {
+      config.display_rotation = rotation;
+      configs.push_back(config);
+    }
+  }
+
+  // Flatland x scene manager
+  {
+    ui_testing::UITestRealm::Config config;
+    config.use_flatland = true;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
+    config.device_pixel_ratio = ui_testing::kDefaultDevicePixelRatio;
+    config.ui_to_client_services = {fuchsia::ui::composition::Flatland::Name_,
+                                    fuchsia::ui::composition::Allocator::Name_};
+    for (const auto rotation : display_rotations) {
+      config.display_rotation = rotation;
+      configs.push_back(config);
+    }
+  }
+  return configs;
+}
 
 }  // namespace
 
@@ -35,33 +81,35 @@ using component_testing::Route;
 // 'config/data/display_rotation' correctly.
 class DisplayRotationPixelTestBase : public gtest::RealLoopFixture {
  protected:
-  DisplayRotationPixelTestBase(ui_testing::UITestRealm::SceneOwnerType scene_owner, int rotation)
-      : scene_owner_(scene_owner), rotation_(rotation) {}
+  DisplayRotationPixelTestBase(ui_testing::UITestRealm::Config config) : config_(config) {}
 
   // |testing::Test|
   void SetUp() override {
-    ui_testing::UITestRealm::Config config;
-    config.scene_owner = scene_owner_;
-    config.display_rotation = rotation_;
-
-    config.device_pixel_ratio = ui_testing::kDefaultDevicePixelRatio;
-    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
-    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
+    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(config_);
 
     // Build realm.
     FX_LOGS(INFO) << "Building realm";
     realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
 
     // Add a test view provider.
-    test_view_ = std::make_unique<ui_testing::GfxTestView>(
-        dispatcher(), /* content = */ ui_testing::TestView::ContentType::COORDINATE_GRID);
+    if (config_.use_flatland) {
+      test_view_ = std::make_unique<ui_testing::FlatlandTestView>(
+          dispatcher(), /* content = */ ui_testing::TestView::ContentType::COORDINATE_GRID);
+    } else {
+      test_view_ = std::make_unique<ui_testing::GfxTestView>(
+          dispatcher(), /* content = */ ui_testing::TestView::ContentType::COORDINATE_GRID);
+    }
+
     realm_->AddLocalChild(kViewProvider, test_view_.get());
     realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
                            .source = ChildRef{kViewProvider},
                            .targets = {ParentRef()}});
-    realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                           .source = ParentRef(),
-                           .targets = {ChildRef{kViewProvider}}});
+
+    for (const auto& protocol : config_.ui_to_client_services) {
+      realm_->AddRoute(Route{.capabilities = {Protocol{protocol}},
+                             .source = ParentRef(),
+                             .targets = {ChildRef{kViewProvider}}});
+    }
 
     ui_test_manager_->BuildRealm();
     realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
@@ -135,32 +183,26 @@ class DisplayRotationPixelTestBase : public gtest::RealLoopFixture {
   std::unique_ptr<ui_testing::TestView> test_view_;
 
  private:
-  ui_testing::UITestRealm::SceneOwnerType scene_owner_ =
-      ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
-  int rotation_ = 0;
+  ui_testing::UITestRealm::Config config_;
   std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
   std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
   std::unique_ptr<Realm> realm_;
 };
 
 class LandscapeModeTest : public DisplayRotationPixelTestBase,
-                          public ::testing::WithParamInterface<
-                              std::tuple<ui_testing::UITestRealm::SceneOwnerType, int>> {
+                          public ::testing::WithParamInterface<ui_testing::UITestRealm::Config> {
  public:
   // The display is said to be in landscape mode when it is oriented horizontally i.e rotated by 0
   // or 180 degrees.
   static std::vector<int> GetDisplayRotation() { return {0, 180}; }
 
  protected:
-  LandscapeModeTest()
-      : DisplayRotationPixelTestBase(std::get<0>(GetParam()), std::get<1>(GetParam())) {}
+  LandscapeModeTest() : DisplayRotationPixelTestBase(GetParam()) {}
 };
 
 INSTANTIATE_TEST_SUITE_P(
     DisplayRotationPixelTestWithParams, LandscapeModeTest,
-    testing::Combine(::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                       ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
-                     testing::ValuesIn(LandscapeModeTest::GetDisplayRotation())));
+    ::testing::ValuesIn(UIConfigurationsToTest(LandscapeModeTest::GetDisplayRotation())));
 
 // This test leverage the coordinate test view to ensure that display rotation is working
 // properly.
@@ -196,23 +238,19 @@ TEST_P(LandscapeModeTest, ValidContentTest) {
 }
 
 class PortraitModeTest : public DisplayRotationPixelTestBase,
-                         public ::testing::WithParamInterface<
-                             std::tuple<ui_testing::UITestRealm::SceneOwnerType, int>> {
+                         public ::testing::WithParamInterface<ui_testing::UITestRealm::Config> {
  public:
   // The display is said to be in portrait mode when it is oriented vertically i.e rotated by 90 or
   // 270 degrees.
   static std::vector<int> GetDisplayRotation() { return {90, 270}; }
 
  protected:
-  PortraitModeTest()
-      : DisplayRotationPixelTestBase(std::get<0>(GetParam()), std::get<1>(GetParam())) {}
+  PortraitModeTest() : DisplayRotationPixelTestBase(GetParam()) {}
 };
 
 INSTANTIATE_TEST_SUITE_P(
     DisplayRotationPixelTestWithParams, PortraitModeTest,
-    testing::Combine(::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                       ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
-                     testing::ValuesIn(PortraitModeTest::GetDisplayRotation())));
+    ::testing::ValuesIn(UIConfigurationsToTest(PortraitModeTest::GetDisplayRotation())));
 
 // This test leverage the coordinate test view to ensure that display rotation is working
 // properly.

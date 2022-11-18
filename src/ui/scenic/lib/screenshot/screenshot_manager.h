@@ -28,7 +28,7 @@ class ScreenshotManager {
                     TakeGfxScreenshot take_gfx_screenshot,
                     std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>
                         buffer_collection_importers,
-                    fuchsia::math::SizeU display_size);
+                    fuchsia::math::SizeU display_size, int display_rotation);
   ~ScreenshotManager() = default;
 
   void CreateBinding(fidl::InterfaceRequest<fuchsia::ui::composition::Screenshot> request);
@@ -45,6 +45,9 @@ class ScreenshotManager {
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers_;
 
   fuchsia::math::SizeU display_size_;
+
+  // Angle in degrees by which the display is rotated.
+  int display_rotation_ = 0;
 
   fidl::BindingSet<fuchsia::ui::composition::Screenshot,
                    std::unique_ptr<fuchsia::ui::composition::Screenshot>>

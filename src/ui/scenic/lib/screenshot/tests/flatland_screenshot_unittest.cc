@@ -23,7 +23,11 @@ using screen_capture::ScreenCaptureBufferCollectionImporter;
 namespace screenshot {
 namespace test {
 
-class FlatlandScreenshotTest : public gtest::RealLoopFixture {
+constexpr auto kDisplayWidth = 100u;
+constexpr auto kDisplayHeight = 200u;
+
+class FlatlandScreenshotTest : public gtest::RealLoopFixture,
+                               public ::testing::WithParamInterface<int> {
  public:
   FlatlandScreenshotTest() = default;
   void SetUp() override {
@@ -54,10 +58,10 @@ class FlatlandScreenshotTest : public gtest::RealLoopFixture {
 
     // We have what we need to make the flatland screenshot client.
 
-    fuchsia::math::SizeU display_size = {.width = 100u, .height = 100u};
+    fuchsia::math::SizeU display_size = {.width = kDisplayWidth, .height = kDisplayHeight};
 
     flatland_screenshotter_ = std::make_unique<screenshot::FlatlandScreenshot>(
-        std::move(screen_capturer_), flatland_allocator_, display_size, [](auto...) {});
+        std::move(screen_capturer_), flatland_allocator_, display_size, GetParam(), [](auto...) {});
     RunLoopUntilIdle();
   }
 
@@ -77,7 +81,10 @@ class FlatlandScreenshotTest : public gtest::RealLoopFixture {
   std::unique_ptr<screen_capture::ScreenCapture> screen_capturer_;
 };
 
-TEST_F(FlatlandScreenshotTest, SimpleTest) {
+INSTANTIATE_TEST_SUITE_P(ParameterizedFlatlandScreenshotTest, FlatlandScreenshotTest,
+                         testing::Values(0, 90, 180, 270));
+
+TEST_P(FlatlandScreenshotTest, SimpleTest) {
   fuchsia::ui::composition::ScreenshotTakeRequest request;
   request.set_format(fuchsia::ui::composition::ScreenshotFormat::BGRA_RAW);
 
@@ -96,8 +103,15 @@ TEST_F(FlatlandScreenshotTest, SimpleTest) {
   EXPECT_TRUE(take_response.has_vmo());
   EXPECT_TRUE(take_response.has_size());
 
-  EXPECT_GT(take_response.size().width, 0u);
-  EXPECT_GT(take_response.size().height, 0u);
+  // Width and height are flipped when the display is rotated by 90 or 270 degrees.
+  if (GetParam() == 90 || GetParam() == 270) {
+    EXPECT_EQ(take_response.size().width, kDisplayHeight);
+    EXPECT_EQ(take_response.size().height, kDisplayWidth);
+
+  } else {
+    EXPECT_EQ(take_response.size().width, kDisplayWidth);
+    EXPECT_EQ(take_response.size().height, kDisplayHeight);
+  }
   EXPECT_NE(take_response.vmo(), 0u);
 }
 

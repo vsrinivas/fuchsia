@@ -20,6 +20,7 @@ class FlatlandScreenshot : public fuchsia::ui::composition::Screenshot {
  public:
   FlatlandScreenshot(std::unique_ptr<ScreenCapture> screen_capturer,
                      std::shared_ptr<Allocator> allocator, fuchsia::math::SizeU display_size,
+                     int display_rotation,
                      fit::function<void(FlatlandScreenshot*)> destroy_instance_function);
 
   ~FlatlandScreenshot() override;
@@ -35,6 +36,9 @@ class FlatlandScreenshot : public fuchsia::ui::composition::Screenshot {
   std::shared_ptr<Allocator> flatland_allocator_;
 
   fuchsia::math::SizeU display_size_;
+
+  // Angle in degrees by which the display is rotated in the clockwise direction.
+  int display_rotation_ = 0;
 
   // The buffer collection where the display gets rendered into.
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info_{};

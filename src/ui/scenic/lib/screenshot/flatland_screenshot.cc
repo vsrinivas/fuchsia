@@ -31,11 +31,12 @@ namespace screenshot {
 
 FlatlandScreenshot::FlatlandScreenshot(
     std::unique_ptr<ScreenCapture> screen_capturer, std::shared_ptr<Allocator> allocator,
-    fuchsia::math::SizeU display_size,
+    fuchsia::math::SizeU display_size, int display_rotation,
     fit::function<void(FlatlandScreenshot*)> destroy_instance_function)
     : screen_capturer_(std::move(screen_capturer)),
       flatland_allocator_(allocator),
       display_size_(display_size),
+      display_rotation_(display_rotation),
       destroy_instance_function_(std::move(destroy_instance_function)),
       weak_factory_(this) {
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
@@ -70,6 +71,10 @@ FlatlandScreenshot::FlatlandScreenshot(
   fuchsia::sysmem::BufferCollectionPtr buffer_collection;
   sysmem_allocator_->BindSharedCollection(std::move(local_token), buffer_collection.NewRequest());
 
+  if (display_rotation_ == 90 || display_rotation_ == 270) {
+    std::swap(display_size_.width, display_size_.height);
+  }
+
   // We only need 1 buffer since it gets re-used on every Take() call.
   buffer_collection->SetConstraints(
       true, utils::CreateDefaultConstraints(/*buffer_count=*/1, display_size_.width,
@@ -91,6 +96,27 @@ FlatlandScreenshot::FlatlandScreenshot(
   sc_args.set_import_token(std::move(ref_pair.import_token));
   sc_args.set_buffer_count(1);
   sc_args.set_size({display_size_.width, display_size_.height});
+
+  switch (display_rotation_) {
+    case 0:
+      sc_args.set_rotation(fuchsia::ui::composition::Rotation::CW_0_DEGREES);
+      break;
+    // If the display in rotated by 90 degrees, we need to apply a clockwise rotation of 270 degrees
+    // in order to cancel the overall rotation and render the correct screenshot.
+    case 90:
+      sc_args.set_rotation(fuchsia::ui::composition::Rotation::CW_270_DEGREES);
+      break;
+    case 180:
+      sc_args.set_rotation(fuchsia::ui::composition::Rotation::CW_180_DEGREES);
+      break;
+      // If the display in rotated by 270 degrees, we need to apply a clockwise rotation of 90
+      // degrees in order to cancel the overall rotation and render the correct screenshot.
+    case 270:
+      sc_args.set_rotation(fuchsia::ui::composition::Rotation::CW_90_DEGREES);
+      break;
+    default:
+      FX_LOGS(ERROR) << "Invalid display rotation value: " << display_rotation_;
+  }
 
   buffer_collection->WaitForBuffersAllocated(
       [weak_ptr = weak_factory_.GetWeakPtr(), buffer_collection = std::move(buffer_collection),

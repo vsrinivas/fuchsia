@@ -79,6 +79,11 @@ struct ConfigValues {
   // TODO(fxb/76985): Remove these when we have proper multi-display support.
   std::optional<uint64_t> i_can_haz_display_id;
   std::optional<size_t> i_can_haz_display_mode;
+
+  // Angle in degrees by which the display is rotated in clockwise direction. This value is
+  // read from `/config/data/display_rotation`. Must be equal to the |display_rotation| config
+  // provided to the scene manager.
+  uint32_t display_rotation = 0;
 };
 
 class App {

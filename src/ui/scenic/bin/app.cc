@@ -146,6 +146,22 @@ scenic_impl::ConfigValues GetConfig(sys::ComponentContext* app_context) {
     FX_LOGS(INFO) << "No config file found at /config/data/scenic_config; using default values";
   }
 
+  // Get the display_rotation value from the config file.
+  if (std::string display_rotation_config;
+      files::ReadFileToString("/config/data/display_rotation", &display_rotation_config)) {
+    if (int display_rotation = stoi(display_rotation_config); display_rotation >= 0) {
+      FX_CHECK(display_rotation < 360) << "Rotation should be less than 360 degrees.";
+      values.display_rotation = display_rotation;
+    } else {
+      FX_LOGS(WARNING)
+          << "Invalid value for display_rotation. Falling back to the default value 0.";
+    }
+
+  } else {
+    FX_LOGS(INFO)
+        << "No config file found at /config/data/display_rotation, using default rotation value 0";
+  }
+
   // Wait for each stash value to be returned. These should have arrived while
   // reading the config file.
   //
@@ -603,7 +619,8 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
         [this](fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
           gfx::Screenshotter::TakeScreenshot(engine_.get(), std::move(callback));
         },
-        std::move(screen_capture_importers), display_info_delegate_->GetDisplayDimensions());
+        std::move(screen_capture_importers), display_info_delegate_->GetDisplayDimensions(),
+        config_values_.display_rotation);
 
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::composition::Screenshot>)> handler =
         fit::bind_member(screenshot_manager_.get(), &screenshot::ScreenshotManager::CreateBinding);
