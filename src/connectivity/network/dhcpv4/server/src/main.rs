@@ -13,7 +13,7 @@ use {
         },
         stash::Stash,
     },
-    fuchsia_async::net::UdpSocket,
+    fuchsia_async::{self as fasync, net::UdpSocket},
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     futures::{Future, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _},
     net_types::ethernet::Mac,
@@ -529,8 +529,14 @@ async fn define_msg_handling_loop_future<DS: DataStore>(
                 Some(socket2::Protocol::UDP),
             )
             .context("create packet socket failed")?;
-            let sent =
-                socket.send_to(packet.as_ref(), &sock_addr).context("unable to send response")?;
+
+            let socket = fasync::net::DatagramSocket::new_from_socket(socket)
+                .context("failed to wrap into fuchsia-async DatagramSocket")?;
+
+            let sent = socket
+                .send_to(packet.as_ref(), sock_addr)
+                .await
+                .context("unable to send response")?;
             if sent != packet.as_ref().len() {
                 return Err(anyhow::anyhow!(
                     "sent {} bytes for a packet of size {}",
