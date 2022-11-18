@@ -19,6 +19,6 @@ test("usb-monitor-util-test-bin") {
   ]
 }
 
-fuchsia_unittest_component("usb-monitor-util-test") {
+fuchsia_unittest_package("usb-monitor-util-test") {
   deps = [ ":usb-monitor-util-test-bin" ]
 }
