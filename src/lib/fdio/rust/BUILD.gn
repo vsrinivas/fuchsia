@@ -17,7 +17,6 @@ rustc_library("fdio") {
     "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:bitflags",
-    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:thiserror",
   ]
 

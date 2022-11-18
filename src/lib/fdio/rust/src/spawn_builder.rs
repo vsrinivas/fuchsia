@@ -13,7 +13,15 @@ use {
 pub struct SpawnBuilder {
     options: Option<SpawnOptions>,
     args: Vec<CString>,
-    dirs: (Vec<CString>, Vec<zx::Handle>),
+    dirs: Vec<(
+        CString,
+        // Option used for interior mutability. When building the arguments to `spawn_etc` we need
+        // borrowed strings and owned handles, so we want this vector to own the strings but allow
+        // moving out of the handles.
+        //
+        // This is always `Some` until the builder is consumed.
+        Option<zx::Handle>,
+    )>,
 }
 
 impl SpawnBuilder {
@@ -44,8 +52,9 @@ impl SpawnBuilder {
     }
 
     fn add_dir_to_namespace_impl(mut self, path: String, dir: File) -> Result<Self, Error> {
-        self.dirs.0.push(CString::new(path).map_err(Error::ConvertNamespacePathToCString)?);
-        self.dirs.1.push(transfer_fd(dir).map_err(Error::TransferFd)?);
+        let path = CString::new(path).map_err(Error::ConvertNamespacePathToCString)?;
+        let handle = transfer_fd(dir).map_err(Error::TransferFd)?;
+        self.dirs.push((path, Some(handle)));
         Ok(self)
     }
 
@@ -58,11 +67,16 @@ impl SpawnBuilder {
         self.spawn_from_path_impl(path.into(), job)
     }
 
-    pub fn spawn_from_path_impl(self, path: String, job: &zx::Job) -> Result<zx::Process, Error> {
-        let mut actions = vec![];
-        for (path, handle) in itertools::zip(&self.dirs.0, self.dirs.1.into_iter()) {
-            actions.push(SpawnAction::add_namespace_entry(&path, handle));
-        }
+    pub fn spawn_from_path_impl(
+        mut self,
+        path: String,
+        job: &zx::Job,
+    ) -> Result<zx::Process, Error> {
+        let mut actions = self
+            .dirs
+            .iter_mut()
+            .map(|(path, handle)| SpawnAction::add_namespace_entry(path, handle.take().unwrap()))
+            .collect::<Vec<_>>();
 
         spawn_etc(
             job,
