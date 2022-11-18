@@ -474,7 +474,7 @@ func infraToolLogChecks() []FailureModeCheck {
 		// Zircon-related errors to ensure tefmocheck attributes these crashes to
 		// the actual root cause.
 		&stringInLogCheck{
-			String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg),
+			String: fmt.Sprintf("botanist ERROR: %s", testrunnerconstants.FailedToReconnectMsg),
 			Type:   swarmingOutputType,
 		},
 		// For fxbug.dev/77689.
@@ -490,16 +490,16 @@ func infraToolLogChecks() []FailureModeCheck {
 		// For fxbug.dev/56651.
 		// This error usually happens due to an SSH failure, so that error should take precedence.
 		&stringInLogCheck{
-			String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunSnapshotMsg),
+			String: fmt.Sprintf("botanist ERROR: %s", testrunnerconstants.FailedToRunSnapshotMsg),
 			Type:   swarmingOutputType,
 		},
 		// General ffx error check.
 		&stringInLogCheck{
-			String: fmt.Sprintf("testrunner FATAL: %s", ffxutilconstants.CommandFailedMsg),
+			String: fmt.Sprintf("botanist FATAL: %s", ffxutilconstants.CommandFailedMsg),
 			Type:   swarmingOutputType,
 		},
 		&stringInLogCheck{
-			String: fmt.Sprintf("testrunner ERROR: %s", ffxutilconstants.CommandFailedMsg),
+			String: fmt.Sprintf("botanist ERROR: %s", ffxutilconstants.CommandFailedMsg),
 			Type:   swarmingOutputType,
 		},
 		&stringInLogCheck{
@@ -519,7 +519,7 @@ func infraToolLogChecks() []FailureModeCheck {
 		},
 		// This error happens when ffx test returns early and skips running some tests.
 		&stringInLogCheck{
-			String: fmt.Sprintf("testrunner FATAL: %s", testrunnerconstants.SkippedRunningTestsMsg),
+			String: fmt.Sprintf("botanist FATAL: %s", testrunnerconstants.SkippedRunningTestsMsg),
 			Type:   swarmingOutputType,
 		},
 	}

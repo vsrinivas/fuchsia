@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/botanist"
@@ -27,6 +28,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/serial"
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 	"go.fuchsia.dev/fuchsia/tools/lib/syslog"
+	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
 	testrunnerconstants "go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 
 	"github.com/google/subcommands"
@@ -126,14 +128,14 @@ func (*RunCommand) Name() string {
 
 func (*RunCommand) Usage() string {
 	return `
-botanist run [flags...] [command...]
+botanist run [flags...] tests-file
 
 flags:
 `
 }
 
 func (*RunCommand) Synopsis() string {
-	return "boots a device and runs a local command"
+	return fmt.Sprintf("boots a device and executes all tests found in the JSON [tests-file].")
 }
 
 func (r *RunCommand) SetFlags(f *flag.FlagSet) {
@@ -482,7 +484,7 @@ func (r *RunCommand) dumpSyslogOverSerial(ctx context.Context, socketPath string
 }
 
 func (r *RunCommand) runAgainstTarget(ctx context.Context, t targets.Target, args []string, testbedConfig string) error {
-	subprocessEnv := map[string]string{
+	testrunnerEnv := map[string]string{
 		constants.NodenameEnvKey:      t.Nodename(),
 		constants.SerialSocketEnvKey:  t.SerialSocketPath(),
 		constants.ECCableEnvKey:       os.Getenv(constants.ECCableEnvKey),
@@ -492,8 +494,8 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t targets.Target, arg
 	// which may not be available on the host. Put behind an experiment level until
 	// the bug is fixed.
 	if t.UseFFXExperimental(2) {
-		subprocessEnv[constants.FFXPathEnvKey] = r.ffxPath
-		subprocessEnv[constants.FFXExperimentLevelEnvKey] = strconv.Itoa(r.ffxExperimentLevel)
+		testrunnerEnv[constants.FFXPathEnvKey] = r.ffxPath
+		testrunnerEnv[constants.FFXExperimentLevelEnvKey] = strconv.Itoa(r.ffxExperimentLevel)
 	}
 
 	// If |netboot| is true, then we assume that fuchsia is not provisioned
@@ -521,7 +523,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t targets.Target, arg
 			constants.IPv6AddrEnvKey:   ipv6.String(),
 		}
 		for k, v := range env {
-			subprocessEnv[k] = v
+			testrunnerEnv[k] = v
 		}
 	}
 
@@ -535,28 +537,72 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t targets.Target, arg
 		if err != nil {
 			return err
 		}
-		subprocessEnv[constants.SSHKeyEnvKey] = absKeyPath
+		testrunnerEnv[constants.SSHKeyEnvKey] = absKeyPath
 	}
 
 	// Run the provided command against t0, adding |subprocessEnv| into
-	// its environment.
-	environ := os.Environ()
-	for k, v := range subprocessEnv {
-		environ = append(environ, fmt.Sprintf("%s=%s", k, v))
+	// the environment.
+
+	// TODO(https://fxbug.dev/111922): testrunner does heavy use of env
+	// variables. Setting these env variables is temporary until we refactor
+	// testrunner to take these variables as arguments or flags.
+	for k, v := range testrunnerEnv {
+		err := os.Setenv(k, v)
+		if err != nil {
+			return fmt.Errorf("error setting env variable %s=%s. %w", k, v, err)
+		}
 	}
 	if t.UseFFX() {
-		environ = append(environ, t.FFXEnv()...)
-	}
-	runner := subprocess.Runner{
-		Env: environ,
+		setEnviron(t.FFXEnv())
 	}
 
-	stdout, stderr, flush := botanist.NewStdioWriters(ctx)
-	defer flush()
-	if err := runner.Run(ctx, args, subprocess.RunOptions{Stdout: stdout, Stderr: stderr}); err != nil {
-		return fmt.Errorf("command %s with timeout %s failed: %w", args, r.timeout, err)
+	// Parse testrunner flags.
+	// We need this as an intermediate step for the merge of testrunner and
+	// botanist (https://fxbug.dev/111922). Once we unify the set of flags and remove the path to
+	// testrunner from the args we can remove this.
+	tf := flag.NewFlagSet("testrunner flags", flag.ContinueOnError)
+	var testrunnerFlags testrunner.TestrunnerFlags
+
+	logger.Tracef(ctx, "parsing testrunner flags with args=%v", args)
+	tf.BoolVar(&testrunnerFlags.Help, "help", false, "Whether to show Usage and exit.")
+	tf.StringVar(&testrunnerFlags.OutDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
+	tf.StringVar(&testrunnerFlags.NsjailPath, "nsjail", "", "Optional path to an NsJail binary to use for linux host test sandboxing.")
+	tf.StringVar(&testrunnerFlags.NsjailRoot, "nsjail-root", "", "Path to the directory to use as the NsJail root directory")
+	tf.StringVar(&testrunnerFlags.LocalWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
+	tf.BoolVar(&testrunnerFlags.UseRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
+	tf.StringVar(&testrunnerFlags.SnapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
+	tf.Var(&testrunnerFlags.LogLevel, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
+	tf.StringVar(&testrunnerFlags.FfxPath, "ffx", "", "Path to the ffx tool.")
+	tf.IntVar(&testrunnerFlags.FfxExperimentLevel, "ffx-experiment-level", 0, "The level of experimental features to enable. If -ffx is not set, this will have no effect.")
+	tf.BoolVar(&testrunnerFlags.PrefetchPackages, "prefetch-packages", false, "Prefetch any test packages in the background.")
+	tf.BoolVar(&testrunnerFlags.UseSerial, "use-serial", false, "Use serial to run tests on the target.")
+
+	// Once we remove "./testrunner" from the args we can remove this
+	// branch.
+	if args[0] == "./testrunner" {
+		args = args[1:]
+	}
+
+	if err := tf.Parse(args); err != nil {
+		return err
+	}
+
+	testsPath := tf.Arg(0)
+	logger.Debugf(ctx, "testrunner positional args %v", tf.Args())
+
+	if err := testrunner.SetupAndExecute(ctx, testrunnerFlags, testsPath); err != nil {
+		return fmt.Errorf("testrunner with args: %v, with timeout: %s, failed: %w", testrunnerFlags, r.timeout, err)
 	}
 	return nil
+}
+
+// setEnviron sets |environ| into the os.Env.
+// The string in the environ slice must be in the format "key=value".
+func setEnviron(environ []string) {
+	for _, env := range environ {
+		keyval := strings.Split(env, "=")
+		os.Setenv(keyval[0], keyval[1])
+	}
 }
 
 func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
