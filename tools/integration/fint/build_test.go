@@ -440,9 +440,15 @@ func TestBuild(t *testing.T) {
 				IncludeGeneratedSources: true,
 			},
 			modules: fakeBuildModules{
-				generatedSources: []string{"foo.h", "bar.h"},
+				generatedSources: []string{
+					"foo.h",
+					"bar.cc",
+					// Non-C++ files should be ignored, see fxbug.dev/115554.
+					"baz.go",
+					"quux.rs",
+				},
 			},
-			expectedTargets: []string{"foo.h", "bar.h"},
+			expectedTargets: []string{"foo.h", "bar.cc"},
 		},
 		{
 			name: "prebuilt binary manifests included",

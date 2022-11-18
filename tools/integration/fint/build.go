@@ -439,7 +439,17 @@ func constructNinjaTargets(
 	}
 
 	if staticSpec.IncludeGeneratedSources {
-		targets = append(targets, modules.GeneratedSources()...)
+		for _, f := range modules.GeneratedSources() {
+			// TODO(fxbug.dev/115554): Remove support for building generated
+			// sources directly. It's only necessary to make generated FIDL
+			// files available when running Clang-Tidy in presubmit, but
+			// Clang-Tidy should be integrated into the build system so that the
+			// necessary generated files are built automatically when Clang-Tidy
+			// is run.
+			if contains([]string{".cc", ".h"}, filepath.Ext(f)) {
+				targets = append(targets, f)
+			}
+		}
 	}
 
 	if staticSpec.IncludePrebuiltBinaryManifests {
