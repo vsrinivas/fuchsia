@@ -535,8 +535,7 @@ TEST_F(SdmmcBlockDeviceTest, SendCmd12OnCommandFailure) {
   EXPECT_EQ(sdmmc_.command_counts().at(SDMMC_STOP_TRANSMISSION), 20);
 }
 
-// TODO(fxbug.dev/49028): Enable these tests once trim is enabled.
-TEST_F(SdmmcBlockDeviceTest, DISABLED_Trim) {
+TEST_F(SdmmcBlockDeviceTest, Trim) {
   AddDevice();
 
   std::optional<block::Operation<OperationContext>> op1;
@@ -595,7 +594,7 @@ TEST_F(SdmmcBlockDeviceTest, DISABLED_Trim) {
   EXPECT_OK(op7->private_storage()->status);
 }
 
-TEST_F(SdmmcBlockDeviceTest, DISABLED_TrimErrors) {
+TEST_F(SdmmcBlockDeviceTest, TrimErrors) {
   AddDevice();
 
   std::optional<block::Operation<OperationContext>> op1;
