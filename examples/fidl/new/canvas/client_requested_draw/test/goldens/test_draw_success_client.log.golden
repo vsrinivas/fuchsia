@@ -4,10 +4,12 @@ AddLines batching line: [Point { x: 0, y: 0 }, Point { x: -5, y: 0 }]
 AddLines batching line: [Point { x: 5, y: 6 }, Point { x: -2, y: 2 }]
 AddLines request sent
 AddLines batching line: [Point { x: -2, y: -2 }, Point { x: 4, y: -3 }]
-OnDrawn event received: top_left: Point { x: 0, y: 0 }, bottom_right: Point { x: 0, y: 0 }
+OnDrawn event received: top_left: Point { x: -5, y: 6 }, bottom_right: Point { x: 5, y: 0 }
 Ready request sent
+Ready success
 AddLines batching line: [Point { x: 7, y: 0 }, Point { x: 6, y: -1 }]
 AddLines batching line: [Point { x: -4, y: 3 }, Point { x: 7, y: -8 }]
 AddLines request sent
-OnDrawn event received: top_left: Point { x: 0, y: 0 }, bottom_right: Point { x: 0, y: 0 }
+OnDrawn event received: top_left: Point { x: -5, y: 6 }, bottom_right: Point { x: 7, y: -8 }
 Ready request sent
+Ready success

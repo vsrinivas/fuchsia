@@ -31,7 +31,7 @@ async fn main() -> Result<(), Error> {
         if action == "PUSH" {
             let mut lines: Vec<[&mut Point; 2]> = batched_lines
                 .iter_mut()
-                .map(|line| line.iter_mut().collect::<Vec<_>>().try_into().unwrap())
+                .map(|line| line.iter_mut().collect::<Vec<&mut Point>>().try_into().unwrap())
                 .collect();
             instance.add_lines(&mut lines.iter_mut()).context("Could not send lines")?;
             println!("AddLines request sent");
@@ -57,8 +57,9 @@ async fn main() -> Result<(), Error> {
             // [START diff_2]
             // Now, inform the server that we are ready to receive more updates whenever they are
             // ready for us.
-            instance.ready().await.context("Could not send ready call")?;
             println!("Ready request sent");
+            instance.ready().await.context("Could not send ready call")?;
+            println!("Ready success");
             continue;
             // [END diff_2]
         }
@@ -81,11 +82,9 @@ async fn main() -> Result<(), Error> {
         let to = points.pop().ok_or(format_err!("line requires 2 points, but has 1"))?;
         let mut line: [Point; 2] = [from, to];
 
-        // Draw a line to the canvas by calling the server, using the two points we just parsed
-        // above as arguments.
+        // Batch a line for drawing to the canvas using the two points provided.
         println!("AddLines batching line: {:?}", &mut line);
         batched_lines.push(line);
-        batched_lines = vec![];
         // [END diff_3]
     }
 

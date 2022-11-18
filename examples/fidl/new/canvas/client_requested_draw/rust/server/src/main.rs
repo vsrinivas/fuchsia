@@ -132,7 +132,7 @@ async fn run_server(stream: InstanceRequestStream) -> Result<(), Error> {
                     // interaction has entered an invalid state, and should be aborted immediately.
                     let mut state = state_ref.lock().unwrap();
                     if state.ready == true {
-                        return Err(anyhow!("Invalid back to back `Ready` requests received"));
+                        return Err(anyhow!("Invalid back-to-back `Ready` requests received"));
                     }
 
                     state.ready = true;
