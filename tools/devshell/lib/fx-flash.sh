@@ -12,6 +12,7 @@ function fx-flash {
   local device="$2"
   local flash_manifest="$3"
   local skip_verify="$4"
+  local no_bootloader_reboot="$5"
 
 
   if [[ $num_gb_devices > 1 ]]; then
@@ -90,6 +91,10 @@ function fx-flash {
 
   if "${skip_verify}"; then
     ffx_flash_args+=("--skip-verify")
+  fi
+
+  if "${no_bootloader_reboot}"; then
+    ffx_flash_args+=("--no-bootloader-reboot")
   fi
 
   fx-info "Running fx ffx ${ffx_args[@]} target flash ${flash_manifest} ${ffx_flash_args[@]}"

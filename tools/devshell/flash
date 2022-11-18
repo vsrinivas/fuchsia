@@ -13,6 +13,8 @@
 ##  --skip-verify            Skip hardware verification. This is dangerous, please be
 ##                           sure the images you are flashing match the device. Only
 ##                           supported with ffx
+##  --no-bootloader-reboot   Don't reboot bootloader after flashing firmware or
+##                           recovery fastboot image.
 ##
 ## Defaults are defined by the "incremental" feature:
 ##    'fx --enable=incremental flash'  defaults to "--build"
@@ -41,6 +43,7 @@ pave=false
 serial=
 device=$(get-device-name)
 skip_verify=false
+no_bootloader_reboot=false
 while [[ $# -ge 1 ]]; do
   case "$1" in
   -h|--help)
@@ -69,8 +72,13 @@ while [[ $# -ge 1 ]]; do
   --skip-verify)
     skip_verify=true
     ;;
+  --no-bootloader-reboot)
+    no_bootloader_reboot=true
+    ;;
   *)
-    break
+    fx-error "Unknown option $1."
+    usage
+    exit 1
   esac
   shift
 done
@@ -95,7 +103,7 @@ fi
 
 flash_manifest="${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts --expect-one --name flash-manifest images)"
 cd "${FUCHSIA_BUILD_DIR}"
-fx-flash "${serial}" "${device}" "${flash_manifest}" "${skip_verify}"
+fx-flash "${serial}" "${device}" "${flash_manifest}" "${skip_verify}" "${no_bootloader_reboot}"
 
 if $pave; then
   # no need to build, since all dependencies were already built above.
