@@ -29,7 +29,7 @@ using fhd_Transform = fuchsia::hardware::display::Transform;
 const std::array<float, 4> kGpuRenderingDebugColor = {0.9f, 0.5f, 0.5f, 1.f};
 
 // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
-fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_format_t format) {
+fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(const zx_pixel_format_t format) {
   switch (format) {
     // These two Zircon formats correspond to the Sysmem BGRA32 format.
     case ZX_PIXEL_FORMAT_RGB_x888:
@@ -50,7 +50,7 @@ fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_form
 // Returns a zircon format for buffer with this pixel format.
 // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
 zx_pixel_format_t BufferCollectionPixelFormatToZirconFormat(
-    fuchsia::sysmem::PixelFormat& pixel_format) {
+    const fuchsia::sysmem::PixelFormat& pixel_format) {
   switch (pixel_format.type) {
     case fuchsia::sysmem::PixelFormatType::BGRA32:
       return ZX_PIXEL_FORMAT_ARGB_8888;
@@ -72,7 +72,7 @@ zx_pixel_format_t BufferCollectionPixelFormatToZirconFormat(
 // in display-controller.fidl.
 // TODO(fxbug.dev/33334): Remove this when image type is removed from the display
 // controller API.
-uint32_t BufferCollectionPixelFormatToImageType(fuchsia::sysmem::PixelFormat& pixel_format) {
+uint32_t BufferCollectionPixelFormatToImageType(const fuchsia::sysmem::PixelFormat& pixel_format) {
   if (pixel_format.has_format_modifier) {
     switch (pixel_format.format_modifier.value) {
       case fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_X_TILED:
@@ -165,6 +165,78 @@ CreateBufferCollectionPtrWithEmptyConstraints(
   }
 
   return buffer_collection;
+}
+
+// Returns whether |metadata| describes a valid image.
+bool IsValidBufferImage(const allocation::ImageMetadata& metadata) {
+  if (metadata.identifier == 0) {
+    FX_LOGS(ERROR) << "ImageMetadata identifier is invalid.";
+    return false;
+  }
+
+  if (metadata.collection_id == allocation::kInvalidId) {
+    FX_LOGS(ERROR) << "ImageMetadata collection ID is invalid.";
+    return false;
+  }
+
+  if (metadata.width == 0 || metadata.height == 0) {
+    FX_LOGS(ERROR) << "ImageMetadata has a null dimension: "
+                   << "(" << metadata.width << ", " << metadata.height << ").";
+    return false;
+  }
+
+  return true;
+}
+
+// Calls CheckBuffersAllocated |token| and returns whether the allocation succeeded.
+bool CheckBuffersAllocated(fuchsia::sysmem::BufferCollectionSyncPtr& token) {
+  zx_status_t allocation_status = ZX_OK;
+  const auto check_status = token->CheckBuffersAllocated(&allocation_status);
+  return check_status == ZX_OK && allocation_status == ZX_OK;
+}
+
+// Calls WaitForBuffersAllocated() on |token| and returns the pixel format of the allocation.
+// |token| must have already checked that buffers are allocated.
+// TODO(fxbug.dev/71344): Delete after we don't need the pixel format anymore.
+fuchsia::sysmem::PixelFormat GetPixelFormat(fuchsia::sysmem::BufferCollectionSyncPtr& token) {
+  zx_status_t allocation_status = ZX_OK;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+  const auto wait_status =
+      token->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+  FX_DCHECK(wait_status == ZX_OK && allocation_status == ZX_OK)
+      << "WaitForBuffersAllocated failed: " << wait_status << ":" << allocation_status;
+  return buffer_collection_info.settings.image_format_constraints.pixel_format;
+}
+
+// TODO(fxbug.dev/85601): Remove after YUV buffers can be imported to display. We filter YUV
+// images out of display path.
+bool IsYUV(const fuchsia::sysmem::PixelFormat& format) {
+  return format.type == fuchsia::sysmem::PixelFormatType::NV12 ||
+         format.type == fuchsia::sysmem::PixelFormatType::I420;
+}
+
+// Returns whether |token| is compatible with the display and, if it is, its pixel format.
+// It is possible for the image to be supported by the display, but for the pixel format fetch to
+// fail.
+// TODO(fxbug.dev/71344): Just return a bool after we don't need the pixel format anymore.
+std::optional<fuchsia::sysmem::PixelFormat> DetermineDisplaySupportFor(
+    fuchsia::sysmem::BufferCollectionSyncPtr token) {
+  const bool image_supports_display = CheckBuffersAllocated(token);
+  if (!image_supports_display) {
+    return std::nullopt;
+  }
+
+  const fuchsia::sysmem::PixelFormat pixel_format = GetPixelFormat(token);
+
+  token->Close();
+
+  // TODO(fxbug.dev/85601): Remove after YUV buffers can be imported to display. We filter YUV
+  // images out of display path.
+  if (IsYUV(pixel_format)) {
+    return std::nullopt;
+  }
+
+  return pixel_format;
 }
 
 }  // anonymous namespace
@@ -281,25 +353,32 @@ void DisplayCompositor::ReleaseBufferCollection(allocation::GlobalBufferCollecti
   buffer_collection_supports_display_.erase(collection_id);
 }
 
-bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metadata,
-                                          BufferCollectionUsage usage) {
-  TRACE_DURATION("gfx", "flatland::DisplayCompositor::ImportBufferImage");
+fuchsia::sysmem::BufferCollectionSyncPtr DisplayCompositor::TakeDisplayBufferCollectionPtr(
+    const allocation::GlobalBufferCollectionId collection_id) {
+  const auto token_it = display_buffer_collection_ptrs_.find(collection_id);
+  FX_DCHECK(token_it != display_buffer_collection_ptrs_.end());
+  auto token = std::move(token_it->second);
+  display_buffer_collection_ptrs_.erase(token_it);
+  return token;
+}
 
+fuchsia::hardware::display::ImageConfig DisplayCompositor::CreateImageConfig(
+    const allocation::ImageMetadata& metadata) const {
+  FX_DCHECK(buffer_collection_pixel_format_.count(metadata.collection_id));
+  const auto pixel_format = buffer_collection_pixel_format_.at(metadata.collection_id);
+  return fuchsia::hardware::display::ImageConfig{
+      .width = metadata.width,
+      .height = metadata.height,
+      .pixel_format = BufferCollectionPixelFormatToZirconFormat(pixel_format),
+      .type = BufferCollectionPixelFormatToImageType(pixel_format)};
+}
+
+bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metadata,
+                                          const BufferCollectionUsage usage) {
+  TRACE_DURATION("gfx", "flatland::DisplayCompositor::ImportBufferImage");
   FX_DCHECK(display_controller_);
 
-  if (metadata.identifier == 0) {
-    FX_LOGS(ERROR) << "ImageMetadata identifier is invalid.";
-    return false;
-  }
-
-  if (metadata.collection_id == allocation::kInvalidId) {
-    FX_LOGS(ERROR) << "ImageMetadata collection ID is invalid.";
-    return false;
-  }
-
-  if (metadata.width == 0 || metadata.height == 0) {
-    FX_LOGS(ERROR) << "ImageMetadata has a null dimension: "
-                   << "(" << metadata.width << ", " << metadata.height << ").";
+  if (!IsValidBufferImage(metadata)) {
     return false;
   }
 
@@ -308,84 +387,60 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
     return false;
   }
 
-  // ImportBufferImage() might be called to import client images or display images that we use as
-  // render_targets. For the second case, we still want to import image into the display. These
-  // images have |buffer_collection_supports_display_| set as true in AddDisplay().
+  const allocation::GlobalBufferCollectionId collection_id = metadata.collection_id;
+  const bool display_support_already_set =
+      buffer_collection_supports_display_.find(collection_id) !=
+      buffer_collection_supports_display_.end();
+
+  // In RendererOnly mode, the only images that should be imported by the display is the
+  // framebuffer, and their display support is already set in AddDisplay() (instead of below).
+  // For every other image in RendererOnly mode we can early exit.
   if (import_mode_ == BufferCollectionImportMode::RendererOnly &&
-      (buffer_collection_supports_display_.find(metadata.collection_id) ==
-           buffer_collection_supports_display_.end() ||
-       !buffer_collection_supports_display_[metadata.collection_id])) {
-    buffer_collection_supports_display_[metadata.collection_id] = false;
+      (!display_support_already_set || !buffer_collection_supports_display_[collection_id])) {
+    buffer_collection_supports_display_[collection_id] = false;
     return true;
   }
 
-  if (buffer_collection_supports_display_.find(metadata.collection_id) ==
-      buffer_collection_supports_display_.end()) {
-    zx_status_t allocation_status = ZX_OK;
-    auto status = display_buffer_collection_ptrs_[metadata.collection_id]->CheckBuffersAllocated(
-        &allocation_status);
-    auto supports_display = status == ZX_OK && allocation_status == ZX_OK;
-    buffer_collection_supports_display_[metadata.collection_id] = supports_display;
-    if (supports_display) {
-      fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
-      status = display_buffer_collection_ptrs_[metadata.collection_id]->WaitForBuffersAllocated(
-          &allocation_status, &buffer_collection_info);
-      if (status != ZX_OK || allocation_status != ZX_OK) {
-        FX_LOGS(ERROR) << "WaitForBuffersAllocated failed: " << status << ":" << allocation_status;
+  if (!display_support_already_set) {
+    const auto pixel_format =
+        DetermineDisplaySupportFor(TakeDisplayBufferCollectionPtr(collection_id));
+    buffer_collection_supports_display_[collection_id] = pixel_format.has_value();
+    if (pixel_format.has_value()) {
+      buffer_collection_pixel_format_[collection_id] = pixel_format.value();
+    }
+  }
+
+  if (!buffer_collection_supports_display_[collection_id]) {
+    // When display isn't supported, so depending on mode we:
+    switch (import_mode_) {
+      case BufferCollectionImportMode::AttemptDisplayConstraints:
+        // Fallback to renderer and continue.
+        return true;
+      case BufferCollectionImportMode::EnforceDisplayConstraints:
+        // Fail outright.
         return false;
-      }
-      buffer_collection_pixel_format_[metadata.collection_id] =
-          buffer_collection_info.settings.image_format_constraints.pixel_format;
-    }
-    status = display_buffer_collection_ptrs_[metadata.collection_id]->Close();
-    display_buffer_collection_ptrs_.erase(metadata.collection_id);
-  }
-
-  // TODO(fxbug.dev/85601): Remove after YUV buffers can be imported to display. We filter YUV
-  // images out of display path.
-  if (buffer_collection_pixel_format_[metadata.collection_id].type ==
-          fuchsia::sysmem::PixelFormatType::NV12 ||
-      buffer_collection_pixel_format_[metadata.collection_id].type ==
-          fuchsia::sysmem::PixelFormatType::I420) {
-    buffer_collection_supports_display_[metadata.collection_id] = false;
-    return true;
-  }
-
-  if (!buffer_collection_supports_display_[metadata.collection_id]) {
-    if (import_mode_ == BufferCollectionImportMode::AttemptDisplayConstraints) {
-      // We fallback to renderer and continue if display isn't supported in
-      // AttemptDisplayConstraints mode.
-      return true;
-    } else if (import_mode_ == BufferCollectionImportMode::EnforceDisplayConstraints) {
-      return false;
+      default:
+        FX_NOTREACHED() << "Should have been handled above";
+        return false;
     }
   }
 
-  FX_DCHECK(buffer_collection_pixel_format_.count(metadata.collection_id));
-  auto pixel_format = buffer_collection_pixel_format_[metadata.collection_id];
-  fuchsia::hardware::display::ImageConfig image_config = {
-      .width = metadata.width,
-      .height = metadata.height,
-      .pixel_format = BufferCollectionPixelFormatToZirconFormat(pixel_format),
-      .type = BufferCollectionPixelFormatToImageType(pixel_format)};
+  const fuchsia::hardware::display::ImageConfig image_config = CreateImageConfig(metadata);
   zx_status_t import_image_status = ZX_OK;
-
-  // Scope the lock.
   {
-    std::scoped_lock lock(lock_);
-    auto status = (*display_controller_.get())
-                      ->ImportImage2(image_config, metadata.collection_id, metadata.identifier,
-                                     metadata.vmo_index, &import_image_status);
+    std::scoped_lock lock(lock_);  // Lock |display_controller_|.
+    const auto status = (*display_controller_)
+                            ->ImportImage2(image_config, collection_id, metadata.identifier,
+                                           metadata.vmo_index, &import_image_status);
     FX_DCHECK(status == ZX_OK);
-
-    if (import_image_status != ZX_OK) {
-      FX_LOGS(ERROR) << "Display controller could not import the image.";
-      return false;
-    }
-
-    // Add the display-specific ID to the global map.
-    return true;
   }
+
+  if (import_image_status != ZX_OK) {
+    FX_LOGS(ERROR) << "Display controller could not import the image.";
+    return false;
+  }
+
+  return true;
 }
 
 void DisplayCompositor::ReleaseBufferImage(allocation::GlobalImageId image_id) {

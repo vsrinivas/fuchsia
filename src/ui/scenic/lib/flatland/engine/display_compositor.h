@@ -173,9 +173,16 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   // Generates a new ImageEventData struct to be used with a client image on a display.
   ImageEventData NewImageEventData();
 
+  fuchsia::hardware::display::ImageConfig CreateImageConfig(
+      const allocation::ImageMetadata& metadata) const;
+
   // Generates a hardware layer for direct compositing on the display. Returns the ID used
   // to reference that layer in the display controller API.
   uint64_t CreateDisplayLayer();
+
+  // Moves a token out of |display_buffer_collection_ptrs_| and returns it.
+  fuchsia::sysmem::BufferCollectionSyncPtr TakeDisplayBufferCollectionPtr(
+      allocation::GlobalBufferCollectionId collection_id);
 
   // Does all the setup for applying the render data, which includes images and rectangles,
   // onto the display via the display controller interface. Returns false if this cannot
@@ -245,6 +252,7 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
       buffer_collection_supports_display_;
 
   // Maps a buffer collection ID to a collection pixel format struct.
+  // TODO(fxbug.dev/71344): Delete after we don't need the pixel format anymore.
   std::unordered_map<allocation::GlobalBufferCollectionId, fuchsia::sysmem::PixelFormat>
       buffer_collection_pixel_format_;
 
