@@ -410,14 +410,14 @@ when delivering B bytes of data as a 16 byte channel message and a VMO of size B
 - 16 rather than as a channel message of size B.*
 
 ![Linear channel-only vs channel + VMO comparison
-graph](resources/nnnn_fidl_large_messages/comparison_linear.png)
+graph](resources/0196_fidl_large_messages/comparison_linear.png)
 
 *Listing 3: Linear scale comparison of delivery time performance between
 delivering B bytes of data as a 16 byte channel message and a VMO of size B - 16
 rather than as a channel message of size B.*
 
 ![Graph of VMO usage penalty at different payload
-sizes](resources/nnnn_fidl_large_messages/vmo_tax.png)
+sizes](resources/0196_fidl_large_messages/vmo_tax.png)
 
 This data yields a few interesting observations. We can see that the
 relationship between data size and time to deliver is roughly linear. There is
@@ -452,7 +452,7 @@ the design described in this document. Note the discontinuity at the 64KiB
 switch from regular to large messages.*
 
 ![Linear graph of modeled
-performance](resources/nnnn_fidl_large_messages/model_linear.png)
+performance](resources/0196_fidl_large_messages/model_linear.png)
 
 ## Ergonomics
 
@@ -794,7 +794,7 @@ not.
 possible combinations of chunkability and appendability.*
 
 ![Large data handling strategies
-matrix](resources/nnnn_fidl_large_messages/large_data_decision_matrix.png)
+matrix](resources/0196_fidl_large_messages/large_data_decision_matrix.png)
 
 These two distinctions are useful, because combining them in a matrix provides
 good guidance on which of large messages or streams are more appropriate.
