@@ -116,6 +116,13 @@ impl FsContext {
     pub fn unshare_namespace(&self) {
         let mut state = self.state.write();
         state.namespace = state.namespace.clone_namespace();
+        // TODO(tbodt): Implement better locking to make these failures impossible. These expects
+        // can only fail if another thread changes mounts between the clone_namespace and the
+        // translate_node calls, making the cwd or root disappear or move.
+        state.root = Namespace::translate_node(state.root.clone(), &state.namespace)
+            .expect("root should exist in the new namespace");
+        state.cwd = Namespace::translate_node(state.cwd.clone(), &state.namespace)
+            .expect("cwd should exist in the new namespace");
     }
 
     pub fn namespace(&self) -> Arc<Namespace> {

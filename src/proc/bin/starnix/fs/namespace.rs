@@ -28,6 +28,7 @@ use crate::types::*;
 /// A mount namespace.
 ///
 /// The namespace records at which entries filesystems are mounted.
+#[derive(Debug)]
 pub struct Namespace {
     root_mount: MountHandle,
 }
@@ -44,11 +45,26 @@ impl Namespace {
     pub fn clone_namespace(&self) -> Arc<Namespace> {
         Arc::new(Self { root_mount: self.root_mount.clone_mount_recursive() })
     }
-}
 
-impl fmt::Debug for Namespace {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Namespace").field("root_mount", &self.root_mount).finish()
+    /// Assuming new_ns is a clone of the namespace that node is from, return the equivalent of
+    /// node in new_ns. If this assumption is violated, returns None.
+    pub fn translate_node(mut node: NamespaceNode, new_ns: &Namespace) -> Option<NamespaceNode> {
+        // Collect the list of mountpoints that leads to this node's mount
+        let mut mountpoints = vec![];
+        let mut mount = node.mount;
+        while let Some(mountpoint) = mount.and_then(|m| m.mountpoint()) {
+            mountpoints.push(mountpoint.entry);
+            mount = mountpoint.mount;
+        }
+
+        // Follow the same path in the new namespace
+        let mut mount = Arc::clone(&new_ns.root_mount);
+        for mountpoint in mountpoints.iter().rev() {
+            let next_mount = Arc::clone(mount.read().submounts.get(ArcKey::ref_cast(mountpoint))?);
+            mount = next_mount;
+        }
+        node.mount = Some(mount);
+        Some(node)
     }
 }
 
