@@ -6,9 +6,10 @@ use {
     crate::consumer_controls_binding::ConsumerControlsEvent,
     crate::input_device,
     crate::input_handler::UnhandledInputHandler,
-    anyhow::{anyhow, Context as _, Error},
+    anyhow::{anyhow, format_err, Context as _, Error},
     async_trait::async_trait,
     async_utils::hanging_get::server::HangingGet,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_io as fio,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_media_sounds::PlayerMarker,
@@ -18,9 +19,9 @@ use {
         FactoryResetCountdownRequestStream, FactoryResetCountdownState,
         FactoryResetCountdownWatchResponder,
     },
-    fuchsia_async::{Duration, Task, Time, Timer},
+    fuchsia_async::{Duration, Task, Time, TimeoutExt, Timer},
     fuchsia_component,
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon::Channel,
     futures::StreamExt,
     std::{
@@ -86,6 +87,8 @@ const FACTORY_RESET_SOUND_PATH: &'static str = "/config/data/chirp-start-tone.wa
 
 const BUTTON_TIMEOUT: Duration = Duration::from_millis(500);
 const RESET_TIMEOUT: Duration = Duration::from_seconds(10);
+/// Maximum length of time to wait for the reset earcon to play (after `RESET_TIMEOUT` elapses).
+const EARCON_TIMEOUT: Duration = Duration::from_millis(2000);
 
 type NotifyFn = Box<dyn Fn(&FactoryResetState, FactoryResetCountdownWatchResponder) -> bool + Send>;
 type ResetCountdownHangingGet =
@@ -305,40 +308,53 @@ impl FactoryResetHandler {
 
     /// Retrieves and plays the sound associated with factory resetting the device.
     async fn play_reset_sound(self: &Rc<Self>) -> Result<(), Error> {
+        fx_log_debug!("Getting sound");
         // Get sound
         let sound_file = File::open(FACTORY_RESET_SOUND_PATH)
             .context("Failed to open factory reset sound file")?;
         let sound_channel = Channel::from(fdio::transfer_fd(sound_file)?);
         let sound_endpoint = fidl::endpoints::ClientEnd::<fio::FileMarker>::new(sound_channel);
 
+        fx_log_debug!("Playing sound");
         // Play sound
-        let sound_player = fuchsia_component::client::connect_to_protocol::<PlayerMarker>()?;
+        let sound_player = fuchsia_component::client::connect_to_protocol::<PlayerMarker>()
+            .with_context(|| format!("failed to connect to {}", PlayerMarker::DEBUG_NAME))?;
 
+        fx_log_debug!("Connected to player");
         let sound_id = 0;
         let _duration = sound_player
             .add_sound_from_file(sound_id, sound_endpoint)
             .await?
-            .map_err(|status| anyhow::format_err!("AddSoundFromFile failed {}", status))?;
+            .map_err(|status| format_err!("AddSoundFromFile failed {}", status))?;
+        fx_log_debug!("Added sound from file");
 
         sound_player
             .play_sound(sound_id, AudioRenderUsage::Media)
             .await?
-            .map_err(|err| anyhow::format_err!("PlaySound failed: {:?}", err))?;
+            .map_err(|err| format_err!("PlaySound failed: {:?}", err))?;
+
+        fx_log_debug!("Played sound");
 
         Ok(())
     }
 
     /// Performs the actual factory reset.
     async fn reset(self: &Rc<Self>) -> Result<(), Error> {
-        if let Err(error) = self.play_reset_sound().await {
-            fx_log_info!("Failed to play reset sound: {:?}", error);
+        fx_log_info!("Beginning reset sequence");
+        if let Err(error) = self
+            .play_reset_sound()
+            .on_timeout(EARCON_TIMEOUT, || Err(format_err!("play_reset_sound took too long")))
+            .await
+        {
+            fx_log_warn!("Failed to play reset sound: {:?}", error);
         }
 
         // Trigger reset
         self.set_factory_reset_state(FactoryResetState::Resetting);
-        fx_log_info!("Triggering factory reset");
-        let factory_reset = fuchsia_component::client::connect_to_protocol::<FactoryResetMarker>()?;
-        factory_reset.reset().await?;
+        fx_log_info!("Calling {}.Reset", FactoryResetMarker::DEBUG_NAME);
+        let factory_reset = fuchsia_component::client::connect_to_protocol::<FactoryResetMarker>()
+            .with_context(|| format!("failed to connect to {}", FactoryResetMarker::DEBUG_NAME))?;
+        factory_reset.reset().await.context("failed while calling Reset")?;
         Ok(())
     }
 }
