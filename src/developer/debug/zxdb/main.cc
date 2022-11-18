@@ -89,6 +89,8 @@ void SetupCommandLineOptions(const CommandLineOptions& options, Session* session
     system_settings.SetList(ClientSettings::System::kBuildIdDirs, options.build_id_dirs);
   if (!options.ids_txts.empty())
     system_settings.SetList(ClientSettings::System::kIdsTxts, options.ids_txts);
+  if (!options.build_dirs.empty())
+    system_settings.SetList(ClientSettings::Target::kBuildDirs, options.build_dirs);
 }
 
 }  // namespace

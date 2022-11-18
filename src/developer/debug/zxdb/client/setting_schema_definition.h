@@ -55,10 +55,11 @@ struct ClientSettings {
     static const char* kUiTimeoutMs;
   };
 
+  struct Job {};
+
   struct Target {
-    // Remap source paths.
-    static const char* kSourceMap;
-    static const char* kSourceMapDescription;
+    static const char* kBuildDirs;
+    static const char* kBuildDirsDescription;  // Help for kBuildDirs.
 
     static const char* kVectorFormat;  // Possible values are the kVectorRegisterFormatStr_*.
     static const char* kVectorFormatDescription;  // Help for kBuildDirs.

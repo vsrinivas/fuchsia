@@ -16,14 +16,18 @@ static const char kShowStdoutDescription[] =
     R"(  Whether this process should pipe its stdout/stderr to zxdb.
   If not set for a particular process, it will default to the global setting.)";
 
-const char* ClientSettings::Target::kSourceMap = "source-map";
-const char* ClientSettings::Target::kSourceMapDescription =
-    R"(  Remap source file paths. The syntax "a=b" means to remap all source file paths
-  starting with "a" with "b". "a" and "b" could be either relative or absolute.
+const char* ClientSettings::Target::kBuildDirs = "build-dirs";
+const char* ClientSettings::Target::kBuildDirsDescription =
+    R"(  List of paths to build direcories. These are the directories to which paths in
+  the symbol files are relative to. When finding a source file, the debugger
+  will search for it relative to each of these directories (there can be more
+  than one because some files may be compiled in different direcrories than
+  others).
 
-  For example, if zxdb cannot find ./../../zircon/system/ulib/c/Scrt1.cc,
-  "set source-map += ./../..=/path/to/fuchsia/checkout" will make zxdb search
-  /path/to/fuchsia/checkout/zircon/system/ulib/c/Scrt1.cc instead.)";
+  These directories don't necessarily need to exist on the local system. When
+  using a crash dump and symbols from another computer you can specify where
+  that computer's build directory would have been given your code location so
+  relative paths will resolve to the correct local files.)";
 
 const char* ClientSettings::Target::kVectorFormat = "vector-format";
 const char* ClientSettings::Target::kVectorFormatDescription =
@@ -60,8 +64,8 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
   schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
 
-  schema->AddList(ClientSettings::Target::kSourceMap,
-                  ClientSettings::Target::kSourceMapDescription);
+  schema->AddList(ClientSettings::Target::kBuildDirs, ClientSettings::Target::kBuildDirsDescription,
+                  {});
 
   schema->AddBool(ClientSettings::Thread::kDebugStepping,
                   ClientSettings::Thread::kDebugSteppingDescription, false);

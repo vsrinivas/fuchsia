@@ -167,10 +167,10 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddList(ClientSettings::System::kIdsTxts, kIdsTxtsDescription, {});
   schema->AddList(ClientSettings::System::kSymbolServers, kSymbolServersDescription, {});
   schema->AddString(ClientSettings::System::kSymbolCache, kSymbolCacheDescription, "");
-  schema->AddList(ClientSettings::Target::kSourceMap,
-                  ClientSettings::Target::kSourceMapDescription);
 
   // Target ones.
+  schema->AddList(ClientSettings::Target::kBuildDirs, ClientSettings::Target::kBuildDirsDescription,
+                  {});
   schema->AddString(
       ClientSettings::Target::kVectorFormat, ClientSettings::Target::kVectorFormatDescription,
       kVectorRegisterFormatStr_Double, ClientSettings::Target::GetVectorFormatOptions());

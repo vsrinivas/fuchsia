@@ -19,15 +19,14 @@ class SettingStore;
 // preferences from the SettingStore to search in.
 class SourceFileProviderImpl : public SourceFileProvider {
  public:
-  explicit SourceFileProviderImpl(const std::vector<std::string>& source_map);
+  explicit SourceFileProviderImpl(std::vector<std::string> build_dirs);
   explicit SourceFileProviderImpl(const SettingStore& settings);
 
   ErrOr<FileData> GetFileData(const std::string& file_name,
                               const std::string& file_build_dir) const override;
 
  private:
-  // Use a vector of pair instead of map to allow multiple possible substitutions for one path.
-  std::vector<std::pair<std::string, std::string>> source_map_;
+  const std::vector<std::string> build_dir_prefs_;
 };
 
 }  // namespace zxdb

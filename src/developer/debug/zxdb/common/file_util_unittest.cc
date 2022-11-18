@@ -85,15 +85,9 @@ TEST(FileUtil, PathStartsWith) {
   EXPECT_TRUE(PathStartsWith("/abc", "/"));
   EXPECT_TRUE(PathStartsWith("/abc/def", "/abc"));
 
-  EXPECT_TRUE(PathStartsWith("abc", "abc"));
-  EXPECT_TRUE(PathStartsWith("abc/def", "abc"));
-
-  EXPECT_TRUE(PathStartsWith(".", "."));
-  EXPECT_TRUE(PathStartsWith("./abc", "."));
-
   EXPECT_FALSE(PathStartsWith("/abc", "/a"));
   EXPECT_FALSE(PathStartsWith("/", ""));
-  EXPECT_FALSE(PathStartsWith("", "/"));
+  EXPECT_FALSE(PathStartsWith("", ""));
 }
 
 TEST(FileUtil, PathRelativeTo) {
@@ -101,9 +95,6 @@ TEST(FileUtil, PathRelativeTo) {
   EXPECT_EQ("def", PathRelativeTo("/abc/def", "/abc"));
   EXPECT_EQ("..", PathRelativeTo("/abc", "/abc/def"));
   EXPECT_EQ("../def", PathRelativeTo("/abc/def", "/abc/ghi"));
-
-  EXPECT_EQ("../def", PathRelativeTo("abc/def", "abc/ghi"));
-  EXPECT_EQ("def", PathRelativeTo("abc/def", "abc"));
 }
 
 }  // namespace zxdb

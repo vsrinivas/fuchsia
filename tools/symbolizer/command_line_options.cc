@@ -36,6 +36,14 @@ const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
       index all ELF files. When a file is passed, it will be loaded as an ELF
       file (if possible).)";
 
+const char kBuildIdDirHelp[] = R"(  --build-id-dir=<path>
+      Adds the given directory to the symbol search path. Multiple
+      --build-id-dir switches can be passed to add multiple directories.
+      The directory must have the same structure as a .build-id directory,
+      that is, each symbol file lives at xx/yyyyyyyy.debug where xx is
+      the first two characters of the build ID and yyyyyyyy is the rest.
+      However, the name of the directory doesn't need to be .build-id.)";
+
 const char kIdsTxtHelp[] = R"(  --ids-txt=<path>
       Adds the given file to the symbol search path. Multiple --ids-txt
       switches can be passed to add multiple files. The file, typically named
@@ -85,6 +93,7 @@ Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options
 
   parser.AddSwitch("symbol-index", 0, kSymbolIndexHelp, &CommandLineOptions::symbol_index_files);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
+  parser.AddSwitch("build-id-dir", 0, kBuildIdDirHelp, &CommandLineOptions::build_id_dirs);
   parser.AddSwitch("ids-txt", 0, kIdsTxtHelp, &CommandLineOptions::ids_txts);
   parser.AddSwitch("symbol-cache", 0, kSymbolCacheHelp, &CommandLineOptions::symbol_cache);
   parser.AddSwitch("symbol-server", 0, kSymbolServerHelp, &CommandLineOptions::symbol_servers);

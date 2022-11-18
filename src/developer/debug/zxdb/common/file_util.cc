@@ -56,7 +56,8 @@ std::time_t GetFileModificationTime(const std::string& path) {
 }
 
 bool PathStartsWith(const std::filesystem::path& path, const std::filesystem::path& base) {
-  if (path.is_absolute() != base.is_absolute())
+  // Only absolute paths can be compared.
+  if (!path.is_absolute() || !base.is_absolute())
     return false;
   auto path_it = path.begin();
   for (const auto& ancestor : base) {
@@ -71,7 +72,7 @@ bool PathStartsWith(const std::filesystem::path& path, const std::filesystem::pa
 
 std::filesystem::path PathRelativeTo(const std::filesystem::path& path,
                                      const std::filesystem::path& base) {
-  FX_CHECK(path.is_absolute() == base.is_absolute());
+  FX_CHECK(path.is_absolute() && base.is_absolute());
   auto base_it = base.begin();
   auto path_it = path.begin();
   while (base_it != base.end() && path_it != path.end() && *base_it == *path_it) {

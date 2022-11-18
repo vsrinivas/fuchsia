@@ -33,6 +33,7 @@ struct CommandLineOptions {
   std::vector<std::string> build_id_dirs;
   std::vector<std::string> ids_txts;
   std::vector<std::string> symbol_servers;
+  std::vector<std::string> build_dirs;
   AnalyticsOption analytics = AnalyticsOption::kUnspecified;
   bool analytics_show = false;
   bool requested_version = false;
