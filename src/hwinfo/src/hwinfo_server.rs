@@ -10,6 +10,7 @@ use {
         ProductRequestStream,
     },
     fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_err,
     futures::prelude::*,
     std::sync::{Arc, RwLock},
 };
@@ -115,14 +116,20 @@ impl ProductInfoServer {
 
 pub fn spawn_device_info_server(server: DeviceInfoServer, stream: DeviceRequestStream) {
     fasync::Task::spawn(async move {
-        server.handle_requests_from_stream(stream).await.expect("Failed to run device_info service")
+        server
+            .handle_requests_from_stream(stream)
+            .await
+            .unwrap_or_else(|e| fx_log_err!("Failed to run device_info service: {:?}", e));
     })
     .detach();
 }
 
 pub fn spawn_board_info_server(server: BoardInfoServer, stream: BoardRequestStream) {
     fasync::Task::spawn(async move {
-        server.handle_requests_from_stream(stream).await.expect("Failed to run board_info service")
+        server
+            .handle_requests_from_stream(stream)
+            .await
+            .unwrap_or_else(|e| fx_log_err!("Failed to run board_info service: {:?}", e));
     })
     .detach();
 }
@@ -132,7 +139,7 @@ pub fn spawn_product_info_server(server: ProductInfoServer, stream: ProductReque
         server
             .handle_requests_from_stream(stream)
             .await
-            .expect("Failed to run product_info service")
+            .unwrap_or_else(|e| fx_log_err!("Failed to run product_info service: {:?}", e));
     })
     .detach();
 }
