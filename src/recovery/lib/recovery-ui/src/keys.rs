@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct LetterKey {
     pub(crate) lower: &'static str,
     pub(crate) upper: &'static str,
     pub(crate) alt: &'static str,
+    #[allow(unused)]
     pub(crate) is_alt_accent: bool,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum SpecialKey {
     ALT,
     DEL,
@@ -19,7 +20,7 @@ pub enum SpecialKey {
     SPACE,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Key {
     Letter(LetterKey),
     Special(SpecialKey, &'static str),
@@ -113,6 +114,7 @@ pub(crate) const ROW0: &'static [&Key] = &[
     &KEY_HYPHEN,
     &KEY_EQUALS,
 ];
+
 pub(crate) const ROW1: &'static [&Key] = &[
     &KEY_Q,
     &KEY_W,
@@ -128,6 +130,7 @@ pub(crate) const ROW1: &'static [&Key] = &[
     &KEY_R_BRACKET,
     &KEY_BACKSLASH,
 ];
+
 const ROW2: &'static [&Key] = &[
     &KEY_A,
     &KEY_S,
@@ -141,6 +144,7 @@ const ROW2: &'static [&Key] = &[
     &KEY_SEMICOLON,
     &KEY_QUOTE,
 ];
+
 const ROW3: &'static [&Key] = &[
     &KEY_Z,
     &KEY_X,
@@ -157,14 +161,14 @@ const SPECIAL_ROW: &'static [&Key] = &[&KEY_SHIFT, &KEY_ALT, &KEY_SPACE, &KEY_DE
 
 pub const KEYBOARD: &'static [&'static [&Key]] = &[ROW0, ROW1, ROW2, ROW3, SPECIAL_ROW];
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Accent {
     accent: &'static Key,
     pub(crate) lower: &'static str,
     pub(crate) upper: &'static str,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct AccentKey {
     pub alt_key: &'static Key,
     accents: &'static [&'static Accent],
@@ -234,4 +238,23 @@ pub fn get_accent(alt_key: &Key, pressed_key: &Key) -> Option<&'static &'static 
         return accent_key.accents.iter().find(|a| a.accent == pressed_key);
     };
     None
+}
+
+#[cfg(test)]
+mod test {
+
+    use crate::keys::*;
+
+    #[test]
+    fn get_accent() {
+        assert_eq!(
+            super::get_accent(&KEY_E, &KEY_E),
+            Some(&&Accent { accent: &KEY_E, lower: "é", upper: "É" })
+        );
+    }
+
+    #[test]
+    fn get_non_accent() {
+        assert_eq!(super::get_accent(&KEY_P, &KEY_E), None);
+    }
 }
