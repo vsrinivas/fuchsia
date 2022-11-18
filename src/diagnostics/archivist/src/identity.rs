@@ -76,6 +76,13 @@ impl TryFrom<SourceIdentity> for ComponentIdentity {
     }
 }
 
+#[cfg(test)]
+impl From<Vec<&str>> for ComponentIdentity {
+    fn from(moniker_segments: Vec<&str>) -> Self {
+        Self { relative_moniker: moniker_segments.into(), instance_id: None, url: "".to_string() }
+    }
+}
+
 impl From<ComponentIdentity> for MonikerWithUrl {
     fn from(identity: ComponentIdentity) -> Self {
         Self { moniker: identity.to_string(), url: identity.url }

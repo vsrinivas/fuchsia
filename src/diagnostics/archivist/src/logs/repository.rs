@@ -117,7 +117,7 @@ impl LogsRepository {
             .filter_map(|(_, c)| c)
             .map(|c| {
                 let cursor = c.cursor(mode, parent_trace_id);
-                (c.identity.relative_moniker.clone(), cursor)
+                (c.identity.clone(), cursor)
             })
             .for_each(|(n, c)| {
                 mpx_handle.send(n, c);
@@ -366,7 +366,7 @@ impl MultiplexerBroker {
     pub async fn send(&mut self, container: &Arc<LogsArtifactsContainer>) {
         self.live_iterators.lock().await.retain(|_, (mode, recipient)| {
             recipient.send(
-                container.identity.relative_moniker.clone(),
+                container.identity.clone(),
                 container.cursor(*mode, recipient.parent_trace_id()),
             )
         });
