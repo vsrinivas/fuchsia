@@ -95,11 +95,13 @@ fuchsia_library_fuzzer("vaapi_vp9_decode_fuzzer") {
 
 fuchsia_fuzzer_component("vaapi_h264_decode_fuzzer_component") {
   component_name = "vaapi_h264_decode_fuzzer"
+  manifest = "meta/vaapi_h264_decode_fuzzer.cml"
   deps = [ ":vaapi_h264_decode_fuzzer" ]
 }
 
 fuchsia_fuzzer_component("vaapi_vp9_decode_fuzzer_component") {
   component_name = "vaapi_vp9_decode_fuzzer"
+  manifest = "meta/vaapi_vp9_decode_fuzzer.cml"
   deps = [ ":vaapi_vp9_decode_fuzzer" ]
 }
 
