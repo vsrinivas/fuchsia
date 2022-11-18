@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_FRAME_VALIDATION_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_FRAME_VALIDATION_H_
 
+#include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <zircon/types.h>
 
 #include <wlan/common/action_frame.h>

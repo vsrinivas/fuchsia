@@ -597,7 +597,6 @@ impl DeviceInterface {
     }
 }
 
-#[cfg(test)]
 macro_rules! arr {
     ($slice:expr, $size:expr $(,)?) => {{
         assert!($slice.len() <= $size);
@@ -607,8 +606,7 @@ macro_rules! arr {
     }};
 }
 
-#[cfg(test)]
-pub(crate) mod test_utils {
+pub mod test_utils {
     use {
         super::*,
         crate::{

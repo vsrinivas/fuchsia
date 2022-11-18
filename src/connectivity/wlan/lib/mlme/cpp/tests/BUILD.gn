@@ -15,9 +15,6 @@ source_set("test_main") {
 
   sources = [
     "mlme_msg.h",
-    "mock_device.h",
-    "test_bss.cc",
-    "test_bss.h",
     "test_data.cc",
     "test_data.h",
     "test_main.cc",

@@ -15,7 +15,6 @@
 #include <wlan/common/buffer_reader.h>
 #include <wlan/common/energy.h>
 #include <wlan/common/macaddr.h>
-#include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 

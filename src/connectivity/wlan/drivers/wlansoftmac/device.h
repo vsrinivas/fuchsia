@@ -28,11 +28,27 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
 #include <wlan/common/macaddr.h>
-#include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
 
+#include "device_interface.h"
+#include "src/connectivity/wlan/drivers/wlansoftmac/rust_driver/c-binding/bindings.h"
+
 namespace wlan {
+
+class WlanSoftmacHandle {
+ public:
+  explicit WlanSoftmacHandle(DeviceInterface* device);
+  ~WlanSoftmacHandle();
+
+  zx_status_t Init();
+  zx_status_t StopMainLoop();
+  zx_status_t QueueEthFrameTx(std::unique_ptr<Packet> pkt);
+
+ private:
+  DeviceInterface* device_;
+  wlansoftmac_handle_t* inner_handle_;
+};
 
 class Device : public DeviceInterface,
                ddk::Device<Device, ddk::Unbindable>,
@@ -128,7 +144,7 @@ class Device : public DeviceInterface,
 
   std::mutex ethernet_proxy_lock_;
   ddk::EthernetIfcProtocolClient ethernet_proxy_ __TA_GUARDED(ethernet_proxy_lock_);
-  bool mlme_main_loop_dead_ = false;
+  bool main_loop_dead_ = false;
 
   // Manages the lifetime of the protocol struct we pass down to the vendor driver. Actual
   // calls to this protocol should only be performed by the vendor driver.
@@ -142,7 +158,7 @@ class Device : public DeviceInterface,
   spectrum_management_support_t spectrum_management_support_ = {};
   fbl::RefPtr<DeviceState> state_;
 
-  std::unique_ptr<Mlme> mlme_;
+  std::unique_ptr<WlanSoftmacHandle> softmac_handle_;
 
   // The FIDL client to communicate with iwlwifi
   fdf::WireSharedClient<fuchsia_wlan_softmac::WlanSoftmac> client_;

@@ -95,7 +95,7 @@ pub enum TimedEventClass {
 #[repr(C)]
 #[derive(Debug, Clone, Default)]
 pub struct ClientConfig {
-    ensure_on_channel_time: zx::sys::zx_duration_t,
+    pub ensure_on_channel_time: zx::sys::zx_duration_t,
 }
 
 pub struct Context {

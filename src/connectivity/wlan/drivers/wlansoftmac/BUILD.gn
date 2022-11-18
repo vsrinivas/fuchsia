@@ -44,6 +44,8 @@ fuchsia_driver("wlansoftmac_driver-driver") {
   sources = [
     "device.cc",
     "device.h",
+    "device_interface.cc",
+    "device_interface.h",
     "driver.cc",
     "probe_sequence.cc",
     "probe_sequence.h",
@@ -52,7 +54,7 @@ fuchsia_driver("wlansoftmac_driver-driver") {
     ":wlansoftmac_bind",
     ":wlansoftmac_convert",
     "//sdk/lib/driver/runtime:driver_runtime_cpp",
-    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
+    "//src/connectivity/wlan/drivers/wlansoftmac/rust_driver/c-binding:wlansoftmac-c",
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
     "//src/devices/lib/driver:driver_runtime",

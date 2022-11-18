@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
@@ -27,39 +28,9 @@ zx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
   return ZX_OK;
 }
 
-wlan_tx_packet_t Packet::AsWlanTxPacket() {
-  ZX_DEBUG_ASSERT(len() <= std::numeric_limits<uint16_t>::max());
-  wlan_tx_packet_t tx_pkt = {};
-  tx_pkt.mac_frame_buffer = data();
-  tx_pkt.mac_frame_size = static_cast<uint16_t>(len());
-  if (has_ctrl_data<wlan_tx_info_t>()) {
-    std::memcpy(&tx_pkt.info, ctrl_data<wlan_tx_info_t>(), sizeof(tx_pkt.info));
-  }
-  return tx_pkt;
-}
-
 bool IsBodyAligned(const Packet& pkt) {
   auto rx = pkt.ctrl_data<wlan_rx_info_t>();
   return rx != nullptr && rx->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
-}
-
-mlme_in_buf_t IntoRustInBuf(std::unique_ptr<Packet> packet) {
-  auto* pkt = packet.release();
-  return mlme_in_buf_t{
-      .free_buffer = [](void* raw) { std::unique_ptr<Packet>(static_cast<Packet*>(raw)).reset(); },
-      .raw = pkt,
-      .data = pkt->data(),
-      .len = pkt->len(),
-  };
-}
-
-std::unique_ptr<Packet> FromRustOutBuf(mlme_out_buf_t buf) {
-  if (!buf.raw) {
-    return {};
-  }
-  auto pkt = std::unique_ptr<Packet>(static_cast<Packet*>(buf.raw));
-  pkt->set_len(buf.written_bytes);
-  return pkt;
 }
 
 void LogAllocationFail(Buffer::Size size) {
@@ -115,16 +86,6 @@ std::unique_ptr<Packet> GetEthPacket(size_t len) { return GetPacket(len, Packet:
 std::unique_ptr<Packet> GetWlanPacket(size_t len) { return GetPacket(len, Packet::Peer::kWlan); }
 
 std::unique_ptr<Packet> GetSvcPacket(size_t len) { return GetPacket(len, Packet::Peer::kService); }
-
-mlme_buffer_provider_ops_t rust_buffer_provider{
-    .get_buffer = [](size_t min_len) -> mlme_in_buf_t {
-      // Note: Once Rust MLME supports more than sending WLAN frames this needs
-      // to change.
-      auto pkt = GetWlanPacket(min_len);
-      ZX_DEBUG_ASSERT(pkt != nullptr);
-      return IntoRustInBuf(std::move(pkt));
-    },
-};
 
 }  // namespace wlan
 

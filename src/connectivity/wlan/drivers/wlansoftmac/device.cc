@@ -29,8 +29,6 @@
 
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
-#include <wlan/mlme/ap/ap_mlme.h>
-#include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/validate_frame.h>
 #include <wlan/mlme/wlan.h>
 
@@ -39,6 +37,35 @@
 #include "probe_sequence.h"
 
 namespace wlan {
+
+wlansoftmac_in_buf_t IntoRustInBuf(std::unique_ptr<Packet> packet) {
+  auto* pkt = packet.release();
+  return wlansoftmac_in_buf_t{
+      .free_buffer = [](void* raw) { std::unique_ptr<Packet>(static_cast<Packet*>(raw)).reset(); },
+      .raw = pkt,
+      .data = pkt->data(),
+      .len = pkt->len(),
+  };
+}
+
+std::unique_ptr<Packet> FromRustOutBuf(wlansoftmac_out_buf_t buf) {
+  if (!buf.raw) {
+    return {};
+  }
+  auto pkt = std::unique_ptr<Packet>(static_cast<Packet*>(buf.raw));
+  pkt->set_len(buf.written_bytes);
+  return pkt;
+}
+
+wlansoftmac_buffer_provider_ops_t rust_buffer_provider{
+    .get_buffer = [](size_t min_len) -> wlansoftmac_in_buf_t {
+      // Note: Once Rust MLME supports more than sending WLAN frames this needs
+      // to change.
+      auto pkt = GetWlanPacket(min_len);
+      ZX_DEBUG_ASSERT(pkt != nullptr);
+      return IntoRustInBuf(std::move(pkt));
+    },
+};
 
 #define DEV(c) static_cast<Device*>(c)
 static zx_protocol_device_t eth_device_ops = {
@@ -63,6 +90,130 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
         -> zx_status_t { return DEV(ctx)->EthernetImplSetParam(param, value, data, data_size); },
 };
 #undef DEV
+
+WlanSoftmacHandle::WlanSoftmacHandle(DeviceInterface* device)
+    : device_(device), inner_handle_(nullptr) {
+  debugfn();
+}
+
+WlanSoftmacHandle::~WlanSoftmacHandle() {
+  debugfn();
+  if (inner_handle_ != nullptr) {
+    delete_sta(inner_handle_);
+  }
+}
+
+zx_status_t WlanSoftmacHandle::Init() {
+  if (inner_handle_ != nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+#define DEVICE(c) static_cast<DeviceInterface*>(c)
+  rust_device_interface_t wlansoftmac_rust_ops = {
+      .device = static_cast<void*>(this->device_),
+      .start = [](void* device, const rust_wlan_softmac_ifc_protocol_copy_t* ifc,
+                  zx_handle_t* out_sme_channel) -> zx_status_t {
+        zx::channel channel;
+        zx_status_t result = DEVICE(device)->Start(ifc, &channel);
+        *out_sme_channel = channel.release();
+        return result;
+      },
+      .deliver_eth_frame = [](void* device, const uint8_t* data, size_t len) -> zx_status_t {
+        return DEVICE(device)->DeliverEthernet({data, len});
+      },
+      .queue_tx = [](void* device, uint32_t options, wlansoftmac_out_buf_t buf,
+                     wlan_tx_info_t tx_info) -> zx_status_t {
+        auto pkt = FromRustOutBuf(buf);
+        return DEVICE(device)->QueueTx(std::move(pkt), tx_info);
+      },
+      .set_eth_status = [](void* device, uint32_t status) { DEVICE(device)->SetStatus(status); },
+      .get_wlan_channel = [](void* device) -> wlan_channel_t {
+        return DEVICE(device)->GetState()->channel();
+      },
+      .set_wlan_channel = [](void* device, wlan_channel_t channel) -> zx_status_t {
+        return DEVICE(device)->SetChannel(channel);
+      },
+      .set_key = [](void* device, wlan_key_config_t* key) -> zx_status_t {
+        return DEVICE(device)->SetKey(key);
+      },
+      .start_passive_scan = [](void* device,
+                               const wlan_softmac_passive_scan_args_t* passive_scan_args,
+                               uint64_t* out_scan_id) -> zx_status_t {
+        return DEVICE(device)->StartPassiveScan(passive_scan_args, out_scan_id);
+      },
+      .start_active_scan = [](void* device, const wlan_softmac_active_scan_args_t* active_scan_args,
+                              uint64_t* out_scan_id) -> zx_status_t {
+        return DEVICE(device)->StartActiveScan(active_scan_args, out_scan_id);
+      },
+      .get_wlan_softmac_info = [](void* device) -> wlan_softmac_info_t {
+        return DEVICE(device)->GetWlanSoftmacInfo();
+      },
+      .get_discovery_support = [](void* device) -> discovery_support_t {
+        return DEVICE(device)->GetDiscoverySupport();
+      },
+      .get_mac_sublayer_support = [](void* device) -> mac_sublayer_support_t {
+        return DEVICE(device)->GetMacSublayerSupport();
+      },
+      .get_security_support = [](void* device) -> security_support_t {
+        return DEVICE(device)->GetSecuritySupport();
+      },
+      .get_spectrum_management_support = [](void* device) -> spectrum_management_support_t {
+        return DEVICE(device)->GetSpectrumManagementSupport();
+      },
+      .configure_bss = [](void* device, bss_config_t* cfg) -> zx_status_t {
+        return DEVICE(device)->ConfigureBss(cfg);
+      },
+      .enable_beaconing = [](void* device, wlansoftmac_out_buf_t buf, size_t tim_ele_offset,
+                             uint16_t beacon_interval) -> zx_status_t {
+        auto pkt = FromRustOutBuf(buf);
+        wlan_bcn_config_t bcn_cfg = {
+            .packet_template =
+                {
+                    .mac_frame_buffer = pkt->data(),
+                    .mac_frame_size = pkt->size(),
+                },
+            .tim_ele_offset = tim_ele_offset,
+            .beacon_interval = beacon_interval,
+        };
+        return DEVICE(device)->EnableBeaconing(&bcn_cfg);
+      },
+      .disable_beaconing = [](void* device) -> zx_status_t {
+        return DEVICE(device)->EnableBeaconing(nullptr);
+      },
+      .configure_beacon = [](void* device, wlansoftmac_out_buf_t buf) -> zx_status_t {
+        return DEVICE(device)->ConfigureBeacon(FromRustOutBuf(buf));
+      },
+      .set_link_status = [](void* device,
+                            uint8_t status) { return DEVICE(device)->SetStatus(status); },
+      .configure_assoc = [](void* device, wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t {
+        return DEVICE(device)->ConfigureAssoc(assoc_ctx);
+      },
+      .clear_assoc = [](void* device, const uint8_t(*addr)[6]) -> zx_status_t {
+        return DEVICE(device)->ClearAssoc(*addr);
+      },
+  };
+#undef DEVICE
+
+  inner_handle_ = start_sta(wlansoftmac_rust_ops, rust_buffer_provider);
+  return ZX_OK;
+}
+
+zx_status_t WlanSoftmacHandle::StopMainLoop() {
+  if (inner_handle_ == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
+  stop_sta(inner_handle_);
+  return ZX_OK;
+}
+
+zx_status_t WlanSoftmacHandle::QueueEthFrameTx(std::unique_ptr<Packet> pkt) {
+  if (inner_handle_ == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
+  wlan_span_t span{.data = pkt->data(), .size = pkt->len()};
+  sta_queue_eth_frame_tx(inner_handle_, span);
+  return ZX_OK;
+}
 
 Device::Device(zx_device_t* device, fdf::ClientEnd<fuchsia_wlan_softmac::WlanSoftmac> client)
     : ddk::Device<Device, ddk::Unbindable>(device), parent_(device) {
@@ -214,31 +365,17 @@ zx_status_t Device::Bind(fdf::Channel channel) __TA_NO_THREAD_SAFETY_ANALYSIS {
 
   state_->set_address(common::MacAddr(wlan_softmac_info_.sta_addr));
 
-  switch (wlan_softmac_info_.mac_role) {
-    case WLAN_MAC_ROLE_CLIENT:
-      infof("Initialize a client MLME.");
-      mlme_.reset(new ClientMlme(this, ClientMlmeDefaultConfig()));
-      break;
-    case WLAN_MAC_ROLE_AP:
-      infof("Initialize an AP MLME.");
-      mlme_.reset(new ApMlme(this));
-      break;
-    // TODO(fxbug.dev/44485): Add support for WLAN_MAC_ROLE_MESH.
-    default:
-      errorf("unsupported MAC role: %u", wlan_softmac_info_.mac_role);
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-  ZX_DEBUG_ASSERT(mlme_ != nullptr);
-  status = mlme_->Init();
+  softmac_handle_.reset(new WlanSoftmacHandle(this));
+  status = softmac_handle_->Init();
   if (status != ZX_OK) {
-    errorf("could not initialize MLME: %d", status);
+    errorf("could not initialize Rust WlanSoftmac: %d", status);
     return status;
   }
 
   status = AddEthDevice();
   if (status != ZX_OK) {
     errorf("could not add eth device: %s", zx_status_get_string(status));
-    mlme_->StopMainLoop();
+    softmac_handle_->StopMainLoop();
     return status;
   }
 
@@ -279,12 +416,12 @@ std::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length, P
 void Device::DestroySelf() { delete this; }
 
 void Device::ShutdownMainLoop() {
-  if (mlme_main_loop_dead_) {
+  if (main_loop_dead_) {
     errorf("ShutdownMainLoop called while main loop was not running");
     return;
   }
-  mlme_->StopMainLoop();
-  mlme_main_loop_dead_ = true;
+  softmac_handle_->StopMainLoop();
+  main_loop_dead_ = true;
 }
 
 // ddk ethernet_impl_protocol_ops methods
@@ -394,7 +531,7 @@ void Device::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
   }
 
   // Forward the packet straight into Rust MLME.
-  auto status = mlme_->QueueEthFrameTx(std::move(packet));
+  auto status = softmac_handle_->QueueEthFrameTx(std::move(packet));
   if (status != ZX_OK) {
     warnf("could not queue Ethernet packet err=%s", zx_status_get_string(status));
     ZX_DEBUG_ASSERT(status != ZX_ERR_SHOULD_WAIT);
@@ -652,10 +789,13 @@ zx_status_t Device::ConfigureBeacon(std::unique_ptr<Packet> beacon) {
   ZX_DEBUG_ASSERT(ValidateFrame("Malformed beacon template", {beacon->data(), beacon->size()}));
 
   zx_status_t status = ZX_OK;
-  wlan_tx_packet_t tx_packet = beacon->AsWlanTxPacket();
   fuchsia_wlan_softmac::wire::WlanTxPacket fidl_tx_packet;
-  if ((status = ConvertTxPacket(tx_packet.mac_frame_buffer, tx_packet.mac_frame_size,
-                                tx_packet.info, &fidl_tx_packet)) != ZX_OK) {
+  wlan_tx_info_t info = {};
+  if (beacon->has_ctrl_data<wlan_tx_info_t>()) {
+    std::memcpy(&info, beacon->ctrl_data<wlan_tx_info_t>(), sizeof(info));
+  }
+  if ((status = ConvertTxPacket(beacon->data(), static_cast<uint16_t>(beacon->len()), info,
+                                &fidl_tx_packet)) != ZX_OK) {
     errorf("WlanTxPacket conversion failed: %s", zx_status_get_string(status));
     return status;
   }

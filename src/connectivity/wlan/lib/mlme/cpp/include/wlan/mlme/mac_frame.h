@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MAC_FRAME_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MAC_FRAME_H_
 
+#include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <zircon/compiler.h>

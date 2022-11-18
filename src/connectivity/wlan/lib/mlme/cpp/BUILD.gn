@@ -22,36 +22,27 @@ source_set("mlme") {
   }
 
   public = [
-    "include/wlan/mlme/ap/ap_mlme.h",
     "include/wlan/mlme/ap/tim.h",
-    "include/wlan/mlme/client/client_mlme.h",
     "include/wlan/mlme/debug.h",
-    "include/wlan/mlme/device_interface.h",
     "include/wlan/mlme/eapol.h",
     "include/wlan/mlme/frame_validation.h",
     "include/wlan/mlme/mac_frame.h",
     "include/wlan/mlme/macaddr_map.h",
     "include/wlan/mlme/mlme.h",
     "include/wlan/mlme/packet.h",
-    "include/wlan/mlme/rust_utils.h",
     "include/wlan/mlme/wlan.h",
   ]
 
   sources = [
-    "ap/ap_mlme.cc",
     "ap/tim.cc",
     "beacon.cc",
-    "client/client_mlme.cc",
     "debug.cc",
-    "device_interface.cc",
     "ht.cc",
     "key.cc",
     "mac_frame.cc",
-    "mac_header_writer.cc",
     "packet.cc",
     "rate_limiter.cc",
     "rates_elements.cc",
-    "rust_utils.cc",
     "validate_frame.cc",
   ]
 
@@ -63,7 +54,6 @@ source_set("mlme") {
     "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats_hlcpp",
     "//sdk/lib/fdio",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//src/connectivity/wlan/lib/mlme/rust/c-binding:wlan-mlme-c",
     "//src/devices/lib/dev-operation",
 
     # TODO(fxbug.dev/38599): The mundane dependency here is purely due to

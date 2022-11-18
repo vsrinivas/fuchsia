@@ -129,8 +129,8 @@ impl OutBuf {
         }
     }
 
-    #[cfg(test)]
-    pub fn free(self) {
+    // For use in test code only
+    pub(crate) fn free(self) {
         let data = self.raw as *mut Vec<u8>;
         unsafe {
             drop(Box::from_raw(data));
@@ -138,10 +138,8 @@ impl OutBuf {
     }
 }
 
-#[cfg(test)]
 pub struct FakeBufferProvider;
 
-#[cfg(test)]
 impl FakeBufferProvider {
     pub fn new() -> BufferProvider {
         BufferProvider { get_buffer: Self::get_buffer }

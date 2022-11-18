@@ -5,29 +5,20 @@
 import("//build/components.gni")
 import("//build/rust/rustc_staticlib.gni")
 
-rustc_staticlib("wlan-mlme-c") {
-  name = "wlan_mlme_c"
+rustc_staticlib("wlansoftmac-c") {
+  name = "wlansoftmac_c"
   version = "0.1.0"
   with_unit_tests = true
   edition = "2021"
 
   deps = [
-    "//src/connectivity/wlan/lib/ieee80211",
+    "//src/connectivity/wlan/drivers/wlansoftmac/rust_driver:wlansoftmac-rust",
     "//src/connectivity/wlan/lib/mlme/rust:wlan-mlme",
     "//src/connectivity/wlan/lib/span:wlan-span",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   public = [ "bindings.h" ]
 
-  sources = [
-    "src/ap.rs",
-    "src/client.rs",
-    "src/lib.rs",
-    "src/sequence.rs",
-  ]
-}
-
-fuchsia_unittest_package("wlan-mlme-c-tests") {
-  deps = [ ":wlan-mlme-c_test" ]
+  sources = [ "src/lib.rs" ]
 }

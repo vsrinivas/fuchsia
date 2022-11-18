@@ -19,7 +19,7 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
-#include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
+// #include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/wlan.h>
 
@@ -267,8 +267,6 @@ class Packet
 
   zx_status_t CopyFrom(const void* src, size_t len, size_t offset);
 
-  wlan_tx_packet_t AsWlanTxPacket();
-
   bool has_ext_data() const { return ext_data_.has_value(); }
   void set_ext_data(eth::BorrowedOperation<> netbuf, uint16_t offset) {
     ZX_DEBUG_ASSERT(!has_ext_data());
@@ -287,8 +285,6 @@ class Packet
   uint16_t ext_offset_ = 0;
 };
 
-mlme_in_buf_t IntoRustInBuf(std::unique_ptr<Packet> packet);
-std::unique_ptr<Packet> FromRustOutBuf(mlme_out_buf_t buf);
 bool IsBodyAligned(const Packet& pkt);
 
 class PacketQueue {
@@ -336,8 +332,6 @@ class PacketQueue {
 std::unique_ptr<Packet> GetEthPacket(size_t len);
 std::unique_ptr<Packet> GetWlanPacket(size_t len);
 std::unique_ptr<Packet> GetSvcPacket(size_t len);
-
-extern mlme_buffer_provider_ops_t rust_buffer_provider;
 
 }  // namespace wlan
 
