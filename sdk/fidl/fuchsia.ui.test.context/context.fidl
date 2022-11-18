@@ -1,0 +1,87 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.test.context;
+
+using fuchsia.element;
+using fuchsia.ui.test.conformance;
+using fuchsia.ui.test.input;
+using fuchsia.ui.composition;
+
+/// Manages the required component topology on behalf of a UI conformance
+/// test, and controls access to puppet and UI capabilities.
+///
+/// Validators should consume all UI capabilities through the Context
+/// service. They should NOT set up any of their own component topology,
+/// NOR consume any UI capabilities from their component namespaces.
+///
+/// Each Context connection is scoped to a single test case. When the
+/// client closes the connection, the server will clean up all resources
+/// associated with the corresponding test.
+protocol Context {
+
+    /// Connects to an instance of the puppet under test.
+    ///
+    /// Each test targets a specific behavior pattern in a single UI
+    /// client; we refer to that target client as the "puppet under test".
+    /// Each test must have exactly one such instance, so calling
+    /// `ConnectToPuppetUnderTest` more than once will cause the server
+    /// to crash.
+    ConnectToPuppetUnderTest(resource table {
+        1: server_end server_end:<fuchsia.ui.test.conformance.Puppet>;
+    });
+
+    /// Connects to an instance of a generic puppet implementation, which
+    /// NOT considered to be "under test".
+    ///
+    /// In order to exercise certain behaviors of the puppet under test,
+    /// we may need multiple puppet instances, some of which may require
+    /// capabilities that the puppet under test does not implement. For
+    /// instance, some puppets may not support embedding views, but may
+    /// still want to participate in tests for which their view is resized,
+    /// disconnected and reconnected to the scene graph, et cetera. In such
+    /// tests, all views besides the one under test will belong to
+    /// "auxiliary" puppet instances.
+    ///
+    /// Test authors can safely assume that the auxiliary puppet instance
+    /// implements the entire puppet API; in other words, it will never
+    /// return fuchsia.ui.test.conformance.Result:UNSUPPORTED from any
+    /// method.
+    ConnectToAuxiliaryPuppet(resource table {
+        1: server_end server_end:<fuchsia.ui.test.conformance.Puppet>;
+    });
+
+    /// Enables tests to interact with the graphics compositor.
+    ConnectToFlatland(resource struct {
+        server_end server_end:<fuchsia.ui.composition.Flatland>;
+    });
+
+    /// Enables tests to present a view to the display; note that most tests
+    /// will use a fake display, NOT the host's.
+    ConnectToGraphicalPresenter(resource struct {
+        server_end server_end:<fuchsia.element.GraphicalPresenter>;
+    });
+
+    /// Enables tests to simulate hardware input interactions, e.g. touch
+    /// screen gestures or keyboard strokes.
+    ConnectToInputRegistry(resource struct {
+        server_end server_end:<fuchsia.ui.test.input.Registry>;
+    });
+};
+
+/// Helper to create a `Context` on behalf of a test.
+@discoverable
+protocol Factory {
+
+    /// Spawns a `Context` server instance, and binds `context_server`
+    /// to it.
+    ///
+    /// NOTE: Each Context connection is scoped to a single test case.
+    /// When the client closes the connection, the server will clean up
+    /// all resources associated with the corresponding test, so tests
+    /// MUST hold the connection open until teardown.
+    Create(resource table {
+        1: context_server server_end:<Context>;
+    });
+};
