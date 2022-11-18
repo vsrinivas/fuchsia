@@ -17,7 +17,6 @@
                 "debian_guest",
                 "debian_guest_manager",
                 "termina_guest",
-                "vmm",
             ],
         },
     },

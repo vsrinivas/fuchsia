@@ -202,6 +202,7 @@ fuchsia_component("termina_guest_manager_cmp") {
     ":default_config",
     ":extras_img",
     "//src/ui/wayland/bin/bridge:wayland_bridge",
+    "//src/virtualization/bin/vmm:vmm_component",
   ]
 }
 

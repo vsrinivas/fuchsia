@@ -12,7 +12,6 @@
                 "debian_guest",
                 "debian_guest_manager",
                 "termina_guest",
-                "vmm",
                 "zircon_guest",
                 "zircon_guest_manager",
             ],

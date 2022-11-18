@@ -11,10 +11,7 @@
     },
     facets: {
         "fuchsia.test": {
-            "deprecated-allowed-packages": [
-                "termina_guest",
-                "vmm",
-            ],
+            "deprecated-allowed-packages": [ "termina_guest" ],
         },
     },
 }

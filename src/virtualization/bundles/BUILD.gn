@@ -24,7 +24,6 @@ group("termina") {
   deps = [
     "//src/virtualization/bin/guest",
     "//src/virtualization/bin/termina_guest_manager",
-    "//src/virtualization/bin/vmm",
     "//src/virtualization/packages/termina_guest",
   ]
 }
@@ -37,7 +36,6 @@ group("debian") {
   deps = [
     "//src/virtualization/bin/guest",
     "//src/virtualization/bin/guest_manager:debian_guest_manager",
-    "//src/virtualization/bin/vmm",
     "//src/virtualization/packages/debian_guest",
   ]
 }
@@ -51,7 +49,6 @@ group("zircon") {
   deps = [
     "//src/virtualization/bin/guest",
     "//src/virtualization/bin/guest_manager:zircon_guest_manager",
-    "//src/virtualization/bin/vmm",
     "//src/virtualization/packages/zircon_guest",
   ]
 }

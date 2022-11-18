@@ -64,7 +64,10 @@ fuchsia_package("zircon_guest_manager") {
 
 fuchsia_component("zircon_guest_manager_cmp") {
   manifest = "meta/zircon_guest_manager.cml"
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    "//src/virtualization/bin/vmm:vmm_component",
+  ]
   component_name = "zircon_guest_manager"
 }
 
@@ -74,7 +77,10 @@ fuchsia_package("debian_guest_manager") {
 
 fuchsia_component("debian_guest_manager_cmp") {
   manifest = "meta/debian_guest_manager.cml"
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    "//src/virtualization/bin/vmm:vmm_component",
+  ]
   component_name = "debian_guest_manager"
 }
 

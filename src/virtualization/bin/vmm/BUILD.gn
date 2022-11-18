@@ -193,15 +193,13 @@ fuchsia_component("vmm_component") {
   deps = [
     ":bin",
     ":vmm-resources",
+    "device:components",
   ]
 }
 
 fuchsia_package("vmm_package") {
   package_name = "vmm"
-  deps = [
-    ":vmm_component",
-    "device:components",
-  ]
+  deps = [ ":vmm_component" ]
 }
 
 executable("vmm_unittests") {

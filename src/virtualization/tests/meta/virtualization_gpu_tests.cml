@@ -12,7 +12,6 @@
                 "cursor",
                 "debian_guest",
                 "debian_guest_manager",
-                "vmm",
                 "zircon_guest",
                 "zircon_guest_manager",
             ],
