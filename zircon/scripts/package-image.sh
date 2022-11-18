@@ -117,10 +117,14 @@ case "$(uname -m)" in
     exit 1
     ;;
 esac
+
 HOST_TOOLS_DIR="${ROOT_BUILD_DIR}/host_${HOST_ARCH}"
 LZ4="${HOST_TOOLS_DIR}/lz4"
-MKBOOTIMG="${ZIRCON_DIR}/third_party/tools/android/mkbootimg"
 ZBI="${HOST_TOOLS_DIR}/zbi"
+
+FUCHSIA_DIR="${ROOT_BUILD_DIR}/../.."
+PYTHON="${FUCHSIA_DIR}/scripts/fuchsia-vendored-python"
+MKBOOTIMG="${FUCHSIA_DIR}/zircon/third_party/tools/android/mkbootimg"
 
 # zircon image built by the Zircon build system
 if [[ -z "${ZIRCON_BOOTIMAGE}" ]]; then
@@ -193,7 +197,7 @@ else
 fi
 
 # create our boot.img
-"${MKBOOTIMG}" \
+"${PYTHON}" "${MKBOOTIMG}" \
     --kernel "${COMPRESSED_BOOTIMAGE_DTB}" \
     --kernel_offset ${KERNEL_OFFSET} \
     ${RAMDISK_OPTION} \
