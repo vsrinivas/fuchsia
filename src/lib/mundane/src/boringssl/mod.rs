@@ -76,12 +76,12 @@ mod wrapper;
 mod raw;
 
 // C types
-pub use boringssl_sys::{
+pub use bssl_sys::{
     BIGNUM, CBB, CBS, EC_GROUP, EC_KEY, EVP_MD, EVP_PKEY, HMAC_CTX, MD5_CTX, RC4_KEY, RSA, RSA_F4,
     SHA256_CTX, SHA512_CTX, SHA_CTX,
 };
 // C constants
-pub use boringssl_sys::{
+pub use bssl_sys::{
     NID_X9_62_prime256v1, NID_md5, NID_secp384r1, NID_secp521r1, NID_sha1, NID_sha256, NID_sha384,
     NID_sha512, ED25519_PRIVATE_KEY_LEN, ED25519_PUBLIC_KEY_LEN, ED25519_SIGNATURE_LEN,
     MD5_DIGEST_LENGTH, SHA256_DIGEST_LENGTH, SHA384_DIGEST_LENGTH, SHA512_DIGEST_LENGTH,
@@ -824,9 +824,9 @@ macro_rules! impl_hash {
             #[must_use]
             pub fn $final(
                 &mut self,
-            ) -> [u8; ::boringssl_sys::$digest_len as usize] {
+            ) -> [u8; ::bssl_sys::$digest_len as usize] {
                 unsafe {
-                    let mut md = MaybeUninit::<[u8; ::boringssl_sys::$digest_len as usize]>::uninit();
+                    let mut md = MaybeUninit::<[u8; ::bssl_sys::$digest_len as usize]>::uninit();
                     // SHA1_Final promises to return 1. SHA256_Final,
                     // SHA384_Final, and SHA512_Final all document that they
                     // only fail due to programmer error. The only input to the

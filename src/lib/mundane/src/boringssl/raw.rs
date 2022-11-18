@@ -13,7 +13,7 @@
 //! (e.g., `void` functions).
 
 // Infallible functions and the `size_t` type.
-pub use boringssl_sys::{
+pub use bssl_sys::{
     size_t, CBB_cleanup, CBB_len, CBS_init, CBS_len, CRYPTO_memcmp, EC_GROUP_get_curve_name,
     ED25519_keypair, ED25519_keypair_from_seed, ERR_print_errors_cb, HMAC_CTX_init, HMAC_size,
     RC4_set_key, RSA_bits, RC4,
@@ -24,7 +24,7 @@ use std::num::NonZeroUsize;
 use std::os::raw::{c_char, c_int, c_uint, c_void};
 use std::ptr::{self, NonNull};
 
-use boringssl_sys::{
+use bssl_sys::{
     self as ffi, BIGNUM, BN_GENCB, CBB, CBS, EC_GROUP, EC_KEY, EVP_MD, EVP_PKEY, HMAC_CTX, RSA,
     SHA512_CTX,
 };

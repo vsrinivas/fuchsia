@@ -47,7 +47,7 @@
 #[macro_use]
 mod macros;
 
-extern crate boringssl_sys;
+extern crate bssl_sys;
 
 // Forbid unsafe code except in the boringssl module.
 #[allow(unsafe_code)]

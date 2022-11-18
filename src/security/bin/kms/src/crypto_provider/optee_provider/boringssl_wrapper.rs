@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use boringssl_sys::{
+use bssl_sys::{
     BN_bin2bn, BN_bn2bin, BN_dup, BN_free, BN_new, BN_num_bytes, CBB_cleanup, CBB_finish, CBB_init,
     CBS_init, EC_GROUP_new_by_curve_name, EC_KEY_free, EC_KEY_get0_group, EC_KEY_get0_private_key,
     EC_KEY_get0_public_key, EC_KEY_new_by_curve_name, EC_KEY_parse_private_key,
@@ -400,7 +400,7 @@ impl<'a> Drop for EcPrivateKey<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use boringssl_sys::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1};
+    use bssl_sys::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1};
     use mundane::public::ec::*;
     use mundane::public::rsa::*;
     use mundane::public::*;

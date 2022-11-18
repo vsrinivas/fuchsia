@@ -10,7 +10,7 @@ use self::keysafe::*;
 use crate::crypto_provider::{
     AsymmetricProviderKey, CryptoProvider, CryptoProviderError, ProviderKey, SealingProviderKey,
 };
-use boringssl_sys::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1};
+use bssl_sys::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1};
 use byteorder::{ByteOrder, LittleEndian};
 use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, KeyProvider};
 use tee::*;

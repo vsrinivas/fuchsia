@@ -26,7 +26,7 @@ rustc_binary("bin") {
     "//src/lib/mundane:mundane",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/security/lib/tee/rust",
-    "//third_party/boringssl/rust/boringssl-sys",
+    "//third_party/boringssl/rust/boringssl-sys:bssl-sys",
     "//third_party/rust_crates:aes-gcm",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:base64",

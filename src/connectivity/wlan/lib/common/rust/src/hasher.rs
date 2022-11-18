@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    boringssl_sys::SHA256_DIGEST_LENGTH,
+    bssl_sys::SHA256_DIGEST_LENGTH,
     ieee80211::{MacAddr, Ssid},
     mundane::{
         hash::{Digest, Sha256},

@@ -23,7 +23,7 @@
 #![allow(dead_code)]
 
 use {
-    boringssl_sys::{
+    bssl_sys::{
         AES_set_decrypt_key, AES_set_encrypt_key, AES_unwrap_key, AES_wrap_key, AES_CMAC, AES_KEY,
     },
     std::{convert::TryInto, ptr},

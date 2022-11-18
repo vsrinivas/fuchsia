@@ -7,7 +7,7 @@
 
 use {
     anyhow::{format_err, Error},
-    boringssl_sys::{
+    bssl_sys::{
         BN_CTX_free, BN_CTX_new, BN_add, BN_asc2bn, BN_bin2bn, BN_bn2bin, BN_bn2dec, BN_cmp,
         BN_copy, BN_equal_consttime, BN_free, BN_is_odd, BN_is_one, BN_is_zero, BN_mod_add,
         BN_mod_exp, BN_mod_inverse, BN_mod_mul, BN_mod_sqr, BN_mod_sqrt, BN_new, BN_nnmod,

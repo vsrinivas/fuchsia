@@ -24,7 +24,7 @@ rustc_library("wlan-common") {
     "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/lib/mundane",
-    "//third_party/boringssl/rust/boringssl-sys",
+    "//third_party/boringssl/rust/boringssl-sys:bssl-sys",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:bytes",
