@@ -1037,10 +1037,11 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo, struct ds
       // The final partial page of data from the file is followed by
       // whatever the file's contents there are, but in the memory
       // image that partial page should be all zero.
-      uintptr_t file_end = (uintptr_t)base + ph->p_vaddr + ph->p_filesz;
-      uintptr_t map_end = mapaddr + map_size;
-      if (map_end > file_end)
-        memset((void*)file_end, 0, map_end - file_end);
+      const uintptr_t file_end = (uintptr_t)base + ph->p_vaddr + ph->p_filesz;
+      const uintptr_t partial_page_offset = file_end & (PAGE_SIZE - 1);
+      if (partial_page_offset) {
+        memset((void*)file_end, 0, PAGE_SIZE - partial_page_offset);
+      }
     }
   }
 
