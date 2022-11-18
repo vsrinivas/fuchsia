@@ -19,10 +19,6 @@ FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
 
   av_codec_context_->opaque = this;
   av_codec_context_->get_buffer2 = AllocateBufferForAvFrame;
-// TODO(fxr/87639): remove once we're committed to the new version.
-#if LIBAVCODEC_VERSION_MAJOR == 58
-  av_codec_context_->refcounted_frames = 1;
-#endif
 }
 
 FfmpegDecoderBase::~FfmpegDecoderBase() {}

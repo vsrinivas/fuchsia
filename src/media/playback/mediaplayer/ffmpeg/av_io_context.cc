@@ -7,7 +7,6 @@
 #include <limits>
 
 #include "src/media/playback/mediaplayer/demux/reader.h"
-#include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_init.h"
 extern "C" {
 #include "libavformat/avio.h"
 #include "libavutil/mem.h"
@@ -33,8 +32,6 @@ zx_status_t AvIoContext::Create(std::shared_ptr<Reader> reader, AvIoContextPtr* 
 
   // Internal buffer size used by AVIO for reading.
   constexpr int kBufferSize = 32 * 1024;
-
-  InitFfmpeg();
 
   // Using a raw pointer here, because the io context doesn't understand smart
   // pointers.
@@ -128,7 +125,7 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
     case SEEK_SET:
       if (size_ != -1 && offset >= size_) {
         FX_LOGS(ERROR) << "Seek out of range: offset " << offset << ", whence SEEK_SET, size "
-                        << size_;
+                       << size_;
         return AVERROR(EIO);
       }
 
@@ -138,8 +135,7 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
     case SEEK_CUR:
       if (size_ != -1 && position_ + offset >= size_) {
         FX_LOGS(ERROR) << "Seek out of range: offset " << offset
-                        << ", whence SEEK_CUR, current position " << position_ << ", size "
-                        << size_;
+                       << ", whence SEEK_CUR, current position " << position_ << ", size " << size_;
         return AVERROR(EIO);
       }
 
@@ -154,7 +150,7 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
 
       if (offset < -size_ || offset >= 0) {
         FX_LOGS(ERROR) << "Seek out of range: offset " << offset << ", whence SEEK_END, size "
-                        << size_;
+                       << size_;
         return AVERROR(EIO);
       }
 

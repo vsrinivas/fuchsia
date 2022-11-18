@@ -6,7 +6,6 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FFMPEG_AV_FORMAT_CONTEXT_H_
 
 #include "src/media/playback/mediaplayer/ffmpeg/av_io_context.h"
-#include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_init.h"
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
@@ -22,8 +21,6 @@ using AvFormatContextPtr = std::unique_ptr<AVFormatContext, AVFormatContextDelet
 
 struct AvFormatContext {
   static AvFormatContextPtr OpenInput(const AvIoContextPtr& io_context) {
-    InitFfmpeg();
-
     // We use a raw pointer here, because avformat_open_input wants the
     // opportunity to replace the context (which is why we pass it a pointer
     // to the pointer). This can't happen if the context is already managed by

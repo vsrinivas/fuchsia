@@ -24,10 +24,6 @@ static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, ui
 
 std::optional<std::unique_ptr<AvCodecContext>> AvCodecContext::CreateDecoder(
     const fuchsia::media::FormatDetails& format_details, GetBufferCallback get_buffer_callback) {
-// TODO(fxr/87639): remove once we're committed to the new version.
-#if LIBAVFORMAT_VERSION_MAJOR == 58
-  avcodec_register_all();
-#endif
   if (!format_details.has_mime_type()) {
     return std::nullopt;
   }
