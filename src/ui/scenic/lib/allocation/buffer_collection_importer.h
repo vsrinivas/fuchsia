@@ -91,6 +91,7 @@ class BufferCollectionImporter {
   // the buffer collection is fully allocated/validated. The return value indicates successful
   // importation via |true| and a failed importation via |false|. Returns false if |collection_id|
   // is already imported. The collection_id can be reused if the importation fails.
+  // |token| must be a valid sysmem token.
   // |usage| determines the type of buffer collection to be imported.
   // |size| may be optionally set to indicate the intended size usage so that it may be specified
   // when setting constraints in |token|.

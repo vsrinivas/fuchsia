@@ -8,6 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/trace/event.h>
 #include <zircon/pixelformat.h>
+#include <zircon/status.h>
 
 #include <cstdint>
 #include <vector>
@@ -22,7 +23,6 @@ namespace flatland {
 
 namespace {
 
-using fuchsia::ui::composition::Orientation;
 using fhd_Transform = fuchsia::hardware::display::Transform;
 
 // Debugging color used to highlight images that have gone through the GPU rendering path.
@@ -100,6 +100,73 @@ fuchsia::hardware::display::AlphaMode GetAlphaMode(
   return alpha_mode;
 }
 
+// Creates a duplicate of |token| in |duplicate|.
+// Returns an error string if it fails, otherwise std::nullopt.
+std::optional<std::string> DuplicateToken(
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr& token,
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr& duplicate) {
+  std::vector<fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>> dup_tokens;
+  if (const auto status = token->DuplicateSync({ZX_RIGHT_SAME_RIGHTS}, &dup_tokens);
+      status != ZX_OK) {
+    return std::string("Could not duplicate token: ") + zx_status_get_string(status);
+  }
+  FX_DCHECK(dup_tokens.size() == 1);
+  duplicate = dup_tokens.front().BindSync();
+  return std::nullopt;
+}
+
+// Consumes |token| and returns a new AttachToken.
+// Returns std::nullopt on failure.
+std::optional<fuchsia::sysmem::BufferCollectionTokenSyncPtr> ConvertToAttachToken(
+    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr token) {
+  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_sync_ptr;
+  sysmem_allocator->BindSharedCollection(std::move(token), buffer_collection_sync_ptr.NewRequest());
+  if (const auto status = buffer_collection_sync_ptr->Sync(); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not sync token: " << zx_status_get_string(status);
+    return std::nullopt;
+  }
+
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr attach_token;
+  if (const auto status =
+          buffer_collection_sync_ptr->AttachToken(ZX_RIGHT_SAME_RIGHTS, attach_token.NewRequest());
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not create AttachToken: " << zx_status_get_string(status);
+    return std::nullopt;
+  }
+  if (const auto status = buffer_collection_sync_ptr->Close(); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not close token: " << zx_status_get_string(status);
+    return std::nullopt;
+  }
+
+  return attach_token;
+}
+
+// Returns a BufferCollectionSyncPtr duplicate of |token| with empty constraints set.
+// Since it has the same failure domain as |token|, it can be used to check the status of
+// allocations made from that collection.
+std::optional<fuchsia::sysmem::BufferCollectionSyncPtr>
+CreateBufferCollectionPtrWithEmptyConstraints(
+    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr& token) {
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr token_dup;
+  if (auto error = DuplicateToken(token, token_dup)) {
+    FX_LOGS(ERROR) << *error;
+    return std::nullopt;
+  }
+
+  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  sysmem_allocator->BindSharedCollection(std::move(token_dup), buffer_collection.NewRequest());
+  if (const auto status =
+          buffer_collection->SetConstraints(false, fuchsia::sysmem::BufferCollectionConstraints{});
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not set constraints: " << zx_status_get_string(status);
+    return std::nullopt;
+  }
+
+  return buffer_collection;
+}
+
 }  // anonymous namespace
 
 DisplayCompositor::DisplayCompositor(
@@ -123,11 +190,11 @@ DisplayCompositor::~DisplayCompositor() {
   DiscardConfig();
   for (const auto& [_, data] : display_engine_data_map_) {
     for (const auto& layer : data.layers) {
-      (*display_controller_.get())->DestroyLayer(layer);
+      (*display_controller_)->DestroyLayer(layer);
     }
     for (const auto& event_data : data.frame_event_datas) {
-      (*display_controller_.get())->ReleaseEvent(event_data.wait_id);
-      (*display_controller_.get())->ReleaseEvent(event_data.signal_id);
+      (*display_controller_)->ReleaseEvent(event_data.wait_id);
+      (*display_controller_)->ReleaseEvent(event_data.signal_id);
     }
   }
 
@@ -145,120 +212,72 @@ bool DisplayCompositor::ImportBufferCollection(
   // Expect the default Buffer Collection usage type.
   FX_DCHECK(usage == BufferCollectionUsage::kClientImage);
 
-  // Create a duped renderer token.
-  auto sync_token = token.BindSync();
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr renderer_token;
-  zx_status_t status = sync_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, renderer_token.NewRequest());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot duplicate token. The client may have invalidated the token.";
+  auto renderer_token = token.BindSync();
+
+  // Create a token for the display controller to set constraints on.
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
+  if (auto error = DuplicateToken(renderer_token, display_token)) {
+    FX_LOGS(ERROR) << *error;
     return false;
   }
 
-  // Import the collection to the renderer.
+  // Set renderer constraints.
   if (!renderer_->ImportBufferCollection(collection_id, sysmem_allocator, std::move(renderer_token),
                                          usage, size)) {
     FX_LOGS(INFO) << "Renderer could not import buffer collection.";
     return false;
   }
 
-  if (import_mode_ == BufferCollectionImportMode::RendererOnly) {
-    status = sync_token->Close();
-    return true;
+  switch (import_mode_) {
+    case BufferCollectionImportMode::RendererOnly:
+      // Fall back to using the renderer. Don't attempt direct-to-display and don't keep any
+      // references.
+      if (const auto status = display_token->Close(); status != ZX_OK) {
+        FX_LOGS(ERROR) << "Could not close token: " << zx_status_get_string(status);
+      }
+      return true;
+    case BufferCollectionImportMode::EnforceDisplayConstraints:
+      // Continue to use |display_token| as is. Allocation will fail if the display constraints are
+      // incompatible.
+      break;
+    case BufferCollectionImportMode::AttemptDisplayConstraints:
+      // Replace |display_token| with an AttachToken. In this mode we get direct-to-display in case
+      // the display "just happens" to be happy with what the client and renderer agreed on.
+      // TODO(fxbug.dev/74423): Replace with prunable token when it is available.
+      if (auto attach_token = ConvertToAttachToken(sysmem_allocator, std::move(display_token))) {
+        display_token = std::move(*attach_token);
+      } else {
+        return false;
+      }
+      break;
   }
 
-  // Create token for display. In EnforceDisplayConstraints mode, duplicate a token and pass it to
-  // display. The allocation will fail if it the allocation is not directly displayable. In
-  // AttemptDisplayConstraints mode, instead of passing a real token, we pass an AttachToken to
-  // display. This way, display does not affect the allocation and we directly display if it happens
-  // to work. In RendererOnly mode, we don't attempt directly displaying and fallback to renderer.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
-  if (import_mode_ == BufferCollectionImportMode::EnforceDisplayConstraints) {
-    status = sync_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, display_token.NewRequest());
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Cannot duplicate token. The client may have invalidated the token.";
-      return false;
-    }
-    status = sync_token->Close();
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Cannot close token. The client may have invalidated the token.";
-      return false;
-    }
-  } else if (import_mode_ == BufferCollectionImportMode::AttemptDisplayConstraints) {
-    fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_sync_ptr;
-    sysmem_allocator->BindSharedCollection(std::move(sync_token),
-                                           buffer_collection_sync_ptr.NewRequest());
-    status = buffer_collection_sync_ptr->Sync();
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Cannot sync token. The client may have invalidated the token.";
-      return false;
-    }
-    // TODO(fxbug.dev/74423): Replace with prunable token when it is available.
-    status =
-        buffer_collection_sync_ptr->AttachToken(ZX_RIGHT_SAME_RIGHTS, display_token.NewRequest());
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Cannot create AttachToken. The client may have invalidated the token.";
-      return false;
-    }
-    status = buffer_collection_sync_ptr->Close();
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Cannot close token. The client may have invalidated the token.";
-      return false;
-    }
+  // Create a BufferCollectionPtr from a duplicate of |display_token| with which to later check if
+  // buffers allocated from the BufferCollection are display-compatible.
+  if (auto collection_ptr =
+          CreateBufferCollectionPtrWithEmptyConstraints(sysmem_allocator, display_token)) {
+    display_buffer_collection_ptrs_[collection_id] = std::move(*collection_ptr);
   } else {
-    // BufferCollectionImportMode::RendererOnly was handled above.
-    FX_NOTREACHED();
-  }
-
-  // Duplicate display token to check later if attach token can be used in the allocated buffers.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token_dup;
-  status = display_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, display_token_dup.NewRequest());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot duplicate token. The client may have invalidated the token.";
     return false;
   }
-  status = display_token->Sync();
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot sync token. The client may have invalidated the token.";
-    return false;
-  }
-  fuchsia::sysmem::BufferCollectionSyncPtr display_token_sync_ptr;
-  sysmem_allocator->BindSharedCollection(std::move(display_token),
-                                         display_token_sync_ptr.NewRequest());
-  {
-    // Intentionally empty constraints. |display_token_sync_ptr| is used to detect logical
-    // allocation completion and success or failure, as seen by the |renderer_token|, because
-    // |display_token_sync_ptr| and |renderer_token| are in the same sysmem failure domain (child
-    // domain of |buffer_collection_sync_ptr|).
-    fuchsia::sysmem::BufferCollectionConstraints constraints;
-    status = display_token_sync_ptr->SetConstraints(false, constraints);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Cannot set constraints. The client may have invalidated the token.";
-      return false;
-    }
-  }
-  display_tokens_[collection_id] = std::move(display_token_sync_ptr);
 
-  // Set image config fields to zero to indicate that a specific size, format, or type is
-  // not required.
-  fuchsia::hardware::display::ImageConfig image_config;
-  image_config.pixel_format = ZX_PIXEL_FORMAT_NONE;
-  image_config.type = 0;
-  std::unique_lock<std::mutex> lock(lock_);
-  auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
-                                                    std::move(display_token_dup), image_config);
-
-  return result;
+  std::scoped_lock lock(lock_);  // Lock |display_controller_|.
+  // Import the buffer collection into the display controller, setting display constraints.
+  return scenic_impl::ImportBufferCollection(
+      collection_id, *display_controller_, std::move(display_token),
+      // Indicate that no specific size, format, or type is required.
+      fuchsia::hardware::display::ImageConfig{.pixel_format = ZX_PIXEL_FORMAT_NONE, .type = 0});
 }
 
 void DisplayCompositor::ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id,
                                                 BufferCollectionUsage usage) {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::ReleaseBufferCollection");
   FX_DCHECK(usage == BufferCollectionUsage::kClientImage);
-  std::unique_lock<std::mutex> lock(lock_);
+  std::scoped_lock lock(lock_);
   FX_DCHECK(display_controller_);
-  (*display_controller_.get())->ReleaseBufferCollection(collection_id);
+  (*display_controller_)->ReleaseBufferCollection(collection_id);
   renderer_->ReleaseBufferCollection(collection_id, usage);
-  display_tokens_.erase(collection_id);
+  display_buffer_collection_ptrs_.erase(collection_id);
   buffer_collection_supports_display_.erase(collection_id);
 }
 
@@ -303,13 +322,13 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
   if (buffer_collection_supports_display_.find(metadata.collection_id) ==
       buffer_collection_supports_display_.end()) {
     zx_status_t allocation_status = ZX_OK;
-    auto status =
-        display_tokens_[metadata.collection_id]->CheckBuffersAllocated(&allocation_status);
+    auto status = display_buffer_collection_ptrs_[metadata.collection_id]->CheckBuffersAllocated(
+        &allocation_status);
     auto supports_display = status == ZX_OK && allocation_status == ZX_OK;
     buffer_collection_supports_display_[metadata.collection_id] = supports_display;
     if (supports_display) {
       fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
-      status = display_tokens_[metadata.collection_id]->WaitForBuffersAllocated(
+      status = display_buffer_collection_ptrs_[metadata.collection_id]->WaitForBuffersAllocated(
           &allocation_status, &buffer_collection_info);
       if (status != ZX_OK || allocation_status != ZX_OK) {
         FX_LOGS(ERROR) << "WaitForBuffersAllocated failed: " << status << ":" << allocation_status;
@@ -318,8 +337,8 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
       buffer_collection_pixel_format_[metadata.collection_id] =
           buffer_collection_info.settings.image_format_constraints.pixel_format;
     }
-    status = display_tokens_[metadata.collection_id]->Close();
-    display_tokens_.erase(metadata.collection_id);
+    status = display_buffer_collection_ptrs_[metadata.collection_id]->Close();
+    display_buffer_collection_ptrs_.erase(metadata.collection_id);
   }
 
   // TODO(fxbug.dev/85601): Remove after YUV buffers can be imported to display. We filter YUV
@@ -353,7 +372,7 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
 
   // Scope the lock.
   {
-    std::unique_lock<std::mutex> lock(lock_);
+    std::scoped_lock lock(lock_);
     auto status = (*display_controller_.get())
                       ->ImportImage2(image_config, metadata.collection_id, metadata.identifier,
                                      metadata.vmo_index, &import_image_status);
@@ -373,9 +392,9 @@ void DisplayCompositor::ReleaseBufferImage(allocation::GlobalImageId image_id) {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::ReleaseBufferImage");
 
   // Locks the rest of the function.
-  std::unique_lock<std::mutex> lock(lock_);
+  std::scoped_lock lock(lock_);
   FX_DCHECK(display_controller_);
-  (*display_controller_.get())->ReleaseImage(image_id);
+  (*display_controller_)->ReleaseImage(image_id);
 
   // Release image from the renderer.
   renderer_->ReleaseBufferImage(image_id);
@@ -384,11 +403,11 @@ void DisplayCompositor::ReleaseBufferImage(allocation::GlobalImageId image_id) {
 }
 
 uint64_t DisplayCompositor::CreateDisplayLayer() {
-  std::unique_lock<std::mutex> lock(lock_);
+  std::scoped_lock lock(lock_);
   uint64_t layer_id;
   zx_status_t create_layer_status;
   zx_status_t transport_status =
-      (*display_controller_.get())->CreateLayer(&create_layer_status, &layer_id);
+      (*display_controller_)->CreateLayer(&create_layer_status, &layer_id);
   if (create_layer_status != ZX_OK || transport_status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create layer, " << create_layer_status;
     return 0;
@@ -398,8 +417,8 @@ uint64_t DisplayCompositor::CreateDisplayLayer() {
 
 void DisplayCompositor::SetDisplayLayers(uint64_t display_id, const std::vector<uint64_t>& layers) {
   // Set all of the layers for each of the images on the display.
-  std::unique_lock<std::mutex> lock(lock_);
-  auto status = (*display_controller_.get())->SetDisplayLayers(display_id, layers);
+  std::scoped_lock lock(lock_);
+  auto status = (*display_controller_)->SetDisplayLayers(display_id, layers);
   FX_DCHECK(status == ZX_OK);
 }
 
@@ -411,7 +430,7 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
   // the given display, then they cannot be directly composited to the display in hardware.
   std::vector<uint64_t> layers;
   {
-    std::unique_lock<std::mutex> lock(lock_);
+    std::scoped_lock lock(lock_);
     auto it = display_engine_data_map_.find(data.display_id);
     FX_DCHECK(it != display_engine_data_map_.end());
     layers = it->second.layers;
@@ -470,7 +489,7 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
 
 void DisplayCompositor::ApplyLayerColor(uint64_t layer_id, ImageRect rectangle,
                                         allocation::ImageMetadata image) {
-  std::unique_lock<std::mutex> lock(lock_);
+  std::scoped_lock lock(lock_);
 
   // We have to convert the image_metadata's multiply color, which is an array of normalized
   // floating point values, to an unnormalized array of uint8_ts in the range 0-255.
@@ -479,7 +498,7 @@ void DisplayCompositor::ApplyLayerColor(uint64_t layer_id, ImageRect rectangle,
                               static_cast<uint8_t>(255 * image.multiply_color[2]),
                               static_cast<uint8_t>(255 * image.multiply_color[3])};
 
-  (*display_controller_.get())->SetLayerColorConfig(layer_id, ZX_PIXEL_FORMAT_ARGB_8888, col);
+  (*display_controller_)->SetLayerColorConfig(layer_id, ZX_PIXEL_FORMAT_ARGB_8888, col);
 
 // TODO(fxbug.dev/104887): Currently, not all display hardware supports the ability to
 // set either the position or the alpha on a color layer, as color layers are not primary
@@ -497,9 +516,9 @@ void DisplayCompositor::ApplyLayerColor(uint64_t layer_id, ImageRect rectangle,
 
   fhd_Transform transform = GetDisplayTransformFromOrientationAndFlip(rectangle.orientation, image.flip);
 
-  (*display_controller_.get())->SetLayerPrimaryPosition(layer_id, transform, src, dst);
+  (*display_controller_)->SetLayerPrimaryPosition(layer_id, transform, src, dst);
   auto alpha_mode = GetAlphaMode(image.blend_mode);
-  (*display_controller_.get())->SetLayerPrimaryAlpha(layer_id, alpha_mode, image.multiply_color[3]);
+  (*display_controller_)->SetLayerPrimaryAlpha(layer_id, alpha_mode, image.multiply_color[3]);
 #endif
 }
 
@@ -511,7 +530,7 @@ void DisplayCompositor::ApplyLayerImage(uint64_t layer_id, ImageRect rectangle,
   fhd_Transform transform =
       GetDisplayTransformFromOrientationAndFlip(rectangle.orientation, image.flip);
 
-  std::unique_lock<std::mutex> lock(lock_);
+  std::scoped_lock lock(lock_);
 
   // TODO(fxbug.dev/71344): Pixel format should be ignored when using sysmem. We do not want to have
   // to deal with this default image format.
@@ -523,25 +542,25 @@ void DisplayCompositor::ApplyLayerImage(uint64_t layer_id, ImageRect rectangle,
       .pixel_format = BufferCollectionPixelFormatToZirconFormat(pixel_format),
       .type = BufferCollectionPixelFormatToImageType(pixel_format)};
 
-  (*display_controller_.get())->SetLayerPrimaryConfig(layer_id, image_config);
+  (*display_controller_)->SetLayerPrimaryConfig(layer_id, image_config);
 
   FX_DCHECK(src.width && src.height) << "Source frame cannot be empty.";
   FX_DCHECK(dst.width && dst.height) << "Destination frame cannot be empty.";
-  (*display_controller_.get())->SetLayerPrimaryPosition(layer_id, transform, src, dst);
+  (*display_controller_)->SetLayerPrimaryPosition(layer_id, transform, src, dst);
 
   auto alpha_mode = GetAlphaMode(image.blend_mode);
-  (*display_controller_.get())->SetLayerPrimaryAlpha(layer_id, alpha_mode, image.multiply_color[3]);
+  (*display_controller_)->SetLayerPrimaryAlpha(layer_id, alpha_mode, image.multiply_color[3]);
 
   // Set the imported image on the layer.
-  (*display_controller_.get())->SetLayerImage(layer_id, image.identifier, wait_id, signal_id);
+  (*display_controller_)->SetLayerImage(layer_id, image.identifier, wait_id, signal_id);
 }
 
 DisplayCompositor::DisplayConfigResponse DisplayCompositor::CheckConfig() {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::CheckConfig");
   fuchsia::hardware::display::ConfigResult result;
   std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
-  std::unique_lock<std::mutex> lock(lock_);
-  (*display_controller_.get())->CheckConfig(/*discard*/ false, &result, &ops);
+  std::scoped_lock lock(lock_);
+  (*display_controller_)->CheckConfig(/*discard*/ false, &result, &ops);
   return {.result = result, .ops = ops};
 }
 
@@ -550,17 +569,17 @@ void DisplayCompositor::DiscardConfig() {
   pending_images_in_config_.clear();
   fuchsia::hardware::display::ConfigResult result;
   std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
-  std::unique_lock<std::mutex> lock(lock_);
-  (*display_controller_.get())->CheckConfig(/*discard*/ true, &result, &ops);
+  std::scoped_lock lock(lock_);
+  (*display_controller_)->CheckConfig(/*discard*/ true, &result, &ops);
 }
 
 fuchsia::hardware::display::ConfigStamp DisplayCompositor::ApplyConfig() {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::ApplyConfig");
-  std::unique_lock<std::mutex> lock(lock_);
-  auto status = (*display_controller_.get())->ApplyConfig();
+  std::scoped_lock lock(lock_);
+  auto status = (*display_controller_)->ApplyConfig();
   FX_DCHECK(status == ZX_OK);
   fuchsia::hardware::display::ConfigStamp pending_config_stamp;
-  status = (*display_controller_.get())->GetLatestAppliedConfigStamp(&pending_config_stamp);
+  status = (*display_controller_)->GetLatestAppliedConfigStamp(&pending_config_stamp);
   FX_DCHECK(status == ZX_OK);
   return pending_config_stamp;
 }
@@ -787,7 +806,7 @@ void DisplayCompositor::OnVsync(zx::time timestamp,
 DisplayCompositor::FrameEventData DisplayCompositor::NewFrameEventData() {
   FrameEventData result;
 
-  std::unique_lock<std::mutex> lock(lock_);
+  std::scoped_lock lock(lock_);
 
   // The DC waits on this to be signaled by the renderer.
   auto status = zx::event::create(0, &result.wait_event);
@@ -809,7 +828,7 @@ DisplayCompositor::FrameEventData DisplayCompositor::NewFrameEventData() {
 DisplayCompositor::ImageEventData DisplayCompositor::NewImageEventData() {
   ImageEventData result;
 
-  std::unique_lock<std::mutex> lock(lock_);
+  std::scoped_lock lock(lock_);
 
   // The DC signals this once it has set the layer image.  We pre-signal this event so the first
   // frame rendered with it behaves as though it was previously OKed for recycling.
@@ -889,7 +908,7 @@ void DisplayCompositor::SetColorConversionValues(const std::array<float, 9>& coe
                                                  const std::array<float, 3>& preoffsets,
                                                  const std::array<float, 3>& postoffsets) {
   // Lock the whole function.
-  std::unique_lock<std::mutex> lock(lock_);
+  std::scoped_lock lock(lock_);
 
   cc_state_machine_.SetData(
       {.coefficients = coefficients, .preoffsets = preoffsets, .postoffsets = postoffsets});

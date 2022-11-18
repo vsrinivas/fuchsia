@@ -233,11 +233,12 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   // that display in both the hardware and software composition paths.
   std::unordered_map<uint64_t, DisplayEngineData> display_engine_data_map_;
 
-  // Maps a buffer collection ID to a BufferCollectionSyncPtr. This is used as a bridge between
-  // ImportBufferCollection() and ImportBufferImage() calls, so that we can check if the display
-  // token can be used on the existing allocation.
+  // Maps a buffer collection ID to a BufferCollectionSyncPtr in the same domain as the token with
+  // display constraints set. This is used as a bridge between ImportBufferCollection() and
+  // ImportBufferImage() calls, so  that we can check if the existing allocation is
+  // display-compatible.
   std::unordered_map<allocation::GlobalBufferCollectionId, fuchsia::sysmem::BufferCollectionSyncPtr>
-      display_tokens_;
+      display_buffer_collection_ptrs_;
 
   // Maps a buffer collection ID to a boolean indicating if it can be imported into display.
   std::unordered_map<allocation::GlobalBufferCollectionId, bool>
