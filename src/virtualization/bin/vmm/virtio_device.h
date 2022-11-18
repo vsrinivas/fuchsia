@@ -148,14 +148,15 @@ class VirtioComponentDevice {
     fuchsia::component::Realm_CreateChild_Result create_res;
     status = realm_->CreateChild({.name = collection_name}, std::move(child_decl),
                                  fuchsia::component::CreateChildArgs(), &create_res);
-
-    if (status != ZX_OK || create_res.is_err()) {
-      FX_PLOGS(ERROR, status) << "Failed to CreateDynamicChild. Realm_CreateChild_Result: "
-                              << static_cast<int64_t>(create_res.err());
-      if (status == ZX_OK) {
-        status = ZX_ERR_NOT_FOUND;
-      }
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to send CreateChild message";
       return status;
+    }
+
+    if (create_res.is_err()) {
+      FX_LOGS(ERROR) << "Failed to create dynamic child: "
+                     << static_cast<int64_t>(create_res.err());
+      return ZX_ERR_INTERNAL;
     }
 
     fuchsia::component::Realm_OpenExposedDir_Result open_res;
