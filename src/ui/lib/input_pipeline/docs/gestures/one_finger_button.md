@@ -15,8 +15,6 @@ itself to trigger the button then move the finger more than threshold.
 Notably, this includes discarding any spurious motion that occurs during the click
 (when a button has been pressed but not yet released).
 
-This recognizer will replace click recognizer and one finger drag recognizer.
-
 # State machine
 
 The one finger button recognizer implements the state machine below.

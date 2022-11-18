@@ -1,0 +1,566 @@
+<g xmlns="http://www.w3.org/2000/svg" id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 1487)">
+<polygon fill="white" stroke="none" points="-4,4 -4,-1487 1242.79,-1487 1242.79,4 -4,4"/>
+<text text-anchor="middle" x="619.4" y="-1467.8" font-family="Times,serif" font-size="14.00">TWO-FINGER BUTTON DOWN RECOGNIZER</text>
+<g id="clust6" class="cluster">
+<title>cluster_forward_motion</title>
+<polygon fill="none" stroke="black" points="205.29,-212 205.29,-391 636.79,-391 636.79,-212 205.29,-212"/>
+<text text-anchor="middle" x="421.04" y="-375.8" font-family="Times,serif" font-size="14.00">DragWinner</text>
+</g>
+<g id="clust1" class="cluster">
+<title>cluster_initial_contender</title>
+<polygon fill="none" stroke="black" points="219.29,-1248 219.29,-1452 666.29,-1452 666.29,-1248 219.29,-1248"/>
+<text text-anchor="middle" x="442.79" y="-1436.8" font-family="Times,serif" font-size="14.00">InitialContender</text>
+<text text-anchor="middle" x="442.79" y="-1421.8" font-family="Times,serif" font-size="14.00">`impl Contender`</text>
+</g>
+<g id="clust5" class="cluster">
+<title>cluster_forward_button_down</title>
+<polygon fill="none" stroke="black" points="205.29,-399 205.29,-668 1230.79,-668 1230.79,-399 205.29,-399"/>
+<text text-anchor="middle" x="718.04" y="-652.8" font-family="Times,serif" font-size="14.00">ButtonDownWinner</text>
+</g>
+<g id="clust2" class="cluster">
+<title>cluster_1_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="193.29,-1036 193.29,-1240 1218.29,-1240 1218.29,-1036 193.29,-1036"/>
+<text text-anchor="middle" x="705.79" y="-1224.8" font-family="Times,serif" font-size="14.00">OneFingerContactContender</text>
+<text text-anchor="middle" x="705.79" y="-1209.8" font-family="Times,serif" font-size="14.00">`impl Contender`</text>
+</g>
+<g id="clust3" class="cluster">
+<title>cluster_2_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="193.29,-817 193.29,-1028 1191.29,-1028 1191.29,-817 193.29,-817"/>
+<text text-anchor="middle" x="692.29" y="-1012.8" font-family="Times,serif" font-size="14.00">TwoFingerContactContender</text>
+<text text-anchor="middle" x="692.29" y="-997.8" font-family="Times,serif" font-size="14.00">`impl Contender`</text>
+</g>
+<g id="clust4" class="cluster">
+<title>cluster_matched_contender</title>
+<polygon fill="none" stroke="black" points="142.79,-676 142.79,-809 409.79,-809 409.79,-676 142.79,-676"/>
+<text text-anchor="middle" x="276.29" y="-793.8" font-family="Times,serif" font-size="14.00">MatchedContender</text>
+</g>
+<g id="clust7" class="cluster">
+<title>cluster_ignore_motion_after_button_up</title>
+<polygon fill="none" stroke="black" points="209.29,-8 209.29,-204 930.29,-204 930.29,-8 209.29,-8"/>
+<text text-anchor="middle" x="569.79" y="-188.8" font-family="Times,serif" font-size="14.00">ButtonUpWinner</text>
+</g>
+<!-- arena -->
+<g id="node1" class="node">
+<title>arena</title>
+<ellipse fill="none" stroke="black" cx="33.9" cy="-731" rx="29.81" ry="29.81"/>
+<ellipse fill="none" stroke="black" cx="33.9" cy="-731" rx="33.8" ry="33.8"/>
+<text text-anchor="middle" x="33.9" y="-727.3" font-family="Times,serif" font-size="14.00">arena</text>
+</g>
+<!-- examine_at_initial_contender -->
+<g id="node2" class="node">
+<title>examine_at_initial_contender</title>
+<polygon fill="none" stroke="black" points="276.29,-1341 227.29,-1303 276.29,-1265 325.29,-1303 276.29,-1341"/>
+<text text-anchor="middle" x="276.29" y="-1306.8" font-family="Times,serif" font-size="14.00">finger</text>
+<text text-anchor="middle" x="276.29" y="-1291.8" font-family="Times,serif" font-size="14.00">count</text>
+</g>
+<!-- arena&#45;&gt;examine_at_initial_contender -->
+<g id="edge1" class="edge">
+<title>arena-&gt;examine_at_initial_contender</title>
+<path fill="none" stroke="black" d="M37.72,-764.83C46.93,-867.26 79.17,-1171.49 142.79,-1244 164.71,-1268.97 199.23,-1283.88 227.54,-1292.46"/>
+<polygon fill="black" stroke="black" points="226.69,-1295.85 237.27,-1295.23 228.61,-1289.12 226.69,-1295.85"/>
+<text text-anchor="middle" x="109.29" y="-1242.8" font-family="Times,serif" font-size="14.00">examine</text>
+<text text-anchor="middle" x="109.29" y="-1227.8" font-family="Times,serif" font-size="14.00">event()</text>
+</g>
+<!-- examine_at_1_finger_contact_contender -->
+<g id="node6" class="node">
+<title>examine_at_1_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="276.29,-1150 201.29,-1097 276.29,-1044 351.29,-1097 276.29,-1150"/>
+<text text-anchor="middle" x="276.29" y="-1108.3" font-family="Times,serif" font-size="14.00">movement</text>
+<text text-anchor="middle" x="276.29" y="-1093.3" font-family="Times,serif" font-size="14.00">&lt;</text>
+<text text-anchor="middle" x="276.29" y="-1078.3" font-family="Times,serif" font-size="14.00">threshold?</text>
+</g>
+<!-- arena&#45;&gt;examine_at_1_finger_contact_contender -->
+<g id="edge5" class="edge">
+<title>arena-&gt;examine_at_1_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M38.7,-765.02C47.11,-825.65 72.5,-953.37 142.79,-1032 161.5,-1052.92 188.44,-1067.84 213.16,-1078.06"/>
+<polygon fill="black" stroke="black" points="211.91,-1081.33 222.5,-1081.75 214.49,-1074.82 211.91,-1081.33"/>
+<text text-anchor="middle" x="109.29" y="-1036.8" font-family="Times,serif" font-size="14.00">examine</text>
+<text text-anchor="middle" x="109.29" y="-1021.8" font-family="Times,serif" font-size="14.00">event()</text>
+</g>
+<!-- examine_at_2_finger_contact_contender -->
+<g id="node12" class="node">
+<title>examine_at_2_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="276.29,-931 201.29,-878 276.29,-825 351.29,-878 276.29,-931"/>
+<text text-anchor="middle" x="276.29" y="-889.3" font-family="Times,serif" font-size="14.00">movement</text>
+<text text-anchor="middle" x="276.29" y="-874.3" font-family="Times,serif" font-size="14.00">&lt;</text>
+<text text-anchor="middle" x="276.29" y="-859.3" font-family="Times,serif" font-size="14.00">threshold?</text>
+</g>
+<!-- arena&#45;&gt;examine_at_2_finger_contact_contender -->
+<g id="edge13" class="edge">
+<title>arena-&gt;examine_at_2_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M56.78,-756.46C65.28,-765.48 75.46,-775.3 85.79,-783 126.47,-813.3 178.27,-838.51 217.43,-855.33"/>
+<polygon fill="black" stroke="black" points="216.53,-858.75 227.1,-859.42 219.26,-852.3 216.53,-858.75"/>
+<text text-anchor="middle" x="109.29" y="-829.8" font-family="Times,serif" font-size="14.00">examine</text>
+<text text-anchor="middle" x="109.29" y="-814.8" font-family="Times,serif" font-size="14.00">event()</text>
+</g>
+<!-- verify_at_matched_contender -->
+<g id="node18" class="node">
+<title>verify_at_matched_contender</title>
+<polygon fill="none" stroke="black" points="331.29,-778 221.29,-778 221.29,-740 331.29,-740 331.29,-778"/>
+<text text-anchor="middle" x="276.29" y="-762.8" font-family="Times,serif" font-size="14.00">nothing</text>
+<text text-anchor="middle" x="276.29" y="-747.8" font-family="Times,serif" font-size="14.00">should never call</text>
+</g>
+<!-- arena&#45;&gt;verify_at_matched_contender -->
+<g id="edge20" class="edge">
+<title>arena-&gt;verify_at_matched_contender</title>
+<path fill="none" stroke="black" d="M66.79,-739.28C73.06,-740.69 79.61,-742.02 85.79,-743 127.22,-749.6 174.21,-753.59 211.03,-755.93"/>
+<polygon fill="black" stroke="black" points="210.93,-759.43 221.13,-756.55 211.36,-752.45 210.93,-759.43"/>
+<text text-anchor="middle" x="109.29" y="-767.8" font-family="Times,serif" font-size="14.00">verify</text>
+<text text-anchor="middle" x="109.29" y="-752.8" font-family="Times,serif" font-size="14.00">event()</text>
+</g>
+<!-- return_button_down_winner_at_matched_contender -->
+<g id="node19" class="node">
+<title>return_button_down_winner_at_matched_contender</title>
+<polygon fill="none" stroke="black" points="401.79,-722 150.79,-722 150.79,-684 401.79,-684 401.79,-722"/>
+<text text-anchor="middle" x="276.29" y="-706.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="276.29" y="-691.8" font-family="Times,serif" font-size="14.00">vec![events], Winner, ButtonDownWinner</text>
+</g>
+<!-- arena&#45;&gt;return_button_down_winner_at_matched_contender -->
+<g id="edge21" class="edge">
+<title>arena-&gt;return_button_down_winner_at_matched_contender</title>
+<path fill="none" stroke="black" d="M59.29,-708.53C67.18,-702.64 76.34,-697.07 85.79,-694 103.19,-688.35 121.95,-685.57 140.67,-684.69"/>
+<polygon fill="black" stroke="black" points="140.85,-688.18 150.75,-684.39 140.65,-681.18 140.85,-688.18"/>
+<text text-anchor="middle" x="109.29" y="-727.8" font-family="Times,serif" font-size="14.00">process</text>
+<text text-anchor="middle" x="109.29" y="-712.8" font-family="Times,serif" font-size="14.00">buffered</text>
+<text text-anchor="middle" x="109.29" y="-697.8" font-family="Times,serif" font-size="14.00">events()</text>
+</g>
+<!-- process_at_button_down_winner -->
+<g id="node20" class="node">
+<title>process_at_button_down_winner</title>
+<polygon fill="none" stroke="black" points="276.29,-637 213.29,-599 276.29,-561 339.29,-599 276.29,-637"/>
+<text text-anchor="middle" x="276.29" y="-602.8" font-family="Times,serif" font-size="14.00">button</text>
+<text text-anchor="middle" x="276.29" y="-587.8" font-family="Times,serif" font-size="14.00">pressed?</text>
+</g>
+<!-- arena&#45;&gt;process_at_button_down_winner -->
+<g id="edge22" class="edge">
+<title>arena-&gt;process_at_button_down_winner</title>
+<path fill="none" stroke="black" d="M44.3,-698.37C52.04,-677.36 65.17,-651.22 85.79,-636 119.83,-610.87 166.38,-601.53 204.81,-598.51"/>
+<polygon fill="black" stroke="black" points="205.16,-602 214.91,-597.85 204.7,-595.01 205.16,-602"/>
+<text text-anchor="middle" x="109.29" y="-669.8" font-family="Times,serif" font-size="14.00">process</text>
+<text text-anchor="middle" x="109.29" y="-654.8" font-family="Times,serif" font-size="14.00">new</text>
+<text text-anchor="middle" x="109.29" y="-639.8" font-family="Times,serif" font-size="14.00">event()</text>
+</g>
+<!-- process_at_drag_winner -->
+<g id="node27" class="node">
+<title>process_at_drag_winner</title>
+<polygon fill="none" stroke="black" points="276.29,-360 213.29,-322 276.29,-284 339.29,-322 276.29,-360"/>
+<text text-anchor="middle" x="276.29" y="-325.8" font-family="Times,serif" font-size="14.00">button</text>
+<text text-anchor="middle" x="276.29" y="-310.8" font-family="Times,serif" font-size="14.00">pressed?</text>
+</g>
+<!-- arena&#45;&gt;process_at_drag_winner -->
+<g id="edge31" class="edge">
+<title>arena-&gt;process_at_drag_winner</title>
+<path fill="none" stroke="black" d="M37.41,-697.2C43.93,-631.72 66.58,-486.01 142.79,-395 164.44,-369.15 197.69,-350.87 225.47,-339.07"/>
+<polygon fill="black" stroke="black" points="227.1,-342.18 235.04,-335.16 224.46,-335.7 227.1,-342.18"/>
+<text text-anchor="middle" x="109.29" y="-517.8" font-family="Times,serif" font-size="14.00">process</text>
+<text text-anchor="middle" x="109.29" y="-502.8" font-family="Times,serif" font-size="14.00">new</text>
+<text text-anchor="middle" x="109.29" y="-487.8" font-family="Times,serif" font-size="14.00">event()</text>
+</g>
+<!-- process_at_button_up_winner -->
+<g id="node30" class="node">
+<title>process_at_button_up_winner</title>
+<polygon fill="none" stroke="black" points="276.29,-173 217.29,-120 276.29,-67 335.29,-120 276.29,-173"/>
+<text text-anchor="middle" x="276.29" y="-131.3" font-family="Times,serif" font-size="14.00">button</text>
+<text text-anchor="middle" x="276.29" y="-116.3" font-family="Times,serif" font-size="14.00">up</text>
+<text text-anchor="middle" x="276.29" y="-101.3" font-family="Times,serif" font-size="14.00">timeout</text>
+</g>
+<!-- arena&#45;&gt;process_at_button_up_winner -->
+<g id="edge34" class="edge">
+<title>arena-&gt;process_at_button_up_winner</title>
+<path fill="none" stroke="black" d="M37.02,-697.01C41.7,-631.13 55.01,-481.81 85.79,-360 103.47,-290.05 97.9,-264.48 142.79,-208 165.36,-179.62 199.63,-157.2 227.66,-142.1"/>
+<polygon fill="black" stroke="black" points="229.29,-145.2 236.52,-137.45 226.04,-139 229.29,-145.2"/>
+<text text-anchor="middle" x="109.29" y="-393.8" font-family="Times,serif" font-size="14.00">process</text>
+<text text-anchor="middle" x="109.29" y="-378.8" font-family="Times,serif" font-size="14.00">new</text>
+<text text-anchor="middle" x="109.29" y="-363.8" font-family="Times,serif" font-size="14.00">event()</text>
+</g>
+<!-- return_1_finger_contact_contender_at_initial_contender -->
+<g id="node3" class="node">
+<title>return_1_finger_contact_contender_at_initial_contender</title>
+<polygon fill="none" stroke="black" points="657.29,-1406 484.29,-1406 484.29,-1368 657.29,-1368 657.29,-1406"/>
+<text text-anchor="middle" x="570.79" y="-1390.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="570.79" y="-1375.8" font-family="Times,serif" font-size="14.00">OneFingerContactContender</text>
+</g>
+<!-- examine_at_initial_contender&#45;&gt;return_1_finger_contact_contender_at_initial_contender -->
+<g id="edge2" class="edge">
+<title>examine_at_initial_contender-&gt;return_1_finger_contact_contender_at_initial_contender</title>
+<path fill="none" stroke="black" d="M311.96,-1313.59C349.71,-1325.06 411.92,-1343.75 465.79,-1359 473.13,-1361.08 480.77,-1363.2 488.43,-1365.31"/>
+<polygon fill="black" stroke="black" points="487.55,-1368.7 498.12,-1367.96 489.4,-1361.95 487.55,-1368.7"/>
+<text text-anchor="middle" x="433.79" y="-1356.8" font-family="Times,serif" font-size="14.00">1</text>
+</g>
+<!-- return_2_finger_contact_contender_at_initial_contender -->
+<g id="node4" class="node">
+<title>return_2_finger_contact_contender_at_initial_contender</title>
+<polygon fill="none" stroke="black" points="658.29,-1294 483.29,-1294 483.29,-1256 658.29,-1256 658.29,-1294"/>
+<text text-anchor="middle" x="570.79" y="-1278.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="570.79" y="-1263.8" font-family="Times,serif" font-size="14.00">TwoFingerContactContender</text>
+</g>
+<!-- examine_at_initial_contender&#45;&gt;return_2_finger_contact_contender_at_initial_contender -->
+<g id="edge3" class="edge">
+<title>examine_at_initial_contender-&gt;return_2_finger_contact_contender_at_initial_contender</title>
+<path fill="none" stroke="black" d="M320,-1298.75C348.31,-1295.95 386.26,-1292.21 419.79,-1289 436.88,-1287.36 455.06,-1285.65 472.66,-1284"/>
+<polygon fill="black" stroke="black" points="473.3,-1287.45 482.93,-1283.03 472.65,-1280.48 473.3,-1287.45"/>
+<text text-anchor="middle" x="433.79" y="-1292.8" font-family="Times,serif" font-size="14.00">2</text>
+</g>
+<!-- return_mismatch_at_initial_contender -->
+<g id="node5" class="node">
+<title>return_mismatch_at_initial_contender</title>
+<polygon fill="none" stroke="black" points="606.79,-1350 534.79,-1350 534.79,-1312 606.79,-1312 606.79,-1350"/>
+<text text-anchor="middle" x="570.79" y="-1334.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="570.79" y="-1319.8" font-family="Times,serif" font-size="14.00">Mismatch</text>
+</g>
+<!-- examine_at_initial_contender&#45;&gt;return_mismatch_at_initial_contender -->
+<g id="edge4" class="edge">
+<title>examine_at_initial_contender-&gt;return_mismatch_at_initial_contender</title>
+<path fill="none" stroke="black" d="M320.14,-1307.1C374.7,-1312.32 468.57,-1321.31 524.35,-1326.65"/>
+<polygon fill="black" stroke="black" points="524.35,-1330.17 534.64,-1327.63 525.02,-1323.2 524.35,-1330.17"/>
+<text text-anchor="middle" x="433.79" y="-1321.8" font-family="Times,serif" font-size="14.00">other</text>
+</g>
+<!-- return_mismatch_at_1_finger_contact_contender -->
+<g id="node7" class="node">
+<title>return_mismatch_at_1_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="1158.79,-1082 1086.79,-1082 1086.79,-1044 1158.79,-1044 1158.79,-1082"/>
+<text text-anchor="middle" x="1122.79" y="-1066.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="1122.79" y="-1051.8" font-family="Times,serif" font-size="14.00">Mismatch</text>
+</g>
+<!-- examine_at_1_finger_contact_contender&#45;&gt;return_mismatch_at_1_finger_contact_contender -->
+<g id="edge6" class="edge">
+<title>examine_at_1_finger_contact_contender-&gt;return_mismatch_at_1_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M337.81,-1087.15C374.69,-1081.6 422.83,-1075.16 465.79,-1072 694.73,-1055.15 969.78,-1059.25 1076.44,-1061.76"/>
+<polygon fill="black" stroke="black" points="1076.45,-1065.26 1086.53,-1062.01 1076.62,-1058.26 1076.45,-1065.26"/>
+<text text-anchor="middle" x="703.29" y="-1064.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- examine2_at_1_finger_contact_contender -->
+<g id="node8" class="node">
+<title>examine2_at_1_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="570.79,-1157 507.79,-1119 570.79,-1081 633.79,-1119 570.79,-1157"/>
+<text text-anchor="middle" x="570.79" y="-1122.8" font-family="Times,serif" font-size="14.00">button</text>
+<text text-anchor="middle" x="570.79" y="-1107.8" font-family="Times,serif" font-size="14.00">pressed?</text>
+</g>
+<!-- examine_at_1_finger_contact_contender&#45;&gt;examine2_at_1_finger_contact_contender -->
+<g id="edge7" class="edge">
+<title>examine_at_1_finger_contact_contender-&gt;examine2_at_1_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M344.4,-1102.05C392.33,-1105.65 456.48,-1110.48 504.09,-1114.06"/>
+<polygon fill="black" stroke="black" points="504.05,-1117.56 514.28,-1114.82 504.58,-1110.58 504.05,-1117.56"/>
+<text text-anchor="middle" x="433.79" y="-1112.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- examine2_at_1_finger_contact_contender&#45;&gt;return_mismatch_at_1_finger_contact_contender -->
+<g id="edge8" class="edge">
+<title>examine2_at_1_finger_contact_contender-&gt;return_mismatch_at_1_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M619.3,-1110.14C650.82,-1104.53 693.16,-1097.51 730.79,-1093 855.46,-1078.05 1003.44,-1069.07 1076.43,-1065.22"/>
+<polygon fill="black" stroke="black" points="1076.84,-1068.7 1086.65,-1064.69 1076.48,-1061.71 1076.84,-1068.7"/>
+<text text-anchor="middle" x="844.79" y="-1096.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- examine3_at_1_finger_contact_contender -->
+<g id="node9" class="node">
+<title>examine3_at_1_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="844.79,-1193 795.79,-1155 844.79,-1117 893.79,-1155 844.79,-1193"/>
+<text text-anchor="middle" x="844.79" y="-1158.8" font-family="Times,serif" font-size="14.00">finger</text>
+<text text-anchor="middle" x="844.79" y="-1143.8" font-family="Times,serif" font-size="14.00">count</text>
+</g>
+<!-- examine2_at_1_finger_contact_contender&#45;&gt;examine3_at_1_finger_contact_contender -->
+<g id="edge9" class="edge">
+<title>examine2_at_1_finger_contact_contender-&gt;examine3_at_1_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M622.96,-1125.77C671.52,-1132.2 744.1,-1141.81 792.66,-1148.23"/>
+<polygon fill="black" stroke="black" points="792.26,-1151.71 802.64,-1149.55 793.18,-1144.77 792.26,-1151.71"/>
+<text text-anchor="middle" x="703.29" y="-1140.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- examine3_at_1_finger_contact_contender&#45;&gt;return_mismatch_at_1_finger_contact_contender -->
+<g id="edge10" class="edge">
+<title>examine3_at_1_finger_contact_contender-&gt;return_mismatch_at_1_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M877.86,-1142.63C913.13,-1129.2 971.63,-1107.46 1022.79,-1091 1040.42,-1085.33 1060,-1079.66 1077.07,-1074.92"/>
+<polygon fill="black" stroke="black" points="1078.08,-1078.27 1086.79,-1072.25 1076.22,-1071.52 1078.08,-1078.27"/>
+<text text-anchor="middle" x="990.79" y="-1108.8" font-family="Times,serif" font-size="14.00">other</text>
+</g>
+<!-- return_self_at_1_finger_contact_contender -->
+<g id="node10" class="node">
+<title>return_self_at_1_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="1149.79,-1138 1095.79,-1138 1095.79,-1100 1149.79,-1100 1149.79,-1138"/>
+<text text-anchor="middle" x="1122.79" y="-1122.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="1122.79" y="-1107.8" font-family="Times,serif" font-size="14.00">`self`</text>
+</g>
+<!-- examine3_at_1_finger_contact_contender&#45;&gt;return_self_at_1_finger_contact_contender -->
+<g id="edge11" class="edge">
+<title>examine3_at_1_finger_contact_contender-&gt;return_self_at_1_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M887.11,-1149.61C941,-1142.58 1034.4,-1130.4 1085.62,-1123.72"/>
+<polygon fill="black" stroke="black" points="1086.11,-1127.18 1095.58,-1122.42 1085.21,-1120.24 1086.11,-1127.18"/>
+<text text-anchor="middle" x="990.79" y="-1140.8" font-family="Times,serif" font-size="14.00">1</text>
+</g>
+<!-- return_2_finger_contact_contender_at_1_finger_contact_contender -->
+<g id="node11" class="node">
+<title>return_2_finger_contact_contender_at_1_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="1210.29,-1194 1035.29,-1194 1035.29,-1156 1210.29,-1156 1210.29,-1194"/>
+<text text-anchor="middle" x="1122.79" y="-1178.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="1122.79" y="-1163.8" font-family="Times,serif" font-size="14.00">TwoFingerContactContender</text>
+</g>
+<!-- examine3_at_1_finger_contact_contender&#45;&gt;return_2_finger_contact_contender_at_1_finger_contact_contender -->
+<g id="edge12" class="edge">
+<title>examine3_at_1_finger_contact_contender-&gt;return_2_finger_contact_contender_at_1_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M889.83,-1158.19C926.13,-1160.82 978.95,-1164.65 1025.01,-1167.99"/>
+<polygon fill="black" stroke="black" points="1024.81,-1171.48 1035.03,-1168.71 1025.31,-1164.5 1024.81,-1171.48"/>
+<text text-anchor="middle" x="990.79" y="-1169.8" font-family="Times,serif" font-size="14.00">2</text>
+</g>
+<!-- return_mismatch_at_2_finger_contact_contender -->
+<g id="node13" class="node">
+<title>return_mismatch_at_2_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="880.79,-977 808.79,-977 808.79,-939 880.79,-939 880.79,-977"/>
+<text text-anchor="middle" x="844.79" y="-961.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="844.79" y="-946.8" font-family="Times,serif" font-size="14.00">Mismatch</text>
+</g>
+<!-- examine_at_2_finger_contact_contender&#45;&gt;return_mismatch_at_2_finger_contact_contender -->
+<g id="edge14" class="edge">
+<title>examine_at_2_finger_contact_contender-&gt;return_mismatch_at_2_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M324.01,-897.29C361.61,-911.85 416.16,-930.83 465.79,-940 584.24,-961.88 726.91,-961.65 798.35,-959.76"/>
+<polygon fill="black" stroke="black" points="798.88,-963.25 808.78,-959.46 798.68,-956.25 798.88,-963.25"/>
+<text text-anchor="middle" x="570.79" y="-962.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- examine2_at_2_finger_contact_contender -->
+<g id="node14" class="node">
+<title>examine2_at_2_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="570.79,-931 514.79,-878 570.79,-825 626.79,-878 570.79,-931"/>
+<text text-anchor="middle" x="570.79" y="-889.3" font-family="Times,serif" font-size="14.00">exactly</text>
+<text text-anchor="middle" x="570.79" y="-874.3" font-family="Times,serif" font-size="14.00">2</text>
+<text text-anchor="middle" x="570.79" y="-859.3" font-family="Times,serif" font-size="14.00">finger?</text>
+</g>
+<!-- examine_at_2_finger_contact_contender&#45;&gt;examine2_at_2_finger_contact_contender -->
+<g id="edge15" class="edge">
+<title>examine_at_2_finger_contact_contender-&gt;examine2_at_2_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M351.48,-878C398.69,-878 459.25,-878 504.6,-878"/>
+<polygon fill="black" stroke="black" points="504.62,-881.5 514.62,-878 504.62,-874.5 504.62,-881.5"/>
+<text text-anchor="middle" x="433.79" y="-881.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- examine2_at_2_finger_contact_contender&#45;&gt;return_mismatch_at_2_finger_contact_contender -->
+<g id="edge16" class="edge">
+<title>examine2_at_2_finger_contact_contender-&gt;return_mismatch_at_2_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M613.96,-890.51C646,-900 691.16,-913.36 730.79,-925 753.21,-931.59 778.13,-938.87 798.86,-944.91"/>
+<polygon fill="black" stroke="black" points="798.08,-948.33 808.66,-947.77 800.04,-941.61 798.08,-948.33"/>
+<text text-anchor="middle" x="703.29" y="-921.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- examine3_at_2_finger_contact_contender -->
+<g id="node15" class="node">
+<title>examine3_at_2_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="844.79,-916 781.79,-878 844.79,-840 907.79,-878 844.79,-916"/>
+<text text-anchor="middle" x="844.79" y="-881.8" font-family="Times,serif" font-size="14.00">button</text>
+<text text-anchor="middle" x="844.79" y="-866.8" font-family="Times,serif" font-size="14.00">pressed?</text>
+</g>
+<!-- examine2_at_2_finger_contact_contender&#45;&gt;examine3_at_2_finger_contact_contender -->
+<g id="edge17" class="edge">
+<title>examine2_at_2_finger_contact_contender-&gt;examine3_at_2_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M626.84,-878C668.55,-878 726.23,-878 771.63,-878"/>
+<polygon fill="black" stroke="black" points="771.71,-881.5 781.71,-878 771.71,-874.5 771.71,-881.5"/>
+<text text-anchor="middle" x="703.29" y="-881.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- return_matched_at_2_finger_contact_contender -->
+<g id="node16" class="node">
+<title>return_matched_at_2_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="1183.29,-936 1062.29,-936 1062.29,-898 1183.29,-898 1183.29,-936"/>
+<text text-anchor="middle" x="1122.79" y="-920.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="1122.79" y="-905.8" font-family="Times,serif" font-size="14.00">MatchedContender</text>
+</g>
+<!-- examine3_at_2_finger_contact_contender&#45;&gt;return_matched_at_2_finger_contact_contender -->
+<g id="edge18" class="edge">
+<title>examine3_at_2_finger_contact_contender-&gt;return_matched_at_2_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M896.1,-885.11C939.79,-891.28 1003.51,-900.29 1052.11,-907.15"/>
+<polygon fill="black" stroke="black" points="1051.85,-910.65 1062.24,-908.58 1052.83,-903.72 1051.85,-910.65"/>
+<text text-anchor="middle" x="990.79" y="-902.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- return_self_at_2_finger_contact_contender -->
+<g id="node17" class="node">
+<title>return_self_at_2_finger_contact_contender</title>
+<polygon fill="none" stroke="black" points="1149.79,-880 1095.79,-880 1095.79,-842 1149.79,-842 1149.79,-880"/>
+<text text-anchor="middle" x="1122.79" y="-864.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="1122.79" y="-849.8" font-family="Times,serif" font-size="14.00">`self`</text>
+</g>
+<!-- examine3_at_2_finger_contact_contender&#45;&gt;return_self_at_2_finger_contact_contender -->
+<g id="edge19" class="edge">
+<title>examine3_at_2_finger_contact_contender-&gt;return_self_at_2_finger_contact_contender</title>
+<path fill="none" stroke="black" d="M902.31,-874.52C957.18,-871.14 1038.82,-866.11 1085.52,-863.23"/>
+<polygon fill="black" stroke="black" points="1086,-866.71 1095.76,-862.6 1085.57,-859.72 1086,-866.71"/>
+<text text-anchor="middle" x="990.79" y="-872.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- return_button_up_winner_at_button_down_winner -->
+<g id="node21" class="node">
+<title>return_button_up_winner_at_button_down_winner</title>
+<polygon fill="none" stroke="black" points="628.79,-635 512.79,-635 512.79,-567 628.79,-567 628.79,-635"/>
+<text text-anchor="middle" x="570.79" y="-619.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="570.79" y="-604.8" font-family="Times,serif" font-size="14.00">ContinueGesture(</text>
+<text text-anchor="middle" x="570.79" y="-589.8" font-family="Times,serif" font-size="14.00">Some(ButtonUp),</text>
+<text text-anchor="middle" x="570.79" y="-574.8" font-family="Times,serif" font-size="14.00">ButtonUpWinner)</text>
+</g>
+<!-- process_at_button_down_winner&#45;&gt;return_button_up_winner_at_button_down_winner -->
+<g id="edge23" class="edge">
+<title>process_at_button_down_winner-&gt;return_button_up_winner_at_button_down_winner</title>
+<path fill="none" stroke="black" d="M338.61,-599.42C386.47,-599.75 452.89,-600.2 502.27,-600.54"/>
+<polygon fill="black" stroke="black" points="502.51,-604.04 512.53,-600.61 502.56,-597.04 502.51,-604.04"/>
+<text text-anchor="middle" x="433.79" y="-603.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- process2_at_button_down_winner -->
+<g id="node22" class="node">
+<title>process2_at_button_down_winner</title>
+<polygon fill="none" stroke="black" points="570.79,-549 511.79,-496 570.79,-443 629.79,-496 570.79,-549"/>
+<text text-anchor="middle" x="570.79" y="-507.3" font-family="Times,serif" font-size="14.00">button</text>
+<text text-anchor="middle" x="570.79" y="-492.3" font-family="Times,serif" font-size="14.00">down</text>
+<text text-anchor="middle" x="570.79" y="-477.3" font-family="Times,serif" font-size="14.00">timeout</text>
+</g>
+<!-- process_at_button_down_winner&#45;&gt;process2_at_button_down_winner -->
+<g id="edge24" class="edge">
+<title>process_at_button_down_winner-&gt;process2_at_button_down_winner</title>
+<path fill="none" stroke="black" d="M316.74,-585.11C368.78,-566.79 460.48,-534.5 518.03,-514.23"/>
+<polygon fill="black" stroke="black" points="519.4,-517.46 527.67,-510.84 517.07,-510.86 519.4,-517.46"/>
+<text text-anchor="middle" x="433.79" y="-550.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- process3_at_button_down_winner -->
+<g id="node23" class="node">
+<title>process3_at_button_down_winner</title>
+<polygon fill="none" stroke="black" points="844.79,-637 739.79,-584 844.79,-531 949.79,-584 844.79,-637"/>
+<text text-anchor="middle" x="844.79" y="-595.3" font-family="Times,serif" font-size="14.00">movement</text>
+<text text-anchor="middle" x="844.79" y="-580.3" font-family="Times,serif" font-size="14.00">&gt;</text>
+<text text-anchor="middle" x="844.79" y="-565.3" font-family="Times,serif" font-size="14.00">larger_threshold</text>
+</g>
+<!-- process2_at_button_down_winner&#45;&gt;process3_at_button_down_winner -->
+<g id="edge25" class="edge">
+<title>process2_at_button_down_winner-&gt;process3_at_button_down_winner</title>
+<path fill="none" stroke="black" d="M614.59,-509.85C656.32,-523.35 720.6,-544.14 770.48,-560.28"/>
+<polygon fill="black" stroke="black" points="769.66,-563.69 780.25,-563.44 771.82,-557.03 769.66,-563.69"/>
+<text text-anchor="middle" x="703.29" y="-543.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- process4_at_button_down_winner -->
+<g id="node24" class="node">
+<title>process4_at_button_down_winner</title>
+<polygon fill="none" stroke="black" points="844.79,-513 730.79,-460 844.79,-407 958.79,-460 844.79,-513"/>
+<text text-anchor="middle" x="844.79" y="-471.3" font-family="Times,serif" font-size="14.00">movement</text>
+<text text-anchor="middle" x="844.79" y="-456.3" font-family="Times,serif" font-size="14.00">&gt;</text>
+<text text-anchor="middle" x="844.79" y="-441.3" font-family="Times,serif" font-size="14.00">smaller_threshold</text>
+</g>
+<!-- process2_at_button_down_winner&#45;&gt;process4_at_button_down_winner -->
+<g id="edge26" class="edge">
+<title>process2_at_button_down_winner-&gt;process4_at_button_down_winner</title>
+<path fill="none" stroke="black" d="M622.64,-489.27C657.23,-484.69 704.12,-478.49 745.82,-472.97"/>
+<polygon fill="black" stroke="black" points="746.29,-476.44 755.74,-471.65 745.37,-469.5 746.29,-476.44"/>
+<text text-anchor="middle" x="703.29" y="-482.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- return_continue_with_no_event_at_winner -->
+<g id="node25" class="node">
+<title>return_continue_with_no_event_at_winner</title>
+<polygon fill="none" stroke="black" points="1179.29,-596.5 1066.29,-596.5 1066.29,-543.5 1179.29,-543.5 1179.29,-596.5"/>
+<text text-anchor="middle" x="1122.79" y="-581.3" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="1122.79" y="-566.3" font-family="Times,serif" font-size="14.00">ContinueGesture(</text>
+<text text-anchor="middle" x="1122.79" y="-551.3" font-family="Times,serif" font-size="14.00">None, self)</text>
+</g>
+<!-- process3_at_button_down_winner&#45;&gt;return_continue_with_no_event_at_winner -->
+<g id="edge27" class="edge">
+<title>process3_at_button_down_winner-&gt;return_continue_with_no_event_at_winner</title>
+<path fill="none" stroke="black" d="M940.39,-579.2C978.29,-577.28 1021.05,-575.11 1055.54,-573.36"/>
+<polygon fill="black" stroke="black" points="1056.15,-576.83 1065.96,-572.83 1055.8,-569.84 1056.15,-576.83"/>
+<text text-anchor="middle" x="990.79" y="-580.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- return_drag_winner -->
+<g id="node26" class="node">
+<title>return_drag_winner</title>
+<polygon fill="none" stroke="black" points="1222.79,-512 1022.79,-512 1022.79,-444 1222.79,-444 1222.79,-512"/>
+<text text-anchor="middle" x="1122.79" y="-496.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="1122.79" y="-481.8" font-family="Times,serif" font-size="14.00">ContinueGesture(</text>
+<text text-anchor="middle" x="1122.79" y="-466.8" font-family="Times,serif" font-size="14.00">Some(move_with_button_down),</text>
+<text text-anchor="middle" x="1122.79" y="-451.8" font-family="Times,serif" font-size="14.00">DragWinner)</text>
+</g>
+<!-- process3_at_button_down_winner&#45;&gt;return_drag_winner -->
+<g id="edge28" class="edge">
+<title>process3_at_button_down_winner-&gt;return_drag_winner</title>
+<path fill="none" stroke="black" d="M905,-561.26C939.54,-548 983.97,-530.93 1023.61,-515.71"/>
+<polygon fill="black" stroke="black" points="1024.96,-518.94 1033.04,-512.09 1022.45,-512.4 1024.96,-518.94"/>
+<text text-anchor="middle" x="990.79" y="-534.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- process4_at_button_down_winner&#45;&gt;return_continue_with_no_event_at_winner -->
+<g id="edge29" class="edge">
+<title>process4_at_button_down_winner-&gt;return_continue_with_no_event_at_winner</title>
+<path fill="none" stroke="black" d="M926.18,-475.25C952.24,-482.13 980.64,-491.77 1004.79,-505 1014.18,-510.14 1013.92,-515.02 1022.79,-521 1033.5,-528.22 1045.43,-535.03 1057.19,-541.15"/>
+<polygon fill="black" stroke="black" points="1055.62,-544.28 1066.12,-545.69 1058.79,-538.04 1055.62,-544.28"/>
+<text text-anchor="middle" x="990.79" y="-508.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- process4_at_button_down_winner&#45;&gt;return_drag_winner -->
+<g id="edge30" class="edge">
+<title>process4_at_button_down_winner-&gt;return_drag_winner</title>
+<path fill="none" stroke="black" d="M950.61,-463.87C968.69,-464.75 987.29,-465.79 1004.79,-467 1007.33,-467.18 1009.9,-467.36 1012.49,-467.55"/>
+<polygon fill="black" stroke="black" points="1012.33,-471.05 1022.57,-468.33 1012.86,-464.07 1012.33,-471.05"/>
+<text text-anchor="middle" x="990.79" y="-470.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- return_button_up_winner_at_drag_winner_winner -->
+<g id="node28" class="node">
+<title>return_button_up_winner_at_drag_winner_winner</title>
+<polygon fill="none" stroke="black" points="628.79,-360 512.79,-360 512.79,-292 628.79,-292 628.79,-360"/>
+<text text-anchor="middle" x="570.79" y="-344.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="570.79" y="-329.8" font-family="Times,serif" font-size="14.00">ContinueGesture(</text>
+<text text-anchor="middle" x="570.79" y="-314.8" font-family="Times,serif" font-size="14.00">Some(ButtonUp),</text>
+<text text-anchor="middle" x="570.79" y="-299.8" font-family="Times,serif" font-size="14.00">ButtonUpWinner)</text>
+</g>
+<!-- process_at_drag_winner&#45;&gt;return_button_up_winner_at_drag_winner_winner -->
+<g id="edge32" class="edge">
+<title>process_at_drag_winner-&gt;return_button_up_winner_at_drag_winner_winner</title>
+<path fill="none" stroke="black" d="M338.26,-322.83C386.09,-323.49 452.63,-324.4 502.11,-325.07"/>
+<polygon fill="black" stroke="black" points="502.34,-328.58 512.39,-325.22 502.44,-321.58 502.34,-328.58"/>
+<text text-anchor="middle" x="433.79" y="-327.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- return_continue_with_event_at_winner -->
+<g id="node29" class="node">
+<title>return_continue_with_event_at_winner</title>
+<polygon fill="none" stroke="black" points="627.29,-273.5 514.29,-273.5 514.29,-220.5 627.29,-220.5 627.29,-273.5"/>
+<text text-anchor="middle" x="570.79" y="-258.3" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="570.79" y="-243.3" font-family="Times,serif" font-size="14.00">ContinueGesture(</text>
+<text text-anchor="middle" x="570.79" y="-228.3" font-family="Times,serif" font-size="14.00">Some, self)</text>
+</g>
+<!-- process_at_drag_winner&#45;&gt;return_continue_with_event_at_winner -->
+<g id="edge33" class="edge">
+<title>process_at_drag_winner-&gt;return_continue_with_event_at_winner</title>
+<path fill="none" stroke="black" d="M321.08,-310.77C369.65,-298.32 448.49,-278.1 504.38,-263.77"/>
+<polygon fill="black" stroke="black" points="505.37,-267.13 514.19,-261.26 503.63,-260.35 505.37,-267.13"/>
+<text text-anchor="middle" x="433.79" y="-287.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- process2_at_button_up_winner -->
+<g id="node31" class="node">
+<title>process2_at_button_up_winner</title>
+<polygon fill="none" stroke="black" points="570.79,-173 465.79,-120 570.79,-67 675.79,-120 570.79,-173"/>
+<text text-anchor="middle" x="570.79" y="-131.3" font-family="Times,serif" font-size="14.00">movement</text>
+<text text-anchor="middle" x="570.79" y="-116.3" font-family="Times,serif" font-size="14.00">&gt;</text>
+<text text-anchor="middle" x="570.79" y="-101.3" font-family="Times,serif" font-size="14.00">larger_threshold</text>
+</g>
+<!-- process_at_button_up_winner&#45;&gt;process2_at_button_up_winner -->
+<g id="edge35" class="edge">
+<title>process_at_button_up_winner-&gt;process2_at_button_up_winner</title>
+<path fill="none" stroke="black" d="M335.43,-120C369.76,-120 414.4,-120 455.51,-120"/>
+<polygon fill="black" stroke="black" points="455.59,-123.5 465.59,-120 455.59,-116.5 455.59,-123.5"/>
+<text text-anchor="middle" x="433.79" y="-123.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- return_end_at_button_up_winner -->
+<g id="node32" class="node">
+<title>return_end_at_button_up_winner</title>
+<polygon fill="none" stroke="black" points="922.29,-68 767.29,-68 767.29,-32 922.29,-32 922.29,-68"/>
+<text text-anchor="middle" x="844.79" y="-46.3" font-family="Times,serif" font-size="14.00">return EndGesutre(None)</text>
+</g>
+<!-- process_at_button_up_winner&#45;&gt;return_end_at_button_up_winner -->
+<g id="edge36" class="edge">
+<title>process_at_button_up_winner-&gt;return_end_at_button_up_winner</title>
+<path fill="none" stroke="black" d="M313.52,-100.23C350.54,-81.25 410.29,-53.9 465.79,-43 564.11,-23.69 679.57,-29.9 756.78,-38.06"/>
+<polygon fill="black" stroke="black" points="756.62,-41.56 766.94,-39.17 757.38,-34.6 756.62,-41.56"/>
+<text text-anchor="middle" x="570.79" y="-46.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- process2_at_button_up_winner&#45;&gt;return_end_at_button_up_winner -->
+<g id="edge38" class="edge">
+<title>process2_at_button_up_winner-&gt;return_end_at_button_up_winner</title>
+<path fill="none" stroke="black" d="M640.78,-102.25C678.22,-92.61 724.68,-80.65 763.71,-70.61"/>
+<polygon fill="black" stroke="black" points="764.65,-73.98 773.46,-68.1 762.9,-67.2 764.65,-73.98"/>
+<text text-anchor="middle" x="703.29" y="-90.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- return_self_at_button_up_winner -->
+<g id="node33" class="node">
+<title>return_self_at_button_up_winner</title>
+<polygon fill="none" stroke="black" points="871.79,-139 817.79,-139 817.79,-101 871.79,-101 871.79,-139"/>
+<text text-anchor="middle" x="844.79" y="-123.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="844.79" y="-108.8" font-family="Times,serif" font-size="14.00">`self`</text>
+</g>
+<!-- process2_at_button_up_winner&#45;&gt;return_self_at_button_up_winner -->
+<g id="edge37" class="edge">
+<title>process2_at_button_up_winner-&gt;return_self_at_button_up_winner</title>
+<path fill="none" stroke="black" d="M676.18,-120C722.41,-120 773.81,-120 807.34,-120"/>
+<polygon fill="black" stroke="black" points="807.58,-123.5 817.58,-120 807.58,-116.5 807.58,-123.5"/>
+<text text-anchor="middle" x="703.29" y="-123.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+</g>
