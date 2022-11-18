@@ -555,6 +555,123 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenRectangleTest) {
   EXPECT_TRUE(images_are_same);
 }
 
+// Test color conversion on the display hardware.
+VK_TEST_P(DisplayCompositorParameterizedPixelTest, ColorConversionTest) {
+  auto renderer = NewNullRenderer();
+  auto display_compositor = std::make_shared<flatland::DisplayCompositor>(
+      dispatcher(), display_manager_->default_display_controller(), renderer,
+      utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"),
+      BufferCollectionImportMode::AttemptDisplayConstraints);
+
+  auto display = display_manager_->default_display();
+  auto display_controller = display_manager_->default_display_controller();
+
+  const uint64_t kCompareCollectionId = allocation::GenerateUniqueBufferCollectionId();
+  const uint64_t kCaptureCollectionId = allocation::GenerateUniqueBufferCollectionId();
+
+  // Set up buffer collection and image for display_controller capture.
+  uint64_t capture_image_id;
+  fuchsia::sysmem::BufferCollectionInfo_2 capture_info;
+  auto capture_collection_result =
+      SetupCapture(kCaptureCollectionId, GetParam(), &capture_info, &capture_image_id);
+  if (capture_collection_result.is_error() &&
+      capture_collection_result.error() == ZX_ERR_NOT_SUPPORTED) {
+    GTEST_SKIP();
+  }
+  EXPECT_TRUE(capture_collection_result.is_ok());
+  auto capture_collection = std::move(capture_collection_result.value());
+
+  // Setup the collection for the texture. Due to display controller limitations, the size of
+  // the texture needs to match the size of the rect. So since we have a fullscreen rect, we
+  // must also have a fullscreen texture to match.
+  const uint32_t kRectWidth = display->width_in_px(), kTextureWidth = display->width_in_px();
+  const uint32_t kRectHeight = display->height_in_px(), kTextureHeight = display->height_in_px();
+  fuchsia::sysmem::BufferCollectionInfo_2 compare_collection_info;
+  auto compare_collection =
+      SetupClientTextures(display_compositor.get(), kCompareCollectionId, GetParam(), kTextureWidth,
+                          kTextureHeight, 1, &compare_collection_info);
+  if (!compare_collection) {
+    GTEST_SKIP();
+  }
+
+  // Set up the values that will be used to test against the display capture. We are making
+  // a green rect with color correcion to multiply it by 0.2 so we should get (1 * 0.2) * 255 = 51
+  // as the green value.
+  const uint32_t num_pixels = kTextureWidth * kTextureHeight;
+  uint32_t col = /*A*/ (255U << 24) | /*G*/ (51U << 8);
+  std::vector<uint32_t> write_values;
+  write_values.assign(num_pixels, col);
+  switch (GetParam()) {
+    case fuchsia::sysmem::PixelFormatType::BGRA32:
+    case fuchsia::sysmem::PixelFormatType::R8G8B8A8: {
+      MapHostPointer(compare_collection_info, /*vmo_index*/ 0,
+                     [&write_values](uint8_t* vmo_host, uint32_t num_bytes) {
+                       EXPECT_GE(num_bytes, sizeof(uint32_t) * write_values.size());
+                       memcpy(vmo_host, write_values.data(),
+                              sizeof(uint32_t) * write_values.size());
+                     });
+      break;
+    }
+    default:
+      FX_NOTREACHED();
+  }
+
+  // Import the texture to the engine. Set green to 0.2, which when converted to an
+  // unnormalized uint8 value in the range [0,255] will be 51U.
+  auto image_metadata = ImageMetadata{.identifier = allocation::kInvalidImageId,
+                                      .multiply_color = {0, 1.0f, 0, 1},
+                                      .blend_mode = fuchsia::ui::composition::BlendMode::SRC};
+
+  // We cannot send to display because it is not supported in allocations.
+  if (!IsDisplaySupported(display_compositor.get(), kCompareCollectionId)) {
+    GTEST_SKIP();
+  }
+
+  // Create a flatland session with a root and image handle. Import to the engine as display root.
+  auto session = CreateSession();
+  const TransformHandle root_handle = session.graph().CreateTransform();
+  const TransformHandle image_handle = session.graph().CreateTransform();
+  session.graph().AddChild(root_handle, image_handle);
+  DisplayInfo display_info{
+      .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
+      .formats = {kPixelFormat}};
+  display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 0,
+                                 /*out_buffer_collection*/ nullptr);
+
+  // Setup the uberstruct data.
+  auto uberstruct = session.CreateUberStructWithCurrentTopology(root_handle);
+  uberstruct->images[image_handle] = image_metadata;
+  uberstruct->local_matrices[image_handle] = glm::scale(
+      glm::translate(glm::mat3(1.0), glm::vec2(0, 0)), glm::vec2(kRectWidth, kRectHeight));
+  uberstruct->local_image_sample_regions[image_handle] = {0.f, 0.f, static_cast<float>(kRectWidth),
+                                                          static_cast<float>(kRectHeight)};
+  session.PushUberStruct(std::move(uberstruct));
+
+  display_compositor->SetColorConversionValues({0.2f, 0, 0, 0, 0.2f, 0, 0, 0, 0.2f}, {0, 0, 0},
+                                               {0, 0, 0});
+
+  // Now we can finally render. Do it a few times to make sure the color correction persists.
+  for (uint32_t i = 0; i < 3; i++) {
+    display_compositor->RenderFrame(
+        1, zx::time(1),
+        GenerateDisplayListForTest(
+            {{display->display_id(), std::make_pair(display_info, root_handle)}}),
+        {}, [](const scheduling::FrameRenderer::Timestamps&) {});
+
+    // Grab the capture vmo data.
+    std::vector<uint8_t> read_values;
+    CaptureDisplayOutput(capture_info, capture_image_id, &read_values);
+
+    // Compare the capture vmo data to the texture data above. Since we're doing a full screen
+    // render, the two should be identical. The comparison is a bit complicated though since
+    // the images are of two different formats.
+    bool images_are_same =
+        CaptureCompare(read_values.data(), write_values.data(), read_values.size(),
+                       display->height_in_px(), display->width_in_px());
+    EXPECT_TRUE(images_are_same);
+  }
+}
+
 // Renders a fullscreen green rectangle to the provided display using a solid color rect
 // instead of an image. Use the NullRenderer to confirm this is being rendered through
 // the display hardware.
@@ -596,9 +713,7 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenSolidColorRectangle
     GTEST_SKIP();
   }
 
-  // Get a raw pointer for the texture's vmo and make it green. Green is chosen because it has
-  // the same bit offset in both RGBA and BGRA pixel formats. The display controller system is
-  // also little-endian, so the BGRA values will be packed in an uint32_t as ARGB.
+  // Setup the values we will compare the display capture against.
   const uint32_t num_pixels = kTextureWidth * kTextureHeight;
   uint32_t col = /*A*/ (255U << 24) | /*G*/ (51U << 8);
   std::vector<uint32_t> write_values;

@@ -16,6 +16,7 @@
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/display/util.h"
+#include "src/ui/scenic/lib/flatland/engine/color_conversion_state_machine.h"
 #include "src/ui/scenic/lib/flatland/engine/engine_types.h"
 #include "src/ui/scenic/lib/flatland/engine/release_fence_manager.h"
 
@@ -116,15 +117,6 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   friend class test::DisplayCompositorPixelTest;
   friend class test::DisplayCompositorTest;
 
-  // Notifies the compositor that a vsync has occurred, in response to a display configuration
-  // applied by the compositor.  It is the compositor's responsibility to signal any release fences
-  // corresponding to the frame identified by |frame_number|.
-  void OnVsync(zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp);
-
-  std::vector<allocation::ImageMetadata> AllocateDisplayRenderTargets(
-      bool use_protected_memory, uint32_t num_render_targets, const fuchsia::math::SizeU& size,
-      zx_pixel_format_t pixel_format, fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info);
-
   struct DisplayConfigResponse {
     // Whether or not the config can be successfully applied or not.
     fuchsia::hardware::display::ConfigResult result;
@@ -165,6 +157,15 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
     // Used to synchronize buffer rendering with setting the buffer on the display.
     std::vector<FrameEventData> frame_event_datas;
   };
+
+  // Notifies the compositor that a vsync has occurred, in response to a display configuration
+  // applied by the compositor.  It is the compositor's responsibility to signal any release fences
+  // corresponding to the frame identified by |frame_number|.
+  void OnVsync(zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp);
+
+  std::vector<allocation::ImageMetadata> AllocateDisplayRenderTargets(
+      bool use_protected_memory, uint32_t num_render_targets, const fuchsia::math::SizeU& size,
+      zx_pixel_format_t pixel_format, fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info);
 
   // Generates a new FrameEventData struct to be used with a render target on a display.
   FrameEventData NewFrameEventData();
@@ -269,14 +270,7 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   // constraints as AttachTokens.
   BufferCollectionImportMode import_mode_ = BufferCollectionImportMode::AttemptDisplayConstraints;
 
-  constexpr static std::array<float, 9> kDefaultColorConversionCoefficients = {1, 0, 0, 0, 1,
-                                                                               0, 0, 0, 1};
-  constexpr static std::array<float, 3> kDefaultColorConversionOffsets = {0, 0, 0};
-
-  bool should_apply_display_color_conversion_ = false;
-  std::array<float, 9> color_conversion_coefficients_ = kDefaultColorConversionCoefficients;
-  std::array<float, 3> color_conversion_preoffsets_ = kDefaultColorConversionOffsets;
-  std::array<float, 3> color_conversion_postoffsets_ = kDefaultColorConversionOffsets;
+  ColorConversionStateMachine cc_state_machine_;
 
   // TODO(fxbug.dev/77414): we use a weak ptr to safely post a task that might outlive this
   // DisplayCompositor, see RenderFrame().  This task simulates a vsync callback that we aren't yet

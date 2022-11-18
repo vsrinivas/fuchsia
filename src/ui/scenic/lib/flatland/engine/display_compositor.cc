@@ -589,12 +589,15 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
         hardware_fail = true;
         break;
       }
-      if (should_apply_display_color_conversion_) {
+
+      // Check the state machine to see if there's any CC data to apply.
+      auto cc_data = cc_state_machine_.GetDataToApply();
+      if (cc_data != std::nullopt) {
         // Apply direct-to-display color conversion here.
-        zx_status_t status = (*display_controller_)
-                                 ->SetDisplayColorConversion(
-                                     data.display_id, color_conversion_preoffsets_,
-                                     color_conversion_coefficients_, color_conversion_postoffsets_);
+        zx_status_t status =
+            (*display_controller_)
+                ->SetDisplayColorConversion(data.display_id, (*cc_data).preoffsets,
+                                            (*cc_data).coefficients, (*cc_data).postoffsets);
         FX_CHECK(status == ZX_OK) << "Could not apply hardware color conversion: " << status;
       }
     }
@@ -608,6 +611,11 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
   } else {
     auto [result, ops] = CheckConfig();
     fallback_to_gpu_composition = (result != fuchsia::hardware::display::ConfigResult::OK);
+
+    // CC was successfully applied to the config so we update the state machine.
+    if (!fallback_to_gpu_composition) {
+      cc_state_machine_.SetApplyConfigSucceeded();
+    }
   }
 
   // If the results are not okay, we have to do GPU composition using the renderer.
@@ -628,6 +636,17 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
       const auto& data = render_data_list[i];
       const auto it = display_engine_data_map_.find(data.display_id);
       FX_DCHECK(it != display_engine_data_map_.end());
+
+      // Clear any past CC state here, before applying GPU CC.
+      if (cc_state_machine_.GpuRequiresDisplayClearing()) {
+        zx_status_t status =
+            (*display_controller_)
+                ->SetDisplayColorConversion(data.display_id, kDefaultColorConversionOffsets,
+                                            kDefaultColorConversionCoefficients,
+                                            kDefaultColorConversionOffsets);
+        FX_CHECK(status == ZX_OK) << "Could not apply hardware color conversion: " << status;
+        cc_state_machine_.DisplayCleared();
+      }
 
       auto& display_engine_data = it->second;
       if (display_engine_data.vmo_count == 0) {
@@ -676,16 +695,17 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
       auto& images = data.images;
 #endif  // VISUAL_DEBUGGING_ENABLED
 
+      auto apply_cc = (cc_state_machine_.GetDataToApply() != std::nullopt);
       std::vector<zx::event> render_fences;
       render_fences.push_back(std::move(event_data.wait_event));
       // Only add render_finished_fence if we're rendering the final display's framebuffer.
       if (is_final_display) {
         render_fences.push_back(std::move(render_finished_fence));
-        renderer_->Render(render_target, data.rectangles, images, render_fences);
+        renderer_->Render(render_target, data.rectangles, images, render_fences, apply_cc);
         // Retrieve fence.
         render_finished_fence = std::move(render_fences.back());
       } else {
-        renderer_->Render(render_target, data.rectangles, images, render_fences);
+        renderer_->Render(render_target, data.rectangles, images, render_fences, apply_cc);
       }
 
       // Retrieve fence.
@@ -870,12 +890,10 @@ void DisplayCompositor::SetColorConversionValues(const std::array<float, 9>& coe
                                                  const std::array<float, 3>& postoffsets) {
   // Lock the whole function.
   std::unique_lock<std::mutex> lock(lock_);
-  color_conversion_coefficients_ = coefficients;
-  color_conversion_preoffsets_ = preoffsets;
-  color_conversion_postoffsets_ = postoffsets;
-  should_apply_display_color_conversion_ = (coefficients != kDefaultColorConversionCoefficients) ||
-                                           (preoffsets != kDefaultColorConversionOffsets) ||
-                                           (postoffsets != kDefaultColorConversionOffsets);
+
+  cc_state_machine_.SetData(
+      {.coefficients = coefficients, .preoffsets = preoffsets, .postoffsets = postoffsets});
+
   renderer_->SetColorConversionValues(coefficients, preoffsets, postoffsets);
 }
 
