@@ -28,6 +28,7 @@ void main() async {
           {'title': 'Bar', 'url': 'about:blank'},
           {'title': 'Null'},
         ].asObservable().value);
+    when(app.launchPendingViews).thenAnswer((_) => []);
 
     WidgetFactory.mockFactory = (type) => Container(key: ValueKey(type));
   });

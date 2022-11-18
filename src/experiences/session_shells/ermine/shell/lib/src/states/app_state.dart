@@ -49,6 +49,7 @@ abstract class AppState {
   ViewState? get switchTarget;
   List<DialogInfo> get dialogs;
   List<ViewState> get views;
+  List<String> get launchPendingViews;
   Map<String, List<String>> get errors;
   Locale? get locale;
   String get buildVersion;

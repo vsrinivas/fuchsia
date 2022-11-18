@@ -71,6 +71,10 @@ class AppLauncher extends StatelessWidget {
   }
 
   bool _isLoading(Map<String, String> item) {
+    if (app.launchPendingViews.contains(item['title'])) {
+      return true;
+    }
+
     final reversedViews = app.views.reversed;
     for (final view in reversedViews) {
       if (view.title == item['title']!) {

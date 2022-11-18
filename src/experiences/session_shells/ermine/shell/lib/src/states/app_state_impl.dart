@@ -403,6 +403,9 @@ class AppStateImpl with Disposable implements AppState {
   }.asAction();
 
   @override
+  final launchPendingViews = <String>[].asObservable();
+
+  @override
   void launch(String title, String url, {String? alternateServiceName}) =>
       _launch([title, url, alternateServiceName]);
   late final _launch =
@@ -412,6 +415,8 @@ class AppStateImpl with Disposable implements AppState {
 
       log.info(
           'Launching $title [$url] using ${alternateServiceName ?? 'ElementManager'}');
+
+      launchPendingViews.add(title);
 
       // For web urls use Chrome's element manager service.
       if (url.startsWith('http')) {
@@ -427,6 +432,7 @@ class AppStateImpl with Disposable implements AppState {
       }
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
+      launchPendingViews.remove(title);
       _onLaunchError(url, e.toString());
       log.shout('$e: Failed to propose element <$url>');
     }
@@ -690,6 +696,7 @@ class AppStateImpl with Disposable implements AppState {
       // Make this view the top view.
       views.add(view);
       topView = view;
+      launchPendingViews.remove(view.title);
 
       // If any, remove previously cached launch errors for the app.
       if (viewState.url != null) {
