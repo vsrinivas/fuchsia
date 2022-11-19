@@ -752,6 +752,19 @@ TEST_F(AudioRendererPipelineTestFloat, NoDistortionOnGainChanges) {
                                << "\ntotal_magn_other = " << result.total_magn_other;
 }
 
+TEST_F(AudioRendererPipelineTestInt16, AddPayloadBufferDiscardable) {
+  auto [renderer, format] = CreateRenderer(kOutputFrameRate);
+
+  zx::vmo vmo;
+  ASSERT_EQ(zx::vmo::create(2 * zx_system_get_page_size(), ZX_VMO_DISCARDABLE, &vmo), ZX_OK);
+  renderer->fidl()->AddPayloadBuffer(1, std::move(vmo));
+
+  // It's not possible to wait for AddPayloadBuffer to complete, since it has no return value, so
+  // just sleep to give it some time to execute. TearDown will verify the renderer connection was
+  // not closed.
+  RunLoopWithTimeout(zx::msec(50));
+}
+
 class AudioRendererGainLimitsTest : public AudioRendererPipelineTestFloat {
  protected:
   static void SetUpTestSuite() {

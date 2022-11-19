@@ -232,10 +232,53 @@ void BaseRenderer::AddPayloadBufferInternal(uint32_t id, zx::vmo payload_buffer)
     return;
   }
 
-  zx_status_t res = vmo_mapper->Map(payload_buffer, 0, 0, ZX_VM_PERM_READ, context_.vmar());
-  if (res != ZX_OK) {
-    FX_PLOGS(ERROR, res) << "Failed to map payload buffer";
+  zx_status_t status;
+  zx_info_vmo_t info;
+  status = payload_buffer.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to get payload buffer info";
     return;
+  }
+
+  // Resizable VMOs are disallowed because we map the VMO: shrinking the VMO size can cause a crash.
+  if ((info.flags & ZX_INFO_VMO_RESIZABLE) != 0) {
+    FX_PLOGS(ERROR, status) << "Resizable payload buffers not supported";
+    return;
+  }
+
+  // If the VMO is discardable, lock it to ensure the pages are not reclaimed until they are
+  // unmapped from this process.
+  if ((info.flags & ZX_INFO_VMO_DISCARDABLE) != 0) {
+    zx_vmo_lock_state_t ls;
+    status = payload_buffer.op_range(ZX_VMO_OP_LOCK, 0, info.size_bytes, &ls, sizeof(ls));
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to lock payload buffer";
+      return;
+    }
+    FX_LOGS(INFO) << "Mapping discardable buffer: " << ls.discarded_size << "/" << ls.size
+                  << " bytes were previously discarded";
+  }
+
+  // ZX_VM_ALLOW_FAULTS is required to support discardable VMOs.
+  status = vmo_mapper->Map(payload_buffer, 0, 0,
+                           ZX_VM_PERM_READ | ZX_VM_ALLOW_FAULTS | ZX_VM_MAP_RANGE, context_.vmar());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to map payload buffer";
+    return;
+  }
+
+  // Locking a discardable VMO ensures the mappings won't be discarded, but doesn't eagerly map the
+  // pages. If a buggy client sends us a discardable VMO, whose contents have been discarded, and
+  // that client doesn't write to or COMMIT the VMO, then there won't be any pages allocated to the
+  // VMO. By reading from each page, we ensure that pages are allocated for the entire VMAR, which
+  // ensures we won't take a page fault later when reading from these pages.
+  if ((info.flags & ZX_INFO_VMO_DISCARDABLE) != 0) {
+    const auto page_size = zx_system_get_page_size();
+    for (size_t offset = 0; offset < info.size_bytes; offset += page_size) {
+      // Use a volatile pointer to ensure the load is not optimized out.
+      auto p = static_cast<const volatile char*>(vmo_mapper->start()) + offset;
+      *p;
+    }
   }
 
   reporter_->AddPayloadBuffer(id, vmo_mapper->size());
