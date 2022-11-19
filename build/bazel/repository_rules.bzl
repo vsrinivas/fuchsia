@@ -71,12 +71,6 @@ filegroup(
                 src_file = source_prefix + src
                 repo_ctx.symlink(src_file, dst)
 
-                # If the file doesn't exist because Ninja has not run yet,
-                # create an empty file now. This allows Bazel queries to work
-                # while the file itself will be overwritten by Ninja later.
-                if not repo_ctx.path(src_file).exists:
-                    repo_ctx.file(dst, "")
-
             content += "    ],\n"
         elif "source_dir" in entry:
             # A directory filegroup which uses glob() to group input files.
@@ -84,11 +78,6 @@ filegroup(
             dst_dir = entry["dest_dir"]
             content += '    srcs = glob(["{dst_dir}**"])\n'.format(dst_dir = dst_dir)
             repo_ctx.symlink(src_dir, dst_dir)
-
-            # If the directory does not exist, create it to allow basic Bazel
-            # queries to work before a Ninja invocation.
-            if not repo_ctx.path(src_dir).exists:
-                repo_ctx.execute(["mkdir", "-p", src_dir])
         else:
             fail("Invalid inputs manifest entry: %s" % entry)
 

@@ -303,8 +303,8 @@ class GeneratedFiles(object):
                 assert False, 'Unknown entry type: ' % entry["type"]
 
 
-def ninja_regen_check(gn_output_dir, ninja):
-    '''Return true if the Ninja build plan needs to be regenerated.'''
+def maybe_regenerate_ninja(gn_output_dir, ninja):
+    '''Regenerate Ninja build plan if needed, returns True on update.'''
     # This reads the build.ninja.d directly and tries to stat() all
     # dependencies in it directly (around 7000+), which is much
     # faster than Ninja trying to stat all build graph paths!
@@ -319,14 +319,14 @@ def ninja_regen_check(gn_output_dir, ninja):
     ninja_stamp = os.path.join(gn_output_dir, build_ninja_deps[0][:-1])
     ninja_stamp_timestamp = os.stat(ninja_stamp).st_mtime
 
-    for dep in build_ninja_deps[1:]:
-        dep_path = os.path.join(gn_output_dir, dep)
-        if not os.path.exists(dep_path):
-            return True
-
-        dep_timestamp = os.stat(dep_path).st_mtime
-        if dep_timestamp > ninja_stamp_timestamp:
-            return True
+    try:
+        for dep in build_ninja_deps[1:]:
+            dep_path = os.path.join(gn_output_dir, dep)
+            dep_timestamp = os.stat(dep_path).st_mtime
+            if dep_timestamp > ninja_stamp_timestamp:
+                return True
+    except FileNotFoundError:
+        return True
 
     return False
 
@@ -439,7 +439,7 @@ def main():
             logs_dir, workspace_dir, output_base_dir, output_user_root,
             bazel_launcher))
 
-    if ninja_regen_check(gn_output_dir, ninja_binary):
+    if maybe_regenerate_ninja(gn_output_dir, ninja_binary):
         log('Re-generating Ninja build plan!')
         subprocess.run([ninja_binary, '-C', gn_output_dir, 'build.ninja'])
     else:

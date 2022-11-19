@@ -107,5 +107,5 @@ declare_args() {
 foreach(dep, gn_labels_for_bazel_inputs) {
   assert(
       string_replace("##{dep}", "##//vendor/", "") == "##{dep}",
-      "Dependencies that belong to //vendor/ should not got into gn_labels_for_bazel_inputs$0x0a" + "Add then to extra_gn_labels_for_bazel_inputs in your args.gn instead!")
+      "Dependencies that belong to //vendor/ shall not go into gn_labels_for_bazel_inputs$0x0a" + "Add them to extra_gn_labels_for_bazel_inputs in your args.gn instead!")
 }

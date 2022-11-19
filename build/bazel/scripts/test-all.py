@@ -51,10 +51,6 @@ def get_fx_build_dir(fuchsia_dir):
 def get_product_name(fuchsia_build_dir):
     with open(os.path.join(fuchsia_build_dir, 'args.json')) as f:
         args = json.load(f)
-        if 'build_info_product' not in args:
-            raise ValueError(
-                "build_info_product not found in args.json, can't determine product name"
-            )
         return args['build_info_product']
 
 
