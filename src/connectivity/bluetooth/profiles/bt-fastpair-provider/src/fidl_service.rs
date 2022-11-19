@@ -45,6 +45,9 @@ fn handle_pairing_client_connection(
                         Err(e) => warn!("Couldn't obtain PairingDelegate client: {:?}", e),
                     }
                 }
+                Ok(PairingRequest::SetDelegate { .. }) => {
+                    warn!("Pairing.SetDelegate received, unimplemented, ignoring (will drop delegate)");
+                }
                 Err(e) => {
                     warn!("Error in sys.Pairing stream: {:?}. Closing connection", e);
                     break;

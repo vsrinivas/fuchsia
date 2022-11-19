@@ -5,7 +5,6 @@
 use {
     anyhow::{format_err, Error},
     async_helpers::hanging_get::asynchronous as hanging_get,
-    fidl::prelude::*,
     fidl_fuchsia_bluetooth_sys::{self as sys, AccessRequest, AccessRequestStream},
     fuchsia_bluetooth::types::{
         pairing_options::{BondableMode, PairingOptions},
@@ -65,32 +64,28 @@ async fn handler(
     request: AccessRequest,
 ) -> Result<(), Error> {
     match request {
-        AccessRequest::SetPairingDelegate { input, output, delegate, control_handle } => {
-            info!("fuchsia.bluetooth.sys.Access.SetPairingDelegate({:?}, {:?})", input, output);
+        AccessRequest::SetPairingDelegate { input, output, delegate, .. } => {
+            warn!("fuchsia.bluetooth.sys.Access.SetPairingDelegate({:?}, {:?})", input, output);
             match delegate.into_proxy() {
                 Ok(proxy) => {
-                    // Attempt to set the pairing delegate for the HostDispatcher. The
-                    // HostDispatcher will reject if there is currently an active delegate; in this
-                    // case `proxy` will be dropped, closing the channel.
                     if let Err(e) = hd.set_pairing_delegate(proxy, input, output) {
                         warn!("Couldn't set PairingDelegate: {e:?}");
                     }
                 }
-                Err(err) => {
-                    warn!("Invalid Pairing Delegate passed to SetPairingDelegate: {}", err);
-                    control_handle.shutdown()
+                Err(e) => {
+                    warn!("Invalid Pairing Delegate passed to SetPairingDelegate: {e:?}");
                 }
             }
             Ok(())
         }
-        AccessRequest::SetLocalName { name, control_handle: _ } => {
+        AccessRequest::SetLocalName { name, .. } => {
             info!("fuchsia.bluetooth.sys.Access.SetLocalName(..)");
             if let Err(e) = hd.set_name(name, NameReplace::Replace).await {
                 warn!("Error setting local name: {:?}", e);
             }
             Ok(())
         }
-        AccessRequest::SetDeviceClass { device_class, control_handle: _ } => {
+        AccessRequest::SetDeviceClass { device_class, .. } => {
             info!("fuchsia.bluetooth.sys.Access.SetDeviceClass(..)");
             if let Err(e) = hd.set_device_class(device_class).await {
                 warn!("Error setting local name: {:?}", e);
@@ -107,7 +102,7 @@ async fn handler(
                     session.discoverable_session =
                         Some(watch_stream_for_session(stream, token).boxed());
                 })
-                .map_err(|e| e.into());
+                .map_err(Into::into);
             responder.send(&mut result).map_err(Error::from)
         }
         AccessRequest::StartDiscovery { token, responder } => {
@@ -120,7 +115,7 @@ async fn handler(
                     session.discovery_session =
                         Some(watch_stream_for_session(stream, token).boxed());
                 })
-                .map_err(|e| e.into());
+                .map_err(Into::into);
             responder.send(&mut result).map_err(Error::from)
         }
         AccessRequest::WatchPeers { responder } => {
@@ -143,7 +138,7 @@ async fn handler(
             if let Err(e) = &result {
                 warn!("Error connecting to peer {}: {:?}", id, e);
             }
-            responder.send(&mut result.map_err(|e| e.into()))?;
+            responder.send(&mut result.map_err(Into::into))?;
             Ok(())
         }
         AccessRequest::Disconnect { id, responder } => {
@@ -153,7 +148,7 @@ async fn handler(
             if let Err(e) = &result {
                 warn!("Error disconnecting from peer {}: {:?}", id, e);
             }
-            responder.send(&mut result.map_err(|e| e.into()))?;
+            responder.send(&mut result.map_err(Into::into))?;
             Ok(())
         }
         AccessRequest::Pair { id, options, responder } => {
@@ -187,7 +182,7 @@ async fn handler(
             if let Err(e) = &result {
                 warn!("Error forgetting peer {}: {:?}", id, e);
             }
-            responder.send(&mut result.map_err(|e| e.into()))?;
+            responder.send(&mut result.map_err(Into::into))?;
             Ok(())
         }
     }

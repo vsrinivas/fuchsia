@@ -28,6 +28,29 @@ protocol Pairing {
         output OutputCapability;
         delegate client_end:PairingDelegate;
     });
+
+    /// Assign a PairingDelegate2 to handle pairing procedures.  The provided
+    /// I/O capabilities will be used to determine the methods used.
+    ///
+    /// Only one of PairingDelegate or PairingDelegate2 can be set at a time
+    /// system-wide.  If this is called while another delegate is set, the new
+    /// delegate will be closed immediately.
+    ///
+    /// Closing a PairingDelegate2 unsets the pairing delegate. Ongoing
+    /// PairingRequests can still be completed, but new requests will act as if
+    /// no delegate is set.
+    ///
+    /// If no delegate is set, all pairings will be rejected even if the
+    /// peer connection was initiated by the local device.
+    ///
+    /// + request `input` Bluetooth input capability, see `InputCapability`
+    /// + request `output` Bluetooth output capability, see `OutputCapability`
+    /// + request `delegate` PairingDelegate2 which will receive pairing requests
+    SetDelegate(resource struct {
+        input InputCapability;
+        output OutputCapability;
+        delegate client_end:PairingDelegate2;
+    });
 };
 
 /// Input Capabilities for pairing exchanges.
@@ -98,7 +121,6 @@ type PairingKeypress = strict enum {
     /// The user has finished entering the passkey.
     PASSKEY_ENTERED = 4;
 };
-
 
 /// A Bluetooth Pairing Delegate is responsible for confirming or denying
 /// pairing requests received from Bluetooth peers that connect or are
@@ -182,5 +204,116 @@ protocol PairingDelegate {
     -> OnLocalKeypress(struct {
         id bt.PeerId;
         keypress PairingKeypress;
+    });
+};
+
+@available(added=HEAD)
+type PairingProperties = flexible union {
+    /// The user is asked to accept or reject pairing.
+    /// This is the minimum method - even when both devices do not support
+    /// input or output, the delegate will be asked to confirm any pairing
+    /// not initiated with user intent.
+    1: consent struct {};
+    /// The user is shown a 6-digit numerical passkey on this device which they
+    /// must key in on the peer device.
+    /// The passkey to be displayed is provided.
+    2: passkey_display uint32;
+    /// The user is shown a 6-digit numerical passkey on this device which will
+    /// also be shown on the peer device. The user must compare the passkeys and
+    /// accept the pairing if the passkeys match.
+    /// The passkey to be displayed is provided.
+    3: passkey_confirmation uint32;
+    /// The user is asked to enter a 6-digit passkey on this device which is
+    /// communicated via the peer device.
+    4: passkey_entry struct {};
+};
+
+/// This protocol is active when a pairing is in progress, and provided to the
+/// PairingDelegate via the `PairingDelegate.StartRequest`
+/// The server will close this protocol with an epitaph if the pairing process
+/// completes early without success:
+///  - ZX_ERR_UNAVAILABLE - Bluetooth peer has disconnected
+///  - ZX_ERR_NOT_SUPPORTED - a passkey was provided when it was not expected
+///  - ZX_ERR_BAD_STATE - a keypress was sent when not using
+///                       PairingProperties.passkey_entry
+///  - ZX_ERR_TIMED_OUT - no activity was detected, and the pairing was stopped
+@available(added=HEAD)
+protocol PairingRequest {
+    /// Accept the pairing request.
+    /// entered_passkey is required if the PairingProperties.passkey_entry
+    /// method is used, ignored otherwise.
+    Accept(table {
+        1: entered_passkey uint32;
+    });
+
+    /// Reject the pairing request.
+    /// Closing this protocol will also reject the pairing request.
+    Reject();
+
+    /// Used to communicate local keypresses to update the remote peer on
+    /// the progress of the pairing. The responses to this method should
+    /// be used for flow control.
+    Keypress(struct {
+        keypress PairingKeypress;
+    }) -> ();
+
+
+    /// Sent when the pairing method is passkey_display.  Can be used to
+    /// update the UI to indicate reception of keypresses.
+    -> OnKeypress(struct {
+        keypress PairingKeypress;
+    });
+
+    /// Sent once when the pairing is completed, just before the protocol is
+    /// closed.
+    /// The success value along with the PeerId will also be sent to the
+    /// delegate using the `PairingDelegate.RequestComplete` call.
+    -> OnComplete(struct {
+        success bool;
+    });
+};
+
+/// A Bluetooth Pairing Delegate is responsible for confirming or denying
+/// pairing requests received from Bluetooth peers that connect or are
+/// being connected to the local device.
+///
+/// Any new pairing will result in a call to `PairingDelegate.StartRequest`,
+/// including pairings where the InputCapability and OutputCapability are set
+/// to none. The delegate is expected to have enough context to derive whether
+/// to accept or reject the pairing.
+///
+/// Only one delegate is allowed to be set per system at a time. See
+/// `fuchsia.bluetooth.sys.Pairing` for how to set the pairing delegate.
+@available(added=HEAD)
+protocol PairingDelegate2 {
+    /// Called when a pairing with `peer` is started. The pairing process is
+    /// continued using the PairingRequest protocol.
+    ///
+    /// The properties of the pairing are provided in `info` which indicates
+    /// what type of interaction is intended locally.
+    ///
+    /// Multiple requests can be active at one time for different peers, and
+    /// requests can outlive this protocol.  Dropping the request protocol will
+    /// automatically reject the pairing.
+    ///
+    /// All fields will always be present.
+    StartRequest(resource table {
+        /// Peer making the request.
+        1: peer Peer;
+        /// Properties of the pairing.
+        2: info PairingProperties;
+        /// Protocol used to complete the pairing process.
+        3: request client_end:PairingRequest;
+    });
+
+    /// Called when the pairing procedure for a peer has been completed.  This
+    /// can be due to successful completion or an error (e.g. due to
+    /// cancellation by the peer, a timeout, or disconnection).
+    ///
+    /// + request `id` The Bluetooth peer ID of the peer which was being paired
+    /// + request `success` true if the pairing succeeded, otherwise false
+    RequestComplete(struct {
+        id bt.PeerId;
+        success bool;
     });
 };

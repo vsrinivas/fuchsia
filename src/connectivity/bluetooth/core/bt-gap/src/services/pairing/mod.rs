@@ -6,7 +6,7 @@ use anyhow::Error;
 use fidl::endpoints::ControlHandle;
 use fidl_fuchsia_bluetooth_sys::{PairingRequest, PairingRequestStream};
 use futures::stream::TryStreamExt;
-use log::{trace, warn};
+use log::{info, warn};
 
 use crate::host_dispatcher::HostDispatcher;
 
@@ -23,7 +23,7 @@ pub async fn run(hd: HostDispatcher, mut stream: PairingRequestStream) -> Result
 async fn handler(hd: HostDispatcher, request: PairingRequest) {
     match request {
         PairingRequest::SetPairingDelegate { input, output, delegate, control_handle } => {
-            trace!("fuchsia.bluetooth.sys.Pairing.SetPairingDelegate({:?}, {:?})", input, output);
+            info!("fuchsia.bluetooth.sys.Pairing.SetPairingDelegate({:?}, {:?})", input, output);
             match delegate.into_proxy() {
                 Ok(proxy) => {
                     // Attempt to set the pairing delegate for the HostDispatcher. The
@@ -38,6 +38,9 @@ async fn handler(hd: HostDispatcher, request: PairingRequest) {
                     control_handle.shutdown()
                 }
             }
+        }
+        PairingRequest::SetDelegate { .. } => {
+            warn!("sys.Pairing.SetDelegate received, unimplemented, ignoring (will drop delegate)");
         }
     }
 }
