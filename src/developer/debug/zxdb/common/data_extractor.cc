@@ -18,7 +18,7 @@ std::optional<int64_t> DataExtractor::ReadSleb128() {
     byte = data_[cur_];
     cur_++;
 
-    result |= (byte & 0x7F) << shift;
+    result |= static_cast<uint64_t>(byte & 0x7F) << shift;
     shift += 7;
   } while (byte & 0x80);
 
@@ -40,7 +40,7 @@ std::optional<uint64_t> DataExtractor::ReadUleb128() {
     byte = data_[cur_];
     cur_++;
 
-    result |= (byte & 0x7F) << shift;
+    result |= static_cast<uint64_t>(byte & 0x7F) << shift;
     shift += 7;
   } while (byte & 0x80);
 

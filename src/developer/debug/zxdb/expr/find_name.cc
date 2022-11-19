@@ -504,12 +504,13 @@ void FindName(const FindNameContext& context, const FindNameOptions& options,
   // This only works for fully-supported identifier types. Some work only with the module-specific
   // symbol query we do below.
   if (supported == FindNameSupported::kFully && options.search_mode == FindNameOptions::kLexical &&
-      options.find_vars && context.block &&
-      looking_for.qualification() == IdentifierQualification::kRelative) {
+      context.block && looking_for.qualification() == IdentifierQualification::kRelative) {
     // Search for local variables and function parameters.
-    FindLocalVariable(options, context.block, looking_for, results);
-    if (results->size() >= options.max_results)
-      return;
+    if (options.find_vars) {
+      FindLocalVariable(options, context.block, looking_for, results);
+      if (results->size() >= options.max_results)
+        return;
+    }
 
     // Search the "this" object.
     FindMemberOnThis(context, options, looking_for, results);

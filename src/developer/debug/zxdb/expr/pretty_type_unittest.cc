@@ -7,11 +7,18 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/expr/abi_null.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/format_options.h"
 #include "src/developer/debug/zxdb/expr/format_test_support.h"
+#include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
+#include "src/developer/debug/zxdb/expr/test_eval_context_impl.h"
+#include "src/developer/debug/zxdb/symbols/index_test_support.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 // NOTE: Some of the tests are in pretty_type_manager_unittest.cc. Those test the actual
@@ -27,15 +34,41 @@ class PrettyTypeTest : public TestWithLoop {};
 }  // namespace
 
 TEST_F(PrettyTypeTest, PrettyGenericContainer) {
+  // To test that the pretty-printer program can resolve type names local to the structure
+  // being pretty-printed, we need a full symbol index.
+  ProcessSymbolsTestSetup setup;
+  MockModuleSymbols* module_symbols = setup.InjectMockModule();
+  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
+  auto& index_root = module_symbols->index().root();
+
+  auto data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  auto eval_context = fxl::MakeRefCounted<TestEvalContextImpl>(
+      std::make_shared<AbiNull>(), setup.process().GetWeakPtr(), data_provider, ExprLanguage::kC);
+
+  // Test struct.
+  const char kStructName[] = "TestStruct";
   auto structure =
-      MakeCollectionType(DwarfTag::kStructureType, "TestStruct", {{"value", MakeInt32Type()}});
+      MakeCollectionType(DwarfTag::kStructureType, kStructName, {{"value", MakeInt32Type()}});
+  TestIndexedSymbol indexed_struct(module_symbols, &index_root, kStructName, structure);
+
+  // Test struct value.
   ExprValue value(static_cast<int32_t>(4), structure);
 
-  // Test appending literal string keys as well as value keys.
+  // Make the equivalent of a "typedef int16_t MyInt;" inside the structure.
+  const char kMyIntName[] = "MyInt";
+  auto my_int = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kTypedef, MakeInt16Type());
+  my_int->set_assigned_name(kMyIntName);
+  SymbolTestParentSetter my_int_parent(my_int, structure);
+  EXPECT_EQ("TestStruct::MyInt", my_int->GetFullName());
+  TestIndexedSymbol indexed_int(module_symbols, indexed_struct.index_node, kMyIntName, my_int);
+
+  // Test appending literal string keys as well as value keys and the GetMaxArraySize() function.
+  // My doing the cast to "MyInt", we also test that types can be resolved that are members of
+  // the struct being pretty-printed.
   PrettyGenericContainer pretty(R"(
     $zxdb::AppendKeyValueRow("[size]", value);
     for (int i = 0; i < value; i = i + 1) {
-      $zxdb::AppendKeyValueRow(i, 1000 + i);
+      $zxdb::AppendKeyValueRow(i, static_cast<MyInt>(1000) + i);
     }
     $zxdb::AppendNameValueRow("[max was]", $zxdb::GetMaxArraySize());
     $zxdb::AppendNameRow("...");
@@ -43,7 +76,6 @@ TEST_F(PrettyTypeTest, PrettyGenericContainer) {
 
   FormatNode node("result", value);
   node.set_type("TestStruct");
-  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
   FormatOptions options;
 
   bool complete = false;

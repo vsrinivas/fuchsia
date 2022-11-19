@@ -69,6 +69,8 @@ class DataExtractor {
 
   // Reads a DWARF signed or unsigned "LEB128"-encoded value from the stream. This encoding is a
   // UTF-8-like variable-length integer encoding.
+  //
+  // To encode, see the toplevel AppendULeb() function in leb.h.
   std::optional<int64_t> ReadSleb128();
   std::optional<uint64_t> ReadUleb128();
 

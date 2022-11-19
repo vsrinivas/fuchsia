@@ -74,7 +74,10 @@ class MockEvalContext : public EvalContext {
   std::shared_ptr<Abi> abi_;
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
 
-  // Mocked results for FindName.
+  // Mocked results for FindName. These identifiers are canonicalized to be explicitly qualified
+  // global values, and the same will be done when comparing for queries. Otherwise "::Foo" and
+  // "Foo" will be treated as separate things (the mock searching is a simple lookup and doesn't do
+  // namespace traversal).
   std::map<ParsedIdentifier, FoundName> names_;
 
   std::map<std::string, ExprValue> values_by_name_;

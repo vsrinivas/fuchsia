@@ -15,6 +15,17 @@
 
 namespace zxdb {
 
+namespace {
+
+// Returns a copy of the input with the global qualification forced to true.
+ParsedIdentifier GloballyQualified(const ParsedIdentifier& input) {
+  ParsedIdentifier result = input;
+  result.set_qualification(IdentifierQualification::kGlobal);
+  return result;
+}
+
+}  // namespace
+
 MockEvalContext::MockEvalContext()
     : abi_(std::make_unique<AbiNull>()),
       data_provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {}
@@ -22,7 +33,7 @@ MockEvalContext::MockEvalContext()
 MockEvalContext::~MockEvalContext() = default;
 
 void MockEvalContext::AddName(const ParsedIdentifier& ident, FoundName found) {
-  names_[ident] = std::move(found);
+  names_[GloballyQualified(ident)] = std::move(found);
 }
 
 void MockEvalContext::AddVariable(const std::string& name, ExprValue v) {
@@ -54,7 +65,7 @@ void MockEvalContext::AddBuiltinFunction(const ParsedIdentifier& name, BuiltinFu
 void MockEvalContext::FindName(const FindNameOptions& options, const ParsedIdentifier& looking_for,
                                std::vector<FoundName>* results) const {
   // Check the mocks first.
-  auto found = names_.find(looking_for);
+  auto found = names_.find(GloballyQualified(looking_for));
   if (found != names_.end()) {
     results->push_back(found->second);
     // Assume if a mock was provided, we don't need to do a full search for anything else.

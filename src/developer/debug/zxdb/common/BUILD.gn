@@ -37,6 +37,7 @@ static_library("common") {
     "host_util.h",
     "inet_util.h",
     "join_callbacks.h",
+    "leb.h",
     "ref_ptr_to.h",
     "scoped_temp_file.h",
     "string_util.h",
@@ -54,6 +55,7 @@ static_library("common") {
     "host_util.cc",
     "inet_util.cc",
     "int128_t.cc",
+    "leb.cc",
     "scoped_temp_file.cc",
     "string_util.cc",
     "tagged_data.cc",
@@ -93,6 +95,7 @@ source_set("tests") {
     "file_util_unittest.cc",
     "inet_util_unittest.cc",
     "join_callbacks_unittest.cc",
+    "leb_unittest.cc",
     "string_util_unittest.cc",
     "tagged_data_unittest.cc",
   ]

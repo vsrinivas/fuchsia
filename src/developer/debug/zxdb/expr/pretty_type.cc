@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/developer/debug/zxdb/common/leb.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/format.h"
@@ -14,6 +15,9 @@
 #include "src/developer/debug/zxdb/expr/format_options.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -158,7 +162,7 @@ class PrettyEvalContext : public EvalContext {
   const std::shared_ptr<Abi>& GetAbi() const override { return impl_->GetAbi(); }
   void FindName(const FindNameOptions& options, const ParsedIdentifier& looking_for,
                 std::vector<FoundName>* results) const override;
-  FindNameContext GetFindNameContext() const override { return impl_->GetFindNameContext(); }
+  FindNameContext GetFindNameContext() const override;
   void GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override {
     return impl_->GetVariableValue(std::move(variable), std::move(cb));
@@ -194,6 +198,7 @@ class PrettyEvalContext : public EvalContext {
         value_(node->value()),
         format_options_(options) {
     AddBuiltinFuncs();
+    FillFakeMemberFn();
   }
 
   // This variant does not support any mutation of the output node. This is used for more narrowly
@@ -202,6 +207,7 @@ class PrettyEvalContext : public EvalContext {
                     const FormatOptions& options = FormatOptions())
       : impl_(std::move(impl)), value_(std::move(value)), format_options_(options) {
     AddBuiltinFuncs();
+    FillFakeMemberFn();
   }
 
   ~PrettyEvalContext() override = default;
@@ -209,11 +215,19 @@ class PrettyEvalContext : public EvalContext {
   // Populates the builtin_funcs_ map.
   void AddBuiltinFuncs();
 
+  // Populates fake_member_fn_.
+  void FillFakeMemberFn();
+
   fxl::RefPtr<EvalContext> impl_;
 
   fxl::WeakPtr<FormatNode> weak_node_;
   ExprValue value_;
   FormatOptions format_options_;
+
+  // A function symbol we've synthesized to make FindName implicitly search the object we're
+  // pretty-printing for values and types. This function is made with a "this" variable whose type
+  // refers to the type being pretty-printed.
+  fxl::RefPtr<Function> fake_member_fn_;
 
   std::map<ParsedIdentifier, BuiltinFuncCallback> builtin_funcs_;
 };
@@ -221,21 +235,15 @@ class PrettyEvalContext : public EvalContext {
 void PrettyEvalContext::FindName(const FindNameOptions& options,
                                  const ParsedIdentifier& looking_for,
                                  std::vector<FoundName>* results) const {
-  // TODO Hook this up to implicitly use the scope of the object being printed. Ideally it would
-  // appear as the "this" member. Currently FindNameContext can't express this, it can only take
-  // a CodeBlock where it looks for the "this" member. Ideally it could also take an object that
-  // is automatically treated as "this".
-  //
-  // The parser will generally tolerate unknown words and treat them as identifiers which makes
-  // parsing work. These cases will all end up in GetNamedValue() below when they're evaluated and
-  // everything works.
-  //
-  // The thing that won't work is local types defined in the pretty-printed object. For C++ parsing
-  // to work correctly, it needs to know which names are types, and this will force the
-  // pretty-printer code to qualify all names, and means that types inside templates probably can't
-  // be expressed at all. However, pretty-printers can always use "auto" which is sufficient for
-  // most uses.
-  return impl_->FindName(options, looking_for, results);
+  return ::zxdb::FindName(GetFindNameContext(), options, looking_for, results);
+}
+
+FindNameContext PrettyEvalContext::GetFindNameContext() const {
+  // The block comes from the fake member function we made. Everything else comes from the
+  // surrounding context.
+  FindNameContext context = impl_->GetFindNameContext();
+  context.block = fake_member_fn_.get();
+  return context;
 }
 
 void PrettyEvalContext::GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const {
@@ -295,6 +303,33 @@ void PrettyEvalContext::AddBuiltinFuncs() {
                                          const std::vector<ExprValue>& params, EvalCallback cb) {
         GetMaxArraySize(eval_context, params, format_options, std::move(cb));
       };
+}
+
+void PrettyEvalContext::FillFakeMemberFn() {
+  // See the declaration of fake_member_fn_ above for more.
+  fake_member_fn_ = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+
+  // Make a DWARF expression that evaluates to the data of the variable being pretty-printed. This
+  // isn't strictly necessary as of this writing because the variable data is never used, only the
+  // type is used for FindName while values go through GetNamedValue() which doesn't use this
+  // code path.
+  //
+  // This data is being provided for completeness to avoid weird effects of a technically-invalid
+  // Variable in case something is changed in the future around member finding. This is implemented
+  // using the DW_OP_piece opcode which is followed by the byte count (ULEB-encoded) and that
+  // number of bytes of the object data.
+  const std::vector<uint8_t>& source_data = value_.data().bytes();
+  std::vector<uint8_t> location_expr_data;
+  location_expr_data.push_back(llvm::dwarf::DW_OP_piece);
+  AppendULeb(source_data.size(), &location_expr_data);
+  location_expr_data.insert(location_expr_data.end(), source_data.begin(), source_data.end());
+  DwarfExpr location_expr(std::move(location_expr_data));
+
+  // FindName expects "this" to be a pointer type on the block.
+  auto this_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, value_.type());
+  auto this_var = fxl::MakeRefCounted<Variable>(DwarfTag::kVariable, "this", this_ptr,
+                                                VariableLocation(std::move(location_expr)));
+  fake_member_fn_->set_object_pointer(LazySymbol(std::move(this_var)));
 }
 
 // When doing multi-evaluation, we'll have a vector of values, any of which could have generated an
