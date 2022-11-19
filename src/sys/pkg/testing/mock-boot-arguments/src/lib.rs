@@ -14,7 +14,9 @@ static PKGFS_BOOT_ARG_KEY: &str = "zircon.system.pkgfs.cmd";
 static PKGFS_BOOT_ARG_VALUE_PREFIX: &str = "bin/pkgsvr+";
 
 /// Serves fuchsia.boot/Arguments.GetString from a supplied arguments map.
-/// Panics on unexpected keys or fidl methods.
+/// Panics on unexpected fidl methods.
+/// GetString panics on unexpected keys.
+/// GetStrings returns None for unexpected keys.
 pub struct MockBootArgumentsService {
     args: HashMap<String, Option<String>>,
 }
@@ -46,6 +48,19 @@ impl MockBootArgumentsService {
                         panic!("unexpected fuchsia.boot/Arguments.GetString key {:?}", key);
                     }
                 }
+                fidl_fuchsia_boot::ArgumentsRequest::GetStrings { keys, responder } => {
+                    let mut values: Vec<Option<&str>> = vec![];
+                    for key in keys {
+                        if let Some(value) = self.args.get(&key) {
+                            values.push(value.as_deref());
+                        } else {
+                            values.push(None);
+                        }
+                    }
+                    responder
+                        .send(&mut values.into_iter())
+                        .expect("Error sending boot_arguments strings response.");
+                }
                 req => {
                     panic!("unexpected fuchsia.boot/Arguments request {:?}", req);
                 }
@@ -70,6 +85,25 @@ mod tests {
                     .to_string()
                 )
             }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn get_strings_request() {
+        let mock = Arc::new(MockBootArgumentsService::new(hashmap! {
+            "some-key".to_string() => Some("some-value".to_string()),
+            "some-key-2".to_string() => Some("some-value-2".to_string())
+        }));
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_boot::ArgumentsMarker>()
+                .unwrap();
+        fasync::Task::spawn(mock.handle_request_stream(stream)).detach();
+
+        let keys = vec!["some-key", "missing-key", "some-key-2"];
+        let values = proxy.get_strings(&mut keys.into_iter()).await.unwrap();
+        assert_eq!(
+            values,
+            vec![Some("some-value".to_string()), None, Some("some-value-2".to_string())]
         );
     }
 
