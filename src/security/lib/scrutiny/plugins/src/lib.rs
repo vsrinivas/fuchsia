@@ -10,4 +10,3 @@ pub mod static_pkgs;
 pub mod sys;
 pub mod toolkit;
 pub mod verify;
-pub mod zbi;

@@ -7,8 +7,10 @@ use {
     ffx_scrutiny_verify_args::bootfs::Command,
     scrutiny_config::{ConfigBuilder, ModelConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
-    scrutiny_plugins::zbi::BootFsCollection,
-    scrutiny_utils::golden::{CompareResult, GoldenFile},
+    scrutiny_utils::{
+        bootfs::BootfsPackageIndex,
+        golden::{CompareResult, GoldenFile},
+    },
     serde_json,
     std::{
         collections::HashSet,
@@ -25,16 +27,27 @@ If you are making a change in fuchsia.git that causes this, you need to perform 
 5: For each existing line you modified in 2, remove the line.
 ";
 
-pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
+pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<PathBuf>> {
     if cmd.golden.len() == 0 {
         bail!("Must specify at least one --golden");
     }
     let mut deps = HashSet::new();
-    let command = CommandBuilder::new("zbi.bootfs").build();
-    let model = ModelConfig::from_product_bundle(cmd.product_bundle.clone())?;
-    let plugins = vec!["ZbiPlugin".to_string()];
+    let zbi_path = &cmd.zbi;
+    let zbi = zbi_path
+        .to_str()
+        .ok_or_else(|| anyhow!("Failed to convert ZBI path to string: {:?}", cmd.zbi))?;
+    deps.insert(zbi_path.clone());
+
+    let command = CommandBuilder::new("tool.zbi.list.bootfs").param("input", zbi).build();
+    // An empty model can be used, because we do not need any artifacts other than the zbi in
+    // order to list the bootfs contents.
+    let model = ModelConfig::empty();
+    let plugins = vec!["ToolkitPlugin".to_string()];
     let mut config = ConfigBuilder::with_model(model).command(command).plugins(plugins).build();
     config.runtime.logging.silent_mode = true;
+    if let Some(tmp_dir) = tmp_dir {
+        config.runtime.model.tmp_dir_path = Some(tmp_dir.clone());
+    }
 
     let scrutiny_output =
         launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
@@ -46,10 +59,8 @@ pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
         Some(Path::new("blob")),
     ]);
 
-    let bootfs_collection: BootFsCollection = serde_json::from_str(&scrutiny_output)
+    let bootfs_files: Vec<String> = serde_json::from_str(&scrutiny_output)
         .context(format!("Failed to deserialize scrutiny output: {}", scrutiny_output))?;
-    let bootfs_files = bootfs_collection.files;
-    let bootfs_packages = bootfs_collection.packages;
     let total_bootfs_file_count = bootfs_files.len();
 
     let non_blob_files = bootfs_files
@@ -79,9 +90,28 @@ pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
         deps.insert(golden_file_path.clone());
     }
 
+    // Extract the bootfs package index.
+    let command =
+        CommandBuilder::new("tool.zbi.extract.bootfs.packages").param("input", zbi).build();
+    let plugins = vec!["ToolkitPlugin".to_string()];
+    // An empty model can be used, because we do not need any artifacts other than the zbi in
+    // order to list the bootfs contents.
+    let model = ModelConfig::empty();
+    let mut config = ConfigBuilder::with_model(model).command(command).plugins(plugins).build();
+    config.runtime.logging.silent_mode = true;
+    if let Some(tmp_dir) = tmp_dir {
+        config.runtime.model.tmp_dir_path = Some(tmp_dir.clone());
+    }
+
+    let scrutiny_output =
+        launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
+
+    let bootfs_packages: BootfsPackageIndex = serde_json::from_str(&scrutiny_output)
+        .context(format!("Failed to deserialize scrutiny output: {}", scrutiny_output))?;
+
     // TODO(fxbug.dev/97517) After the first bootfs package is migrated to a component, an
     // absence of a bootfs package index is an error.
-    if bootfs_packages.is_none() {
+    if bootfs_packages.bootfs_pkgs.is_none() {
         if non_blob_files.len() != total_bootfs_file_count {
             return Err(anyhow!("tool.zbi.extract.bootfs.packages returned empty result, but there were blobs in the bootfs."));
         } else {
@@ -90,7 +120,7 @@ pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
     }
 
     // Extract package names from bootfs package descriptions.
-    let bootfs_packages = bootfs_packages.unwrap();
+    let bootfs_packages = bootfs_packages.bootfs_pkgs.unwrap();
     let bootfs_package_names: Vec<String> = bootfs_packages
         .into_iter()
         .map(|((name, _variant), _hash)| name.as_ref().to_string())

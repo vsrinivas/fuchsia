@@ -36,6 +36,10 @@ import("//build/security/verifier/verify_structured_config.gni")
 #   product_bundle (required)
 #     [label] The label of a product_bundle target.
 #
+#   zbi (required)
+#     [label] The path to a ZBI that contains the kernel cmdline and bootfs files.
+#     TODO: Scrutiny should be updated to pull the ZBI from the product bundle.
+#
 #   assembly_image_name (required)
 #     [string] The image name used to assemble the system.
 #
@@ -91,6 +95,7 @@ import("//build/security/verifier/verify_structured_config.gni")
 template("scrutiny_verifiers") {
   assert(defined(invoker.product_bundle),
          "product_bundle is required for scrutiny_verifiers()")
+  assert(defined(invoker.zbi), "zbi is required for scrutiny_verifiers()")
 
   assert(defined(invoker.assembly_image_name),
          "assembly_image_name is required for scrutiny_verifiers()")
@@ -125,8 +130,6 @@ template("scrutiny_verifiers") {
   assert(defined(invoker.zbi_kernel_cmdline_goldens),
          "zbi_kernel_cmdline_goldens is required for scrutiny_verifiers()")
 
-  # TODO(fxbug.dev/114473): Remove once clients have stopped supplying a ZBI.
-  not_needed(invoker, [ "zbi" ])
   verifiers = []
 
   verify_structured_config_policy_by_build_type(
@@ -158,7 +161,7 @@ template("scrutiny_verifiers") {
                                  "testonly",
                                  "visiblity",
                                ])
-        product_bundle = invoker.product_bundle
+        zbi = invoker.zbi
         goldens = invoker.zbi_bootfs_filelist_goldens
         golden_packages = invoker.zbi_bootfs_packages_goldens
       }
@@ -174,10 +177,16 @@ template("scrutiny_verifiers") {
                                  "testonly",
                                  "visiblity",
                                ])
-        product_bundle = invoker.product_bundle
+        zbi = invoker.zbi
         goldens = invoker.zbi_kernel_cmdline_goldens
       }
       verifiers += [ ":${invoker.assembly_image_name}_verify_kernel_cmdline" ]
+    }
+
+    if (invoker.zbi_bootfs_filelist_goldens == [] &&
+        invoker.zbi_bootfs_packages_goldens == [] &&
+        invoker.zbi_kernel_cmdline_goldens == []) {
+      not_needed(invoker, [ "zbi" ])
     }
 
     if (invoker.route_sources_config != "") {

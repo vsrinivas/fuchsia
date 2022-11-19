@@ -7,7 +7,6 @@ use {
     ffx_scrutiny_verify_args::kernel_cmdline::Command,
     scrutiny_config::{ConfigBuilder, ModelConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
-    scrutiny_plugins::zbi::CmdlineCollection,
     scrutiny_utils::golden::{CompareResult, GoldenFile},
     serde_json,
     std::{
@@ -28,25 +27,38 @@ If you are making a change in fuchsia.git that causes this, you need to perform 
 // Query information common to multiple verification passes that may run against different golden
 // files.
 struct Query {
-    // A host filesystem path to the product bundle.
-    product_bundle: PathBuf,
+    // A host filesystem path to the ZBI blob.
+    zbi_path: PathBuf,
+    // A root directory for temporary files created by scrutiny.
+    tmp_dir_path: Option<PathBuf>,
 }
 
 fn verify_kernel_cmdline<P: AsRef<Path>>(query: &Query, golden_path: P) -> Result<()> {
-    let command = CommandBuilder::new("zbi.cmdline").build();
-    let plugins = vec!["ZbiPlugin".to_string()];
-    let model = ModelConfig::from_product_bundle(query.product_bundle.clone())?;
+    let zbi_path = query.zbi_path.to_str().ok_or_else(|| {
+        anyhow!(
+            "ZBI path {:?} cannot be converted to string for passing to scrutiny",
+            query.zbi_path
+        )
+    })?;
+    let command = CommandBuilder::new("tool.zbi.extract.cmdline").param("input", zbi_path).build();
+    let plugins = vec!["ToolkitPlugin".to_string()];
+    // An empty model can be used, because we do not need any artifacts other than the zbi in
+    // order to get the kernel cmdline.
+    let model = ModelConfig::empty();
     let mut config = ConfigBuilder::with_model(model).command(command).plugins(plugins).build();
     config.runtime.logging.silent_mode = true;
+    config.runtime.model.tmp_dir_path = query.tmp_dir_path.clone();
 
     let scrutiny_output =
         launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
 
-    let cmdline_collection: CmdlineCollection = serde_json::from_str(&scrutiny_output)
+    let kernel_cmdline: String = serde_json::from_str(&scrutiny_output)
         .context(format!("Failed to deserialize scrutiny output: {}", scrutiny_output))?;
-    let cmdline = cmdline_collection.cmdline;
+    let mut sorted_cmdline =
+        kernel_cmdline.split(' ').map(ToString::to_string).collect::<Vec<String>>();
+    sorted_cmdline.sort();
     let golden_file = GoldenFile::open(&golden_path).context("Failed to open golden file")?;
-    match golden_file.compare(cmdline) {
+    match golden_file.compare(sorted_cmdline) {
         CompareResult::Matches => Ok(()),
         CompareResult::Mismatch { errors } => {
             println!("Kernel cmdline mismatch");
@@ -65,13 +77,14 @@ fn verify_kernel_cmdline<P: AsRef<Path>>(query: &Query, golden_path: P) -> Resul
     }
 }
 
-pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
+pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<PathBuf>> {
     if cmd.golden.len() == 0 {
         bail!("Must specify at least one --golden");
     }
     let mut deps = HashSet::new();
+    deps.insert(cmd.zbi.clone());
 
-    let query = Query { product_bundle: cmd.product_bundle.clone() };
+    let query = Query { zbi_path: cmd.zbi.clone(), tmp_dir_path: tmp_dir.map(PathBuf::clone) };
     for golden_file_path in cmd.golden.iter() {
         verify_kernel_cmdline(&query, golden_file_path)?;
 

@@ -9,8 +9,8 @@ import("//src/developer/ffx/build/ffx_action.gni")
 #
 # Parameters
 #
-#   product_bundle (required)
-#     [path] Path to a product bundle.
+#   zbi (required)
+#     [path] Path to a ZBI file that contains the kernel cmdline.
 #
 #   goldens (required)
 #     [list of strings] Path to a list of golden files that contain golden
@@ -23,8 +23,7 @@ import("//src/developer/ffx/build/ffx_action.gni")
 #     Usual GN meaning.
 
 template("verify_kernel_cmdline") {
-  assert(defined(invoker.product_bundle),
-         "verify_kernel_cmdline() must specify a product_bundle")
+  assert(defined(invoker.zbi), "verify_kernel_cmdline() must specify zbi")
   assert(defined(invoker.goldens),
          "verify_kernel_cmdline() must specify goldens")
 
@@ -40,18 +39,11 @@ template("verify_kernel_cmdline") {
 
     stamp_file = "$target_gen_dir/$target_name.verified"
     depfile = "$target_gen_dir/$target_name.d"
+    tmp_dir = "$target_out_dir/$target_name/tmp"
 
-    pb_name = get_label_info(invoker.product_bundle, "name")
-    pb_out = get_label_info(invoker.product_bundle, "target_out_dir")
-    pb_dir = "$pb_out/$pb_name"
-    pb_manifest = "$pb_dir/product_bundle.json"
+    hermetic_action_ignored_prefixes = [ tmp_dir ]
 
-    # This verifiers reads blobs from the product bundle, but we do not know
-    # which blobs ahead of time, therefore we allow everything inside the
-    # product bundle directory.
-    hermetic_action_ignored_prefixes = [ pb_dir ]
-
-    inputs = [ pb_manifest ] + invoker.goldens
+    inputs = [ invoker.zbi ] + invoker.goldens
     outputs = [ stamp_file ]
 
     args = [
@@ -61,9 +53,11 @@ template("verify_kernel_cmdline") {
       rebase_path(depfile, root_build_dir),
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
+      "--tmp-dir",
+      rebase_path(tmp_dir, root_build_dir),
       "kernel-cmdline",
-      "--product-bundle",
-      rebase_path(pb_dir, root_build_dir),
+      "--zbi",
+      rebase_path(invoker.zbi, root_build_dir),
     ]
     foreach(golden, invoker.goldens) {
       args += [
@@ -71,10 +65,5 @@ template("verify_kernel_cmdline") {
         rebase_path(golden, root_build_dir),
       ]
     }
-
-    if (!defined(invoker.deps)) {
-      deps = []
-    }
-    deps += [ invoker.product_bundle ]
   }
 }

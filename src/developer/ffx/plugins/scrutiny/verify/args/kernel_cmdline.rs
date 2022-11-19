@@ -16,13 +16,13 @@ use {
     example = r#"To verify kernel cmdline arguments on your current build:
 
     $ ffx scrutiny verify kernel-cmdline \
-        --product-bundle $(fx get-build-dir)/obj/build/images/fuchsia/product_bundle \
+        --zbi $(fx get-build-dir)/obj/build/images/fuchsia/fuchsia/fuchsia.zbi \
         --golden path/to/golden"#
 )]
 pub struct Command {
-    /// absolute or working directory-relative path to a product bundle.
+    /// absolute or working directory-relative path to ZBI image file that contains bootfs.
     #[argh(option)]
-    pub product_bundle: PathBuf,
+    pub zbi: PathBuf,
     /// absolute or working directory-relative path(s) to golden files to compare against during
     /// verification.
     #[argh(option)]

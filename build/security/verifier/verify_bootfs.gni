@@ -9,8 +9,8 @@ import("//src/developer/ffx/build/ffx_action.gni")
 #
 # Parameters
 #
-#   product_bundle (required)
-#     [label] Path to a product bundle.
+#   zbi (required)
+#     [label] Path to a zbi that contains bootfs.
 #
 #   goldens (required)
 #     [list of strings] Path to a list of golden files that contain golden
@@ -31,8 +31,7 @@ import("//src/developer/ffx/build/ffx_action.gni")
 #     Usual GN meaning.
 
 template("verify_bootfs_filelist") {
-  assert(defined(invoker.product_bundle),
-         "verify_bootfs_filelist() must specify product_bundle")
+  assert(defined(invoker.zbi), "verify_bootfs_filelist() must specify zbi")
   assert(defined(invoker.goldens),
          "verify_bootfs_filelist() must specify goldens")
   assert(defined(invoker.golden_packages),
@@ -49,18 +48,11 @@ template("verify_bootfs_filelist") {
                            ])
     stamp_file = "$target_gen_dir/$target_name.verified"
     depfile = "$target_gen_dir/$target_name.d"
+    tmp_dir = "$target_out_dir/$target_name/tmp"
 
-    pb_name = get_label_info(invoker.product_bundle, "name")
-    pb_out = get_label_info(invoker.product_bundle, "target_out_dir")
-    pb_dir = "$pb_out/$pb_name"
-    pb_manifest = "$pb_dir/product_bundle.json"
+    hermetic_action_ignored_prefixes = [ tmp_dir ]
 
-    # This verifiers reads blobs from the product bundle, but we do not know
-    # which blobs ahead of time, therefore we allow everything inside the
-    # product bundle directory.
-    hermetic_action_ignored_prefixes = [ pb_dir ]
-
-    inputs = [ pb_manifest ] + invoker.goldens + invoker.golden_packages
+    inputs = [ invoker.zbi ] + invoker.goldens + invoker.golden_packages
     outputs = [ stamp_file ]
 
     args = [
@@ -70,9 +62,11 @@ template("verify_bootfs_filelist") {
       rebase_path(depfile, root_build_dir),
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
+      "--tmp-dir",
+      rebase_path(tmp_dir, root_build_dir),
       "bootfs",
-      "--product-bundle",
-      rebase_path(pb_dir, root_build_dir),
+      "--zbi",
+      rebase_path(invoker.zbi, root_build_dir),
     ]
 
     if (invoker.golden_packages != []) {
@@ -90,10 +84,5 @@ template("verify_bootfs_filelist") {
         rebase_path(golden, root_build_dir),
       ]
     }
-
-    if (!defined(invoker.deps)) {
-      deps = []
-    }
-    deps += [ invoker.product_bundle ]
   }
 }

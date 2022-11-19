@@ -9,19 +9,19 @@ use {argh::FromArgs, ffx_core::ffx_command, std::path::PathBuf};
 #[argh(
     subcommand,
     name = "bootfs",
-    description = "Verifies list of files in bootfs inside a product bundle against a golden file",
+    description = "Verifies list of files in bootfs embedded in ZBI image against a golden file",
     example = r#"To verify bootfs on your current build:
 
     $ ffx scrutiny verify bootfs \
-        --product-bundle $(fx get-build-dir)/obj/build/images/fuchsia/product_bundle \
+        --zbi $(fx get-build-dir)/obj/build/images/fuchsia/fuchsia/fuchsia.zbi \
         --golden /path/to/goldens/product.txt \
         --golden /path/to/goldens/board.txt"#,
     note = "Verifies all file paths in bootfs."
 )]
 pub struct Command {
-    /// absolute or working directory-relative path to a product bundle.
+    /// absolute or working directory-relative path to ZBI image file that contains bootfs.
     #[argh(option)]
-    pub product_bundle: PathBuf,
+    pub zbi: PathBuf,
     /// absolute or working directory-relative path(s) to golden file(s) for verifying bootfs paths.
     #[argh(option)]
     pub golden: Vec<PathBuf>,
