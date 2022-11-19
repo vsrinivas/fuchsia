@@ -56,11 +56,26 @@ group("tests") {
   ]
 }
 
+# Platform support needed to run tests.
+# TODO(http://fxbug.dev/112006) Remove when added to platform assembly input
+# bundles.
+group("test_support") {
+  testonly = true
+  deps = [
+    "//src/sys/run_test_suite:run_test_suite",
+    "//src/sys/test_manager",
+  ]
+}
+
 group("tests_no_e2e") {
   testonly = true
   assert_no_deps = e2e_test_libs
 
-  deps = [
+  # Add testing support
+  deps = [ ":test_support" ]
+
+  # And then the tests themselves
+  deps += [
     "bringup:tests",
     "camera:tests",
     "chromium:tests",

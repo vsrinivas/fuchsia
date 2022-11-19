@@ -151,6 +151,9 @@ group("tests") {
 
     # although these tests don't use test_manager itself, this group includes test_manager's
     # dependencies (such as test runners).
+    #
+    # TODO(http://fxbug.dev/112006) Remove when added to platform assembly input
+    # bundles.
     "//src/sys/test_manager",
 
     # test_manager_test launches these tests.
