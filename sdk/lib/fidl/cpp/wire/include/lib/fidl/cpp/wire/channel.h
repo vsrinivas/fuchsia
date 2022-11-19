@@ -137,8 +137,9 @@ class ServerBindingRef : public internal::ServerBindingRefBase {
   //
   // This may be called from any thread.
   void Close(zx_status_t epitaph) {
-    if (auto binding = ServerBindingRefBase::binding().lock())
+    if (auto binding = ServerBindingRefBase::binding().lock()) {
       binding->Close(std::move(binding), epitaph);
+    }
   }
 
   // Retrieve the implementation used by this |ServerBindingRef| to process incoming messages, and
@@ -146,7 +147,7 @@ class ServerBindingRef : public internal::ServerBindingRefBase {
   template <typename ServerImpl>
   void AsImpl(fit::function<void(const ServerImpl*)> impl_handler) const {
     static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol, Protocol>);
-    if (auto held_binding = binding().lock()) {
+    if (auto held_binding = ServerBindingRefBase::binding().lock()) {
       impl_handler(static_cast<const ServerImpl*>(held_binding->interface()));
     }
   }
@@ -755,6 +756,37 @@ class ServerBindingGroup final {
   ServerBindingGroup& operator=(ServerBindingGroup&&) = delete;
 
   // Add a binding to an unowned impl to the group.
+  //
+  // |CloseHandler| is silently discarded if |ServerBindingGroup| is destroyed, to avoid calling
+  // into a destroyed server implementation.
+  //
+  // The handler may have one of these signatures:
+  //
+  //     void(fidl::UnbindInfo info);
+  //     void(Impl* impl, fidl::UnbindInfo info);
+  //
+  // |info| contains the detailed reason for stopping message dispatch. |impl| is the pointer to the
+  // server implementation borrowed by the binding.
+  //
+  // This method allows one to bind a |CloseHandler| to the newly created server binding instance.
+  // See |ServerBinding| for more information on the behavior of the |CloseHandler|, when and how it
+  // is called, etc. This is particularly useful when passing in a |std::unique_ptr<ServerImpl>|,
+  // because one does not have to capture the server implementation pointer again:
+  //
+  //     // Define and instantiate the impl.
+  //     class Impl : fidl::WireServer<Protocol> {
+  //      public:
+  //       void OnFidlClosed(fidl::UnbindInfo) { /* handle errors */ }
+  //     };
+  //
+  //     auto impl = Impl(...);
+  //     fidl::ServerBindingGroup<Protocol> binding_group;
+  //
+  //     // Bind the server endpoint to the |Impl| instance, and hook up the
+  //     // |CloseHandler| to its |OnFidlClosed| member function.
+  //     binding_group.AddBinding(
+  //         dispatcher, std::move(server_end), &impl,
+  //         std::mem_fn(&Impl::OnFidlClosed));
   template <typename ServerImpl, typename CloseHandler>
   void AddBinding(async_dispatcher_t* dispatcher,
                   fidl::internal::ServerEndType<FidlProtocol> server_end, ServerImpl* impl,
@@ -792,10 +824,77 @@ class ServerBindingGroup final {
     }
   }
 
-  // The number of bindings in this |ServerBindingGroup|.
+  // Removes all bindings associated with a particular |impl| without calling their close handlers.
+  // None of the removed bindings will have its close handler called. Returns true if at least one
+  // binding was removed.
+  template <class ServerImpl>
+  bool RemoveBindings(const ServerImpl* impl) {
+    ProtocolMatchesImplRequirement<ServerImpl>();
+
+    if (ExtractMatchedBindings(impl).empty()) {
+      return false;
+    }
+
+    MaybeEmpty();
+    return true;
+  }
+
+  // Removes all bindings. None of the removed bindings close handlers' is called. Returns true if
+  // at least one binding was removed.
+  bool RemoveAll() {
+    if (bindings_.empty()) {
+      return false;
+    }
+
+    bindings_.clear();
+    MaybeEmpty();
+    return true;
+  }
+
+  // Closes all bindings associated with the specified |impl|. The supplied epitaph is passed to
+  // each closed binding's close handler, which is called in turn. Returns true if at least one
+  // binding was closed. The teardown operation is asynchronous, and will not necessarily have been
+  // completed by the time this function returns.
+  template <class ServerImpl>
+  bool CloseBindings(const ServerImpl* impl, zx_status_t epitaph_value) {
+    ProtocolMatchesImplRequirement<ServerImpl>();
+
+    auto matching_bindings = ExtractMatchedBindings(impl);
+    if (matching_bindings.empty()) {
+      return false;
+    }
+
+    // Kick off teardown for each binding, then put all matched bindings in the special store for
+    // bindings that have been removed but are waiting to be successfully torn down.
+    for (auto& binding : matching_bindings) {
+      binding.second->Close(epitaph_value);
+      tearing_down_.insert(std::move(binding));
+    }
+    return true;
+  }
+
+  // Closes all bindings. All of the closed bindings' close handlers are called. Returns true if at
+  // least one binding was closed.
+  bool CloseAll(zx_status_t epitaph_value) {
+    bool had_bindings = !bindings_.empty();
+
+    // Kick off teardown for each binding, then put all matched bindings in the special store for
+    // bindings that have been removed but are waiting to be successfully torn down.
+    for (auto& binding : bindings_) {
+      binding.second->Close(epitaph_value);
+      tearing_down_.insert(std::move(binding));
+    }
+
+    bindings_.clear();
+    return had_bindings;
+  }
+
+  // The number of active bindings in this |ServerBindingGroup|.
   size_t size() const { return bindings_.size(); }
 
-  // Called when the last binding has been removed from this |ServerBindingGroup|.
+  // Called when a previously full |ServerBindingGroup| has been emptied. A |ServerBindingGroup| is
+  // "empty" once it contains no active bindings, and all closed bindings that it held since the
+  // last time it was empty have finished their tear down routines.
   //
   // This function is not called by |~ServerBindingGroup|.
   void set_empty_set_handler(fit::closure empty_set_handler) {
@@ -808,15 +907,67 @@ class ServerBindingGroup final {
     static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol, FidlProtocol>);
   }
 
+  // Removes all bindings matching a specified |impl*| instance from the main |bindings_| storage,
+  // and transfers ownership of them to the caller to do what it pleases with. The caller may choose
+  // to then immediately drop them (thereby "removing" the bindings), or to call `Close()` on each
+  // one and store them in the |tearing_down_| storage until their respective teardowns can be
+  // completed.
+  template <typename ServerImpl>
+  StorageType ExtractMatchedBindings(const ServerImpl* impl) {
+    ProtocolMatchesImplRequirement<ServerImpl>();
+
+    // Do one pass to build up the |extracted| list. We don't |.erase()| moved entries during this
+    // pass to avoid mutating the list while walking over it.
+    StorageType extracted;
+    for (auto& binding : bindings_) {
+      ZX_ASSERT(binding.second != nullptr);
+      binding.second.get()->template AsImpl<ServerImpl>([&](const ServerImpl* i) {
+        if (impl == i) {
+          extracted.insert(std::move(binding));
+        }
+      });
+    }
+
+    // Now do a second pass, erasing all entries in |bindings_| that have been moved to |extracted|.
+    for (const auto& binding : extracted) {
+      bindings_.erase(binding.first);
+    }
+
+    return extracted;
+  }
+
+  // Removes a single binding matching a specified |BindingUid| from the main |bindings_| storage,
+  // and transfers ownership of it to the caller to do what it pleases with. The caller may choose
+  // to then immediately drop it (thereby "removing" the binding), or to call `Close()` on it and
+  // store it in the |tearing_down_| storage until its teardown is completed.
   std::unique_ptr<Binding> ExtractMatchedBinding(BindingUid uid) {
     auto it = bindings_.find(uid);
-    if (it == bindings_.end())
+    if (it == bindings_.end()) {
       return nullptr;
+    }
 
     std::unique_ptr<Binding> extracted = std::move(it->second);
     bindings_.erase(uid);
 
     return extracted;
+  }
+
+  // Take a binding in any stage (either active or "tearing down") and immediately remove it from
+  // all storage and pass it back to the caller, who now owns it.
+  std::unique_ptr<Binding> ReleaseBinding(BindingUid uid) {
+    auto matched_binding = ExtractMatchedBinding(uid);
+    if (matched_binding != nullptr) {
+      return matched_binding;
+    }
+    auto it = tearing_down_.find(uid);
+    if (it == tearing_down_.end()) {
+      return nullptr;
+    }
+
+    std::unique_ptr<Binding> deleted = std::move(it->second);
+    tearing_down_.erase(uid);
+
+    return deleted;
   }
 
   // There are three ways in which this function may be called:
@@ -825,39 +976,44 @@ class ServerBindingGroup final {
   //   2. The implementation calls |completer.Close|.
   //   3. The owner of this |ServerBindingGroup| has manually closed this |ServerBinding| by calling
   //      the |CloseBinding| method on it.
-  //
-  // In the last of these scenarios, the call to |ExtractMatchedBinding| will return a |nullptr|, as
-  // either of the referenced method would have already removed the binding in question from the
-  // underlying storage. In either of the first two cases, this call will return an unused
-  // |unique_ptr| pointing to the binding that has just now been removed. We proceed in the same
-  // manner regardless of the return value, but because we have no way of knowing which of the three
-  // scenarios above is the source of the |CloseHandler| call we are currently inside, we must call
-  // it defensively anyway.
   template <typename CloseHandler, typename ServerImpl>
   void OnBindingClose(BindingUid uid, ServerImpl* impl, UnbindInfo info,
                       CloseHandler&& actual_close_handler) {
-    {
-      // In the case that this is a |unique_ptr|, and thus the owner of the binding, assign it to a
-      // locally scoped variable to ensure that it does not get dropped before the
-      // |actual_close_handler| returns.
-      auto matched_binding = this->ExtractMatchedBinding(uid);
+    ProtocolMatchesImplRequirement<ServerImpl>();
 
-      // Execute the user-supplied |CloseHandler|.
-      if constexpr (std::is_convertible_v<CloseHandler, internal::SimpleCloseHandler>) {
-        actual_close_handler(info);
-      } else {
-        actual_close_handler(impl, info);
-      }
+    // Assign this binding to a locally scoped variable to ensure that it does not get dropped
+    // before the |actual_close_handler| returns. If the binding has already been removed manually
+    // via a |Remove*| call, this will return a |nullptr|, indicating that we should not proceed
+    // with firing the |empty_handler_|.
+    auto released_binding = this->ReleaseBinding(uid);
+
+    // Execute the user-supplied |CloseHandler|.
+    if constexpr (std::is_convertible_v<CloseHandler, internal::SimpleCloseHandler>) {
+      actual_close_handler(info);
+    } else {
+      actual_close_handler(impl, info);
     }
 
-    // Make sure to clean up after ourselves if we're the last ones here!
-    if (this->bindings_.empty() && this->empty_handler_) {
+    if (released_binding != nullptr) {
+      this->MaybeEmpty();
+    }
+  }
+
+  // Make sure to clean up after ourselves if we're the last ones here! Only fires the
+  // |empty_handler_| once all active bindings have been removed, and all "closed" bindings have
+  // finished their respective teardown routines.
+  void MaybeEmpty() {
+    if (this->empty_handler_ && this->bindings_.empty() && this->tearing_down_.empty()) {
       this->empty_handler_();
     }
   }
 
   BindingUid next_uid_ = 0;
   StorageType bindings_;
+
+  // Store for bindings that are being torn down and may no longer be interacted with through public
+  // methods (iterated over, closed, removed, etc).
+  StorageType tearing_down_;
   fit::closure empty_handler_;
 };
 

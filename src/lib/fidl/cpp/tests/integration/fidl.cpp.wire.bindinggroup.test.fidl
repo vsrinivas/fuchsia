@@ -13,5 +13,5 @@ protocol Testable {
     });
 
     /// Causes the other end to close and execute its close handler.
-    Close();
+    Terminate();
 };

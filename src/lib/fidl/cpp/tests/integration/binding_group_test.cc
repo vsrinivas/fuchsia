@@ -17,14 +17,17 @@
 namespace {
 
 using ::fidl_cpp_wire_bindinggroup_test::Testable;
-
-constexpr auto kNoopCloser = [](fidl::UnbindInfo info) {};
 constexpr zx_status_t kTestEpitaph = 1234;
 constexpr char kSimpleEcho[] = "test";
 
+// These are the default values for the number of impls and number of bindings per impl when
+// testing. Some test running functions may use template parameters to override these as needed.
+const size_t kTestNumImpls = 2;
+const size_t kTestNumBindingsPerImpl = 2;
+
 struct TestImpl : fidl::Server<Testable> {
  public:
-  TestImpl() {}
+  TestImpl(async::Loop* loop) : loop(loop) {}
 
   void Echo(EchoRequest& request, EchoCompleter::Sync& completer) override {
     echo_count_++;
@@ -33,18 +36,35 @@ struct TestImpl : fidl::Server<Testable> {
 
   // Always abruptly close the connection. This is not a good implementation to copy - its just
   // useful to check that close handling works properly.
-  void Close(CloseCompleter::Sync& completer) override {
-    close_count_++;
+  void Terminate(TerminateCompleter::Sync& completer) override {
+    terminate_count_++;
     completer.Close(kTestEpitaph);
+    loop->Quit();
   }
+
+  // Fired whenever the binding is closed via a |Close*| call on its parent |ServerBindingGroup|.
+  void close_handler_fired() { close_count_++; }
 
   size_t get_echo_count() const { return echo_count_; }
 
   size_t get_close_count() const { return close_count_; }
 
+  size_t get_terminate_count() const { return terminate_count_; }
+
+  async::Loop* loop = nullptr;
+
  private:
   size_t close_count_ = 0;
   size_t echo_count_ = 0;
+  size_t terminate_count_ = 0;
+};
+
+constexpr auto kCloseHandler = [](TestImpl* impl, fidl::UnbindInfo info) {
+  impl->close_handler_fired();
+  EXPECT_TRUE(info.did_send_epitaph());
+  EXPECT_EQ(fidl::Reason::kClose, info.reason());
+  EXPECT_OK(info.status());
+  impl->loop->Quit();
 };
 
 TEST(BindingGroup, Trivial) { fidl::ServerBindingGroup<Testable> group; }
@@ -52,7 +72,7 @@ TEST(BindingGroup, Trivial) { fidl::ServerBindingGroup<Testable> group; }
 // Tests simple patterns for adding various numbers of bindings for various numbers of
 // implementations. Additionally, this test template tests that the |size| and |ForEachBinding|
 // methods work as expected.
-template <size_t NumImpls, size_t NumBindingsPerImpl>
+template <size_t NumImpls = kTestNumImpls, size_t NumBindingsPerImpl = kTestNumBindingsPerImpl>
 void AddBindingTest() {
   constexpr size_t TotalServerBindings = NumImpls * NumBindingsPerImpl;
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
@@ -64,24 +84,27 @@ void AddBindingTest() {
   impls.reserve(NumImpls);
   clients.reserve(TotalServerBindings);
 
+  // Data we are tracking for the duration of the test which we will assert against.
+  std::map<const TestImpl*, size_t> unvisited_bindings_per_impl;
+
   fidl::ServerBindingGroup<Testable> group;
-  std::map<const TestImpl*, size_t> active_bindings_per_impl;
 
   // Create the right number of bindings for each impl as requested. Hold on to the client so that
   // we may poke at it later.
   for (size_t i = 0; i < NumImpls; i++) {
-    impls.emplace_back();
+    impls.emplace_back(&loop);
     for (size_t j = i * NumBindingsPerImpl; j < (i + 1) * NumBindingsPerImpl; j++) {
       zx::result<fidl::Endpoints<Testable>> endpoints = fidl::CreateEndpoints<Testable>();
       ASSERT_OK(endpoints.status_value());
-      group.AddBinding(loop.dispatcher(), std::move(endpoints->server), &impls.back(), kNoopCloser);
+      group.AddBinding(loop.dispatcher(), std::move(endpoints->server), &impls.back(),
+                       kCloseHandler);
       clients.emplace_back(std::move(endpoints->client), loop.dispatcher());
     }
-    active_bindings_per_impl.insert({&impls.back(), NumBindingsPerImpl});
+    unvisited_bindings_per_impl.insert({&impls.back(), NumBindingsPerImpl});
   }
   EXPECT_EQ(group.size(), TotalServerBindings);
   EXPECT_EQ(clients.size(), TotalServerBindings);
-  EXPECT_EQ(active_bindings_per_impl.size(), NumImpls);
+  EXPECT_EQ(unvisited_bindings_per_impl.size(), NumImpls);
 
   // Make an |Echo| call on each |client| to ensure that its binding is actually responsive.
   for (auto& client : clients) {
@@ -112,19 +135,20 @@ void AddBindingTest() {
     bool matched = false;
     bindings_visited++;
     binding.AsImpl<TestImpl>([&](const TestImpl* binding_impl) {
-      auto matched_impl = active_bindings_per_impl.find(binding_impl);
-      EXPECT_NE(matched_impl, active_bindings_per_impl.end());
+      auto matched_impl = unvisited_bindings_per_impl.find(binding_impl);
+      EXPECT_NE(matched_impl, unvisited_bindings_per_impl.end());
       matched = true;
       matched_impl->second--;
     });
+
     EXPECT_TRUE(matched);
   });
 
   // Because the previous loop decremented the count for each impl visited, we can iterate over the
-  // |active_bindings_per_impl| counters to ensure that they are all zero, confirming that every
+  // |unvisited_bindings_per_impl| counters to ensure that they are all zero, confirming that every
   // |impl| has been visited the appropriate number of times.
   EXPECT_EQ(bindings_visited, TotalServerBindings);
-  for (const auto& impl : active_bindings_per_impl) {
+  for (const auto& impl : unvisited_bindings_per_impl) {
     EXPECT_EQ(impl.second, 0);
   }
 }
@@ -138,7 +162,7 @@ TEST(BindingGroup, AddBindingManyImplsWithOneBindingEach) { AddBindingTest<2, 1>
 TEST(BindingGroup, AddBindingManyImplsWithManyBindingsEach) { AddBindingTest<2, 2>(); }
 
 // Tests adding bindings using the generator produced by the |CreateHandler| method.
-template <size_t NumImpls, size_t NumBindingsPerImpl>
+template <size_t NumImpls = kTestNumImpls, size_t NumBindingsPerImpl = kTestNumBindingsPerImpl>
 void CreateHandlerTest() {
   constexpr size_t TotalServerBindings = NumImpls * NumBindingsPerImpl;
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
@@ -151,24 +175,21 @@ void CreateHandlerTest() {
   clients.reserve(TotalServerBindings);
 
   fidl::ServerBindingGroup<Testable> group;
-  std::map<const TestImpl*, size_t> active_bindings_per_impl;
 
   // Create the right number of bindings for each impl as requested. Hold on to the client so that
   // we may poke at it later.
   for (size_t i = 0; i < NumImpls; i++) {
-    impls.emplace_back();
-    auto handler = group.CreateHandler(&impls.back(), loop.dispatcher(), kNoopCloser);
+    impls.emplace_back(&loop);
+    auto handler = group.CreateHandler(&impls.back(), loop.dispatcher(), kCloseHandler);
     for (size_t j = i * NumBindingsPerImpl; j < (i + 1) * NumBindingsPerImpl; j++) {
       zx::result<fidl::Endpoints<Testable>> endpoints = fidl::CreateEndpoints<Testable>();
       ASSERT_OK(endpoints.status_value());
       handler(std::move(endpoints->server));
       clients.emplace_back(std::move(endpoints->client), loop.dispatcher());
     }
-    active_bindings_per_impl.insert({&impls.back(), NumBindingsPerImpl});
   }
   EXPECT_EQ(group.size(), TotalServerBindings);
   EXPECT_EQ(clients.size(), TotalServerBindings);
-  EXPECT_EQ(active_bindings_per_impl.size(), NumImpls);
 
   // Make an |Echo| call on each |client| to ensure that its binding is actually responsive.
   for (auto& client : clients) {
@@ -202,7 +223,7 @@ TEST(BindingGroup, CreateHandlerManyImplsWithOneBindingEach) { CreateHandlerTest
 TEST(BindingGroup, CreateHandlerManyImplsWithManyBindingsEach) { CreateHandlerTest<2, 2>(); }
 
 // Tests that |CloseHandler| functions are correctly passed to, and fired by, bindings in the group.
-template <size_t NumImpls, size_t NumBindingsPerImpl>
+template <size_t NumImpls = kTestNumImpls, size_t NumBindingsPerImpl = kTestNumBindingsPerImpl>
 void CloseHandlerTest() {
   constexpr size_t TotalServerBindings = NumImpls * NumBindingsPerImpl;
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
@@ -214,44 +235,34 @@ void CloseHandlerTest() {
   impls.reserve(NumImpls);
   clients.reserve(TotalServerBindings);
 
-  fidl::ServerBindingGroup<Testable> group;
-  std::map<const TestImpl*, size_t> unclosed_bindings_per_impl;
-  auto close_handler = [&](TestImpl* impl, fidl::UnbindInfo info) {
-    auto matched_impl = unclosed_bindings_per_impl.find(impl);
-    EXPECT_NE(matched_impl, unclosed_bindings_per_impl.end());
-    EXPECT_TRUE(info.did_send_epitaph());
-    EXPECT_EQ(fidl::Reason::kClose, info.reason());
-    EXPECT_OK(info.status());
+  // Data we are tracking for the duration of the test which we will assert against.
+  size_t empty_set_handler_call_count = 0;
 
-    matched_impl->second--;
-  };
+  fidl::ServerBindingGroup<Testable> group;
 
   // Add an |empty_handler| lambda to the |group|, and ensure that it only gets called once.
-  size_t empty_set_handler_call_count = 0;
   group.set_empty_set_handler([&]() { empty_set_handler_call_count++; });
 
   // Create the right number of bindings for each impl as requested. Hold on to the client so that
   // we may poke at it later.
   for (size_t i = 0; i < NumImpls; i++) {
-    impls.emplace_back();
+    impls.emplace_back(&loop);
     for (size_t j = i * NumBindingsPerImpl; j < (i + 1) * NumBindingsPerImpl; j++) {
       zx::result<fidl::Endpoints<Testable>> endpoints = fidl::CreateEndpoints<Testable>();
       ASSERT_OK(endpoints.status_value());
       group.AddBinding(loop.dispatcher(), std::move(endpoints->server), &impls.back(),
-                       close_handler);
+                       kCloseHandler);
       clients.emplace_back(std::move(endpoints->client), loop.dispatcher());
     }
-    unclosed_bindings_per_impl.insert({&impls.back(), NumBindingsPerImpl});
   }
   EXPECT_EQ(group.size(), TotalServerBindings);
   EXPECT_EQ(clients.size(), TotalServerBindings);
-  EXPECT_EQ(unclosed_bindings_per_impl.size(), NumImpls);
 
-  // Make a |Close| call on each |client| to ensure that it is abruptly torn down.
+  // Make a |Terminate| call on each |client| to ensure that it is abruptly torn down.
   for (auto& client : clients) {
     EXPECT_EQ(empty_set_handler_call_count, 0);
 
-    auto result = client->Close();
+    auto result = client->Terminate();
     EXPECT_TRUE(result.ok());
 
     // Run the loop until the close handlers are resolved.
@@ -259,12 +270,15 @@ void CloseHandlerTest() {
     loop.ResetQuit();
   }
 
-  // Ensure that each |impl| was closed the number of times that we expect.
+  // Ensure that each |impl| was closed the number of times that we expect. In this case, that means
+  // that every closure came from a |Terminate| method call on the client, and that every binding
+  // was closed in this manner.
   for (const auto& impl : impls) {
-    EXPECT_EQ(impl.get_close_count(), NumBindingsPerImpl);
+    EXPECT_EQ(impl.get_terminate_count(), impl.get_close_count());
+    EXPECT_EQ(impl.get_terminate_count(), NumBindingsPerImpl);
   }
 
-  // Ensure that empty handler was only called once, after the last binding resolved its |Close|
+  // Ensure that empty handler was only called once, after the last binding resolved its |Terminate|
   // handler.
   EXPECT_EQ(empty_set_handler_call_count, 1);
 }
@@ -276,5 +290,251 @@ TEST(BindingGroup, CloseHandlerOneImplWithManyBindings) { CloseHandlerTest<1, 2>
 TEST(BindingGroup, CloseHandlerManyImplsWithOneBindingEach) { CloseHandlerTest<2, 1>(); }
 
 TEST(BindingGroup, CloseHandlerManyImplsWithManyBindingsEach) { CloseHandlerTest<2, 2>(); }
+
+using KillSomeBindings = fit::function<void(fidl::ServerBindingGroup<Testable>& group,
+                                            async::Loop* loop, std::vector<TestImpl>& impls,
+                                            std::map<size_t, const TestImpl*>& open_bindings)>;
+
+// Tests that calling methods in the |Close*()| and |Remove*()| families works as expected. The
+// |KillSomeBindings| lambda is used to |Remove*| or |Close*| some number of bindings as the
+// specific test requires.
+void ExternalKillBindingTest(KillSomeBindings kill_some_bindings) {
+  constexpr size_t TotalServerBindings = kTestNumImpls * kTestNumBindingsPerImpl;
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+
+  // Because we're going to be using raw pointers into these vectors for the test, its important to
+  // pre-allocate, so that the underlying storage doesn't move.
+  std::vector<TestImpl> impls;
+  std::vector<fidl::WireClient<Testable>> clients;
+  impls.reserve(kTestNumImpls);
+  clients.reserve(TotalServerBindings);
+
+  // Data we are tracking for the duration of the test which we will assert against.  The
+  // |kill_some_bindings| handler should replace all entries in |open_bindings| with |nullptr| when
+  // killing them.
+  std::map<size_t, const TestImpl*> open_bindings;
+  size_t empty_set_handler_call_count = 0;
+
+  // Create the |group| under test, and define a counter-decrementing |close_handler| to attach to
+  // each binding it holds.
+  fidl::ServerBindingGroup<Testable> group;
+
+  // Add an |empty_handler| lambda to the |group|, incrementing a simple counter each time it gets
+  // called.
+  group.set_empty_set_handler([&]() { empty_set_handler_call_count++; });
+
+  // Create the right number of bindings for each impl as requested. Hold on to the client so that
+  // we may poke at it later.
+  for (size_t i = 0; i < kTestNumImpls; i++) {
+    impls.emplace_back(&loop);
+    for (size_t j = i * kTestNumBindingsPerImpl; j < (i + 1) * kTestNumBindingsPerImpl; j++) {
+      zx::result<fidl::Endpoints<Testable>> endpoints = fidl::CreateEndpoints<Testable>();
+      ASSERT_OK(endpoints.status_value());
+
+      group.AddBinding(loop.dispatcher(), std::move(endpoints->server), &impls.back(),
+                       kCloseHandler);
+      clients.emplace_back(std::move(endpoints->client), loop.dispatcher());
+      open_bindings.insert({j, &impls.back()});
+    }
+  }
+  EXPECT_EQ(group.size(), TotalServerBindings);
+  EXPECT_EQ(clients.size(), TotalServerBindings);
+
+  // Call the |kill_some_bindings| lambda to kill the servers that the test requires.
+  kill_some_bindings(group, &loop, impls, open_bindings);
+
+  // Make a |Terminate| call on each remaining |client| to ensure that it is abruptly torn down.
+  for (auto& open_binding : open_bindings) {
+    // Check if the other side of the connection has been dropped - a failure here means that it
+    // has, which should conform to our expectations based on which |open_bindings| we've set as
+    // |nullptr|s (indicating removal/closing) and not.
+    auto result = clients[open_binding.first]->Terminate();
+    EXPECT_EQ(result.ok(), open_binding.second != nullptr);
+
+    // Run the loop until the close handlers are resolved.
+    loop.RunUntilIdle();
+    loop.ResetQuit();
+  }
+
+  // Ensure that empty handler was only called once, after the last binding resolved its |Terminate|
+  // handler.
+  EXPECT_EQ(empty_set_handler_call_count, 1);
+}
+
+TEST(BindingGroup, RemoveBindings) {
+  ExternalKillBindingTest([](fidl::ServerBindingGroup<Testable>& group, async::Loop* loop,
+                             std::vector<TestImpl>& impls,
+                             std::map<size_t, const TestImpl*>& open_bindings) {
+    const TestImpl* target_impl = &impls[0];
+    EXPECT_EQ(group.RemoveBindings(target_impl), true);
+    EXPECT_EQ(group.RemoveBindings(target_impl), false);
+    EXPECT_EQ(group.size(), 2);
+
+    loop->RunUntilIdle();
+    loop->ResetQuit();
+
+    // Ensure that no close counters were incremented, since this was merely a removal.
+    for (auto& impl : open_bindings) {
+      EXPECT_EQ(impl.second->get_close_count(), 0);
+    }
+
+    // Mark the removed bindings as killed, so that the rest of the test knows which bindings
+    // should and should not be closed via the client making a |Terminate| call.
+    for (const auto& open_binding : open_bindings) {
+      if (open_binding.second == target_impl) {
+        open_bindings[open_binding.first] = nullptr;
+      }
+    }
+  });
+}
+
+TEST(BindingGroup, RemoveAll) {
+  ExternalKillBindingTest([](fidl::ServerBindingGroup<Testable>& group, async::Loop* loop,
+                             std::vector<TestImpl>& impls,
+                             std::map<size_t, const TestImpl*>& open_bindings) {
+    EXPECT_EQ(group.RemoveAll(), true);
+    EXPECT_EQ(group.RemoveAll(), false);
+    EXPECT_EQ(group.size(), 0);
+
+    loop->RunUntilIdle();
+    loop->ResetQuit();
+
+    // Ensure that no close counters were incremented, since this was merely a removal.
+    for (auto& impl : open_bindings) {
+      EXPECT_EQ(impl.second->get_close_count(), 0);
+    }
+
+    // Mark the removed bindings as killed, so that the rest of the test knows which bindings
+    // should and should not be closed via the client making a |Terminate| call.
+    for (const auto& open_binding : open_bindings) {
+      open_bindings[open_binding.first] = nullptr;
+    }
+  });
+}
+
+TEST(BindingGroup, CloseBindings) {
+  ExternalKillBindingTest([](fidl::ServerBindingGroup<Testable>& group, async::Loop* loop,
+                             std::vector<TestImpl>& impls,
+                             std::map<size_t, const TestImpl*>& open_bindings) {
+    const TestImpl* target_impl = &impls[0];
+    EXPECT_EQ(group.CloseBindings(target_impl, kTestEpitaph), true);
+    EXPECT_EQ(group.CloseBindings(target_impl, kTestEpitaph), false);
+    EXPECT_EQ(group.size(), 2);
+
+    // Run the loop until the close handlers are resolved. We need to do this once for every
+    // close handler being called, so 2 in this case.
+    for (size_t i = 0; i < 2; i++) {
+      loop->RunUntilIdle();
+      loop->ResetQuit();
+    }
+
+    // Ensure that the close handler was fired for the closed binding's |impl| the correct
+    // number of times.
+    EXPECT_EQ(target_impl->get_close_count(), 2);
+    for (const auto& impl : impls) {
+      if (&impl != target_impl) {
+        EXPECT_EQ(impl.get_close_count(), 0);
+      }
+    }
+
+    // Mark the closed binding as killed, so that the rest of the test knows which bindings
+    // should and should not be closed via the client making a |Terminate| call.
+    for (const auto& open_binding : open_bindings) {
+      if (open_binding.second == target_impl) {
+        open_bindings[open_binding.first] = nullptr;
+      }
+    }
+  });
+}
+
+TEST(BindingGroup, CloseAll) {
+  ExternalKillBindingTest([](fidl::ServerBindingGroup<Testable>& group, async::Loop* loop,
+                             std::vector<TestImpl>& impls,
+                             std::map<size_t, const TestImpl*>& open_bindings) {
+    EXPECT_EQ(group.CloseAll(kTestEpitaph), true);
+    EXPECT_EQ(group.CloseAll(kTestEpitaph), false);
+    EXPECT_EQ(group.size(), 0);
+
+    // Run the loop until the close handlers are resolved. We need to do this once for every
+    // close handler being called, so all 4 in this case.
+    for (size_t i = 0; i < 4; i++) {
+      loop->RunUntilIdle();
+      loop->ResetQuit();
+    }
+
+    // Ensure that the close handler was fired for the closed bindings' |impl|s the correct
+    // number of times.
+    for (const auto& impl : impls) {
+      EXPECT_EQ(impl.get_close_count(), 2);
+    }
+
+    // Mark the closed bindings as killed, so that the rest of the test knows which bindings
+    // should and should not be closed via the client making a |Terminate| call.
+    for (const auto& open_binding : open_bindings) {
+      open_bindings[open_binding.first] = nullptr;
+    }
+  });
+}
+
+TEST(BindingGroup, CannotRemoveAfterClose) {
+  ExternalKillBindingTest([](fidl::ServerBindingGroup<Testable>& group, async::Loop* loop,
+                             std::vector<TestImpl>& impls,
+                             std::map<size_t, const TestImpl*>& open_bindings) {
+    const TestImpl* target_impl = &impls[1];
+    EXPECT_EQ(group.CloseBindings(target_impl, kTestEpitaph), true);
+    EXPECT_EQ(group.RemoveBindings(target_impl), false);
+    EXPECT_EQ(group.size(), 2);
+    EXPECT_EQ(group.CloseAll(kTestEpitaph), true);
+    EXPECT_EQ(group.RemoveAll(), false);
+    EXPECT_EQ(group.size(), 0);
+
+    // Run the loop until the close handlers are resolved. We need to do this once for every
+    // close handler being called, so all 4 in this case.
+    for (size_t i = 0; i < 4; i++) {
+      loop->RunUntilIdle();
+      loop->ResetQuit();
+    }
+
+    // Ensure that the close handler was fired for the closed bindings' |impl|s the correct
+    // number of times.
+    for (const auto& impl : impls) {
+      EXPECT_EQ(impl.get_close_count(), 2);
+    }
+
+    // Mark the closed bindings as killed, so that the rest of the test knows which bindings
+    // should and should not be closed via the client making a |Terminate| call.
+    for (const auto& open_binding : open_bindings) {
+      open_bindings[open_binding.first] = nullptr;
+    }
+  });
+}
+
+TEST(BindingGroup, CannotCloseAfterRemove) {
+  ExternalKillBindingTest([](fidl::ServerBindingGroup<Testable>& group, async::Loop* loop,
+                             std::vector<TestImpl>& impls,
+                             std::map<size_t, const TestImpl*>& open_bindings) {
+    const TestImpl* target_impl = &impls[1];
+    EXPECT_EQ(group.RemoveBindings(target_impl), true);
+    EXPECT_EQ(group.CloseBindings(target_impl, kTestEpitaph), false);
+    EXPECT_EQ(group.size(), 2);
+    EXPECT_EQ(group.RemoveAll(), true);
+    EXPECT_EQ(group.CloseAll(kTestEpitaph), false);
+    EXPECT_EQ(group.size(), 0);
+
+    loop->RunUntilIdle();
+    loop->ResetQuit();
+
+    // Ensure that no close counters were incremented, since this was merely a removal.
+    for (auto& impl : open_bindings) {
+      EXPECT_EQ(impl.second->get_close_count(), 0);
+    }
+
+    // Mark the removed bindings as killed, so that the rest of the test knows which bindings
+    // should and should not be closed via the client making a |Terminate| call.
+    for (const auto& open_binding : open_bindings) {
+      open_bindings[open_binding.first] = nullptr;
+    }
+  });
+}
 
 }  // namespace
