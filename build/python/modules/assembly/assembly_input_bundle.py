@@ -405,9 +405,6 @@ class AIBCreator:
         deps.update(config_data_deps)
         result.config_data = config_data
 
-        # Sort the shell commands alphabetically
-        result.shell_commands = dict(sorted(result.shell_commands.items()))
-
         # Write the AIB manifest
         assembly_config_path = os.path.join(self.outdir, "assembly_config.json")
         with open(assembly_config_path, 'w') as file:
