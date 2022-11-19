@@ -21,6 +21,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer {
     fuchsia::media::AudioStreamType stream_type_;
     fuchsia::media::AudioRenderUsage usage_;
     bool block_completion_ = false;
+    bool close_on_add_payload_buffer_ = false;
   };
 
   FakeAudioRenderer();

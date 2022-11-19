@@ -55,6 +55,13 @@ void FakeAudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_
 }
 
 void FakeAudioRenderer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
+  if (expectations_.close_on_add_payload_buffer_) {
+    binding_.set_error_handler(nullptr);
+    binding_.Unbind();
+    add_payload_buffer_called_ = true;
+    return;
+  }
+
   // All the expected packets should have the same payload buffer id. Check |id| against the
   // buffer id of the first expected packet.
   EXPECT_FALSE(expectations_.packets_.empty());

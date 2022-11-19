@@ -209,6 +209,21 @@ fpromise::result<std::shared_ptr<Sound>, zx_status_t> SoundPlayerImpl::SoundFrom
 SoundPlayerImpl::Renderer::Renderer(fuchsia::media::AudioRendererPtr audio_renderer,
                                     fuchsia::media::AudioRenderUsage usage)
     : audio_renderer_(std::move(audio_renderer)) {
+  audio_renderer_.set_error_handler([this](zx_status_t status) {
+    if (locked_sound_) {
+      locked_sound_->Unlock();
+      locked_sound_ = nullptr;
+    }
+
+    if (play_sound_callback_) {
+      // This renderer may be deleted during the callback, so we move the callback to prevent
+      // it from being deleted out from under us.
+      auto callback = std::move(play_sound_callback_);
+      callback(fuchsia::media::sounds::Player_PlaySound_Result::WithErr(
+          fuchsia::media::sounds::PlaySoundError::RENDERER_FAILED));
+    }
+  });
+
   audio_renderer_->SetUsage(usage);
 }
 

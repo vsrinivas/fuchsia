@@ -609,5 +609,44 @@ TEST_F(SoundPlayerTests, WhenReady) {
   RunLoopUntilIdle();
 }
 
+// Plays a sound from a wav file. The audio renderer closes the connection on |AddPayloadBuffer|.
+TEST_F(SoundPlayerTests, WavFileCloseConnection) {
+  SetRendererExpectations({{
+      .payload_buffer_ = ZX_KOID_INVALID,
+      .packets_ = {{.pts = fuchsia::media::NO_TIMESTAMP,
+                    .payload_buffer_id = 0,
+                    .payload_offset = 0,
+                    .payload_size = kWavFilePayloadSize,
+                    .flags = 0,
+                    .buffer_config = 0,
+                    .stream_segment_id = 0}},
+      .stream_type_ =
+          {
+              .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
+              .channels = kWavFileChannels,
+              .frames_per_second = kWavFramesPerSecond,
+          },
+      .usage_ = kUsage,
+      .close_on_add_payload_buffer_ = true,
+  }});
+
+  under_test().AddSoundFromFile(0, ResourceFile("sfx.wav"),
+                                [](fuchsia::media::sounds::Player_AddSoundFromFile_Result result) {
+                                  EXPECT_TRUE(result.is_response());
+                                  EXPECT_EQ(kWavFileDuration, result.response().duration);
+                                });
+  bool play_sound_completed = false;
+  under_test().PlaySound(
+      0, kUsage, [&play_sound_completed](fuchsia::media::sounds::Player_PlaySound_Result result) {
+        EXPECT_TRUE(result.is_err());
+        EXPECT_EQ(fuchsia::media::sounds::PlaySoundError::RENDERER_FAILED, result.err());
+        play_sound_completed = true;
+      });
+  RunLoopUntil([&play_sound_completed]() { return play_sound_completed; });
+
+  under_test().RemoveSound(0);
+  RunLoopUntilIdle();
+}
+
 }  // namespace test
 }  // namespace soundplayer
