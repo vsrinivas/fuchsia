@@ -7,21 +7,22 @@ use {
     futures::channel::mpsc::Sender, std::cell::RefCell, std::rc::Rc,
 };
 
-/// A fake [`InputHandler`] used for testing. A [`FakeInputHandler`] does not consume InputEvents.
-pub struct FakeInputHandler {
+/// A fake [`InputHandler`] used for testing.
+/// A [`ObserveFakeEventsInputHandler`] does not consume InputEvents.
+pub struct ObserveFakeEventsInputHandler {
     /// Events received by [`handle_input_event()`] are sent to this channel.
     event_sender: RefCell<Sender<input_device::InputEvent>>,
 }
 
 #[allow(dead_code)]
-impl FakeInputHandler {
+impl ObserveFakeEventsInputHandler {
     pub fn new(event_sender: Sender<input_device::InputEvent>) -> Rc<Self> {
-        Rc::new(FakeInputHandler { event_sender: RefCell::new(event_sender) })
+        Rc::new(ObserveFakeEventsInputHandler { event_sender: RefCell::new(event_sender) })
     }
 }
 
 #[async_trait(?Send)]
-impl input_handler::InputHandler for FakeInputHandler {
+impl input_handler::InputHandler for ObserveFakeEventsInputHandler {
     async fn handle_input_event(
         self: Rc<Self>,
         input_event: input_device::InputEvent,

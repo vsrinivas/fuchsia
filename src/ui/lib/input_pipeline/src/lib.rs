@@ -5,8 +5,8 @@
 #[macro_use]
 mod testing_utilities;
 mod fake_input_device_binding;
-mod fake_input_handler;
 mod mouse_config;
+mod observe_fake_events_input_handler;
 mod utils;
 
 pub mod consumer_controls_binding;

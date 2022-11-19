@@ -622,9 +622,9 @@ mod tests {
     use {
         super::*,
         crate::fake_input_device_binding,
-        crate::fake_input_handler,
         crate::input_device::{self, InputDeviceBinding},
         crate::mouse_binding,
+        crate::observe_fake_events_input_handler,
         crate::utils::Position,
         assert_matches::assert_matches,
         fidl::endpoints::{create_proxy, create_proxy_and_stream, create_request_stream},
@@ -745,7 +745,9 @@ mod tests {
         // Create a fake input handler.
         let (handler_event_sender, mut handler_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        let input_handler = fake_input_handler::FakeInputHandler::new(handler_event_sender);
+        let input_handler = observe_fake_events_input_handler::ObserveFakeEventsInputHandler::new(
+            handler_event_sender,
+        );
 
         // Build the input pipeline.
         let (sender, receiver, tasks) =
@@ -795,11 +797,15 @@ mod tests {
         let (first_handler_event_sender, mut first_handler_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
         let first_input_handler =
-            fake_input_handler::FakeInputHandler::new(first_handler_event_sender);
+            observe_fake_events_input_handler::ObserveFakeEventsInputHandler::new(
+                first_handler_event_sender,
+            );
         let (second_handler_event_sender, mut second_handler_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
         let second_input_handler =
-            fake_input_handler::FakeInputHandler::new(second_handler_event_sender);
+            observe_fake_events_input_handler::ObserveFakeEventsInputHandler::new(
+                second_handler_event_sender,
+            );
 
         // Build the input pipeline.
         let (sender, receiver, tasks) = InputPipelineAssembly::new()
