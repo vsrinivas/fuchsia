@@ -298,15 +298,20 @@ fidl_testdata_info = [
     name = "overflowing"
     target = "//tools/fidl/fidlc/testdata:test.overflowing"
     denylist = [
-      # TODO(fxbug.dev/106641): Overflowing is only used by the Rust backend at this time.
+      # TODO(fxbug.dev/100478): Re-enable before landing
       "fidldoc",
-      "fidlgen_banjo",
+
+      # TODO(fxbug.dev/114261): Re-enable some of these tests when decoding is enabled.
+      # TODO(fxbug.dev/114263): Remove from denylist when encoding is enabled as well.
+      "fidlgen_cpp",
       "fidlgen_dart",
-      "fidlgen_go",
       "fidlgen_hlcpp",
       "fidlgen_libfuzzer",
-      "fidlgen_cpp",
       "fidlgen_syzkaller",
+
+      # TODO(fxbug.dev/114266): Re-enable when proper runtime error messages have been added.
+      "fidlgen_go",
+      "fidlgen_banjo",
     ]
   },
   {

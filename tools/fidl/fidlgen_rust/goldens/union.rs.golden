@@ -1340,7 +1340,7 @@ impl TestProtocolSynchronousProxy {
         &self,
         ___deadline: zx::Time,
     ) -> Result<(OlderSimpleUnion), fidl::Error> {
-        let _value: (OlderSimpleUnion,) = self.client.send_query::<_, _, false, false>(
+        let _value: (OlderSimpleUnion,) = self.client.send_query::<_, _, false, true>(
             &mut (),
             0x6ad517317388ea05,
             fidl::encoding::DynamicFlags::empty(),
@@ -1438,7 +1438,7 @@ impl TestProtocolProxyInterface for TestProtocolProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })

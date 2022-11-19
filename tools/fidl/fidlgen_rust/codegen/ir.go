@@ -171,13 +171,9 @@ type Protocol struct {
 	ProtocolName string
 }
 
-// Overflowing stores information about a method's payloads, indicating whether
+// Overflowable stores information about a method's payloads, indicating whether
 // it is possible for either of them to overflow on either encode or decode.
-// TODO(fxbug.dev/106641): this information will be included in the IR in the
-// final implementation. For the current prototype, inferring it from a user
-// supplied (but allowlist guarded) `@experimental_overflowing` attribute is
-// sufficient.
-type Overflowing struct {
+type Overflowable struct {
 	// OnRequestEncode indicates whether or not the parent method's request
 	// payload may be so large on encode as to require overflow handling.
 	OnRequestEncode bool
@@ -229,7 +225,7 @@ type Method struct {
 	// union.
 	Result *Result
 	// Stores overflowing information for this method's payloads.
-	Overflowing Overflowing
+	Overflowable Overflowable
 }
 
 // DynamicFlags gets rust code for the DynamicFlags value that should be set for
@@ -1125,8 +1121,10 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	}
 
 	for _, v := range val.Methods {
+		overflowable := Overflowable{}
 		var compiledRequestParameterList []Parameter
 		if v.RequestPayload != nil {
+			overflowable.OnRequestDecode = v.RequestPayload.DecodeOverflowableOnTransport(val.OverTransport())
 			compiledRequestParameterList = getParametersFromType(v.RequestPayload)
 			if len(compiledRequestParameterList) > maximumAllowedParameters {
 				panic(fmt.Sprintf(
@@ -1148,46 +1146,47 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 			panic(fmt.Sprintf("unknown result type: %v", v.ResultType.Identifier))
 		}
 
-		if v.HasError {
-			compiledResponseParameterList = getParametersFromType(v.ResponsePayload)
-			foundResult = findResultType()
-		} else if v.HasTransportError() {
-			compiledResponseParameterList = getParametersFromType(v.ValueType)
-			foundResult = findResultType()
-		} else if v.ResponsePayload != nil {
-			compiledResponseParameterList = getParametersFromType(v.ResponsePayload)
+		// TODO(fxbug.dev/100478): Use this special variable to hold the actual
+		// `overflowable.OnResponseEncode` result, but only apply that result if the
+		// experimental flag allows it below.
+		canBeOverflowableOnResponseEncode := false
+		if v.ResponsePayload != nil {
+			if v.HasError || v.HasTransportError() {
+				foundResult = findResultType()
+			}
+			innerResponse := v.ResponsePayload
+			if !v.HasError && v.HasTransportError() {
+				innerResponse = v.ValueType
+			}
+			compiledResponseParameterList = getParametersFromType(innerResponse)
+			canBeOverflowableOnResponseEncode = v.ResponsePayload.EncodeOverflowableOnTransport(val.OverTransport())
+			overflowable.OnResponseDecode = v.ResponsePayload.DecodeOverflowableOnTransport(val.OverTransport())
 		}
 
-		// TODO(fxbug.dev/106641): This feature is currently restricted to
-		// allowlisted libraries. It is a "dirty" implementation of the final
-		// feature, with some checks (like determining whether or not overflowing
-		// checks are needed for both encode and decode, rather than just the
-		// latter) being omitted.
-		overflowing := Overflowing{}
+		// TODO(fxbug.dev/100478): Encoding large messages is currently restricted
+		// to allowlisted libraries.
 		if c.experiments.Contains(fidlgen.ExperimentAllowOverflowing) {
 			attr, found := v.Attributes.LookupAttribute("experimental_overflowing")
 			if found {
 				reqArg, hasReq := attr.LookupArg("request")
-				if hasReq && reqArg.ValueString() != "false" {
-					overflowing.OnRequestEncode = true
-					overflowing.OnRequestDecode = true
+				if hasReq && reqArg.ValueString() != "false" && v.RequestPayload != nil {
+					overflowable.OnRequestEncode = v.RequestPayload.EncodeOverflowableOnTransport(val.OverTransport())
 				}
 				resArg, hasRes := attr.LookupArg("response")
 				if hasRes && resArg.ValueString() != "false" {
-					overflowing.OnResponseEncode = true
-					overflowing.OnResponseDecode = true
+					overflowable.OnResponseEncode = canBeOverflowableOnResponseEncode
 				}
 			}
 		}
 
 		r.Methods = append(r.Methods, Method{
-			Method:      v,
-			Name:        name,
-			CamelName:   camelName,
-			Request:     compiledRequestParameterList,
-			Response:    compiledResponseParameterList,
-			Result:      foundResult,
-			Overflowing: overflowing,
+			Method:       v,
+			Name:         name,
+			CamelName:    camelName,
+			Request:      compiledRequestParameterList,
+			Response:     compiledResponseParameterList,
+			Result:       foundResult,
+			Overflowable: overflowable,
 		})
 	}
 

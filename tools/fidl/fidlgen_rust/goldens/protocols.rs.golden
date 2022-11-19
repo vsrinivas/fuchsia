@@ -2324,7 +2324,7 @@ impl MethodWithUnionSynchronousProxy {
         mut u: &mut TheUnion,
         ___deadline: zx::Time,
     ) -> Result<(Option<Box<TheUnion>>), fidl::Error> {
-        let _value: (Option<Box<TheUnion>>,) = self.client.send_query::<_, _, false, false>(
+        let _value: (Option<Box<TheUnion>>,) = self.client.send_query::<_, _, false, true>(
             &mut (u),
             0x393e7f5b2b821218,
             fidl::encoding::DynamicFlags::empty(),
@@ -2393,7 +2393,7 @@ impl MethodWithUnionProxyInterface for MethodWithUnionProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -2527,7 +2527,12 @@ impl futures::Stream for MethodWithUnionRequestStream {
                     let mut req: (TheUnion,) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.protocols/MethodWithUnionUnionMethodRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
-                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::encoding::maybe_overflowing_decode(
+                        &header,
+                        _body_bytes,
+                        handles,
+                        &mut req,
+                    )?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
                     let control_handle = MethodWithUnionControlHandle { inner: this.inner.clone() };
 
@@ -3218,7 +3223,7 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
         &self,
         ___deadline: zx::Time,
     ) -> Result<(String), fidl::Error> {
-        let _value: (String,) = self.client.send_query::<_, _, false, false>(
+        let _value: (String,) = self.client.send_query::<_, _, false, true>(
             &mut (),
             0x7d6b2fcf0e2a65bd,
             fidl::encoding::DynamicFlags::empty(),
@@ -3251,7 +3256,7 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
         mut arg: &str,
         ___deadline: zx::Time,
     ) -> Result<(String), fidl::Error> {
-        let _value: (String,) = self.client.send_query::<_, _, false, false>(
+        let _value: (String,) = self.client.send_query::<_, _, false, true>(
             &mut (arg),
             0x590e91945d58f5b1,
             fidl::encoding::DynamicFlags::empty(),
@@ -3363,7 +3368,7 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3410,7 +3415,7 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3499,7 +3504,7 @@ impl WithAndWithoutRequestResponseEvent {
                 let mut out_tuple: (String,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.protocols/WithAndWithoutRequestResponseOnWithResponseEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     WithAndWithoutRequestResponseEvent::OnWithResponse {ret: out_tuple.0,}
@@ -3633,7 +3638,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
                     let mut req: (String,) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
-                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::encoding::maybe_overflowing_decode(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
                     let control_handle = WithAndWithoutRequestResponseControlHandle {
                         inner: this.inner.clone(),
@@ -3645,7 +3650,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
                     let mut req: (String,) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
-                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::encoding::maybe_overflowing_decode(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
                     let control_handle = WithAndWithoutRequestResponseControlHandle {
                         inner: this.inner.clone(),
@@ -3661,7 +3666,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
                     let mut req: (String,) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
-                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::encoding::maybe_overflowing_decode(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
                     let control_handle = WithAndWithoutRequestResponseControlHandle {
                         inner: this.inner.clone(),

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"reflect"
 	"sort"
@@ -540,6 +541,14 @@ const (
 	ZxExperimentalPointerType TypeKind = "experimental_pointer"
 )
 
+type Boundedness string
+
+const (
+	BoundednessBounded     Boundedness = "bounded"
+	BoundednessSemiBounded Boundedness = "semi_bounded"
+	BoundednessUnbounded   Boundedness = "unbounded"
+)
+
 type Type struct {
 	Kind               TypeKind
 	ElementType        *Type
@@ -736,6 +745,91 @@ func (t *Type) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("unknown type kind: %#v", t)
 	}
 	return json.Marshal(obj)
+}
+
+// Boundedness calculates whether the type in question is bounded, semi-bounded,
+// or unbounded.
+func (t *Type) Boundedness() Boundedness {
+	// All calculations are performed using `TypeShapeV2`, though in principal
+	// both type shapes should be identical with respect to the properties being
+	// checked.
+	ts := t.TypeShapeV2
+
+	// MaxUint32 is the sentinel value that the JSON IR uses to represent
+	// "unlimited" in this case.
+	if ts.Depth <= 32 && ts.MaxOutOfLine < math.MaxUint32 {
+		if ts.HasFlexibleEnvelope {
+			return BoundednessSemiBounded
+		}
+		return BoundednessBounded
+	}
+	return BoundednessUnbounded
+}
+
+// MaxEncodeSize returns the maximum encodable size of the type, or nil if the
+// maximum size is unbounded. Note that this only applies to encode (ie, the
+// known shape of the type); on decode, a type may be larger than this size if
+// it contains flexible envelopes (ie, is semi-bounded).
+func (t *Type) MaxEncodeSize() *int {
+	if t.Boundedness() == BoundednessUnbounded {
+		return nil
+	}
+
+	// All calculations are performed using `TypeShapeV2`, though in principal
+	// both type shapes should be identical with respect to the properties being
+	// checked.
+	ts := t.TypeShapeV2
+	mes := ts.InlineSize + ts.MaxOutOfLine
+	return &mes
+}
+
+// MaxDecodeSize returns the maximum decodable size of the type, or nil if the
+// maximum size is unbounded.
+func (t *Type) MaxDecodeSize() *int {
+	if t.Boundedness() != BoundednessBounded {
+		return nil
+	}
+
+	// All calculations are performed using `TypeShapeV2`, though in principal
+	// both type shapes should be identical with respect to the properties being
+	// checked.
+	ts := t.TypeShapeV2
+	mes := ts.InlineSize + ts.MaxOutOfLine
+	return &mes
+}
+
+// Subtract 16 to account for the header that will need to prefix this type when
+// encoded.
+const largeMessageCutoffForZxChannel = math.MaxUint16 - 16
+
+// EncodeOverflowableOnTransport determines whether this type could possibly
+// overflow when encoded after being sent on the given transport.
+func (t *Type) EncodeOverflowableOnTransport(transport string) bool {
+	mes := t.MaxEncodeSize()
+	if strings.ToLower(transport) == "channel" {
+		if mes == nil || *mes > largeMessageCutoffForZxChannel {
+			return true
+		}
+		return false
+	}
+
+	// This is a transport that never overflows.
+	return false
+}
+
+// DecodeOverflowableOnTransport determines whether this type could possibly
+// overflow when decoded after being sent on the given transport.
+func (t *Type) DecodeOverflowableOnTransport(transport string) bool {
+	mes := t.MaxDecodeSize()
+	if strings.ToLower(transport) == "channel" {
+		if mes == nil || *mes > largeMessageCutoffForZxChannel {
+			return true
+		}
+		return false
+	}
+
+	// This is a transport that never overflows.
+	return false
 }
 
 type AttributeArg struct {

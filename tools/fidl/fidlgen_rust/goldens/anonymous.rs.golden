@@ -776,7 +776,12 @@ impl futures::Stream for SomeProtocolRequestStream {
                         fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.anonymous/SomeProtocolSomeMethodRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
-                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::encoding::maybe_overflowing_decode(
+                        &header,
+                        _body_bytes,
+                        handles,
+                        &mut req,
+                    )?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
                     let control_handle = SomeProtocolControlHandle { inner: this.inner.clone() };
 

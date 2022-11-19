@@ -3177,7 +3177,7 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse), fidl::Error> {
         let _value: (UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse,) =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x5177371967e0e6d1,
                 fidl::encoding::DynamicFlags::empty(),
@@ -3190,7 +3190,7 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayTableResponse), fidl::Error> {
         let _value: (UnknownInteractionsAjarProtocolStrictTwoWayTableResponse,) =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x6f8f9343b34e2ed4,
                 fidl::encoding::DynamicFlags::empty(),
@@ -3229,7 +3229,7 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult), fidl::Error> {
         let _value: UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResultHandleWrapper =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x2cbfd5a859d4ac95,
                 fidl::encoding::DynamicFlags::empty(),
@@ -3242,7 +3242,7 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult), fidl::Error> {
         let _value: UnknownInteractionsAjarProtocolStrictTwoWayTableErrResultHandleWrapper =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x30c9e1b3da57dc37,
                 fidl::encoding::DynamicFlags::empty(),
@@ -3409,7 +3409,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3433,7 +3433,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3505,7 +3505,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3529,7 +3529,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3868,7 +3868,7 @@ impl UnknownInteractionsAjarProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsAjarProtocolStrictEventUnionRequest,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventUnionEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsAjarProtocolEvent::StrictEventUnion {payload: out_tuple.0,}
@@ -3878,7 +3878,7 @@ impl UnknownInteractionsAjarProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsAjarProtocolStrictEventTableRequest,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventTableEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsAjarProtocolEvent::StrictEventTable {payload: out_tuple.0,}
@@ -3908,7 +3908,7 @@ impl UnknownInteractionsAjarProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsAjarProtocolStrictEventUnionErrResult,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventUnionErrEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsAjarProtocolEvent::StrictEventUnionErr {result: out_tuple.0,}
@@ -3918,7 +3918,7 @@ impl UnknownInteractionsAjarProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsAjarProtocolStrictEventTableErrResult,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventTableErrEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsAjarProtocolEvent::StrictEventTableErr {result: out_tuple.0,}
@@ -3948,7 +3948,7 @@ impl UnknownInteractionsAjarProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsAjarProtocolFlexibleEventUnionRequest,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventUnionEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsAjarProtocolEvent::FlexibleEventUnion {payload: out_tuple.0,}
@@ -3958,7 +3958,7 @@ impl UnknownInteractionsAjarProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsAjarProtocolFlexibleEventTableRequest,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventTableEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsAjarProtocolEvent::FlexibleEventTable {payload: out_tuple.0,}
@@ -3988,7 +3988,7 @@ impl UnknownInteractionsAjarProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventUnionErrEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsAjarProtocolEvent::FlexibleEventUnionErr {result: out_tuple.0,}
@@ -3998,7 +3998,7 @@ impl UnknownInteractionsAjarProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsAjarProtocolFlexibleEventTableErrResult,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventTableErrEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsAjarProtocolEvent::FlexibleEventTableErr {result: out_tuple.0,}
@@ -5709,7 +5709,7 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse), fidl::Error> {
         let _value: (UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse,) =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x68b32554eb0f6fa7,
                 fidl::encoding::DynamicFlags::empty(),
@@ -5722,7 +5722,7 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayTableResponse), fidl::Error> {
         let _value: (UnknownInteractionsClosedProtocolStrictTwoWayTableResponse,) =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x6e4a94d44b69e785,
                 fidl::encoding::DynamicFlags::empty(),
@@ -5761,7 +5761,7 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult), fidl::Error> {
         let _value: UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResultHandleWrapper =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0xcd65d4d29a43c80,
                 fidl::encoding::DynamicFlags::empty(),
@@ -5774,7 +5774,7 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult), fidl::Error> {
         let _value: UnknownInteractionsClosedProtocolStrictTwoWayTableErrResultHandleWrapper =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x117dde20b92f7b90,
                 fidl::encoding::DynamicFlags::empty(),
@@ -5932,7 +5932,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -5957,7 +5957,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -6030,7 +6030,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -6055,7 +6055,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -6247,7 +6247,7 @@ impl UnknownInteractionsClosedProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsClosedProtocolStrictEventUnionRequest,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventUnionEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsClosedProtocolEvent::StrictEventUnion {payload: out_tuple.0,}
@@ -6257,7 +6257,7 @@ impl UnknownInteractionsClosedProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsClosedProtocolStrictEventTableRequest,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventTableEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsClosedProtocolEvent::StrictEventTable {payload: out_tuple.0,}
@@ -6287,7 +6287,7 @@ impl UnknownInteractionsClosedProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsClosedProtocolStrictEventUnionErrResult,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventUnionErrEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsClosedProtocolEvent::StrictEventUnionErr {result: out_tuple.0,}
@@ -6297,7 +6297,7 @@ impl UnknownInteractionsClosedProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsClosedProtocolStrictEventTableErrResult,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventTableErrEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsClosedProtocolEvent::StrictEventTableErr {result: out_tuple.0,}
@@ -7794,7 +7794,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolStrictTwoWayUnionResponse), fidl::Error> {
         let _value: (UnknownInteractionsProtocolStrictTwoWayUnionResponse,) =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x2212805eca592cad,
                 fidl::encoding::DynamicFlags::empty(),
@@ -7807,7 +7807,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolStrictTwoWayTableResponse), fidl::Error> {
         let _value: (UnknownInteractionsProtocolStrictTwoWayTableResponse,) =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x746ebf8659ff23b7,
                 fidl::encoding::DynamicFlags::empty(),
@@ -7846,7 +7846,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolStrictTwoWayUnionErrResult), fidl::Error> {
         let _value: UnknownInteractionsProtocolStrictTwoWayUnionErrResultHandleWrapper =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x453af745d38b20ca,
                 fidl::encoding::DynamicFlags::empty(),
@@ -7859,7 +7859,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolStrictTwoWayTableErrResult), fidl::Error> {
         let _value: UnknownInteractionsProtocolStrictTwoWayTableErrResultHandleWrapper =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x4c26c7ab89cb68d8,
                 fidl::encoding::DynamicFlags::empty(),
@@ -7895,7 +7895,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolFlexibleTwoWayUnionResponse), fidl::Error> {
         let _value: UnknownInteractionsProtocolFlexibleTwoWayUnionResultWireHandleWrapper =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x44301e4e8d514fb6,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -7910,7 +7910,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolFlexibleTwoWayTableResponse), fidl::Error> {
         let _value: UnknownInteractionsProtocolFlexibleTwoWayTableResultWireHandleWrapper =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x7f492934b6c76187,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -7956,7 +7956,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult), fidl::Error> {
         let _value: UnknownInteractionsProtocolFlexibleTwoWayUnionErrResultWireHandleWrapper =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x2172940a75f107d7,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -7972,7 +7972,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolFlexibleTwoWayTableErrResult), fidl::Error> {
         let _value: UnknownInteractionsProtocolFlexibleTwoWayTableErrResultWireHandleWrapper =
-            self.client.send_query::<_, _, false, false>(
+            self.client.send_query::<_, _, false, true>(
                 &mut (),
                 0x6d8aab48e1693bf2,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -8176,7 +8176,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8196,7 +8196,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8265,7 +8265,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8288,7 +8288,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8367,7 +8367,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8394,7 +8394,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8480,7 +8480,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8509,7 +8509,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, true>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8845,7 +8845,7 @@ impl UnknownInteractionsProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsProtocolStrictEventUnionRequest,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolStrictEventUnionEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsProtocolEvent::StrictEventUnion {payload: out_tuple.0,}
@@ -8855,7 +8855,7 @@ impl UnknownInteractionsProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsProtocolStrictEventTableRequest,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolStrictEventTableEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsProtocolEvent::StrictEventTable {payload: out_tuple.0,}
@@ -8885,7 +8885,7 @@ impl UnknownInteractionsProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsProtocolStrictEventUnionErrResult,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolStrictEventUnionErrEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsProtocolEvent::StrictEventUnionErr {result: out_tuple.0,}
@@ -8895,7 +8895,7 @@ impl UnknownInteractionsProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsProtocolStrictEventTableErrResult,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolStrictEventTableErrEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsProtocolEvent::StrictEventTableErr {result: out_tuple.0,}
@@ -8925,7 +8925,7 @@ impl UnknownInteractionsProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsProtocolFlexibleEventUnionRequest,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventUnionEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsProtocolEvent::FlexibleEventUnion {payload: out_tuple.0,}
@@ -8935,7 +8935,7 @@ impl UnknownInteractionsProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsProtocolFlexibleEventTableRequest,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventTableEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsProtocolEvent::FlexibleEventTable {payload: out_tuple.0,}
@@ -8965,7 +8965,7 @@ impl UnknownInteractionsProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsProtocolFlexibleEventUnionErrResult,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventUnionErrEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsProtocolEvent::FlexibleEventUnionErr {result: out_tuple.0,}
@@ -8975,7 +8975,7 @@ impl UnknownInteractionsProtocolEvent {
                 let mut out_tuple: (UnknownInteractionsProtocolFlexibleEventTableErrResult,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventTableErrEvent");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::maybe_overflowing_decode(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     UnknownInteractionsProtocolEvent::FlexibleEventTableErr {result: out_tuple.0,}
