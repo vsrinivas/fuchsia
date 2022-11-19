@@ -25,6 +25,7 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 
 namespace fvm {
@@ -75,10 +76,6 @@ zx_status_t RebindBlockDevice(DeviceRef* device) {
     return status;
   }
   return ZX_OK;
-}
-
-fidl::VectorView<uint8_t> ToFidlVector(const fbl::Array<uint8_t>& data) {
-  return fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(data.data()), data.size());
 }
 
 using FidlGuid = fuchsia_hardware_block_partition::wire::Guid;
@@ -133,25 +130,16 @@ zx_status_t RamdiskRef::Grow(uint64_t target_size) {
 }
 
 void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offset) {
-  zx::result channel = GetChannel<fuchsia_io::File>(device());
+  zx::result channel = GetChannel<fuchsia_hardware_block::Block>(device());
   ASSERT_OK(channel.status_value());
-  const fidl::WireResult result =
-      fidl::WireCall(channel.value())->WriteAt(ToFidlVector(data), offset);
-  ASSERT_OK(result.status(), "Failed to communicate with block device.");
-  const fit::result response = result.value();
-  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
-  ASSERT_EQ(data.size(), response.value()->actual_count);
+  ASSERT_OK(block_client::SingleWriteBytes(channel.value(), data.data(), data.size(), offset));
 }
 
 void BlockDeviceAdapter::ReadAt(uint64_t offset, fbl::Array<uint8_t>* out_data) {
-  zx::result channel = GetChannel<fuchsia_io::File>(device());
+  zx::result channel = GetChannel<fuchsia_hardware_block::Block>(device());
   ASSERT_OK(channel.status_value());
-  const fidl::WireResult result = fidl::WireCall(channel.value())->ReadAt(out_data->size(), offset);
-  ASSERT_OK(result.status(), "Failed to communicate with block device.");
-  const fit::result response = result.value();
-  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
-  const fidl::VectorView data = response.value()->data;
-  memcpy(out_data->data(), data.data(), data.count());
+  ASSERT_OK(
+      block_client::SingleReadBytes(channel.value(), out_data->data(), out_data->size(), offset));
 }
 
 void BlockDeviceAdapter::CheckContentsAt(const fbl::Array<uint8_t>& data, uint64_t offset) {

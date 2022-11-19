@@ -305,6 +305,7 @@ source_set("adapter-tests") {
     "commands/arguments_test.cc",
     "commands/create_test.cc",
     "commands/extend_test.cc",
+    "commands/file_client.cc",
     "commands/pave_test.cc",
     "commands/size_test.cc",
     "empty_partition_test.cc",

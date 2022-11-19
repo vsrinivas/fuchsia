@@ -4,10 +4,13 @@
 
 #include "src/storage/fvm/fvm_check.h"
 
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -18,23 +21,83 @@
 #include <fbl/vector.h>
 #include <gpt/guid.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm.h"
 
 namespace fvm {
 
-Checker::Checker() = default;
+Checker::Block::Block(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> block)
+    : block_(block) {}
 
-Checker::Checker(fbl::unique_fd fd, uint32_t block_size, bool silent)
-    : fd_(std::move(fd)), block_size_(block_size), logger_(silent) {}
+Checker::Block::~Block() = default;
 
-Checker::~Checker() = default;
+zx::result<size_t> Checker::Block::Size() const {
+  const fidl::WireResult result = fidl::WireCall(block_)->GetInfo();
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    return zx::error(status);
+  }
+  if (response.info == nullptr) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  const fuchsia_hardware_block::wire::BlockInfo& info = *response.info;
+  return zx::ok(info.block_count * info.block_size);
+}
+
+zx::result<size_t> Checker::Block::Read(void* buf, size_t count) const {
+  return zx::make_result(block_client::SingleReadBytes(block_, buf, count, 0), count);
+}
+
+Checker::File::File(fidl::UnownedClientEnd<fuchsia_io::File> file) : file_(file) {}
+
+Checker::File::~File() = default;
+
+zx::result<size_t> Checker::File::Size() const {
+  const fidl::WireResult result = fidl::WireCall(file_)->GetAttr();
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.s; status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(response.attributes.content_size);
+}
+
+zx::result<size_t> Checker::File::Read(void* buf, size_t count) const {
+  uint8_t* dst = static_cast<uint8_t*>(buf);
+  for (size_t offset = 0; offset != count;) {
+    size_t len = std::min(count - offset, fuchsia_io::wire::kMaxTransferSize);
+    const fidl::WireResult result = fidl::WireCall(file_)->ReadAt(len, offset);
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    const fit::result response = result.value();
+    if (response.is_error()) {
+      return zx::error(response.error_value());
+    }
+    fidl::VectorView<uint8_t> data = response.value()->data;
+    memcpy(dst + offset, data.data(), data.count());
+    offset += data.count();
+  }
+  return zx::ok(count);
+}
+
+Checker::Checker(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> block, uint32_t block_size,
+                 bool silent)
+    : Checker(std::make_unique<Block>(block), block_size, silent) {}
+
+Checker::Checker(fidl::UnownedClientEnd<fuchsia_io::File> file, uint32_t block_size, bool silent)
+    : Checker(std::make_unique<File>(file), block_size, silent) {}
+
+Checker::Checker(std::unique_ptr<Interface> interface, uint32_t block_size, bool silent)
+    : interface_(std::move(interface)), block_size_(block_size), logger_(silent) {}
 
 bool Checker::Validate() const {
-  if (!ValidateOptions()) {
-    return false;
-  }
-
   FvmInfo info;
   if (!LoadFVM(&info)) {
     return false;
@@ -43,56 +106,54 @@ bool Checker::Validate() const {
   return CheckFVM(info);
 }
 
-bool Checker::ValidateOptions() const {
-  if (!fd_) {
-    logger_.Error("FVM checker missing a device\n");
-    return false;
-  }
-  if (block_size_ == 0) {
-    logger_.Error("Invalid block size\n");
-    return false;
-  }
-  return true;
-}
-
 bool Checker::LoadFVM(FvmInfo* out) const {
-  const off_t device_size = lseek(fd_.get(), 0, SEEK_END);
-  if (device_size < 0) {
-    logger_.Error("Unable to get file length\n");
+  zx::result device_size = interface_->Size();
+  if (device_size.is_error()) {
+    logger_.Error("Could not get device size: %s\n", device_size.status_string());
     return false;
   }
-  if (device_size % block_size_ != 0) {
-    logger_.Error("File size is not divisible by block size\n");
+  if (device_size.value() % block_size_ != 0) {
+    logger_.Error("device size (%d) is not divisible by block size %d\n", device_size.value(),
+                  block_size_);
     return false;
   }
-  const size_t block_count = device_size / block_size_;
+  const size_t block_count = device_size.value() / block_size_;
 
-  std::unique_ptr<uint8_t[]> header(new uint8_t[fvm::kBlockSize]);
-  if (pread(fd_.get(), header.get(), fvm::kBlockSize, 0) != static_cast<ssize_t>(fvm::kBlockSize)) {
-    logger_.Error("Could not read header\n");
-    return false;
+  uint8_t header[fvm::kBlockSize];
+  {
+    zx::result result = interface_->Read(header, sizeof(header));
+    if (result.is_error()) {
+      logger_.Error("Could not read header: %s\n", result.status_string());
+      return false;
+    }
+    if (result.value() != sizeof(header)) {
+      logger_.Error("Could not read header: %d/%d bytes read\n", result.value(), sizeof(header));
+      return false;
+    }
   }
-  const fvm::Header* superblock = reinterpret_cast<fvm::Header*>(header.get());
-  if (superblock->slice_size % block_size_ != 0) {
+  fvm::Header superblock;
+  memcpy(&superblock, header, sizeof(superblock));
+  if (superblock.slice_size % block_size_ != 0) {
     logger_.Error("Slice size not divisible by block size\n");
     return false;
-  } else if (superblock->slice_size == 0) {
+  }
+  if (superblock.slice_size == 0) {
     logger_.Error("Slice size cannot be zero\n");
     return false;
   }
 
   // Validate sizes to prevent allocating overlarge buffers for the metadata. Check the table
   // sizes separately to prevent numeric overflow when combining them.
-  if (superblock->GetAllocationTableAllocatedByteSize() > fvm::kMaxAllocationTableByteSize) {
+  if (superblock.GetAllocationTableAllocatedByteSize() > fvm::kMaxAllocationTableByteSize) {
     logger_.Error("Slice allocation table is too large.");
     return false;
   }
-  if (superblock->GetPartitionTableByteSize() > fvm::kMaxPartitionTableByteSize) {
+  if (superblock.GetPartitionTableByteSize() > fvm::kMaxPartitionTableByteSize) {
     logger_.Error("FVM header partition table is too large.");
     return false;
   }
 
-  size_t metadata_allocated_bytes = superblock->GetMetadataAllocatedBytes();
+  size_t metadata_allocated_bytes = superblock.GetMetadataAllocatedBytes();
   if (metadata_allocated_bytes > fvm::kMaxMetadataByteSize) {
     logger_.Error("FVM metadata size exceeds maximum limit.");
     return false;
@@ -101,9 +162,9 @@ bool Checker::LoadFVM(FvmInfo* out) const {
   // The metadata buffer holds both primary and secondary copies of the metadata.
   size_t metadata_buffer_size = metadata_allocated_bytes * 2;
   std::unique_ptr<uint8_t[]> metadata(new uint8_t[metadata_buffer_size]);
-  if (pread(fd_.get(), metadata.get(), metadata_buffer_size, 0) !=
-      static_cast<ssize_t>(metadata_buffer_size)) {
-    logger_.Error("Could not read metadata\n");
+  if (zx::result result = interface_->Read(metadata.get(), metadata_buffer_size);
+      result.is_error()) {
+    logger_.Error("Could not read metadata %s\n", result.status_string());
     return false;
   }
 
@@ -118,19 +179,19 @@ bool Checker::LoadFVM(FvmInfo* out) const {
                                                ? fvm::SuperblockType::kSecondary
                                                : fvm::SuperblockType::kPrimary;
 
-  const uint8_t* valid_metadata = metadata.get() + superblock->GetSuperblockOffset(*use_superblock);
+  const uint8_t* valid_metadata = metadata.get() + superblock.GetSuperblockOffset(*use_superblock);
   const uint8_t* invalid_metadata =
-      metadata.get() + superblock->GetSuperblockOffset(invalid_superblock);
+      metadata.get() + superblock.GetSuperblockOffset(invalid_superblock);
 
   FvmInfo info = {
-      fbl::Array<uint8_t>(metadata.release(), superblock->GetMetadataAllocatedBytes() * 2),
-      superblock->GetSuperblockOffset(*use_superblock),
+      fbl::Array<uint8_t>(metadata.release(), superblock.GetMetadataAllocatedBytes() * 2),
+      superblock.GetSuperblockOffset(*use_superblock),
       valid_metadata,
       invalid_metadata,
       block_size_,
       block_count,
-      static_cast<size_t>(device_size),
-      superblock->slice_size,
+      device_size.value(),
+      superblock.slice_size,
   };
 
   *out = std::move(info);
@@ -170,7 +231,7 @@ bool Checker::LoadPartitions(const size_t slice_count, const fvm::SliceEntry* sl
       Slice slice = {vpart, slice_table[i].VSlice(), i};
 
       slices.push_back(slice);
-      partitions[vpart].slices.push_back(std::move(slice));
+      partitions[vpart].slices.push_back(slice);
     }
   }
 
@@ -242,17 +303,17 @@ void Checker::DumpSlices(const fbl::Vector<Slice>& slices) const {
 }
 
 bool Checker::CheckFVM(const FvmInfo& info) const {
-  auto superblock = reinterpret_cast<const fvm::Header*>(info.valid_metadata);
-  auto invalid_superblock = reinterpret_cast<const fvm::Header*>(info.invalid_metadata);
+  const auto& superblock = *reinterpret_cast<const fvm::Header*>(info.valid_metadata);
+  const auto& invalid_superblock = *reinterpret_cast<const fvm::Header*>(info.invalid_metadata);
 
   logger_.Log("[  FVM Info  ]\n");
-  logger_.Log("Major version: %" PRIu64 "\n", superblock->major_version);
-  logger_.Log("Oldest minor version: %" PRIu64 "\n", superblock->oldest_minor_version);
-  logger_.Log("Generation number: %" PRIu64 "\n", superblock->generation);
-  logger_.Log("Generation number: %" PRIu64 " (invalid copy)\n", invalid_superblock->generation);
+  logger_.Log("Major version: %" PRIu64 "\n", superblock.major_version);
+  logger_.Log("Oldest minor version: %" PRIu64 "\n", superblock.oldest_minor_version);
+  logger_.Log("Generation number: %" PRIu64 "\n", superblock.generation);
+  logger_.Log("Generation number: %" PRIu64 " (invalid copy)\n", invalid_superblock.generation);
   logger_.Log("\n");
 
-  const size_t slice_count = superblock->GetAllocationTableUsedEntryCount();
+  const size_t slice_count = superblock.GetAllocationTableUsedEntryCount();
   logger_.Log("[  Size Info  ]\n");
   logger_.Log("%-15s %10zu\n", "Device Length:", info.device_size);
   logger_.Log("%-15s %10zu\n", "Block size:", info.block_size);
@@ -260,7 +321,7 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
   logger_.Log("%-15s %10zu\n", "Slice count:", slice_count);
   logger_.Log("\n");
 
-  const size_t metadata_size = superblock->GetMetadataAllocatedBytes();
+  const size_t metadata_size = superblock.GetMetadataAllocatedBytes();
   const size_t metadata_count = 2;
   const size_t metadata_end = metadata_size * metadata_count;
   logger_.Log("[  Metadata  ]\n");
@@ -274,9 +335,9 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
   logger_.Log("[  All Subsequent Offsets Relative to Valid Metadata Start  ]\n");
   logger_.Log("\n");
 
-  const size_t vpart_table_start = superblock->GetPartitionTableOffset();
+  const size_t vpart_table_start = superblock.GetPartitionTableOffset();
   const size_t vpart_entry_size = sizeof(fvm::VPartitionEntry);
-  const size_t vpart_table_size = superblock->GetPartitionTableByteSize();
+  const size_t vpart_table_size = superblock.GetPartitionTableByteSize();
   const size_t vpart_table_end = vpart_table_start + vpart_table_size;
   logger_.Log("[  Virtual Partition Table  ]\n");
   logger_.Log("%-25s 0x%016zx\n", "VPartition Entry Start:", vpart_table_start);
@@ -285,9 +346,9 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
   logger_.Log("%-25s 0x%016zx\n", "VPartition table end:", vpart_table_end);
   logger_.Log("\n");
 
-  const size_t slice_table_start = superblock->GetAllocationTableOffset();
+  const size_t slice_table_start = superblock.GetAllocationTableOffset();
   const size_t slice_entry_size = sizeof(fvm::SliceEntry);
-  const size_t slice_table_size = superblock->GetAllocationTableUsedByteSize();
+  const size_t slice_table_size = superblock.GetAllocationTableUsedByteSize();
   const size_t slice_table_end = slice_table_start + slice_table_size;
   logger_.Log("[  Slice Allocation Table  ]\n");
   logger_.Log("%-25s 0x%016zx\n", "Slice table start:", slice_table_start);

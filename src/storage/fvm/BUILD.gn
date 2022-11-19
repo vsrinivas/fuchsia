@@ -19,7 +19,6 @@ static_library("fvm") {
   sources = [
     "format.cc",
     "fvm.cc",
-    "fvm_check.cc",
     "metadata.cc",
     "metadata_buffer.cc",
     "sparse_reader.cc",
@@ -45,6 +44,7 @@ static_library("fvm") {
   if (is_fuchsia) {
     sources += [
       "client.cc",
+      "fvm_check.cc",
       "vmo_metadata_buffer.cc",
     ]
 
@@ -87,6 +87,7 @@ static_library("test_support") {
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
+    "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client/cpp",
     "//src/storage/fvm",

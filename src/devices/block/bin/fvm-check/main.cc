@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <lib/fdio/cpp/caller.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/status.h>
@@ -27,7 +29,9 @@ Options:
   --silent (-s): Silences all stdout logging info. Defaults to false.
 )""";
 
-bool GetOptions(int argc, char** argv, fvm::Checker* checker) {
+bool GetOptions(int argc, char** argv, fbl::unique_fd& fd, std::optional<fvm::Checker>& checker) {
+  uint32_t block_size;
+  bool silent = false;
   while (true) {
     struct option options[] = {
         {"block-size", required_argument, nullptr, 'b'},
@@ -42,10 +46,10 @@ bool GetOptions(int argc, char** argv, fvm::Checker* checker) {
     }
     switch (c) {
       case 'b':
-        checker->SetBlockSize(static_cast<uint32_t>(strtoul(optarg, NULL, 0)));
+        block_size = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
         break;
       case 's':
-        checker->SetSilent(true);
+        silent = true;
         break;
       case 'h':
         return false;
@@ -53,13 +57,14 @@ bool GetOptions(int argc, char** argv, fvm::Checker* checker) {
   }
   if (argc == optind + 1) {
     const char* path = argv[optind];
-    fbl::unique_fd fd(open(path, O_RDONLY));
+    fd.reset(open(path, O_RDONLY));
     if (!fd) {
-      fprintf(stderr, "Cannot open %s\n", path);
+      fprintf(stderr, "Cannot open %s: %s\n", path, strerror(errno));
       return false;
     }
+    fdio_cpp::UnownedFdioCaller caller(fd);
 
-    checker->SetDevice(std::move(fd));
+    checker.emplace(caller.borrow_as<fuchsia_hardware_block::Block>(), block_size, silent);
     return true;
   }
   return false;
@@ -68,13 +73,14 @@ bool GetOptions(int argc, char** argv, fvm::Checker* checker) {
 }  // namespace
 
 int main(int argc, char** argv) {
-  fvm::Checker checker;
-  if (!GetOptions(argc, argv, &checker)) {
+  fbl::unique_fd fd;
+  std::optional<fvm::Checker> checker;
+  if (!GetOptions(argc, argv, fd, checker)) {
     fprintf(stderr, "%s\n", kUsageMessage);
     return -1;
   }
 
-  if (!checker.Validate()) {
+  if (!checker.value().Validate()) {
     return -1;
   }
   return 0;

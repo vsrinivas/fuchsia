@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <zircon/assert.h>
 
 #include <array>
 #include <cstdint>
@@ -22,6 +21,7 @@
 
 #include "src/storage/fvm/fvm_check.h"
 #include "src/storage/volume_image/adapter/commands.h"
+#include "src/storage/volume_image/adapter/commands/file_client.h"
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_image_extend.h"
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
@@ -106,9 +106,9 @@ fpromise::result<TempFile, std::string> CreateTrimmedFvmBlockImage() {
 void CheckFvm(std::string_view image_path, uint64_t expected_partition_size,
               uint64_t expected_image_size) {
   // FVM is valid.
-  fbl::unique_fd fvm_fd(open(image_path.data(), O_RDONLY));
-  ASSERT_TRUE(fvm_fd.is_valid());
-  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  zx::result file = OpenFile(std::string(image_path).c_str());
+  ASSERT_TRUE(file.is_ok()) << file.status_string();
+  fvm::Checker fvm_checker(file.value(), 8 * (1 << 10), true);
   ASSERT_TRUE(fvm_checker.Validate());
 
   // Check that the partition size is correct.

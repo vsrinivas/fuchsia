@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <zircon/assert.h>
 
 #include <array>
 #include <cstdint>
@@ -18,6 +17,7 @@
 
 #include "src/storage/fvm/fvm_check.h"
 #include "src/storage/volume_image/adapter/commands.h"
+#include "src/storage/volume_image/adapter/commands/file_client.h"
 #include "src/storage/volume_image/utils/fd_reader.h"
 #include "src/storage/volume_image/utils/fd_test_helper.h"
 #include "src/storage/volume_image/utils/fd_writer.h"
@@ -51,10 +51,10 @@ TEST(PaveCommandTest, CompressedSparseImageIsOk) {
   auto pave_result = Pave(pave_params);
   ASSERT_TRUE(pave_result.is_ok()) << pave_result.error();
 
-  fbl::unique_fd fvm_fd(open(output_or.value().path().data(), O_RDONLY));
-  ASSERT_TRUE(fvm_fd.is_valid());
+  zx::result file = OpenFile(pave_params.output_path.c_str());
+  ASSERT_TRUE(file.is_ok()) << file.status_string();
 
-  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  fvm::Checker fvm_checker(file.value(), 8 * (1 << 10), true);
   ASSERT_TRUE(fvm_checker.Validate());
 }
 
@@ -69,10 +69,10 @@ TEST(PaveCommandTest, CompressedSparseImageWithLengthIsOk) {
   auto pave_result = Pave(pave_params);
   ASSERT_TRUE(pave_result.is_ok()) << pave_result.error();
 
-  fbl::unique_fd fvm_fd(open(output_or.value().path().data(), O_RDONLY));
-  ASSERT_TRUE(fvm_fd.is_valid());
+  zx::result file = OpenFile(pave_params.output_path.c_str());
+  ASSERT_TRUE(file.is_ok()) << file.status_string();
 
-  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  fvm::Checker fvm_checker(file.value(), 8 * (1 << 10), true);
   ASSERT_TRUE(fvm_checker.Validate());
 }
 
@@ -90,10 +90,10 @@ TEST(PaveCommandTest, CompressedSparseImageToBlockDeviceIsOk) {
   auto pave_result = Pave(pave_params);
   ASSERT_TRUE(pave_result.is_ok()) << pave_result.error();
 
-  fbl::unique_fd fvm_fd(open(output_or.value().path().data(), O_RDONLY));
-  ASSERT_TRUE(fvm_fd.is_valid());
+  zx::result file = OpenFile(pave_params.output_path.c_str());
+  ASSERT_TRUE(file.is_ok()) << file.status_string();
 
-  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  fvm::Checker fvm_checker(file.value(), 8 * (1 << 10), true);
   ASSERT_TRUE(fvm_checker.Validate());
 }
 
@@ -109,10 +109,10 @@ TEST(PaveCommandTest, CompressedSparseImageToBlockDeviceWithLengthIsOk) {
   auto pave_result = Pave(pave_params);
   ASSERT_TRUE(pave_result.is_ok()) << pave_result.error();
 
-  fbl::unique_fd fvm_fd(open(output_or.value().path().data(), O_RDONLY));
-  ASSERT_TRUE(fvm_fd.is_valid());
+  zx::result file = OpenFile(pave_params.output_path.c_str());
+  ASSERT_TRUE(file.is_ok()) << file.status_string();
 
-  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  fvm::Checker fvm_checker(file.value(), 8 * (1 << 10), true);
   ASSERT_TRUE(fvm_checker.Validate());
 }
 
@@ -173,17 +173,16 @@ TEST(PaveCommandTest, CreateEmbeddedFvmImageIsOk) {
     auto buffer_view = cpp20::span<uint8_t>(buffer).subspan(
         0, std::min(pave_params.offset.value() + pave_params.length.value() - current_offset,
                     static_cast<uint64_t>(buffer.size())));
-    ;
     ASSERT_TRUE(fvm_reader->Read(current_offset, buffer_view).is_ok());
 
     ASSERT_TRUE(fvm_copy->Write(current_offset - pave_params.offset.value(), buffer_view).is_ok());
     current_offset += buffer_view.size();
   }
 
-  fbl::unique_fd fvm_fd(open(copy_file_or.value().path().data(), O_RDONLY));
-  ASSERT_TRUE(fvm_fd.is_valid());
+  zx::result file = OpenFile(std::string(copy_file_or.value().path()).c_str());
+  ASSERT_TRUE(file.is_ok()) << file.status_string();
 
-  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  fvm::Checker fvm_checker(file.value(), 8 * (1 << 10), true);
   ASSERT_TRUE(fvm_checker.Validate());
 }
 

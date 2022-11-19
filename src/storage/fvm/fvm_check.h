@@ -5,13 +5,13 @@
 #ifndef SRC_STORAGE_FVM_FVM_CHECK_H_
 #define SRC_STORAGE_FVM_FVM_CHECK_H_
 
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <stdarg.h>
 #include <stdlib.h>
 
 #include <utility>
 
 #include <fbl/array.h>
-#include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
 #include "src/storage/fvm/format.h"
@@ -22,20 +22,9 @@ namespace fvm {
 // (provided as either a regular file or a raw block device).
 class Checker {
  public:
-  Checker();
-  Checker(fbl::unique_fd fd, uint32_t block_size, bool silent);
-  ~Checker();
-
-  // Sets the path of the block device / image to read the FVM from.
-  void SetDevice(fbl::unique_fd fd) { fd_ = std::move(fd); }
-
-  // Sets the block size of the provided device. Not automatically queried from the underlying
-  // device, since this checker may operate on a regular file, which does not have an
-  // attached block size.
-  void SetBlockSize(uint32_t block_size) { block_size_ = block_size; }
-
-  // Toggles the output of future calls to |Log|.
-  void SetSilent(bool silent) { logger_.SetSilent(silent); }
+  Checker(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> block, uint32_t block_size,
+          bool silent);
+  Checker(fidl::UnownedClientEnd<fuchsia_io::File> file, uint32_t block_size, bool silent);
 
   // Read from and validate the provided device, logging information if requested.
   bool Validate() const;
@@ -43,14 +32,10 @@ class Checker {
  private:
   class Logger {
    public:
-    Logger() : silent_(false) {}
     explicit Logger(bool silent) : silent_(silent) {}
 
-    // Toggles the output of future calls to |Log|.
-    void SetSilent(bool silent) { silent_ = silent; }
-
     // Prints the format string and arguments to stderr.
-    void Error(const char* format, ...) const {
+    static void Error(const char* format, ...) {
       va_list arg;
       va_start(arg, format);
       vprintf(format, arg);
@@ -68,7 +53,41 @@ class Checker {
     }
 
    private:
-    bool silent_;
+    const bool silent_;
+  };
+
+  class Interface {
+   public:
+    virtual ~Interface() = default;
+
+    virtual zx::result<size_t> Size() const = 0;
+    virtual zx::result<size_t> Read(void* buf, size_t count) const = 0;
+  };
+
+  Checker(std::unique_ptr<Interface> interface, uint32_t block_size, bool silent);
+
+  class Block : public Interface {
+   public:
+    explicit Block(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> block);
+    ~Block() override;
+
+   private:
+    zx::result<size_t> Size() const override;
+    zx::result<size_t> Read(void* buf, size_t count) const override;
+
+    const fidl::UnownedClientEnd<fuchsia_hardware_block::Block> block_;
+  };
+
+  class File : public Interface {
+   public:
+    explicit File(fidl::UnownedClientEnd<fuchsia_io::File> file);
+    ~File() override;
+
+   private:
+    zx::result<size_t> Size() const override;
+    zx::result<size_t> Read(void* buf, size_t count) const override;
+
+    const fidl::UnownedClientEnd<fuchsia_io::File> file_;
   };
 
   // Cached information from loading and validating the FVM.
@@ -106,7 +125,7 @@ class Checker {
   // Acquires a list of slices and partitions while parsing the FVM.
   //
   // Returns false if the FVM contains contradictory or invalid data.
-  bool LoadPartitions(const size_t slice_count, const fvm::SliceEntry* slice_table,
+  bool LoadPartitions(size_t slice_count, const fvm::SliceEntry* slice_table,
                       const fvm::VPartitionEntry* vpart_table, fbl::Vector<Slice>* out_slices,
                       fbl::Array<Partition>* out_partitions) const;
 
@@ -116,9 +135,9 @@ class Checker {
   // Confirms the Checker has received necessary arguments before beginning validation.
   bool ValidateOptions() const;
 
-  fbl::unique_fd fd_;
-  uint32_t block_size_ = 512;
-  Logger logger_;
+  const std::unique_ptr<Interface> interface_;
+  const uint32_t block_size_;
+  const Logger logger_;
 };
 
 }  // namespace fvm

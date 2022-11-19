@@ -499,7 +499,6 @@ TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumDataBytessLo
       CreateBlobfsFvmPartition(std::move(blobfs_reader), partition_options, fvm_options);
   ASSERT_TRUE(partition_or.is_ok()) << partition_or.error();
   auto partition = partition_or.take_value();
-  ;
   ASSERT_NO_FATAL_FAILURE(CheckPartition(partition));
 
   auto maybe_superblocks = ReadSuperblocks(original_blobfs_reader, *partition.reader());

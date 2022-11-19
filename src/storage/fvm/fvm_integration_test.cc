@@ -13,9 +13,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fdio/unsafe.h>
 #include <lib/fit/function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -54,6 +52,7 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
+#include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "src/lib/storage/block_client/cpp/client.h"
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"
@@ -115,8 +114,6 @@ class FvmTest : public zxtest::Test {
   fbl::unique_fd fvm_device() const { return fbl::unique_fd(open(fvm_driver_path_, O_RDWR)); }
 
   const char* fvm_path() const { return fvm_driver_path_; }
-
-  fbl::unique_fd ramdisk_device() const { return fbl::unique_fd(open(ramdisk_path_, O_RDWR)); }
 
   fidl::UnownedClientEnd<fuchsia_device::Controller> ramdisk_controller_interface() const {
     return fidl::UnownedClientEnd<fuchsia_device::Controller>(
@@ -232,16 +229,13 @@ enum class ValidationResult {
   Corrupted,
 };
 
-void ValidateFVM(fbl::unique_fd fd, ValidationResult result = ValidationResult::Valid) {
-  ASSERT_TRUE(fd);
-  fdio_cpp::UnownedFdioCaller disk_caller(fd.get());
-  const fidl::WireResult wire_result =
-      fidl::WireCall(disk_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+void ValidateFVM(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
+                 ValidationResult result = ValidationResult::Valid) {
+  const fidl::WireResult wire_result = fidl::WireCall(device)->GetInfo();
   ASSERT_OK(wire_result.status());
   const fidl::WireResponse wire_response = wire_result.value();
   ASSERT_OK(wire_response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *wire_response.info;
-  fvm::Checker checker(std::move(fd), block_info.block_size, true);
+  fvm::Checker checker(device, wire_response.info->block_size, true);
   switch (result) {
     case ValidationResult::Valid:
       ASSERT_TRUE(checker.Validate());
@@ -251,7 +245,7 @@ void ValidateFVM(fbl::unique_fd fd, ValidationResult result = ValidationResult::
   }
 }
 
-zx::result<std::string> GetPartitionPath(int fd) {
+zx::result<std::string> GetPartitionPath(const fbl::unique_fd& fd) {
   fdio_cpp::UnownedFdioCaller caller(fd);
   auto controller = caller.borrow_as<fuchsia_device::Controller>();
   auto path = fidl::WireCall(controller)->GetTopologicalPath();
@@ -306,7 +300,7 @@ class VmoBuf;
 
 class VmoClient : public fbl::RefCounted<VmoClient> {
  public:
-  explicit VmoClient(int fd);
+  explicit VmoClient(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device);
   ~VmoClient() = default;
 
   void CheckWrite(VmoBuf& vbuf, size_t buf_off, size_t dev_off, size_t len);
@@ -316,11 +310,12 @@ class VmoClient : public fbl::RefCounted<VmoClient> {
   }
   zx::result<storage::Vmoid> RegisterVmo(const zx::vmo& vmo) { return client_->RegisterVmo(vmo); }
 
-  int fd() const { return fd_; }
+  fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device() const { return device_; }
+
   groupid_t group() { return 0; }
 
  private:
-  int fd_;
+  const fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device_;
   uint32_t block_size_;
   std::unique_ptr<block_client::Client> client_;
 };
@@ -356,12 +351,10 @@ class VmoBuf {
   storage::Vmoid vmoid_;
 };
 
-VmoClient::VmoClient(int fd) : fd_(fd) {
-  fdio_cpp::UnownedFdioCaller disk_connection(fd);
-
+VmoClient::VmoClient(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device)
+    : device_(device) {
   {
-    const fidl::WireResult result =
-        fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_OK(response.status);
@@ -373,9 +366,7 @@ VmoClient::VmoClient(int fd) : fd_(fd) {
   ASSERT_OK(endpoints);
   auto& [session, server] = endpoints.value();
 
-  const fidl::Status result =
-      fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())
-          ->OpenSession(std::move(server));
+  const fidl::Status result = fidl::WireCall(device)->OpenSession(std::move(server));
   ASSERT_OK(result.status());
 
   const fidl::WireResult fifo_result = fidl::WireCall(session)->GetFifo();
@@ -438,28 +429,28 @@ void VmoClient::CheckRead(VmoBuf& vbuf, size_t buf_off, size_t dev_off, size_t l
   ASSERT_EQ(memcmp(&vbuf.buf_[buf_off], out.get(), len), 0);
 }
 
-void CheckWrite(int fd, size_t off, size_t len, uint8_t* buf) {
+void CheckWrite(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device, size_t off,
+                size_t len, uint8_t* buf) {
   for (size_t i = 0; i < len; i++) {
     buf[i] = static_cast<uint8_t>(rand());
   }
-  ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
-  ASSERT_EQ(write(fd, buf, len), static_cast<ssize_t>(len));
+  ASSERT_OK(block_client::SingleWriteBytes(device, buf, len, off));
 }
 
-void CheckRead(int fd, size_t off, size_t len, const uint8_t* in) {
+void CheckRead(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device, size_t off, size_t len,
+               const uint8_t* in) {
   fbl::AllocChecker ac;
   std::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
   ASSERT_TRUE(ac.check());
   memset(out.get(), 0, len);
-  ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
-  ASSERT_EQ(read(fd, out.get(), len), static_cast<ssize_t>(len));
+  ASSERT_OK(block_client::SingleReadBytes(device, out.get(), len, off));
   ASSERT_EQ(memcmp(in, out.get(), len), 0);
 }
 
-void CheckWriteReadBlock(int fd, size_t block, size_t count) {
-  fdio_cpp::UnownedFdioCaller disk_connection(fd);
-  const fidl::WireResult result =
-      fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+void CheckWriteReadBlock(const fbl::unique_fd& fd, size_t block, size_t count) {
+  fdio_cpp::UnownedFdioCaller caller(fd);
+  fidl::UnownedClientEnd device = caller.borrow_as<fuchsia_hardware_block::Block>();
+  const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
   ASSERT_OK(result.status());
   const fidl::WireResponse response = result.value();
   ASSERT_OK(response.status);
@@ -467,8 +458,8 @@ void CheckWriteReadBlock(int fd, size_t block, size_t count) {
   size_t len = block_info.block_size * count;
   size_t off = block_info.block_size * block;
   std::unique_ptr<uint8_t[]> in(new uint8_t[len]);
-  CheckWrite(fd, off, len, in.get());
-  CheckRead(fd, off, len, in.get());
+  ASSERT_NO_FATAL_FAILURE(CheckWrite(device, off, len, in.get()));
+  ASSERT_NO_FATAL_FAILURE(CheckRead(device, off, len, in.get()));
 }
 
 void CheckWriteReadBytesFifo(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
@@ -476,36 +467,34 @@ void CheckWriteReadBytesFifo(fidl::UnownedClientEnd<fuchsia_hardware_block::Bloc
   std::unique_ptr<uint8_t[]> write_buf(new uint8_t[len]);
   memset(write_buf.get(), 0xa3, len);
 
-  ASSERT_EQ(block_client::SingleWriteBytes(device, write_buf.get(), len, off), ZX_OK);
+  ASSERT_OK(block_client::SingleWriteBytes(device, write_buf.get(), len, off));
   std::unique_ptr<uint8_t[]> read_buf(new uint8_t[len]);
   memset(read_buf.get(), 0, len);
-  ASSERT_EQ(block_client::SingleReadBytes(device, read_buf.get(), len, off), ZX_OK);
+  ASSERT_OK(block_client::SingleReadBytes(device, read_buf.get(), len, off));
   EXPECT_EQ(memcmp(write_buf.get(), read_buf.get(), len), 0);
 }
 
-void CheckNoAccessBlock(int fd, size_t block, size_t count) {
-  fdio_cpp::UnownedFdioCaller disk_connection(fd);
-  const fidl::WireResult result =
-      fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+void CheckNoAccessBlock(const fbl::unique_fd& fd, size_t block, size_t count) {
+  fdio_cpp::UnownedFdioCaller caller(fd);
+  fidl::UnownedClientEnd device = caller.borrow_as<fuchsia_hardware_block::Block>();
+  const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
   ASSERT_OK(result.status());
   const fidl::WireResponse response = result.value();
   ASSERT_OK(response.status);
   const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
-  std::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * count]);
   size_t len = block_info.block_size * count;
   size_t off = block_info.block_size * block;
-  for (size_t i = 0; i < len; i++)
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[len]);
+  for (size_t i = 0; i < len; i++) {
     buf[i] = static_cast<uint8_t>(rand());
-  ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
-  ASSERT_EQ(write(fd, buf.get(), len), -1);
-  ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
-  ASSERT_EQ(read(fd, buf.get(), len), -1);
+  }
+  ASSERT_STATUS(block_client::SingleWriteBytes(device, buf.get(), len, off), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_STATUS(block_client::SingleReadBytes(device, buf.get(), len, off), ZX_ERR_OUT_OF_RANGE);
 }
 
-void CheckDeadConnection(int fd) {
-  lseek(fd, 0, SEEK_SET);
-  bool is_dead = ((errno == EBADF) || (errno == EPIPE));
-  ASSERT_TRUE(is_dead);
+void CheckDeadConnection(const fbl::unique_fd& fd) {
+  fdio_cpp::UnownedFdioCaller caller(fd);
+  ASSERT_OK(caller.channel()->wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
 }
 
 void Upgrade(const fdio_cpp::FdioCaller& caller, const uuid::Uuid& old_guid,
@@ -529,11 +518,9 @@ TEST_F(FvmTest, TestTooSmall) {
   uint64_t block_count = (1 << 15);
 
   CreateRamdisk(block_size, block_count);
-  fbl::unique_fd fd(ramdisk_device());
-  ASSERT_TRUE(fd);
   size_t slice_size = block_size * block_count;
   ASSERT_EQ(fs_management::FvmInit(ramdisk_block_interface(), slice_size), ZX_ERR_NO_SPACE);
-  ValidateFVM(ramdisk_device(), ValidationResult::Corrupted);
+  ValidateFVM(ramdisk_block_interface(), ValidationResult::Corrupted);
 }
 
 // Test initializing the FVM on a large partition, with metadata size > the max transfer size
@@ -542,16 +529,12 @@ TEST_F(FvmTest, TestLarge) {
   constexpr uint64_t kBlockSize = 512;
   constexpr uint64_t kBlockCount{UINT64_C(8) * (1 << 20)};
   CreateRamdisk(kBlockSize, kBlockCount);
-  fbl::unique_fd fd(ramdisk_device());
-  ASSERT_TRUE(fd);
 
   constexpr size_t kSliceSize{static_cast<size_t>(16) * (1 << 10)};
   fvm::Header fvm_header =
       fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kSliceSize);
 
-  fdio_cpp::UnownedFdioCaller disk_connection(fd.get());
-  const fidl::WireResult result =
-      fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  const fidl::WireResult result = fidl::WireCall(ramdisk_block_interface())->GetInfo();
   ASSERT_OK(result.status());
   const fidl::WireResponse response = result.value();
   ASSERT_OK(response.status);
@@ -560,14 +543,14 @@ TEST_F(FvmTest, TestLarge) {
 
   ASSERT_EQ(fs_management::FvmInit(ramdisk_block_interface(), kSliceSize), ZX_OK);
 
-  auto resp = fidl::WireCall(disk_connection.borrow_as<fuchsia_device::Controller>())
-                  ->Bind(fidl::StringView(FVM_DRIVER_LIB));
+  auto resp =
+      fidl::WireCall(ramdisk_controller_interface())->Bind(fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->is_ok());
 
   snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", ramdisk_path());
   ASSERT_OK(wait_for_device(fvm_path, zx::duration::infinite().get()));
-  ValidateFVM(ramdisk_device());
+  ValidateFVM(ramdisk_block_interface());
 }
 
 // Load and unload an empty FVM
@@ -577,7 +560,7 @@ TEST_F(FvmTest, TestEmpty) {
   constexpr uint64_t kSliceSize = 64 * kBlockSize;
   CreateFVM(kBlockSize, kBlockCount, kSliceSize);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
-  ValidateFVM(ramdisk_device());
+  ValidateFVM(ramdisk_block_interface());
 }
 
 // Test allocating a single partition
@@ -608,18 +591,18 @@ TEST_F(FvmTest, TestAllocateOne) {
   ASSERT_STREQ(response.name.get(), kTestPartDataName.data());
 
   // Check that we can read from / write to it.
-  CheckWriteReadBlock(vp_fd.get(), 0, 1);
+  CheckWriteReadBlock(vp_fd, 0, 1);
 
   // Try accessing the block again after closing / re-opening it.
   ASSERT_EQ(close(vp_fd.release()), 0);
   vp_fd_or = WaitForPartition(kPartition1Matcher);
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't re-open Data VPart");
   vp_fd = *std::move(vp_fd_or);
-  CheckWriteReadBlock(vp_fd.get(), 0, 1);
+  CheckWriteReadBlock(vp_fd, 0, 1);
 
   ASSERT_EQ(close(vp_fd.release()), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
-  ValidateFVM(ramdisk_device());
+  ValidateFVM(ramdisk_block_interface());
 }
 
 // Test Reading and writing with RemoteBlockDevice helpers
@@ -646,7 +629,7 @@ TEST_F(FvmTest, TestReadWriteSingle) {
 
   ASSERT_EQ(close(caller.release().release()), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
-  ValidateFVM(ramdisk_device());
+  ValidateFVM(ramdisk_block_interface());
 }
 
 // Test allocating a collection of partitions
@@ -681,15 +664,15 @@ TEST_F(FvmTest, TestAllocateMany) {
   ASSERT_EQ(sys_fd_or.status_value(), ZX_OK);
   fbl::unique_fd sys_fd = *std::move(sys_fd_or);
 
-  CheckWriteReadBlock(data_fd.get(), 0, 1);
-  CheckWriteReadBlock(blob_fd.get(), 0, 1);
-  CheckWriteReadBlock(sys_fd.get(), 0, 1);
+  CheckWriteReadBlock(data_fd, 0, 1);
+  CheckWriteReadBlock(blob_fd, 0, 1);
+  CheckWriteReadBlock(sys_fd, 0, 1);
 
   ASSERT_EQ(close(data_fd.release()), 0);
   ASSERT_EQ(close(blob_fd.release()), 0);
   ASSERT_EQ(close(sys_fd.release()), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
-  ValidateFVM(ramdisk_device());
+  ValidateFVM(ramdisk_block_interface());
 }
 
 // Test allocating additional slices to a vpartition.
@@ -842,7 +825,7 @@ TEST_F(FvmTest, TestVPartitionExtend) {
   ASSERT_NE(vp2_fd_or.status_value(), ZX_OK, "Expected VPart allocation failure");
 
   FVMCheckSliceSize(fvm_device(), kSliceSize);
-  ValidateFVM(ramdisk_device());
+  ValidateFVM(ramdisk_block_interface());
 }
 
 // Test allocating very sparse VPartition
@@ -859,7 +842,7 @@ TEST_F(FvmTest, TestVPartitionExtendSparse) {
   });
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
   fbl::unique_fd vp_fd = *std::move(vp_fd_or);
-  CheckWriteReadBlock(vp_fd.get(), 0, 1);
+  CheckWriteReadBlock(vp_fd, 0, 1);
 
   // Double check that we can access a block at this vslice address
   // (this isn't always possible; for certain slice sizes, blocks may be
@@ -890,7 +873,7 @@ TEST_F(FvmTest, TestVPartitionExtendSparse) {
     ASSERT_OK(response.status);
   }
 
-  CheckWriteReadBlock(vp_fd.get(), bno, 1);
+  CheckWriteReadBlock(vp_fd, bno, 1);
 
   // Try freeing beyond largest offset
   {
@@ -902,7 +885,7 @@ TEST_F(FvmTest, TestVPartitionExtendSparse) {
     ASSERT_STATUS(response.status, ZX_ERR_OUT_OF_RANGE);
   }
 
-  CheckWriteReadBlock(vp_fd.get(), bno, 1);
+  CheckWriteReadBlock(vp_fd, bno, 1);
 
   // Try freeing at the largest offset
   {
@@ -914,11 +897,11 @@ TEST_F(FvmTest, TestVPartitionExtendSparse) {
     ASSERT_OK(response.status);
   }
 
-  CheckNoAccessBlock(vp_fd.get(), bno, 1);
+  CheckNoAccessBlock(vp_fd, bno, 1);
 
   ASSERT_EQ(close(vp_fd.release()), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
-  ValidateFVM(ramdisk_device());
+  ValidateFVM(ramdisk_block_interface());
 }
 
 // Test removing slices from a VPartition.
@@ -962,8 +945,8 @@ TEST_F(FvmTest, TestVPartitionShrink) {
     ASSERT_OK(response.status);
     const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
-    CheckWriteReadBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 1);
-    CheckNoAccessBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2);
+    CheckWriteReadBlock(vp_fd, (slice_size / block_info.block_size) - 1, 1);
+    CheckNoAccessBlock(vp_fd, (slice_size / block_info.block_size) - 1, 2);
     FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
   }
 
@@ -1045,8 +1028,8 @@ TEST_F(FvmTest, TestVPartitionShrink) {
     ASSERT_OK(response.status);
     const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
-    CheckWriteReadBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 1);
-    CheckWriteReadBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2);
+    CheckWriteReadBlock(vp_fd, (slice_size / block_info.block_size) - 1, 1);
+    CheckWriteReadBlock(vp_fd, (slice_size / block_info.block_size) - 1, 2);
   }
   FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
 
@@ -1102,7 +1085,7 @@ TEST_F(FvmTest, TestVPartitionShrink) {
   }
 
   FVMCheckSliceSize(fvm_device(), kSliceSize);
-  ValidateFVM(ramdisk_device());
+  ValidateFVM(ramdisk_block_interface());
 }
 
 // Test splitting a contiguous slice extent into multiple parts
@@ -1160,19 +1143,19 @@ TEST_F(FvmTest, TestVPartitionSplit) {
     size_t end_block = end_erequest.offset * (slice_size / block_info.block_size);
 
     if (start) {
-      CheckWriteReadBlock(vp_fd.get(), start_block, 1);
+      CheckWriteReadBlock(vp_fd, start_block, 1);
     } else {
-      CheckNoAccessBlock(vp_fd.get(), start_block, 1);
+      CheckNoAccessBlock(vp_fd, start_block, 1);
     }
     if (mid) {
-      CheckWriteReadBlock(vp_fd.get(), mid_block, 1);
+      CheckWriteReadBlock(vp_fd, mid_block, 1);
     } else {
-      CheckNoAccessBlock(vp_fd.get(), mid_block, 1);
+      CheckNoAccessBlock(vp_fd, mid_block, 1);
     }
     if (end) {
-      CheckWriteReadBlock(vp_fd.get(), end_block, 1);
+      CheckWriteReadBlock(vp_fd, end_block, 1);
     } else {
-      CheckNoAccessBlock(vp_fd.get(), end_block, 1);
+      CheckNoAccessBlock(vp_fd, end_block, 1);
     }
     return true;
   };
@@ -1260,7 +1243,7 @@ TEST_F(FvmTest, TestVPartitionSplit) {
   ASSERT_EQ(close(vp_fd.release()), 0);
   ASSERT_EQ(close(fd.release()), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
-  ValidateFVM(ramdisk_device());
+  ValidateFVM(ramdisk_block_interface());
 }
 
 // Test removing VPartitions within an FVM
@@ -1301,9 +1284,9 @@ TEST_F(FvmTest, TestVPartitionDestroy) {
   fdio_cpp::UnownedFdioCaller sys_caller(sys_fd.get());
 
   // We can access all three...
-  CheckWriteReadBlock(data_fd.get(), 0, 1);
-  CheckWriteReadBlock(blob_fd.get(), 0, 1);
-  CheckWriteReadBlock(sys_fd.get(), 0, 1);
+  CheckWriteReadBlock(data_fd, 0, 1);
+  CheckWriteReadBlock(blob_fd, 0, 1);
+  CheckWriteReadBlock(sys_fd, 0, 1);
 
   // But not after we destroy the blob partition.
   {
@@ -1313,9 +1296,9 @@ TEST_F(FvmTest, TestVPartitionDestroy) {
     const fidl::WireResponse response = result.value();
     ASSERT_OK(response.status);
   }
-  CheckWriteReadBlock(data_fd.get(), 0, 1);
-  CheckWriteReadBlock(sys_fd.get(), 0, 1);
-  CheckDeadConnection(blob_fd.get());
+  CheckWriteReadBlock(data_fd, 0, 1);
+  CheckWriteReadBlock(sys_fd, 0, 1);
+  CheckDeadConnection(blob_fd);
 
   // Destroy the other two VPartitions.
   {
@@ -1325,8 +1308,8 @@ TEST_F(FvmTest, TestVPartitionDestroy) {
     const fidl::WireResponse response = result.value();
     ASSERT_OK(response.status);
   }
-  CheckWriteReadBlock(sys_fd.get(), 0, 1);
-  CheckDeadConnection(data_fd.get());
+  CheckWriteReadBlock(sys_fd, 0, 1);
+  CheckDeadConnection(data_fd);
 
   {
     const fidl::WireResult result =
@@ -1335,7 +1318,7 @@ TEST_F(FvmTest, TestVPartitionDestroy) {
     const fidl::WireResponse response = result.value();
     ASSERT_OK(response.status);
   }
-  CheckDeadConnection(sys_fd.get());
+  CheckDeadConnection(sys_fd);
 
   ASSERT_EQ(close(fd.release()), 0);
 
@@ -1482,9 +1465,9 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
   fbl::unique_fd vp_fd = *std::move(vp_fd_or);
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
+  fidl::UnownedClientEnd device = partition_caller.borrow_as<fuchsia_hardware_block::Block>();
 
-  const fidl::WireResult result =
-      fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
   ASSERT_OK(result.status());
   const fidl::WireResponse response = result.value();
   ASSERT_OK(response.status);
@@ -1494,14 +1477,14 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
   size_t last_block = (slice_size / block_info.block_size) - 1;
 
   {
-    auto vc = fbl::MakeRefCounted<VmoClient>(vp_fd.get());
+    auto vc = fbl::MakeRefCounted<VmoClient>(device);
     VmoBuf vb(vc, block_info.block_size * static_cast<size_t>(2));
     vc->CheckWrite(vb, 0, block_info.block_size * last_block, block_info.block_size);
     vc->CheckRead(vb, 0, block_info.block_size * last_block, block_info.block_size);
 
     // Try writing out of bounds -- check that we don't have access.
-    CheckNoAccessBlock(vp_fd.get(), (slice_size / block_info.block_size) - 1, 2);
-    CheckNoAccessBlock(vp_fd.get(), slice_size / block_info.block_size, 1);
+    CheckNoAccessBlock(vp_fd, (slice_size / block_info.block_size) - 1, 2);
+    CheckNoAccessBlock(vp_fd, slice_size / block_info.block_size, 1);
 
     // Attempt to access the next contiguous slice
     {
@@ -1557,9 +1540,9 @@ TEST_F(FvmTest, TestSliceAccessMany) {
   fbl::unique_fd vp_fd = *std::move(vp_fd_or);
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
+  fidl::UnownedClientEnd device = partition_caller.borrow_as<fuchsia_hardware_block::Block>();
 
-  const fidl::WireResult result =
-      fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
   ASSERT_OK(result.status());
   const fidl::WireResponse response = result.value();
   ASSERT_OK(response.status);
@@ -1567,7 +1550,7 @@ TEST_F(FvmTest, TestSliceAccessMany) {
   ASSERT_EQ(block_info.block_size, kBlockSize);
 
   {
-    auto vc = fbl::MakeRefCounted<VmoClient>(vp_fd.get());
+    auto vc = fbl::MakeRefCounted<VmoClient>(device);
     VmoBuf vb(vc, kSliceSize * 3);
 
     // Access the first slice
@@ -1575,8 +1558,8 @@ TEST_F(FvmTest, TestSliceAccessMany) {
     vc->CheckRead(vb, 0, 0, kSliceSize);
 
     // Try writing out of bounds -- check that we don't have access.
-    CheckNoAccessBlock(vp_fd.get(), kBlocksPerSlice - 1, 2);
-    CheckNoAccessBlock(vp_fd.get(), kBlocksPerSlice, 1);
+    CheckNoAccessBlock(vp_fd, kBlocksPerSlice - 1, 2);
+    CheckNoAccessBlock(vp_fd, kBlocksPerSlice, 1);
 
     // Attempt to access the next contiguous slices
     uint64_t offset = 1;
@@ -1612,7 +1595,7 @@ TEST_F(FvmTest, TestSliceAccessMany) {
   ASSERT_EQ(close(vp_fd.release()), 0);
   ASSERT_EQ(close(fd.release()), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
-  ValidateFVM(ramdisk_device());
+  ValidateFVM(ramdisk_block_interface());
 }
 
 // Test allocating and accessing slices which are allocated
@@ -1666,11 +1649,12 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
   size_t usable_slices_per_vpart = UsableSlicesCount(kDiskSize, kSliceSize) / kNumVParts;
   size_t i = 0;
   while (vparts[i].slices_used < usable_slices_per_vpart) {
-    int vfd = vparts[i].fd.get();
+    const fbl::unique_fd& vfd = vparts[i].fd;
     // This is the last 'accessible' block.
     size_t last_block = (vparts[i].slices_used * (kSliceSize / block_info.block_size)) - 1;
 
-    auto vc = fbl::MakeRefCounted<VmoClient>(vfd);
+    fdio_cpp::UnownedFdioCaller caller(vfd);
+    auto vc = fbl::MakeRefCounted<VmoClient>(caller.borrow_as<fuchsia_hardware_block::Block>());
     VmoBuf vb(vc, block_info.block_size * static_cast<size_t>(2));
 
     vc->CheckWrite(vb, 0, block_info.block_size * last_block, block_info.block_size);
@@ -1682,7 +1666,6 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
 
     // Attempt to access the next contiguous slice
     fdio_cpp::UnownedFdioCaller partition_caller(vfd);
-    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
     uint64_t offset = vparts[i].slices_used;
     uint64_t length = 1;
     {
@@ -1717,7 +1700,8 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
     ASSERT_GE(vparts[i].slices_used, 5);
 
     {
-      auto vc = fbl::MakeRefCounted<VmoClient>(vparts[i].fd.get());
+      fdio_cpp::UnownedFdioCaller caller(vparts[i].fd);
+      auto vc = fbl::MakeRefCounted<VmoClient>(caller.borrow_as<fuchsia_hardware_block::Block>());
       VmoBuf vb(vc, kSliceSize * 4);
 
       // Try accessing 3 noncontiguous slices at once, with the
@@ -1760,7 +1744,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
 
   ASSERT_EQ(close(fd.release()), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
-  ValidateFVM(ramdisk_device());
+  ValidateFVM(ramdisk_block_interface());
 }
 
 // Test allocating and accessing slices which are
@@ -1814,7 +1798,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
   size_t usable_slices_per_vpart = UsableSlicesCount(kDiskSize, kSliceSize) / kNumVParts;
   size_t i = 0;
   while (vparts[i].slices_used < usable_slices_per_vpart) {
-    int vfd = vparts[i].fd.get();
+    const fbl::unique_fd& vfd = vparts[i].fd;
     // This is the last 'accessible' block.
     size_t last_block = (vparts[i].last_slice * (kSliceSize / block_info.block_size)) - 1;
     CheckWriteReadBlock(vfd, last_block, 1);
@@ -1825,7 +1809,6 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
 
     // Attempt to access a non-contiguous slice
     fdio_cpp::UnownedFdioCaller partition_caller(vfd);
-    zx::unowned_channel partition_channel(partition_caller.borrow_channel());
     uint64_t offset = vparts[i].last_slice + 2;
     uint64_t length = 1;
     {
@@ -1856,7 +1839,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
 
   ASSERT_EQ(close(fd.release()), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
-  ValidateFVM(ramdisk_device());
+  ValidateFVM(ramdisk_block_interface());
 }
 
 // Test that the FVM driver actually persists updates.
@@ -1885,6 +1868,7 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   slices_left--;
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
+  fidl::UnownedClientEnd device = partition_caller.borrow_as<fuchsia_hardware_block::Block>();
 
   // Check that the name matches what we provided
   {
@@ -1899,8 +1883,7 @@ TEST_F(FvmTest, TestPersistenceSimple) {
 
   fuchsia_hardware_block::wire::BlockInfo block_info;
   {
-    const fidl::WireResult result =
-        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_OK(response.status);
@@ -1909,8 +1892,8 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   std::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * static_cast<size_t>(2)]);
 
   // Check that we can read from / write to it
-  CheckWrite(vp_fd.get(), 0, block_info.block_size, buf.get());
-  CheckRead(vp_fd.get(), 0, block_info.block_size, buf.get());
+  CheckWrite(device, 0, block_info.block_size, buf.get());
+  CheckRead(device, 0, block_info.block_size, buf.get());
   ASSERT_EQ(close(vp_fd.release()), 0);
 
   // Check that it still exists after rebinding the driver
@@ -1922,19 +1905,21 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   vp_fd_or = WaitForPartition(kPartition1Matcher);
   ASSERT_OK(vp_fd_or.status_value());
   vp_fd = *std::move(vp_fd_or);
-  CheckRead(vp_fd.get(), 0, block_info.block_size, buf.get());
+  partition_caller.reset(vp_fd);
+  device = partition_caller.borrow_as<fuchsia_hardware_block::Block>();
+
+  CheckRead(device, 0, block_info.block_size, buf.get());
 
   // Try extending the vpartition, and checking that the extension persists.
   // This is the last 'accessible' block.
   size_t last_block = (kSliceSize / block_info.block_size) - 1;
-  CheckWrite(vp_fd.get(), block_info.block_size * last_block, block_info.block_size, buf.get());
-  CheckRead(vp_fd.get(), block_info.block_size * last_block, block_info.block_size, buf.get());
+  CheckWrite(device, block_info.block_size * last_block, block_info.block_size, buf.get());
+  CheckRead(device, block_info.block_size * last_block, block_info.block_size, buf.get());
 
   // Try writing out of bounds -- check that we don't have access.
-  CheckNoAccessBlock(vp_fd.get(), (kSliceSize / block_info.block_size) - 1, 2);
-  CheckNoAccessBlock(vp_fd.get(), kSliceSize / block_info.block_size, 1);
+  CheckNoAccessBlock(vp_fd, (kSliceSize / block_info.block_size) - 1, 2);
+  CheckNoAccessBlock(vp_fd, kSliceSize / block_info.block_size, 1);
 
-  partition_caller.reset(vp_fd);
   uint64_t offset = 1;
   uint64_t length = 1;
   {
@@ -1959,25 +1944,24 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   vp_fd_or = WaitForPartition(kPartition1Matcher);
   ASSERT_OK(vp_fd_or.status_value());
   vp_fd = *std::move(vp_fd_or);
-
   partition_caller.reset(vp_fd);
+  device = partition_caller.borrow_as<fuchsia_hardware_block::Block>();
 
   // Now we can access the next slice...
-  CheckWrite(vp_fd.get(), block_info.block_size * (last_block + 1), block_info.block_size,
+  CheckWrite(device, block_info.block_size * (last_block + 1), block_info.block_size,
              &buf[block_info.block_size]);
-  CheckRead(vp_fd.get(), block_info.block_size * (last_block + 1), block_info.block_size,
+  CheckRead(device, block_info.block_size * (last_block + 1), block_info.block_size,
             &buf[block_info.block_size]);
   // ... We can still access the previous slice...
-  CheckRead(vp_fd.get(), block_info.block_size * last_block, block_info.block_size, buf.get());
+  CheckRead(device, block_info.block_size * last_block, block_info.block_size, buf.get());
   // ... And we can cross slices
-  CheckRead(vp_fd.get(), block_info.block_size * last_block,
+  CheckRead(device, block_info.block_size * last_block,
             block_info.block_size * static_cast<size_t>(2), buf.get());
 
   // Try allocating the rest of the slices, rebinding, and ensuring
   // that the size stays updated.
   {
-    const fidl::WireResult result =
-        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_OK(response.status);
@@ -1996,8 +1980,7 @@ TEST_F(FvmTest, TestPersistenceSimple) {
     ASSERT_OK(response.status);
   }
   {
-    const fidl::WireResult result =
-        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_OK(response.status);
@@ -2015,10 +1998,10 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   ASSERT_OK(vp_fd_or.status_value());
   vp_fd = *std::move(vp_fd_or);
   partition_caller.reset(vp_fd);
+  device = partition_caller.borrow_as<fuchsia_hardware_block::Block>();
 
   {
-    const fidl::WireResult result =
-        fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_OK(response.status);
@@ -2187,7 +2170,6 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
   vp_fd = *std::move(vp_fd_or);
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
   // Verify that slices were fixed on mount.
   const fidl::WireResult result =
@@ -2225,7 +2207,7 @@ TEST_F(FvmTest, TestCorruptMount) {
   });
   ASSERT_OK(vp_fd_or.status_value());
 
-  auto partition_path = GetPartitionPath(vp_fd_or->get());
+  auto partition_path = GetPartitionPath(vp_fd_or.value());
   ASSERT_OK(partition_path.status_value());
 
   size_t kMinfsBlocksPerSlice = kSliceSize / minfs::kMinfsBlockSize;
@@ -2421,7 +2403,7 @@ TEST_F(FvmTest, TestMounting) {
   fbl::unique_fd vp_fd(*std::move(vp_fd_or));
 
   // Format the VPart as minfs
-  auto partition_path = GetPartitionPath(vp_fd.get());
+  auto partition_path = GetPartitionPath(vp_fd);
   ASSERT_OK(partition_path.status_value());
   ASSERT_EQ(fs_management::Mkfs(partition_path->c_str(), fs_management::kDiskFormatMinfs,
                                 fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
@@ -2480,7 +2462,7 @@ TEST_F(FvmTest, TestMkfs) {
   fbl::unique_fd vp_fd(*std::move(vp_fd_or));
 
   // Format the VPart as minfs.
-  auto partition_path = GetPartitionPath(vp_fd.get());
+  auto partition_path = GetPartitionPath(vp_fd);
   ASSERT_OK(partition_path.status_value());
   ASSERT_EQ(fs_management::Mkfs(partition_path->c_str(), fs_management::kDiskFormatMinfs,
                                 fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
@@ -2562,9 +2544,6 @@ TEST_F(FvmTest, TestCorruptionOk) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  fbl::unique_fd ramdisk_fd = ramdisk_device();
-  ASSERT_TRUE(ramdisk_fd);
-
   auto volume_info_or = fs_management::FvmQuery(fd.get());
   ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
 
@@ -2598,9 +2577,9 @@ TEST_F(FvmTest, TestCorruptionOk) {
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * 2);
 
   // Initial slice access
-  CheckWriteReadBlock(vp_fd.get(), 0, 1);
+  CheckWriteReadBlock(vp_fd, 0, 1);
   // Extended slice access
-  CheckWriteReadBlock(vp_fd.get(), kSliceSize / block_info.block_size, 1);
+  CheckWriteReadBlock(vp_fd, kSliceSize / block_info.block_size, 1);
 
   ASSERT_EQ(close(vp_fd.release()), 0);
 
@@ -2610,12 +2589,11 @@ TEST_F(FvmTest, TestCorruptionOk) {
       fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kSliceSize);
   auto off = static_cast<off_t>(header.GetSuperblockOffset(fvm::SuperblockType::kSecondary));
   uint8_t buf[fvm::kBlockSize];
-  ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
-  ASSERT_EQ(read(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
+  fidl::UnownedClientEnd device = ramdisk_block_interface();
+  ASSERT_OK(block_client::SingleReadBytes(device, buf, sizeof(buf), off));
   // Modify an arbitrary byte (not the magic bits; we still want it to mount!)
   buf[128]++;
-  ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
-  ASSERT_EQ(write(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
+  ASSERT_OK(block_client::SingleWriteBytes(device, buf, sizeof(buf), off));
 
   ASSERT_EQ(close(fd.release()), 0);
   FVMRebind();
@@ -2625,12 +2603,11 @@ TEST_F(FvmTest, TestCorruptionOk) {
   vp_fd = *std::move(vp_fd_or);
 
   // The slice extension is still accessible.
-  CheckWriteReadBlock(vp_fd.get(), 0, 1);
-  CheckWriteReadBlock(vp_fd.get(), kSliceSize / block_info.block_size, 1);
+  CheckWriteReadBlock(vp_fd, 0, 1);
+  CheckWriteReadBlock(vp_fd, kSliceSize / block_info.block_size, 1);
 
   // Clean up
   ASSERT_EQ(close(vp_fd.release()), 0);
-  ASSERT_EQ(close(ramdisk_fd.release()), 0);
 
   FVMCheckSliceSize(fvm_device(), kSliceSize);
 }
@@ -2642,9 +2619,6 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   CreateFVM(kBlockSize, kBlockCount, kSliceSize);
   fbl::unique_fd fd(fvm_device());
   ASSERT_TRUE(fd);
-
-  fbl::unique_fd ramdisk_fd = ramdisk_device();
-  ASSERT_TRUE(ramdisk_fd);
 
   auto volume_info_or = fs_management::FvmQuery(fd.get());
   ASSERT_EQ(volume_info_or.status_value(), ZX_OK);
@@ -2660,7 +2634,6 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   fbl::unique_fd vp_fd(*std::move(vp_fd_or));
 
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
   // Extend the vpart (writes to primary)
   uint64_t offset = 1;
@@ -2682,9 +2655,9 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * 2);
 
   // Initial slice access
-  CheckWriteReadBlock(vp_fd.get(), 0, 1);
+  CheckWriteReadBlock(vp_fd, 0, 1);
   // Extended slice access
-  CheckWriteReadBlock(vp_fd.get(), slice_size / block_info.block_size, 1);
+  CheckWriteReadBlock(vp_fd, slice_size / block_info.block_size, 1);
 
   ASSERT_EQ(close(vp_fd.release()), 0);
 
@@ -2692,11 +2665,10 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   // The 'primary' was the last one written, so the backup will be used.
   off_t off = 0;
   uint8_t buf[fvm::kBlockSize];
-  ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
-  ASSERT_EQ(read(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
+  fidl::UnownedClientEnd device = ramdisk_block_interface();
+  ASSERT_OK(block_client::SingleReadBytes(device, buf, sizeof(buf), off));
   buf[128]++;
-  ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
-  ASSERT_EQ(write(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
+  ASSERT_OK(block_client::SingleWriteBytes(device, buf, sizeof(buf), off));
 
   ASSERT_EQ(close(fd.release()), 0);
   FVMRebind();
@@ -2706,12 +2678,11 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   vp_fd = *std::move(vp_fd_or);
 
   // The slice extension is no longer accessible
-  CheckWriteReadBlock(vp_fd.get(), 0, 1);
-  CheckNoAccessBlock(vp_fd.get(), slice_size / block_info.block_size, 1);
+  CheckWriteReadBlock(vp_fd, 0, 1);
+  CheckNoAccessBlock(vp_fd, slice_size / block_info.block_size, 1);
 
   // Clean up
   ASSERT_EQ(close(vp_fd.release()), 0);
-  ASSERT_EQ(close(ramdisk_fd.release()), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
 }
 
@@ -2730,8 +2701,7 @@ TEST_F(FvmTest, TestCorruptionUnrecoverable) {
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
   fbl::unique_fd vp_fd(*std::move(vp_fd_or));
 
-  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
-  zx::unowned_channel partition_channel(partition_caller.borrow_channel());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd);
 
   // Extend the vpart (writes to primary)
   uint64_t offset = 1;
@@ -2753,9 +2723,9 @@ TEST_F(FvmTest, TestCorruptionUnrecoverable) {
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * 2);
 
   // Initial slice access
-  CheckWriteReadBlock(vp_fd.get(), 0, 1);
+  CheckWriteReadBlock(vp_fd, 0, 1);
   // Extended slice access
-  CheckWriteReadBlock(vp_fd.get(), kSliceSize / block_info.block_size, 1);
+  CheckWriteReadBlock(vp_fd, kSliceSize / block_info.block_size, 1);
 
   ASSERT_EQ(close(vp_fd.release()), 0);
 
@@ -2763,53 +2733,30 @@ TEST_F(FvmTest, TestCorruptionUnrecoverable) {
   // The 'primary' was the last one written, so the backup will be used.
   off_t off = 0;
   uint8_t buf[fvm::kBlockSize];
-  fbl::unique_fd ramdisk_fd = ramdisk_device();
-  ASSERT_TRUE(ramdisk_fd);
-  ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
-  ASSERT_EQ(read(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
+  fidl::UnownedClientEnd device = ramdisk_block_interface();
+  ASSERT_OK(block_client::SingleReadBytes(device, buf, sizeof(buf), off));
   buf[128]++;
-  ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
-  ASSERT_EQ(write(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
+  ASSERT_OK(block_client::SingleWriteBytes(device, buf, sizeof(buf), off));
 
   fvm::Header header =
       fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kSliceSize);
   off = static_cast<off_t>(header.GetSuperblockOffset(fvm::SuperblockType::kSecondary));
-  ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
-  ASSERT_EQ(read(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
+  ASSERT_OK(block_client::SingleReadBytes(device, buf, sizeof(buf), off));
   buf[128]++;
-  ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
-  ASSERT_EQ(write(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
+  ASSERT_OK(block_client::SingleWriteBytes(device, buf, sizeof(buf), off));
 
-  ValidateFVM(ramdisk_device(), ValidationResult::Corrupted);
-
-  // Clean up
-  ASSERT_EQ(close(ramdisk_fd.release()), 0);
-}
-
-// Tests the FVM checker using invalid arguments.
-TEST_F(FvmTest, TestCheckBadArguments) {
-  fvm::Checker checker;
-  ASSERT_FALSE(checker.Validate(), "Checker should be missing device, block size");
-
-  checker.SetBlockSize(512);
-  ASSERT_FALSE(checker.Validate(), "Checker should be missing device");
-
-  checker.SetBlockSize(0);
-  CreateFVM(512, 1 << 20, 64LU * (1 << 20));
-  fbl::unique_fd fd = ramdisk_device();
-  ASSERT_TRUE(fd);
-
-  checker.SetDevice(std::move(fd));
-  ASSERT_FALSE(checker.Validate(), "Checker should be missing block size");
+  ValidateFVM(ramdisk_block_interface(), ValidationResult::Corrupted);
 }
 
 // Tests the FVM checker against a just-initialized FVM.
 TEST_F(FvmTest, TestCheckNewFVM) {
   CreateFVM(512, 1 << 20, 64LU * (1 << 20));
-  fbl::unique_fd fd = ramdisk_device();
-  ASSERT_TRUE(fd);
-
-  fvm::Checker checker(std::move(fd), 512, true);
+  fidl::UnownedClientEnd device = ramdisk_block_interface();
+  const fidl::WireResult wire_result = fidl::WireCall(device)->GetInfo();
+  ASSERT_OK(wire_result.status());
+  const fidl::WireResponse wire_response = wire_result.value();
+  ASSERT_OK(wire_response.status);
+  fvm::Checker checker(device, wire_response.info->block_size, true);
   ASSERT_TRUE(checker.Validate());
 }
 

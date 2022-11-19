@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fdio/directory.h>
 #include <stdio.h>
-#include <zircon/assert.h>
 
 #include <array>
 #include <cstdint>
@@ -18,6 +18,7 @@
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_check.h"
 #include "src/storage/volume_image/adapter/commands.h"
+#include "src/storage/volume_image/adapter/commands/file_client.h"
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 #include "src/storage/volume_image/fvm/options.h"
 #include "src/storage/volume_image/utils/fd_reader.h"
@@ -138,10 +139,10 @@ TEST(CreateCommandTest, CreateFvmBlockImageIsOk) {
 
   ASSERT_TRUE(Create(params).is_ok());
 
-  fbl::unique_fd fvm_fd(open(output_file_or.value().path().data(), O_RDONLY));
-  ASSERT_TRUE(fvm_fd.is_valid());
+  zx::result file = OpenFile(params.output_path.c_str());
+  ASSERT_TRUE(file.is_ok()) << file.status_string();
 
-  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  fvm::Checker fvm_checker(file.value(), 8 * (1 << 10), true);
   ASSERT_TRUE(fvm_checker.Validate());
 }
 
@@ -240,10 +241,10 @@ TEST(CreateCommandTest, CreateCompressedFvmBlockImageIsOk) {
   auto result = Decompress(output_file_or.value().path());
   ASSERT_TRUE(result.is_ok()) << result.error();
 
-  fbl::unique_fd fvm_fd(open(output_file_or.value().path().data(), O_RDONLY));
-  ASSERT_TRUE(fvm_fd.is_valid());
+  zx::result file = OpenFile(params.output_path.c_str());
+  ASSERT_TRUE(file.is_ok()) << file.status_string();
 
-  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  fvm::Checker fvm_checker(file.value(), 8 * (1 << 10), true);
   ASSERT_TRUE(fvm_checker.Validate());
 }
 
@@ -479,10 +480,10 @@ TEST(CreateCommandTest, CreateEmbeddedFvmImageIsOk) {
     current_offset += buffer_view.size();
   }
 
-  fbl::unique_fd fvm_fd(open(copy_file_or.value().path().data(), O_RDONLY));
-  ASSERT_TRUE(fvm_fd.is_valid());
+  zx::result file = OpenFile(std::string(copy_file_or.value().path()).c_str());
+  ASSERT_TRUE(file.is_ok()) << file.status_string();
 
-  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  fvm::Checker fvm_checker(file.value(), 8 * (1 << 10), true);
   ASSERT_TRUE(fvm_checker.Validate());
 }
 

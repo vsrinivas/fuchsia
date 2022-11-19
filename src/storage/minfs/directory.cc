@@ -329,7 +329,6 @@ zx::result<Directory::IteratorCommand> Directory::DirentCallbackUpdateInode(
           vndir->WriteExactInternal(args->transaction, de, DirentSize(de->namelen), args->offs.off);
       status.is_error()) {
     return status.take_error();
-    ;
   }
   args->transaction->PinVnode(vndir);
   return zx::ok(IteratorCommand::kIteratorSaveSync);
