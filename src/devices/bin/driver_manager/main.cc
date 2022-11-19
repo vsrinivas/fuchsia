@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "main.h"
+
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
@@ -49,18 +51,6 @@
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 #include "system_instance.h"
 #include "v2/driver_runner.h"
-
-namespace {
-
-// These are helpers for getting sets of parameters over FIDL
-struct DriverManagerParams {
-  bool require_system;
-  bool suspend_timeout_fallback;
-  bool verbose;
-  DriverHostCrashPolicy crash_policy;
-  std::string root_driver;
-  bool use_dfv2;
-};
 
 DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Arguments>& client) {
   fuchsia_boot::wire::BoolPair bool_req[]{
@@ -152,8 +142,6 @@ zx::result<zx::resource> get_mexec_resource() {
   return zx::ok(std::move(result.value().resource));
 }
 
-}  // namespace
-
 int main(int argc, char** argv) {
   zx_status_t status = StdoutToDebuglog::Init();
   if (status != ZX_OK) {
@@ -175,10 +163,15 @@ int main(int argc, char** argv) {
       fx_logger_set_min_severity(logger, std::numeric_limits<fx_log_severity_t>::min());
     }
   }
-  std::string root_driver = "fuchsia-boot:///#driver/platform-bus.so";
   if (driver_manager_params.use_dfv2) {
-    root_driver = "fuchsia-boot:///#meta/platform-bus.cm";
+    return RunDfv2(driver_manager_params, std::move(boot_args));
   }
+  return RunDfv1(driver_manager_params, std::move(boot_args));
+}
+
+int RunDfv1(DriverManagerParams driver_manager_params,
+            fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args) {
+  std::string root_driver = "fuchsia-boot:///#driver/platform-bus.so";
   if (!driver_manager_params.root_driver.empty()) {
     root_driver = driver_manager_params.root_driver;
   }
@@ -245,7 +238,8 @@ int main(int argc, char** argv) {
   }
 
   zx_handle_t oom_event;
-  status = zx_system_get_event(root_job.value().get(), ZX_SYSTEM_EVENT_OUT_OF_MEMORY, &oom_event);
+  zx_status_t status =
+      zx_system_get_event(root_job.value().get(), ZX_SYSTEM_EVENT_OUT_OF_MEMORY, &oom_event);
   if (status != ZX_OK) {
     LOGF(INFO, "Failed to get OOM event, assuming test environment and continuing");
   } else {
@@ -306,31 +300,18 @@ int main(int argc, char** argv) {
       loop.dispatcher());
   driver_runner.PublishComponentRunner(outgoing);
 
-  // Find and load v1 or v2 Drivers.
-  if (!driver_manager_params.use_dfv2) {
-    coordinator.set_driver_runner(&driver_runner);
-    coordinator.PublishDriverDevelopmentService(outgoing);
+  // Find and load v1 Drivers.
+  coordinator.set_driver_runner(&driver_runner);
+  coordinator.PublishDriverDevelopmentService(outgoing);
 
-    // V1 Drivers.
-    status = system_instance.CreateDriverHostJob(root_job.value(), &config.driver_host_job);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to create driver_host job: %s", zx_status_get_string(status));
-      return status;
-    }
-
-    coordinator.LoadV1Drivers(root_driver);
-  } else {
-    // V2 Drivers.
-    LOGF(INFO, "Starting DriverRunner with root driver URL: %s", root_driver.c_str());
-    auto start = driver_runner.StartRootDriver(root_driver);
-    if (start.is_error()) {
-      return start.error_value();
-    }
-    driver_development_service.emplace(driver_runner, loop.dispatcher());
-    driver_development_service->Publish(outgoing);
-    driver_runner.PublishDeviceGroupManager(outgoing);
-    driver_runner.ScheduleBaseDriversBinding();
+  // V1 Drivers.
+  status = system_instance.CreateDriverHostJob(root_job.value(), &config.driver_host_job);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to create driver_host job: %s", zx_status_get_string(status));
+    return status;
   }
+
+  coordinator.LoadV1Drivers(root_driver);
 
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   LOGF(INFO, "Drivers loaded and published");

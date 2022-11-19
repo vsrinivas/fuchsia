@@ -181,7 +181,11 @@ source_set("lib") {
 }
 
 executable("driver_manager") {
-  sources = [ "main.cc" ]
+  sources = [
+    "dfv2_main.cc",
+    "main.cc",
+    "main.h",
+  ]
 
   deps = [
     ":lib",
