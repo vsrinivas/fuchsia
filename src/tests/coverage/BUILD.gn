@@ -12,16 +12,21 @@ group("tests") {
   testonly = true
 
   # Ensure that these tests are built for the host, and not for Fuchsia.
-  # These tests use ELF build ID that is only available on Linux.
   # These tests use instrumententation for coverage, and they are intentionally
   # disabled when sanitizer instrumentation is enabled.
-  if (is_linux && !is_asan) {
+  if (!is_asan) {
     deps = [
-      ":clang_coverage_tests_on_host($host_toolchain)",
       ":clang_coverage_tests_on_target($host_toolchain)",
-      ":rust_coverage_tests_on_host($host_toolchain)",
       ":rust_coverage_tests_on_target($host_toolchain)",
     ]
+
+    # Only run host coverage tests on Linux because they use ELF build ID that is only available on Linux.
+    if (host_os == "linux") {
+      deps += [
+        ":clang_coverage_tests_on_host($host_toolchain)",
+        ":rust_coverage_tests_on_host($host_toolchain)",
+      ]
+    }
   }
 }
 
