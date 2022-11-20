@@ -11,11 +11,13 @@ use {
     nom::{
         branch::alt,
         bytes::complete::{is_not, tag, take_while, take_while_m_n},
-        character::{complete::char, is_alphabetic, is_alphanumeric},
-        combinator::{all_consuming, map, recognize},
+        character::{
+            complete::{char, none_of, one_of},
+            is_alphabetic, is_alphanumeric,
+        },
+        combinator::{all_consuming, map, opt, peek, recognize},
         error::{convert_error, VerboseError},
-        multi::{fold_many0, separated_list},
-        number::complete::double,
+        multi::{fold_many0, many0, separated_list},
         sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
         Err::{self, Incomplete},
         IResult, InputLength, Slice,
@@ -125,6 +127,71 @@ fn name_no_namespace<'a>(i: ParsingContext<'a>) -> ParsingResult<'a, ExpressionT
 // holding it.
 fn name<'a>(i: ParsingContext<'a>) -> ParsingResult<'a, ExpressionTree> {
     alt((name_with_namespace, name_no_namespace))(i)
+}
+
+// Parse a decimal literal as specified in https://doc.rust-lang.org/reference/tokens.html#integer-literals
+// DEC_DIGIT (DEC_DIGIT|_)*
+// Parse the first decimal digit
+// Consume all the remaining (DEC_DIGIT|_)
+fn decimal_literal<'a>(i: ParsingContext<'a>) -> ParsingResult<'a, &'a str> {
+    map(
+        recognize(tuple((one_of("0123456789"), many0(one_of("0123456789_"))))),
+        |d: ParsingContext<'_>| d.into_inner(),
+    )(i)
+}
+
+// Parse float exponent as specified in https://doc.rust-lang.org/reference/tokens.html#floating-point-literals
+// (e|E)(+|-)?(DEC_DIGIT|_)*(DEC_DIGIT)(DEC_DIGIT|_)*
+// This essentially means that there should be atleast one DEC_DIGIT after (e|E)(+|-)?
+// So we consume all the preceding '_'
+// The next digit must be a DEC_DIGIT, if not the float exponent is not valid
+// Consume all the remaining (DEC_DIGIT|_)
+fn float_exponent<'a>(i: ParsingContext<'a>) -> ParsingResult<'a, &'a str> {
+    map(
+        recognize(tuple((
+            one_of("eE"),
+            opt(one_of("+-")),
+            many0(char('_')),
+            one_of("0123456789"),
+            many0(one_of("0123456789_")),
+        ))),
+        |exponent: ParsingContext<'_>| exponent.into_inner(),
+    )(i)
+}
+
+// Parse a floating point literal
+// This mostly follows from https://doc.rust-lang.org/reference/tokens.html#floating-point-literals
+// with the addition of . DECIMAL_LITERAL
+// Consume the starting optional sign (+|-)
+// We try to parse the remaining string as
+//  1. . DECIMAL_LITERAL (FLOAT_EXPONENT)? Eg. .12_34___ (0.1234) .2e__2_ (20.0)
+//  2. DECIMAL_LITERAL FLOAT_EXPONENT Eg. 1_234_567___8E-__1_0 (0.0012345678)
+//  3. DECIMAL_LITERAL . DECIMAL_LITERAL (FLOAT_EXPONENT)? Eg. 1__234__.12E-3 (1.23412)
+//  4. DECIMAL_LITERAL . (not followed by '.', '_', 'e') Eg. 1.
+//  5. DECIMAL_LITERAL Eg. 1_2__3__4 (1234)
+fn double<'a>(i: ParsingContext<'a>) -> ParsingResult<'a, f64> {
+    map(
+        recognize(tuple((
+            opt(one_of("+-")),
+            alt((
+                recognize(tuple((char('.'), decimal_literal, opt(float_exponent)))),
+                recognize(tuple((decimal_literal, float_exponent))),
+                recognize(tuple((
+                    decimal_literal,
+                    char('.'),
+                    decimal_literal,
+                    opt(float_exponent),
+                ))),
+                recognize(tuple((decimal_literal, char('.'), peek(none_of("._"))))),
+                recognize(tuple((decimal_literal, char('.')))),
+                recognize(decimal_literal),
+            )),
+        ))),
+        |d: ParsingContext<'_>| {
+            dbg!(d);
+            d.into_inner().replace("_", "").parse::<f64>().unwrap()
+        },
+    )(i)
 }
 
 // Returns a Value-type expression holding either an Int or Float number.
@@ -521,8 +588,30 @@ mod test {
             get_parse!(number, "1.a"),
             Res::Ok("a", ExpressionTree::Value(MetricValue::Float(1.0)))
         );
-        // "e" must be followed by a number
-        assert!(get_parse!(number, "1.e").is_err());
+
+        assert_eq!(
+            get_parse!(number, ".12_34___"),
+            Res::Ok("", ExpressionTree::Value(MetricValue::Float(0.1234)))
+        );
+        assert_eq!(
+            get_parse!(number, ".2e__2_"),
+            Res::Ok("", ExpressionTree::Value(MetricValue::Float(20.0)))
+        );
+        assert_eq!(
+            get_parse!(number, "1_234_567___8E-__1_0__"),
+            Res::Ok("", ExpressionTree::Value(MetricValue::Float(0.0012345678)))
+        );
+        assert_eq!(
+            get_parse!(number, "1__234__.12E-3__"),
+            Res::Ok("", ExpressionTree::Value(MetricValue::Float(1.23412)))
+        );
+        assert_eq!(
+            get_parse!(number, "1_2__3__4__"),
+            Res::Ok("", ExpressionTree::Value(MetricValue::Int(1234)))
+        );
+
+        // number cannot begin with '_'
+        assert!(get_parse!(number, "_100").is_err());
     }
 
     #[fuchsia::test]
