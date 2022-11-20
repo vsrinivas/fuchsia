@@ -53,6 +53,9 @@ constexpr pgoff_t kInvalidPageOffset = std::numeric_limits<pgoff_t>::max();
 // For node offset
 constexpr block_t kInvalidNodeOffset = std::numeric_limits<block_t>::max();
 
+// For readahead
+constexpr pgoff_t kDefaultReadaheadSize = 32;
+
 // CountType for monitoring
 //
 // f2fs monitors the number of several block types such as on-writeback,

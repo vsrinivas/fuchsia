@@ -542,6 +542,26 @@ void FileCache::Reset() {
   }
 }
 
+uint64_t FileCache::CountContiguousPages(pgoff_t index, uint64_t max_scan) {
+  if (index == 0) {
+    return 0;
+  }
+
+  std::lock_guard tree_lock(tree_lock_);
+
+  auto current_key = index - 1;
+  auto current = page_tree_.find(current_key);
+  uint64_t count = 0;
+  while (current_key >= 0 && current != page_tree_.end() && current_key == current->GetKey() &&
+         current->IsUptodate() && count < max_scan) {
+    --current;
+    --current_key;
+    ++count;
+  }
+
+  return count;
+}
+
 std::vector<LockedPage> FileCache::GetLockedDirtyPagesUnsafe(const WritebackOperation &operation) {
   std::vector<LockedPage> pages;
   pgoff_t nwritten = 0;

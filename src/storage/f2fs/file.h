@@ -45,6 +45,7 @@ class File : public VnodeF2fs, public fbl::Recyclable<File> {
       __TA_EXCLUDES(mutex_);
   zx_status_t TruncateInline(size_t len, bool is_recover) __TA_EXCLUDES(mutex_);
   zx_status_t ConvertInlineData() __TA_EXCLUDES(mutex_);
+  pgoff_t GetReadaheadSize(size_t off, size_t len) __TA_EXCLUDES(mutex_);
 
   uint8_t* InlineDataPtr(Page* page);
   loff_t MaxFileSize(unsigned bits);

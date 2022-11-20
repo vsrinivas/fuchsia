@@ -424,6 +424,10 @@ class VnodeF2fs : public fs::Vnode,
     return file_cache_.GetPages(page_offsets);
   }
 
+  uint64_t CountContiguousPagesOnFileCache(pgoff_t index, uint64_t max_scan) {
+    return file_cache_.CountContiguousPages(index, max_scan);
+  }
+
   pgoff_t Writeback(WritebackOperation &operation) { return file_cache_.Writeback(operation); }
   std::vector<LockedPage> InvalidatePages(pgoff_t start = 0, pgoff_t end = kPgOffMax) {
     return file_cache_.InvalidatePages(start, end);

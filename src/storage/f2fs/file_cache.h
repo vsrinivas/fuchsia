@@ -359,6 +359,8 @@ class FileCache {
   void Downgrade(Page *raw_page) __TA_EXCLUDES(tree_lock_);
   bool IsOrphan() { return is_orphan_.test(std::memory_order_relaxed); }
   bool SetOrphan() { return is_orphan_.test_and_set(std::memory_order_relaxed); }
+  // Count contiguously cached pages in the range [index - max_scan, index - 1].
+  uint64_t CountContiguousPages(pgoff_t index, uint64_t max_scan) __TA_EXCLUDES(tree_lock_);
   F2fs *fs() const;
 #ifdef __Fuchsia__
   VmoManager &GetVmoManager() { return *vmo_manager_; }
