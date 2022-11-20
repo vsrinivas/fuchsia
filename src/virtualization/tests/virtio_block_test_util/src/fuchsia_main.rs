@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
-use futures::{StreamExt as _, TryStreamExt as _};
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
-use std::path::{Path, PathBuf};
-use std::vec;
-use structopt::StructOpt;
+use {
+    fidl_fuchsia_hardware_block::BlockMarker,
+    fuchsia_component::client,
+    fuchsia_fs::{directory, OpenFlags},
+    remote_block_device::{BlockClient as _, BufferSlice, MutableBufferSlice, RemoteBlockClient},
+    structopt::StructOpt,
+};
 
 const BLOCK_CLASS_PATH: &str = "/dev/class/block/";
 
@@ -32,112 +31,105 @@ enum Command {
     Write { offset: u64, value: u8 },
 }
 
-// This tool has access to block nodes in the /dev/class/block path, but we need
-// to match against composite PCI devices which sit in the /dev/ root we cannot
-// get blanket access to. To achieve this, we walk all the block devices and
-// look up their corresponding topological path to see if it corresponds to the
-// device we're looking for.
-async fn get_class_path_from_topological(
-    topological_path_suffix: &str,
-) -> Result<PathBuf, anyhow::Error> {
-    // Scan current files in the directory and watch for new ones in case we
-    // don't find the block device we're looking for. There's a slim possibility
-    // a partition may not yet be available when this tool is executed in a
-    // test.
-    let block_dir = fuchsia_fs::directory::open_in_namespace(
-        BLOCK_CLASS_PATH,
-        fuchsia_fs::OpenFlags::RIGHT_READABLE,
-    )?;
-    let watcher = fuchsia_vfs_watcher::Watcher::new(block_dir).await?;
-    watcher
-        .try_filter_map(|fuchsia_vfs_watcher::WatchMessage { event, filename }| {
-            futures::future::ready((|| match event {
-                fuchsia_vfs_watcher::WatchEvent::ADD_FILE
-                | fuchsia_vfs_watcher::WatchEvent::EXISTING => {
-                    if filename == Path::new(".") {
-                        Ok(None)
-                    } else {
-                        let block_path = PathBuf::from(BLOCK_CLASS_PATH).join(filename);
-                        let block_dev = File::open(&block_path)?;
-                        let topo_path = fdio::device_get_topo_path(&block_dev)?;
-                        Ok(topo_path.ends_with(topological_path_suffix).then(|| block_path))
-                    }
-                }
-                _ => Ok(None),
-            })())
-        })
-        .err_into()
-        .next()
-        .await
-        .unwrap_or(Err(zx::Status::NOT_FOUND).map_err(Into::into))
-}
-
-async fn open_block_device(pci_bus: u8, pci_device: u8) -> Result<File, anyhow::Error> {
-    // The filename is in the format pci-<bus>:<device>.<function>. The function
-    // is always zero for virtio block devices.
-    let topo_path_suffix =
-        format!("/pci-{:02}:{:02}.0-fidl/virtio-block/block", pci_bus, pci_device);
-
-    let class_path = get_class_path_from_topological(&topo_path_suffix).await?;
-    let file = OpenOptions::new().read(true).write(true).open(&class_path)?;
-
-    Ok(file)
-}
-
-async fn check(block_dev: &File, block_size: u32, block_count: u64) -> Result<(), anyhow::Error> {
-    let channel = fdio::clone_channel(block_dev)?;
-    let channel = fasync::Channel::from_channel(channel)?;
-    let device = fidl_fuchsia_hardware_block::BlockProxy::new(channel);
-    let (status, maybe_block_info) = device.get_info().await?;
-    let () = zx::Status::ok(status)?;
-    let block_info = maybe_block_info.ok_or(zx::Status::BAD_STATE)?;
-    if block_info.block_size == block_size && block_info.block_count == block_count {
-        Ok(())
-    } else {
-        Err(zx::Status::BAD_STATE)
-    }
-    .map_err(Into::into)
-}
-
-fn read_block(
-    block_dev: &mut File,
-    block_size: u32,
-    offset: u64,
-    expected: u8,
-) -> Result<(), anyhow::Error> {
-    block_dev.seek(SeekFrom::Start(offset * block_size as u64))?;
-    let mut data: Vec<u8> = vec![0; block_size as usize];
-    block_dev.read_exact(&mut data)?;
-    if data.iter().all(|&b| b == expected) { Ok(()) } else { Err(zx::Status::BAD_STATE) }
-        .map_err(Into::into)
-}
-
-fn write_block(
-    block_dev: &mut File,
-    block_size: u32,
-    offset: u64,
-    value: u8,
-) -> Result<(), anyhow::Error> {
-    block_dev.seek(SeekFrom::Start(offset * block_size as u64))?;
-    let data: Vec<u8> = vec![value; block_size as usize];
-    block_dev.write_all(&data)?;
-    // TODO(fxbug.dev/33099): We may want to support sync through the block
-    // protocol, but in the interim, it is unsupported.
-    // block_dev.sync_all()?;
-    Ok(())
-}
-
 #[fuchsia::main]
 async fn main() -> Result<(), anyhow::Error> {
-    let config = Config::from_args();
-    let mut block_dev = open_block_device(config.pci_bus, config.pci_device).await?;
-    let result = match config.cmd {
-        Command::Check { block_count } => check(&block_dev, config.block_size, block_count).await,
+    let Config { block_size, pci_bus, pci_device, cmd } = Config::from_args();
+
+    // The filename is in the format pci-<bus>:<device>.<function>. The function is always zero for
+    // virtio block devices.
+    let topological_path_suffix =
+        format!("/pci-{:02}:{:02}.0-fidl/virtio-block/block", pci_bus, pci_device);
+
+    // This tool has access to block nodes in the /dev/class/block path, but we need to match
+    // against composite PCI devices which sit in the /dev/ root we cannot get blanket access to. To
+    // achieve this, we walk all the block devices and look up their corresponding topological path
+    // to see if it corresponds to the device we're looking for.
+    //
+    // Scan current files in the directory and watch for new ones in case we don't find the block
+    // device we're looking for. There's a slim possibility a partition may not yet be available
+    // when this tool is executed in a test.
+    let block_dir = directory::open_in_namespace(BLOCK_CLASS_PATH, OpenFlags::RIGHT_READABLE)?;
+    let block_proxy = device_watcher::wait_for_device_with(
+        &block_dir,
+        |device_watcher::DeviceInfo { filename, topological_path }| {
+            topological_path.ends_with(&topological_path_suffix).then(|| {
+                client::connect_to_named_protocol_at_dir_root::<BlockMarker>(&block_dir, filename)
+            })
+        },
+    )
+    .await??;
+    let block_client = RemoteBlockClient::new(block_proxy).await?;
+
+    let result = match cmd {
+        Command::Check { block_count } => {
+            let actual_block_size = block_client.block_size();
+            let actual_block_count = block_client.block_count();
+            if actual_block_size != block_size || actual_block_count != block_count {
+                Err(anyhow::anyhow!(
+                    "actual_block_size={} != block_size={} || actual_block_count={} != block_count={}",
+                    actual_block_size,
+                    block_size,
+                    actual_block_count,
+                    block_count,
+                ))
+            } else {
+                Ok(())
+            }
+        }
         Command::Read { offset, expected } => {
-            read_block(&mut block_dev, config.block_size, offset, expected)
+            let device_offset = offset.checked_mul(block_size.into()).ok_or(anyhow::anyhow!(
+                "offset={} * block_size={} overflows",
+                offset,
+                block_size
+            ))?;
+            let block_size = block_size.try_into()?;
+            let mut data = {
+                let mut data = Vec::new();
+                let () = data.resize(block_size, !expected);
+                data.into_boxed_slice()
+            };
+            let () = block_client
+                .read_at(MutableBufferSlice::Memory(&mut (*data)[..]), device_offset)
+                .await?;
+            // TODO(https://github.com/rust-lang/rust/issues/59878): Box<[T]> is not IntoIter.
+            let mismatches = data.to_vec().into_iter().enumerate().try_fold(
+                String::new(),
+                |mut acc, (i, b)| {
+                    use std::fmt::Write as _;
+
+                    if b != expected {
+                        let () = write!(&mut acc, "\n{}:{:b}", i, b)?;
+                    }
+                    Ok::<_, anyhow::Error>(acc)
+                },
+            )?;
+            if !mismatches.is_empty() {
+                Err(anyhow::anyhow!(
+                    "offset={} expected={:b} mismatches={}",
+                    offset,
+                    expected,
+                    mismatches
+                ))
+            } else {
+                Ok(())
+            }
         }
         Command::Write { offset, value } => {
-            write_block(&mut block_dev, config.block_size, offset, value)
+            let device_offset = offset.checked_mul(block_size.into()).ok_or(anyhow::anyhow!(
+                "offset={} * block_size={} overflows",
+                offset,
+                block_size
+            ))?;
+            let block_size = block_size.try_into()?;
+            let data = {
+                let mut data = Vec::new();
+                let () = data.resize(block_size, value);
+                data.into_boxed_slice()
+            };
+            let () =
+                block_client.write_at(BufferSlice::Memory(&(*data)[..]), device_offset).await?;
+            let () = block_client.flush().await?;
+            Ok(())
         }
     };
     match result.as_ref() {

@@ -386,7 +386,7 @@ TYPED_TEST(VirtioBlockGuestTest, WriteRaw) {
         if (this->GetGuestKernel() == GuestKernel::LINUX) {
           EXPECT_THAT(result, HasSubstr("PermissionDenied"));
         } else {
-          EXPECT_THAT(result, HasSubstr("Error: I/O error"));
+          EXPECT_THAT(result, HasSubstr("Error: IO"));
         }
       } else {
         EXPECT_THAT(result, HasSubstr("PASS"));
@@ -506,7 +506,7 @@ TYPED_TEST(VirtioBlockGuestTest, WriteQcow) {
         if (this->GetGuestKernel() == GuestKernel::LINUX) {
           EXPECT_THAT(result, HasSubstr("PermissionDenied"));
         } else {
-          EXPECT_THAT(result, HasSubstr("Error: I/O error"));
+          EXPECT_THAT(result, HasSubstr("Error: IO"));
         }
       } else {
         EXPECT_THAT(result, HasSubstr("PASS"));
