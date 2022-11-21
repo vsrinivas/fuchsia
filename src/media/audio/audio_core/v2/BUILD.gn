@@ -10,6 +10,8 @@ source_set("audio_core_lib") {
     "audio_core_component.h",
     "input_device_pipeline.cc",
     "input_device_pipeline.h",
+    "output_device_pipeline.cc",
+    "output_device_pipeline.h",
     "reference_clock.cc",
     "reference_clock.h",
     "task_barrier.h",
@@ -49,7 +51,10 @@ executable("unittest_bin") {
   testonly = true
   output_name = "audio_core_v2_unittests"
 
-  sources = [ "input_device_pipeline_unittest.cc" ]
+  sources = [
+    "input_device_pipeline_unittest.cc",
+    "output_device_pipeline_unittest.cc",
+  ]
 
   deps = [
     ":audio_core_lib",
