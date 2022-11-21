@@ -414,3 +414,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0198_magma_api_design.md
   - title: "RFC-0199: Protect child VMARs"
     path: /docs/contribute/governance/rfcs/0199_protect_child_vmars.md
+  - title: "RFC-0200: Support adb protocol and interface for hardware testing"
+    path: /docs/contribute/governance/rfcs/0200_support_adb_protocol_and_interface_for_hardware_testing.md

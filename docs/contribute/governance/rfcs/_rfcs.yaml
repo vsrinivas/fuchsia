@@ -2603,3 +2603,16 @@
   reviewers: ['travisg@google.com', 'rashaeqbal@google.com', 'nickcano@google.com']
   consulted: ['wez@google.com', 'palmer@google.com', 'mvanotti@google.com']
   reviewed: '2022-11-03'
+
+- name: 'RFC-0200'
+  title: 'Support adb protocol and interface for hardware testing'
+  short_description: 'Add adb protocol and interface support to enable Fuchsia device interaction with stock adb client for hardware testing usecases.'
+  authors: ['puneetha@google.com']
+  file: '0200_support_adb_protocol_and_interface_for_hardware_testing.md'
+  area: ['Developer', 'Testing']
+  issue: ['106067']
+  gerrit_change_id: ['715977']
+  status: 'Accepted'
+  reviewers: ['curtisgalloway@google.com', 'rdzhuang@google.com', 'gkalsi@google.com',  'prashanthsw@google.com', 'jeremymanson@google.com', 'surajmalhotra@google.com']
+  submitted: '2022-08-24'
+  reviewed: '2022-11-17'
