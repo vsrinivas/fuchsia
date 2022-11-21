@@ -63,7 +63,9 @@ size_t __string_read(FILE*, unsigned char*, size_t) ATTR_LIBC_VISIBILITY;
 int __toread(FILE*) ATTR_LIBC_VISIBILITY;
 int __towrite(FILE*) ATTR_LIBC_VISIBILITY;
 
-zx_status_t _mmap_get_vmo_from_fd(int mmap_prot, int mmap_flags, int fd, uint32_t* out_vmo);
+zx_status_t _mmap_get_vmo_from_context(int mmap_prot, int mmap_flags, void* context,
+                                       uint32_t* out_vmo);
+zx_status_t _mmap_on_mapped(void* context, void* ptr);
 
 #if defined(__PIC__) && (100 * __GNUC__ + __GNUC_MINOR__ >= 303)
 __attribute__((visibility("protected")))

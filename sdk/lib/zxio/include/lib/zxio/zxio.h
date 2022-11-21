@@ -294,6 +294,10 @@ ZXIO_EXPORT zx_status_t zxio_token_get(zxio_t* io, zx_handle_t* out_token);
 // access rights.
 ZXIO_EXPORT zx_status_t zxio_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo);
 
+// Called when this file is mmapped. |ptr| is the address the file has been
+// mapped at.
+ZXIO_EXPORT zx_status_t zxio_on_mapped(zxio_t* io, void* ptr);
+
 // Get a read-only VMO containing the whole contents of the file. This function creates a clone of
 // the underlying VMO using `zxio_vmo_get_clone()` when possible, falling back to eagerly reading
 // the contents into a freshly-created VMO. Copying the file data can have significant memory and

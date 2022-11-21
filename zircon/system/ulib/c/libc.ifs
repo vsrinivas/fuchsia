@@ -160,10 +160,13 @@ Symbols:
   - { Name: _dl_debug_addr, Type: Object }
   - { Name: _environ, Type: Object, Weak: true }
   - { Name: _exit, Type: Func }
+  - { Name: _fd_get_context, Type: Func, Weak: true }
   - { Name: _fd_open_max, Type: Func, Weak: true }
+  - { Name: _fd_release_context, Type: Func, Weak: true }
   - { Name: _getaddrinfo_from_dns, Type: Func, Weak: true }
   - { Name: _longjmp, Type: Func }
-  - { Name: _mmap_get_vmo_from_fd, Type: Func, Weak: true }
+  - { Name: _mmap_get_vmo_from_context, Type: Func, Weak: true }
+  - { Name: _mmap_on_mapped, Type: Func, Weak: true }
   - { Name: _ns_flagdata, Type: Object }
   - { Name: _setjmp, Type: Func }
   - { Name: _zx_job_default, Type: Func }

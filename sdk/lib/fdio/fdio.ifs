@@ -4,9 +4,12 @@ SoName:          libfdio.so
 Symbols:
   - { Name: __libc_extensions_fini, Type: Func }
   - { Name: __libc_extensions_init, Type: Func }
+  - { Name: _fd_get_context, Type: Func }
   - { Name: _fd_open_max, Type: Func }
+  - { Name: _fd_release_context, Type: Func }
   - { Name: _getaddrinfo_from_dns, Type: Func }
-  - { Name: _mmap_get_vmo_from_fd, Type: Func }
+  - { Name: _mmap_get_vmo_from_context, Type: Func }
+  - { Name: _mmap_on_mapped, Type: Func }
   - { Name: accept4, Type: Func }
   - { Name: access, Type: Func }
   - { Name: bind, Type: Func }

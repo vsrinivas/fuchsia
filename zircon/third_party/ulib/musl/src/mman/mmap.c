@@ -16,7 +16,7 @@
 #include "zircon_impl.h"
 
 static zx_status_t mmap_inner(uintptr_t start, size_t len, int prot, int flags, int fd,
-                              off_t fd_off, uintptr_t* ptr) {
+                              off_t fd_off, void** context, uintptr_t* ptr) {
   zx_vm_option_t zx_options = 0;
   zx_options |= (prot & PROT_READ) ? ZX_VM_PERM_READ : 0;
   zx_options |= (prot & PROT_WRITE) ? ZX_VM_PERM_WRITE : 0;
@@ -61,8 +61,12 @@ static zx_status_t mmap_inner(uintptr_t start, size_t len, int prot, int flags, 
       }
     }
   } else {
+    *context = _fd_get_context(fd);
+    if (context == NULL) {
+      return ZX_ERR_BAD_HANDLE;
+    }
     zx_options |= ZX_VM_ALLOW_FAULTS;
-    zx_status_t status = _mmap_get_vmo_from_fd(prot, flags, fd, &vmo);
+    zx_status_t status = _mmap_get_vmo_from_context(prot, flags, *context, &vmo);
     if (status != ZX_OK) {
       return status;
     }
@@ -109,11 +113,24 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t fd_off)
   // round up to page size
   len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
-  uintptr_t ptr;
-  zx_status_t status = mmap_inner((uintptr_t)start, len, prot, flags, fd, fd_off, &ptr);
+  void* context = NULL;
+  uintptr_t ptr_val;
+  zx_status_t status =
+      mmap_inner((uintptr_t)start, len, prot, flags, fd, fd_off, &context, &ptr_val);
+  void* ptr = (void*)ptr_val;
+  if (context != NULL) {
+    if (status == ZX_OK) {
+      status = _mmap_on_mapped(context, ptr);
+      if (status != ZX_OK) {
+        zx_status_t unmap_status = _zx_vmar_unmap(_zx_vmar_root_self(), ptr_val, len);
+        ZX_ASSERT_MSG(unmap_status == ZX_OK, "failed to vmar_unmap(): %s", _zx_status_get_string(unmap_status));
+      }
+    }
+    _fd_release_context(context);
+  }
   switch (status) {
     case ZX_OK:
-      return (void*)ptr;
+      return ptr;
     case ZX_ERR_BAD_HANDLE:
       errno = EBADF;
       break;

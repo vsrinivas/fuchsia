@@ -46,6 +46,7 @@ zx_status_t zxio_default_truncate(zxio_t* io, uint64_t length);
 zx_status_t zxio_default_flags_get(zxio_t* io, uint32_t* out_flags);
 zx_status_t zxio_default_flags_set(zxio_t* io, uint32_t flags);
 zx_status_t zxio_default_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo);
+zx_status_t zxio_default_on_mapped(zxio_t* io, void* ptr);
 zx_status_t zxio_default_get_read_buffer_available(zxio_t* io, size_t* out_available);
 zx_status_t zxio_default_shutdown(zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code);
 zx_status_t zxio_default_open(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
@@ -116,6 +117,7 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .flags_get = zxio_default_flags_get,
     .flags_set = zxio_default_flags_set,
     .vmo_get = zxio_default_vmo_get,
+    .on_mapped = zxio_default_on_mapped,
     .get_read_buffer_available = zxio_default_get_read_buffer_available,
     .shutdown = zxio_default_shutdown,
     .open = zxio_default_open,

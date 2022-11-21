@@ -92,6 +92,7 @@ test("fdio-test") {
       "fdio_memfd.cc",
       "fdio_namespace.cc",
       "fdio_null_namespace.cc",
+      "fdio_on_mapped.cc",
       "fdio_open_max.cc",
       "fdio_pipe.cc",
       "fdio_pty.cc",

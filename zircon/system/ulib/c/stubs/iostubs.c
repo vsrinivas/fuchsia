@@ -44,12 +44,18 @@ static ssize_t stub_write(int fd, const void* buf, size_t count) {
 }
 weak_alias(stub_write, write);
 
-static zx_status_t stub__mmap_get_vmo_from_fd(int mmap_prot, int mmap_flags, int fd,
-                                              zx_handle_t* out_vmo) {
+static zx_status_t stub__mmap_get_vmo_from_context(int mmap_prot, int mmap_flags, void* context,
+                                                   zx_handle_t* out_vmo) {
   libc_io_functions_not_implemented_use_fdio_instead();
   return ZX_ERR_NOT_SUPPORTED;
 }
-weak_alias(stub__mmap_get_vmo_from_fd, _mmap_get_vmo_from_fd);
+weak_alias(stub__mmap_get_vmo_from_context, _mmap_get_vmo_from_context);
+
+static zx_status_t stub__mmap_on_mapped(void* context, void* ptr) {
+  libc_io_functions_not_implemented_use_fdio_instead();
+  return ZX_ERR_NOT_SUPPORTED;
+}
+weak_alias(stub__mmap_on_mapped, _mmap_on_mapped);
 
 static int stub_close(int fd) {
   libc_io_functions_not_implemented_use_fdio_instead();
@@ -571,6 +577,17 @@ static int stub__fd_open_max(void) {
   return -1;
 }
 weak_alias(stub__fd_open_max, _fd_open_max);
+
+static void* stub__fd_get_context(int fd) {
+  libc_io_functions_not_implemented_use_fdio_instead();
+  return NULL;
+}
+weak_alias(stub__fd_get_context, _fd_get_context);
+
+static void stub__fd_release_context(void* context) {
+  libc_io_functions_not_implemented_use_fdio_instead();
+}
+weak_alias(stub__fd_release_context, _fd_release_context);
 
 static int stub_statfs(const char* path, struct statfs* buf) {
   libc_io_functions_not_implemented_use_fdio_instead();

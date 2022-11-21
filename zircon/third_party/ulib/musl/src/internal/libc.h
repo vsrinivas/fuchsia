@@ -105,6 +105,12 @@ void __unlockfile(FILE*) ATTR_LIBC_VISIBILITY;
 // Returns -1 if the value is unknown.
 int _fd_open_max(void);
 
+// Hook for extension libraries to provide a context associated to a given fd.
+// Operation on the context must be available until it has been release, even if
+// the fd is then closed.
+void* _fd_get_context(int fd);
+void _fd_release_context(void* context);
+
 extern char** __environ;
 
 #undef weak_alias

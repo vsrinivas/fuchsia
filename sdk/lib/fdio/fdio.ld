@@ -2,9 +2,12 @@
 	global:
 		__libc_extensions_fini;
 		__libc_extensions_init;
+		_fd_get_context;
 		_fd_open_max;
+		_fd_release_context;
 		_getaddrinfo_from_dns;
-		_mmap_get_vmo_from_fd;
+		_mmap_get_vmo_from_context;
+		_mmap_on_mapped;
 		accept4;
 		access;
 		bind;

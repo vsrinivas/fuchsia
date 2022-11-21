@@ -79,6 +79,13 @@ zx_status_t zxio_default_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t zxio_default_on_mapped(zxio_t* io, void* ptr) {
+  // The default implementation does nothing, as most implementation do not need
+  // to know where the fd has been mapped, and it would be cumbersome to force
+  // these to implement the on_mapped method.
+  return ZX_OK;
+}
+
 zx_status_t zxio_default_get_read_buffer_available(zxio_t* io, size_t* out_available) {
   return ZX_ERR_NOT_SUPPORTED;
 }

@@ -558,13 +558,11 @@ static zx_status_t fdio_stat(const fdio_ptr& io, struct stat* s) {
 
 // extern "C" is required here, since the corresponding declaration is in an internal musl header:
 // zircon/third_party/ulib/musl/src/internal/stdio_impl.h
-extern "C" __EXPORT zx_status_t _mmap_get_vmo_from_fd(int mmap_prot, int mmap_flags, int fd,
-                                                      zx_handle_t* out_vmo) {
+extern "C" __EXPORT zx_status_t _mmap_get_vmo_from_context(int mmap_prot, int mmap_flags,
+                                                           void* context, zx_handle_t* out_vmo) {
+  assert(context != nullptr);
   assert(out_vmo != nullptr);
-  const fdio_ptr io = fd_to_io(fd);
-  if (io == nullptr) {
-    return ZX_ERR_BAD_HANDLE;
-  }
+  fdio_t* io = static_cast<fdio_t*>(context);
 
   // Convert mmap flags into respective ZXIO flags.
   zxio_vmo_flags_t zxio_flags = 0;
@@ -580,6 +578,14 @@ extern "C" __EXPORT zx_status_t _mmap_get_vmo_from_fd(int mmap_prot, int mmap_fl
   // option in the fs_test suite to validate this case.
 
   return zxio_vmo_get(&io->zxio_storage().io, zxio_flags, out_vmo);
+}
+
+// extern "C" is required here, since the corresponding declaration is in an internal musl header:
+// zircon/third_party/ulib/musl/src/internal/stdio_impl.h
+extern "C" __EXPORT zx_status_t _mmap_on_mapped(void* context, void* ptr) {
+  assert(context != nullptr);
+  fdio_t* io = static_cast<fdio_t*>(context);
+  return zxio_on_mapped(&io->zxio_storage().io, ptr);
 }
 
 __EXPORT
@@ -2184,3 +2190,14 @@ int statvfs(const char* path, struct statvfs* buf) {
 // extern "C" is required here, since the corresponding declaration is in an internal musl header:
 // zircon/third_party/ulib/musl/src/internal/libc.h
 extern "C" __EXPORT int _fd_open_max(void) { return FDIO_MAX_FD; }
+
+// extern "C" is required here, since the corresponding declaration is in an internal musl header:
+// zircon/third_party/ulib/musl/src/internal/libc.h
+extern "C" __EXPORT void* _fd_get_context(int fd) { return fdio_unsafe_fd_to_io(fd); }
+
+// extern "C" is required here, since the corresponding declaration is in an internal musl header:
+// zircon/third_party/ulib/musl/src/internal/libc.h
+extern "C" __EXPORT void _fd_release_context(void* context) {
+  assert(context != nullptr);
+  fdio_unsafe_release(static_cast<fdio_t*>(context));
+}

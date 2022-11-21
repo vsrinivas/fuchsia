@@ -311,6 +311,14 @@ zx_status_t zxio_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vm
   return zio->ops->vmo_get(io, flags, out_vmo);
 }
 
+zx_status_t zxio_on_mapped(zxio_t* io, void* ptr) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+  zxio_internal_t* zio = to_internal(io);
+  return zio->ops->on_mapped(io, ptr);
+}
+
 zx_status_t zxio_get_read_buffer_available(zxio_t* io, size_t* out_available) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
