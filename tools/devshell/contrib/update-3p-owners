@@ -31,7 +31,7 @@
 ##                            in integration/third_party/flower.
 ##
 ## --skip-existing:           only generate OWNERS files for projects missing
-##                            owners; does not update exiting OWNERS files.
+##                            owners; does not update existing OWNERS files.
 ##
 ## --skip-rustc-3p-update:    skip updating rustc_library and rustc_binary
 ##                            third_party dependencies.
