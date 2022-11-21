@@ -62,28 +62,25 @@ const uint8_t kTapMacPrefix[] = {0x12, 0x20};
 
 class EthertapClient {
  public:
-  EthertapClient() {
-    // Each EthertapClient will have a different MAC address based on a monotonically increasing
-    // counter. That allows us to deterministically find each device in devfs (see WatchCb).
-    auto seed = instance_counter_.fetch_add(1);
-    auto* tail = std::copy_n(kTapMacPrefix, sizeof(kTapMacPrefix), mac_.octets.begin());
-    std::copy_n(reinterpret_cast<const uint8_t*>(&seed), sizeof(seed), tail);
-  }
+  EthertapClient()
+      : mac_([]() {
+          // Each EthertapClient will have a different MAC address based on a monotonically
+          // increasing counter. That allows us to deterministically find each device in devfs.
+          fuchsia_hardware_ethernet::wire::MacAddress mac;
+          uint32_t seed = instance_counter_.fetch_add(1);
+          uint8_t* tail = std::copy_n(kTapMacPrefix, sizeof(kTapMacPrefix), mac.octets.begin());
+          std::copy_n(reinterpret_cast<const uint8_t*>(&seed), sizeof(seed), tail);
+          return mac;
+        }()) {}
 
-  ~EthertapClient() { reset(); }
-
-  zx_status_t CreateWithOptions(uint32_t mtu, const char* name, uint32_t options = 0) {
-    tap_device_.reset();
+  void CreateWithOptions(uint32_t mtu, const char* name, uint32_t options = 0) {
+    ASSERT_FALSE(tap_device_.is_valid());
 
     zx::result tap_control = component::Connect<fuchsia_hardware_ethertap::TapControl>(kTapctl);
-    if (tap_control.is_error()) {
-      return tap_control.error_value();
-    }
+    ASSERT_OK(tap_control);
 
     zx::result server = fidl::CreateEndpoints(&tap_device_);
-    if (server.is_error()) {
-      return server.error_value();
-    }
+    ASSERT_OK(server);
     const size_t name_len =
         std::min<size_t>(strlen(name), fuchsia_hardware_ethertap::wire::kMaxNameLength);
     const fidl::WireResult result = fidl::WireCall(tap_control.value())
@@ -94,11 +91,9 @@ class EthertapClient {
                                                          .mac = mac_,
                                                      },
                                                      std::move(server.value()));
-    if (!result.ok()) {
-      return result.status();
-    }
+    ASSERT_OK(result);
     const fidl::WireResponse response = result.value();
-    return response.s;
+    ASSERT_OK(response.s);
   }
 
   zx_status_t SetOnline(bool online) {
@@ -175,7 +170,7 @@ class EthertapClient {
       const char* msg_;
     };
     EventHandler handler(data, len, msg);
-    ASSERT_NO_FATAL_FAILURE(ASSERT_OK(handler.HandleOneEvent(tap_device_)));
+    ASSERT_OK(handler.HandleOneEvent(tap_device_));
   }
 
   void ExpectSetParam(uint32_t param, int32_t value, size_t len, uint8_t* data, const char* msg) {
@@ -204,87 +199,17 @@ class EthertapClient {
       const char* msg_;
     };
     EventHandler handler(param, value, len, data, msg);
-    ASSERT_NO_FATAL_FAILURE(ASSERT_OK(handler.HandleOneEvent(tap_device_)));
+    ASSERT_OK(handler.HandleOneEvent(tap_device_));
   }
-
-  bool valid() const { return tap_device_.is_valid(); }
-
-  void reset() { tap_device_.reset(); }
 
   const fuchsia_hardware_ethernet::wire::MacAddress& mac() const { return mac_; }
 
  private:
   static std::atomic_uint32_t instance_counter_;
-  fuchsia_hardware_ethernet::wire::MacAddress mac_;
+  const fuchsia_hardware_ethernet::wire::MacAddress mac_;
   fidl::ClientEnd<fuchsia_hardware_ethertap::TapDevice> tap_device_;
 };
 std::atomic_uint32_t EthertapClient::instance_counter_;
-
-struct WatchCookie {
-  fidl::ClientEnd<fuchsia_hardware_ethernet::Device> device;
-  fuchsia_hardware_ethernet::wire::MacAddress mac;
-};
-zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
-  if (event != WATCH_EVENT_ADD_FILE) {
-    return ZX_OK;
-  }
-  if (std::string_view{fn} == ".") {
-    return ZX_OK;
-  }
-
-  fdio_cpp::UnownedFdioCaller caller(dirfd);
-  zx::result device =
-      component::ConnectAt<fuchsia_hardware_ethernet::Device>(caller.directory(), fn);
-  if (device.is_error()) {
-    return device.error_value();
-  }
-  // See if this device is our ethertap device
-  const fidl::WireResult result = fidl::WireCall(device.value())->GetInfo();
-  if (!result.ok()) {
-    fprintf(stderr, "could not get ethernet info for %s/%s: %s\n", kEthernetDir, fn,
-            result.FormatDescription().c_str());
-    // Return ZX_OK to keep watching for devices.
-    //
-    // Why does this fail sometimes? Are we seeing ethertap devices flap?
-    return ZX_OK;
-  }
-  const fidl::WireResponse response = result.value();
-  const fuchsia_hardware_ethernet::wire::Info& info = response.info;
-
-  if (!(info.features & fuchsia_hardware_ethernet::wire::Features::kSynthetic)) {
-    // Not a match, keep looking.
-    return ZX_OK;
-  }
-
-  WatchCookie& watch_request = *reinterpret_cast<WatchCookie*>(cookie);
-  if (info.mac.octets != watch_request.mac.octets) {
-    // Not a match, keep looking.
-    return ZX_OK;
-  }
-
-  // Found it!
-  watch_request.device = std::move(device.value());
-  return ZX_ERR_STOP;
-}
-
-zx::result<fidl::ClientEnd<fuchsia_hardware_ethernet::Device>> OpenEthertapDev(
-    EthertapClient& tap) {
-  fbl::unique_fd ethdir(open(kEthernetDir, O_RDONLY));
-  if (!ethdir) {
-    fprintf(stderr, "could not open %s: %s\n", kEthernetDir, strerror(errno));
-    return zx::error(ZX_ERR_IO);
-  }
-
-  WatchCookie cookie = {
-      .mac = tap.mac(),
-  };
-  zx_status_t status = fdio_watch_directory(ethdir.get(), WatchCb, zx_deadline_after(ZX_SEC(30)),
-                                            reinterpret_cast<void*>(&cookie));
-  if (status == ZX_ERR_STOP) {
-    return zx::ok(std::move(cookie.device));
-  }
-  return zx::error(status);
-}
 
 struct FifoEntry : public fbl::SinglyLinkedListable<std::unique_ptr<FifoEntry>> {
   eth_fifo_entry_t e;
@@ -314,8 +239,8 @@ class EthernetClient {
     ethernet_device_.reset();
   }
 
-  zx_status_t Register(fidl::ClientEnd<fuchsia_hardware_ethernet::Device> ethernet_device,
-                       const char* name, uint32_t nbufs, uint16_t bufsize) {
+  void Register(fidl::ClientEnd<fuchsia_hardware_ethernet::Device> ethernet_device,
+                const char* name, uint32_t nbufs, uint16_t bufsize) {
     ethernet_device_ = std::move(ethernet_device);
     {
       const size_t name_len =
@@ -323,29 +248,15 @@ class EthernetClient {
       const fidl::WireResult result =
           fidl::WireCall(ethernet_device_)
               ->SetClientName(fidl::StringView::FromExternal(name, name_len));
-      if (!result.ok()) {
-        fprintf(stderr, "could not set client name to %s: %s\n", name,
-                result.FormatDescription().c_str());
-        return result.status();
-      }
+      ASSERT_OK(result);
       const fidl::WireResponse response = result.value();
-      if (zx_status_t status = response.status; status != ZX_OK) {
-        fprintf(stderr, "could not set client name to %s: %s\n", name,
-                zx_status_get_string(status));
-        return status;
-      }
+      ASSERT_OK(response.status);
     }
     {
       const fidl::WireResult result = fidl::WireCall(ethernet_device_)->GetFifos();
-      if (!result.ok()) {
-        fprintf(stderr, "could not get fifos: %s\n", result.FormatDescription().c_str());
-        return result.status();
-      }
+      ASSERT_OK(result);
       const fidl::WireResponse response = result.value();
-      if (zx_status_t status = response.status; status != ZX_OK) {
-        fprintf(stderr, "could not get fifos: %s\n", zx_status_get_string(status));
-        return status;
-      }
+      ASSERT_OK(response.status);
       fuchsia_hardware_ethernet::wire::Fifos& fifos = *response.info;
       tx_.get() = std::move(fifos.tx);
       rx_.get() = std::move(fifos.rx);
@@ -357,35 +268,17 @@ class EthernetClient {
     bufsize_ = bufsize;
 
     vmo_size_ = 2 * nbufs_ * bufsize_;
-    if (zx_status_t status = zx::vmo::create(vmo_size_, 0, &buf_); status != ZX_OK) {
-      fprintf(stderr, "could not create a vmo of size %" PRIu64 ": %s\n", vmo_size_,
-              zx_status_get_string(status));
-      return status;
-    }
-
-    if (zx_status_t status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, buf_,
-                                                        0, vmo_size_, &mapped_);
-        status != ZX_OK) {
-      fprintf(stderr, "failed to map vmo: %s\n", zx_status_get_string(status));
-      return status;
-    }
+    ASSERT_OK(zx::vmo::create(vmo_size_, 0, &buf_));
+    ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, buf_, 0, vmo_size_,
+                                         &mapped_));
 
     {
       zx::vmo dup;
-      if (zx_status_t status = buf_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
-        fprintf(stderr, "failed to duplicate vmo: %s\n", zx_status_get_string(status));
-        return status;
-      }
+      ASSERT_OK(buf_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
       const fidl::WireResult result = fidl::WireCall(ethernet_device_)->SetIoBuffer(std::move(dup));
-      if (!result.ok()) {
-        fprintf(stderr, "could not set eth iobuf: %s\n", result.FormatDescription().c_str());
-        return result.status();
-      }
+      ASSERT_OK(result);
       const fidl::WireResponse response = result.value();
-      if (zx_status_t status = response.status; status != ZX_OK) {
-        fprintf(stderr, "could not set eth iobuf: %s\n", zx_status_get_string(status));
-        return status;
-      }
+      ASSERT_OK(response.status);
     }
 
     uint32_t idx = 0;
@@ -396,22 +289,21 @@ class EthernetClient {
           .flags = 0,
           .cookie = 0,
       };
-      if (zx_status_t status = rx_.write_one(entry); status != ZX_OK) {
-        fprintf(stderr, "failed call to write(): %s\n", zx_status_get_string(status));
-        return status;
-      }
+      ASSERT_OK(rx_.write_one(entry), "idx=%d", idx);
     }
 
     for (; idx < 2 * nbufs; idx++) {
+      uint32_t offset = idx * bufsize_;
+      eth_fifo_entry_t e = {
+          .offset = offset,
+          .length = bufsize_,
+          .flags = 0,
+          .cookie = mapped_ + offset,
+      };
       auto entry = std::make_unique<FifoEntry>();
-      entry->e.offset = idx * bufsize_;
-      entry->e.length = bufsize_;
-      entry->e.flags = 0;
-      entry->e.cookie = mapped_ + entry->e.offset;
+      entry->e = e;
       tx_available_.push_front(std::move(entry));
     }
-
-    return ZX_OK;
   }
 
   zx_status_t Start() {
@@ -538,17 +430,71 @@ class EthernetClient {
 static void AddClientHelper(EthertapClient& tap, EthernetClient& client,
                             const EthernetOpenInfo& openInfo) {
   // Open the ethernet device
-  zx::result ethernet_device = OpenEthertapDev(tap);
-  ASSERT_OK(ethernet_device);
+  fbl::unique_fd ethdir(open(kEthernetDir, O_RDONLY));
+  ASSERT_TRUE(ethdir, "%s", strerror(errno));
+
+  struct WatchCookie {
+    fidl::ClientEnd<fuchsia_hardware_ethernet::Device> device;
+    fuchsia_hardware_ethernet::wire::MacAddress mac;
+  } cookie = {
+      .mac = tap.mac(),
+  };
+  ASSERT_STATUS(
+      fdio_watch_directory(
+          ethdir.get(),
+          +[](int dirfd, int event, const char* fn, void* cookie) {
+            if (event != WATCH_EVENT_ADD_FILE) {
+              return ZX_OK;
+            }
+            if (std::string_view{fn} == ".") {
+              return ZX_OK;
+            }
+
+            fdio_cpp::UnownedFdioCaller caller(dirfd);
+            zx::result device =
+                component::ConnectAt<fuchsia_hardware_ethernet::Device>(caller.directory(), fn);
+            if (device.is_error()) {
+              return device.error_value();
+            }
+            // See if this device is our ethertap device
+            const fidl::WireResult result = fidl::WireCall(device.value())->GetInfo();
+            if (!result.ok()) {
+              fprintf(stderr, "could not get ethernet info for %s/%s: %s\n", kEthernetDir, fn,
+                      result.FormatDescription().c_str());
+              // Return ZX_OK to keep watching for devices.
+              //
+              // This sometimes fails because tests are running concurrently without isolation.
+              return ZX_OK;
+            }
+            const fidl::WireResponse response = result.value();
+            const fuchsia_hardware_ethernet::wire::Info& info = response.info;
+
+            if (!(info.features & fuchsia_hardware_ethernet::wire::Features::kSynthetic)) {
+              // Not a match, keep looking.
+              return ZX_OK;
+            }
+
+            WatchCookie& watch_request = *reinterpret_cast<WatchCookie*>(cookie);
+            if (info.mac.octets != watch_request.mac.octets) {
+              // Not a match, keep looking.
+              return ZX_OK;
+            }
+
+            // Found it!
+            watch_request.device = std::move(device.value());
+            return ZX_ERR_STOP;
+          },
+          zx_deadline_after(ZX_SEC(30)), reinterpret_cast<void*>(&cookie)),
+      ZX_ERR_STOP);
 
   // Initialize the ethernet client
-  ASSERT_EQ(ZX_OK, client.Register(std::move(ethernet_device.value()), openInfo.name, 32, 2048));
+  ASSERT_NO_FATAL_FAILURE(client.Register(std::move(cookie.device), openInfo.name, 32, 2048));
   if (openInfo.online) {
     // Start the ethernet client
-    ASSERT_EQ(ZX_OK, client.Start());
+    ASSERT_OK(client.Start());
   }
   if (openInfo.multicast) {
-    ASSERT_EQ(ZX_OK, client.MulticastInitForTest());
+    ASSERT_OK(client.MulticastInitForTest());
   }
   if (openInfo.options & fuchsia_hardware_ethertap::wire::kOptReportParam) {
     tap.DrainEvents(nullptr);  // internal driver setup probably has caused some reports
@@ -562,7 +508,7 @@ static void OpenFirstClientHelper(EthertapClient& tap, EthernetClient& client,
   if (openInfo.online) {
     options |= fuchsia_hardware_ethertap::wire::kOptOnline;
   }
-  ASSERT_EQ(ZX_OK, tap.CreateWithOptions(1500, openInfo.name, options));
+  ASSERT_NO_FATAL_FAILURE(tap.CreateWithOptions(1500, openInfo.name, options));
   ASSERT_NO_FATAL_FAILURE(AddClientHelper(tap, client, openInfo));
 }
 
@@ -579,12 +525,12 @@ TEST(EthernetSetupTests, EthernetImplStartTest) {
   EXPECT_FALSE(obs & fuchsia_hardware_ethernet::wire::kSignalStatus);
 
   // Start the ethernet client
-  EXPECT_EQ(ZX_OK, client.Start());
+  EXPECT_OK(client.Start());
 
   // Verify that the ethernet driver signaled a status change for the initial state.
   obs = 0;
-  EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(fuchsia_hardware_ethernet::wire::kSignalStatus,
-                                              FAIL_TIMEOUT, &obs));
+  EXPECT_OK(client.rx_fifo()->wait_one(fuchsia_hardware_ethernet::wire::kSignalStatus, FAIL_TIMEOUT,
+                                       &obs));
   EXPECT_TRUE(obs & fuchsia_hardware_ethernet::wire::kSignalStatus);
 
   // Default link status should be OFFLINE
@@ -595,10 +541,10 @@ TEST(EthernetSetupTests, EthernetImplStartTest) {
   }
 
   // Set the link status to online and verify
-  EXPECT_EQ(ZX_OK, tap.SetOnline(true));
+  EXPECT_OK(tap.SetOnline(true));
 
-  EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(fuchsia_hardware_ethernet::wire::kSignalStatus,
-                                              FAIL_TIMEOUT, &obs));
+  EXPECT_OK(client.rx_fifo()->wait_one(fuchsia_hardware_ethernet::wire::kSignalStatus, FAIL_TIMEOUT,
+                                       &obs));
   EXPECT_TRUE(obs & fuchsia_hardware_ethernet::wire::kSignalStatus);
 
   {
@@ -617,8 +563,8 @@ TEST(EthernetSetupTests, EthernetLinkStatusTest) {
 
   // Verify that the ethernet driver signaled a status change for the initial state.
   zx_signals_t obs = 0;
-  EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(fuchsia_hardware_ethernet::wire::kSignalStatus,
-                                              FAIL_TIMEOUT, &obs));
+  EXPECT_OK(client.rx_fifo()->wait_one(fuchsia_hardware_ethernet::wire::kSignalStatus, FAIL_TIMEOUT,
+                                       &obs));
   EXPECT_TRUE(obs & fuchsia_hardware_ethernet::wire::kSignalStatus);
 
   // Link status should be ONLINE since it's set in OpenFirstClientHelper
@@ -629,12 +575,12 @@ TEST(EthernetSetupTests, EthernetLinkStatusTest) {
   }
 
   // Now the device goes offline
-  EXPECT_EQ(ZX_OK, tap.SetOnline(false));
+  EXPECT_OK(tap.SetOnline(false));
 
   // Verify the link status
   obs = 0;
-  EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(fuchsia_hardware_ethernet::wire::kSignalStatus,
-                                              FAIL_TIMEOUT, &obs));
+  EXPECT_OK(client.rx_fifo()->wait_one(fuchsia_hardware_ethernet::wire::kSignalStatus, FAIL_TIMEOUT,
+                                       &obs));
   EXPECT_TRUE(obs & fuchsia_hardware_ethernet::wire::kSignalStatus);
 
   {
@@ -654,21 +600,21 @@ TEST(EthernetConfigTests, EthernetSetPromiscMultiClientTest) {
   info.name = "SetPromiscB";
   ASSERT_NO_FATAL_FAILURE(AddClientHelper(tap, clientB, info));
 
-  ASSERT_EQ(ZX_OK, clientA.SetPromisc(true));
+  ASSERT_OK(clientA.SetPromisc(true));
 
   ASSERT_NO_FATAL_FAILURE(
       tap.ExpectSetParam(ETHERNET_SETPARAM_PROMISC, 1, 0, nullptr, "Promisc on (1)"));
 
   // None of these should cause a change in promisc commands to ethermac.
-  ASSERT_EQ(ZX_OK, clientA.SetPromisc(true));  // It was already requested by A.
-  ASSERT_EQ(ZX_OK, clientB.SetPromisc(true));
-  ASSERT_EQ(ZX_OK, clientA.SetPromisc(false));  // A should now not want it, but B still does.
+  ASSERT_OK(clientA.SetPromisc(true));  // It was already requested by A.
+  ASSERT_OK(clientB.SetPromisc(true));
+  ASSERT_OK(clientA.SetPromisc(false));  // A should now not want it, but B still does.
   size_t reads;
   ASSERT_NO_FATAL_FAILURE(tap.DrainEvents(&reads));
   EXPECT_EQ(0, reads);
 
   // After the next line, no one wants promisc, so I should get a command to turn it off.
-  ASSERT_EQ(ZX_OK, clientB.SetPromisc(false));
+  ASSERT_OK(clientB.SetPromisc(false));
   ASSERT_NO_FATAL_FAILURE(
       tap.ExpectSetParam(ETHERNET_SETPARAM_PROMISC, 0, 0, nullptr, "Promisc should be off (2)"));
 }
@@ -680,21 +626,18 @@ TEST(EthernetConfigTests, EthernetSetPromiscClearOnCloseTest) {
   info.options = fuchsia_hardware_ethertap::wire::kOptReportParam;
   ASSERT_NO_FATAL_FAILURE(OpenFirstClientHelper(tap, client, info));
 
-  ASSERT_EQ(ZX_OK, client.SetPromisc(true));
+  ASSERT_OK(client.SetPromisc(true));
 
   ASSERT_NO_FATAL_FAILURE(
       tap.ExpectSetParam(ETHERNET_SETPARAM_PROMISC, 1, 0, nullptr, "Promisc on (1)"));
 
   // Shutdown the ethernet client.
-  EXPECT_EQ(ZX_OK, client.Stop());
+  EXPECT_OK(client.Stop());
   client.Cleanup();  // This will free devfd
 
   // That should have caused promisc to turn off.
   ASSERT_NO_FATAL_FAILURE(
       tap.ExpectSetParam(ETHERNET_SETPARAM_PROMISC, 0, 0, nullptr, "Promisc should be off (2)"));
-
-  // Clean up the ethertap device.
-  tap.reset();
 }
 
 TEST(EthernetConfigTests, EthernetMulticastRejectsUnicastAddress) {
@@ -731,11 +674,11 @@ TEST(EthernetConfigTests, EthernetMulticastSetsAddresses) {
   fuchsia_hardware_ethernet::wire::MacAddress data = {
       .octets = {6, 12},
   };
-  ASSERT_EQ(ZX_OK, clientA.MulticastAddressAdd(macA));
+  ASSERT_OK(clientA.MulticastAddressAdd(macA));
 
   ASSERT_NO_FATAL_FAILURE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, 1, 1,
                                              data.octets.data(), "first addr"));
-  ASSERT_EQ(ZX_OK, clientB.MulticastAddressAdd(macB));
+  ASSERT_OK(clientB.MulticastAddressAdd(macB));
   ASSERT_NO_FATAL_FAILURE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, 2, 2,
                                              data.octets.data(), "second addr"));
 }
@@ -765,18 +708,18 @@ TEST(EthernetConfigTests, EthernetMulticastPromiscOnOverflow) {
   for (uint32_t i = 0; i < MULTICAST_LIST_LIMIT - 1; i++) {
     last_octet = next_val;
     data[n_data++] = next_val++;
-    ASSERT_EQ(ZX_OK, clientA.MulticastAddressAdd(mac));
+    ASSERT_OK(clientA.MulticastAddressAdd(mac));
     ASSERT_NO_FATAL_FAILURE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, n_data, n_data,
                                                data, "loading filter"));
   }
   ASSERT_EQ(n_data, MULTICAST_LIST_LIMIT - 1);  // There should be 1 space left
   last_octet = next_val;
   data[n_data++] = next_val++;
-  ASSERT_EQ(ZX_OK, clientB.MulticastAddressAdd(mac));
+  ASSERT_OK(clientB.MulticastAddressAdd(mac));
   ASSERT_NO_FATAL_FAILURE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, n_data, n_data,
                                              data, "b - filter should be full"));
   last_octet = next_val++;
-  ASSERT_EQ(ZX_OK, clientB.MulticastAddressAdd(mac));
+  ASSERT_OK(clientB.MulticastAddressAdd(mac));
   ASSERT_NO_FATAL_FAILURE(
       tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, -1, 0, nullptr, "overloaded B"));
   // Drop a client, multicast filtering for it must be dropped as well.
@@ -786,11 +729,11 @@ TEST(EthernetConfigTests, EthernetMulticastPromiscOnOverflow) {
                                              data, "deleted B - filter should have 31"));
   last_octet = next_val;
   data[n_data++] = next_val++;
-  ASSERT_EQ(ZX_OK, clientA.MulticastAddressAdd(mac));
+  ASSERT_OK(clientA.MulticastAddressAdd(mac));
   ASSERT_NO_FATAL_FAILURE(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, n_data, n_data,
                                              data, "a - filter should be full"));
   last_octet = next_val++;
-  ASSERT_EQ(ZX_OK, clientA.MulticastAddressAdd(mac));
+  ASSERT_OK(clientA.MulticastAddressAdd(mac));
   ASSERT_NO_FATAL_FAILURE(
       tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, -1, 0, nullptr, "overloaded A"));
 }
@@ -833,21 +776,18 @@ TEST(EthernetConfigTests, EthernetSetMulticastPromiscClearOnCloseTest) {
   info.multicast = true;
   ASSERT_NO_FATAL_FAILURE(OpenFirstClientHelper(tap, client, info));
 
-  ASSERT_EQ(ZX_OK, client.SetPromisc(true));
+  ASSERT_OK(client.SetPromisc(true));
 
   ASSERT_NO_FATAL_FAILURE(
       tap.ExpectSetParam(ETHERNET_SETPARAM_PROMISC, 1, 0, nullptr, "Promisc on (1)"));
 
   // Shutdown the ethernet client.
-  EXPECT_EQ(ZX_OK, client.Stop());
+  EXPECT_OK(client.Stop());
   client.Cleanup();  // This will free devfd
 
   // That should have caused promisc to turn off.
   ASSERT_NO_FATAL_FAILURE(
       tap.ExpectSetParam(ETHERNET_SETPARAM_PROMISC, 0, 0, nullptr, "Closed: promisc off (2)"));
-
-  // Clean up the ethertap device.
-  tap.reset();
 }
 
 TEST(EthernetDataTests, EthernetDataTest_Send) {
@@ -858,7 +798,7 @@ TEST(EthernetDataTests, EthernetDataTest_Send) {
 
   // Ensure that the fifo is writable
   zx_signals_t obs;
-  EXPECT_EQ(ZX_OK, client.tx_fifo()->wait_one(ZX_FIFO_WRITABLE, zx::time(), &obs));
+  EXPECT_OK(client.tx_fifo()->wait_one(ZX_FIFO_WRITABLE, zx::time(), &obs));
   ASSERT_TRUE(obs & ZX_FIFO_WRITABLE);
 
   // Grab an available TX fifo entry
@@ -873,16 +813,16 @@ TEST(EthernetDataTests, EthernetDataTest_Send) {
   entry->length = 32;
 
   // Write to the TX fifo
-  ASSERT_EQ(ZX_OK, client.tx_fifo()->write_one(*entry));
+  ASSERT_OK(client.tx_fifo()->write_one(*entry));
 
   tap.ExpectDataRead(buf, 32, "");
 
   // Now the TX completion entry should be available to read from the TX fifo
-  EXPECT_EQ(ZX_OK, client.tx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
+  EXPECT_OK(client.tx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
   ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
   eth_fifo_entry_t return_entry;
-  ASSERT_EQ(ZX_OK, client.tx_fifo()->read_one(&return_entry));
+  ASSERT_OK(client.tx_fifo()->read_one(&return_entry));
 
   // Check the flags on the returned entry
   EXPECT_TRUE(return_entry.flags & ETH_FIFO_TX_OK);
@@ -909,27 +849,27 @@ TEST(EthernetDataTests, EthernetDataTest_Recv) {
   for (int i = 0; i < 32; i++) {
     buf[i] = static_cast<uint8_t>(i & 0xff);
   }
-  EXPECT_EQ(ZX_OK, tap.Write(buf, sizeof(buf)));
+  EXPECT_OK(tap.Write(buf, sizeof(buf)));
 
   zx_signals_t obs;
   // The fifo should be readable
-  EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
+  EXPECT_OK(client.rx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
   ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
   // Read the RX fifo
   eth_fifo_entry_t entry;
-  EXPECT_EQ(ZX_OK, client.rx_fifo()->read_one(&entry));
+  EXPECT_OK(client.rx_fifo()->read_one(&entry));
 
   // Check the bytes in the VMO compared to what we sent through the tap channel
   auto return_buf = client.GetRxBuffer(entry.offset);
   EXPECT_BYTES_EQ(buf, return_buf, entry.length, "");
 
   // RX fifo should be readable, and we can return the buffer to the driver
-  EXPECT_EQ(ZX_OK, client.rx_fifo()->wait_one(ZX_FIFO_WRITABLE, zx::time(), &obs));
+  EXPECT_OK(client.rx_fifo()->wait_one(ZX_FIFO_WRITABLE, zx::time(), &obs));
   ASSERT_TRUE(obs & ZX_FIFO_WRITABLE);
 
   entry.length = 2048;
-  EXPECT_EQ(ZX_OK, client.rx_fifo()->write_one(entry));
+  EXPECT_OK(client.rx_fifo()->write_one(entry));
 }
 
 int main(int argc, char** argv) {
