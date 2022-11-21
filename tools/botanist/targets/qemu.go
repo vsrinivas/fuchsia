@@ -532,7 +532,7 @@ func rewriteVirtualDevice(path string, config QEMUConfig, storage int) error {
 // Stop stops the QEMU target.
 func (t *QEMUTarget) Stop() error {
 	// TODO(fxbug.dev/91352): Remove experimental condition once stable.
-	if t.UseFFXExperimental(2) {
+	if (t.UseFFXExperimental(1) && t.config.Target == "x64") || t.UseFFXExperimental(2) {
 		return t.ffx.EmuStop(context.Background())
 	}
 	if t.process == nil {
