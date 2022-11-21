@@ -73,6 +73,7 @@ group("non_hermetic_deps") {
   # will not be resolved except by moving to Bazel.
   visibility += [
     "//build/images/*",
+    "//src/security/lib/scrutiny/plugins/*",
     "//src/security/lib/scrutiny/tests/*",
     "//src/security/tests/pkg_test/tests/*",
     "//src/security/tests/scrutiny_ffx_integration/*",

@@ -527,14 +527,6 @@ if (is_fuchsia) {
     assembly_image_name = "fuchsia"
     product_bundle = ":product_bundle"
 
-    # Pass the ZBI for verifying the bootfs and kernel cmdline.
-    if (custom_signing_script != "" || use_vboot) {
-      zbi = files.zbi_signed
-    } else {
-      zbi = files.zbi
-    }
-    deps = [ ":fuchsia_assembly" ]
-
     route_sources_config = fuchsia_route_sources_config
     static_pkgs_goldens = fuchsia_static_pkgs_goldens
     structured_config_policy = fuchsia_structured_config_policy

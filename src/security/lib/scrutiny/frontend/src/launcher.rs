@@ -9,7 +9,7 @@ use {
     scrutiny_plugins::{
         core::CorePlugin, devmgr_config::DevmgrConfigPlugin, engine::EnginePlugin,
         search::SearchPlugin, static_pkgs::StaticPkgsPlugin, sys::SysRealmPlugin,
-        toolkit::ToolkitPlugin, verify::VerifyPlugin,
+        toolkit::ToolkitPlugin, verify::VerifyPlugin, zbi::ZbiPlugin,
     },
     std::sync::Arc,
 };
@@ -36,6 +36,7 @@ pub fn launch_from_config(config: Config) -> Result<String> {
         scrutiny.plugin(VerifyPlugin::new())?;
         scrutiny.plugin(SysRealmPlugin::new())?;
         scrutiny.plugin(SearchPlugin::new())?;
+        scrutiny.plugin(ZbiPlugin::new())?;
     }
     scrutiny.run()
 }
