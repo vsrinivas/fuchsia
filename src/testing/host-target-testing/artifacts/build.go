@@ -33,6 +33,9 @@ const (
 
 	// LazilyFetchBlobs will only download blobs when they are accessed.
 	LazilyFetchBlobs
+
+	// Product Bundle manifest which is used to locate VBmeta
+	ProductBundleManifest = "product_bundle.json"
 )
 
 type Build interface {
@@ -464,7 +467,22 @@ func (b *ProductBundleDirBuild) GetFlashManifest(ctx context.Context) (string, e
 
 func (b *ProductBundleDirBuild) GetPackageRepository(ctx context.Context, blobFetchMode BlobFetchMode) (*packages.Repository, error) {
 	// TODO (fxb/114760) Change to use ffx tool to start package server
-	blobFS := packages.NewDirBlobStore(filepath.Join(b.dir, "blobs"))
+	pbJSON := filepath.Join(b.dir, ProductBundleManifest)
+	f, err := os.Open(pbJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open %q: %w", pbJSON, err)
+	}
+	defer f.Close()
+
+	var productBundle ProductBundle
+	if err := json.NewDecoder(f).Decode(&productBundle); err != nil {
+		return nil, fmt.Errorf("failed to parse %q: %w", pbJSON, err)
+	}
+	if productBundle.Version != "2" {
+		return nil, fmt.Errorf("Product bundle version is not 2 %q", pbJSON)
+	}
+
+	blobFS := packages.NewDirBlobStore(filepath.Join(b.dir, productBundle.Repositories[0].BlobsPath))
 	return packages.NewRepository(ctx, b.dir, blobFS)
 }
 
@@ -491,9 +509,40 @@ func (b *ProductBundleDirBuild) GetSshPublicKey() ssh.PublicKey {
 	return b.sshPublicKey
 }
 
+type ProductBundle struct {
+	SystemA      []build.Image  `json:"system_a"`
+	Version      string         `json:"version"`
+	Repositories []PBRepository `json:"repositories"`
+}
+
+type PBRepository struct {
+	MetadataPath string `json:"metadata_path"`
+	BlobsPath    string `json:"blobs_path"`
+}
+
 func (b *ProductBundleDirBuild) GetVbmetaPath(ctx context.Context) (string, error) {
-	// TOOD(lijiaming) We don't need this for reboot test. Revisit when we do upgrade test.
-	return "", nil
+	pbJSON := filepath.Join(b.dir, ProductBundleManifest)
+	f, err := os.Open(pbJSON)
+	if err != nil {
+		return "", fmt.Errorf("failed to open %q: %w", pbJSON, err)
+	}
+	defer f.Close()
+
+	var productBundle ProductBundle
+	if err := json.NewDecoder(f).Decode(&productBundle); err != nil {
+		return "", fmt.Errorf("failed to parse %q: %w", pbJSON, err)
+	}
+	if productBundle.Version != "2" {
+		return "", fmt.Errorf("Product bundle version is not 2 %q", pbJSON)
+	}
+
+	for _, item := range productBundle.SystemA {
+		if item.Name == "zircon-a" && item.Type == "vbmeta" {
+			return filepath.Join(b.dir, item.Path), nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to find zircon-a vbmeta in %q", pbJSON)
 }
 
 type OmahaBuild struct {
