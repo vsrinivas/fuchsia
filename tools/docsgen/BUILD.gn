@@ -5,7 +5,6 @@
 import("//build/compiled_action.gni")
 import("//build/config/build_api_module.gni")
 import("//build/python/python_binary.gni")
-import("//build/python/python_host_test.gni")
 import("//build/sdk/sdk_documentation.gni")
 
 group("docsgen") {
@@ -32,8 +31,7 @@ action("invoke_fidldoc") {
         name = "fidldoc"
         archive = {
           origin_file =
-              rebase_path("$host_out_dir/obj/tools/docsgen/fidldoc.zip",
-                          root_build_dir)
+              rebase_path("$target_out_dir/fidldoc.zip", root_build_dir)
           base_folder = "fidldoc"
         }
         dest_folder = "sdk/fidl"
@@ -86,8 +84,7 @@ compiled_action("invoke_clidoc") {
         name = "clidoc"
         archive = {
           origin_file =
-              rebase_path("$host_out_dir/obj/tools/docsgen/$clidoc_tarfile",
-                          root_build_dir)
+              rebase_path("$target_out_dir/$clidoc_tarfile", root_build_dir)
           base_folder = "clidoc"
         }
         dest_folder = "tools/sdk"
@@ -125,26 +122,6 @@ python_binary(_docsgen_transforms_script_target) {
   deps = []
 }
 
-if (is_host) {
-  python_host_test("gen_helpdocs_test") {
-    main_source = "gen_helpdocs_test.py"
-    sources = [ "gen_helpdocs.py" ]
-  }
-
-  python_host_test("docsgen_transforms_test") {
-    main_source = "docsgen_transforms_test.py"
-    sources = [ "docsgen_transforms.py" ]
-  }
-}
-
-group("tests") {
-  testonly = true
-  deps = [
-    ":docsgen_transforms_test($host_toolchain)",
-    ":gen_helpdocs_test($host_toolchain)",
-  ]
-}
-
 # Runs one time python helpdoc generation script.
 action("invoke_helpdoc") {
   # TODO(https://fxbug.dev/87512): Remove this exception when this action no
@@ -162,8 +139,7 @@ action("invoke_helpdoc") {
         name = "helpdoc"
         archive = {
           origin_file =
-              rebase_path("$host_out_dir/obj/tools/docsgen/$helpdoc_tarfile",
-                          root_build_dir)
+              rebase_path("$target_out_dir/$helpdoc_tarfile", root_build_dir)
           base_folder = "helpdoc"
         }
         dest_folder = "tools/fx"
@@ -216,19 +192,19 @@ compiled_action("invoke_cmldoc") {
 # Set up targets and files for sdk_documentation and build_api_module.
 ref_docs = [
   {
-    target = ":invoke_clidoc($host_toolchain)"
+    target = ":invoke_clidoc"
     file = "clidoc_out.tar.gz"
   },
   {
-    target = ":invoke_cmldoc($host_toolchain)"
+    target = ":invoke_cmldoc"
     file = "cmldoc_out/index.md"
   },
   {
-    target = ":invoke_fidldoc($host_toolchain)"
+    target = ":invoke_fidldoc"
     file = "fidldoc.zip"
   },
   {
-    target = ":invoke_helpdoc($host_toolchain)"
+    target = ":invoke_helpdoc"
     file = "helpdoc_out.tar.gz"
   },
   {
@@ -314,4 +290,9 @@ sdk_documentation("ref_docs_sdk") {
 
   files = ref_doc_files
   non_sdk_deps = ref_doc_targets
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "tests($host_toolchain)" ]
 }

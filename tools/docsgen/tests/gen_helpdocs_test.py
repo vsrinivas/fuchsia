@@ -24,6 +24,6 @@ class GenReferenceDocsTest(unittest.TestCase):
 
         fx_bin = os.path.join(src_dir, "scripts/fx")
         with mock.patch.object(gen_helpdocs.subprocess, 'run') as mock_run:
-            gen_helpdocs.run_fx_helpdoc(src_dir, out_path)
+            gen_helpdocs.run_fx_helpdoc(src_dir, out_path, depfile)
             mock_run.assert_called_once_with(
-                [fx_bin, "helpdoc", "--depfile", depfile, "--archive", out_path])
+                [fx_bin, "helpdoc", "--depfile", depfile, "--archive", out_path], stdout=None)
