@@ -26,10 +26,9 @@ mod stored_account;
 #[cfg(test)]
 mod test_util;
 
-use account_handler_structured_config::Config;
-
 use {
     crate::{account_handler::AccountHandler, common::AccountLifetime},
+    account_handler_structured_config::Config,
     anyhow::{Context as _, Error},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_io as fio,

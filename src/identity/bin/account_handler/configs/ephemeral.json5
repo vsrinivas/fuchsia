@@ -1,4 +1,7 @@
 {
+    available_mechanisms: [
+        "PASSWORD",
+    ],
     is_ephemeral: true,
     storage_manager: "MINFS",
 }

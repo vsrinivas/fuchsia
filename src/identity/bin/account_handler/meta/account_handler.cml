@@ -46,6 +46,19 @@
         },
     ],
     config: {
+        // Provide the mechanisms which are available to the client
+        // for authentication ("UPPER_CASE" format). A valid option will be one
+        // corresponding to the set of values defined in
+        // fuchsia.identity.authentication.Mechanism. E.g.: [ "PASSWORD" ].
+        available_mechanisms: {
+            type: "vector",
+            max_count: 1, // We only support single mechanism at a time for now.
+            element: {
+                type: "string",
+                max_size: 32,
+            },
+        },
+
         // If true, created accounts will be ephemeral. Otherwise, they will be
         // persistent.
         is_ephemeral: { type: "bool" },
