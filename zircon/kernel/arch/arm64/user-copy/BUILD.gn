@@ -104,7 +104,14 @@ if (is_fuchsia) {
     ]
   }
 
-  # Elf binaries that will produce data that describes the usercopy behaviors.
+  group("benchmarks-standalone") {
+    deps = [
+      ":_arm64_user_copy-bench",
+      ":_arm64_user_copy_from_user-bench",
+      ":_arm64_user_copy_to_user-bench",
+    ]
+  }
+
   group("benchmarks") {
     deps = [
       ":_arm64_user_copy.shell",

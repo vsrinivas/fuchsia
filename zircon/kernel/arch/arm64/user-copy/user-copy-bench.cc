@@ -21,6 +21,7 @@
 #include <zircon/syscalls/profile.h>
 
 #include <climits>
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -173,8 +174,8 @@ int64_t SampleCopy(int cpu_num, size_t block_size, size_t src_alignment, size_t 
 }
 
 constexpr auto kBlockSize =
-    cpp20::to_array<size_t>({1,  2,  3,   4,   8,   15,  16,  31,  32,  63,   64,   95,
-                             96, 97, 127, 128, 255, 256, 257, 511, 512, 1023, 1024, 2048});
+    cpp20::to_array<size_t>({1,  2,   3,   4,   8,   15,  16,  31,  32,   63,   64,   95,   96,
+                             97, 127, 128, 255, 256, 257, 511, 512, 1023, 1024, 2048, 4096, 8192});
 
 constexpr auto kAlignments = cpp20::to_array<size_t>({0, 1, 7, 8, 9, 15});
 
@@ -184,9 +185,10 @@ int main(int argc, char** argv) {
   auto long_opts = cpp20::to_array<struct option>({
       {"cpu", required_argument, nullptr, 'c'},
       {"output", required_argument, nullptr, 'o'},
-      {"seed", optional_argument, nullptr, 's'},
-      {"profile", optional_argument, nullptr, 'p'},
+      {"seed", required_argument, nullptr, 's'},
+      {"profile", required_argument, nullptr, 'p'},
       {"cpu_name", required_argument, nullptr, 'n'},
+      {"logtostdout", optional_argument, nullptr, 'l'},
       {nullptr, 0, nullptr, 0},
   });
 
@@ -196,8 +198,9 @@ int main(int argc, char** argv) {
   std::string cpu_name;
   bool done = false;
   bool use_deadline_profile = false;
+  bool log_to_stdout = false;
 
-  while (const int ch = getopt_long(argc, argv, "p:c:o:s:n:", long_opts.data(), nullptr)) {
+  while (const int ch = getopt_long(argc, argv, "p:c:o:s:n:l::", long_opts.data(), nullptr)) {
     switch (ch) {
       case 'o':
         output_path = optarg;
@@ -214,6 +217,12 @@ int main(int argc, char** argv) {
       case 'n':
         cpu_name = optarg;
         break;
+      case 'l':
+        log_to_stdout = true;
+        if (optarg != nullptr && (optarg[0] == 'f' || optarg[0] == 'F')) {
+          log_to_stdout = false;
+        }
+        break;
 
       default:
         done = true;
@@ -225,20 +234,35 @@ int main(int argc, char** argv) {
     }
   }
 
-  if (output_path.empty() || cpu < 0) {
+  fbl::unique_fd output_fd;
+  int raw_out_fd = STDOUT_FILENO;
+
+  if (!log_to_stdout && !output_path.empty()) {
+    output_fd.reset(open(output_path.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR));
+
+    if (!output_fd) {
+      printf("Failed to open file %s\n", strerror(errno));
+      return -1;
+    }
+    raw_out_fd = output_fd.get();
+  }
+
+  if (cpu < 0 || (!log_to_stdout && output_path.empty())) {
     printf(
         R"""([OPTIONS]
 
---cpu_name,-n STRING    Used as a name for the cpu to use in the csv output.
+--cpu_name,-n   STRING    Used as a name for the cpu to use in the csv output.
 
---cpu,-c      UINT      Fixes the CPU to bind to, for running the benchmark.
+--cpu,-c        UINT      Fixes the CPU to bind to, for running the benchmark.
 
---output,-o   PATH      Sets the output path where results will be written in csv format.
+--output,-o     PATH      Sets the output path where results will be written in csv format.
 
---seed,-s     UINT      Fixes the seed to use for randomizing buffer contents.
+--seed,-s       UINT      Fixes the seed to use for randomizing buffer contents.
 
---profile,-p  TYPE      Fixes the profile to use for sampling.
-                        TYPE must be default or deadline.
+--profile,-p    TYPE      Fixes the profile to use for sampling.
+                          TYPE must be default or deadline.
+
+--logtostdout, -l BOOL    When set, results are logged to stdout instead of output.
 )""");
     return -1;
   }
@@ -247,17 +271,10 @@ int main(int argc, char** argv) {
          cpu_name.c_str(), use_deadline_profile ? "deadline" : "default", output_path.c_str(),
          seed);
 
-  fbl::unique_fd output_fd(
-      open(output_path.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR));
-  if (!output_fd) {
-    printf("Failed to open file %s\n", strerror(errno));
-    return -1;
-  }
-
-  auto puts = [&output_fd](const std::string& str) {
+  auto puts = [raw_out_fd](const std::string& str) {
     size_t written = 0;
     while (written < str.length()) {
-      auto res = write(output_fd.get(), str.c_str(), str.size());
+      auto res = write(raw_out_fd, str.c_str(), str.size());
       ZX_ASSERT_MSG(res >= 0, "%s", strerror(errno));
       written += res;
     }
@@ -266,7 +283,6 @@ int main(int argc, char** argv) {
   puts("variant_name,cpu_name,block_size,src_alignment,dst_alignment,time\n");
 
   for (auto block_size : kBlockSize) {
-    printf("Sampling: Block size %zu bytes for all alignments.\n", block_size);
     for (auto src_alignment : kAlignments) {
       for (auto dst_alignment : kAlignments) {
         auto sampler = (use_deadline_profile) ? SampleCopy<true> : SampleCopy<false>;
