@@ -73,7 +73,8 @@ class MfgModeEnabler {
 };
 
 void LogCommandComplete(StatusCode status) {
-  std::cout << "  Command Complete - status: " << fxl::StringPrintf("0x%02x", status) << std::endl;
+  std::cout << "  Command Complete - status: " << fxl::StringPrintf("0x%02hhx", status)
+            << std::endl;
 }
 
 // Prints a byte in decimal and hex forms

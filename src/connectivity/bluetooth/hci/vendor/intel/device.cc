@@ -142,10 +142,10 @@ zx_status_t Device::LoadSecureFirmware(zx::channel* cmd, zx::channel* acl) {
   // event on newer models, this likely means that the controller is in
   // bootloader mode and we can ignore the error.
   auto hci_status = hci.SendHciReset();
-  if (hci_status == bt::hci_spec::StatusCode::kUnknownCommand) {
+  if (hci_status == bt::hci_spec::StatusCode::UNKNOWN_COMMAND) {
     infof("Ignoring \"Unknown Command\" error while in bootloader mode");
-  } else if (hci_status != bt::hci_spec::StatusCode::kSuccess) {
-    errorf("HCI_Reset failed (status: 0x%02x)", hci_status);
+  } else if (hci_status != bt::hci_spec::StatusCode::SUCCESS) {
+    errorf("HCI_Reset failed (status: 0x%02hhx)", hci_status);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -155,7 +155,7 @@ zx_status_t Device::LoadSecureFirmware(zx::channel* cmd, zx::channel* acl) {
   hci.enable_events_on_bulk(acl);
 
   ReadVersionReturnParams version = hci.SendReadVersion();
-  if (version.status != bt::hci_spec::StatusCode::kSuccess) {
+  if (version.status != bt::hci_spec::StatusCode::SUCCESS) {
     errorf("failed to obtain version information");
     return ZX_ERR_BAD_STATE;
   }
@@ -173,7 +173,7 @@ zx_status_t Device::LoadSecureFirmware(zx::channel* cmd, zx::channel* acl) {
   }
 
   ReadBootParamsReturnParams boot_params = hci.SendReadBootParams();
-  if (boot_params.status != bt::hci_spec::StatusCode::kSuccess) {
+  if (boot_params.status != bt::hci_spec::StatusCode::SUCCESS) {
     errorf("failed to read boot parameters");
     return ZX_ERR_BAD_STATE;
   }
@@ -215,13 +215,13 @@ zx_status_t Device::LoadLegacyFirmware(zx::channel* cmd, zx::channel* acl) {
 
   // Bring the controller to a well-defined default state.
   auto hci_status = hci.SendHciReset();
-  if (hci_status != bt::hci_spec::StatusCode::kSuccess) {
-    errorf("HCI_Reset failed (status: 0x%02x)", hci_status);
+  if (hci_status != bt::hci_spec::StatusCode::SUCCESS) {
+    errorf("HCI_Reset failed (status: 0x%02hhx)", hci_status);
     return ZX_ERR_BAD_STATE;
   }
 
   ReadVersionReturnParams version = hci.SendReadVersion();
-  if (version.status != bt::hci_spec::StatusCode::kSuccess) {
+  if (version.status != bt::hci_spec::StatusCode::SUCCESS) {
     errorf("failed to obtain version information");
     return ZX_ERR_BAD_STATE;
   }

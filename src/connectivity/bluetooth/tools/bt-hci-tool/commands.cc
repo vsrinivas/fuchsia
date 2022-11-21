@@ -44,7 +44,7 @@ namespace {
 
 void LogCommandResult(bt::hci_spec::StatusCode status, ::bt::hci::CommandChannel::TransactionId id,
                       const std::string& event_name = "Command Complete") {
-  std::cout << fxl::StringPrintf("  %s - status: 0x%02x (id=%lu)\n", event_name.c_str(), status,
+  std::cout << fxl::StringPrintf("  %s - status: 0x%02hhx (id=%lu)\n", event_name.c_str(), status,
                                  id);
 }
 
@@ -201,7 +201,7 @@ bool HandleVersionInfo(const CommandData* cmd_data, const fxl::CommandLine& cmd_
                                                 const ::bt::hci::EventPacket& event) {
     auto params = event.return_params<::bt::hci_spec::ReadLocalVersionInfoReturnParams>();
     LogCommandResult(params->status, id);
-    if (params->status != bt::hci_spec::StatusCode::kSuccess) {
+    if (params->status != bt::hci_spec::StatusCode::SUCCESS) {
       complete_cb();
       return;
     }
@@ -248,7 +248,7 @@ bool HandleReadBDADDR(const CommandData* cmd_data, const fxl::CommandLine& cmd_l
                                                 const ::bt::hci::EventPacket& event) {
     auto return_params = event.return_params<::bt::hci_spec::ReadBDADDRReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != bt::hci_spec::StatusCode::kSuccess) {
+    if (return_params->status != bt::hci_spec::StatusCode::SUCCESS) {
       complete_cb();
       return;
     }
@@ -276,7 +276,7 @@ bool HandleReadLocalName(const CommandData* cmd_data, const fxl::CommandLine& cm
                                                 const ::bt::hci::EventPacket& event) {
     auto return_params = event.return_params<::bt::hci_spec::ReadLocalNameReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::bt::hci_spec::StatusCode::kSuccess) {
+    if (return_params->status != ::bt::hci_spec::StatusCode::SUCCESS) {
       complete_cb();
       return;
     }
@@ -631,7 +631,7 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
                                                   const ::bt::hci::EventPacket& event) mutable {
     auto return_params = event.return_params<::bt::hci_spec::SimpleReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::bt::hci_spec::StatusCode::kSuccess) {
+    if (return_params->status != ::bt::hci_spec::StatusCode::SUCCESS) {
       cleanup_cb();
       return;
     }
@@ -743,7 +743,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   auto inquiry_complete_cb = [cleanup_cb =
                                   cleanup_cb.share()](const ::bt::hci::EventPacket& event) mutable {
     auto params = event.params<::bt::hci_spec::InquiryCompleteEventParams>();
-    std::cout << fxl::StringPrintf("  Inquiry Complete - status: 0x%02x\n", params.status);
+    std::cout << fxl::StringPrintf("  Inquiry Complete - status: 0x%02hhx\n", params.status);
     cleanup_cb();
     return ::bt::hci::CommandChannel::EventCallbackResult::kContinue;
   };
@@ -764,7 +764,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
                                                   const ::bt::hci::EventPacket& event) mutable {
     auto return_params = event.params<::bt::hci_spec::CommandStatusEventParams>();
     LogCommandResult(return_params.status, id, "Command Status");
-    if (return_params.status != ::bt::hci_spec::StatusCode::kSuccess) {
+    if (return_params.status != ::bt::hci_spec::StatusCode::SUCCESS) {
       cleanup_cb();
       return;
     }
@@ -886,7 +886,7 @@ bool HandleReadPageScanActivity(const CommandData* cmd_data, const fxl::CommandL
                                                 const ::bt::hci::EventPacket& event) {
     auto return_params = event.return_params<::bt::hci_spec::ReadPageScanActivityReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::bt::hci_spec::StatusCode::kSuccess) {
+    if (return_params->status != ::bt::hci_spec::StatusCode::SUCCESS) {
       complete_cb();
       return;
     }
@@ -955,7 +955,7 @@ bool HandleReadPageScanType(const CommandData* cmd_data, const fxl::CommandLine&
                                                 const ::bt::hci::EventPacket& event) {
     auto return_params = event.return_params<::bt::hci_spec::ReadPageScanTypeReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::bt::hci_spec::StatusCode::kSuccess) {
+    if (return_params->status != ::bt::hci_spec::StatusCode::SUCCESS) {
       complete_cb();
       return;
     }
@@ -1031,7 +1031,7 @@ bool HandleReadScanEnable(const CommandData* cmd_data, const fxl::CommandLine& c
                                                 const ::bt::hci::EventPacket& event) {
     auto return_params = event.return_params<::bt::hci_spec::ReadScanEnableReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::bt::hci_spec::StatusCode::kSuccess) {
+    if (return_params->status != ::bt::hci_spec::StatusCode::SUCCESS) {
       complete_cb();
       return;
     }
