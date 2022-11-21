@@ -1,0 +1,36 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//boards/arm64.gni")
+
+# The targeted CPU affects many parts of the build process.
+target_cpu = "arm64"
+
+board_name = "imx8mmevk"
+
+# Board-specific configuration based on your targeted architecture and CPU.
+# //build/config/arm64/BUILD.gn
+board_configs += [ "//build/config/arm64:cortex-a53" ]
+
+# The Zircon Boot Image (ZBI) contains everything needed to boot.
+# //zircon/system/public/zircon/boot/image.h
+max_fuchsia_zbi_size = 33554432  # 32 mebibytes (MiB)
+
+# Zedboot is a minimal recovery image that's used to install and boot a full
+# Fuchsia system.
+# https://fuchsia.dev/fuchsia-src/glossary#zedboot
+max_zedboot_zbi_size = 33554432  # 32 MiB
+
+# You'll put kernel command line arguments and driver dependencies here later.
+_common_bootfs_deps = []
+board_bootfs_labels += _common_bootfs_deps
+board_zedboot_bootfs_labels += _common_bootfs_deps
+board_recovery_bootfs_labels += _common_bootfs_deps
+
+#board_driver_package_labels += []
+#board_package_labels += []
+
+# Supports only physical devices.
+board_is_emu = false
+board_is_phys = true
