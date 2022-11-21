@@ -14,9 +14,10 @@
 namespace debug_ipc {
 
 // ABI Compatibility Guide
+// -----------------------
 //
-// Goal: within the same Fuchsia API level, different versions of zxdb and debug_agent should be
-// compatible with each other.
+// Goal: zxdb and debug_agent with overlapping [kMinimumProtocolVersion, kCurrentProtocolVersion]
+// should be able to talk with each other.
 //
 //   - If you want to rename something, don't bump the version number because ABI doesn't change.
 //   - If you want to add/remove a field to/from a message, bump the version number, and use e.g.
@@ -28,19 +29,46 @@ namespace debug_ipc {
 //   - You don't want to remove a message type. Just mark it as deprecated but still handle it
 //     when receiving it.
 //   - More complex logic could be implemented by checking the protocol version before sending.
-//   - kMinimumProtocolVersion can only be updated when FUCHSIA_API_LEVEL bumps, which means we
-//     should increase kMinimumProtocolVersion to the kCurrentProtocolVersion and the support for
-//     old versions can be dropped.
+//
+// NOTE: Before you want to bump the kCurrentProtocolVersion, please make sure that
+// CURRENT_SUPPORTED_API_LEVEL is equal to FUCHSIA_API_LEVEL specified in platform_version.json.
+// If not, continue reading the comments below.
 
 constexpr uint32_t kCurrentProtocolVersion = 54;
 
+// How to decide kMinimumProtocolVersion
+// -------------------------------------
+//
+// We want to maintain a compatibility window of 2 major releases, so that zxdb built with a given
+// FUCHSIA_API_LEVEL could support debug_agent built between FUCHSIA_API_LEVEL-2 (inclusive) and
+// FUCHSIA_API_LEVEL+2 (inclusive). This exceeds the minimum compatibility required by RFC-0169,
+// which only requires forward compatibility (older zxdb with newer debug_agent).
+//
+// To achieve this, kMinimumProtocolVersion must be set to the initial protocol version used in
+// FUCHSIA_API_LEVEL-2. The following macros are used to ensure that kMinimumProtocolVersion is
+// set based on FUCHSIA_API_LEVEL.
+//
+// To avoid blocking FUCHSIA_API_LEVEL bumps, we allow CURRENT_SUPPORTED_API_LEVEL to be out of
+// sync with FUCHSIA_API_LEVEL, as long as the kCurrentProtocolVersion stays the same.
+// When FUCHSIA_API_LEVEL changes, we need to update those macros as the following:
+//
+//   - INITIAL_VERSION_FOR_API_LEVEL_MINUS_2 = INITIAL_VERSION_FOR_API_LEVEL_MINUS_1
+//   - INITIAL_VERSION_FOR_API_LEVEL_MINUS_1 = INITIAL_VERSION_FOR_API_LEVEL_CURRENT
+//   - INITIAL_VERSION_FOR_API_LEVEL_CURRENT = kCurrentProtocolVersion
+//   - CURRENT_SUPPORTED_API_LEVEL = FUCHSIA_API_LEVEL
+
+#define INITIAL_VERSION_FOR_API_LEVEL_MINUS_2 52
+#define INITIAL_VERSION_FOR_API_LEVEL_MINUS_1 52
+#define INITIAL_VERSION_FOR_API_LEVEL_CURRENT 52
+#define CURRENT_SUPPORTED_API_LEVEL 10
+
 #if !defined(FUCHSIA_API_LEVEL)
 #error FUCHSIA_API_LEVEL must be defined
-#elif FUCHSIA_API_LEVEL == 10
-constexpr uint32_t kMinimumProtocolVersion = 52;
+#elif FUCHSIA_API_LEVEL == CURRENT_SUPPORTED_API_LEVEL
+constexpr uint32_t kMinimumProtocolVersion = INITIAL_VERSION_FOR_API_LEVEL_MINUS_2;
 #else
-#define FUCHSIA_API_LEVEL_NOT_SUPPORTED  // This will issue a warning.
-constexpr uint32_t kMinimumProtocolVersion = kCurrentProtocolVersion;
+// If this branch is chosen, please update as above.
+constexpr uint32_t kMinimumProtocolVersion = INITIAL_VERSION_FOR_API_LEVEL_MINUS_1;
 #endif
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
