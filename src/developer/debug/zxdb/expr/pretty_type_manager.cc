@@ -300,6 +300,18 @@ void PrettyTypeManager::AddDefaultRustPrettyTypes() {
                                                             {"as_ref", "*ptr.pointer"},
                                                             {"as_mut", "*ptr.pointer"}}));
 
+  // Atomic values (bool is special because it's stored as an 8-bit int, and "ptr" is a template).
+  // These are otherwise all the same, they just put the value in "v.value".
+  for (const auto& name : {"AtomicI8", "AtomicI16", "AtomicI32", "AtomicI64", "AtomicIsize",
+                           "AtomicU8", "AtomicU16", "AtomicU32", "AtomicU64", "AtomicUsize"}) {
+    rust_.emplace_back(InternalGlob((std::string("core::sync::atomic::") + name).c_str()),
+                       std::make_unique<PrettyWrappedValue>(name, "{", "}", "v.value"));
+  }
+  rust_.emplace_back(InternalGlob("core::sync::atomic::AtomicBool"),
+                     std::make_unique<PrettyWrappedValue>("AtomicBool", "{", "}", "(bool)v.value"));
+  rust_.emplace_back(InternalGlob("core::sync::atomic::AtomicPtr<*>"),
+                     std::make_unique<PrettyWrappedValue>("AtomicPtr", "{", "}", "v.value"));
+
   // Rust's wrapper for zx_status_t
   rust_.emplace_back(InternalGlob("fuchsia_zircon_status::Status"),
                      std::make_unique<PrettyRustZirconStatus>());
