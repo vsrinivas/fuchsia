@@ -1269,6 +1269,60 @@ TEST_F(ExprParserTest, CTernaryIf) {
   EXPECT_EQ("Rust '?' operators are not supported.", parser().err().msg());
 }
 
+TEST_F(ExprParserTest, RustIfLet) {
+  EXPECT_EQ(
+      "CONDITION\n"
+      " IF_LET(0)\n"
+      "  \"Some\"\n"
+      "  IDENTIFIER(\"b\")\n"
+      " THEN\n"
+      "  BLOCK\n"
+      "   LITERAL(12)\n",
+      GetParseString("if let Some(a) = b { 12 }", ExprLanguage::kRust));
+
+  // Enums with no values can be matched.
+  EXPECT_EQ(
+      "CONDITION\n"
+      " IF_LET()\n"
+      "  \"Some\"\n"
+      "  IDENTIFIER(\"b\")\n"
+      " THEN\n"
+      "  BLOCK\n"
+      "   LITERAL(12)\n",
+      GetParseString("if let Some = b { 12 }", ExprLanguage::kRust));
+
+  EXPECT_EQ(
+      "CONDITION\n"
+      " IF\n"
+      "  BINARY_OP(==)\n"
+      "   IDENTIFIER(\"a\")\n"
+      "   IDENTIFIER(\"b\")\n"
+      " THEN\n"
+      "  BLOCK\n"
+      "   LITERAL(12)\n"
+      " ELSEIF_LET(0)\n"
+      "  \"Namespace\"; ::\"Enum\"\n"
+      "  IDENTIFIER(\"c\")\n"
+      " THEN\n"
+      "  BLOCK\n"
+      "   LITERAL(13)\n"
+      " ELSEIF_LET(1, 2)\n"
+      "  \"Namespace\"; ::\"Other\"\n"
+      "  IDENTIFIER(\"c\")\n"
+      " THEN\n"
+      "  BLOCK\n"
+      "   LOCAL_VAR(1)\n",
+      GetParseString("if a == b { 12 } "
+                     "else if let Namespace::Enum(val) = c { 13 } "
+                     "else if let Namespace::Other(val, other) = c { val }",
+                     ExprLanguage::kRust));
+
+  // Test error message for tuple struct patterns (not supported yet).
+  auto result = Parse("if let Point{x, y} = a {}", ExprLanguage::kRust);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Struct pattern syntax is not supported yet, sorry.", parser().err().msg());
+}
+
 TEST_F(ExprParserTest, ForLoop) {
   EXPECT_EQ(
       "LOOP(for)\n"

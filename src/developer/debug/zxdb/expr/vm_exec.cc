@@ -192,7 +192,7 @@ void VmExecState::Exec(fxl::RefPtr<VmExecState> state) {
     state->ReportDone(ExprValue());
   } else {
     // Correct programs should have only one result.
-    FX_DCHECK(state->stack_.size() == 1u);
+    FX_DCHECK(state->stack_.size() == 1u) << "Got " << state->stack_.size();
     state->ReportDone(state->stack_.back());
   }
 }

@@ -1269,9 +1269,11 @@ fxl::RefPtr<ExprNode> ExprParser::QuestionInfix(fxl::RefPtr<ExprNode> left,
   if (has_error())
     return nullptr;
 
+  ConditionExprNode::Condition cond;
+  cond.cond = std::move(left);
   return fxl::MakeRefCounted<ConditionExprNode>(
-      std::vector<ConditionExprNode::Pair>{{std::move(left), std::move(then)}},
-      std::move(else_then));
+      std::vector<ConditionExprNode::Pair>{{std::move(cond), std::move(then)}},
+      std::move(else_then), std::nullopt);
 }
 
 fxl::RefPtr<ExprNode> ExprParser::LiteralPrefix(const ExprToken& token) {
@@ -1395,6 +1397,9 @@ fxl::RefPtr<ExprNode> ExprParser::IfPrefix(const ExprToken& token) {
   std::vector<ConditionExprNode::Pair> conditions;
   fxl::RefPtr<ExprNode> else_then;
 
+  // The if statement may allow variable introductions "if (int i = ...)" and this will track.
+  LocalVarCounter var_counter(&local_vars_);
+
   // This is the language-specific way to parse a conditional block.
   std::function<fxl::RefPtr<ExprNode>()> parse_block;
   switch (language_) {
@@ -1419,8 +1424,58 @@ fxl::RefPtr<ExprNode> ExprParser::IfPrefix(const ExprToken& token) {
         return nullptr;
     }
 
+    // Check for Rust "if let".
+    ConditionExprNode::Condition condition;
+    if (language_ == ExprLanguage::kRust && LookAhead(ExprTokenType::kLet)) {
+      // Syntax we support is:
+      //    "if" "let" <enum-name> [ "(" ( <var-name> "," )* <var-name> ")" ] "=" <expression>
+      Consume();  // Eat the "let".
+
+      ParseNameResult enum_name = ParseName(false);
+      if (has_error())
+        return nullptr;
+      condition.rust_pattern_name = std::move(enum_name.ident);
+
+      if (LookAhead(ExprTokenType::kLeftBracket)) {
+        // Struct enums patterns looks like "if let Point{x, y} = pt" which we don't support.
+        SetErrorAtCur("Struct pattern syntax is not supported yet, sorry.");
+        return nullptr;
+      }
+      if (LookAhead(ExprTokenType::kLeftParen)) {
+        // Rust tuple enum patterns.
+        Consume(ExprTokenType::kLeftParen, "Expecting '(' after enumeration name.", cur_token());
+        if (has_error())
+          return nullptr;
+
+        // Variable name(s) for the pattern.
+        //
+        // Note: this actually leaves the variable in scope for the "else" cases (it will just have
+        // an empty value). It's a bit annoying to implement the scoping properly because variables
+        // introduced in C++ are in scope for both the "if" and "else" arms of the condition.
+        while (true) {
+          const ExprToken& var_token =
+              Consume(ExprTokenType::kName, "Expecting variable name.", cur_token());
+          if (has_error())
+            return nullptr;
+          condition.rust_pattern_local_slots.push_back(static_cast<uint32_t>(local_vars_.size()));
+          local_vars_.push_back(var_token.value());
+
+          if (!LookAhead(ExprTokenType::kComma))
+            break;    // Expecting a comma to separate names, anything else means end of list.
+          Consume();  // Eat the comma.
+        }
+
+        Consume(ExprTokenType::kRightParen, "Expecting ')' after variable name.", cur_token());
+        if (has_error())
+          return nullptr;
+      }
+      Consume(ExprTokenType::kEquals, "Expecting '=' for 'if let' expression.", cur_token());
+      if (has_error())
+        return nullptr;
+    }
+
     // Conditional expression.
-    auto condition = ParseExpression(0);
+    condition.cond = ParseExpression(0);
     if (has_error())
       return nullptr;
 
@@ -1455,7 +1510,8 @@ fxl::RefPtr<ExprNode> ExprParser::IfPrefix(const ExprToken& token) {
     }
   }
 
-  return fxl::MakeRefCounted<ConditionExprNode>(std::move(conditions), std::move(else_then));
+  return fxl::MakeRefCounted<ConditionExprNode>(std::move(conditions), std::move(else_then),
+                                                var_counter.GetExitVarCount());
 }
 
 fxl::RefPtr<ExprNode> ExprParser::LetPrefix(const ExprToken& token) {

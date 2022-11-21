@@ -82,6 +82,23 @@ fxl::RefPtr<CompileUnit> MakeRustUnit();
 fxl::RefPtr<Variant> MakeRustVariant(const std::string& name, std::optional<uint64_t> discriminant,
                                      const std::vector<fxl::RefPtr<DataMember>>& members);
 
+// High-level creation of a Rust enum. This will generate a 64-bit disciminant and start numbering
+// the enum values at 0. The "values" of the enum will all be tuple types.
+//
+// The "type" for a Rust enum value is always a struct. If there is no data (say for
+// "Option::None"), the type should be an empty collection. For tuple values, name the struct
+// members starting with "__0". So this is how "Option<i32>" might be created:
+//
+//   MakeRustEnum("Option", {
+//       {"None", {}},
+//       {"Some", {MakeInt32Type()}}
+//   });
+fxl::RefPtr<Collection> MakeRustEnum(
+    const std::string& name,
+    std::initializer_list<std::pair<std::string, std::vector<fxl::RefPtr<Type>>>> values);
+
+// Low-level creation of a Rust enum.
+//
 // A rust enum is a collection containing a variant part. The variant part includes a discriminant
 // and the variants that it selects from. The caller should ensure the data members in the variants
 // and the discriminant don't overlap.

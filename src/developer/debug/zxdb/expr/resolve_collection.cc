@@ -426,4 +426,70 @@ Err GetConcretePointedToCollection(const fxl::RefPtr<EvalContext>& eval_context,
              to_type->GetFullName().c_str());
 }
 
+ErrOr<size_t> GetRustTupleMemberCount(const fxl::RefPtr<EvalContext>& eval_context,
+                                      const ExprValue& tuple) {
+  const char kNotATupleMessage[] = "Value is not a Rust tuple.";
+
+  fxl::RefPtr<Type> type = eval_context->GetConcreteType(tuple.type());
+  if (!type)
+    return Err(kNotATupleMessage);
+  const Collection* coll = type->As<Collection>();
+  if (!coll)
+    return Err(kNotATupleMessage);
+
+  if (coll->data_members().empty()) {
+    // Empty struct. A regular empty struct is not differentiable from an empty tuple struct so
+    // we don't check the heuristically-defined "special" type of the collection.
+    return 0;
+  }
+
+  if (coll->GetSpecialType() != Collection::kRustTuple &&
+      coll->GetSpecialType() != Collection::kRustTupleStruct)
+    return Err(kNotATupleMessage);
+
+  return coll->data_members().size();
+}
+
+ErrOrValue ExtractRustTuple(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& tuple,
+                            size_t index) {
+  const char kNotATupleMessage[] = "Value is not a Rust tuple.";
+
+  fxl::RefPtr<Type> type = eval_context->GetConcreteType(tuple.type());
+  if (!type)
+    return Err(kNotATupleMessage);
+  const Collection* coll = type->As<Collection>();
+  if (!coll)
+    return Err(kNotATupleMessage);
+
+  if (coll->data_members().empty()) {
+    // Empty struct. A regular empty struct is not differentiable from an empty tuple struct so
+    // error out early before checking the heuristically-defined "special" type of the collection.
+    // This avoids saying something isn't a tuple when it's just empty.
+    return Err("Can't extract a tuple value from an empty struct/tuple.");
+  }
+
+  if (coll->GetSpecialType() != Collection::kRustTuple &&
+      coll->GetSpecialType() != Collection::kRustTupleStruct) {
+    return Err(kNotATupleMessage);
+  }
+
+  // The members are called "__0", "__1", etc. This searches for the value directly rather than
+  // giving the name to ResolveNonstaticMember() because we know exactly what the structure is
+  // (there's no inheritance or anything) and we can give better error messages.
+  std::string expected_name = fxl::StringPrintf("__%zu", index);
+  const DataMember* found_member = nullptr;
+  for (const auto& cur : coll->data_members()) {
+    if (const DataMember* cur_member = cur.Get()->As<DataMember>();
+        cur_member && cur_member->GetAssignedName() == expected_name) {
+      found_member = cur_member;
+      break;
+    }
+  }
+  if (!found_member)
+    return Err("The tuple does not have a member %zu.", index);
+
+  // Actually extract the value.
+  return ResolveNonstaticMember(eval_context, tuple, FoundMember(coll, found_member));
+}
+
 }  // namespace zxdb

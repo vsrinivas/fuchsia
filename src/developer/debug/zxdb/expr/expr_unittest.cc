@@ -390,6 +390,81 @@ TEST_F(ExprTest, RustWhileLoop) {
   EXPECT_TRUE(called);
 }
 
+TEST_F(ExprTest, RustIfLet) {
+  auto int32_type = GetBuiltinType(ExprLanguage::kRust, "i32");
+  auto enum_type = MakeRustEnum(
+      "Option", {{"None", {}}, {"Some", {int32_type}}, {"Many", {int32_type, int32_type}}});
+  ASSERT_EQ(16u, enum_type->byte_size());
+
+  const char kEnumName[] = "my_enum";  // Injected variable with Rust enum type.
+  const char kCode[] = R"(
+    let result: i32 = 0;
+    if let Some(a) = my_enum {
+      result = a;
+    } else if let None = my_enum {
+      result = 9999;
+    } else if let Many(x, y) = my_enum {
+      result = x * 100 + y;
+    }
+    result
+  )";
+
+  ExprValue enum_none_value(
+      enum_type,
+      {0, 0, 0, 0, 0, 0, 0, 0,    // Discriminant in the first 8 bytes, 0 = None.
+       0, 0, 0, 0, 0, 0, 0, 0});  // Padding for the 2x 32 bit value only used for "Some".
+
+  // Inject the enum value as a variable in the context.
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+  eval_context->set_language(ExprLanguage::kRust);
+  eval_context->AddVariable(kEnumName, enum_none_value);
+
+  bool called = false;
+  EvalExpression(kCode, eval_context, false, [&](ErrOrValue result) {
+    called = true;
+    ASSERT_TRUE(result.ok()) << result.err().msg();
+    EXPECT_EQ(result.value(), ExprValue(9999, int32_type));
+  });
+  EXPECT_TRUE(called);
+
+  // Now try with a "some" enum.
+  ExprValue enum_some_value(
+      enum_type, {1, 0, 0, 0, 0, 0, 0, 0,     // Discriminant in the first 8 bytes, 1 = Some.
+                  42, 0, 0, 0, 0, 0, 0, 0});  // Value = 42 + padding.
+  eval_context->AddVariable(kEnumName, enum_some_value);
+
+  called = false;
+  EvalExpression(kCode, eval_context, false, [&](ErrOrValue result) {
+    called = true;
+    ASSERT_TRUE(result.ok()) << result.err().msg();
+    EXPECT_EQ(result.value(), ExprValue(42, int32_type));
+  });
+  EXPECT_TRUE(called);
+
+  // Try with a "many" enum.
+  ExprValue enum_many_value(
+      enum_type, {2, 0, 0, 0, 0, 0, 0, 0,      // Discriminant in the first 8 bytes, 2 = Many.
+                  76, 0, 0, 0, 19, 0, 0, 0});  // Value = (76, 19)
+  eval_context->AddVariable(kEnumName, enum_many_value);
+
+  called = false;
+  EvalExpression(kCode, eval_context, false, [&](ErrOrValue result) {
+    called = true;
+    ASSERT_TRUE(result.ok()) << result.err().msg();
+    EXPECT_EQ(result.value(), ExprValue(7619, int32_type));
+  });
+  EXPECT_TRUE(called);
+
+  // Mismatched tuple member count (using the "Many" tuple value set in previous test).
+  called = false;
+  EvalExpression("if let Many(a) = my_enum {}", eval_context, false, [&](ErrOrValue result) {
+    called = true;
+    ASSERT_TRUE(result.has_error());
+    EXPECT_EQ("Tuple pattern contains 1 members but the matched tuple has 2.", result.err().msg());
+  });
+  EXPECT_TRUE(called);
+}
+
 TEST_F(ExprTest, BuiltinFunctionCall) {
   const char kCode[] = "1 + MyFunction(2, 3 * 4)";
 

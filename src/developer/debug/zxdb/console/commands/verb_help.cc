@@ -80,6 +80,44 @@ Arrays
     [zxdb] print argv@3         # Declare array of size 3.
     {"/pkg/bin/foo", "--bar", "baz"}
 
+Control flow
+
+  The expression system can instatiate new local (local to the debugger)
+  variables and control flow commands. This is mostly useful in the context of
+  writing logic for pretty-printers (currently internal only).
+
+  Local variables can be instantiated in the normal language-specific way but
+  are only valid for the duration of the current "print" command. In C++, the
+  use of "auto" is encouraged to simplify casting:
+
+    [zxdb] print auto i = 45; i * 100
+    4500
+
+  In addition to the C ternary if (?:) statement, C and Rust if/else statements
+  are also supported. Since the expression language is dynamically typed,
+  everything is an expression and has a value. The last statement of a block
+  always determines the result value of that block. The result of loops and
+  untaken if statements is an empty but valid value.
+
+    [zxdb] print if (a == 5) { a * 10; }
+    50
+
+  In Rust, you can extract the values of an enum (though not yet enum structs
+  with named members) using "if let" (this does not require an "else" arm as
+  Rust does, since the result in that case will be an empty value):
+
+    [zxdb] print if let Some(x) = my_enum { x }
+
+  In C++, non-range-based-"for", "do/while", and "while" loops are supported. In
+  Rust, "loop" and "while" loops are supported (Rust "for" loops use iterators
+  which the debugger can not instantiate).
+
+  For example, to count the number of slashes in the argv[0] string, one could
+  type (all on one line):
+
+    [zxdb] p int count = 0; char* cur = argv[0]; while (*cur) {
+      if (*cur == '/') { count = count + 1; } cur = cur + 1; } count
+
 Special names
 
   Special names begin with '$'. There are different forms:

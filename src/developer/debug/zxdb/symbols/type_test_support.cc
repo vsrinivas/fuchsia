@@ -168,6 +168,39 @@ fxl::RefPtr<Variant> MakeRustVariant(const std::string& name, std::optional<uint
   return var;
 }
 
+fxl::RefPtr<Collection> MakeRustEnum(
+    const std::string& name,
+    std::initializer_list<std::pair<std::string, std::vector<fxl::RefPtr<Type>>>> values) {
+  // Disciminant starts at the beginning of the structure.
+  constexpr uint32_t kDisciminantSize = 8;
+  auto u64_type =
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, kDisciminantSize, "u64");
+  auto discr = fxl::MakeRefCounted<DataMember>(std::string(), u64_type, 0);
+
+  // Rust actually starts the variant structs at 0 offset and then offsets the members inside of it.
+  // This is surprising because they technically overlap the disciminant, but avoids computing an
+  // extra offset for dereferencing.
+  uint64_t discriminant = 0;
+  std::vector<fxl::RefPtr<Variant>> variants;
+  for (const auto& pair : values) {
+    // Create data members for each type, named like Rust does for tuples.
+    std::vector<fxl::RefPtr<DataMember>> data_members;
+    int tuple_index = 0;
+    uint32_t member_offset = kDisciminantSize;
+    for (const auto& member : pair.second) {
+      data_members.push_back(fxl::MakeRefCounted<DataMember>(fxl::StringPrintf("__%d", tuple_index),
+                                                             member, member_offset));
+      tuple_index++;
+      member_offset += member->byte_size();
+    }
+
+    variants.push_back(MakeRustVariant(pair.first, discriminant, data_members));
+    discriminant++;
+  }
+
+  return MakeRustEnum(name, discr, variants);
+}
+
 fxl::RefPtr<Collection> MakeRustEnum(const std::string& name, fxl::RefPtr<DataMember> discriminant,
                                      const std::vector<fxl::RefPtr<Variant>>& variants) {
   auto unit = MakeRustUnit();
@@ -178,7 +211,7 @@ fxl::RefPtr<Collection> MakeRustEnum(const std::string& name, fxl::RefPtr<DataMe
     // Pick the size based on the largest variant
     if (!var->data_members().empty()) {
       const DataMember* last_member = var->data_members().back().Get()->As<DataMember>();
-      FX_DCHECK(last_member);  // ASsume test code has set up properly.
+      FX_DCHECK(last_member);  // Assume test code has set up properly.
       uint32_t var_byte_size =
           last_member->member_location() + last_member->type().Get()->As<Type>()->byte_size();
       if (var_byte_size > byte_size)

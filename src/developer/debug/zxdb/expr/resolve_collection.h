@@ -120,6 +120,20 @@ ErrOrValue ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprV
 Err GetConcretePointedToCollection(const fxl::RefPtr<EvalContext>& eval_context, const Type* input,
                                    fxl::RefPtr<Collection>* pointed_to);
 
+// Returns the number of members in a Rust tuple.
+//
+// Returns an error if the value isn't a Rust tuple. Empty structs are considered empty tuples,
+// regardless of whether the Collection thinks it's a tuple or not. Empty tuple structs and
+// empty enum values look just like regular empty structs.
+ErrOr<size_t> GetRustTupleMemberCount(const fxl::RefPtr<EvalContext>& eval_context,
+                                      const ExprValue& tuple);
+
+// Given a Rust tuple or tuple struct stored in an ExprValue, extracts the value at the given index.
+//
+// Returns an error if the input isn't a Rust tuple or the index is out of range.
+ErrOrValue ExtractRustTuple(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& tuple,
+                            size_t index);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_RESOLVE_COLLECTION_H_

@@ -226,11 +226,20 @@ class CastExprNode : public ExprNode {
 // Implements all types of if and if/else
 class ConditionExprNode : public ExprNode {
  public:
-  struct Pair {
-    Pair(fxl::RefPtr<ExprNode> c, fxl::RefPtr<ExprNode> t)
-        : cond(std::move(c)), then(std::move(t)) {}
+  struct Condition {
+    bool IsRustIfLet() const { return !rust_pattern_name.empty(); }
+
+    // For "if let" conditions, the rust_pattern_name will be !empty(), use IsRustIfLet(). Even in
+    // that case, rust_pattern_local_slots may be empty for matching an enum with no value.
+    ParsedIdentifier rust_pattern_name;
+    std::vector<uint32_t> rust_pattern_local_slots;  // Variable(s) to assign to on match.
 
     fxl::RefPtr<ExprNode> cond;  // Conditional expression to evaluate.
+  };
+  struct Pair {
+    Pair(Condition c, fxl::RefPtr<ExprNode> t) : cond(std::move(c)), then(std::move(t)) {}
+
+    Condition cond;
     fxl::RefPtr<ExprNode> then;  // Code to execute when condition is satisfied. Possibly null.
   };
 
@@ -244,13 +253,17 @@ class ConditionExprNode : public ExprNode {
 
   ConditionExprNode();
   // The conditions are evaluated in-order until one is true. The "else" can be null in which case
-  // it will be ignored.
-  ConditionExprNode(std::vector<Pair> conds, fxl::RefPtr<ExprNode> else_case)
-      : conds_(std::move(conds)), else_(std::move(else_case)) {}
+  // it will be ignored. See BlockExprNode for the entry_local_var_count.
+  ConditionExprNode(std::vector<Pair> conds, fxl::RefPtr<ExprNode> else_case,
+                    std::optional<uint32_t> entry_local_var_count)
+      : conds_(std::move(conds)),
+        else_(std::move(else_case)),
+        entry_local_var_count_(entry_local_var_count) {}
   ~ConditionExprNode() override = default;
 
   std::vector<Pair> conds_;
   fxl::RefPtr<ExprNode> else_;  // Possibly null.
+  std::optional<uint32_t> entry_local_var_count_;
 };
 
 // Implements dereferencing a pointer ("*" in C).

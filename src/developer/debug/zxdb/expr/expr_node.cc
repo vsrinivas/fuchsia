@@ -20,6 +20,7 @@
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
+#include "src/developer/debug/zxdb/expr/resolve_variant.h"
 #include "src/developer/debug/zxdb/expr/vm_stream.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
@@ -62,6 +63,23 @@ void PrintExprOrSemicolon(std::ostream& out, int indent, const fxl::RefPtr<ExprN
   } else {
     out << IndentFor(indent) << ";\n";
   }
+}
+
+ErrOrValue RustPatternMatches(const fxl::RefPtr<EvalContext>& eval_context,
+                              const ParsedIdentifier& enum_name, ExprValue value) {
+  ErrOr<std::string> cur_name = GetActiveRustVariantName(eval_context, value);
+  if (cur_name.has_error())
+    return cur_name.err();
+
+  // Currently this only allows "short" one-word enum names, not fully qualified ones.
+  if (enum_name.components().size() != 1) {
+    return Err("Only unqualified (single-word) patterns are supported. I saw " +
+               enum_name.GetFullName());
+  }
+
+  bool result = enum_name.components()[0].special() == SpecialIdentifier::kNone &&
+                enum_name.components()[0].name() == cur_name.value();
+  return ExprValue(result);
 }
 
 }  // namespace
@@ -249,10 +267,68 @@ void ConditionExprNode::EmitBytecode(VmStream& stream) const {
   std::vector<size_t> done_jumps;
 
   for (const Pair& pair : conds_) {
-    pair.cond->EmitBytecodeExpandRef(stream);
+    pair.cond.cond->EmitBytecodeExpandRef(stream);
 
-    // Jump over the "then" case if false.
-    VmBytecodeForwardJumpIfFalse jump_to_next(&stream);
+    VmBytecodeForwardJumpIfFalse jump_to_next;
+
+    bool needs_if_let_pop = false;
+    if (pair.cond.IsRustIfLet()) {
+      // Rust "if let" support.
+      //
+      // Since a VM callback can't return two values (ideally it would return both whether the match
+      // succeeded and the contained value), the match is done in two phases: first the enum type is
+      // checked to see if the match succeeds, and then if it did, another callback is issued to
+      // extract the contained value of the enum. For this we need two copies of the expression
+      // result, if the match fails, the duplicate copy will be dropped before executing the next
+      // "if/else" according to needs_if_let_pop.
+      needs_if_let_pop = true;
+      stream.push_back(VmOp::MakeDup());
+      stream.push_back(
+          VmOp::MakeCallback1([name = pair.cond.rust_pattern_name](
+                                  const fxl::RefPtr<EvalContext>& eval_context, ExprValue value) {
+            return RustPatternMatches(eval_context, name, std::move(value));
+          }));
+      jump_to_next.SetSource(&stream);  // Jumps to next if the match fails.
+
+      // Match succeeded: Extract the enum value. This can be nothing, a tuple, or a struct.
+      // Currently we don't support structs. This consumes the duplicated value we made from the
+      // expression above.
+      stream.push_back(VmOp::MakeCallback1(&ResolveSingleVariantValue));
+
+      // Validate the number of tuple elements matches the number of arguments.
+      stream.push_back(VmOp::MakeDup());
+      stream.push_back(VmOp::MakeCallback1(
+          [expected_count = pair.cond.rust_pattern_local_slots.size()](
+              const fxl::RefPtr<EvalContext>& eval_context, ExprValue value) -> ErrOrValue {
+            ErrOr<size_t> actual_count = GetRustTupleMemberCount(eval_context, value);
+            if (actual_count.has_error())
+              return actual_count.err();
+            if (expected_count != actual_count.value()) {
+              return Err("Tuple pattern contains %zu members but the matched tuple has %zu.",
+                         expected_count, actual_count.value());
+            }
+            return ExprValue();
+          }));
+      stream.push_back(VmOp::MakeDrop());  // The callback's return value is not used.
+
+      for (size_t match_i = 0; match_i < pair.cond.rust_pattern_local_slots.size(); match_i++) {
+        // The callback consumes the stack entry so we need to save a copy for the next iteration.
+        stream.push_back(VmOp::MakeDup());
+
+        // Actually extract the Nth tuple member and store it in the corresponding local var.
+        stream.push_back(VmOp::MakeCallback1(
+            [match_i](const fxl::RefPtr<EvalContext>& eval_context, ExprValue value) {
+              return ExtractRustTuple(eval_context, value, match_i);
+            }));
+        stream.push_back(VmOp::MakeSetLocal(pair.cond.rust_pattern_local_slots[match_i]));
+      }
+
+      // Drop the saved copy of the extracted tuple.
+      stream.push_back(VmOp::MakeDrop());
+    } else {
+      // Normal "if": jump over the "then" case if false.
+      jump_to_next.SetSource(&stream);
+    }
 
     pair.then->EmitBytecode(stream);
 
@@ -262,6 +338,11 @@ void ConditionExprNode::EmitBytecode(VmStream& stream) const {
 
     // Fixup the "else" case to go to here.
     jump_to_next.JumpToHere();
+    if (needs_if_let_pop) {
+      // When a Rust "if let" the condition fails, we need to drop the duplicate value we saved
+      // for extracting the enum contents.
+      stream.push_back(VmOp::MakeDrop());
+    }
   }
 
   if (else_) {
@@ -275,16 +356,33 @@ void ConditionExprNode::EmitBytecode(VmStream& stream) const {
   for (size_t jump_source : done_jumps) {
     stream[jump_source].SetJumpDest(static_cast<uint32_t>(stream.size()));
   }
+
+  // Clean up any local variables introduced in the conditions.
+  if (entry_local_var_count_)
+    stream.push_back(VmOp::MakePopLocals(*entry_local_var_count_));
 }
 
 void ConditionExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "CONDITION\n";
   for (size_t i = 0; i < conds_.size(); i++) {
-    if (i == 0)
-      out << IndentFor(indent + 1) << "IF\n";
-    else
-      out << IndentFor(indent + 1) << "ELSEIF\n";
-    conds_[i].cond->Print(out, indent + 2);
+    if (i == 0) {
+      out << IndentFor(indent + 1) << "IF";
+    } else {
+      out << IndentFor(indent + 1) << "ELSEIF";
+    }
+    if (conds_[i].cond.IsRustIfLet()) {
+      out << "_LET(";
+      for (size_t s = 0; s < conds_[i].cond.rust_pattern_local_slots.size(); s++) {
+        if (s != 0)
+          out << ", ";
+        out << conds_[i].cond.rust_pattern_local_slots[s];
+      }
+      out << ")\n";
+      out << IndentFor(indent + 2) << conds_[i].cond.rust_pattern_name.GetDebugName() << "\n";
+    } else {
+      out << "\n";
+    }
+    conds_[i].cond.cond->Print(out, indent + 2);
 
     if (conds_[i].then) {
       out << IndentFor(indent + 1) << "THEN\n";

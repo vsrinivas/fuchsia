@@ -26,6 +26,7 @@
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
+#include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
@@ -622,6 +623,44 @@ TEST_F(ResolveCollectionTest, ConstValue) {
   EXPECT_EQ(const_int32_type.get(), result.value().type());
   EXPECT_EQ(kExternConstValue, result.value().GetAs<int32_t>());
   EXPECT_EQ(ExprValueSource::Type::kConstant, result.value().source().type());
+}
+
+TEST_F(ResolveCollectionTest, RustTuples) {
+  fxl::RefPtr<Collection> empty_coll = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
+  ExprValue empty_value(empty_coll, {});
+
+  ErrOr<size_t> count = GetRustTupleMemberCount(eval_context_, empty_value);
+  ASSERT_TRUE(count.ok());
+  EXPECT_EQ(0u, count.value());
+
+  // Can't extract a value from an empty tuple.
+  ErrOrValue value = ExtractRustTuple(eval_context_, empty_value, 0);
+  ASSERT_TRUE(value.has_error());
+  EXPECT_EQ("Can't extract a tuple value from an empty struct/tuple.", value.err().msg());
+
+  // Make a tuple with two values (12, 99).
+  auto int32_type = MakeInt32Type();
+  fxl::RefPtr<Collection> tuple2 = MakeRustTuple("(i32, i32)", {int32_type, int32_type});
+  ExprValue tuple2_value(tuple2, {12, 0, 0, 0, 99, 0, 0, 0});
+
+  count = GetRustTupleMemberCount(eval_context_, tuple2_value);
+  ASSERT_TRUE(count.ok());
+  EXPECT_EQ(2u, count.value());
+
+  // [0] item.
+  value = ExtractRustTuple(eval_context_, tuple2_value, 0);
+  ASSERT_TRUE(value.ok());
+  EXPECT_EQ(value.value(), ExprValue(static_cast<int32_t>(12), int32_type));
+
+  // [1] item
+  value = ExtractRustTuple(eval_context_, tuple2_value, 1);
+  ASSERT_TRUE(value.ok());
+  EXPECT_EQ(value.value(), ExprValue(static_cast<int32_t>(99), int32_type));
+
+  // Out of range.
+  value = ExtractRustTuple(eval_context_, tuple2_value, 2);
+  ASSERT_TRUE(value.has_error());
+  EXPECT_EQ("The tuple does not have a member 2.", value.err().msg());
 }
 
 }  // namespace zxdb
