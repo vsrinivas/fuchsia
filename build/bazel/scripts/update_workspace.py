@@ -228,6 +228,8 @@ def generate_fuchsia_build_config(fuchsia_dir):
         "arm64": "@platforms//cpu:aarch64",
     }.get(host_arch)
 
+    rbe_instance_name = rbe_config.get('instance_name', '')
+    rbe_project = rbe_instance_name.split('/')[1]
     return {
         'host_os': host_os,
         'host_arch': host_arch,
@@ -236,8 +238,9 @@ def generate_fuchsia_build_config(fuchsia_dir):
         'host_target_triple': host_target_triple,
         'host_os_constraint': host_os_constraint,
         "host_cpu_constraint": host_cpu_constraint,
-        'rbe_instance_name': rbe_config.get('instance_name', ''),
-        'rbe_container_image': rbe_config.get('container_image', '')
+        'rbe_instance_name': rbe_instance_name,
+        'rbe_container_image': rbe_config.get('container_image', ''),
+        'rbe_project': rbe_project,
     }
 
 
@@ -569,7 +572,8 @@ block *
         host_platform=host_tag_alt,
         log_file=os.path.join(logs_dir, 'workspace-events.log'),
         config_file=os.path.join(topdir, 'download_config_file'),
-        remote_instance_name=build_config["rbe_instance_name"],
+        remote_instance_name=build_config['rbe_instance_name'],
+        rbe_project=build_config['rbe_project'],
     )
     if args.use_bzlmod:
         bazelrc_content += '''

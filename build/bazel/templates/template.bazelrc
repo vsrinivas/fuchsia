@@ -31,3 +31,11 @@ build:remote --define=EXECUTOR=remote
 build:remote --remote_executor=grpcs://remotebuildexecution.googleapis.com
 build:remote --incompatible_strict_action_env=true
 build:remote --google_default_credentials=true
+
+# Setup sponge (go/sponge-bazel)
+build:sponge --bes_backend=buildeventservice-pa.googleapis.com
+build:sponge --google_auth_scopes=https://www.googleapis.com/auth/cloud-platform
+build:sponge --google_default_credentials=true
+build:sponge --bes_instance_name={rbe_project}
+build:sponge --bes_header=X-Goog-User-Project={rbe_project}
+build:sponge --bes_results_url=http://sponge2/
