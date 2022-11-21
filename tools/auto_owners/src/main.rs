@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context as _, Result};
 use argh::FromArgs;
 use camino::{Utf8Path, Utf8PathBuf};
 use gnaw_lib::CrateOutputMetadata;
@@ -125,7 +125,15 @@ impl OwnersDb {
     ) -> Result<Self> {
         let rust_crates: Vec<CrateOutputMetadata> = rust_metadata
             .as_ref()
-            .map(|metadata| Ok::<_, anyhow::Error>(serde_json::from_reader(File::open(metadata)?)?))
+            .map(|metadata| {
+                Ok::<_, anyhow::Error>(
+                    serde_json::from_reader(
+                        File::open(metadata)
+                            .with_context(|| format!("opening {}", metadata.display()))?,
+                    )
+                    .with_context(|| format!("parsing {}", metadata.display()))?,
+                )
+            })
             .transpose()?
             .unwrap_or_default();
 
@@ -154,13 +162,21 @@ impl OwnersDb {
             })
             .collect();
         let integration_projects = jiri_manifest
-            .map(|manifest| Ok::<_, anyhow::Error>(parse_jiri_manifest(&manifest)?))
+            .map(|manifest| {
+                Ok::<_, anyhow::Error>(
+                    parse_jiri_manifest(&manifest)
+                        .with_context(|| format!("parsing {}", manifest.display()))?,
+                )
+            })
             .transpose()?
             .unwrap_or_default();
         let projects = rust_projects.into_iter().chain(integration_projects).collect::<Vec<_>>();
 
-        let overrides: BTreeMap<String, Vec<Utf8PathBuf>> =
-            toml::de::from_str(&std::fs::read_to_string(overrides)?)?;
+        let overrides: BTreeMap<String, Vec<Utf8PathBuf>> = toml::de::from_str(
+            &std::fs::read_to_string(&overrides)
+                .with_context(|| format!("reading {}", overrides))?,
+        )
+        .with_context(|| format!("parsing {}", overrides))?;
 
         Ok(Self {
             projects,
@@ -197,7 +213,8 @@ impl OwnersDb {
         let owners_path = metadata.path.join("OWNERS");
         // We need to every OWNERS file, even if it would be empty, because
         // the other OWNERS files may include the empty ones.
-        std::fs::write(owners_path, file.to_string().as_bytes())?;
+        std::fs::write(&owners_path, file.to_string().as_bytes())
+            .with_context(|| format!("writing {}", owners_path))?;
         eprint!(".");
 
         Ok(())
