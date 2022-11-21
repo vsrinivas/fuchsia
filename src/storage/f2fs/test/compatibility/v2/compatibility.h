@@ -127,7 +127,7 @@ class LinuxOperator : public CompatibilityTestOperator {
   void Mkdir(std::string_view path, mode_t mode) final;
   int Rmdir(std::string_view path) final;
   std::unique_ptr<TestFile> Open(std::string_view path, int flags, mode_t mode) final;
-  void Rename(std::string_view oldpath, std::string_view newpath) final {}
+  void Rename(std::string_view oldpath, std::string_view newpath) final;
 
   zx_status_t Execute(const std::vector<std::string>& argv, std::string* result = nullptr);
   void ExecuteWithAssert(const std::vector<std::string>& argv, std::string* result = nullptr);

@@ -130,6 +130,10 @@ std::unique_ptr<TestFile> LinuxOperator::Open(std::string_view path, int flags, 
   return std::unique_ptr<TestFile>(new LinuxTestFile(path, this));
 }
 
+void LinuxOperator::Rename(std::string_view oldpath, std::string_view newpath) {
+  ExecuteWithAssert({"mv", ConvertPath(oldpath), ConvertPath(newpath)});
+}
+
 void FuchsiaOperator::Mkfs(MkfsOptions opt) {
   MkfsWorker mkfs(std::move(bc_), opt);
   auto ret = mkfs.DoMkfs();
