@@ -84,3 +84,21 @@ TEST(NodeRemovalTracker, CallbacksCallOrder) {
   EXPECT_EQ(package_callbacks, 1);
   EXPECT_EQ(all_callbacks, 1);
 }
+
+// This tests verifies that set_all_callback can be called
+// during the pkg_callback without causing a deadlock.
+TEST(NodeRemovalTracker, CallbackDeadlock) {
+  dfv2::NodeRemovalTracker tracker;
+  dfv2::NodeState node1 = dfv2::NodeState::kRunning;
+  tracker.RegisterNode(&node1, dfv2::Collection::kBoot, "node", node1);
+  int package_callbacks = 0;
+  int all_callbacks = 0;
+  tracker.set_pkg_callback([&tracker, &package_callbacks, &all_callbacks]() {
+    package_callbacks++;
+    tracker.set_all_callback([&all_callbacks]() { all_callbacks++; });
+  });
+  tracker.NotifyRemovalComplete(&node1);
+
+  EXPECT_EQ(package_callbacks, 1);
+  EXPECT_EQ(all_callbacks, 1);
+}

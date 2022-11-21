@@ -35,7 +35,6 @@ void NodeRemovalTracker::NotifyRemovalComplete(void* node_ptr) {
   } else {
     LOGF(ERROR, "Tried to NotifyNoChildren without registering!");
   }
-  fbl::AutoLock lock(&callback_lock_);
   int pkg_count = 0, all_count = 0;
   for (auto [ptr, value] : nodes_) {
     auto [name, node_collection, state] = value;
@@ -46,23 +45,30 @@ void NodeRemovalTracker::NotifyRemovalComplete(void* node_ptr) {
       }
     }
   }
-  if (pkg_callback_ && pkg_count == 0) {
-    pkg_callback_();
-    pkg_callback_ = nullptr;
+  {
+    fbl::AutoLock lock(&pkg_callback_lock_);
+    if (pkg_callback_ && pkg_count == 0) {
+      pkg_callback_();
+      pkg_callback_ = nullptr;
+    }
   }
-  if (all_callback_ && all_count == 0) {
-    all_callback_();
-    all_callback_ = nullptr;
-    nodes_.clear();
+  {
+    fbl::AutoLock lock(&all_callback_lock_);
+    if (all_callback_ && all_count == 0) {
+      all_callback_();
+      all_callback_ = nullptr;
+      nodes_.clear();
+    }
   }
+  LOGF(DEBUG, "NodeRemovalTracker: %d pkg %d all remaining", pkg_count, all_count);
 }
 
 void NodeRemovalTracker::set_pkg_callback(fit::callback<void()> callback) {
-  fbl::AutoLock lock(&callback_lock_);
+  fbl::AutoLock lock(&pkg_callback_lock_);
   pkg_callback_ = std::move(callback);
 }
 void NodeRemovalTracker::set_all_callback(fit::callback<void()> callback) {
-  fbl::AutoLock lock(&callback_lock_);
+  fbl::AutoLock lock(&all_callback_lock_);
   all_callback_ = std::move(callback);
 }
 

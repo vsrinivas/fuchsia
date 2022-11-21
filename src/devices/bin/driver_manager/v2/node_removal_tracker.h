@@ -27,9 +27,9 @@ class NodeRemovalTracker {
 
  private:
   std::map<void*, std::tuple<std::string, Collection, NodeState>> nodes_;
-  fbl::Mutex callback_lock_;
-  fit::callback<void()> pkg_callback_ __TA_GUARDED(callback_lock_);
-  fit::callback<void()> all_callback_ __TA_GUARDED(callback_lock_);
+  fbl::Mutex pkg_callback_lock_, all_callback_lock_;
+  fit::callback<void()> pkg_callback_ __TA_GUARDED(pkg_callback_lock_);
+  fit::callback<void()> all_callback_ __TA_GUARDED(all_callback_lock_);
 };
 
 }  // namespace dfv2
