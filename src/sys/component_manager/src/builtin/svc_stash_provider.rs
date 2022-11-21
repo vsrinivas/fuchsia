@@ -92,7 +92,7 @@ mod tests {
         let event = Event::new_for_test(
             AbsoluteMoniker::root(),
             "fuchsia-pkg://root",
-            Ok(EventPayload::CapabilityRouted { source, capability_provider: provider.clone() }),
+            EventPayload::CapabilityRouted { source, capability_provider: provider.clone() },
         );
         hooks.dispatch(&event).await?;
 

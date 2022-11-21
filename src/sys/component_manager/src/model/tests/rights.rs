@@ -94,14 +94,14 @@ impl CapabilityProvider for MockFrameworkDirectoryProvider {
 #[async_trait]
 impl Hook for MockFrameworkDirectoryHost {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let Ok(EventPayload::CapabilityRouted {
+        if let EventPayload::CapabilityRouted {
             source:
                 CapabilitySource::Framework {
                     capability: InternalCapability::Directory(source_name),
                     ..
                 },
             capability_provider,
-        }) = &event.result
+        } = &event.payload
         {
             let mut capability_provider = capability_provider.lock().await;
             if source_name.str() == "foo_data" {

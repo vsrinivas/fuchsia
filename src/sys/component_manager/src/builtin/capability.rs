@@ -108,10 +108,10 @@ impl<R: ResourceCapability + Send + Sync> BuiltinCapability for R {
 #[async_trait]
 impl<B: 'static + BuiltinCapability + Send + Sync> Hook for B {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let Ok(EventPayload::CapabilityRouted {
+        if let EventPayload::CapabilityRouted {
             source: CapabilitySource::Builtin { capability, .. },
             capability_provider,
-        }) = &event.result
+        } = &event.payload
         {
             if self.matches_routed_capability(&capability) {
                 let mut provider = capability_provider.lock().await;

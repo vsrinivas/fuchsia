@@ -246,17 +246,17 @@ impl Hook for TestHook {
         let target_moniker = event
             .target_moniker
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
-        match &event.result {
-            Ok(EventPayload::Discovered { .. }) => {
+        match &event.payload {
+            EventPayload::Discovered { .. } => {
                 self.create_instance_if_necessary(&target_moniker).await?;
             }
-            Ok(EventPayload::Destroyed) => {
+            EventPayload::Destroyed => {
                 self.on_destroyed_async(&target_moniker).await?;
             }
-            Ok(EventPayload::Started { .. }) => {
+            EventPayload::Started { .. } => {
                 self.on_started_async(&target_moniker).await?;
             }
-            Ok(EventPayload::Stopped { .. }) => {
+            EventPayload::Stopped { .. } => {
                 self.on_stopped_async(&target_moniker).await?;
             }
             _ => (),
@@ -307,10 +307,10 @@ impl HubInjectionTestHook {
 #[async_trait]
 impl Hook for HubInjectionTestHook {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let Ok(EventPayload::CapabilityRouted {
+        if let EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, component },
             capability_provider,
-        }) = &event.result
+        } = &event.payload
         {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self

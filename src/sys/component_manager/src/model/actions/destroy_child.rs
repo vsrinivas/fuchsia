@@ -88,7 +88,7 @@ async fn do_destroy_child(
         }
 
         // Send the Destroyed event for the component
-        let event = Event::new(&child, Ok(EventPayload::Destroyed));
+        let event = Event::new(&child, EventPayload::Destroyed);
         component.hooks.dispatch(&event).await?;
     }
 

@@ -76,10 +76,10 @@ impl SystemController {
 #[async_trait]
 impl Hook for SystemController {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let Ok(EventPayload::CapabilityRouted {
+        if let EventPayload::CapabilityRouted {
             source: CapabilitySource::Builtin { capability, .. },
             capability_provider,
-        }) = &event.result
+        } = &event.payload
         {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self

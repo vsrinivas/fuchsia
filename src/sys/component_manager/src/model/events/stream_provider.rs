@@ -244,11 +244,11 @@ impl Hook for EventStreamProvider {
         let target_moniker = event
             .target_moniker
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
-        match &event.result {
-            Ok(EventPayload::Destroyed) => {
+        match &event.payload {
+            EventPayload::Destroyed => {
                 self.on_component_destroyed(target_moniker).await?;
             }
-            Ok(EventPayload::Resolved { decl, .. }) => {
+            EventPayload::Resolved { decl, .. } => {
                 self.on_component_resolved(target_moniker, decl).await?;
             }
             _ => {}

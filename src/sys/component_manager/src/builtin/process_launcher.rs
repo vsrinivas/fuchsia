@@ -345,10 +345,10 @@ impl ProcessLauncher {
 #[async_trait]
 impl Hook for ProcessLauncher {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let Ok(EventPayload::CapabilityRouted {
+        if let EventPayload::CapabilityRouted {
             source: CapabilitySource::Builtin { capability, .. },
             capability_provider,
-        }) = &event.result
+        } = &event.payload
         {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self
@@ -465,10 +465,10 @@ mod tests {
         let event = Event::new_for_test(
             AbsoluteMoniker::root(),
             "fuchsia-pkg://root",
-            Ok(EventPayload::CapabilityRouted {
+            EventPayload::CapabilityRouted {
                 source,
                 capability_provider: capability_provider.clone(),
-            }),
+            },
         );
         hooks.dispatch(&event).await?;
 

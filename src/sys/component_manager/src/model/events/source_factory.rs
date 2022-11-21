@@ -123,11 +123,11 @@ impl Hook for EventSourceFactory {
         let target_moniker = event
             .target_moniker
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
-        match &event.result {
-            Ok(EventPayload::CapabilityRouted {
+        match &event.payload {
+            EventPayload::CapabilityRouted {
                 source: CapabilitySource::Builtin { capability, .. },
                 capability_provider,
-            }) => {
+            } => {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_capability_routed_async(
@@ -137,10 +137,10 @@ impl Hook for EventSourceFactory {
                     )
                     .await?;
             }
-            Ok(EventPayload::CapabilityRouted {
+            EventPayload::CapabilityRouted {
                 source: CapabilitySource::Framework { capability, .. },
                 capability_provider,
-            }) => {
+            } => {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_capability_routed_async(

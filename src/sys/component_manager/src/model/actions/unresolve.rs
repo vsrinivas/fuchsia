@@ -7,7 +7,7 @@ use {
         actions::{Action, ActionKey, ActionSet, ShutdownAction},
         component::{ComponentInstance, InstanceState},
         error::ModelError,
-        hooks::{Event, EventError, EventErrorPayload, EventPayload},
+        hooks::{Event, EventPayload},
     },
     anyhow::anyhow,
     async_trait::async_trait,
@@ -38,35 +38,27 @@ impl Action for UnresolveAction {
     }
 }
 
-// Create and emit a Unresolved EventError with the given error message. Return the error.
-async fn emit_unresolve_failed_event(
-    component: &Arc<ComponentInstance>,
-    msg: String,
-) -> Result<bool, ModelError> {
-    let e = ModelError::from(ComponentInstanceError::unresolve_failed(
-        component.abs_moniker.clone(),
-        anyhow!(msg),
-    ));
-    let event = Event::new(component, Err(EventError::new(&e, EventErrorPayload::Unresolved)));
-    component.hooks.dispatch(&event).await?;
-    Err(e)
-}
-
 // Check the component state for applicability of the UnresolveAction. Return Ok(true) if the
 // component is Discovered so UnresolveAction can early-return. Return Ok(false) if the component is
 // resolved so UnresolveAction can proceed. Return an error if the component is running or in an
 // incompatible state.
 async fn check_state(component: &Arc<ComponentInstance>) -> Result<bool, ModelError> {
     if component.lock_execution().await.runtime.is_some() {
-        return emit_unresolve_failed_event(component, "component was running".to_string()).await;
+        return Err(ModelError::from(ComponentInstanceError::unresolve_failed(
+            component.abs_moniker.clone(),
+            anyhow!("component was running"),
+        )));
     }
     match *component.lock_state().await {
         InstanceState::Unresolved => return Ok(true),
         InstanceState::Resolved(_) => return Ok(false),
         _ => {}
     }
-    emit_unresolve_failed_event(component, "component was not discovered or resolved".to_string())
-        .await
+
+    Err(ModelError::from(ComponentInstanceError::unresolve_failed(
+        component.abs_moniker.clone(),
+        anyhow!("component was not discovered or resolved"),
+    )))
 }
 
 async fn unresolve_resolved_children(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
@@ -120,18 +112,16 @@ async fn do_unresolve(component: &Arc<ComponentInstance>) -> Result<(), ModelErr
     };
 
     if !success {
-        return emit_unresolve_failed_event(
-            component,
-            "state change failed in UnresolveAction".to_string(),
-        )
-        .await
-        .map(|_| ());
+        return Err(ModelError::from(ComponentInstanceError::unresolve_failed(
+            component.abs_moniker.clone(),
+            anyhow!("state change failed in UnresolveAction"),
+        )));
     }
 
     // The component was shut down, so won't start. Re-enable it.
     component.lock_execution().await.reset_shut_down();
 
-    let event = Event::new(&component, Ok(EventPayload::Unresolved));
+    let event = Event::new(&component, EventPayload::Unresolved);
     component.hooks.dispatch(&event).await
 }
 

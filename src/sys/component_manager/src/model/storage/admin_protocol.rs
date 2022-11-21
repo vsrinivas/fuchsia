@@ -426,11 +426,11 @@ impl StorageAdmin {
 #[async_trait]
 impl Hook for StorageAdmin {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        match &event.result {
-            Ok(EventPayload::CapabilityRouted {
+        match &event.payload {
+            EventPayload::CapabilityRouted {
                 source: CapabilitySource::Capability { source_capability, component },
                 capability_provider,
-            }) => {
+            } => {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_scoped_framework_capability_routed_async(

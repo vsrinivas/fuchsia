@@ -56,11 +56,11 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
 
             let event = Event::new(
                 &self.target.upgrade()?,
-                Ok(EventPayload::CapabilityRequested {
+                EventPayload::CapabilityRequested {
                     source_moniker: source.abs_moniker.clone(),
                     name: self.name.to_string(),
                     capability: capability.clone(),
-                }),
+                },
             );
             source.hooks.dispatch(&event).await?;
             Result::<Arc<ComponentInstance>, ModelError>::Ok(source)

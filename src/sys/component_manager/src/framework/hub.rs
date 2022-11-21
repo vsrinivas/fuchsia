@@ -415,28 +415,28 @@ impl Hook for Hub {
         let target_moniker = event
             .target_moniker
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
-        match &event.result {
-            Ok(EventPayload::CapabilityRouted { source, capability_provider }) => {
+        match &event.payload {
+            EventPayload::CapabilityRouted { source, capability_provider } => {
                 self.on_capability_routed_async(source.clone(), capability_provider.clone())
                     .await?;
             }
-            Ok(EventPayload::Discovered { .. }) => {
+            EventPayload::Discovered { .. } => {
                 self.on_discovered_async(target_moniker).await?;
             }
-            Ok(EventPayload::Unresolved) => {
+            EventPayload::Unresolved => {
                 self.on_unresolved_async(target_moniker, event.component_url.to_string()).await?;
             }
-            Ok(EventPayload::Destroyed) => {
+            EventPayload::Destroyed => {
                 self.on_destroyed_async(target_moniker).await?;
             }
-            Ok(EventPayload::Started { runtime, .. }) => {
+            EventPayload::Started { runtime, .. } => {
                 self.on_started_async(target_moniker, &runtime).await?;
             }
-            Ok(EventPayload::Resolved { component, decl, package_dir, .. }) => {
+            EventPayload::Resolved { component, decl, package_dir, .. } => {
                 self.on_resolved_async(target_moniker, component, &decl, package_dir.as_ref())
                     .await?;
             }
-            Ok(EventPayload::Stopped { .. }) => {
+            EventPayload::Stopped { .. } => {
                 self.on_stopped_async(target_moniker).await?;
             }
             _ => {}

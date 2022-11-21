@@ -136,10 +136,10 @@ impl BinderCapabilityHost {
 #[async_trait]
 impl Hook for BinderCapabilityHost {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let Ok(EventPayload::CapabilityRouted {
+        if let EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, component },
             capability_provider,
-        }) = &event.result
+        } = &event.payload
         {
             let target_moniker = match &event.target_moniker {
                 ExtendedMoniker::ComponentManager => {

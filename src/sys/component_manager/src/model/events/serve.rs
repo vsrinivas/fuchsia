@@ -5,9 +5,7 @@
 use {
     crate::model::{
         events::{event::Event, registry::ComponentEventRoute, stream::EventStream},
-        hooks::{
-            EventError, EventErrorPayload, EventPayload, EventResult, EventType, HasEventType,
-        },
+        hooks::{EventPayload, EventType, HasEventType},
     },
     cm_util::io::clone_dir,
     fidl::endpoints::{Proxy, ServerEnd},
@@ -303,56 +301,29 @@ pub async fn serve_event_stream_v2(
 }
 
 async fn maybe_create_event_result(
-    event_result: &EventResult,
+    event_payload: &EventPayload,
 ) -> Result<Option<fsys::EventResult>, fidl::Error> {
-    match event_result {
-        Ok(EventPayload::DirectoryReady { name, node, .. }) => {
+    match event_payload {
+        EventPayload::DirectoryReady { name, node, .. } => {
             Ok(Some(create_directory_ready_payload(name.to_string(), node)?))
         }
-        Ok(EventPayload::CapabilityRequested { name, capability, .. }) => Ok(Some(
+        EventPayload::CapabilityRequested { name, capability, .. } => Ok(Some(
             create_capability_requested_payload(name.to_string(), capability.clone()).await,
         )),
-        Ok(EventPayload::CapabilityRouted { .. }) => {
+        EventPayload::CapabilityRouted { .. } => {
             // Capability routed events cannot be exposed externally. This should be unreachable.
             Ok(None)
         }
-        Ok(EventPayload::Stopped { status }) => Ok(Some(fsys::EventResult::Payload(
+        EventPayload::Stopped { status } => Ok(Some(fsys::EventResult::Payload(
             fsys::EventPayload::Stopped(fsys::StoppedPayload {
                 status: Some(status.into_raw()),
                 ..fsys::StoppedPayload::EMPTY
             }),
         ))),
-        Ok(EventPayload::DebugStarted { runtime_dir, break_on_start }) => {
+        EventPayload::DebugStarted { runtime_dir, break_on_start } => {
             Ok(Some(create_debug_started_payload(runtime_dir, break_on_start)))
         }
-        Ok(payload) => Ok(maybe_create_empty_payload(payload.event_type())),
-        Err(EventError {
-            source,
-            event_error_payload: EventErrorPayload::DirectoryReady { name },
-        }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
-            error_payload: Some(fsys::EventErrorPayload::DirectoryReady(
-                fsys::DirectoryReadyError {
-                    name: Some(name.to_string()),
-                    ..fsys::DirectoryReadyError::EMPTY
-                },
-            )),
-            description: Some(format!("{}", source)),
-            ..fsys::EventError::EMPTY
-        }))),
-        Err(EventError {
-            source,
-            event_error_payload: EventErrorPayload::CapabilityRequested { name, .. },
-        }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
-            error_payload: Some(fsys::EventErrorPayload::CapabilityRequested(
-                fsys::CapabilityRequestedError {
-                    name: Some(name.to_string()),
-                    ..fsys::CapabilityRequestedError::EMPTY
-                },
-            )),
-            description: Some(format!("{}", source)),
-            ..fsys::EventError::EMPTY
-        }))),
-        Err(error) => Ok(maybe_create_empty_error_payload(error)),
+        payload => Ok(maybe_create_empty_payload(payload.event_type())),
     }
 }
 
@@ -384,29 +355,12 @@ async fn create_capability_requested_payload(
     capability: Arc<Mutex<Option<zx::Channel>>>,
 ) -> fsys::EventResult {
     let capability = capability.lock().await.take();
-    match capability {
-        Some(capability) => {
-            let payload = fsys::CapabilityRequestedPayload {
-                name: Some(name),
-                capability: Some(capability),
-                ..fsys::CapabilityRequestedPayload::EMPTY
-            };
-            fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(payload))
-        }
-        None => {
-            // This can happen if a hook takes the capability prior to the events system.
-            let payload =
-                fsys::EventErrorPayload::CapabilityRequested(fsys::CapabilityRequestedError {
-                    name: Some(name),
-                    ..fsys::CapabilityRequestedError::EMPTY
-                });
-            fsys::EventResult::Error(fsys::EventError {
-                error_payload: Some(payload),
-                description: Some("Capability unavailable".to_string()),
-                ..fsys::EventError::EMPTY
-            })
-        }
-    }
+    let payload = fsys::CapabilityRequestedPayload {
+        name: Some(name),
+        capability,
+        ..fsys::CapabilityRequestedPayload::EMPTY
+    };
+    fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(payload))
 }
 
 fn create_debug_started_payload(
@@ -447,23 +401,6 @@ fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult
     Some(result)
 }
 
-fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventResult> {
-    let error_payload = match error.event_type() {
-        EventType::Discovered => fsys::EventErrorPayload::Discovered(fsys::DiscoveredError::EMPTY),
-        EventType::Destroyed => fsys::EventErrorPayload::Destroyed(fsys::DestroyedError::EMPTY),
-        EventType::Resolved => fsys::EventErrorPayload::Resolved(fsys::ResolvedError::EMPTY),
-        EventType::Unresolved => fsys::EventErrorPayload::Unresolved(fsys::UnresolvedError::EMPTY),
-        EventType::Started => fsys::EventErrorPayload::Started(fsys::StartedError::EMPTY),
-        EventType::Stopped => fsys::EventErrorPayload::Stopped(fsys::StoppedError::EMPTY),
-        _ => fsys::EventErrorPayload::unknown(999, Default::default()),
-    };
-    Some(fsys::EventResult::Error(fsys::EventError {
-        error_payload: Some(error_payload),
-        description: Some(format!("{}", error.source)),
-        ..fsys::EventError::EMPTY
-    }))
-}
-
 /// Creates the basic FIDL Event object
 async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, anyhow::Error> {
     let moniker_string = match (&event.event.target_moniker, &event.scope_moniker) {
@@ -486,7 +423,7 @@ async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, anyhow::E
         timestamp: Some(event.event.timestamp.into_nanos()),
         ..fsys::EventHeader::EMPTY
     });
-    let event_result = maybe_create_event_result(&event.event.result).await?;
+    let event_result = maybe_create_event_result(&event.event.payload).await?;
     Ok(fsys::Event { header, event_result, ..fsys::Event::EMPTY })
 }
 

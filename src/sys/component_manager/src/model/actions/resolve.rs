@@ -10,7 +10,7 @@ use {
             WeakComponentInstance,
         },
         error::ModelError,
-        hooks::{Event, EventError, EventErrorPayload, EventPayload},
+        hooks::{Event, EventPayload},
         resolver::Resolver,
     },
     ::routing::resolving::ComponentAddress,
@@ -111,7 +111,7 @@ async fn do_resolve(component: &Arc<ComponentInstance>) -> Result<Component, Mod
         Ok((component_info, true)) => {
             let event = Event::new(
                 component,
-                Ok(EventPayload::Resolved {
+                EventPayload::Resolved {
                     component: WeakComponentInstance::from(component),
                     resolved_url: component_info.resolved_url.clone(),
                     config: component_info.config.clone(),
@@ -120,17 +120,12 @@ async fn do_resolve(component: &Arc<ComponentInstance>) -> Result<Component, Mod
                         .package
                         .as_ref()
                         .and_then(|pkg| clone_dir(Some(&pkg.package_dir))),
-                }),
+                },
             );
             component.hooks.dispatch(&event).await?;
             Ok(component_info)
         }
-        Err(e) => {
-            let event =
-                Event::new(component, Err(EventError::new(&e, EventErrorPayload::Resolved)));
-            component.hooks.dispatch(&event).await?;
-            Err(e)
-        }
+        Err(e) => Err(e),
     }
 }
 

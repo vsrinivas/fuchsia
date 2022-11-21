@@ -4202,7 +4202,7 @@ mod tests {
                 let target_moniker = event
                     .target_moniker
                     .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
-                if let Ok(EventPayload::Stopped { .. }) = event.result {
+                if let EventPayload::Stopped { .. } = event.payload {
                     self.on_shutdown_instance_async(target_moniker).await?;
                 }
                 Ok(())

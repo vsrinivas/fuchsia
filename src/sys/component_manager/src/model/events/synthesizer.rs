@@ -301,8 +301,8 @@ mod tests {
         .await;
 
         let (event, _) = event_stream.next().await.expect("got running event");
-        match event.event.result {
-            Ok(EventPayload::DirectoryReady { name, .. }) if name == "diagnostics" => {
+        match event.event.payload {
+            EventPayload::DirectoryReady { name, .. } if name == "diagnostics" => {
                 assert_eq!(event.event.target_moniker, ExtendedMoniker::ComponentManager);
             }
             payload => panic!("Expected running or directory ready. Got: {:?}", payload),

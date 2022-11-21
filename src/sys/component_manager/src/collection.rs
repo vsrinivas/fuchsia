@@ -69,7 +69,7 @@ impl CollectionCapabilityHost {
 #[async_trait]
 impl Hook for CollectionCapabilityHost {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let Ok(EventPayload::CapabilityRouted {
+        if let EventPayload::CapabilityRouted {
             source:
                 CapabilitySource::Collection {
                     component,
@@ -78,7 +78,7 @@ impl Hook for CollectionCapabilityHost {
                     ..
                 },
             capability_provider,
-        }) = &event.result
+        } = &event.payload
         {
             let target_moniker = match &event.target_moniker {
                 ExtendedMoniker::ComponentManager => {

@@ -44,37 +44,28 @@ async fn call_trigger(directory: &fio::DirectoryProxy, paths: &Vec<String>) {
 #[fuchsia::main]
 async fn main() {
     let mut event_stream = EventStream::open().await.unwrap();
-    // For successful CapabilityRead events, this is a map of the directory to expected contents
+    // For successful DirectoryReady events, this is a map of the directory to expected contents
     let mut all_expected_entries = hashmap! {
         "normal".to_string() => vec![ftest::TriggerMarker::PROTOCOL_NAME.to_string()],
         "nested".to_string() => vec![format!("inner/{}", ftest::TriggerMarker::PROTOCOL_NAME).to_string()],
     };
 
-    let mut err_event_names = vec!["insufficient_rights"];
-
-    for _ in 0..3 {
-        let event = EventMatcher::default().expect_match::<DirectoryReady>(&mut event_stream).await;
+    for _ in 0..2 {
+        let event = EventMatcher::ok().expect_match::<DirectoryReady>(&mut event_stream).await;
         assert_eq!(event.target_moniker(), "./child");
+        let payload = event.result().unwrap();
 
-        match event.result() {
-            Ok(payload) => {
-                let expected_entries = all_expected_entries.remove(&payload.name).unwrap();
+        let expected_entries = all_expected_entries.remove(&payload.name).unwrap();
 
-                // Open the directory and verify its contents
-                let (node_clone, server_end) = fidl::endpoints::create_proxy().unwrap();
-                payload.node.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server_end).unwrap();
-                let directory = fuchsia_fs::node_to_directory(node_clone).unwrap();
-                let entries = list_entries(&directory).await;
+        // Open the directory and verify its contents
+        let (node_clone, server_end) = fidl::endpoints::create_proxy().unwrap();
+        payload.node.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server_end).unwrap();
+        let directory = fuchsia_fs::node_to_directory(node_clone).unwrap();
+        let entries = list_entries(&directory).await;
 
-                assert_eq!(entries, expected_entries);
+        assert_eq!(entries, expected_entries);
 
-                // Call the trigger service on each expected entry
-                call_trigger(&directory, &expected_entries).await;
-            }
-            Err(error) => {
-                let index = err_event_names.iter().position(|x| *x == error.name).unwrap();
-                err_event_names.remove(index);
-            }
-        }
+        // Call the trigger service on each expected entry
+        call_trigger(&directory, &expected_entries).await;
     }
 }

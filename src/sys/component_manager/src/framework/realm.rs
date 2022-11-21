@@ -400,10 +400,10 @@ impl RealmCapabilityHost {
 #[async_trait]
 impl Hook for RealmCapabilityHost {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let Ok(EventPayload::CapabilityRouted {
+        if let EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, component },
             capability_provider,
-        }) = &event.result
+        } = &event.payload
         {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self

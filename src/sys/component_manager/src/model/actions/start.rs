@@ -9,7 +9,7 @@ use {
             ComponentInstance, ExecutionState, InstanceState, Package, Runtime, StartReason,
         },
         error::ModelError,
-        hooks::{Event, EventError, EventErrorPayload, EventPayload, RuntimeInfo},
+        hooks::{Event, EventPayload, RuntimeInfo},
         namespace::IncomingNamespace,
     },
     ::routing::{component_instance::ComponentInstanceInterface, policy::GlobalPolicyChecker},
@@ -119,7 +119,7 @@ async fn do_start(
                 .hooks
                 .dispatch(&Event::new_with_timestamp(
                     component,
-                    Ok(EventPayload::Started {
+                    EventPayload::Started {
                         component: component.into(),
                         runtime: RuntimeInfo::from_runtime(
                             &mut pending_runtime,
@@ -127,7 +127,7 @@ async fn do_start(
                         ),
                         component_decl: start_context.component_decl.clone(),
                         start_reason: start_reason.clone(),
-                    }),
+                    },
                     pending_runtime.timestamp,
                 ))
                 .await?;
@@ -135,30 +135,16 @@ async fn do_start(
                 .hooks
                 .dispatch(&Event::new_with_timestamp(
                     component,
-                    Ok(EventPayload::DebugStarted {
+                    EventPayload::DebugStarted {
                         runtime_dir: pending_runtime.runtime_dir.clone(),
                         break_on_start: Arc::new(break_on_start),
-                    }),
+                    },
                     pending_runtime.timestamp,
                 ))
                 .await?;
             (start_context, pending_runtime)
         }
         Err(e) => {
-            component
-                .hooks
-                .dispatch(&Event::new(
-                    component,
-                    Err(EventError::new(&e, EventErrorPayload::Started)),
-                ))
-                .await?;
-            component
-                .hooks
-                .dispatch(&Event::new(
-                    component,
-                    Err(EventError::new(&e, EventErrorPayload::DebugStarted)),
-                ))
-                .await?;
             return Err(e);
         }
     };
@@ -181,10 +167,7 @@ async fn do_start(
             // Destroyed is issued.
             component
                 .hooks
-                .dispatch(&Event::new(
-                    component,
-                    Ok(EventPayload::Stopped { status: zx::Status::OK }),
-                ))
+                .dispatch(&Event::new(component, EventPayload::Stopped { status: zx::Status::OK }))
                 .await?;
         }
     };

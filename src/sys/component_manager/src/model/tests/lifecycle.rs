@@ -108,8 +108,8 @@ async fn bind_concurrent() {
     let event = event_stream.wait_until(EventType::Started, vec!["system"].into()).await.unwrap();
     // Verify that the correct StartReason propagates to the event.
     assert_matches!(
-        event.event.result,
-        Ok(EventPayload::Started { start_reason: StartReason::Root, .. })
+        event.event.payload,
+        EventPayload::Started { start_reason: StartReason::Root, .. }
     );
 
     // While the start() is paused, simulate a second start by explicitly scheduling a Start

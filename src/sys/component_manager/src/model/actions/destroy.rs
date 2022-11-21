@@ -815,7 +815,7 @@ pub mod tests {
                 let target_moniker = event
                     .target_moniker
                     .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
-                if let Ok(EventPayload::Destroyed) = event.result {
+                if let EventPayload::Destroyed = event.payload {
                     self.on_destroyed_async(target_moniker).await?;
                 }
                 Ok(())

@@ -31,24 +31,6 @@ rustc_binary("nested_reporter_v2_bin") {
   sources = [ "nested/reporter.rs" ]
 }
 
-rustc_binary("resolved_error_reporter_v2_bin") {
-  name = "resolved_error_reporter_v2"
-  edition = "2021"
-  source_root = "resolved_error/reporter.rs"
-  testonly = true
-  deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-component",
-    "//src/sys/lib/component-events",
-  ]
-
-  sources = [ "resolved_error/reporter.rs" ]
-}
-
 rustc_binary("async_reporter_v2_bin") {
   name = "async_reporter_v2"
   edition = "2021"

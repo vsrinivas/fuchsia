@@ -7,9 +7,7 @@ use {
         component::{ComponentInstance, InstanceState},
         error::ModelError,
         events::synthesizer::{EventSynthesisProvider, ExtendedComponent},
-        hooks::{
-            Event, EventError, EventErrorPayload, EventPayload, EventType, Hook, HooksRegistration,
-        },
+        hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
         model::Model,
     },
     ::routing::{event::EventFilter, rights::Rights},
@@ -21,7 +19,7 @@ use {
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_fs, fuchsia_zircon as zx,
     futures::stream::StreamExt,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::AbsoluteMoniker,
     std::{
         sync::{Arc, Mutex, Weak},
         time::Duration,
@@ -193,7 +191,9 @@ impl DirectoryReadyNotifier {
                     unreachable!("should have skipped above");
                 }
             };
-            events.push(event);
+            if let Some(event) = event {
+                events.push(event);
+            }
         }
 
         events
@@ -208,7 +208,7 @@ impl DirectoryReadyNotifier {
         rights: Rights,
         source_path: &CapabilityPath,
         target_name: &CapabilityName,
-    ) -> Event {
+    ) -> Option<Event> {
         let target_name = target_name.to_string();
 
         let node_result = async move {
@@ -253,12 +253,9 @@ impl DirectoryReadyNotifier {
 
         match node_result {
             Ok(node) => {
-                Event::new(&target, Ok(EventPayload::DirectoryReady { name: target_name, node }))
+                Some(Event::new(&target, EventPayload::DirectoryReady { name: target_name, node }))
             }
-            Err(e) => Event::new(
-                &target,
-                Err(EventError::new(&e, EventErrorPayload::DirectoryReady { name: target_name })),
-            ),
+            Err(_) => None,
         }
     }
 
@@ -306,20 +303,13 @@ impl DirectoryReadyNotifier {
                     let event = node
                         .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server_end)
                         .map(|_| {
-                            Event::new_builtin(Ok(EventPayload::DirectoryReady {
+                            Event::new_builtin(EventPayload::DirectoryReady {
                                 name: name.clone(),
                                 node: node_clone,
-                            }))
+                            })
                         })
-                        .unwrap_or_else(|_| {
-                            let err =
-                                ModelError::clone_node_error(AbsoluteMoniker::root(), name.clone());
-                            Event::new_builtin(Err(EventError::new(
-                                &err,
-                                EventErrorPayload::DirectoryReady { name: name.clone() },
-                            )))
-                        });
-                    Some(event)
+                        .ok();
+                    event
                 })
                 .collect()
         } else {
@@ -429,8 +419,8 @@ impl Hook for DirectoryReadyNotifier {
         let target_moniker = event
             .target_moniker
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
-        match &event.result {
-            Ok(EventPayload::Started { runtime, component_decl, .. }) => {
+        match &event.payload {
+            EventPayload::Started { runtime, component_decl, .. } => {
                 if filter_matching_exposes(&component_decl, None).is_empty() {
                     // Short-circuit if there are no matching exposes so we don't spawn a task
                     // if there's nothing to do. In particular, don't wait for the component's
@@ -460,6 +450,7 @@ mod tests {
         testing::test_helpers::{TestEnvironmentBuilder, TestModelResult},
     };
     use cm_rust_testing::ComponentDeclBuilder;
+    use moniker::AbsoluteMonikerBase;
     use std::convert::TryFrom;
 
     #[fuchsia::test]
@@ -489,10 +480,11 @@ mod tests {
                 &CapabilityPath::try_from("/foo").unwrap(),
                 &CapabilityName::from("foo"),
             )
-            .await;
+            .await
+            .unwrap();
         assert_eq!(event.target_moniker, AbsoluteMoniker::root().into());
         assert_eq!(event.component_url, "test:///root");
-        let payload = event.result.expect("got ok result");
+        let payload = event.payload;
 
         match payload {
             EventPayload::DirectoryReady { name, .. } => {

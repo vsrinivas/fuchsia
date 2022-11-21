@@ -568,10 +568,9 @@ mod tests {
     use {
         super::*,
         crate::model::{
-            hooks::{Event as ComponentEvent, EventError, EventErrorPayload, EventPayload},
+            hooks::{Event as ComponentEvent, EventPayload},
             testing::test_helpers::{TestModelResult, *},
         },
-        ::routing::error::ComponentInstanceError,
         assert_matches::assert_matches,
         cm_rust::{
             Availability, ChildDecl, ComponentDecl, DependencyType, DictionaryValue, OfferDecl,
@@ -591,11 +590,11 @@ mod tests {
         let event = ComponentEvent::new_for_test(
             AbsoluteMoniker::root(),
             "fuchsia-pkg://root",
-            Ok(EventPayload::CapabilityRequested {
+            EventPayload::CapabilityRequested {
                 source_moniker: AbsoluteMoniker::root(),
                 name: "foo".to_string(),
                 capability: capability_server_end,
-            }),
+            },
         );
         registry.dispatch(&event).await
     }
@@ -604,20 +603,7 @@ mod tests {
         let event = ComponentEvent::new_for_test(
             AbsoluteMoniker::root(),
             "fuchsia-pkg://root",
-            Ok(EventPayload::Discovered { instance_id: 0 }),
-        );
-        registry.dispatch(&event).await
-    }
-
-    async fn dispatch_error_event(registry: &EventRegistry) -> Result<(), ModelError> {
-        let root = AbsoluteMoniker::root();
-        let event = ComponentEvent::new_for_test(
-            root.clone(),
-            "fuchsia-pkg://root",
-            Err(EventError::new(
-                &ModelError::instance_not_found(root.clone()),
-                EventErrorPayload::Resolved,
-            )),
+            EventPayload::Discovered { instance_id: 0 },
         );
         registry.dispatch(&event).await
     }
@@ -673,39 +659,6 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn event_error_dispatch() {
-        let TestModelResult { model, .. } = TestEnvironmentBuilder::new().build().await;
-        let event_registry = EventRegistry::new(Arc::downgrade(&model));
-
-        assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Resolved).await);
-
-        let mut event_stream = event_registry
-            .subscribe(
-                &ExtendedMoniker::ComponentManager,
-                vec![EventSubscription::new(EventType::Resolved.into(), EventMode::Async)],
-            )
-            .await
-            .expect("subscribed to event stream");
-
-        assert_eq!(1, event_registry.dispatchers_per_event_type(EventType::Resolved).await);
-
-        dispatch_error_event(&event_registry).await.unwrap();
-
-        let event = event_stream.next().await.map(|(event, _)| event.event).unwrap();
-
-        // Verify that we received the event error.
-        assert_matches!(
-            event.result,
-            Err(EventError {
-                source: ModelError::ComponentInstanceError {
-                    err: ComponentInstanceError::InstanceNotFound { .. }
-                },
-                event_error_payload: EventErrorPayload::Resolved,
-            })
-        );
-    }
-
-    #[fuchsia::test]
     async fn capability_requested_over_two_event_streams() {
         let TestModelResult { model, .. } = TestEnvironmentBuilder::new().build().await;
         let event_registry = EventRegistry::new(Arc::downgrade(&model));
@@ -752,18 +705,12 @@ mod tests {
         let event_a = event_stream_a.next().await.map(|(event, _)| event.event).unwrap();
 
         // Verify that we received a valid CapabilityRequested event.
-        assert_matches!(event_a.result, Ok(EventPayload::CapabilityRequested { .. }));
+        assert_matches!(event_a.payload, EventPayload::CapabilityRequested { .. });
 
         let event_b = event_stream_b.next().await.map(|(event, _)| event.event).unwrap();
 
-        // Verify that we received the event error.
-        assert_matches!(
-            event_b.result,
-            Err(EventError {
-                event_error_payload: EventErrorPayload::CapabilityRequested { .. },
-                ..
-            })
-        );
+        // Verify that we received a valid CapabilityRequested event.
+        assert_matches!(event_b.payload, EventPayload::CapabilityRequested { .. });
     }
 
     #[fuchsia::test]

@@ -286,10 +286,10 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
 
             let event = Event::new(
                 &target,
-                Ok(EventPayload::CapabilityRouted {
+                EventPayload::CapabilityRouted {
                     source: source.clone(),
                     capability_provider: mutexed_provider.clone(),
-                }),
+                },
             );
 
             // Get a capability provider from the tree

@@ -110,10 +110,10 @@ async fn use_framework_service() {
     #[async_trait]
     impl Hook for MockRealmCapabilityHost {
         async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-            if let Ok(EventPayload::CapabilityRouted {
+            if let EventPayload::CapabilityRouted {
                 source: CapabilitySource::Framework { capability, component },
                 capability_provider,
-            }) = &event.result
+            } = &event.payload
             {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
@@ -1640,13 +1640,13 @@ async fn use_runner_from_environment_failed() {
     #[async_trait]
     impl Hook for RunnerHost {
         async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-            if let Ok(EventPayload::CapabilityRouted {
+            if let EventPayload::CapabilityRouted {
                 source:
                     CapabilitySource::Component {
                         capability: ComponentCapability::Runner(decl), ..
                     },
                 capability_provider,
-            }) = &event.result
+            } = &event.payload
             {
                 let mut capability_provider = capability_provider.lock().await;
                 if decl.name.str() == "runner" {

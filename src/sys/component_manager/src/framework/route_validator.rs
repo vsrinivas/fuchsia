@@ -145,8 +145,8 @@ impl RouteValidator {
 #[async_trait]
 impl Hook for RouteValidator {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        match &event.result {
-            Ok(EventPayload::CapabilityRouted { source, capability_provider }) => {
+        match &event.payload {
+            EventPayload::CapabilityRouted { source, capability_provider } => {
                 self.on_capability_routed_async(source.clone(), capability_provider.clone())
                     .await?;
             }

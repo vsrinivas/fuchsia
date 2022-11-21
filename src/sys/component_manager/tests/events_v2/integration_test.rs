@@ -122,11 +122,6 @@ async fn event_directory_ready() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn resolved_error_test() {
-    start_nested_cm_and_wait_for_clean_stop("#meta/resolved_error_reporter_v2.cm", "./root").await;
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn synthesis_test() {
     start_nested_cm_and_wait_for_clean_stop("#meta/synthesis_reporter_v2.cm", "./root").await;
 }

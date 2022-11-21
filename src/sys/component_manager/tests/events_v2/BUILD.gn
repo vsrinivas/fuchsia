@@ -67,12 +67,6 @@ fuchsia_component("nested_reporter_v2") {
   manifest = "components/nested/meta/reporter_v2.cml"
 }
 
-fuchsia_component("resolved_error_reporter_v2") {
-  testonly = true
-  deps = [ "components:resolved_error_reporter_v2_bin" ]
-  manifest = "components/resolved_error/meta/reporter_v2.cml"
-}
-
 fuchsia_component("event_dispatch_order_root_v2") {
   testonly = true
   deps = [ "components:stub_component_v2_bin" ]
@@ -124,7 +118,6 @@ fuchsia_unittest_package("events_v2_integration_test") {
     ":realm_offered_nested_v2",
     ":realm_offered_reporter_v2",
     ":realm_offered_root_v2",
-    ":resolved_error_reporter_v2",
     ":stub_component_v2",
     ":synthesis_reporter_v2",
     "//src/sys/component_manager:component-manager-realm-builder-debug-cmp",

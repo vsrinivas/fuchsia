@@ -5,9 +5,7 @@
 use {
     crate::model::{
         events::{event::Event, registry::ComponentEventRoute},
-        hooks::{
-            Event as ComponentEvent, EventError, EventErrorPayload, EventPayload, TransferEvent,
-        },
+        hooks::{Event as ComponentEvent, EventPayload, TransferEvent},
     },
     ::routing::event::EventFilter,
     anyhow::Error,
@@ -156,21 +154,13 @@ impl EventDispatcherScope {
     /// Given the subscriber, indicates whether or not the event is contained
     /// in this scope.
     pub fn contains(&self, subscriber: &ExtendedMoniker, event: &ComponentEvent) -> bool {
-        let in_scope = match &event.result {
-            Ok(EventPayload::CapabilityRequested { source_moniker, .. })
-            | Err(EventError {
-                event_error_payload: EventErrorPayload::CapabilityRequested { source_moniker, .. },
-                ..
-            }) => match &subscriber {
+        let in_scope = match &event.payload {
+            EventPayload::CapabilityRequested { source_moniker, .. } => match &subscriber {
                 ExtendedMoniker::ComponentManager => true,
                 ExtendedMoniker::ComponentInstance(target) => *source_moniker == *target,
             },
             // CapabilityRouted events are never dispatched
-            Ok(EventPayload::CapabilityRouted { .. })
-            | Err(EventError {
-                event_error_payload: EventErrorPayload::CapabilityRouted { .. },
-                ..
-            }) => false,
+            EventPayload::CapabilityRouted { .. } => false,
             _ => {
                 let contained_in_realm = self.moniker.contains_in_realm(&event.target_moniker);
                 let is_component_instance = matches!(
@@ -187,23 +177,11 @@ impl EventDispatcherScope {
 
         // TODO(fsamuel): Creating hashmaps on every lookup is not ideal, but in practice this
         // likely doesn't happen too often.
-        let filterable_fields = match &event.result {
-            Ok(EventPayload::CapabilityRequested { name, .. }) => Some(hashmap! {
+        let filterable_fields = match &event.payload {
+            EventPayload::CapabilityRequested { name, .. } => Some(hashmap! {
                 "name".to_string() => DictionaryValue::Str(name.into())
             }),
-            Ok(EventPayload::DirectoryReady { name, .. }) => Some(hashmap! {
-                "name".to_string() => DictionaryValue::Str(name.into())
-            }),
-            Err(EventError {
-                event_error_payload: EventErrorPayload::CapabilityRequested { name, .. },
-                ..
-            }) => Some(hashmap! {
-                "name".to_string() => DictionaryValue::Str(name.into())
-            }),
-            Err(EventError {
-                event_error_payload: EventErrorPayload::DirectoryReady { name, .. },
-                ..
-            }) => Some(hashmap! {
+            EventPayload::DirectoryReady { name, .. } => Some(hashmap! {
                 "name".to_string() => DictionaryValue::Str(name.into())
             }),
             _ => None,
@@ -267,11 +245,11 @@ mod tests {
         let event = ComponentEvent::new_for_test(
             AbsoluteMoniker::root(),
             "fuchsia-pkg://root/a/b/c",
-            Ok(EventPayload::CapabilityRequested {
+            EventPayload::CapabilityRequested {
                 source_moniker: source_moniker.clone(),
                 name: "foo".to_string(),
                 capability: capability_server_end,
-            }),
+            },
         );
         dispatcher.dispatch(&event).await.ok().flatten()
     }
@@ -283,7 +261,7 @@ mod tests {
         let event = ComponentEvent::new_for_test(
             AbsoluteMoniker::root(),
             "fuchsia-pkg://root/a/b/c",
-            Ok(EventPayload::CapabilityRouted {
+            EventPayload::CapabilityRouted {
                 source: CapabilitySource::Builtin {
                     capability: InternalCapability::Protocol(
                         "fuchsia.sys2.MyAwesomeProtocol".try_into().unwrap(),
@@ -291,7 +269,7 @@ mod tests {
                     top_instance: Weak::new(),
                 },
                 capability_provider: empty_capability_provider,
-            }),
+            },
         );
         dispatcher.dispatch(&event).await.ok().flatten()
     }
@@ -309,7 +287,7 @@ mod tests {
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
         assert_matches!(
             factory.next_event().await,
-            Some(ComponentEvent { result: Ok(EventPayload::CapabilityRequested { .. }), .. })
+            Some(ComponentEvent { payload: EventPayload::CapabilityRequested { .. }, .. })
         );
 
         // Verify that we cannot dispatch the CapabilityRequested event to the root component.
@@ -334,7 +312,7 @@ mod tests {
         assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_some());
         assert_matches!(
             factory.next_event().await,
-            Some(ComponentEvent { result: Ok(EventPayload::CapabilityRequested { .. }), .. })
+            Some(ComponentEvent { payload: EventPayload::CapabilityRequested { .. }, .. })
         );
 
         // Verify that we cannot dispatch the CapabilityRequested event to the root:0/a:0/b:0/c:0/d:0 component.

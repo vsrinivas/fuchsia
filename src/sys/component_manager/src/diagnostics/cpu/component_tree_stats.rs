@@ -463,7 +463,7 @@ impl Hook for ComponentTreeStats<DiagnosticsTask> {
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match event.event_type() {
             EventType::Started => {
-                if let Some(EventPayload::Started { runtime, .. }) = event.result.as_ref().ok() {
+                if let EventPayload::Started { runtime, .. } = &event.payload {
                     self.on_component_started(target_moniker, runtime).await;
                 }
             }
