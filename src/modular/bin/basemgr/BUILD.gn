@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//src/ui/build_args.gni")
 
-group("tests") {
+group("legacy_tests") {
   testonly = true
   deps = [ ":basemgr_unittests" ]
 }

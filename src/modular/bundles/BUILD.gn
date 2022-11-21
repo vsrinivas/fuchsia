@@ -26,9 +26,3 @@ group("integration_testing") {
   testonly = true
   public_deps = [ ":framework" ]
 }
-
-# Packages which contain tests.
-group("tests") {
-  testonly = true
-  public_deps = [ "//src/modular:tests" ]
-}
