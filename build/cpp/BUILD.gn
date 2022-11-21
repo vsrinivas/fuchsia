@@ -153,7 +153,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//zircon/system/ulib/usb-virtual-bus-launcher",
     "//zircon/system/utest/dlfcn",
     "//zircon/system/utest/miscsvc",
-    "//zircon/system/utest/svchost",
     "//zircon/third_party/uapp/dash",
   ]
 }
