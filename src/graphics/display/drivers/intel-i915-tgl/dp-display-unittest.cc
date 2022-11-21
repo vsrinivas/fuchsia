@@ -210,7 +210,14 @@ class DpDisplayTest : public ::testing::Test {
   std::optional<PchEngine> pch_engine_;
 };
 
-// Tests that display creation fails if the DP sink count is not 1, as MST is not supported.
+// Tests that display creation fails if the there is no DisplayPort sink.
+TEST_F(DpDisplayTest, NoSinkNotSupported) {
+  fake_dpcd()->SetSinkCount(0);
+  ASSERT_EQ(nullptr, MakeDisplay(DdiId::DDI_A));
+}
+
+// Tests that display creation fails if the DP sink count is greater than 1, as
+// MST is not supported.
 TEST_F(DpDisplayTest, MultipleSinksNotSupported) {
   fake_dpcd()->SetSinkCount(2);
   ASSERT_EQ(nullptr, MakeDisplay(DdiId::DDI_A));

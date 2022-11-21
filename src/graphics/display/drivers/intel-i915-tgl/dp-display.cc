@@ -1669,10 +1669,22 @@ bool DpDisplay::Query() {
     capabilities_ = capabilities.take_value();
   }
 
-  // TODO(fxbug.dev/31313): Add support for MST
-  if (capabilities_->sink_count() != 1) {
-    zxlogf(ERROR, "MST not supported");
-    return false;
+  switch (capabilities_->sink_count()) {
+    case 0:
+      zxlogf(ERROR,
+             "No DisplayPort Sink devices detected on DDI %d. No DisplayDevice will "
+             "be created.",
+             ddi_id());
+      return false;
+    case 1:
+      break;
+    default:
+      // TODO(fxbug.dev/31313): Add support for MST.
+      zxlogf(ERROR,
+             "Multiple (%lu) DisplayPort Sink devices detected on DDI %d. DisplayPort "
+             "Multi-Stream Transport is not supported yet.",
+             capabilities_->sink_count(), ddi_id());
+      return false;
   }
 
   uint8_t lane_count = capabilities_->max_lane_count();
