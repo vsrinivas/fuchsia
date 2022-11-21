@@ -4,16 +4,20 @@
 
 use {
     account_common::AccountManagerError,
+    anyhow::format_err,
     async_utils::hanging_get::server::{HangingGet, Publisher},
     fidl::endpoints::{ControlHandle, ServerEnd},
     fidl_fuchsia_identity_account::Error as ApiError,
     fidl_fuchsia_identity_authentication::{
-        AttemptedEvent, InteractionMarker, InteractionRequest, InteractionRequestStream,
-        InteractionWatchStateResponder, InteractionWatchStateResponse, Mechanism, Mode,
+        AttemptedEvent, Enrollment, InteractionMarker, InteractionProtocolServerEnd,
+        InteractionRequest, InteractionRequestStream, InteractionWatchStateResponder,
+        InteractionWatchStateResponse, Mechanism, Mode, StorageUnlockMechanismMarker,
+        StorageUnlockMechanismProxy,
     },
+    fuchsia_component::client,
     fuchsia_zircon as zx,
-    futures::TryStreamExt,
-    std::cell::RefCell,
+    futures::{Future, TryStreamExt},
+    std::{cell::RefCell, rc::Rc},
     tracing::warn,
 };
 
@@ -33,14 +37,6 @@ pub struct EnrollmentData(Vec<u8>);
 /// capable of storage unlock.
 /// TODO(fxb/114074): Remove this and start using a common type across all modules.
 pub struct PrekeyMaterial(Vec<u8>);
-
-#[allow(dead_code)]
-// TODO(fxb/104337): Use the following type when we start returning the data
-// from handle_requests_from_stream.
-enum AuthenticatorResponse {
-    Authenticate(AttemptedEvent),
-    Enrollment(EnrollmentData, PrekeyMaterial),
-}
 
 /// Generate an InteractionWatchStateResponse when the `Mode` and `Mechanism`
 /// are specified.
@@ -84,18 +80,25 @@ impl Interaction {
 
     #[allow(dead_code)]
     /// Handles request stream over the provided `server_end` and connects to an
-    /// authenticator supporting the provided `mechanism`. Performs authenticate
+    /// authenticator supporting the provided `mechanism`. `enrollments` specify
+    /// the list of enrollments to be accepted by the authenticator. Performs authenticate
     /// operation and returns the result. It will always run in `Authenticate` mode.
     pub async fn authenticate(
         server_end: ServerEnd<InteractionMarker>,
         mechanism: Mechanism,
+        enrollments: Vec<Enrollment>,
     ) -> Result<AttemptedEvent, AccountManagerError> {
         let interaction = Self::new(mechanism, Mode::Authenticate);
         let stream = server_end.into_stream()?;
-        interaction.handle_requests_from_stream(stream).await?;
-        // TODO(104337): Return the actual result from the authentication
-        // once it is fully functional.
-        Ok(AttemptedEvent::EMPTY)
+        let enrollments = Rc::new(RefCell::new(enrollments));
+        interaction
+            .handle_requests_from_stream(
+                stream,
+                Box::new(move |storage_unlock_proxy, ipse| {
+                    Self::start_authentication(Rc::clone(&enrollments), storage_unlock_proxy, ipse)
+                }),
+            )
+            .await
     }
 
     #[allow(dead_code)]
@@ -108,10 +111,7 @@ impl Interaction {
     ) -> Result<(EnrollmentData, PrekeyMaterial), AccountManagerError> {
         let interaction = Self::new(mechanism, Mode::Enroll);
         let stream = server_end.into_stream()?;
-        interaction.handle_requests_from_stream(stream).await?;
-        // TODO(104337): Return the actual result from the enrollment
-        // once it is fully functional.
-        Ok((EnrollmentData(vec![]), PrekeyMaterial(vec![])))
+        interaction.handle_requests_from_stream(stream, Box::new(Self::start_enrollment)).await
     }
 
     /// Generate an InteractionWatchStateResponse based on the current
@@ -137,10 +137,21 @@ impl Interaction {
     }
 
     /// Asynchronously handles the supplied stream of `InteractionRequestStream` messages.
-    async fn handle_requests_from_stream(
+    ///
+    /// * `stream` - Stream of InteractionRequests to be processed.
+    /// * `authenticator_fn` - A function pointer which will talk to the StorageUnlockMechanism
+    /// server to process the Authentication and Enrollment requests and return
+    /// the result of the operation.
+    async fn handle_requests_from_stream<T, Fut>(
         &self,
         mut stream: InteractionRequestStream,
-    ) -> Result<(), AccountManagerError> {
+        authenticator_fn: Box<
+            dyn Fn(StorageUnlockMechanismProxy, InteractionProtocolServerEnd) -> Fut + 'static,
+        >,
+    ) -> Result<T, AccountManagerError>
+    where
+        Fut: Future<Output = Result<T, AccountManagerError>>,
+    {
         while let Some(req) = stream.try_next().await? {
             match req {
                 InteractionRequest::StartPassword { mode, control_handle, ui } => {
@@ -159,7 +170,7 @@ impl Interaction {
                                 fuchsia.identity.authentication.Interaction.StartPassword"
                             );
                             control_handle.shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
-                            return Ok(());
+                            return Err(AccountManagerError::from(ApiError::InvalidRequest));
                         }
                     }
                 }
@@ -175,8 +186,21 @@ impl Interaction {
                         Ok(()) => {
                             // TODO(104337): Get enrollment/authentication result
                             // from the authenticator and return.
-                            control_handle.shutdown_with_epitaph(zx::Status::OK);
-                            return Ok(());
+                            let storage_unlock_proxy = self.get_storage_unlock_proxy()?;
+                            match authenticator_fn(
+                                storage_unlock_proxy,
+                                InteractionProtocolServerEnd::Test(ui),
+                            )
+                            .await
+                            {
+                                Ok(result) => {
+                                    control_handle.shutdown_with_epitaph(zx::Status::OK);
+                                    return Ok(result);
+                                }
+                                Err(err) => {
+                                    warn!("Authenticator operation failed with error: {:?}", err);
+                                }
+                            }
                         }
                     }
                 }
@@ -220,6 +244,48 @@ impl Interaction {
 
         Ok(())
     }
+
+    /// Get the proxy to the appropriate authenticator based on the Mechanism.
+    fn get_storage_unlock_proxy(&self) -> Result<StorageUnlockMechanismProxy, ApiError> {
+        // TODO(fxb/104199): Return the correct proxy based on the current
+        // operation mechanism.
+        client::connect_to_protocol::<StorageUnlockMechanismMarker>().map_err(|err| {
+            warn!("Failed to connect to authenticator {:?}", err);
+            ApiError::Resource
+        })
+    }
+
+    async fn start_authentication(
+        enrollments: Rc<RefCell<Vec<Enrollment>>>,
+        storage_unlock_proxy: StorageUnlockMechanismProxy,
+        mut ipse: InteractionProtocolServerEnd,
+    ) -> Result<AttemptedEvent, AccountManagerError> {
+        let auth_attempt = storage_unlock_proxy
+            .authenticate(&mut ipse, &mut enrollments.borrow_mut().iter_mut())
+            .await
+            .map_err(|err| {
+                AccountManagerError::new(ApiError::Unknown)
+                    .with_cause(format_err!("Error connecting to authenticator: {:?}", err))
+            })?
+            .map_err(|authenticator_err| AccountManagerError::from(authenticator_err).api_error)?;
+
+        Ok(auth_attempt)
+    }
+
+    async fn start_enrollment(
+        storage_unlock_proxy: StorageUnlockMechanismProxy,
+        mut ipse: InteractionProtocolServerEnd,
+    ) -> Result<(EnrollmentData, PrekeyMaterial), AccountManagerError> {
+        let (data, prekey_material) = storage_unlock_proxy
+            .enroll(&mut ipse)
+            .await
+            .map_err(|err| {
+                AccountManagerError::new(ApiError::Unknown)
+                    .with_cause(format_err!("Error connecting to authenticator: {:?}", err))
+            })?
+            .map_err(|authenticator_err| AccountManagerError::from(authenticator_err).api_error)?;
+        Ok((EnrollmentData(data), PrekeyMaterial(prekey_material)))
+    }
 }
 
 #[cfg(test)]
@@ -233,41 +299,54 @@ mod tests {
         futures::StreamExt,
     };
 
-    fn make_proxy(mechanism: Mechanism, mode: Mode) -> InteractionProxy {
+    /// Returns an InteractionProxy and a task which reports the result of handling
+    /// all the requests on the Interaction channel.
+    ///
+    /// * `mechanism` - Current operating mechanism for authentication.
+    /// * `mode` - Operation to be performed.
+    /// * `storage_unlock` - A function pointer which will perform the actual operation
+    /// and return the result.
+    fn make_proxy<T, Fut>(
+        mechanism: Mechanism,
+        mode: Mode,
+        storage_unlock: Box<
+            dyn Fn(StorageUnlockMechanismProxy, InteractionProtocolServerEnd) -> Fut + 'static,
+        >,
+    ) -> (InteractionProxy, Task<Result<T, AccountManagerError>>)
+    where
+        Fut: Future<Output = Result<T, AccountManagerError>> + 'static,
+    {
         let (proxy, server_end) =
             create_proxy::<InteractionMarker>().expect("Failed to create interaction proxy");
         let interaction_handler = Interaction::new(mechanism, mode);
 
-        Task::local(async move {
+        let task = Task::local(async move {
             interaction_handler
-                .handle_requests_from_stream(server_end.into_stream().expect(
-                    "Failed to create \
+                .handle_requests_from_stream(
+                    server_end.into_stream().expect(
+                        "Failed to create \
                             fuchsia.identity.authentication.Interaction stream \
                             from server end",
-                ))
+                    ),
+                    storage_unlock,
+                )
                 .await
-                .unwrap_or_else(|err| {
-                    warn!(
-                        "Error while handling \
-                        fuchsia.identity.authentication.Interaction request stream: {:?}",
-                        err
-                    );
-                });
-        })
-        .detach();
-        proxy
+        });
+        (proxy, task)
     }
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn interaction_initial_state() {
-        let proxy = make_proxy(Mechanism::Test, Mode::Enroll);
+        let (proxy, _task) =
+            make_proxy(Mechanism::Test, Mode::Enroll, Box::new(move |_, _| async { Ok(()) }));
         let state = proxy.watch_state().await.expect("Failed to get interaction state");
         assert_eq!(state, InteractionWatchStateResponse::Enrollment(vec![Mechanism::Test]));
     }
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn interaction_unsupported_password_mechanism() {
-        let proxy = make_proxy(Mechanism::Password, Mode::Enroll);
+        let (proxy, task) =
+            make_proxy(Mechanism::Password, Mode::Enroll, Box::new(move |_, _| async { Ok(()) }));
         let state = proxy.watch_state().await.expect("Failed to get interaction state");
         assert_eq!(state, InteractionWatchStateResponse::Enrollment(vec![Mechanism::Password]));
 
@@ -287,11 +366,24 @@ mod tests {
             state_fut.await.expect("Failed to get interaction state"),
             InteractionWatchStateResponse::Enrollment(vec![Mechanism::Password])
         );
+
+        // The result of the task should report an InvalidRequest error.
+        assert_matches!(
+            task.await,
+            Err(AccountManagerError { api_error: ApiError::InvalidRequest, .. })
+        );
     }
 
     #[fuchsia_async::run_until_stalled(test)]
-    async fn interaction_test_succeed() {
-        let proxy = make_proxy(Mechanism::Test, Mode::Enroll);
+    async fn interaction_test_succeed_enrollment() {
+        let (proxy, task) = make_proxy(
+            Mechanism::Test,
+            Mode::Enroll,
+            Box::new(|_, ipse| async move {
+                assert_matches!(ipse, InteractionProtocolServerEnd::Test(_));
+                Ok(()) // Final result after operation completion.
+            }),
+        );
         let state = proxy.watch_state().await.expect("Failed to get interaction state");
         assert_eq!(state, InteractionWatchStateResponse::Enrollment(vec![Mechanism::Test]));
 
@@ -302,11 +394,66 @@ mod tests {
             proxy.take_event_stream().next().await.unwrap(),
             Err(fidl::Error::ClientChannelClosed { status: fidl::Status::OK, .. })
         );
+
+        // Check that the enrollment operation succeeds.
+        assert_matches!(task.await, Ok(()));
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn interaction_test_succeed_authentication() {
+        let (proxy, task) = make_proxy(
+            Mechanism::Test,
+            Mode::Authenticate,
+            Box::new(|_, _| async {
+                Ok(()) // Final result after operation completion.
+            }),
+        );
+        let state = proxy.watch_state().await.expect("Failed to get interaction state");
+        assert_eq!(state, InteractionWatchStateResponse::Authenticate(vec![Mechanism::Test]));
+
+        let (_test_proxy, test_interaction_server_end) = create_endpoints().unwrap();
+        // Send a StartTest event and verify that channel closes with Ok.
+        let _ = proxy.start_test(test_interaction_server_end, Mode::Authenticate).unwrap();
+        assert_matches!(
+            proxy.take_event_stream().next().await.unwrap(),
+            Err(fidl::Error::ClientChannelClosed { status: fidl::Status::OK, .. })
+        );
+
+        // Check that the authentication operation succeeds.
+        assert_matches!(task.await, Ok(()));
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn interaction_test_fail_authentication() {
+        let (proxy, _task) = make_proxy(
+            Mechanism::Test,
+            Mode::Authenticate,
+            Box::new(|_, _| async {
+                Err(AccountManagerError::new(ApiError::Internal)) as Result<(), AccountManagerError>
+                // Final result after operation completion.
+            }),
+        );
+        let state = proxy.watch_state().await.expect("Failed to get interaction state");
+        assert_eq!(state, InteractionWatchStateResponse::Authenticate(vec![Mechanism::Test]));
+
+        let (_test_proxy, test_interaction_server_end) = create_endpoints().unwrap();
+        // Send a StartTest event and verify that channel closes with Ok.
+        let _ = proxy.start_test(test_interaction_server_end, Mode::Authenticate).unwrap();
+
+        // Since authentication failed, it should return the same response as before.
+        let state = proxy.watch_state().await.expect("Failed to get interaction state");
+        assert_eq!(state, InteractionWatchStateResponse::Authenticate(vec![Mechanism::Test]));
     }
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn interaction_test_invalid_mode_delayed_watch_state() {
-        let proxy = make_proxy(Mechanism::Test, Mode::Enroll);
+        let (proxy, _task) = make_proxy(
+            Mechanism::Test,
+            Mode::Enroll,
+            Box::new(|_, _| async {
+                Ok(()) // Final result after operation completion.
+            }),
+        );
 
         let (test_proxy, test_interaction_server_end) = create_proxy().unwrap();
         // Send a StartTest event with a different mode and verify that the
@@ -324,7 +471,13 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn interaction_test_invalid_mechanism_delayed_watch_state() {
-        let proxy = make_proxy(Mechanism::Test, Mode::Enroll);
+        let (proxy, _task) = make_proxy(
+            Mechanism::Test,
+            Mode::Enroll,
+            Box::new(|_, _| async {
+                Ok(()) // Final result after operation completion.
+            }),
+        );
 
         let (password_proxy, test_password_interaction_server_end) = create_proxy().unwrap();
         // Send a StartPassword event which is a different mode and verify that
@@ -342,7 +495,13 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn interaction_test_invalid_mode_multiple_watch_calls() {
-        let proxy = make_proxy(Mechanism::Test, Mode::Enroll);
+        let (proxy, _task) = make_proxy(
+            Mechanism::Test,
+            Mode::Enroll,
+            Box::new(|_, _| async {
+                Ok(()) // Final result after operation completion.
+            }),
+        );
         let state = proxy.watch_state().await.expect("Failed to get interaction state");
         assert_eq!(state, InteractionWatchStateResponse::Enrollment(vec![Mechanism::Test]));
 
