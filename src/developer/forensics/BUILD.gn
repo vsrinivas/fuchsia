@@ -50,6 +50,10 @@ group("user_configs") {
   ]
 }
 
+group("workstation_configs") {
+  deps = [ ":feedback_workstation_product_config" ]
+}
+
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -167,6 +171,14 @@ resource("feedback_default_product_config") {
   sources = [ "feedback/configs/product/default.json" ]
 
   outputs = [ "data/product/default_config.json" ]
+}
+
+config_data("feedback_workstation_product_config") {
+  for_pkg = "forensics"
+
+  sources = [ "feedback/configs/product/workstation.json" ]
+
+  outputs = [ "product/override_config.json" ]
 }
 
 resource("feedback_data_config") {

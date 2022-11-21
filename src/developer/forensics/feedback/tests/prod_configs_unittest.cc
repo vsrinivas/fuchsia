@@ -35,6 +35,16 @@ TEST_F(ProdConfigTest, DefaultProduct) {
   EXPECT_FALSE(config->snapshot_persistence_max_cache_size.has_value());
 }
 
+TEST_F(ProdConfigTest, WorkstationProduct) {
+  const std::optional<ProductConfig> config = ReadProductConfig("workstation.json");
+  ASSERT_TRUE(config.has_value());
+
+  EXPECT_EQ(config->persisted_logs_num_files, 8u);
+  EXPECT_EQ(config->persisted_logs_total_size, StorageSize::Kilobytes(512));
+  EXPECT_FALSE(config->snapshot_persistence_max_tmp_size.has_value());
+  EXPECT_FALSE(config->snapshot_persistence_max_cache_size.has_value());
+}
+
 TEST_F(ProdConfigTest, Default) {
   const std::optional<BuildTypeConfig> config = ReadBuildTypeConfig("default.json");
   ASSERT_TRUE(config.has_value());
