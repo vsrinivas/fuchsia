@@ -28,6 +28,7 @@ rustc_test("access_ota_blob_as_executable-test") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/security/tests/pkg_test/pkg_server:test.security.pkg_rust",
     "//src/security/tests/pkg_test/util",
+    "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer_rust",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-merkle",

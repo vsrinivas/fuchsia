@@ -8,10 +8,7 @@ use {
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
-    fidl_fuchsia_pkg::{
-        BlobId, BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker, PackageCacheMarker,
-        PackageResolverMarker, PackageUrl,
-    },
+    fidl_fuchsia_pkg::{BlobId, PackageCacheMarker, PackageResolverMarker, PackageUrl},
     fidl_fuchsia_sys2::{StorageAdminMarker, StorageIteratorMarker},
     fidl_fuchsia_update_installer::{
         Initiator, InstallerMarker, MonitorMarker, MonitorRequest, Options, RebootControllerMarker,
@@ -28,7 +25,7 @@ use {
     fuchsia_hash::Hash,
     fuchsia_merkle::MerkleTree,
     fuchsia_zircon::{AsHandleRef, Rights, Status},
-    futures::{channel::oneshot::channel, join, TryFutureExt as _, TryStreamExt},
+    futures::{channel::oneshot::channel, join, TryStreamExt},
     security_pkg_test_util::load_config,
     std::{convert::TryInto, fs::File},
     tracing::info,
@@ -169,10 +166,6 @@ impl AccessCheckRequest {
         let mut package = File::open(&self.config.local_package_path).unwrap();
         let package_merkle = MerkleTree::from_reader(&mut package).unwrap().root();
         let package_blob_id = BlobId { merkle_root: package_merkle.into() };
-        let package_blob_info = BlobInfo {
-            blob_id: package_blob_id,
-            length: package.metadata().expect("access meta.far File metadata").len(),
-        };
 
         // Open package via pkgfs-versions API.
         let pkgfs_versions_path = format!("{}/versions/{}", PKGFS_PATH, package_merkle);
@@ -250,54 +243,17 @@ impl AccessCheckRequest {
         let pkg_cache_get_rx_result = if self.selectors.pkg_cache_get {
             info!(%package_merkle, "Opening package via fuchsia.pkg/PackageCache.Get");
             // In all of the uses of this check in these tests, the package's blobs are already
-            // present in blobfs. This means we should not need to perform any of the parts of the
-            // PackageCache.Get protocol (and therefore any of the parts of the
-            // PackageCache.NeededBlobs protocol) that actually write blobs to blobfs.
-            // If this stops being the case, one of the below assertions will trigger and the test
-            // will fail (notifying a developer to update this test).
+            // present in blobfs.
+            // If this stops being the case, get_already_cached will fail (notifying a developer to
+            // update this test).
             let pkg_cache_proxy = connect_to_protocol::<PackageCacheMarker>().unwrap();
-            let (needed_blobs, needed_blobs_server_end) =
-                fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
-            let (package_directory_proxy, package_directory_server_end) =
-                create_proxy::<fio::DirectoryMarker>().unwrap();
 
-            let get_fut = pkg_cache_proxy
-                .get(
-                    &mut package_blob_info.clone(),
-                    needed_blobs_server_end,
-                    Some(package_directory_server_end),
-                )
-                .map_ok(|res| res.map_err(Status::from_raw));
-
-            let (_meta_blob, meta_blob_server_end) =
-                fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-
-            // If the package is in base or active in the dynamic index, the server will close the
-            // NeededBlobs channel with a `ZX_OK` epitaph.
-            // Otherwise, the server will respond to OpenMetaBlob with Ok(false), because in these
-            // tests all the package's blobs (including the meta.far) are already in blobfs.
-            let do_missing_blobs = match needed_blobs.open_meta_blob(meta_blob_server_end).await {
-                Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }) => false,
-                Ok(Ok(false)) => true,
-                Ok(r) => {
-                    panic!("meta.far blob not cached: unexpected response {:?}", r)
-                }
-                Err(e) => {
-                    panic!("meta.far blob not cached: unexpected FIDL error {:?}", e)
-                }
-            };
-
-            if do_missing_blobs {
-                let (blob_iterator, blob_iterator_server_end) =
-                    fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
-                let () = needed_blobs.get_missing_blobs(blob_iterator_server_end).unwrap();
-                // Iterator should be empty because all content blobs should be in blobfs.
-                assert!(blob_iterator.next().await.unwrap().is_empty());
-            }
-
-            // The initial PackageCache.Get request should complete now that the
-            // PackageCache.NeededBlobs procedure has been performed.
-            let () = get_fut.await.unwrap().unwrap();
+            let pkg_cache = fidl_fuchsia_pkg_ext::cache::Client::from_proxy(pkg_cache_proxy);
+            let package_directory = pkg_cache
+                .get_already_cached(package_blob_id.try_into().unwrap())
+                .await
+                .expect("package should already be cached");
+            let package_directory_proxy = package_directory.into_proxy();
 
             Some((
                 self.attempt_readable(&package_directory_proxy).await,
