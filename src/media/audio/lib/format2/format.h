@@ -7,6 +7,8 @@
 
 #include <fidl/fuchsia.audio/cpp/natural_types.h>
 #include <fidl/fuchsia.audio/cpp/wire_types.h>
+#include <fidl/fuchsia.media/cpp/natural_types.h>
+#include <fidl/fuchsia.media/cpp/wire_types.h>
 #include <fidl/fuchsia.mediastreams/cpp/natural_types.h>
 #include <fidl/fuchsia.mediastreams/cpp/wire_types.h>
 #include <lib/fpromise/result.h>
@@ -47,6 +49,13 @@ class Format {
       fuchsia_mediastreams::wire::AudioFormat msg);
   static Format CreateLegacyOrDie(fuchsia_mediastreams::AudioFormat msg);
   static Format CreateLegacyOrDie(fuchsia_mediastreams::wire::AudioFormat msg);
+
+  // TODO(fxbug.dev/115503): Remove when audio_core/v2 is deleted.
+  static fpromise::result<Format, std::string> CreateLegacy(fuchsia_media::AudioStreamType msg);
+  static fpromise::result<Format, std::string> CreateLegacy(
+      fuchsia_media::wire::AudioStreamType msg);
+  static Format CreateLegacyOrDie(fuchsia_media::AudioStreamType msg);
+  static Format CreateLegacyOrDie(fuchsia_media::wire::AudioStreamType msg);
 
   Format(const Format&) = default;
   Format& operator=(const Format&) = default;

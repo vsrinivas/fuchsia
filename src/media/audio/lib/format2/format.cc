@@ -23,6 +23,40 @@ namespace media_audio {
 using SampleType = fuchsia_audio::SampleType;
 using TimelineRate = media::TimelineRate;
 
+namespace {
+
+std::optional<SampleType> ConvertLegacySampleType(fuchsia_mediastreams::AudioSampleFormat fmt) {
+  switch (fmt) {
+    case fuchsia_mediastreams::AudioSampleFormat::kUnsigned8:
+      return SampleType::kUint8;
+    case fuchsia_mediastreams::AudioSampleFormat::kSigned16:
+      return SampleType::kInt16;
+    case fuchsia_mediastreams::AudioSampleFormat::kSigned24In32:
+      return SampleType::kInt32;
+    case fuchsia_mediastreams::AudioSampleFormat::kFloat:
+      return SampleType::kFloat32;
+    default:
+      return std::nullopt;
+  }
+}
+
+std::optional<SampleType> ConvertLegacySampleType(fuchsia_media::AudioSampleFormat fmt) {
+  switch (fmt) {
+    case fuchsia_media::AudioSampleFormat::kUnsigned8:
+      return SampleType::kUint8;
+    case fuchsia_media::AudioSampleFormat::kSigned16:
+      return SampleType::kInt16;
+    case fuchsia_media::AudioSampleFormat::kSigned24In32:
+      return SampleType::kInt32;
+    case fuchsia_media::AudioSampleFormat::kFloat:
+      return SampleType::kFloat32;
+    default:
+      return std::nullopt;
+  }
+}
+
+}  // namespace
+
 fpromise::result<Format, std::string> Format::Create(fuchsia_audio::wire::Format msg) {
   if (!msg.has_sample_type()) {
     return fpromise::error("missing required field (sample_type)");
@@ -110,28 +144,15 @@ Format Format::CreateOrDie(Args args) {
 }
 
 fpromise::result<Format, std::string> Format::CreateLegacy(fuchsia_mediastreams::AudioFormat msg) {
-  SampleType sample_type;
-  switch (msg.sample_format()) {
-    case fuchsia_mediastreams::wire::AudioSampleFormat::kUnsigned8:
-      sample_type = SampleType::kUint8;
-      break;
-    case fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16:
-      sample_type = SampleType::kInt16;
-      break;
-    case fuchsia_mediastreams::wire::AudioSampleFormat::kSigned24In32:
-      sample_type = SampleType::kInt32;
-      break;
-    case fuchsia_mediastreams::wire::AudioSampleFormat::kFloat:
-      sample_type = SampleType::kFloat32;
-      break;
-    default:
-      return fpromise::error("bad sample_format '" +
-                             std::to_string(fidl::ToUnderlying(msg.sample_format())) + "'");
+  auto sample_type = ConvertLegacySampleType(msg.sample_format());
+  if (!sample_type) {
+    return fpromise::error("bad sample_format '" +
+                           std::to_string(fidl::ToUnderlying(msg.sample_format())) + "'");
   }
 
   fidl::Arena<> arena;
   return Create(fuchsia_audio::wire::Format::Builder(arena)
-                    .sample_type(sample_type)
+                    .sample_type(*sample_type)
                     .channel_count(msg.channel_count())
                     .frames_per_second(msg.frames_per_second())
                     .Build());
@@ -139,28 +160,15 @@ fpromise::result<Format, std::string> Format::CreateLegacy(fuchsia_mediastreams:
 
 fpromise::result<Format, std::string> Format::CreateLegacy(
     fuchsia_mediastreams::wire::AudioFormat msg) {
-  SampleType sample_type;
-  switch (msg.sample_format) {
-    case fuchsia_mediastreams::wire::AudioSampleFormat::kUnsigned8:
-      sample_type = SampleType::kUint8;
-      break;
-    case fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16:
-      sample_type = SampleType::kInt16;
-      break;
-    case fuchsia_mediastreams::wire::AudioSampleFormat::kSigned24In32:
-      sample_type = SampleType::kInt32;
-      break;
-    case fuchsia_mediastreams::wire::AudioSampleFormat::kFloat:
-      sample_type = SampleType::kFloat32;
-      break;
-    default:
-      return fpromise::error("bad sample_format '" +
-                             std::to_string(fidl::ToUnderlying(msg.sample_format)) + "'");
+  auto sample_type = ConvertLegacySampleType(msg.sample_format);
+  if (!sample_type) {
+    return fpromise::error("bad sample_format '" +
+                           std::to_string(fidl::ToUnderlying(msg.sample_format)) + "'");
   }
 
   fidl::Arena<> arena;
   return Create(fuchsia_audio::wire::Format::Builder(arena)
-                    .sample_type(sample_type)
+                    .sample_type(*sample_type)
                     .channel_count(msg.channel_count)
                     .frames_per_second(msg.frames_per_second)
                     .Build());
@@ -175,6 +183,53 @@ Format Format::CreateLegacyOrDie(fuchsia_mediastreams::AudioFormat msg) {
 }
 
 Format Format::CreateLegacyOrDie(fuchsia_mediastreams::wire::AudioFormat msg) {
+  auto result = CreateLegacy(msg);
+  if (!result.is_ok()) {
+    FX_CHECK(false) << "Format::CreateLegacyOrDie failed: " << result.error();
+  }
+  return result.take_value();
+}
+
+fpromise::result<Format, std::string> Format::CreateLegacy(fuchsia_media::AudioStreamType msg) {
+  auto sample_type = ConvertLegacySampleType(msg.sample_format());
+  if (!sample_type) {
+    return fpromise::error("bad sample_format '" +
+                           std::to_string(fidl::ToUnderlying(msg.sample_format())) + "'");
+  }
+
+  fidl::Arena<> arena;
+  return Create(fuchsia_audio::wire::Format::Builder(arena)
+                    .sample_type(*sample_type)
+                    .channel_count(msg.channels())
+                    .frames_per_second(msg.frames_per_second())
+                    .Build());
+}
+
+fpromise::result<Format, std::string> Format::CreateLegacy(
+    fuchsia_media::wire::AudioStreamType msg) {
+  auto sample_type = ConvertLegacySampleType(msg.sample_format);
+  if (!sample_type) {
+    return fpromise::error("bad sample_format '" +
+                           std::to_string(fidl::ToUnderlying(msg.sample_format)) + "'");
+  }
+
+  fidl::Arena<> arena;
+  return Create(fuchsia_audio::wire::Format::Builder(arena)
+                    .sample_type(*sample_type)
+                    .channel_count(msg.channels)
+                    .frames_per_second(msg.frames_per_second)
+                    .Build());
+}
+
+Format Format::CreateLegacyOrDie(fuchsia_media::AudioStreamType msg) {
+  auto result = CreateLegacy(msg);
+  if (!result.is_ok()) {
+    FX_CHECK(false) << "Format::CreateLegacyOrDie failed: " << result.error();
+  }
+  return result.take_value();
+}
+
+Format Format::CreateLegacyOrDie(fuchsia_media::wire::AudioStreamType msg) {
   auto result = CreateLegacy(msg);
   if (!result.is_ok()) {
     FX_CHECK(false) << "Format::CreateLegacyOrDie failed: " << result.error();
