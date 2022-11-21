@@ -91,6 +91,7 @@ source_set("tests") {
     "js_testing_utils.h",
     "ns_test.cc",
     "pp_test.cc",
+    "runtime_test.cc",
     "task_test.cc",
     "zx_test.cc",
   ]

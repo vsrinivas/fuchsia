@@ -55,6 +55,11 @@ int ConsoleMain(int argc, const char **argv) {
     return 1;
   }
 
+  if (!options.startup_js_lib_path.empty() && !ctx.InitStartups(options.startup_js_lib_path)) {
+    ctx.DumpError();
+    return 1;
+  }
+
   JSContext *ctx_ptr = ctx.Get();
 
   // TODO(jeremymanson): The second and third parameter below let you define properties on the

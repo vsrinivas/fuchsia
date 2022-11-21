@@ -10,6 +10,8 @@
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"
 
+#define DEFAULT_SEQUENCE_JSON_FILENAME "startup.json"
+
 namespace shell {
 
 // A C++ wrapper for the JSRuntime type.  Creates a JSRuntime and manages its lifetime.
@@ -44,12 +46,21 @@ class Context {
   // boot_js_path is the directory to look for builtin JS (like ls and friends).
   bool InitBuiltins(const std::string& fidl_path, const std::string& boot_js_path);
 
+  // Initialize startup modules.
+  // startup_js_path is the directory to look for startup JS and the sequence JSON.
+  bool InitStartups(const std::string& startup_js_path);
+
   // Loads JS from the given lib.
   // If js_path is empty, it will load it from a predefined module  of that name.
   // If js_path is non-empty, it will load it from a similarly named JS file relative to js_path.
   // For example, if you pass "ns", it will load "$path/ns.js". This can obviously be made better
   // (e.g., support subdirectories, handle missing files), but we don't need that yet.
   bool Export(const std::string&, const std::string& js_path = "");
+
+  // Loads JS from the given script.
+  // If js_file_path is empty, it will load it from a predefined module of that name.
+  // If js_file_path is non-empty, it will load it from the js script file.
+  bool ExportScript(const std::string&, const std::string& js_file_path = "");
 
  private:
   JSContext* ctx_;

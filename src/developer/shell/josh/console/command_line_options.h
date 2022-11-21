@@ -18,6 +18,7 @@ struct CommandLineOptions {
   std::optional<std::string> run_script_path;
   std::string fidl_ir_path;
   std::string boot_js_lib_path;
+  std::string startup_js_lib_path;
   bool line_editor = false;
 };
 

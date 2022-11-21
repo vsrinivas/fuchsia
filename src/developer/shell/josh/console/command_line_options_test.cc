@@ -18,6 +18,7 @@ namespace shell {
 TEST(CommandLineOptions, SimpleParseCommandLineTest) {
   std::string fidl_ir_path = "blah.fidl.json";
   std::string boot_js_lib_path = "path/to/js/lib";
+  std::string startup_js_lib_path = "path/to/js/startup";
   std::string run_script_path = "path/to/js/script.js";
   std::string command_line = "\"Once upon a midnight dreary\"";
 
@@ -27,6 +28,8 @@ TEST(CommandLineOptions, SimpleParseCommandLineTest) {
                                    "-l",
                                    "--boot-js-lib-path",
                                    boot_js_lib_path.c_str(),
+                                   "--startup-js-lib-path",
+                                   startup_js_lib_path.c_str(),
                                    "-r",
                                    run_script_path.c_str(),
                                    "-c",
@@ -40,6 +43,7 @@ TEST(CommandLineOptions, SimpleParseCommandLineTest) {
   ASSERT_EQ(2U, params.size()) << "Expected 0 params, got (at least) " << params[0];
   ASSERT_EQ(fidl_ir_path, options.fidl_ir_path);
   ASSERT_EQ(boot_js_lib_path, options.boot_js_lib_path);
+  ASSERT_EQ(startup_js_lib_path, options.startup_js_lib_path);
   ASSERT_EQ(run_script_path, options.run_script_path);
   ASSERT_EQ(command_line, options.command_string);
 
