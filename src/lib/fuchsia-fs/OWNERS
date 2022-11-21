@@ -1,5 +1,5 @@
 include /src/storage/OWNERS
-dgonyeo@google.com
+cgonyeo@google.com
 sdemos@google.com
 
 # COMPONENT: Storage

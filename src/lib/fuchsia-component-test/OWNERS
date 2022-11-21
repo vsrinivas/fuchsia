@@ -1,5 +1,5 @@
 include /src/sys/component_manager/OWNERS
 
-dgonyeo@google.com
+cgonyeo@google.com
 
 # COMPONENT: ComponentFramework>SDK
