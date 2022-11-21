@@ -46,11 +46,9 @@ class VirtioGpu
                              zx_gpaddr_t used);
   zx_status_t Ready(uint32_t negotiated_features);
 
-  void OnConfigChanged(
-      fidl::WireEvent<fuchsia_virtualization_hardware::VirtioGpu::OnConfigChanged>* event) override;
   void on_fidl_error(fidl::UnbindInfo error) override;
 
-  void OnConfigChanged();
+  void OnConfigChanged() override;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_GPU_H_

@@ -314,13 +314,12 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
   void ReceiveOpenEvents(ReceiveOpenEventsRequestView request,
                          ReceiveOpenEventsCompleter::Sync& completer) override {
     class EventHandler : public fidl::WireSyncEventHandler<fidl_clientsuite::OpenTarget> {
-      void StrictEvent(fidl::WireEvent<fidl_clientsuite::OpenTarget::StrictEvent>* event) override {
+      void StrictEvent() override {
         ZX_ASSERT(!received_event.has_value());
         received_event = fidl_clientsuite::OpenTargetEventReport::WithStrictEvent({});
       }
 
-      void FlexibleEvent(
-          fidl::WireEvent<fidl_clientsuite::OpenTarget::FlexibleEvent>* event) override {
+      void FlexibleEvent() override {
         ZX_ASSERT(!received_event.has_value());
         received_event = fidl_clientsuite::OpenTargetEventReport::WithFlexibleEvent({});
       }

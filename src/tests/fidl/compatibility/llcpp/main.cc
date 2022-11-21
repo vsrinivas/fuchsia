@@ -270,7 +270,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
         fidl::Status result() const { return result_; }
 
-        void EchoMinimalEvent(fidl::WireEvent<Echo::EchoMinimalEvent>* event) override {
+        void EchoMinimalEvent() override {
           result_ = fidl::WireSendEvent(connection_->server_binding_.value())->EchoMinimalEvent();
         }
 

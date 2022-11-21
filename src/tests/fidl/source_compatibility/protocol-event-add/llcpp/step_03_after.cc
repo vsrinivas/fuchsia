@@ -7,13 +7,13 @@ namespace fidl_test = fidl_test_protocoleventadd;
 
 // [START contents]
 class AsyncEventHandler : public fidl::WireAsyncEventHandler<fidl_test::Example> {
-  void OnExistingEvent(fidl::WireEvent<fidl_test::Example::OnExistingEvent>* event) override {}
-  void OnNewEvent(fidl::WireEvent<fidl_test::Example::OnNewEvent>* event) override {}
+  void OnExistingEvent() override {}
+  void OnNewEvent() override {}
 };
 
 class SyncEventHandler : public fidl::WireSyncEventHandler<fidl_test::Example> {
-  void OnExistingEvent(fidl::WireEvent<fidl_test::Example::OnExistingEvent>* event) override {}
-  void OnNewEvent(fidl::WireEvent<fidl_test::Example::OnNewEvent>* event) override {}
+  void OnExistingEvent() override {}
+  void OnNewEvent() override {}
 };
 
 void sendEvents(fidl::ServerBindingRef<fidl_test::Example> server) {

@@ -203,14 +203,14 @@ TEST(GenAPITestCase, OneWaySyncManaged) {
 TEST(GenAPITestCase, AsyncEventHandlerExhaustivenessNotRequired) {
   class EventHandlerNone : public fidl::WireAsyncEventHandler<test_basic_protocol::TwoEvents> {};
   class EventHandlerA : public fidl::WireAsyncEventHandler<test_basic_protocol::TwoEvents> {
-    void EventA(fidl::WireEvent<test_basic_protocol::TwoEvents::EventA>*) override {}
+    void EventA() override {}
   };
   class EventHandlerB : public fidl::WireAsyncEventHandler<test_basic_protocol::TwoEvents> {
-    void EventB(fidl::WireEvent<test_basic_protocol::TwoEvents::EventB>*) override {}
+    void EventB() override {}
   };
   class EventHandlerAll : public fidl::WireAsyncEventHandler<test_basic_protocol::TwoEvents> {
-    void EventA(fidl::WireEvent<test_basic_protocol::TwoEvents::EventA>*) override {}
-    void EventB(fidl::WireEvent<test_basic_protocol::TwoEvents::EventB>*) override {}
+    void EventA() override {}
+    void EventB() override {}
   };
   class EventHandlerAllTransitional
       : public fidl::WireSyncEventHandler<test_transitional::TransitionalEvent> {};

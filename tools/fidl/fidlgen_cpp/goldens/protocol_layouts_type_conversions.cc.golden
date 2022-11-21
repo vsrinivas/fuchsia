@@ -459,6 +459,7 @@ namespace internal {
   return ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>(
       WireNaturalConversionTraits<::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedRequest, ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedRequest>::ToNatural(std::move(src)));
 }
+
 ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed> WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed> src) {
   return ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>(
       WireNaturalConversionTraits<::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedRequest, ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedRequest>::ToWire(arena, std::move(src)));
@@ -468,6 +469,7 @@ namespace internal {
   return ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>(
       WireNaturalConversionTraits<::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedWithErrorRequest, ::fit::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedWithErrorResponse>>::ToNatural(std::move(src)));
 }
+
 ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> src) {
   return ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>(
       WireNaturalConversionTraits<::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedWithErrorRequest, ::fit::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedWithErrorResponse>>::ToWire(arena, std::move(src)));
@@ -477,6 +479,7 @@ namespace internal {
   return ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>(
       WireNaturalConversionTraits<::test_protocollayouts_imported::wire::ImportUnionPayload, ::test_protocollayouts_imported::ImportUnionPayload>::ToNatural(std::move(src)));
 }
+
 ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed> WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed> src) {
   return ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>(
       WireNaturalConversionTraits<::test_protocollayouts_imported::wire::ImportUnionPayload, ::test_protocollayouts_imported::ImportUnionPayload>::ToWire(arena, std::move(src)));
@@ -486,6 +489,7 @@ namespace internal {
   return ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>(
       WireNaturalConversionTraits<::test_protocollayouts_imported::wire::ComposedProtocolOnNamedComposedWithErrorRequest, ::fit::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload>>::ToNatural(std::move(src)));
 }
+
 ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> src) {
   return ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>(
       WireNaturalConversionTraits<::test_protocollayouts_imported::wire::ComposedProtocolOnNamedComposedWithErrorRequest, ::fit::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload>>::ToWire(arena, std::move(src)));
@@ -495,6 +499,7 @@ namespace internal {
   return ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>(
       WireNaturalConversionTraits<::test_protocollayouts_imported::wire::ImportUnionPayload, ::test_protocollayouts_imported::ImportUnionPayload>::ToNatural(std::move(src)));
 }
+
 ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport> WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport> src) {
   return ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>(
       WireNaturalConversionTraits<::test_protocollayouts_imported::wire::ImportUnionPayload, ::test_protocollayouts_imported::ImportUnionPayload>::ToWire(arena, std::move(src)));
@@ -504,6 +509,7 @@ namespace internal {
   return ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>(
       WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest, ::fit::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload>>::ToNatural(std::move(src)));
 }
+
 ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError> WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError> src) {
   return ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError>(
       WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest, ::fit::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload>>::ToWire(arena, std::move(src)));
@@ -513,6 +519,7 @@ namespace internal {
   return ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>(
       WireNaturalConversionTraits<::test_protocollayouts::wire::LocalUnionPayload, ::test_protocollayouts::LocalUnionPayload>::ToNatural(std::move(src)));
 }
+
 ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal> WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal> src) {
   return ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>(
       WireNaturalConversionTraits<::test_protocollayouts::wire::LocalUnionPayload, ::test_protocollayouts::LocalUnionPayload>::ToWire(arena, std::move(src)));
@@ -522,6 +529,7 @@ namespace internal {
   return ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>(
       WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest, ::fit::result<uint32_t, ::test_protocollayouts::LocalTablePayload>>::ToNatural(std::move(src)));
 }
+
 ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError> WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError> src) {
   return ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>(
       WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest, ::fit::result<uint32_t, ::test_protocollayouts::LocalTablePayload>>::ToWire(arena, std::move(src)));
@@ -531,6 +539,7 @@ namespace internal {
   return ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>(
       WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnAnonRequest, ::test_protocollayouts::MainProtocolOnAnonRequest>::ToNatural(std::move(src)));
 }
+
 ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon> WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon> src) {
   return ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>(
       WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnAnonRequest, ::test_protocollayouts::MainProtocolOnAnonRequest>::ToWire(arena, std::move(src)));
@@ -540,6 +549,7 @@ namespace internal {
   return ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>(
       WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest, ::fit::result<uint32_t, ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse>>::ToNatural(std::move(src)));
 }
+
 ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError> WireNaturalConversionTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError> src) {
   return ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>(
       WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest, ::fit::result<uint32_t, ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse>>::ToWire(arena, std::move(src)));

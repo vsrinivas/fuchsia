@@ -830,21 +830,6 @@ struct WireTypeForNaturalType<::fidl::Response<::test_protocols::WithAndWithoutR
 };
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>, ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
-  static ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> ToNatural(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> src);
-  static ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
-  using type = ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
-  using type = ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>, ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>> {
   static ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> ToNatural(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> src);
   static ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> src);

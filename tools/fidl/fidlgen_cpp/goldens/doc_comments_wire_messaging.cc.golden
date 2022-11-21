@@ -101,9 +101,7 @@ fidl::internal::WireEventDispatcher<::test_doccomments::Interface>::DispatchEven
         return decoded.error_value();
       }
       if (event_handler()) {
-        ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> empty_event;
-        auto* primary = &empty_event;
-        event_handler()->OnEvent(primary);
+        event_handler()->OnEvent();
       }
       return ::fidl::Status::Ok();
     }

@@ -4679,20 +4679,6 @@ struct WireTypeForNaturalType<::fidl::Response<::test_unknowninteractions::Unkno
 
 
 
-template <>
-struct WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>> {
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> src);
-  static ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>> {
-    using type = ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>> {
-    using type = ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>;
-};
 
 template <>
 struct WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>> {
@@ -4799,20 +4785,6 @@ struct WireTypeForNaturalType<::fidl::Event<::test_unknowninteractions::UnknownI
     using type = ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>;
 };
 
-template <>
-struct WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>> {
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> src);
-  static ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>> {
-    using type = ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>> {
-    using type = ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>;
-};
 
 template <>
 struct WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>> {
@@ -5035,20 +5007,6 @@ struct WireTypeForNaturalType<::fidl::Response<::test_unknowninteractions::Unkno
     using type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>;
 };
 
-template <>
-struct WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>> {
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> src);
-  static ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>> {
-    using type = ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>> {
-    using type = ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>;
-};
 
 template <>
 struct WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>> {
@@ -5155,20 +5113,6 @@ struct WireTypeForNaturalType<::fidl::Event<::test_unknowninteractions::UnknownI
     using type = ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>;
 };
 
-template <>
-struct WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>> {
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> src);
-  static ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>> {
-    using type = ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>> {
-    using type = ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>;
-};
 
 template <>
 struct WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>> {
@@ -5390,20 +5334,6 @@ struct WireTypeForNaturalType<::fidl::Response<::test_unknowninteractions::Unkno
     using type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>;
 };
 
-template <>
-struct WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>> {
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> src);
-  static ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>> {
-    using type = ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>> {
-    using type = ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>;
-};
 
 template <>
 struct WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>> {

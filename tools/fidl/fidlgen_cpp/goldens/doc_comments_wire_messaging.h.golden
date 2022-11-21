@@ -96,11 +96,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 template <>
-struct ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> final {
-  WireEvent() = default;
-};
-
-template <>
 struct ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
@@ -280,7 +275,7 @@ class ::fidl::internal::WireEventHandlerInterface<::test_doccomments::Interface>
   /// event comment #1
   ///
   /// event comment #3
-  virtual void OnEvent(::fidl::WireEvent<::test_doccomments::Interface::OnEvent>* event) = 0;
+  virtual void OnEvent() = 0;
 };
 
 template <>
@@ -291,7 +286,7 @@ class ::fidl::WireAsyncEventHandler<::test_doccomments::Interface>
   /// event comment #1
   ///
   /// event comment #3
-  void OnEvent(::fidl::WireEvent<::test_doccomments::Interface::OnEvent>* event) override {}
+  void OnEvent() override {}
 };
 
 template <>

@@ -52,7 +52,7 @@ fidl/{{ .LibraryDots }}/cpp/wire_test_base.h
     virtual void NotImplemented_(const std::string& name) = 0;
 
     {{- range .Events }}
-      virtual void {{ .Name }}({{ .WireEvent }}* event) override {
+      void {{ .Name }}({{ if .HasResponsePayload }}{{ .WireEvent }}* event{{ end }}) override {
         NotImplemented_("{{ .Name }}");
       }
     {{- end }}

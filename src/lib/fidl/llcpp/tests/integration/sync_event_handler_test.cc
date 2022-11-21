@@ -34,14 +34,14 @@ TEST(SyncEventHandler, TestBase) {
 TEST(SyncEventHandler, ExhaustivenessRequired) {
   class EventHandlerNone : public fidl::WireSyncEventHandler<test::TwoEvents> {};
   class EventHandlerA : public fidl::WireSyncEventHandler<test::TwoEvents> {
-    void EventA(fidl::WireEvent<test::TwoEvents::EventA>*) override {}
+    void EventA() override {}
   };
   class EventHandlerB : public fidl::WireSyncEventHandler<test::TwoEvents> {
-    void EventB(fidl::WireEvent<test::TwoEvents::EventB>*) override {}
+    void EventB() override {}
   };
   class EventHandlerAll : public fidl::WireSyncEventHandler<test::TwoEvents> {
-    void EventA(fidl::WireEvent<test::TwoEvents::EventA>*) override {}
-    void EventB(fidl::WireEvent<test::TwoEvents::EventB>*) override {}
+    void EventA() override {}
+    void EventB() override {}
   };
   class EventHandlerAllTransitional
       : public fidl::WireSyncEventHandler<test_transitional::TransitionalEvent> {};
@@ -58,10 +58,8 @@ TEST(SyncEventHandler, HandleEvent) {
   ASSERT_OK(fidl::WireSendEvent(endpoints->server)->EventA());
 
   struct EventHandlerAll : public fidl::WireSyncEventHandler<test::TwoEvents> {
-    void EventA(fidl::WireEvent<test::TwoEvents::EventA>*) override { count += 1; }
-    void EventB(fidl::WireEvent<test::TwoEvents::EventB>*) override {
-      ADD_FAILURE("Should not get EventB");
-    }
+    void EventA() override { count += 1; }
+    void EventB() override { ADD_FAILURE("Should not get EventB"); }
     int count = 0;
   };
 
@@ -87,12 +85,8 @@ TEST(SyncEventHandler, UnknownEvent) {
       endpoints->server.channel().write(0, &unknown_message, sizeof(unknown_message), nullptr, 0));
 
   class EventHandlerAll : public fidl::WireSyncEventHandler<test::TwoEvents> {
-    void EventA(fidl::WireEvent<test::TwoEvents::EventA>*) override {
-      ADD_FAILURE("Should not get EventA");
-    }
-    void EventB(fidl::WireEvent<test::TwoEvents::EventB>*) override {
-      ADD_FAILURE("Should not get EventB");
-    }
+    void EventA() override { ADD_FAILURE("Should not get EventA"); }
+    void EventB() override { ADD_FAILURE("Should not get EventB"); }
   };
   EventHandlerAll event_handler;
   fidl::Status status = event_handler.HandleOneEvent(endpoints->client);

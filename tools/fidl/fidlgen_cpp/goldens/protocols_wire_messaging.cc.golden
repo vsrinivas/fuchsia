@@ -572,9 +572,7 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
           return decoded.error_value();
         }
         if (event_handler()) {
-            ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> empty_event;
-            auto* primary = &empty_event;
-          event_handler()->OnEmptyResponse(primary);
+          event_handler()->OnEmptyResponse();
         }
         return ::fidl::Status::Ok();
       }
@@ -965,17 +963,19 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestR
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_DynamicFlags);
+  }
     
     
   
@@ -2603,9 +2603,10 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtocol::Mutat
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_protocols::ChannelProtocol::EventA>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kChannelProtocol_EventA_Ordinal, ::test_protocols::kChannelProtocol_EventA_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocols::ChannelProtocol::EventA>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kChannelProtocol_EventA_Ordinal, ::test_protocols::kChannelProtocol_EventA_DynamicFlags);
+  }
     
     
 
@@ -3083,9 +3084,10 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::Transitional::Request>
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_protocols::Transitional::Event>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kTransitional_Event_Ordinal, ::test_protocols::kTransitional_Event_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocols::Transitional::Event>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kTransitional_Event_Ordinal, ::test_protocols::kTransitional_Event_DynamicFlags);
+  }
     
     
   
@@ -3760,9 +3762,10 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::HandleRightsProtocol::
 
 #ifdef __Fuchsia__
 
-    void ::fidl::internal::TransactionalEvent<::test_protocols::HandleRightsProtocol::AnEvent>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal, ::test_protocols::kHandleRightsProtocol_AnEvent_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocols::HandleRightsProtocol::AnEvent>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal, ::test_protocols::kHandleRightsProtocol_AnEvent_DynamicFlags);
+  }
 
 #endif  // __Fuchsia__
 

@@ -17,7 +17,7 @@ public:
   virtual ~{{ .WireEventHandlerInterface.Self }}() = default;
   {{- range .Events -}}
     {{- .Docs }}
-    virtual void {{ .Name }}({{ .WireEvent }}* event) = 0;
+    virtual void {{ .Name }}({{ if .HasResponsePayload }}{{ .WireEvent }}* event{{ end }}) = 0;
   {{- end }}
 };
 
@@ -28,7 +28,7 @@ class {{ .WireAsyncEventHandler }}
   {{ .WireAsyncEventHandler.Self }}() = default;
   {{- range .Events -}}
     {{- .Docs }}
-    void {{ .Name }}({{ .WireEvent }}* event) override {}
+    void {{ .Name }}({{ if .HasResponsePayload }}{{ .WireEvent }}* event{{ end }}) override {}
   {{- end }}
 };
 
@@ -41,7 +41,9 @@ class {{ .WireAsyncEventHandler }}
 
     {{- range .Events }}
       {{- if .Transitional }}
-        void {{ .Name }}({{ .WireEvent }}* event) override { OnTransitionalEvent_(); }
+        void {{ .Name }}({{ if .HasResponsePayload }}{{ .WireEvent }}* event{{ end }}) override {
+          OnTransitionalEvent_();
+        }
       {{- end }}
     {{- end }}
 
@@ -101,11 +103,8 @@ class {{ .WireEventDispatcher }} final :
         if (event_handler()) {
           {{- if .HasResponsePayload }}
             auto* primary = decoded.value().pointer();
-          {{- else }}
-            {{ .WireEvent }} empty_event;
-            auto* primary = &empty_event;
           {{- end }}
-          event_handler()->{{ .Name }}(primary);
+          event_handler()->{{ .Name }}({{ if .HasResponsePayload }}primary{{ end }});
         }
         return ::fidl::Status::Ok();
       }

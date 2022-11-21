@@ -69,10 +69,6 @@ zx_status_t VirtioGpu::Ready(uint32_t negotiated_features) {
   return gpu_.sync()->Ready(negotiated_features).status();
 }
 
-void VirtioGpu::OnConfigChanged(
-    fidl::WireEvent<fuchsia_virtualization_hardware::VirtioGpu::OnConfigChanged>* event) {
-  OnConfigChanged();
-}
 void VirtioGpu::on_fidl_error(fidl::UnbindInfo error) {
   FX_LOGS(ERROR) << "Connection to VirtioGpu lost: " << error;
 }

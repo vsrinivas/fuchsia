@@ -37,10 +37,7 @@ TEST(NamespaceTest, PathTraversalEscapeFails) {
 
   class EventHandler : public fidl::WireSyncEventHandler<fuchsia_sys::ComponentController> {
    public:
-    void OnDirectoryReady(
-        ::fidl::WireEvent<::fuchsia_sys::ComponentController::OnDirectoryReady>* event) final {
-      FAIL();
-    }
+    void OnDirectoryReady() final { FAIL(); }
 
     void OnTerminated(
         ::fidl::WireEvent<::fuchsia_sys::ComponentController::OnTerminated>* event) final {

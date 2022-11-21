@@ -45,10 +45,10 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocols::WithAndWit
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_protocols::WithAndWithoutRequestResponse>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void OnEmptyResponse(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>* event) override {
+  void OnEmptyResponse() override {
     NotImplemented_("OnEmptyResponse");
   }
-  virtual void OnWithResponse(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>* event) override {
+  void OnWithResponse(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>* event) override {
     NotImplemented_("OnWithResponse");
   }
 };
@@ -115,7 +115,7 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocols::ChannelPro
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_protocols::ChannelProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void EventA(::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>* event) override {
+  void EventA(::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>* event) override {
     NotImplemented_("EventA");
   }
 };
@@ -142,7 +142,7 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocols::Transition
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_protocols::Transitional>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void Event(::fidl::WireEvent<::test_protocols::Transitional::Event>* event) override {
+  void Event(::fidl::WireEvent<::test_protocols::Transitional::Event>* event) override {
     NotImplemented_("Event");
   }
 };
@@ -201,7 +201,7 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocols::HandleRigh
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_protocols::HandleRightsProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void AnEvent(::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>* event) override {
+  void AnEvent(::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>* event) override {
     NotImplemented_("AnEvent");
   }
 };

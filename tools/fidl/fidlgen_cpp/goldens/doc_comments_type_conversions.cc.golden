@@ -70,13 +70,6 @@ namespace internal {
 
 #ifdef __Fuchsia__
 
-::fidl::Event<::test_doccomments::Interface::OnEvent> WireNaturalConversionTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>, ::fidl::Event<::test_doccomments::Interface::OnEvent>>::ToNatural(::fidl::WireEvent<::test_doccomments::Interface::OnEvent> src) {
-  return ::fidl::Event<::test_doccomments::Interface::OnEvent>();
-}
-::fidl::WireEvent<::test_doccomments::Interface::OnEvent> WireNaturalConversionTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>, ::fidl::Event<::test_doccomments::Interface::OnEvent>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_doccomments::Interface::OnEvent> src) {
-  return ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>();
-}
-
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

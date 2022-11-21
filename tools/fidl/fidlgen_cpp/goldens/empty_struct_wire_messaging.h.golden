@@ -144,10 +144,12 @@ struct ::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::R
   fidl_message_header_t header;
 
   ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> body;
+
   explicit TransactionalEvent(const ::test_emptystruct::wire::Empty& e)
       : body(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>(e)) {
     _InitHeader();
   }
+
   TransactionalEvent() {
     _InitHeader();
   }

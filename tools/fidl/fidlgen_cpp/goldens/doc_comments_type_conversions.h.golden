@@ -123,21 +123,6 @@ struct WireTypeForNaturalType<::test_doccomments::FlexibleUnion> {
 
 #ifdef __Fuchsia__
 
-template <>
-struct WireNaturalConversionTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>, ::fidl::Event<::test_doccomments::Interface::OnEvent>> {
-  static ::fidl::Event<::test_doccomments::Interface::OnEvent> ToNatural(::fidl::WireEvent<::test_doccomments::Interface::OnEvent> src);
-  static ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_doccomments::Interface::OnEvent> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> {
-  using type = ::fidl::Event<::test_doccomments::Interface::OnEvent>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Event<::test_doccomments::Interface::OnEvent>> {
-  using type = ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>;
-};
-
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

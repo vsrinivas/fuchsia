@@ -35,11 +35,7 @@ namespace test = ::test_unknown_interactions;
 class UnknownInteractionsEventHandlerBase
     : public ::fidl::WireAsyncEventHandler<::test::UnknownInteractionsProtocol>,
       public ::fidl::WireSyncEventHandler<::test::UnknownInteractionsProtocol> {
-  void StrictEvent(
-      ::fidl::WireEvent<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEvent>*)
-      override {
-    ADD_FAILURE() << "StrictEvent called unexpectedly";
-  }
+  void StrictEvent() override { ADD_FAILURE() << "StrictEvent called unexpectedly"; }
   void StrictEventFields(
       ::fidl::WireEvent<
           ::test_unknown_interactions::UnknownInteractionsProtocol::StrictEventFields>*) override {
@@ -56,11 +52,7 @@ class UnknownInteractionsEventHandlerBase
       override {
     ADD_FAILURE() << "StrictEventFieldsErr called unexpectedly";
   }
-  void FlexibleEvent(
-      ::fidl::WireEvent<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEvent>*)
-      override {
-    ADD_FAILURE() << "FlexibleEvent called unexpectedly";
-  }
+  void FlexibleEvent() override { ADD_FAILURE() << "FlexibleEvent called unexpectedly"; }
   void FlexibleEventFields(
       ::fidl::WireEvent<
           ::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEventFields>*)
@@ -722,11 +714,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendErrorVariant) {
 
 TEST_F(UnknownInteractions, ReceiveStrictEventAsync) {
   class EventHandler : public UnknownInteractionsEventHandlerBase {
-    void StrictEvent(
-        ::fidl::WireEvent<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEvent>*)
-        override {
-      received_event = true;
-    }
+    void StrictEvent() override { received_event = true; }
 
    public:
     bool received_event = false;
@@ -746,11 +734,7 @@ TEST_F(UnknownInteractions, ReceiveStrictEventAsync) {
 
 TEST_F(UnknownInteractions, ReceiveStrictEventAsyncMismatchedStrictness) {
   class EventHandler : public UnknownInteractionsEventHandlerBase {
-    void StrictEvent(
-        ::fidl::WireEvent<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEvent>*)
-        override {
-      received_event = true;
-    }
+    void StrictEvent() override { received_event = true; }
 
    public:
     bool received_event = false;
@@ -770,11 +754,7 @@ TEST_F(UnknownInteractions, ReceiveStrictEventAsyncMismatchedStrictness) {
 
 TEST_F(UnknownInteractions, ReceiveFlexibleEventAsync) {
   class EventHandler : public UnknownInteractionsEventHandlerBase {
-    void FlexibleEvent(
-        ::fidl::WireEvent<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEvent>*)
-        override {
-      received_event = true;
-    }
+    void FlexibleEvent() override { received_event = true; }
 
    public:
     bool received_event = false;
@@ -794,11 +774,7 @@ TEST_F(UnknownInteractions, ReceiveFlexibleEventAsync) {
 
 TEST_F(UnknownInteractions, ReceiveFlexibleEventAsyncMismatchedStrictness) {
   class EventHandler : public UnknownInteractionsEventHandlerBase {
-    void FlexibleEvent(
-        ::fidl::WireEvent<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEvent>*)
-        override {
-      received_event = true;
-    }
+    void FlexibleEvent() override { received_event = true; }
 
    public:
     bool received_event = false;
@@ -1333,11 +1309,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendErrorVariant) {
 
 TEST_F(UnknownInteractions, ReceiveStrictEventSync) {
   class EventHandler : public UnknownInteractionsEventHandlerBase {
-    void StrictEvent(
-        ::fidl::WireEvent<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEvent>*)
-        override {
-      received_event = true;
-    }
+    void StrictEvent() override { received_event = true; }
 
    public:
     bool received_event = false;
@@ -1357,11 +1329,7 @@ TEST_F(UnknownInteractions, ReceiveStrictEventSync) {
 
 TEST_F(UnknownInteractions, ReceiveStrictEventSyncMismatchedStrictness) {
   class EventHandler : public UnknownInteractionsEventHandlerBase {
-    void StrictEvent(
-        ::fidl::WireEvent<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEvent>*)
-        override {
-      received_event = true;
-    }
+    void StrictEvent() override { received_event = true; }
 
    public:
     bool received_event = false;
@@ -1381,11 +1349,7 @@ TEST_F(UnknownInteractions, ReceiveStrictEventSyncMismatchedStrictness) {
 
 TEST_F(UnknownInteractions, ReceiveFlexibleEventSync) {
   class EventHandler : public UnknownInteractionsEventHandlerBase {
-    void FlexibleEvent(
-        ::fidl::WireEvent<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEvent>*)
-        override {
-      received_event = true;
-    }
+    void FlexibleEvent() override { received_event = true; }
 
    public:
     bool received_event = false;
@@ -1405,11 +1369,7 @@ TEST_F(UnknownInteractions, ReceiveFlexibleEventSync) {
 
 TEST_F(UnknownInteractions, ReceiveFlexibleEventSyncMismatchedStrictness) {
   class EventHandler : public UnknownInteractionsEventHandlerBase {
-    void FlexibleEvent(
-        ::fidl::WireEvent<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEvent>*)
-        override {
-      received_event = true;
-    }
+    void FlexibleEvent() override { received_event = true; }
 
    public:
     bool received_event = false;

@@ -28,7 +28,7 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_emptystruct::EmptyPro
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_emptystruct::EmptyProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void Receive(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>* event) override {
+  void Receive(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>* event) override {
     NotImplemented_("Receive");
   }
 };

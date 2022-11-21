@@ -1877,9 +1877,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
           return decoded.error_value();
         }
         if (event_handler()) {
-            ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> empty_event;
-            auto* primary = &empty_event;
-          event_handler()->StrictEvent(primary);
+          event_handler()->StrictEvent();
         }
         return ::fidl::Status::Ok();
       }
@@ -1982,9 +1980,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
           return decoded.error_value();
         }
         if (event_handler()) {
-            ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> empty_event;
-            auto* primary = &empty_event;
-          event_handler()->FlexibleEvent(primary);
+          event_handler()->FlexibleEvent();
         }
         return ::fidl::Status::Ok();
       }
@@ -3555,129 +3551,145 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEvent_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEvent_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFields_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFields_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnion_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnion_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTable_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTable_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFieldsErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFieldsErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnionErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnionErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTableErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTableErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEvent_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEvent_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFields_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFields_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnion_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnion_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTable_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTable_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFieldsErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFieldsErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnionErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnionErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTableErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTableErr_DynamicFlags);
+  }
     
     
   
@@ -5609,9 +5621,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
           return decoded.error_value();
         }
         if (event_handler()) {
-            ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> empty_event;
-            auto* primary = &empty_event;
-          event_handler()->StrictEvent(primary);
+          event_handler()->StrictEvent();
         }
         return ::fidl::Status::Ok();
       }
@@ -5714,9 +5724,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
           return decoded.error_value();
         }
         if (event_handler()) {
-            ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> empty_event;
-            auto* primary = &empty_event;
-          event_handler()->FlexibleEvent(primary);
+          event_handler()->FlexibleEvent();
         }
         return ::fidl::Status::Ok();
       }
@@ -6601,129 +6609,145 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEvent_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEvent_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFields_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFields_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnion_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnion_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTable_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTable_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFieldsErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFieldsErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnionErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnionErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTableErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTableErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEvent_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEvent_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFields_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFields_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnion_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnion_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTable_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTable_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnionErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnionErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTableErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTableErr_DynamicFlags);
+  }
     
     
   
@@ -8500,9 +8524,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
           return decoded.error_value();
         }
         if (event_handler()) {
-            ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> empty_event;
-            auto* primary = &empty_event;
-          event_handler()->StrictEvent(primary);
+          event_handler()->StrictEvent();
         }
         return ::fidl::Status::Ok();
       }
@@ -9337,65 +9359,73 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEvent_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEvent_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFields_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFields_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnion_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnion_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTable_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTable_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFieldsErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFieldsErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnionErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnionErr_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTableErr_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTableErr_DynamicFlags);
+  }
     
     
   

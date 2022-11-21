@@ -1743,27 +1743,20 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-  template<>
-  struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> final {
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
 
-    
-    WireEvent() = default;
-  };
+  
 
-
-
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
-    TransactionalEvent() {
+  TransactionalEvent() {
     _InitHeader();
-    }
+  }
 
-   private:
-    void _InitHeader();
-  };
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1779,16 +1772,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsRequest {
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsRequest(std::move(base)) {}
-    explicit WireEvent(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsRequest{ .some_field = std::move(some_field)}{}
+    explicit WireEvent(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsRequest{ .some_field = std::move(some_field) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1807,23 +1798,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields> body;
+
     explicit TransactionalEvent(int32_t some_field)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>(some_field)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1843,7 +1837,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest {
 
@@ -1851,7 +1844,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest UnknownInteractionsProtocolStrictEventUnionRequest) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest(UnknownInteractionsProtocolStrictEventUnionRequest){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1870,23 +1862,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest UnknownInteractionsProtocolStrictEventUnionRequest)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>(UnknownInteractionsProtocolStrictEventUnionRequest)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1906,7 +1901,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest {
 
@@ -1914,7 +1908,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest UnknownInteractionsProtocolStrictEventTableRequest) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest(UnknownInteractionsProtocolStrictEventTableRequest){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1933,23 +1926,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest UnknownInteractionsProtocolStrictEventTableRequest)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>(UnknownInteractionsProtocolStrictEventTableRequest)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1969,17 +1965,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1998,23 +1992,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2034,17 +2031,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2063,23 +2058,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2099,17 +2097,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2128,23 +2124,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2164,17 +2163,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2193,23 +2190,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2230,27 +2230,20 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
 };
 
 
-  template<>
-  struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> final {
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
 
-    
-    WireEvent() = default;
-  };
+  
 
-
-
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
-    TransactionalEvent() {
+  TransactionalEvent() {
     _InitHeader();
-    }
+  }
 
-   private:
-    void _InitHeader();
-  };
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2266,16 +2259,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsRequest {
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsRequest(std::move(base)) {}
-    explicit WireEvent(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsRequest{ .some_field = std::move(some_field)}{}
+    explicit WireEvent(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsRequest{ .some_field = std::move(some_field) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2294,23 +2285,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields> body;
+
     explicit TransactionalEvent(int32_t some_field)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>(some_field)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2330,7 +2324,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest {
 
@@ -2338,7 +2331,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest UnknownInteractionsProtocolFlexibleEventUnionRequest) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest(UnknownInteractionsProtocolFlexibleEventUnionRequest){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2357,23 +2349,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest UnknownInteractionsProtocolFlexibleEventUnionRequest)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>(UnknownInteractionsProtocolFlexibleEventUnionRequest)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2393,7 +2388,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest {
 
@@ -2401,7 +2395,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest UnknownInteractionsProtocolFlexibleEventTableRequest) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest(UnknownInteractionsProtocolFlexibleEventTableRequest){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2420,23 +2413,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest UnknownInteractionsProtocolFlexibleEventTableRequest)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>(UnknownInteractionsProtocolFlexibleEventTableRequest)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2456,17 +2452,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2485,23 +2479,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2521,17 +2518,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2550,23 +2545,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2586,17 +2584,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2615,23 +2611,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2651,17 +2650,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -2680,23 +2677,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -6763,7 +6763,7 @@ class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::Un
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
-    virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>* event) = 0;
+    virtual void StrictEvent() = 0;
     virtual void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>* event) = 0;
     virtual void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>* event) = 0;
     virtual void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>* event) = 0;
@@ -6771,7 +6771,7 @@ public:
     virtual void StrictEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>* event) = 0;
     virtual void StrictEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>* event) = 0;
     virtual void StrictEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>* event) = 0;
-    virtual void FlexibleEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>* event) = 0;
+    virtual void FlexibleEvent() = 0;
     virtual void FlexibleEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>* event) = 0;
     virtual void FlexibleEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>* event) = 0;
     virtual void FlexibleEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>* event) = 0;
@@ -6786,7 +6786,7 @@ class ::fidl::WireAsyncEventHandler<::test_unknowninteractions::UnknownInteracti
     : public ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsProtocol>, public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
-    void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>* event) override {}
+    void StrictEvent() override {}
     void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>* event) override {}
     void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>* event) override {}
     void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>* event) override {}
@@ -6794,7 +6794,7 @@ class ::fidl::WireAsyncEventHandler<::test_unknowninteractions::UnknownInteracti
     void StrictEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>* event) override {}
     void StrictEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>* event) override {}
     void StrictEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>* event) override {}
-    void FlexibleEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>* event) override {}
+    void FlexibleEvent() override {}
     void FlexibleEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>* event) override {}
     void FlexibleEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>* event) override {}
     void FlexibleEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>* event) override {}
@@ -8831,27 +8831,20 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-  template<>
-  struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> final {
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
 
-    
-    WireEvent() = default;
-  };
+  
 
-
-
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
-    TransactionalEvent() {
+  TransactionalEvent() {
     _InitHeader();
-    }
+  }
 
-   private:
-    void _InitHeader();
-  };
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -8867,16 +8860,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsRequest {
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsRequest(std::move(base)) {}
-    explicit WireEvent(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsRequest{ .some_field = std::move(some_field)}{}
+    explicit WireEvent(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsRequest{ .some_field = std::move(some_field) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -8895,23 +8886,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields> body;
+
     explicit TransactionalEvent(int32_t some_field)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>(some_field)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -8931,7 +8925,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest {
 
@@ -8939,7 +8932,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest UnknownInteractionsAjarProtocolStrictEventUnionRequest) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest(UnknownInteractionsAjarProtocolStrictEventUnionRequest){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -8958,23 +8950,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest UnknownInteractionsAjarProtocolStrictEventUnionRequest)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>(UnknownInteractionsAjarProtocolStrictEventUnionRequest)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -8994,7 +8989,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest {
 
@@ -9002,7 +8996,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest UnknownInteractionsAjarProtocolStrictEventTableRequest) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest(UnknownInteractionsAjarProtocolStrictEventTableRequest){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9021,23 +9014,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest UnknownInteractionsAjarProtocolStrictEventTableRequest)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>(UnknownInteractionsAjarProtocolStrictEventTableRequest)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9057,17 +9053,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9086,23 +9080,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9122,17 +9119,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9151,23 +9146,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9187,17 +9185,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9216,23 +9212,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9252,17 +9251,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9281,23 +9278,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9318,27 +9318,20 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
 };
 
 
-  template<>
-  struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> final {
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
 
-    
-    WireEvent() = default;
-  };
+  
 
-
-
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
-    TransactionalEvent() {
+  TransactionalEvent() {
     _InitHeader();
-    }
+  }
 
-   private:
-    void _InitHeader();
-  };
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9354,16 +9347,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest {
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest(std::move(base)) {}
-    explicit WireEvent(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest{ .some_field = std::move(some_field)}{}
+    explicit WireEvent(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest{ .some_field = std::move(some_field) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9382,23 +9373,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields> body;
+
     explicit TransactionalEvent(int32_t some_field)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>(some_field)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9418,7 +9412,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest {
 
@@ -9426,7 +9419,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest UnknownInteractionsAjarProtocolFlexibleEventUnionRequest) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest(UnknownInteractionsAjarProtocolFlexibleEventUnionRequest){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9445,23 +9437,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest UnknownInteractionsAjarProtocolFlexibleEventUnionRequest)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>(UnknownInteractionsAjarProtocolFlexibleEventUnionRequest)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9481,7 +9476,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest {
 
@@ -9489,7 +9483,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest UnknownInteractionsAjarProtocolFlexibleEventTableRequest) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest(UnknownInteractionsAjarProtocolFlexibleEventTableRequest){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9508,23 +9501,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest UnknownInteractionsAjarProtocolFlexibleEventTableRequest)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>(UnknownInteractionsAjarProtocolFlexibleEventTableRequest)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9544,17 +9540,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9573,23 +9567,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9609,17 +9606,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9638,23 +9633,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9674,17 +9672,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9703,23 +9699,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9739,17 +9738,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -9768,23 +9765,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -12338,7 +12338,7 @@ class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::Un
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
-    virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>* event) = 0;
+    virtual void StrictEvent() = 0;
     virtual void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>* event) = 0;
     virtual void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>* event) = 0;
     virtual void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>* event) = 0;
@@ -12346,7 +12346,7 @@ public:
     virtual void StrictEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>* event) = 0;
     virtual void StrictEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>* event) = 0;
     virtual void StrictEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>* event) = 0;
-    virtual void FlexibleEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>* event) = 0;
+    virtual void FlexibleEvent() = 0;
     virtual void FlexibleEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>* event) = 0;
     virtual void FlexibleEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>* event) = 0;
     virtual void FlexibleEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>* event) = 0;
@@ -12361,7 +12361,7 @@ class ::fidl::WireAsyncEventHandler<::test_unknowninteractions::UnknownInteracti
     : public ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarProtocol>, public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
-    void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>* event) override {}
+    void StrictEvent() override {}
     void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>* event) override {}
     void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>* event) override {}
     void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>* event) override {}
@@ -12369,7 +12369,7 @@ class ::fidl::WireAsyncEventHandler<::test_unknowninteractions::UnknownInteracti
     void StrictEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>* event) override {}
     void StrictEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>* event) override {}
     void StrictEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>* event) override {}
-    void FlexibleEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>* event) override {}
+    void FlexibleEvent() override {}
     void FlexibleEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>* event) override {}
     void FlexibleEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>* event) override {}
     void FlexibleEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>* event) override {}
@@ -13848,27 +13848,20 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-  template<>
-  struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> final {
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
 
-    
-    WireEvent() = default;
-  };
+  
 
-
-
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
-    TransactionalEvent() {
+  TransactionalEvent() {
     _InitHeader();
-    }
+  }
 
-   private:
-    void _InitHeader();
-  };
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -13884,16 +13877,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsRequest {
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsRequest(std::move(base)) {}
-    explicit WireEvent(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsRequest{ .some_field = std::move(some_field)}{}
+    explicit WireEvent(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsRequest{ .some_field = std::move(some_field) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -13912,23 +13903,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields> body;
+
     explicit TransactionalEvent(int32_t some_field)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>(some_field)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -13948,7 +13942,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest {
 
@@ -13956,7 +13949,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest UnknownInteractionsClosedProtocolStrictEventUnionRequest) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest(UnknownInteractionsClosedProtocolStrictEventUnionRequest){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -13975,23 +13967,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest UnknownInteractionsClosedProtocolStrictEventUnionRequest)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>(UnknownInteractionsClosedProtocolStrictEventUnionRequest)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -14011,7 +14006,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest {
 
@@ -14019,7 +14013,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest UnknownInteractionsClosedProtocolStrictEventTableRequest) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest(UnknownInteractionsClosedProtocolStrictEventTableRequest){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -14038,23 +14031,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest UnknownInteractionsClosedProtocolStrictEventTableRequest)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>(UnknownInteractionsClosedProtocolStrictEventTableRequest)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -14074,17 +14070,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -14103,23 +14097,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -14139,17 +14136,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -14168,23 +14163,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -14204,17 +14202,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -14233,23 +14229,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -14269,17 +14268,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResult;
 
     
     explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrRequest base) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrRequest(std::move(base)) {}
-    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResult result) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -14298,23 +14295,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_unknownintera
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> body;
+
     explicit TransactionalEvent(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResult result)
     : body(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -16354,7 +16354,7 @@ class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::Un
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
-    virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>* event) = 0;
+    virtual void StrictEvent() = 0;
     virtual void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>* event) = 0;
     virtual void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>* event) = 0;
     virtual void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>* event) = 0;
@@ -16369,7 +16369,7 @@ class ::fidl::WireAsyncEventHandler<::test_unknowninteractions::UnknownInteracti
     : public ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsClosedProtocol>, public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
-    void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>* event) override {}
+    void StrictEvent() override {}
     void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>* event) override {}
     void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>* event) override {}
     void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>* event) override {}

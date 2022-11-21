@@ -522,27 +522,20 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-  template<>
-  struct ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> final {
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
 
-    
-    WireEvent() = default;
-  };
+  
 
-
-
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
-    TransactionalEvent() {
+  TransactionalEvent() {
     _InitHeader();
-    }
+  }
 
-   private:
-    void _InitHeader();
-  };
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -558,16 +551,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest {
 
     
     explicit WireEvent(::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest base) : ::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest(std::move(base)) {}
-    explicit WireEvent(::fidl::StringView ret) : ::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest{ .ret = std::move(ret)}{}
+    explicit WireEvent(::fidl::StringView ret) : ::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest{ .ret = std::move(ret) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -586,23 +577,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocols::Wi
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> body;
+
     explicit TransactionalEvent(::fidl::StringView ret)
     : body(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>(ret)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1648,7 +1642,7 @@ class ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithAndWitho
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
-    virtual void OnEmptyResponse(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>* event) = 0;
+    virtual void OnEmptyResponse() = 0;
     virtual void OnWithResponse(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>* event) = 0;
 };
 
@@ -1657,7 +1651,7 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::WithAndWithoutRequestRespo
     : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse>, public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
-    void OnEmptyResponse(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>* event) override {}
+    void OnEmptyResponse() override {}
     void OnWithResponse(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>* event) override {}
 };
 
@@ -3727,16 +3721,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> final : public ::test_protocols::wire::ChannelProtocolEventARequest {
 
     
     explicit WireEvent(::test_protocols::wire::ChannelProtocolEventARequest base) : ::test_protocols::wire::ChannelProtocolEventARequest(std::move(base)) {}
-    explicit WireEvent(int64_t a, int64_t b) : ::test_protocols::wire::ChannelProtocolEventARequest{ .a = std::move(a), .b = std::move(b)}{}
+    explicit WireEvent(int64_t a, int64_t b) : ::test_protocols::wire::ChannelProtocolEventARequest{ .a = std::move(a), .b = std::move(b) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -3755,23 +3747,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocols::Ch
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocols::ChannelProtocol::EventA> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocols::ChannelProtocol::EventA> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> body;
+
     explicit TransactionalEvent(int64_t a, int64_t b)
     : body(::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>(a, b)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocols::ChannelProtocol::EventA>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -5330,16 +5325,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocols::Transitional::Event> final : public ::test_protocols::wire::TransitionalEventRequest {
 
     
     explicit WireEvent(::test_protocols::wire::TransitionalEventRequest base) : ::test_protocols::wire::TransitionalEventRequest(std::move(base)) {}
-    explicit WireEvent(int64_t x) : ::test_protocols::wire::TransitionalEventRequest{ .x = std::move(x)}{}
+    explicit WireEvent(int64_t x) : ::test_protocols::wire::TransitionalEventRequest{ .x = std::move(x) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocols::Transitional::Event>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -5358,23 +5351,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocols::Tr
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocols::Transitional::Event> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocols::Transitional::Event> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocols::Transitional::Event> body;
+
     explicit TransactionalEvent(int64_t x)
     : body(::fidl::WireEvent<::test_protocols::Transitional::Event>(x)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocols::Transitional::Event>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -5793,7 +5789,9 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::Transitional>
       : public ::fidl::internal::WireEventHandlerInterface<::test_protocols::Transitional>, public ::fidl::internal::SyncEventHandler {
    public:
     WireSyncEventHandler() = default;
-        void Event(::fidl::WireEvent<::test_protocols::Transitional::Event>* event) override { OnTransitionalEvent_(); }
+        void Event(::fidl::WireEvent<::test_protocols::Transitional::Event>* event) override {
+          OnTransitionalEvent_();
+        }
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding virtual
@@ -6681,16 +6679,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 #ifdef __Fuchsia__
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent> final : public ::test_protocols::wire::HandleRightsProtocolAnEventRequest {
 
     
     explicit WireEvent(::test_protocols::wire::HandleRightsProtocolAnEventRequest base) : ::test_protocols::wire::HandleRightsProtocolAnEventRequest(std::move(base)) {}
-    explicit WireEvent(::zx::socket&& h) : ::test_protocols::wire::HandleRightsProtocolAnEventRequest{ .h = std::move(h)}{}
+    explicit WireEvent(::zx::socket&& h) : ::test_protocols::wire::HandleRightsProtocolAnEventRequest{ .h = std::move(h) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -6709,26 +6705,29 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocols::Ha
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocols::HandleRightsProtocol::AnEvent> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocols::HandleRightsProtocol::AnEvent> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent> body;
+
     explicit TransactionalEvent(::zx::socket&& h)
     : body(::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>(std::move(h))) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
-    void _CloseHandles() {
-      body._CloseHandles();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+  void _CloseHandles() {
+    body._CloseHandles();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocols::HandleRightsProtocol::AnEvent>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>

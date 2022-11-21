@@ -1,15 +1,16 @@
 {{/*
-  // Copyright 2022 The Fuchsia Authors. All rights reserved.
-  // Use of this source code is governed by a BSD-style license that can be
-  // found in the LICENSE file.
-  */}}
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
 
-  {{- define "Method:Event:WireMessagingHeader" }}
-  {{- EnsureNamespace "" }}
-  {{- if .Response.IsResource }}
-  {{- IfdefFuchsia -}}
-  {{- end }}
+{{- define "Method:Event:WireMessagingHeader" }}
+{{- EnsureNamespace "" }}
+{{- if .Response.IsResource }}
+{{- IfdefFuchsia -}}
+{{- end }}
 
+{{- if .HasResponsePayload }}
   template<>
   struct {{ .WireEvent }} final {{- if .HasResponsePayload }} : public {{ .ResponsePayload }}{{ end }} {
   {{- range .ResponseAnonymousChildren }}
@@ -23,15 +24,14 @@
     {{- if .ResponseArgs }}
     explicit {{ .WireEvent.Self }}({{ RenderParams .ResponseArgs }}) : {{ .ResponsePayload }}
     {{- if .ResponseFlattened -}}
-    {{- "{ " }}{{ RenderForwardStructParams .ResponseArgs }}}
+      { {{ RenderForwardStructParams .ResponseArgs }} }
     {{- else -}}
-    ({{ RenderForwardParams .ResponseArgs }})
+      ({{ RenderForwardParams .ResponseArgs }})
     {{- end -}}{}
     {{- end }}
     {{ .WireEvent.Self }}() = default;
   };
 
-{{ if .HasResponsePayload }}
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<{{ .WireEvent }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
   : public WireStructCodingTraitsBase<{{ .WireEvent }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
@@ -50,32 +50,35 @@ struct ::fidl::internal::WireCodingTraits<{{ .WireEvent }}, ::fidl::internal::Wi
 };
 {{- end }}
 
-  template<>
-  struct {{ .WireTransactionalEvent }} final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    {{ if .ResponseArgs }}
+template<>
+struct {{ .WireTransactionalEvent }} final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  {{ if .ResponseArgs }}
     {{ .WireEvent }} body;
+
     explicit {{ .WireTransactionalEvent.Self }}({{ RenderParams .ResponseArgs }})
     : body({{ .WireEvent }}({{ RenderForwardParams .ResponseArgs }})) {
       _InitHeader();
     }
-    {{- end }}
-    {{ .WireTransactionalEvent.Self }}() {
+  {{- end }}
+
+  {{ .WireTransactionalEvent.Self }}() {
     _InitHeader();
-    }
+  }
 
-    {{- if .Response.IsResource }}
-    void _CloseHandles() {
-      {{- if .ResponseArgs }}
-      body._CloseHandles();
-      {{- end }}
-    }
+  {{- if .Response.IsResource }}
+  void _CloseHandles() {
+    {{- if .ResponseArgs }}
+    body._CloseHandles();
     {{- end }}
+  }
+  {{- end }}
 
-   private:
-    void _InitHeader();
-  };
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<{{ .WireTransactionalEvent }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -98,27 +101,27 @@ struct ::fidl::internal::WireCodingTraits<{{ .WireTransactionalEvent }}, ::fidl:
     {{- end }}
   }
 };
-  {{- if .Response.IsResource }}
-  {{- EndifFuchsia -}}
-  {{- end }}
-  {{- end }}
+{{- if .Response.IsResource }}
+{{- EndifFuchsia -}}
+{{- end }}
+{{- end }}
 
 
 
+{{- define "Method:Event:WireMessagingSource" }}
+{{- EnsureNamespace "" }}
+{{- if .Response.IsResource }}
+{{- IfdefFuchsia -}}
+{{- end }}
 
-  {{- define "Method:Event:WireMessagingSource" }}
-    {{- EnsureNamespace "" }}
-  {{- if .Response.IsResource }}
-  {{- IfdefFuchsia -}}
-  {{- end }}
-    void {{ .WireTransactionalEvent }}::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, {{ .OrdinalName }}, {{ .DynamicFlagsName }});
-    }
+  void {{ .WireTransactionalEvent }}::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, {{ .OrdinalName }}, {{ .DynamicFlagsName }});
+  }
+{{- if .Response.IsResource }}
+{{- EndifFuchsia -}}
+{{- end }}
+{{- end }}
 
-  {{- if .Response.IsResource }}
-  {{- EndifFuchsia -}}
-  {{- end }}
-  {{- end }}
 
 
 {{- define "Method:Event:NaturalMessagingHeader" }}
@@ -190,10 +193,12 @@ class {{ .NaturalEventConverter }} {
 
 
 {{- define "Method:Event:NaturalMessagingSource" }}
-
 {{- end }}
 
+
+
 {{- define "Method:Event:Traits:TypeConversionsHeader" }}
+{{- if .HasResponsePayload }}
 template <>
 struct WireNaturalConversionTraits<{{ .WireEvent }}, {{ .NaturalEvent }}> {
   static {{ .NaturalEvent }} ToNatural({{ .WireEvent }} src);
@@ -209,8 +214,12 @@ struct WireTypeForNaturalType<{{ .NaturalEvent }}> {
     using type = {{ .WireEvent }};
 };
 {{- end }}
+{{- end }}
+
+
 
 {{- define "Method:Event:Traits:TypeConversionsSource" }}
+{{- if .HasResponsePayload }}
 {{ .NaturalEvent }}  WireNaturalConversionTraits<{{ .WireEvent }}, {{ .NaturalEvent }}>::ToNatural({{ .WireEvent }} src) {
   {{- if .HasResponsePayload }}
   return {{ .NaturalEvent }}(
@@ -219,6 +228,7 @@ struct WireTypeForNaturalType<{{ .NaturalEvent }}> {
   return {{ .NaturalEvent }}();
   {{- end }}
 }
+
 {{ .WireEvent }}  WireNaturalConversionTraits<{{ .WireEvent }}, {{ .NaturalEvent }}>::ToWire(fidl::AnyArena& arena, {{ .NaturalEvent }} src) {
   {{- if .HasResponsePayload }}
   return {{ .WireEvent }}(
@@ -227,4 +237,5 @@ struct WireTypeForNaturalType<{{ .NaturalEvent }}> {
   return {{ .WireEvent }}();
   {{- end }}
 }
+{{- end }}
 {{- end }}

@@ -22,7 +22,7 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_doccomments::Interfac
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_doccomments::Interface>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void OnEvent(::fidl::WireEvent<::test_doccomments::Interface::OnEvent>* event) override {
+  void OnEvent() override {
     NotImplemented_("OnEvent");
   }
 };

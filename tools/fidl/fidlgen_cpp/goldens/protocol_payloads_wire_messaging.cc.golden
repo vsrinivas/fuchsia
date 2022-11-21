@@ -2053,17 +2053,19 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposed>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal, ::test_protocolpayloads::kMainProtocol_OnComposed_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposed>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal, ::test_protocolpayloads::kMainProtocol_OnComposed_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnComposedWithError_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnComposedWithError_DynamicFlags);
+  }
     
     
 
@@ -2099,17 +2101,19 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocal>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal, ::test_protocolpayloads::kMainProtocol_OnLocal_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocal>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal, ::test_protocolpayloads::kMainProtocol_OnLocal_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnLocalWithError_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnLocalWithError_DynamicFlags);
+  }
     
     
 
@@ -2145,17 +2149,19 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImport>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal, ::test_protocolpayloads::kMainProtocol_OnImport_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImport>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal, ::test_protocolpayloads::kMainProtocol_OnImport_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnImportWithError_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnImportWithError_DynamicFlags);
+  }
     
     
 
@@ -2191,17 +2197,19 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnon>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal, ::test_protocolpayloads::kMainProtocol_OnAnon_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnon>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal, ::test_protocolpayloads::kMainProtocol_OnAnon_DynamicFlags);
+  }
     
     
     
     
 
-    void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>::_InitHeader() {
-      ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnAnonWithError_DynamicFlags);
-    }
+
+  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>::_InitHeader() {
+    ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnAnonWithError_DynamicFlags);
+  }
     
     
   

@@ -93,52 +93,52 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>* event) override {
+  void StrictEvent() override {
     NotImplemented_("StrictEvent");
   }
-  virtual void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>* event) override {
+  void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>* event) override {
     NotImplemented_("StrictEventFields");
   }
-  virtual void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>* event) override {
+  void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>* event) override {
     NotImplemented_("StrictEventUnion");
   }
-  virtual void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>* event) override {
+  void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>* event) override {
     NotImplemented_("StrictEventTable");
   }
-  virtual void StrictEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>* event) override {
+  void StrictEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>* event) override {
     NotImplemented_("StrictEventErr");
   }
-  virtual void StrictEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>* event) override {
+  void StrictEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>* event) override {
     NotImplemented_("StrictEventFieldsErr");
   }
-  virtual void StrictEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>* event) override {
+  void StrictEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>* event) override {
     NotImplemented_("StrictEventUnionErr");
   }
-  virtual void StrictEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>* event) override {
+  void StrictEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>* event) override {
     NotImplemented_("StrictEventTableErr");
   }
-  virtual void FlexibleEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>* event) override {
+  void FlexibleEvent() override {
     NotImplemented_("FlexibleEvent");
   }
-  virtual void FlexibleEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>* event) override {
+  void FlexibleEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>* event) override {
     NotImplemented_("FlexibleEventFields");
   }
-  virtual void FlexibleEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>* event) override {
+  void FlexibleEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>* event) override {
     NotImplemented_("FlexibleEventUnion");
   }
-  virtual void FlexibleEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>* event) override {
+  void FlexibleEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>* event) override {
     NotImplemented_("FlexibleEventTable");
   }
-  virtual void FlexibleEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>* event) override {
+  void FlexibleEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>* event) override {
     NotImplemented_("FlexibleEventErr");
   }
-  virtual void FlexibleEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>* event) override {
+  void FlexibleEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>* event) override {
     NotImplemented_("FlexibleEventFieldsErr");
   }
-  virtual void FlexibleEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>* event) override {
+  void FlexibleEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>* event) override {
     NotImplemented_("FlexibleEventUnionErr");
   }
-  virtual void FlexibleEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>* event) override {
+  void FlexibleEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>* event) override {
     NotImplemented_("FlexibleEventTableErr");
   }
   virtual void handle_unknown_event(::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsProtocol> metadata) override {
@@ -201,52 +201,52 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>* event) override {
+  void StrictEvent() override {
     NotImplemented_("StrictEvent");
   }
-  virtual void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>* event) override {
+  void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>* event) override {
     NotImplemented_("StrictEventFields");
   }
-  virtual void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>* event) override {
+  void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>* event) override {
     NotImplemented_("StrictEventUnion");
   }
-  virtual void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>* event) override {
+  void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>* event) override {
     NotImplemented_("StrictEventTable");
   }
-  virtual void StrictEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>* event) override {
+  void StrictEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>* event) override {
     NotImplemented_("StrictEventErr");
   }
-  virtual void StrictEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>* event) override {
+  void StrictEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>* event) override {
     NotImplemented_("StrictEventFieldsErr");
   }
-  virtual void StrictEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>* event) override {
+  void StrictEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>* event) override {
     NotImplemented_("StrictEventUnionErr");
   }
-  virtual void StrictEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>* event) override {
+  void StrictEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>* event) override {
     NotImplemented_("StrictEventTableErr");
   }
-  virtual void FlexibleEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>* event) override {
+  void FlexibleEvent() override {
     NotImplemented_("FlexibleEvent");
   }
-  virtual void FlexibleEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>* event) override {
+  void FlexibleEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>* event) override {
     NotImplemented_("FlexibleEventFields");
   }
-  virtual void FlexibleEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>* event) override {
+  void FlexibleEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>* event) override {
     NotImplemented_("FlexibleEventUnion");
   }
-  virtual void FlexibleEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>* event) override {
+  void FlexibleEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>* event) override {
     NotImplemented_("FlexibleEventTable");
   }
-  virtual void FlexibleEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>* event) override {
+  void FlexibleEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>* event) override {
     NotImplemented_("FlexibleEventErr");
   }
-  virtual void FlexibleEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>* event) override {
+  void FlexibleEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>* event) override {
     NotImplemented_("FlexibleEventFieldsErr");
   }
-  virtual void FlexibleEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>* event) override {
+  void FlexibleEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>* event) override {
     NotImplemented_("FlexibleEventUnionErr");
   }
-  virtual void FlexibleEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>* event) override {
+  void FlexibleEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>* event) override {
     NotImplemented_("FlexibleEventTableErr");
   }
   virtual void handle_unknown_event(::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsAjarProtocol> metadata) override {
@@ -302,28 +302,28 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>* event) override {
+  void StrictEvent() override {
     NotImplemented_("StrictEvent");
   }
-  virtual void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>* event) override {
+  void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>* event) override {
     NotImplemented_("StrictEventFields");
   }
-  virtual void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>* event) override {
+  void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>* event) override {
     NotImplemented_("StrictEventUnion");
   }
-  virtual void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>* event) override {
+  void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>* event) override {
     NotImplemented_("StrictEventTable");
   }
-  virtual void StrictEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>* event) override {
+  void StrictEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>* event) override {
     NotImplemented_("StrictEventErr");
   }
-  virtual void StrictEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>* event) override {
+  void StrictEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>* event) override {
     NotImplemented_("StrictEventFieldsErr");
   }
-  virtual void StrictEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>* event) override {
+  void StrictEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>* event) override {
     NotImplemented_("StrictEventUnionErr");
   }
-  virtual void StrictEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>* event) override {
+  void StrictEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>* event) override {
     NotImplemented_("StrictEventTableErr");
   }
 };

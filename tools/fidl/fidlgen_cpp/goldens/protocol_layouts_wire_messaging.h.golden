@@ -449,7 +449,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed> final : public ::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedRequest {
 
@@ -457,7 +456,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     explicit WireEvent(::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedRequest ComposedProtocolOnAnonComposedRequest) : ::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedRequest(ComposedProtocolOnAnonComposedRequest){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -476,23 +474,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayou
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposed> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposed> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed> body;
+
     explicit TransactionalEvent(::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedRequest ComposedProtocolOnAnonComposedRequest)
     : body(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>(ComposedProtocolOnAnonComposedRequest)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -512,16 +513,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> final : public ::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedWithErrorRequest {
 
     
     explicit WireEvent(::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedWithErrorRequest base) : ::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedWithErrorRequest(std::move(base)) {}
-    explicit WireEvent(::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedWithErrorResult result) : ::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedWithErrorRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedWithErrorResult result) : ::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedWithErrorRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -540,23 +539,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayou
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> body;
+
     explicit TransactionalEvent(::test_protocollayouts_imported::wire::ComposedProtocolOnAnonComposedWithErrorResult result)
     : body(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -809,7 +811,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed> final : public ::test_protocollayouts_imported::wire::ImportUnionPayload {
 
@@ -817,7 +818,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     explicit WireEvent(::test_protocollayouts_imported::wire::ImportUnionPayload ImportUnionPayload) : ::test_protocollayouts_imported::wire::ImportUnionPayload(ImportUnionPayload){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -836,23 +836,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayou
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposed> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposed> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed> body;
+
     explicit TransactionalEvent(::test_protocollayouts_imported::wire::ImportUnionPayload ImportUnionPayload)
     : body(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>(ImportUnionPayload)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -872,16 +875,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> final : public ::test_protocollayouts_imported::wire::ComposedProtocolOnNamedComposedWithErrorRequest {
 
     
     explicit WireEvent(::test_protocollayouts_imported::wire::ComposedProtocolOnNamedComposedWithErrorRequest base) : ::test_protocollayouts_imported::wire::ComposedProtocolOnNamedComposedWithErrorRequest(std::move(base)) {}
-    explicit WireEvent(::test_protocollayouts_imported::wire::ComposedProtocolOnNamedComposedWithErrorResult result) : ::test_protocollayouts_imported::wire::ComposedProtocolOnNamedComposedWithErrorRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_protocollayouts_imported::wire::ComposedProtocolOnNamedComposedWithErrorResult result) : ::test_protocollayouts_imported::wire::ComposedProtocolOnNamedComposedWithErrorRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -900,23 +901,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayou
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> body;
+
     explicit TransactionalEvent(::test_protocollayouts_imported::wire::ComposedProtocolOnNamedComposedWithErrorResult result)
     : body(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1170,7 +1174,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport> final : public ::test_protocollayouts_imported::wire::ImportUnionPayload {
 
@@ -1178,7 +1181,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     explicit WireEvent(::test_protocollayouts_imported::wire::ImportUnionPayload ImportUnionPayload) : ::test_protocollayouts_imported::wire::ImportUnionPayload(ImportUnionPayload){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1197,23 +1199,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayou
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImport> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImport> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport> body;
+
     explicit TransactionalEvent(::test_protocollayouts_imported::wire::ImportUnionPayload ImportUnionPayload)
     : body(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>(ImportUnionPayload)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImport>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1233,17 +1238,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError> final : public ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest {
     using Result = test_protocollayouts::wire::MainProtocolOnImportWithErrorResult;
 
     
     explicit WireEvent(::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest base) : ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest(std::move(base)) {}
-    explicit WireEvent(::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult result) : ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult result) : ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1262,23 +1265,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayou
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImportWithError> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImportWithError> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError> body;
+
     explicit TransactionalEvent(::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult result)
     : body(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImportWithError>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnImportWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1532,7 +1538,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal> final : public ::test_protocollayouts::wire::LocalUnionPayload {
 
@@ -1540,7 +1545,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     explicit WireEvent(::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload) : ::test_protocollayouts::wire::LocalUnionPayload(LocalUnionPayload){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1559,23 +1563,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayou
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocal> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocal> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal> body;
+
     explicit TransactionalEvent(::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload)
     : body(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>(LocalUnionPayload)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocal>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1595,17 +1602,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError> final : public ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest {
     using Result = test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult;
 
     
     explicit WireEvent(::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest base) : ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest(std::move(base)) {}
-    explicit WireEvent(::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult result) : ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult result) : ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1624,23 +1629,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayou
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocalWithError> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocalWithError> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError> body;
+
     explicit TransactionalEvent(::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult result)
     : body(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1894,7 +1902,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon> final : public ::test_protocollayouts::wire::MainProtocolOnAnonRequest {
 
@@ -1902,7 +1909,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     explicit WireEvent(::test_protocollayouts::wire::MainProtocolOnAnonRequest MainProtocolOnAnonRequest) : ::test_protocollayouts::wire::MainProtocolOnAnonRequest(MainProtocolOnAnonRequest){}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1921,23 +1927,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayou
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnon> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnon> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon> body;
+
     explicit TransactionalEvent(::test_protocollayouts::wire::MainProtocolOnAnonRequest MainProtocolOnAnonRequest)
     : body(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>(MainProtocolOnAnonRequest)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnon>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1957,17 +1966,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
   template<>
   struct ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError> final : public ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest {
     using Result = test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult;
 
     
     explicit WireEvent(::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest base) : ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest(std::move(base)) {}
-    explicit WireEvent(::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult result) : ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest{ .result = std::move(result)}{}
+    explicit WireEvent(::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult result) : ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest{ .result = std::move(result) }{}
     WireEvent() = default;
   };
-
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
@@ -1986,23 +1993,26 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocollayou
   }
 };
 
-  template<>
-  struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonWithError> final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t header;
-    
+template<>
+struct ::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonWithError> final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  
     ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError> body;
+
     explicit TransactionalEvent(::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult result)
     : body(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>(result)) {
       _InitHeader();
     }
-    TransactionalEvent() {
-    _InitHeader();
-    }
 
-   private:
-    void _InitHeader();
-  };
+  TransactionalEvent() {
+    _InitHeader();
+  }
+
+ private:
+  void _InitHeader();
+};
 
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
