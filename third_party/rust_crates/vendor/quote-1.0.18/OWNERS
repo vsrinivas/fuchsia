@@ -40,7 +40,7 @@ include /third_party/rust_crates/vendor/pin-project-internal-1.0.11/OWNERS
 include /third_party/rust_crates/vendor/prost-derive-0.11.0/OWNERS
 include /third_party/rust_crates/vendor/ref-cast-impl-1.0.9/OWNERS
 include /third_party/rust_crates/vendor/schemars_derive-0.8.10/OWNERS
-include /third_party/rust_crates/vendor/serde_derive-1.0.116/OWNERS
+include /third_party/rust_crates/vendor/serde_derive-1.0.147/OWNERS
 include /third_party/rust_crates/vendor/serde_derive_internals-0.26.0/OWNERS
 include /third_party/rust_crates/vendor/serde_repr-0.1.7/OWNERS
 include /third_party/rust_crates/vendor/serial_test_derive-0.5.1/OWNERS

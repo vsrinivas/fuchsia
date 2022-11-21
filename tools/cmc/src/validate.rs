@@ -6423,7 +6423,7 @@ mod tests {
                     "verbosity": 123456
                 }
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid type: integer `123456`, expected internally tagged enum"
+            Err(Error::Parse { err, .. }) if &err == "invalid type: integer `123456`, expected internally tagged enum ConfigValueType"
         ),
 
         test_cml_configs_unknown_type(
@@ -6553,7 +6553,7 @@ mod tests {
                     }
                 }
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid type: string \"abcd\", expected u32"
+            Err(Error::Parse { err, .. }) if &err == "invalid type: string \"abcd\", expected a nonzero u32"
         ),
 
         test_cml_configs_zero_max_size_string(
@@ -6565,7 +6565,7 @@ mod tests {
                     }
                 }
             }),
-            Err(Error::Parse { err, .. }) if &err == "expected a non-zero value"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: integer `0`, expected a nonzero u32"
         ),
 
         test_cml_configs_bad_max_count_on_vector(
@@ -6580,7 +6580,7 @@ mod tests {
                     }
                 }
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid type: string \"abcd\", expected u32"
+            Err(Error::Parse { err, .. }) if &err == "invalid type: string \"abcd\", expected a nonzero u32"
         ),
 
         test_cml_configs_zero_max_count_on_vector(
@@ -6595,7 +6595,7 @@ mod tests {
                     }
                 }
             }),
-            Err(Error::Parse { err, .. }) if &err == "expected a non-zero value"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: integer `0`, expected a nonzero u32"
         ),
 
         test_cml_configs_bad_max_size_string_vector(
@@ -6611,7 +6611,7 @@ mod tests {
                     }
                 }
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid type: string \"abcd\", expected u32"
+            Err(Error::Parse { err, .. }) if &err == "invalid type: string \"abcd\", expected a nonzero u32"
         ),
 
         test_cml_configs_zero_max_size_string_vector(
@@ -6627,7 +6627,7 @@ mod tests {
                     }
                 }
             }),
-            Err(Error::Parse { err, .. }) if &err == "expected a non-zero value"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: integer `0`, expected a nonzero u32"
         ),
     }}
 
