@@ -161,7 +161,7 @@ fn verify_budgets_with_tools(
 
     // Write the output result if requested by the command line.
     if let Some(out_path) = &args.gerrit_output {
-        write_json_file(&out_path, &to_json_output(&results)?)?;
+        write_json_file(out_path, &to_json_output(&results)?)?;
     }
 
     // Ensure that the sum of all the budgets equals total budget bytes.
@@ -185,7 +185,7 @@ fn verify_budgets_with_tools(
     if let Some(verbose_json_output) = args.verbose_json_output {
         let output: HashMap<&str, &BudgetResult> =
             results.iter().map(|v| (v.name.as_str(), v)).collect();
-        write_json_file(&verbose_json_output, &output)?;
+        write_json_file(verbose_json_output, &output)?;
     }
 
     // Print a text report for each overrun budget.
@@ -295,7 +295,7 @@ fn load_manifests_blobs_match_budgets(budgets: &Vec<PackageSetBudget>) -> Result
 fn load_blob_info(blob_size_paths: &Vec<Utf8PathBuf>) -> Result<Vec<BlobJsonEntry>> {
     let mut result = vec![];
     for blobs_path in blob_size_paths.iter() {
-        let mut blobs: Vec<BlobJsonEntry> = read_config(&blobs_path)?;
+        let mut blobs: Vec<BlobJsonEntry> = read_config(blobs_path)?;
         result.append(&mut blobs);
     }
     Ok(result)
@@ -385,7 +385,7 @@ fn compute_resources_budget_blobs(
             .iter()
             .flat_map(|budget| &budget.blobs)
             .filter(|blob| budget.paths.contains(&blob.path))
-            .map(|blob| blob.hash.clone())
+            .map(|blob| blob.hash)
             .collect();
 
         // Collect occurrence based on the hash.
@@ -460,7 +460,7 @@ fn compute_budget_results(
 
         result.push(BudgetResult {
             name: budget_usage.budget.name.clone(),
-            used_bytes: used_bytes,
+            used_bytes,
             package_breakdown,
             ..budget_usage.budget
         });
@@ -1420,22 +1420,22 @@ mod tests {
                 },
                 blobs: vec![
                     BlobInstance {
-                        hash: blob1_hash.clone(),
+                        hash: blob1_hash,
                         package: package1_path.clone(),
                         path: blob1_path.to_string(),
                     },
                     BlobInstance {
-                        hash: blob3_hash.clone(),
+                        hash: blob3_hash,
                         package: package1_path.clone(),
                         path: blob3_path.to_string(),
                     },
                     BlobInstance {
-                        hash: blob2_hash.clone(),
+                        hash: blob2_hash,
                         package: package2_path.clone(),
                         path: blob2_path.to_string(),
                     },
                     BlobInstance {
-                        hash: blob1_hash.clone(),
+                        hash: blob1_hash,
                         package: package2_path.clone(),
                         path: blob1_path.to_string(),
                     },
@@ -1450,16 +1450,16 @@ mod tests {
                     package_breakdown: HashMap::new(),
                 },
                 blobs: vec![BlobInstance {
-                    hash: blob2_hash.clone(),
+                    hash: blob2_hash,
                     package: package3_path.clone(),
                     path: blob2_path.to_string(),
                 }],
             },
         ];
         let blob_count_by_hash: HashMap<Hash, BlobSizeAndCount> = HashMap::from([
-            (blob1_hash.clone(), BlobSizeAndCount { size: 90, share_count: 2 }),
-            (blob2_hash.clone(), BlobSizeAndCount { size: 50, share_count: 2 }),
-            (blob3_hash.clone(), BlobSizeAndCount { size: 1000, share_count: 1 }),
+            (blob1_hash, BlobSizeAndCount { size: 90, share_count: 2 }),
+            (blob2_hash, BlobSizeAndCount { size: 50, share_count: 2 }),
+            (blob3_hash, BlobSizeAndCount { size: 1000, share_count: 1 }),
         ]);
         let ignored_hashes: HashSet<&Hash> = HashSet::from([&blob3_hash]);
         let results =
@@ -1472,21 +1472,21 @@ mod tests {
                 used_bytes: 115,
                 package_breakdown: HashMap::from([
                     (
-                        package2_path.clone(),
+                        package2_path,
                         PackageSizeInfo {
                             name: "".to_string(),
                             proportional_size: 70, /* 90/2 + 50/2 */
                             used_space_in_blobfs: 140,
                             blobs: vec![
                                 PackageBlobSizeInfo {
-                                    merkle: blob2_hash.clone(),
+                                    merkle: blob2_hash,
                                     used_space_in_blobfs: 50,
                                     share_count: 2,
                                     absolute_share_count: 2,
                                     path_in_package: "".to_string(),
                                 },
                                 PackageBlobSizeInfo {
-                                    merkle: blob1_hash.clone(),
+                                    merkle: blob1_hash,
                                     path_in_package: "".to_string(),
                                     used_space_in_blobfs: 90,
                                     share_count: 2,
@@ -1496,13 +1496,13 @@ mod tests {
                         },
                     ),
                     (
-                        package1_path.clone(),
+                        package1_path,
                         PackageSizeInfo {
                             name: "".to_string(),
                             proportional_size: 45, /* 90/2 */
                             used_space_in_blobfs: 90,
                             blobs: vec![PackageBlobSizeInfo {
-                                merkle: blob1_hash.clone(),
+                                merkle: blob1_hash,
                                 path_in_package: "".to_string(),
                                 used_space_in_blobfs: 90,
                                 share_count: 2,
@@ -1518,13 +1518,13 @@ mod tests {
                 creep_budget_bytes: 111,
                 used_bytes: 31, /* 25 + 6 */
                 package_breakdown: HashMap::from([(
-                    package3_path.clone(),
+                    package3_path,
                     PackageSizeInfo {
                         name: "".to_string(),
                         proportional_size: 25, /* 50/2 */
                         used_space_in_blobfs: 50,
                         blobs: vec![PackageBlobSizeInfo {
-                            merkle: blob2_hash.clone(),
+                            merkle: blob2_hash,
                             path_in_package: "".to_string(),
                             used_space_in_blobfs: 50,
                             share_count: 2,

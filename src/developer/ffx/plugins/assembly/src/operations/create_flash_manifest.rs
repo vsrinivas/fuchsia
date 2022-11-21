@@ -80,7 +80,7 @@ mod tests {
 
         fn assert_eq(&self, rel_path: &str, expected: serde_json::Value) {
             let path = self.root.join(rel_path);
-            let actual: serde_json::Value = read_config(&path).unwrap();
+            let actual: serde_json::Value = read_config(path).unwrap();
             assert_eq!(actual, expected);
         }
 

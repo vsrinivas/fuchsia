@@ -24,14 +24,14 @@ pub fn construct_blobfs(
     let mut contents = BlobfsContents::default();
     let mut blobfs_builder = BlobFSBuilder::new(blobfs_tool, blobfs_config.layout.to_string());
     blobfs_builder.set_compressed(blobfs_config.compress);
-    contents.maximum_contents_size = blobfs_config.maximum_contents_size.clone();
+    contents.maximum_contents_size = blobfs_config.maximum_contents_size;
 
     // Add the base and cache packages.
     for package_manifest_path in &image_config.base {
-        blobfs_builder.add_package(&package_manifest_path)?;
+        blobfs_builder.add_package(package_manifest_path)?;
     }
     for package_manifest_path in &image_config.cache {
-        blobfs_builder.add_package(&package_manifest_path)?;
+        blobfs_builder.add_package(package_manifest_path)?;
     }
 
     // Add the base package and its contents.

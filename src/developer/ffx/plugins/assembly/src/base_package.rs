@@ -69,7 +69,7 @@ pub fn construct_base_package(
     let merkle_path = outdir.join("base.merkle");
     std::fs::write(merkle_path, hex::encode(base_merkle.as_bytes()))?;
 
-    let base_package_path_relative = path_relative_from_current_dir(base_package_path.clone())?;
+    let base_package_path_relative = path_relative_from_current_dir(base_package_path)?;
     assembly_manifest.images.push(Image::BasePackage(base_package_path_relative.clone()));
     Ok(BasePackage {
         merkle: base_merkle,
@@ -96,9 +96,9 @@ mod tests {
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         // Prepare package manifests to add to the base package.
-        let system_manifest = generate_test_manifest_file(&dir, "extra_base");
-        let base_manifest = generate_test_manifest_file(&dir, "test_static");
-        let cache_manifest = generate_test_manifest_file(&dir, "test_cache");
+        let system_manifest = generate_test_manifest_file(dir, "extra_base");
+        let base_manifest = generate_test_manifest_file(dir, "test_static");
+        let cache_manifest = generate_test_manifest_file(dir, "test_cache");
         let mut product_config = ImageAssemblyConfig::new_for_testing("kernel", 0);
         product_config.system.push(system_manifest);
         product_config.base.push(base_manifest);
@@ -139,9 +139,9 @@ mod tests {
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         // Prepare package manifests to add to the base package.
-        let system_manifest = generate_test_manifest_file(&dir, "extra_base");
-        let base_manifest = generate_test_manifest_file(&dir, "test_static");
-        let cache_manifest = generate_test_manifest_file(&dir, "test_cache");
+        let system_manifest = generate_test_manifest_file(dir, "extra_base");
+        let base_manifest = generate_test_manifest_file(dir, "test_static");
+        let cache_manifest = generate_test_manifest_file(dir, "test_cache");
         let mut product_config = ImageAssemblyConfig::new_for_testing("kernel", 0);
         product_config.system.push(system_manifest);
         product_config.base.push(base_manifest);

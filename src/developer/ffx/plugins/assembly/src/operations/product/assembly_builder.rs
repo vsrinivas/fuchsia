@@ -471,7 +471,7 @@ impl ImageAssemblyConfigBuilder {
         let cmc_tool = tools.get_tool("cmc")?;
 
         // add structured config value files to bootfs
-        let mut bootfs_repackager = Repackager::for_bootfs(&mut bootfs_files.entries, &outdir);
+        let mut bootfs_repackager = Repackager::for_bootfs(&mut bootfs_files.entries, outdir);
         for (component, values) in bootfs_structured_config.components {
             // check if we should try to configure the component before attempting so we can still
             // return errors for other conditions like a missing config field or a wrong type
@@ -490,7 +490,7 @@ impl ImageAssemblyConfigBuilder {
                     .with_context(|| format!("removing {} for repackaging", package))?
             {
                 let outdir = outdir.join("repackaged").join(&package);
-                let mut repackager = Repackager::new(manifest, &outdir)
+                let mut repackager = Repackager::new(manifest, outdir)
                     .with_context(|| format!("reading existing manifest for {}", package))?;
                 for (component, values) in &config.components {
                     repackager
@@ -806,8 +806,7 @@ mod tests {
     }
 
     fn make_test_assembly_bundle(bundle_path: &Utf8Path) -> AssemblyInputBundle {
-        let write_empty_bundle_pkg =
-            |name: &str| write_empty_pkg(bundle_path, name, None).clone().into();
+        let write_empty_bundle_pkg = |name: &str| write_empty_pkg(bundle_path, name, None).clone();
         AssemblyInputBundle {
             image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
                 base: vec![write_empty_bundle_pkg("base_package0")],
@@ -892,7 +891,7 @@ mod tests {
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir, make_test_assembly_bundle(outdir)).unwrap();
         let result: assembly_config_schema::ImageAssemblyConfig =
-            builder.build(&outdir, &tools).unwrap();
+            builder.build(outdir, &tools).unwrap();
 
         assert_eq!(
             result.base,
@@ -1039,13 +1038,13 @@ mod tests {
 
         let packages = ProductPackagesConfig {
             base: vec![
-                write_empty_pkg(&outdir, "base_a", None).into(),
+                write_empty_pkg(outdir, "base_a", None).into(),
                 ProductPackageDetails {
-                    manifest: write_empty_pkg(&outdir, "base_b", None).into(),
+                    manifest: write_empty_pkg(outdir, "base_b", None).into(),
                     config_data: Vec::default(),
                 },
                 ProductPackageDetails {
-                    manifest: write_empty_pkg(&outdir, "base_c", None).into(),
+                    manifest: write_empty_pkg(outdir, "base_c", None),
                     config_data: vec![
                         ProductConfigData {
                             destination: "dest/path/cfg.txt".into(),
@@ -1056,22 +1055,21 @@ mod tests {
                             source: config_data_source_b.into(),
                         },
                     ],
-                }
-                .into(),
+                },
             ],
             cache: vec![
-                write_empty_pkg(&outdir, "cache_a", None).into(),
-                write_empty_pkg(&outdir, "cache_b", None).into(),
+                write_empty_pkg(outdir, "cache_a", None).into(),
+                write_empty_pkg(outdir, "cache_b", None).into(),
             ],
         };
 
         let mut builder = get_minimum_config_builder(
-            &outdir,
+            outdir,
             vec!["platform_a".to_owned(), "platform_b".to_owned()],
         );
         builder.add_product_packages(packages).unwrap();
         let result: assembly_config_schema::ImageAssemblyConfig =
-            builder.build(&outdir, &tools).unwrap();
+            builder.build(outdir, &tools).unwrap();
 
         assert_eq!(
             result.base,
@@ -1116,15 +1114,15 @@ mod tests {
         let tools = FakeToolProvider::default();
 
         let mut builder = get_minimum_config_builder(
-            &outdir,
+            outdir,
             vec!["platform_a".to_owned(), "platform_b".to_owned()],
         );
-        let base_driver_1 = make_test_driver("driver1", &outdir)?;
-        let base_driver_2 = make_test_driver("driver2", &outdir)?;
+        let base_driver_1 = make_test_driver("driver1", outdir)?;
+        let base_driver_2 = make_test_driver("driver2", outdir)?;
 
         builder.add_product_drivers(vec![base_driver_1, base_driver_2])?;
         let result: assembly_config_schema::ImageAssemblyConfig =
-            builder.build(&outdir, &tools).unwrap();
+            builder.build(outdir, &tools).unwrap();
 
         assert_eq!(
             result.base.iter().map(|p| p.to_owned()).sorted().collect::<Vec<_>>(),
@@ -1136,15 +1134,14 @@ mod tests {
                 "platform_b"
             ]
             .iter()
-            .map(|p| outdir.join(p).to_owned())
+            .map(|p| outdir.join(p))
             .sorted()
             .collect::<Vec<_>>()
         );
 
-        let driver_manifest: Vec<DriverManifest> =
-            serde_json::from_reader(BufReader::new(File::open(
-                &outdir.join("driver-manager-base-config/config/base-driver-manifest.json"),
-            )?))?;
+        let driver_manifest: Vec<DriverManifest> = serde_json::from_reader(BufReader::new(
+            File::open(outdir.join("driver-manager-base-config/config/base-driver-manifest.json"))?,
+        ))?;
         assert_eq!(
             driver_manifest,
             vec![
@@ -1252,10 +1249,10 @@ mod tests {
         let outdir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let packages = ProductPackagesConfig {
-            base: vec![write_empty_pkg(&outdir, "base_a", None).into()],
+            base: vec![write_empty_pkg(outdir, "base_a", None).into()],
             ..ProductPackagesConfig::default()
         };
-        let mut builder = get_minimum_config_builder(&outdir, vec!["base_a".to_owned()]);
+        let mut builder = get_minimum_config_builder(outdir, vec!["base_a".to_owned()]);
 
         let result = builder.add_product_packages(packages);
         assert!(result.is_err());
@@ -1267,8 +1264,8 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let outdir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let base_driver_1 = make_test_driver("driver1", &outdir)?;
-        let mut builder = get_minimum_config_builder(&outdir, vec!["driver1".to_owned()]);
+        let base_driver_1 = make_test_driver("driver1", outdir)?;
+        let mut builder = get_minimum_config_builder(outdir, vec!["driver1".to_owned()]);
 
         let result = builder.add_product_drivers(vec![base_driver_1]);
 
@@ -1378,9 +1375,9 @@ mod tests {
     fn assert_two_pkgs_same_name_diff_path_errors() {
         let tmp = TempDir::new().unwrap();
         let outdir = Utf8Path::from_path(tmp.path()).unwrap();
-        let tmp_path1 = TempDir::new_in(&outdir).unwrap();
+        let tmp_path1 = TempDir::new_in(outdir).unwrap();
         let dir_path1 = Utf8Path::from_path(tmp_path1.path()).unwrap();
-        let tmp_path2 = TempDir::new_in(&outdir).unwrap();
+        let tmp_path2 = TempDir::new_in(outdir).unwrap();
         let dir_path2 = Utf8Path::from_path(tmp_path2.path()).unwrap();
         let aib = AssemblyInputBundle {
             image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
@@ -1407,9 +1404,9 @@ mod tests {
     fn assert_two_pkgs_same_name_diff_path_across_aibs_errors() {
         let tmp = TempDir::new().unwrap();
         let outdir = Utf8Path::from_path(tmp.path()).unwrap();
-        let tmp_path1 = TempDir::new_in(&outdir).unwrap();
+        let tmp_path1 = TempDir::new_in(outdir).unwrap();
         let dir_path1 = Utf8Path::from_path(tmp_path1.path()).unwrap();
-        let tmp_path2 = TempDir::new_in(&outdir).unwrap();
+        let tmp_path2 = TempDir::new_in(outdir).unwrap();
         let dir_path2 = Utf8Path::from_path(tmp_path2.path()).unwrap();
         let tools = FakeToolProvider::default();
         let aib = AssemblyInputBundle {
@@ -1445,9 +1442,9 @@ mod tests {
     fn test_builder_catches_dupes_across_package_sets() {
         let tmp = TempDir::new().unwrap();
         let outdir = Utf8Path::from_path(tmp.path()).unwrap();
-        let tmp_path1 = TempDir::new_in(&outdir).unwrap();
+        let tmp_path1 = TempDir::new_in(outdir).unwrap();
         let dir_path1 = Utf8Path::from_path(tmp_path1.path()).unwrap();
-        let tmp_path2 = TempDir::new_in(&outdir).unwrap();
+        let tmp_path2 = TempDir::new_in(outdir).unwrap();
         let dir_path2 = Utf8Path::from_path(tmp_path2.path()).unwrap();
         let aib = AssemblyInputBundle {
             image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
@@ -1473,9 +1470,9 @@ mod tests {
     fn test_builder_allows_dupes_assuming_different_package_url() {
         let tmp = TempDir::new().unwrap();
         let outdir = Utf8Path::from_path(tmp.path()).unwrap();
-        let tmp_path1 = TempDir::new_in(&outdir).unwrap();
+        let tmp_path1 = TempDir::new_in(outdir).unwrap();
         let dir_path1 = Utf8Path::from_path(tmp_path1.path()).unwrap();
-        let tmp_path2 = TempDir::new_in(&outdir).unwrap();
+        let tmp_path2 = TempDir::new_in(outdir).unwrap();
         let dir_path2 = Utf8Path::from_path(tmp_path2.path()).unwrap();
         let aib = AssemblyInputBundle {
             image_assembly: assembly_config_schema::PartialImageAssemblyConfig {

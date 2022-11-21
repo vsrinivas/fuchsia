@@ -29,30 +29,30 @@ pub struct ExtraHashDescriptor {
     pub min_avb_version: Option<[u32; 2]>,
 }
 
-impl Into<HashDescriptor> for ExtraHashDescriptor {
-    fn into(self) -> HashDescriptor {
+impl From<ExtraHashDescriptor> for HashDescriptor {
+    fn from(val: ExtraHashDescriptor) -> Self {
         let builder = RawHashDescriptorBuilder::default();
-        let builder = match self.name {
+        let builder = match val.name {
             Some(name) => builder.name(name),
             _ => builder,
         };
-        let builder = match self.size {
+        let builder = match val.size {
             Some(size) => builder.size(size),
             _ => builder,
         };
-        let builder = match self.salt {
+        let builder = match val.salt {
             Some(salt) => builder.salt(salt),
             _ => builder,
         };
-        let builder = match self.digest {
+        let builder = match val.digest {
             Some(digest) => builder.digest(&digest[..]),
             _ => builder,
         };
-        let builder = match self.flags {
+        let builder = match val.flags {
             Some(flags) => builder.flags(flags),
             _ => builder,
         };
-        let builder = match self.min_avb_version {
+        let builder = match val.min_avb_version {
             Some(min_avb_version) => builder.min_avb_version(min_avb_version),
             _ => builder,
         };
@@ -78,7 +78,7 @@ where
     if let Value::String(number) = &value {
         return number
             .parse::<u64>()
-            .map(|v| Some(v))
+            .map(Some)
             .map_err(|e| serde::de::Error::custom(e.to_string()));
     }
     Err(serde::de::Error::custom("not a valid value"))
@@ -108,9 +108,7 @@ where
     let value = String::deserialize(value)?;
     match Salt::decode_hex(value.as_str()) {
         Ok(salt) => Ok(Some(salt)),
-        Err(e) => {
-            Err(serde::de::Error::custom(format!("not a valid salt value: {}", e.to_string())))
-        }
+        Err(e) => Err(serde::de::Error::custom(format!("not a valid salt value: {}", e))),
     }
 }
 
@@ -123,13 +121,13 @@ where
     let value = Value::deserialize(value)?;
     if let Some(u64_value) = value.as_u64() {
         return u32::try_from(u64_value)
-            .map(|v| Some(v))
+            .map(Some)
             .map_err(|e| serde::de::Error::custom(e.to_string()));
     }
     if let Value::String(number) = &value {
         return number
             .parse::<u32>()
-            .map(|v| Some(v))
+            .map(Some)
             .map_err(|e| serde::de::Error::custom(e.to_string()));
     }
     Err(serde::de::Error::custom("not a valid value"))
@@ -141,7 +139,7 @@ where
     D: Deserializer<'de>,
 {
     let raw_string = String::deserialize(value)?;
-    let parts: Vec<&str> = raw_string.split(".").collect();
+    let parts: Vec<&str> = raw_string.split('.').collect();
     if parts.len() != 2 {
         Err(serde::de::Error::custom("version must be in `A.B` format"))
     } else {

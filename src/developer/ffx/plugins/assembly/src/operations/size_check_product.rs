@@ -66,8 +66,8 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<bool> {
         }
     };
     let max_contents_size = blobfs_contents.maximum_contents_size;
-    let package_sizes = calculate_package_sizes(&blobfs_contents)?;
-    let total_blobfs_size = calculate_total_blobfs_size(&blobfs_contents)?;
+    let package_sizes = calculate_package_sizes(blobfs_contents)?;
+    let total_blobfs_size = calculate_total_blobfs_size(blobfs_contents)?;
     let contents_fit = match max_contents_size {
         None => true,
         Some(max) => total_blobfs_size <= max,
@@ -94,7 +94,7 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<bool> {
                     base_assembly_manifest
                 )
             })?;
-        let other_package_sizes = calculate_package_sizes(&other_blobfs_contents)?;
+        let other_package_sizes = calculate_package_sizes(other_blobfs_contents)?;
         print_size_diff(&package_sizes, &other_package_sizes);
     } else if args.verbose {
         println!("{}", PackageSizeInfos(&package_sizes));
@@ -177,7 +177,7 @@ fn generate_visualization_tree(package_sizes: &Vec<PackageSizeInfo>) -> Visualiz
         name: "packages".to_string(),
         kind: "p".to_string(),
         children: package_sizes
-            .into_iter()
+            .iter()
             .map(|package_size| VisualizationPackageNode {
                 name: package_size.name.clone(),
                 kind: "p".to_string(),
@@ -280,9 +280,9 @@ fn build_blob_share_counts(
         .chain(blobfs_contents.packages.cache.0.iter())
         .flat_map(|p| {
             if is_absolute {
-                (&p.blobs).iter().map(|b| b.merkle.to_string()).collect::<Vec<String>>()
+                p.blobs.iter().map(|b| b.merkle.to_string()).collect::<Vec<String>>()
             } else {
-                (&p.blobs)
+                p.blobs
                     .iter()
                     .map(|b| b.merkle.to_string())
                     .collect::<HashSet<String>>()
@@ -1602,7 +1602,7 @@ test_base_package                                                            65 
                 }],
             );
             let expected_product_level_diff = &ProductLevelDiff {
-                package_path: format!("{} {}", expected_sign, "package1 : any_path".to_string()),
+                package_path: format!("{} {}", expected_sign, "package1 : any_path"),
                 merkle: merkle_key.to_string(),
                 size_delta: 110.0,
             };

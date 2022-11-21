@@ -36,7 +36,7 @@ impl BlobJsonGenerator {
         builder.set_compressed(true);
         package_manifests
             .iter()
-            .map(|manifest| builder.add_package(&manifest))
+            .map(|manifest| builder.add_package(manifest))
             .collect::<Result<Vec<()>>>()?;
 
         let tmp = TempDir::new()?;

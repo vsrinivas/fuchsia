@@ -73,7 +73,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
                 &mut assembly_manifest,
                 &image_assembly_config,
                 fvm_config.clone(),
-                &base_package,
+                base_package,
             )?;
         }
     } else {
@@ -102,7 +102,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
             &outdir,
             &gendir,
             &image_assembly_config,
-            &zbi_config,
+            zbi_config,
             base_package.as_ref(),
             fvm_for_zbi,
         )?)
@@ -122,7 +122,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
 
     if let Some(vbmeta_config) = vbmeta_config {
         info!("Creating the VBMeta image");
-        vbmeta::construct_vbmeta(&mut assembly_manifest, &outdir, &vbmeta_config, &zbi_path)
+        vbmeta::construct_vbmeta(&mut assembly_manifest, &outdir, vbmeta_config, &zbi_path)
             .context("Creating the VBMeta image")?;
     } else {
         info!("Skipping vbmeta creation");
@@ -138,7 +138,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
                     signing_tool,
                     &mut assembly_manifest,
                     &outdir,
-                    &zbi_config,
+                    zbi_config,
                     &zbi_path,
                 )
                 .context("Vendor-signing the ZBI")?;
@@ -178,7 +178,7 @@ fn create_package_manifest(
     base_package: Option<&BasePackage>,
 ) -> Result<()> {
     let packages_path = outdir.as_ref().join("packages.json");
-    let packages_file = File::create(&packages_path).context("Creating the packages manifest")?;
+    let packages_file = File::create(packages_path).context("Creating the packages manifest")?;
     let mut packages_manifest = UpdatePackagesManifest::V1(BTreeSet::new());
     let mut add_packages_to_update = |packages: &Vec<Utf8PathBuf>| -> Result<()> {
         for package_path in packages {
@@ -201,11 +201,11 @@ fn create_package_manifest(
             None,
         )?;
     }
-    Ok(ser::to_writer(packages_file, &packages_manifest).context("Writing packages manifest")?)
+    ser::to_writer(packages_file, &packages_manifest).context("Writing packages manifest")
 }
 
 fn has_base_package(image_assembly_config: &ImageAssemblyConfig) -> bool {
-    return !(image_assembly_config.base.is_empty()
+    !(image_assembly_config.base.is_empty()
         && image_assembly_config.cache.is_empty()
-        && image_assembly_config.system.is_empty());
+        && image_assembly_config.system.is_empty())
 }

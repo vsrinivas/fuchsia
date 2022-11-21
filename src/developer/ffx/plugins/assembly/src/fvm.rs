@@ -162,7 +162,7 @@ impl<'a> MultiFvmBuilder<'a> {
                     FvmBuilder::new(fvm_tool, &path, self.slice_size, config.compress, fvm_type);
                 for filesystem_name in &config.filesystems {
                     let fs = self
-                        .get_filesystem(tools, &filesystem_name)
+                        .get_filesystem(tools, filesystem_name)
                         .context(format!("Including filesystem: {}", &filesystem_name))?;
                     builder.filesystem(fs);
                 }
@@ -188,7 +188,7 @@ impl<'a> MultiFvmBuilder<'a> {
 
                 let mut has_minfs = false;
                 for filesystem_name in &config.filesystems {
-                    let fs = self.get_filesystem(tools, &filesystem_name)?;
+                    let fs = self.get_filesystem(tools, filesystem_name)?;
                     match fs {
                         Filesystem::MinFS { path: _, attributes: _ } => has_minfs = true,
                         _ => {}
@@ -285,9 +285,9 @@ impl<'a> MultiFvmBuilder<'a> {
                     tools.get_tool("blobfs")?,
                     &self.outdir,
                     &self.gendir,
-                    &self.assembly_config,
-                    &config,
-                    &self.base_package,
+                    self.assembly_config,
+                    config,
+                    self.base_package,
                 )
                 .context("Constructing blobfs")?;
                 (
