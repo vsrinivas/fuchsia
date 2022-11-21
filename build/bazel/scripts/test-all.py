@@ -90,7 +90,7 @@ class CommandLauncher(object):
 
 def check_update_workspace_script(
         fuchsia_dir, update_workspace_cmd, cmd_launcher):
-    """Check the behavior of the update-workspace.py script!"""
+    """Check the behavior of the update_workspace.py script!"""
 
     def get_update_output():
         return cmd_launcher.get_output(update_workspace_cmd)
@@ -245,7 +245,7 @@ def main():
 
     log('Generating bazel workspace and repositories.')
     update_workspace_cmd = [
-        os.path.join(_SCRIPT_DIR, 'update-workspace.py'),
+        os.path.join(_SCRIPT_DIR, 'update_workspace.py'),
         '--fuchsia-dir',
         fuchsia_dir,
     ]
@@ -257,7 +257,7 @@ def main():
         'Bazel script does not exist: ' + bazel_script)
 
     # Verify that adding or removinf files from FUCHSIA_DIR invokes a regeneration.
-    log('Checking behavior of update-workspace.py script.')
+    log('Checking behavior of update_workspace.py script.')
     check_update_workspace_script(
         fuchsia_dir, update_workspace_cmd, command_launcher)
 

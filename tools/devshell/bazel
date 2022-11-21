@@ -31,6 +31,6 @@ readonly BAZEL_WRAPPER="${FUCHSIA_BUILD_DIR}/gen/build/bazel/bazel"
 
 # Regenerate Bazel workspace and launcher script if needed.
 # Note that this also regenerates the Ninja build plan if necessary.
-"${FUCHSIA_DIR}"/build/bazel/scripts/update-workspace.py
+"${FUCHSIA_DIR}"/build/bazel/scripts/update_workspace.py
 
 "${BAZEL_WRAPPER}" "$@"

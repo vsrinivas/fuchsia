@@ -61,7 +61,7 @@ action("generate_main_workspace") {
           "//build/bazel/bazel_workspace.gni$0x0aOld bazel_top_dir location " +
           "[${bazel_top_dir}] new location [${target_gen_dir}")
 
-  script = "//build/bazel/scripts/update-workspace.py"
+  script = "//build/bazel/scripts/update_workspace.py"
 
   # The update script tracks the file and directory entries of FUCHSIA_DIR
   # and will update the workspace if they change (i.e. if a file or
@@ -182,4 +182,9 @@ bazel_input_resource("build_args_bazel_inputs") {
   sources = [ _build_args_bzl_output ]
   outputs = [ "build_args.bzl" ]
   deps = [ ":${_build_args_bzl_target}" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "scripts:tests" ]
 }

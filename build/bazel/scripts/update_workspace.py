@@ -96,7 +96,13 @@ def make_removeable(path: str):
 
     info = os.stat(path, follow_symlinks=False)
     if info.st_mode & stat.S_IWUSR == 0:
-        os.chmod(path, info.st_mode | stat.S_IWUSR, follow_symlinks=False)
+        try:
+            os.chmod(path, info.st_mode | stat.S_IWUSR, follow_symlinks=False)
+        except Exception as e:
+            islink = os.path.islink(path)
+            raise RuntimeError(
+                f'Failed to chmod +w to {path}, islink: {islink}, info: {info}, error: {e}'
+            )
 
 
 def remove_dir(path):
