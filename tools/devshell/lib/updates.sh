@@ -193,10 +193,15 @@ function check-for-package-server {
       return 1
     fi
 
-    if ! is-listening-on-port "${ffx_port}"; then
-      fx-error "It looks like the ffx package server is not running."
-      fx-error "You probably need to run \"fx add-update-source\""
-      return 1
+    if [[ "${ffx_port}" -eq 0 ]]; then
+      fx-warn "WARNING: The server is configured to listen on a random port."
+      fx-warn "WARNING: We can't determine port this is, so assuming it's running."
+    else
+      if ! is-listening-on-port "${ffx_port}"; then
+        fx-error "It looks like the ffx package server is not running."
+        fx-error "You probably need to run \"fx add-update-source\""
+        return 1
+      fi
     fi
 
     # FIXME(http://fxbug.dev/80431): Check if the current `devhost` points at
