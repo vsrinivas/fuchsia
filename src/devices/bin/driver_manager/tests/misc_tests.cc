@@ -412,7 +412,7 @@ TEST(MiscTestCase, DeviceAlreadyBoundFromDriverIndex) {
   loop.RunUntilIdle();
 }
 
-TEST(MiscTestCase, AddDeviceGroup) {
+TEST(MiscTestCase, AddNodeGroup) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::Loop index_loop(&kAsyncLoopConfigNeverAttachToThread);
   ASSERT_OK(index_loop.StartThread("test-thread"));
@@ -476,32 +476,32 @@ TEST(MiscTestCase, AddDeviceGroup) {
                            .value(fdf::wire::NodePropertyValue::WithIntValue(500))
                            .Build();
 
-  fidl::VectorView<fdf::wire::DeviceGroupNode> nodes(allocator, 1);
-  nodes[0] = fdf::wire::DeviceGroupNode{
+  fidl::VectorView<fdf::wire::NodeRepresentation> nodes(allocator, 1);
+  nodes[0] = fdf::wire::NodeRepresentation{
       .bind_rules = bind_rules,
       .bind_properties = bind_properties,
   };
 
   fidl::VectorView<fuchsia_device_manager::wire::DeviceMetadata> metadata(allocator, 0);
 
-  fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc =
-      fuchsia_device_manager::wire::DeviceGroupDescriptor{
+  fuchsia_device_manager::wire::NodeGroupDescriptor group_desc =
+      fuchsia_device_manager::wire::NodeGroupDescriptor{
           .nodes = nodes,
           .spawn_colocated = false,
           .metadata = metadata,
       };
-  const fdi::MatchedDeviceGroupInfo match({
+  const fdi::MatchedNodeGroupInfo match({
       .composite = fdi::MatchedCompositeInfo(
           {.num_nodes = 1,
            .node_names = {{"shoveler"}},
            .driver_info = fdi::MatchedDriverInfo({.url = "#driver/mock-device.so"})}),
       .node_names = {{"shoveler"}},
   });
-  fake_driver_index.AddDeviceGroupMatch("group", match);
+  fake_driver_index.AddNodeGroupMatch("group", match);
 
-  ASSERT_OK(coordinator.AddDeviceGroup(device, "group", group_desc));
+  ASSERT_OK(coordinator.AddNodeGroup(device, "group", group_desc));
   loop.RunUntilIdle();
-  ZX_ASSERT(coordinator.device_group_manager()->device_groups().count("group") != 0);
+  ZX_ASSERT(coordinator.node_group_manager()->node_groups().count("group") != 0);
 
   controller_endpoints->server.reset();
   coordinator_endpoints->client.reset();

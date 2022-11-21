@@ -11,14 +11,14 @@ source_set("driver_runner") {
     "composite_assembler.h",
     "composite_manager.cc",
     "composite_manager.h",
-    "device_group_v2.cc",
-    "device_group_v2.h",
     "driver_host.cc",
     "driver_host.h",
     "driver_runner.cc",
     "driver_runner.h",
     "node.cc",
     "node.h",
+    "node_group_v2.cc",
+    "node_group_v2.h",
     "node_removal_tracker.cc",
     "node_removal_tracker.h",
     "parent_set_collector.cc",
@@ -33,7 +33,7 @@ source_set("driver_runner") {
     "//sdk/lib/sys/component/cpp",
     "//src/bringup/lib/mexec",
     "//src/devices/bin/driver_manager:binding",
-    "//src/devices/bin/driver_manager/device_group:lib",
+    "//src/devices/bin/driver_manager/node_group:lib",
     "//src/devices/lib/log",
     "//src/lib/fsl",
     "//src/lib/fxl",
@@ -113,9 +113,9 @@ fuchsia_unittest_component("composite-assembler-test") {
   deps = [ ":composite_assembler_test" ]
 }
 
-executable("device_group_v2_test") {
+executable("node_group_v2_test") {
   testonly = true
-  sources = [ "device_group_v2_test.cc" ]
+  sources = [ "node_group_v2_test.cc" ]
 
   deps = [
     ":driver_runner",
@@ -125,8 +125,8 @@ executable("device_group_v2_test") {
   ]
 }
 
-fuchsia_unittest_component("device-group-v2-test") {
-  deps = [ ":device_group_v2_test" ]
+fuchsia_unittest_component("node-group-v2-test") {
+  deps = [ ":node_group_v2_test" ]
 }
 
 executable("node_removal_tracker_test") {
@@ -152,7 +152,7 @@ fuchsia_test_package("driver-runner-tests") {
   }
 
   test_components = [
-    ":device-group-v2-test",
+    ":node-group-v2-test",
     ":driver-runner-test",
     ":composite-assembler-test",
     ":node-removal-tracker-test",

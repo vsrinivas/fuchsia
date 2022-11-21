@@ -654,7 +654,7 @@ __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, 
 }
 
 __EXPORT zx_status_t device_add_group(zx_device_t* dev, const char* name,
-                                      const device_group_desc_t* group_desc) {
+                                      const node_group_desc_t* group_desc) {
   ZX_DEBUG_ASSERT_MSG(dev && dev->magic == DEV_MAGIC, "Dev pointer '%p' is not a real device", dev);
   fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
   auto dev_ref = fbl::RefPtr(dev);

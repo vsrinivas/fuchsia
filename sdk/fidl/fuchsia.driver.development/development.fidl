@@ -162,7 +162,7 @@ type NodeGroupInfo = table {
     4: node_names vector<string:MAX>:MAX;
 
     /// The nodes in the node group.
-    5: nodes vector<fuchsia.driver.framework.DeviceGroupNode>:MAX;
+    5: nodes vector<fuchsia.driver.framework.NodeRepresentation>:MAX;
 };
 
 protocol NodeGroupsIterator {

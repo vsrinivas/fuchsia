@@ -60,8 +60,8 @@
 #include <src/lib/fsl/vmo/vector.h>
 
 #include "src/devices/bin/driver_manager/package_resolver.h"
-#include "src/devices/bin/driver_manager/v1/device_group_v1.h"
 #include "src/devices/bin/driver_manager/v1/driver_development.h"
+#include "src/devices/bin/driver_manager/v1/node_group_v1.h"
 #include "src/devices/lib/log/log.h"
 
 namespace {
@@ -312,7 +312,7 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
 
   device_manager_ = std::make_unique<DeviceManager>(this, config_.crash_policy);
 
-  device_group_manager_ = std::make_unique<DeviceGroupManager>(this);
+  node_group_manager_ = std::make_unique<NodeGroupManager>(this);
 
   suspend_resume_manager_ = std::make_unique<SuspendResumeManager>(this, config_.suspend_timeout);
   firmware_loader_ =
@@ -878,35 +878,34 @@ zx_status_t Coordinator::SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
   return ZX_OK;
 }
 
-zx_status_t Coordinator::AddDeviceGroup(
+zx_status_t Coordinator::AddNodeGroup(
     const fbl::RefPtr<Device>& dev, std::string_view name,
-    fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc) {
+    fuchsia_device_manager::wire::NodeGroupDescriptor group_desc) {
   if (group_desc.nodes.count() == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto device_group_result = device_group::DeviceGroupV1::Create(
-      DeviceGroupCreateInfo{
+  auto node_group_result = node_group::NodeGroupV1::Create(
+      NodeGroupCreateInfo{
           .name = std::string(name.data()),
           .size = group_desc.nodes.count(),
       },
       group_desc, &driver_loader_);
-  if (!device_group_result.is_ok()) {
-    LOGF(ERROR, "Failed to create device group");
-    return device_group_result.status_value();
+  if (!node_group_result.is_ok()) {
+    LOGF(ERROR, "Failed to create node group");
+    return node_group_result.status_value();
   }
 
   fidl::Arena allocator;
-  auto fidl_device_group = fdf::wire::DeviceGroup::Builder(allocator)
-                               .name(fidl::StringView(allocator, name))
-                               .nodes(std::move(group_desc.nodes))
-                               .Build();
+  auto fidl_node_group = fdf::wire::NodeGroup::Builder(allocator)
+                             .name(fidl::StringView(allocator, name))
+                             .nodes(std::move(group_desc.nodes))
+                             .Build();
 
-  auto result = device_group_manager_->AddDeviceGroup(fidl_device_group,
-                                                      std::move(device_group_result.value()));
+  auto result =
+      node_group_manager_->AddNodeGroup(fidl_node_group, std::move(node_group_result.value()));
   if (!result.is_ok()) {
-    LOGF(ERROR, "Failed to add device group to the device group manager: %d.",
-         result.error_value());
+    LOGF(ERROR, "Failed to add node group to the node group manager: %d.", result.error_value());
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -1070,23 +1069,23 @@ void Coordinator::InitOutgoingServices(component::OutgoingDirectory& outgoing) {
 std::string Coordinator::GetFragmentDriverUrl() const { return "#driver/fragment.so"; }
 
 // TODO(fxb/107737): Ideally, we try to match and bind all devices, regardless if they
-// match with a device group or not. However, this causes issues because the driver manager
+// match with a node group or not. However, this causes issues because the driver manager
 // currently can't catch when a device is in the process of its Bind() function. As such,
 // this can create an infinite loop of the same device calling its Bind() nonstop. As a
 // short-term solution, we can following how Composite Devices just try to match and
 // bind devices to its fragments.
-void Coordinator::BindNodesForDeviceGroups() {
+void Coordinator::BindNodesForNodeGroups() {
   for (auto& dev : device_manager_->devices()) {
-    auto status = bind_driver_manager_->MatchAndBindDeviceGroups(fbl::RefPtr(&dev));
+    auto status = bind_driver_manager_->MatchAndBindNodeGroups(fbl::RefPtr(&dev));
     if (status != ZX_OK) {
       // LOGF(WARNING, "Failed to bind device '%s': %d", dev.name().data(), status);
     }
   }
 }
 
-void Coordinator::AddDeviceGroupToDriverIndex(fuchsia_driver_framework::wire::DeviceGroup group,
-                                              AddToIndexCallback callback) {
-  driver_loader_.AddDeviceGroup(group, std::move(callback));
+void Coordinator::AddNodeGroupToDriverIndex(fuchsia_driver_framework::wire::NodeGroup group,
+                                            AddToIndexCallback callback) {
+  driver_loader_.AddNodeGroup(group, std::move(callback));
 }
 
 void Coordinator::RestartDriverHosts(RestartDriverHostsRequestView request,

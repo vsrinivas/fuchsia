@@ -1,0 +1,33 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+
+driver_bind_rules("node-group-bind") {
+  rules = "node-group.bind"
+  bind_output = "node-group.bindbc"
+}
+
+fuchsia_driver("driver") {
+  testonly = true
+  output_name = "node-group"
+  sources = [ "node-group.cc" ]
+  deps = [
+    ":node-group-bind",
+    "//sdk/lib/driver/component/cpp:cpp",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/devices/tests/v2/compat-node-group:fuchsia.compat.nodegroup.test_cpp_wire",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}
+
+fuchsia_driver_component("component") {
+  testonly = true
+  component_name = "node_group"
+  manifest = "meta/node-group.cml"
+  deps = [ ":driver" ]
+  info = "node-group-info.json"
+}

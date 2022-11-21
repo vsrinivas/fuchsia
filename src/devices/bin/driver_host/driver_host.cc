@@ -46,11 +46,11 @@
 
 #include "src/devices/bin/driver_host/composite_device.h"
 #include "src/devices/bin/driver_host/device_controller_connection.h"
-#include "src/devices/bin/driver_host/device_group_desc_util.h"
 #include "src/devices/bin/driver_host/driver.h"
 #include "src/devices/bin/driver_host/env.h"
 #include "src/devices/bin/driver_host/log.h"
 #include "src/devices/bin/driver_host/main.h"
+#include "src/devices/bin/driver_host/node_group_desc_util.h"
 #include "src/devices/bin/driver_host/proxy_device.h"
 #include "src/devices/bin/driver_host/proxy_iostate.h"
 #include "src/devices/bin/driver_host/scheduler_profile.h"
@@ -1255,7 +1255,7 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
 
 zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& dev,
                                               std::string_view name,
-                                              const device_group_desc_t* group_desc) {
+                                              const node_group_desc_t* group_desc) {
   if (name.empty() || !group_desc) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -1274,9 +1274,9 @@ zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& de
   }
 
   fidl::Arena allocator;
-  auto nodes = fidl::VectorView<fdf::wire::DeviceGroupNode>(allocator, group_desc->nodes_count);
+  auto nodes = fidl::VectorView<fdf::wire::NodeRepresentation>(allocator, group_desc->nodes_count);
   for (size_t i = 0; i < group_desc->nodes_count; i++) {
-    auto node_result = ConvertDeviceGroupNode(allocator, group_desc->nodes[i]);
+    auto node_result = ConvertNodeRepresentation(allocator, group_desc->nodes[i]);
     if (!node_result.is_ok()) {
       return node_result.error_value();
     }
@@ -1293,12 +1293,12 @@ zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& de
             group_desc->metadata_list[i].length)};
   }
 
-  fdm::wire::DeviceGroupDescriptor desc = {
+  fdm::wire::NodeGroupDescriptor desc = {
       .nodes = nodes, .spawn_colocated = group_desc->spawn_colocated, .metadata = metadata};
 
-  auto response = client.sync()->AddDeviceGroup(fidl::StringView(allocator, name), std::move(desc));
+  auto response = client.sync()->AddNodeGroup(fidl::StringView(allocator, name), std::move(desc));
   auto status = response.status();
   auto call_status = status == ZX_OK && response->is_error() ? response->error_value() : ZX_OK;
 
-  return log_rpc_result(dev, "add-device-group", status, call_status);
+  return log_rpc_result(dev, "add-node-group", status, call_status);
 }

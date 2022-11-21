@@ -76,7 +76,7 @@ struct MatchedCompositeDriverInfo {
 };
 
 using MatchedDriver = std::variant<MatchedDriverInfo, MatchedCompositeDriverInfo,
-                                   fuchsia_driver_index::MatchedDeviceGroupNodeInfo>;
+                                   fuchsia_driver_index::MatchedNodeRepresentationInfo>;
 
 #define DRIVER_NAME_LEN_MAX 64
 

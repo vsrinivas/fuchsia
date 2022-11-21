@@ -14,8 +14,8 @@
 
 #include "src/devices/bin/driver_manager/base_package_resolver.h"
 #include "src/devices/bin/driver_manager/device.h"
-#include "src/devices/bin/driver_manager/device_group/composite_manager_bridge.h"
 #include "src/devices/bin/driver_manager/driver.h"
+#include "src/devices/bin/driver_manager/node_group/composite_manager_bridge.h"
 
 class Coordinator;
 
@@ -51,8 +51,7 @@ class DriverLoader {
     bool only_return_base_and_fallback_drivers = false;
   };
 
-  void AddDeviceGroup(fuchsia_driver_framework::wire::DeviceGroup group,
-                      AddToIndexCallback callback);
+  void AddNodeGroup(fuchsia_driver_framework::wire::NodeGroup group, AddToIndexCallback callback);
 
   const std::vector<MatchedDriver> MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
                                                           const MatchDeviceConfig& config);

@@ -37,8 +37,8 @@ class BindDriverManager {
   // Binds all the devices to the drivers.
   void BindAllDevices(const DriverLoader::MatchDeviceConfig& config);
 
-  // Find matching device group nodes for |dev| and then bind them.
-  zx_status_t MatchAndBindDeviceGroups(const fbl::RefPtr<Device>& dev);
+  // Find matching node group nodes for |dev| and then bind them.
+  zx_status_t MatchAndBindNodeGroups(const fbl::RefPtr<Device>& dev);
 
  private:
   zx_status_t BindDriverToDevice(const MatchedDriver& driver, const fbl::RefPtr<Device>& dev);

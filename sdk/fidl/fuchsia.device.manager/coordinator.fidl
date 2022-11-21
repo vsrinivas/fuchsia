@@ -124,9 +124,9 @@ type CompositeDeviceDescriptor = struct {
     metadata vector<DeviceMetadata>:<METADATA_MAX, optional>;
 };
 
-/// Device group parts and properties.
-type DeviceGroupDescriptor = struct {
-    nodes vector<fdf.DeviceGroupNode>:MAX;
+/// Node group parts and properties.
+type NodeGroupDescriptor = struct {
+    nodes vector<fdf.NodeRepresentation>:MAX;
     spawn_colocated bool;
     metadata vector<DeviceMetadata>:<METADATA_MAX, optional>;
 };
@@ -378,12 +378,12 @@ protocol Coordinator {
         comp_desc CompositeDeviceDescriptor;
     }) -> () error zx.status;
 
-    /// Adds the given device group. This causes the driver manager to add the device group to
+    /// Adds the given node group. This causes the driver manager to add the node group to
     /// the driver index, and then try to match the nodes against the existing device tree.
     /// All device additions will be monitored to see if they matched to the remaining
     /// unbound nodes.
-    AddDeviceGroup(struct {
+    AddNodeGroup(struct {
         name string:DEVICE_NAME_MAX;
-        group_desc DeviceGroupDescriptor;
+        group_desc NodeGroupDescriptor;
     }) -> () error zx.status;
 };

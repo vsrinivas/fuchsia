@@ -7,7 +7,7 @@ using fuchsia.device.manager;
 using zx;
 
 // This protocol is used by DFv1 drivers to add composite devices.
-// Newer drivers should use DeviceGroups.
+// Newer drivers should use NodeGroups.
 @discoverable
 protocol DeprecatedCompositeCreator {
     AddCompositeDevice(struct {

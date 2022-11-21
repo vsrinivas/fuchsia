@@ -1,0 +1,20 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite node_group_driver;
+
+using node.group.test.lib;
+
+primary node "test_primary" {
+  fuchsia.BIND_PROTOCOL == node.group.test.lib.BIND_PROTOCOL.VALUE_1;
+  fuchsia.BIND_USB_VID == node.group.test.lib.BIND_USB_VID.VALUE;
+}
+
+node "child_a" {
+  fuchsia.BIND_PROTOCOL == node.group.test.lib.BIND_PROTOCOL.VALUE_2;
+}
+
+optional node "optional_a" {
+  fuchsia.BIND_PROTOCOL == node.group.test.lib.BIND_PROTOCOL.VALUE_3;
+}

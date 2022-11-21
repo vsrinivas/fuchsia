@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::device_group_manager::DeviceGroupManager,
     crate::match_common::node_to_device_property,
+    crate::node_group_manager::NodeGroupManager,
     crate::resolved_driver::{load_driver, DriverPackageType, ResolvedDriver},
     anyhow::{self, Context},
     bind::interpreter::decode_bind_rules::DecodedRules,
@@ -28,8 +28,8 @@ use {
     },
 };
 
-mod device_group_manager;
 mod match_common;
+mod node_group_manager;
 mod package_resolver;
 mod resolved_driver;
 
@@ -116,9 +116,9 @@ struct Indexer {
     // but will eventually resolve when base packages are available.
     base_repo: RefCell<BaseRepo>,
 
-    // Manages the device groups. This is wrapped in a RefCell since the
-    // device groups are added after the driver index server has started.
-    device_group_manager: RefCell<DeviceGroupManager>,
+    // Manages the node groups. This is wrapped in a RefCell since the
+    // node groups are added after the driver index server has started.
+    node_group_manager: RefCell<NodeGroupManager>,
 
     // Whether /system is required. Used to determine if the indexer should
     // return fallback drivers that match.
@@ -135,7 +135,7 @@ impl Indexer {
         Indexer {
             boot_repo,
             base_repo: RefCell::new(base_repo),
-            device_group_manager: RefCell::new(DeviceGroupManager::new()),
+            node_group_manager: RefCell::new(NodeGroupManager::new()),
             require_system,
             ephemeral_drivers: RefCell::new(HashMap::new()),
         }
@@ -168,11 +168,11 @@ impl Indexer {
         let properties = args.properties.unwrap();
         let properties = node_to_device_property(&properties)?;
 
-        // Prioritize device groups to avoid match conflicts with composite drivers.
-        let device_group_match =
-            self.device_group_manager.borrow().match_device_group_nodes(&properties);
-        if let Some(device_group) = device_group_match {
-            return Ok(device_group);
+        // Prioritize node groups to avoid match conflicts with composite drivers.
+        let node_group_match =
+            self.node_group_manager.borrow().match_node_representations(&properties);
+        if let Some(node_group) = node_group_match {
+            return Ok(node_group);
         }
 
         let base_repo = self.base_repo.borrow();
@@ -264,17 +264,17 @@ impl Indexer {
             .filter_map(|d| d)
             .collect();
 
-        // Prioritize device groups to avoid match conflicts with composite drivers.
-        let device_group_match =
-            self.device_group_manager.borrow().match_device_group_nodes(&properties);
-        if let Some(device_group) = device_group_match {
-            matched_drivers.insert(0, device_group);
+        // Prioritize node groups to avoid match conflicts with composite drivers.
+        let node_group_match =
+            self.node_group_manager.borrow().match_node_representations(&properties);
+        if let Some(node_group) = node_group_match {
+            matched_drivers.insert(0, node_group);
         }
 
         Ok(matched_drivers)
     }
 
-    fn add_device_group(&self, group: fdf::DeviceGroup) -> fdi::DriverIndexAddDeviceGroupResult {
+    fn add_node_group(&self, group: fdf::NodeGroup) -> fdi::DriverIndexAddNodeGroupResult {
         let base_repo = self.base_repo.borrow();
         let base_repo_iter = match base_repo.deref() {
             BaseRepo::Resolved(drivers) => drivers.iter(),
@@ -300,8 +300,8 @@ impl Indexer {
             .filter(|&driver| matches!(driver.bind_rules, DecodedRules::Composite(_)))
             .collect::<Vec<_>>();
 
-        let mut device_group_manager = self.device_group_manager.borrow_mut();
-        device_group_manager.add_device_group(group, composite_drivers)
+        let mut node_group_manager = self.node_group_manager.borrow_mut();
+        node_group_manager.add_node_group(group, composite_drivers)
     }
 
     fn get_driver_info(&self, driver_filter: Vec<String>) -> Vec<fdd::DriverInfo> {
@@ -377,8 +377,8 @@ impl Indexer {
 
         let resolved_driver = resolve.unwrap();
 
-        let mut device_group_manager = self.device_group_manager.borrow_mut();
-        device_group_manager.new_driver_available(resolved_driver.clone());
+        let mut node_group_manager = self.node_group_manager.borrow_mut();
+        node_group_manager.new_driver_available(resolved_driver.clone());
 
         let mut ephemeral_drivers = self.ephemeral_drivers.borrow_mut();
         let existing = ephemeral_drivers.insert(pkg_url.clone(), resolved_driver);
@@ -474,8 +474,8 @@ async fn run_driver_development_server(
                     .detach();
                 }
                 fdd::DriverIndexRequest::GetNodeGroups { name_filter, iterator, .. } => {
-                    let device_group_manager = indexer.device_group_manager.borrow();
-                    let node_groups = device_group_manager.get_node_groups(name_filter);
+                    let node_group_manager = indexer.node_group_manager.borrow();
+                    let node_groups = node_group_manager.get_node_groups(name_filter);
                     if node_groups.is_empty() {
                         iterator.close_with_epitaph(Status::NOT_FOUND)?;
                         return Ok(());
@@ -566,11 +566,11 @@ async fn run_index_server(
                         .or_else(ignore_peer_closed)
                         .context("error responding to MatchDriversV1")?;
                 }
-                DriverIndexRequest::AddDeviceGroup { payload, responder } => {
+                DriverIndexRequest::AddNodeGroup { payload, responder } => {
                     responder
-                        .send(&mut indexer.add_device_group(payload))
+                        .send(&mut indexer.add_node_group(payload))
                         .or_else(ignore_peer_closed)
-                        .context("error responding to AddDeviceGroup")?;
+                        .context("error responding to AddNodeGroup")?;
                 }
             }
             Ok(())
@@ -623,8 +623,8 @@ async fn load_base_drivers(
             resolved_driver.fallback = false;
         }
 
-        let mut device_group_manager = indexer.device_group_manager.borrow_mut();
-        device_group_manager.new_driver_available(resolved_driver.clone());
+        let mut node_group_manager = indexer.node_group_manager.borrow_mut();
+        node_group_manager.new_driver_available(resolved_driver.clone());
         resolved_drivers.push(resolved_driver);
     }
     indexer.load_base_repo(BaseRepo::Resolved(resolved_drivers));
@@ -2456,7 +2456,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_device_group_node_match() {
+    async fn test_node_representation_match() {
         let base_repo = BaseRepo::Resolved(std::vec![]);
 
         let (proxy, stream) =
@@ -2490,13 +2490,13 @@ mod tests {
             assert_eq!(
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
-                    .add_device_group(fdf::DeviceGroup {
+                    .add_node_group(fdf::NodeGroup {
                         name: Some("test_group".to_string()),
-                        nodes: Some(vec![fdf::DeviceGroupNode {
+                        nodes: Some(vec![fdf::NodeRepresentation {
                             bind_rules: bind_rules,
                             bind_properties: bind_properties,
                         }]),
-                        ..fdf::DeviceGroup::EMPTY
+                        ..fdf::NodeGroup::EMPTY
                     })
                     .await
                     .unwrap()
@@ -2521,14 +2521,14 @@ mod tests {
 
             let result = proxy.match_driver(match_args).await.unwrap().unwrap();
             assert_eq!(
-                fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
-                    device_groups: Some(vec![fdi::MatchedDeviceGroupInfo {
+                fdi::MatchedDriver::NodeRepresentation(fdi::MatchedNodeRepresentationInfo {
+                    node_groups: Some(vec![fdi::MatchedNodeGroupInfo {
                         name: Some("test_group".to_string()),
                         node_index: Some(0),
                         num_nodes: Some(1),
-                        ..fdi::MatchedDeviceGroupInfo::EMPTY
+                        ..fdi::MatchedNodeGroupInfo::EMPTY
                     }]),
-                    ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
+                    ..fdi::MatchedNodeRepresentationInfo::EMPTY
                 }),
                 result
             );
@@ -2565,7 +2565,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_device_group_node_match_v1() {
+    async fn test_node_representation_match_v1() {
         let always_match_rules = bind::compiler::BindRules {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
@@ -2621,13 +2621,13 @@ mod tests {
             assert_eq!(
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
-                    .add_device_group(fdf::DeviceGroup {
+                    .add_node_group(fdf::NodeGroup {
                         name: Some("test_group".to_string()),
-                        nodes: Some(vec![fdf::DeviceGroupNode {
+                        nodes: Some(vec![fdf::NodeRepresentation {
                             bind_rules: bind_rules,
                             bind_properties: bind_properties,
                         }]),
-                        ..fdf::DeviceGroup::EMPTY
+                        ..fdf::NodeGroup::EMPTY
                     })
                     .await
                     .unwrap()
@@ -2655,14 +2655,14 @@ mod tests {
 
             assert_eq!(
                 vec![
-                    fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
-                        device_groups: Some(vec![fdi::MatchedDeviceGroupInfo {
+                    fdi::MatchedDriver::NodeRepresentation(fdi::MatchedNodeRepresentationInfo {
+                        node_groups: Some(vec![fdi::MatchedNodeGroupInfo {
                             name: Some("test_group".to_string()),
                             node_index: Some(0),
                             num_nodes: Some(1),
-                            ..fdi::MatchedDeviceGroupInfo::EMPTY
+                            ..fdi::MatchedNodeGroupInfo::EMPTY
                         }]),
-                        ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
+                        ..fdi::MatchedNodeRepresentationInfo::EMPTY
                     }),
                     fdi::MatchedDriver::Driver(fdi::MatchedDriverInfo {
                         url: Some(
@@ -2721,7 +2721,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_add_device_group_matched_composite() {
+    async fn test_add_node_group_matched_composite() {
         // Create the Composite Bind rules.
         let primary_node_inst = vec![SymbolicInstructionInfo {
             location: None,
@@ -2831,19 +2831,19 @@ mod tests {
             ];
 
             let result = proxy
-                .add_device_group(fdf::DeviceGroup {
+                .add_node_group(fdf::NodeGroup {
                     name: Some("group_match".to_string()),
                     nodes: Some(vec![
-                        fdf::DeviceGroupNode {
+                        fdf::NodeRepresentation {
                             bind_rules: node_1_bind_rules.clone(),
                             bind_properties: node_1_bind_props_match.clone(),
                         },
-                        fdf::DeviceGroupNode {
+                        fdf::NodeRepresentation {
                             bind_rules: node_2_bind_rules.clone(),
                             bind_properties: node_2_bind_props_match.clone(),
                         },
                     ]),
-                    ..fdf::DeviceGroup::EMPTY
+                    ..fdf::NodeGroup::EMPTY
                 })
                 .await
                 .unwrap()
@@ -2859,19 +2859,19 @@ mod tests {
             assert_eq!(
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
-                    .add_device_group(fdf::DeviceGroup {
+                    .add_node_group(fdf::NodeGroup {
                         name: Some("group_non_match_1".to_string()),
                         nodes: Some(vec![
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_1_bind_rules.clone(),
                                 bind_properties: node_1_bind_props_nonmatch,
                             },
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_2_bind_rules.clone(),
                                 bind_properties: node_2_bind_props_match,
                             },
                         ]),
-                        ..fdf::DeviceGroup::EMPTY
+                        ..fdf::NodeGroup::EMPTY
                     })
                     .await
                     .unwrap()
@@ -2886,19 +2886,19 @@ mod tests {
             assert_eq!(
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
-                    .add_device_group(fdf::DeviceGroup {
+                    .add_node_group(fdf::NodeGroup {
                         name: Some("group_non_match_2".to_string()),
                         nodes: Some(vec![
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_1_bind_rules.clone(),
                                 bind_properties: node_1_bind_props_match,
                             },
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_2_bind_rules.clone(),
                                 bind_properties: node_2_bind_props_nonmatch,
                             },
                         ]),
-                        ..fdf::DeviceGroup::EMPTY
+                        ..fdf::NodeGroup::EMPTY
                     })
                     .await
                     .unwrap()
@@ -2916,7 +2916,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_add_device_group_no_optional_matched_composite_with_optional() {
+    async fn test_add_node_group_no_optional_matched_composite_with_optional() {
         // Create the Composite Bind rules.
         let primary_node_inst = vec![SymbolicInstructionInfo {
             location: None,
@@ -3037,19 +3037,19 @@ mod tests {
             ];
 
             let result = proxy
-                .add_device_group(fdf::DeviceGroup {
+                .add_node_group(fdf::NodeGroup {
                     name: Some("group_match".to_string()),
                     nodes: Some(vec![
-                        fdf::DeviceGroupNode {
+                        fdf::NodeRepresentation {
                             bind_rules: node_1_bind_rules.clone(),
                             bind_properties: node_1_bind_props_match.clone(),
                         },
-                        fdf::DeviceGroupNode {
+                        fdf::NodeRepresentation {
                             bind_rules: node_2_bind_rules.clone(),
                             bind_properties: node_2_bind_props_match.clone(),
                         },
                     ]),
-                    ..fdf::DeviceGroup::EMPTY
+                    ..fdf::NodeGroup::EMPTY
                 })
                 .await
                 .unwrap()
@@ -3065,19 +3065,19 @@ mod tests {
             assert_eq!(
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
-                    .add_device_group(fdf::DeviceGroup {
+                    .add_node_group(fdf::NodeGroup {
                         name: Some("group_non_match_1".to_string()),
                         nodes: Some(vec![
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_1_bind_rules.clone(),
                                 bind_properties: node_1_bind_props_nonmatch,
                             },
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_2_bind_rules.clone(),
                                 bind_properties: node_2_bind_props_match,
                             },
                         ]),
-                        ..fdf::DeviceGroup::EMPTY
+                        ..fdf::NodeGroup::EMPTY
                     })
                     .await
                     .unwrap()
@@ -3092,19 +3092,19 @@ mod tests {
             assert_eq!(
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
-                    .add_device_group(fdf::DeviceGroup {
+                    .add_node_group(fdf::NodeGroup {
                         name: Some("group_non_match_2".to_string()),
                         nodes: Some(vec![
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_1_bind_rules.clone(),
                                 bind_properties: node_1_bind_props_match,
                             },
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_2_bind_rules.clone(),
                                 bind_properties: node_2_bind_props_nonmatch,
                             },
                         ]),
-                        ..fdf::DeviceGroup::EMPTY
+                        ..fdf::NodeGroup::EMPTY
                     })
                     .await
                     .unwrap()
@@ -3122,7 +3122,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_add_device_group_with_optional_matched_composite_with_optional() {
+    async fn test_add_node_group_with_optional_matched_composite_with_optional() {
         // Create the Composite Bind rules.
         let primary_node_inst = vec![SymbolicInstructionInfo {
             location: None,
@@ -3255,23 +3255,23 @@ mod tests {
             ];
 
             let result = proxy
-                .add_device_group(fdf::DeviceGroup {
+                .add_node_group(fdf::NodeGroup {
                     name: Some("group_match".to_string()),
                     nodes: Some(vec![
-                        fdf::DeviceGroupNode {
+                        fdf::NodeRepresentation {
                             bind_rules: node_1_bind_rules.clone(),
                             bind_properties: node_1_bind_props_match.clone(),
                         },
-                        fdf::DeviceGroupNode {
+                        fdf::NodeRepresentation {
                             bind_rules: optional_1_bind_rules.clone(),
                             bind_properties: optional_1_bind_props_match.clone(),
                         },
-                        fdf::DeviceGroupNode {
+                        fdf::NodeRepresentation {
                             bind_rules: node_2_bind_rules.clone(),
                             bind_properties: node_2_bind_props_match.clone(),
                         },
                     ]),
-                    ..fdf::DeviceGroup::EMPTY
+                    ..fdf::NodeGroup::EMPTY
                 })
                 .await
                 .unwrap()
@@ -3290,7 +3290,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_add_device_group_then_driver() {
+    async fn test_add_node_group_then_driver() {
         // Create the Composite Bind rules.
         let primary_node_inst = vec![SymbolicInstructionInfo {
             location: None,
@@ -3389,23 +3389,23 @@ mod tests {
                 },
             ];
 
-            // When we add the device group it should get not found since there's no drivers.
+            // When we add the node group it should get not found since there's no drivers.
             assert_eq!(
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
-                    .add_device_group(fdf::DeviceGroup {
+                    .add_node_group(fdf::NodeGroup {
                         name: Some("test_group".to_string()),
                         nodes: Some(vec![
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_1_bind_rules.clone(),
                                 bind_properties: node_1_bind_props_match.clone(),
                             },
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_2_bind_rules.clone(),
                                 bind_properties: node_2_bind_props_match,
                             },
                         ]),
-                        ..fdf::DeviceGroup::EMPTY
+                        ..fdf::NodeGroup::EMPTY
                     })
                     .await
                     .unwrap()
@@ -3428,18 +3428,18 @@ mod tests {
                 ..fdf::NodeAddArgs::EMPTY
             };
 
-            // We can see the device group comes back without a matched composite.
+            // We can see the node group comes back without a matched composite.
             let match_result = proxy.match_driver(match_args.clone()).await.unwrap().unwrap();
-            if let fdi::MatchedDriver::DeviceGroupNode(info) = match_result {
-                assert_eq!(None, info.device_groups.unwrap()[0].composite);
+            if let fdi::MatchedDriver::NodeRepresentation(info) = match_result {
+                assert_eq!(None, info.node_groups.unwrap()[0].composite);
             } else {
-                assert!(false, "Did not get back a device group.");
+                assert!(false, "Did not get back a node group.");
             }
 
-            // Notify the device group manager of a new composite driver.
+            // Notify the node group manager of a new composite driver.
             {
-                let mut device_group_manager = index.device_group_manager.borrow_mut();
-                device_group_manager.new_driver_available(ResolvedDriver {
+                let mut node_group_manager = index.node_group_manager.borrow_mut();
+                node_group_manager.new_driver_available(ResolvedDriver {
                     component_url: url.clone(),
                     v1_driver_path: None,
                     bind_rules: rules,
@@ -3454,10 +3454,10 @@ mod tests {
 
             // Now when we get it back, it has the matching composite driver on it.
             let match_result = proxy.match_driver(match_args.clone()).await.unwrap().unwrap();
-            if let fdi::MatchedDriver::DeviceGroupNode(info) = match_result {
+            if let fdi::MatchedDriver::NodeRepresentation(info) = match_result {
                 assert_eq!(
                     &"mimid".to_string(),
-                    info.device_groups.unwrap()[0]
+                    info.node_groups.unwrap()[0]
                         .composite
                         .as_ref()
                         .unwrap()
@@ -3466,7 +3466,7 @@ mod tests {
                         .unwrap()
                 );
             } else {
-                assert!(false, "Did not get back a device group.");
+                assert!(false, "Did not get back a node group.");
             }
         }
         .fuse();
@@ -3481,7 +3481,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_add_device_group_no_optional_then_driver_with_optional() {
+    async fn test_add_node_group_no_optional_then_driver_with_optional() {
         // Create the Composite Bind rules.
         let primary_node_inst = vec![SymbolicInstructionInfo {
             location: None,
@@ -3591,23 +3591,23 @@ mod tests {
                 },
             ];
 
-            // When we add the device group it should get not found since there's no drivers.
+            // When we add the node group it should get not found since there's no drivers.
             assert_eq!(
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
-                    .add_device_group(fdf::DeviceGroup {
+                    .add_node_group(fdf::NodeGroup {
                         name: Some("test_group".to_string()),
                         nodes: Some(vec![
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_1_bind_rules.clone(),
                                 bind_properties: node_1_bind_props_match.clone(),
                             },
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_2_bind_rules.clone(),
                                 bind_properties: node_2_bind_props_match,
                             },
                         ]),
-                        ..fdf::DeviceGroup::EMPTY
+                        ..fdf::NodeGroup::EMPTY
                     })
                     .await
                     .unwrap()
@@ -3630,18 +3630,18 @@ mod tests {
                 ..fdf::NodeAddArgs::EMPTY
             };
 
-            // We can see the device group comes back without a matched composite.
+            // We can see the node group comes back without a matched composite.
             let match_result = proxy.match_driver(match_args.clone()).await.unwrap().unwrap();
-            if let fdi::MatchedDriver::DeviceGroupNode(info) = match_result {
-                assert_eq!(None, info.device_groups.unwrap()[0].composite);
+            if let fdi::MatchedDriver::NodeRepresentation(info) = match_result {
+                assert_eq!(None, info.node_groups.unwrap()[0].composite);
             } else {
-                assert!(false, "Did not get back a device group.");
+                assert!(false, "Did not get back a node group.");
             }
 
-            // Notify the device group manager of a new composite driver.
+            // Notify the node group manager of a new composite driver.
             {
-                let mut device_group_manager = index.device_group_manager.borrow_mut();
-                device_group_manager.new_driver_available(ResolvedDriver {
+                let mut node_group_manager = index.node_group_manager.borrow_mut();
+                node_group_manager.new_driver_available(ResolvedDriver {
                     component_url: url.clone(),
                     v1_driver_path: None,
                     bind_rules: rules,
@@ -3656,10 +3656,10 @@ mod tests {
 
             // Now when we get it back, it has the matching composite driver on it.
             let match_result = proxy.match_driver(match_args.clone()).await.unwrap().unwrap();
-            if let fdi::MatchedDriver::DeviceGroupNode(info) = match_result {
+            if let fdi::MatchedDriver::NodeRepresentation(info) = match_result {
                 assert_eq!(
                     &"mimid".to_string(),
-                    info.device_groups.unwrap()[0]
+                    info.node_groups.unwrap()[0]
                         .composite
                         .as_ref()
                         .unwrap()
@@ -3668,7 +3668,7 @@ mod tests {
                         .unwrap()
                 );
             } else {
-                assert!(false, "Did not get back a device group.");
+                assert!(false, "Did not get back a node group.");
             }
         }
         .fuse();
@@ -3683,7 +3683,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_add_device_group_with_optional_then_driver_with_optional() {
+    async fn test_add_node_group_with_optional_then_driver_with_optional() {
         // Create the Composite Bind rules.
         let primary_node_inst = vec![SymbolicInstructionInfo {
             location: None,
@@ -3805,27 +3805,27 @@ mod tests {
                 ..fdf::NodeProperty::EMPTY
             }];
 
-            // When we add the device group it should get not found since there's no drivers.
+            // When we add the node group it should get not found since there's no drivers.
             assert_eq!(
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
-                    .add_device_group(fdf::DeviceGroup {
+                    .add_node_group(fdf::NodeGroup {
                         name: Some("test_group".to_string()),
                         nodes: Some(vec![
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_1_bind_rules.clone(),
                                 bind_properties: node_1_bind_props_match.clone(),
                             },
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: node_2_bind_rules.clone(),
                                 bind_properties: node_2_bind_props_match,
                             },
-                            fdf::DeviceGroupNode {
+                            fdf::NodeRepresentation {
                                 bind_rules: optional_1_bind_rules.clone(),
                                 bind_properties: optional_1_bind_props_match,
                             },
                         ]),
-                        ..fdf::DeviceGroup::EMPTY
+                        ..fdf::NodeGroup::EMPTY
                     })
                     .await
                     .unwrap()
@@ -3841,18 +3841,18 @@ mod tests {
                 ..fdf::NodeAddArgs::EMPTY
             };
 
-            // We can see the device group comes back without a matched composite.
+            // We can see the node group comes back without a matched composite.
             let match_result = proxy.match_driver(match_args.clone()).await.unwrap().unwrap();
-            if let fdi::MatchedDriver::DeviceGroupNode(info) = match_result {
-                assert_eq!(None, info.device_groups.unwrap()[0].composite);
+            if let fdi::MatchedDriver::NodeRepresentation(info) = match_result {
+                assert_eq!(None, info.node_groups.unwrap()[0].composite);
             } else {
-                assert!(false, "Did not get back a device group.");
+                assert!(false, "Did not get back a node group.");
             }
 
-            // Notify the device group manager of a new composite driver.
+            // Notify the node group manager of a new composite driver.
             {
-                let mut device_group_manager = index.device_group_manager.borrow_mut();
-                device_group_manager.new_driver_available(ResolvedDriver {
+                let mut node_group_manager = index.node_group_manager.borrow_mut();
+                node_group_manager.new_driver_available(ResolvedDriver {
                     component_url: url.clone(),
                     v1_driver_path: None,
                     bind_rules: rules,
@@ -3867,10 +3867,10 @@ mod tests {
 
             // Now when we get it back, it has the matching composite driver on it.
             let match_result = proxy.match_driver(match_args.clone()).await.unwrap().unwrap();
-            if let fdi::MatchedDriver::DeviceGroupNode(info) = match_result {
+            if let fdi::MatchedDriver::NodeRepresentation(info) = match_result {
                 assert_eq!(
                     &"mimid".to_string(),
-                    info.device_groups.unwrap()[0]
+                    info.node_groups.unwrap()[0]
                         .composite
                         .as_ref()
                         .unwrap()
@@ -3879,7 +3879,7 @@ mod tests {
                         .unwrap()
                 );
             } else {
-                assert!(false, "Did not get back a device group.");
+                assert!(false, "Did not get back a node group.");
             }
         }
         .fuse();
@@ -3894,7 +3894,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_add_device_group_duplicate_path() {
+    async fn test_add_node_group_duplicate_path() {
         let always_match_rules = bind::compiler::BindRules {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
@@ -3944,9 +3944,9 @@ mod tests {
             assert_eq!(
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
-                    .add_device_group(fdf::DeviceGroup {
+                    .add_node_group(fdf::NodeGroup {
                         name: Some("test_group".to_string()),
-                        nodes: Some(vec![fdf::DeviceGroupNode {
+                        nodes: Some(vec![fdf::NodeRepresentation {
                             bind_rules: bind_rules,
                             bind_properties: vec![fdf::NodeProperty {
                                 key: Some(fdf::NodePropertyKey::StringValue(
@@ -3958,7 +3958,7 @@ mod tests {
                                 ..fdf::NodeProperty::EMPTY
                             }]
                         }]),
-                        ..fdf::DeviceGroup::EMPTY
+                        ..fdf::NodeGroup::EMPTY
                     })
                     .await
                     .unwrap()
@@ -3977,13 +3977,13 @@ mod tests {
             }];
 
             let result = proxy
-                .add_device_group(fdf::DeviceGroup {
+                .add_node_group(fdf::NodeGroup {
                     name: Some("test_group".to_string()),
-                    nodes: Some(vec![fdf::DeviceGroupNode {
+                    nodes: Some(vec![fdf::NodeRepresentation {
                         bind_rules: duplicate_bind_rules,
                         bind_properties: node_transform,
                     }]),
-                    ..fdf::DeviceGroup::EMPTY
+                    ..fdf::NodeGroup::EMPTY
                 })
                 .await
                 .unwrap();
@@ -4001,7 +4001,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_add_device_group_duplicate_key() {
+    async fn test_add_node_group_duplicate_key() {
         let always_match_rules = bind::compiler::BindRules {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
@@ -4055,13 +4055,13 @@ mod tests {
             }];
 
             let result = proxy
-                .add_device_group(fdf::DeviceGroup {
+                .add_node_group(fdf::NodeGroup {
                     name: Some("test_group".to_string()),
-                    nodes: Some(vec![fdf::DeviceGroupNode {
+                    nodes: Some(vec![fdf::NodeRepresentation {
                         bind_rules: bind_rules,
                         bind_properties: node_transform,
                     }]),
-                    ..fdf::DeviceGroup::EMPTY
+                    ..fdf::NodeGroup::EMPTY
                 })
                 .await
                 .unwrap();

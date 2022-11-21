@@ -121,7 +121,7 @@ int RunDfv2(DriverManagerParams driver_manager_params,
   driver_manager::DriverDevelopmentService driver_development_service(driver_runner,
                                                                       loop.dispatcher());
   driver_development_service.Publish(outgoing);
-  driver_runner.PublishDeviceGroupManager(outgoing);
+  driver_runner.PublishNodeGroupManager(outgoing);
   driver_runner.ScheduleBaseDriversBinding();
 
   dfv2::ShutdownManager shutdown_manager(&driver_runner, loop.dispatcher());

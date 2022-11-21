@@ -41,11 +41,11 @@
 #include "src/devices/bin/driver_manager/bind_driver_manager.h"
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/device.h"
-#include "src/devices/bin/driver_manager/device_group/device_group_manager.h"
 #include "src/devices/bin/driver_manager/driver.h"
 #include "src/devices/bin/driver_manager/driver_host.h"
 #include "src/devices/bin/driver_manager/driver_loader.h"
 #include "src/devices/bin/driver_manager/inspect.h"
+#include "src/devices/bin/driver_manager/node_group/node_group_manager.h"
 #include "src/devices/bin/driver_manager/package_resolver.h"
 #include "src/devices/bin/driver_manager/system_state_manager.h"
 #include "src/devices/bin/driver_manager/v1/device_manager.h"
@@ -140,10 +140,10 @@ class Coordinator : public CompositeManagerBridge,
   void LoadV1Drivers(std::string_view sys_device_driver);
   void InitCoreDevices(std::string_view sys_device_driver);
 
-  zx_status_t BindDriverToDeviceGroup(const MatchedDriver& driver, const fbl::RefPtr<Device>& dev);
+  zx_status_t BindDriverToNodeGroup(const MatchedDriver& driver, const fbl::RefPtr<Device>& dev);
 
-  zx_status_t AddDeviceGroup(const fbl::RefPtr<Device>& dev, std::string_view name,
-                             fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc);
+  zx_status_t AddNodeGroup(const fbl::RefPtr<Device>& dev, std::string_view name,
+                           fuchsia_device_manager::wire::NodeGroupDescriptor group_desc);
 
   zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
   const Driver* LibnameToDriver(std::string_view libname) const;
@@ -226,7 +226,7 @@ class Coordinator : public CompositeManagerBridge,
 
   DeviceManager* device_manager() const { return device_manager_.get(); }
 
-  DeviceGroupManager* device_group_manager() const { return device_group_manager_.get(); }
+  NodeGroupManager* node_group_manager() const { return node_group_manager_.get(); }
 
   BindDriverManager* bind_driver_manager() const { return bind_driver_manager_.get(); }
 
@@ -241,9 +241,9 @@ class Coordinator : public CompositeManagerBridge,
 
  private:
   // CompositeManagerBridge interface
-  void BindNodesForDeviceGroups() override;
-  void AddDeviceGroupToDriverIndex(fuchsia_driver_framework::wire::DeviceGroup group,
-                                   AddToIndexCallback callback) override;
+  void BindNodesForNodeGroups() override;
+  void AddNodeGroupToDriverIndex(fuchsia_driver_framework::wire::NodeGroup group,
+                                 AddToIndexCallback callback) override;
 
   // fuchsia.driver.development/DriverDevelopment interface
   void RestartDriverHosts(RestartDriverHostsRequestView request,
@@ -303,7 +303,7 @@ class Coordinator : public CompositeManagerBridge,
 
   std::unique_ptr<DeviceManager> device_manager_;
 
-  std::unique_ptr<DeviceGroupManager> device_group_manager_;
+  std::unique_ptr<NodeGroupManager> node_group_manager_;
 
   std::unique_ptr<BindDriverManager> bind_driver_manager_;
 

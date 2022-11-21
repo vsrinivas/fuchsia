@@ -20,8 +20,8 @@ namespace {
 
 namespace fdf = fuchsia_driver_framework;
 
-using TestAddDeviceGroupCallback =
-    fit::function<void(fuchsia_device_manager::wire::DeviceGroupDescriptor)>;
+using TestAddNodeGroupCallback =
+    fit::function<void(fuchsia_device_manager::wire::NodeGroupDescriptor)>;
 
 class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordinator> {
  public:
@@ -42,9 +42,9 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
                           AddCompositeDeviceCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void AddDeviceGroup(AddDeviceGroupRequestView request,
-                      AddDeviceGroupCompleter::Sync& completer) override {
-    device_group_callback_(request->group_desc);
+  void AddNodeGroup(AddNodeGroupRequestView request,
+                    AddNodeGroupCompleter::Sync& completer) override {
+    node_group_callback_(request->group_desc);
     completer.ReplySuccess();
   }
   void BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& completer) override {
@@ -76,8 +76,8 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
 
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
 
-  void set_device_group_callback(TestAddDeviceGroupCallback callback) {
-    device_group_callback_ = std::move(callback);
+  void set_node_group_callback(TestAddNodeGroupCallback callback) {
+    node_group_callback_ = std::move(callback);
   }
 
  private:
@@ -87,7 +87,7 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
   // it doesn't hang.
   async::Loop loop_;
 
-  TestAddDeviceGroupCallback device_group_callback_;
+  TestAddNodeGroupCallback node_group_callback_;
 };
 
 class CoreTest : public zxtest::Test {
@@ -371,7 +371,7 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
   }
 }
 
-TEST_F(CoreTest, AddDeviceGroup) {
+TEST_F(CoreTest, AddNodeGroup) {
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx_, "test", driver_obj_, &dev));
 
@@ -380,12 +380,12 @@ TEST_F(CoreTest, AddDeviceGroup) {
 
   ASSERT_NO_FATAL_FAILURE(Connect(dev));
 
-  TestAddDeviceGroupCallback test_callback =
-      [](fuchsia_device_manager::wire::DeviceGroupDescriptor device_group) {
-        ASSERT_EQ(2, device_group.nodes.count());
+  TestAddNodeGroupCallback test_callback =
+      [](fuchsia_device_manager::wire::NodeGroupDescriptor node_group) {
+        ASSERT_EQ(2, node_group.nodes.count());
 
         // Check the first node.
-        auto node_result_1 = device_group.nodes.at(0);
+        auto node_result_1 = node_group.nodes.at(0);
         ASSERT_EQ(2, node_result_1.bind_rules.count());
 
         auto node_1_bind_rule_1_result = node_result_1.bind_rules.at(0);
@@ -409,7 +409,7 @@ TEST_F(CoreTest, AddDeviceGroup) {
         ASSERT_EQ(20, node_1_bind_props_result.at(1).value().int_value());
 
         // Check the second node.
-        auto node_result_2 = device_group.nodes.at(1);
+        auto node_result_2 = node_group.nodes.at(1);
         ASSERT_EQ(2, node_result_2.bind_rules.count());
 
         auto node_2_bind_rule_1 = node_result_2.bind_rules.at(0);
@@ -431,7 +431,7 @@ TEST_F(CoreTest, AddDeviceGroup) {
         ASSERT_TRUE(node_2_bind_prop_result.at(0).value().bool_value());
       };
 
-  coordinator_.set_device_group_callback(std::move(test_callback));
+  coordinator_.set_node_group_callback(std::move(test_callback));
 
   const device_bind_prop_value_t node_1_bind_rules_values_1[] = {
       device_bind_prop_int_val(1),
@@ -442,7 +442,7 @@ TEST_F(CoreTest, AddDeviceGroup) {
       device_bind_prop_int_val(3),
   };
 
-  const device_group_bind_rule_t node_1_bind_rules[] = {
+  const node_group_bind_rule_t node_1_bind_rules[] = {
       {
           .key = device_bind_prop_int_key(2),
           .condition = DEVICE_BIND_RULE_CONDITION_ACCEPT,
@@ -468,7 +468,7 @@ TEST_F(CoreTest, AddDeviceGroup) {
           .value = device_bind_prop_int_val(20),
       }};
 
-  const device_group_node_t node_1{
+  const node_representation_t node_1{
       .bind_rules = node_1_bind_rules,
       .bind_rule_count = std::size(node_1_bind_rules),
       .bind_properties = node_1_bind_properties,
@@ -484,7 +484,7 @@ TEST_F(CoreTest, AddDeviceGroup) {
       device_bind_prop_str_val("sanderling"),
   };
 
-  const device_group_bind_rule_t node_2_props[] = {
+  const node_group_bind_rule_t node_2_props[] = {
       {
           .key = device_bind_prop_int_key(12),
           .condition = DEVICE_BIND_RULE_CONDITION_REJECT,
@@ -504,19 +504,19 @@ TEST_F(CoreTest, AddDeviceGroup) {
       .value = device_bind_prop_bool_val(true),
   }};
 
-  const device_group_node_t node_2{
+  const node_representation_t node_2{
       .bind_rules = node_2_props,
       .bind_rule_count = std::size(node_2_props),
       .bind_properties = node_2_bind_properties,
       .bind_property_count = std::size(node_2_bind_properties),
   };
 
-  const device_group_node_t nodes[] = {
+  const node_representation_t nodes[] = {
       node_1,
       node_2,
   };
 
-  const device_group_desc group_desc = {
+  const node_group_desc group_desc = {
       .nodes = nodes,
       .nodes_count = std::size(nodes),
       .spawn_colocated = false,
@@ -524,7 +524,7 @@ TEST_F(CoreTest, AddDeviceGroup) {
       .metadata_count = 0,
   };
 
-  EXPECT_EQ(ZX_OK, device_add_group(dev.get(), "device_group", &group_desc));
+  EXPECT_EQ(ZX_OK, device_add_group(dev.get(), "node_group", &group_desc));
 
   // Join the thread running in the background, then run the rest of the tasks locally.
   ctx_.loop().Quit();

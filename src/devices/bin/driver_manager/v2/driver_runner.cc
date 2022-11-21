@@ -160,41 +160,41 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
       root_node_(std::make_shared<Node>("root", std::vector<Node*>{}, this, dispatcher)),
       composite_device_manager_(this, dispatcher, [this]() { this->TryBindAllOrphansUntracked(); }),
       composite_node_manager_(dispatcher_, this),
-      device_group_manager_(this) {
+      node_group_manager_(this) {
   inspector.GetRoot().CreateLazyNode(
       "driver_runner", [this] { return Inspect(); }, &inspector);
 }
 
-void DriverRunner::BindNodesForDeviceGroups() { TryBindAllOrphansUntracked(); }
+void DriverRunner::BindNodesForNodeGroups() { TryBindAllOrphansUntracked(); }
 
-void DriverRunner::CreateDeviceGroup(CreateDeviceGroupRequestView request,
-                                     CreateDeviceGroupCompleter::Sync& completer) {
+void DriverRunner::CreateNodeGroup(CreateNodeGroupRequestView request,
+                                   CreateNodeGroupCompleter::Sync& completer) {
   if (!request->has_name() || !request->has_nodes()) {
-    completer.Reply(fit::error(fdf::DeviceGroupError::kMissingArgs));
+    completer.Reply(fit::error(fdf::NodeGroupError::kMissingArgs));
     return;
   }
 
   if (request->nodes().empty()) {
-    completer.Reply(fit::error(fdf::DeviceGroupError::kEmptyNodes));
+    completer.Reply(fit::error(fdf::NodeGroupError::kEmptyNodes));
     return;
   }
 
-  auto device_group = std::make_unique<DeviceGroupV2>(
-      DeviceGroupCreateInfo{
+  auto node_group = std::make_unique<NodeGroupV2>(
+      NodeGroupCreateInfo{
           .name = std::string(request->name().get()),
           .size = request->nodes().count(),
       },
       dispatcher_, this);
-  completer.Reply(device_group_manager_.AddDeviceGroup(*request, std::move(device_group)));
+  completer.Reply(node_group_manager_.AddNodeGroup(*request, std::move(node_group)));
 }
 
-void DriverRunner::AddDeviceGroupToDriverIndex(fuchsia_driver_framework::wire::DeviceGroup group,
-                                               AddToIndexCallback callback) {
-  driver_index_->AddDeviceGroup(group).Then(
+void DriverRunner::AddNodeGroupToDriverIndex(fuchsia_driver_framework::wire::NodeGroup group,
+                                             AddToIndexCallback callback) {
+  driver_index_->AddNodeGroup(group).Then(
       [callback = std::move(callback)](
-          fidl::WireUnownedResult<fdi::DriverIndex::AddDeviceGroup>& result) mutable {
+          fidl::WireUnownedResult<fdi::DriverIndex::AddNodeGroup>& result) mutable {
         if (!result.ok()) {
-          LOGF(ERROR, "DriverIndex::AddDeviceGroup failed %d", result.status());
+          LOGF(ERROR, "DriverIndex::AddNodeGroup failed %d", result.status());
           callback(zx::error(result.status()));
           return;
         }
@@ -253,8 +253,8 @@ void DriverRunner::PublishComponentRunner(component::OutgoingDirectory& outgoing
   composite_device_manager_.Publish(outgoing);
 }
 
-void DriverRunner::PublishDeviceGroupManager(component::OutgoingDirectory& outgoing) {
-  auto result = outgoing.AddProtocol<fdf::DeviceGroupManager>(this);
+void DriverRunner::PublishNodeGroupManager(component::OutgoingDirectory& outgoing) {
+  auto result = outgoing.AddProtocol<fdf::NodeGroupManager>(this);
   ZX_ASSERT(result.is_ok());
 }
 
@@ -433,11 +433,11 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
 
     auto& matched_driver = result->value()->driver;
     if (!matched_driver.is_driver() && !matched_driver.is_composite_driver() &&
-        !matched_driver.is_device_group_node()) {
+        !matched_driver.is_node_representation()) {
       orphaned();
       LOGF(WARNING,
            "Failed to match Node '%s', the MatchedDriver is not a normal/composite"
-           "driver or a device group node.",
+           "driver or a node group node.",
            driver_node->name().data());
       return;
     }
@@ -452,11 +452,11 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
       return;
     }
 
-    if (matched_driver.is_device_group_node() &&
-        !matched_driver.device_group_node().has_device_groups()) {
+    if (matched_driver.is_node_representation() &&
+        !matched_driver.node_representation().has_node_groups()) {
       orphaned();
       LOGF(WARNING,
-           "Failed to match Node '%s', the MatchedDriver is missing device groups for a device "
+           "Failed to match Node '%s', the MatchedDriver is missing node groups for a device "
            "group node.",
            driver_node->name().data());
       return;
@@ -477,16 +477,16 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
       driver_node = *composite;
     }
 
-    // If this is a device group match, bind the node into its device group and get the child
-    // and driver if its a completed device group to proceed with driver start.
+    // If this is a node group match, bind the node into its node group and get the child
+    // and driver if its a completed node group to proceed with driver start.
     fdi::wire::MatchedDriverInfo driver_info;
-    if (matched_driver.is_device_group_node()) {
-      auto device_groups = matched_driver.device_group_node();
+    if (matched_driver.is_node_representation()) {
+      auto node_groups = matched_driver.node_representation();
       auto result =
-          device_group_manager_.BindDeviceGroupNode(device_groups, driver_node->weak_from_this());
+          node_group_manager_.BindNodeRepresentation(node_groups, driver_node->weak_from_this());
       if (result.is_error()) {
         orphaned();
-        LOGF(ERROR, "Failed to bind node '%s' to any of the matched device group nodes.",
+        LOGF(ERROR, "Failed to bind node '%s' to any of the matched node group nodes.",
              driver_node->name().data());
         return;
       }
@@ -494,7 +494,7 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
       auto composite_node_and_driver = result.value();
 
       // If it doesn't have a value but there was no error it just means the node was added
-      // to a device group but the device group is not complete yet.
+      // to a node group but the node group is not complete yet.
       if (!composite_node_and_driver.has_value()) {
         return;
       }

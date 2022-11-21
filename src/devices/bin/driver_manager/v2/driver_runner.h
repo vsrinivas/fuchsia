@@ -25,13 +25,13 @@
 
 #include <fbl/intrusive_double_list.h>
 
-#include "src/devices/bin/driver_manager/device_group/composite_manager_bridge.h"
-#include "src/devices/bin/driver_manager/device_group/device_group_manager.h"
+#include "src/devices/bin/driver_manager/node_group/composite_manager_bridge.h"
+#include "src/devices/bin/driver_manager/node_group/node_group_manager.h"
 #include "src/devices/bin/driver_manager/v2/composite_assembler.h"
 #include "src/devices/bin/driver_manager/v2/composite_manager.h"
-#include "src/devices/bin/driver_manager/v2/device_group_v2.h"
 #include "src/devices/bin/driver_manager/v2/driver_host.h"
 #include "src/devices/bin/driver_manager/v2/node.h"
+#include "src/devices/bin/driver_manager/v2/node_group_v2.h"
 #include "src/devices/bin/driver_manager/v2/node_removal_tracker.h"
 #include "src/devices/bin/driver_manager/v2/node_remover.h"
 
@@ -41,7 +41,7 @@
 namespace dfv2 {
 
 class DriverRunner : public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,
-                     public fidl::WireServer<fuchsia_driver_framework::DeviceGroupManager>,
+                     public fidl::WireServer<fuchsia_driver_framework::NodeGroupManager>,
                      public CompositeManagerBridge,
                      public NodeManager,
                      public NodeRemover {
@@ -53,19 +53,19 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
                inspect::Inspector& inspector, LoaderServiceFactory loader_service_factory,
                async_dispatcher_t* dispatcher);
 
-  // fidl::WireServer<fuchsia_driver_framework::DeviceGroupManager>
-  void CreateDeviceGroup(CreateDeviceGroupRequestView request,
-                         CreateDeviceGroupCompleter::Sync& completer) override;
+  // fidl::WireServer<fuchsia_driver_framework::NodeGroupManager>
+  void CreateNodeGroup(CreateNodeGroupRequestView request,
+                       CreateNodeGroupCompleter::Sync& completer) override;
 
   // CompositeManagerBridge interface
-  void BindNodesForDeviceGroups() override;
-  void AddDeviceGroupToDriverIndex(fuchsia_driver_framework::wire::DeviceGroup group,
-                                   AddToIndexCallback callback) override;
+  void BindNodesForNodeGroups() override;
+  void AddNodeGroupToDriverIndex(fuchsia_driver_framework::wire::NodeGroup group,
+                                 AddToIndexCallback callback) override;
 
   fpromise::promise<inspect::Inspector> Inspect() const;
   size_t NumOrphanedNodes() const;
   void PublishComponentRunner(component::OutgoingDirectory& outgoing);
-  void PublishDeviceGroupManager(component::OutgoingDirectory& outgoing);
+  void PublishNodeGroupManager(component::OutgoingDirectory& outgoing);
   zx::result<> StartRootDriver(std::string_view url);
   std::shared_ptr<Node> root_node();
   // This function schedules a callback to attempt to bind all orphaned nodes against
@@ -77,7 +77,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   void TryBindAllOrphans(NodeBindingInfoResultCallback result_callback);
 
   // Only exposed for testing.
-  DeviceGroupManager& device_group_manager() { return device_group_manager_; }
+  NodeGroupManager& node_group_manager() { return node_group_manager_; }
 
   // Create a driver component with `url` against a given `node`.
   zx::result<> StartDriver(Node& node, std::string_view url,
@@ -128,8 +128,8 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   // This is for dfv2 composites.
   CompositeNodeManager composite_node_manager_;
 
-  // This is for dfv2 device groups.
-  DeviceGroupManager device_group_manager_;
+  // This is for dfv2 node groups.
+  NodeGroupManager node_group_manager_;
 
   NodeRemovalTracker removal_tracker_;
 

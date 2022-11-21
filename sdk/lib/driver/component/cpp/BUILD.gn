@@ -17,7 +17,6 @@ sdk_source_set("cpp") {
   include_base = "//sdk"
 
   sources = [
-    "device_group.h",
     "driver_base.h",
     "driver_context.cc",
     "driver_context.h",
@@ -30,6 +29,7 @@ sdk_source_set("cpp") {
     "namespace.h",
     "node_add_args.cc",
     "node_add_args.h",
+    "node_group.h",
     "outgoing_directory.cc",
     "outgoing_directory.h",
     "service_client.h",

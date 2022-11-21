@@ -25,7 +25,7 @@
 namespace {
 
 zx::result<fdi::wire::MatchedDriverInfo> GetFidlMatchedDriverInfo(fdi::wire::MatchedDriver driver) {
-  if (driver.is_device_group_node()) {
+  if (driver.is_node_representation()) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
@@ -67,13 +67,13 @@ MatchedCompositeDevice CreateMatchedCompositeDevice(
   return composite;
 }
 
-bool VerifyMatchedDeviceGroupNodeInfo(fdi::wire::MatchedDeviceGroupNodeInfo info) {
-  if (!info.has_device_groups() || info.device_groups().empty()) {
+bool VerifyMatchedNodeRepresentationInfo(fdi::wire::MatchedNodeRepresentationInfo info) {
+  if (!info.has_node_groups() || info.node_groups().empty()) {
     return false;
   }
 
-  for (auto& device_group : info.device_groups()) {
-    if (!device_group.has_name() || device_group.name().empty() || !device_group.has_node_index()) {
+  for (auto& node_group : info.node_groups()) {
+    if (!node_group.has_name() || node_group.name().empty() || !node_group.has_node_index()) {
       return false;
     }
   }
@@ -188,11 +188,11 @@ bool DriverLoader::MatchesLibnameDriverIndex(const std::string& driver_url,
   return driver_path == libname;
 }
 
-void DriverLoader::AddDeviceGroup(fuchsia_driver_framework::wire::DeviceGroup group,
-                                  AddToIndexCallback callback) {
-  auto result = driver_index_.sync()->AddDeviceGroup(group);
+void DriverLoader::AddNodeGroup(fuchsia_driver_framework::wire::NodeGroup group,
+                                AddToIndexCallback callback) {
+  auto result = driver_index_.sync()->AddNodeGroup(group);
   if (!result.ok()) {
-    LOGF(ERROR, "DriverIndex::AddDeviceGroup failed %d", result.status());
+    LOGF(ERROR, "DriverIndex::AddNodeGroup failed %d", result.status());
     callback(zx::error(result.status()));
     return;
   }
@@ -292,14 +292,14 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
   const auto& drivers = result->value()->drivers;
 
   for (auto driver : drivers) {
-    if (driver.is_device_group_node()) {
-      if (!VerifyMatchedDeviceGroupNodeInfo(driver.device_group_node())) {
+    if (driver.is_node_representation()) {
+      if (!VerifyMatchedNodeRepresentationInfo(driver.node_representation())) {
         LOGF(ERROR,
-             "DriverIndex: MatchDriverV1 response is missing fields in MatchedDeviceGroupInfo");
+             "DriverIndex: MatchDriverV1 response is missing fields in MatchedNodeGroupInfo");
         continue;
       }
 
-      matched_drivers.push_back(fidl::ToNatural(driver.device_group_node()));
+      matched_drivers.push_back(fidl::ToNatural(driver.node_representation()));
       continue;
     }
 

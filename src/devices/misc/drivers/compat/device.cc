@@ -18,7 +18,7 @@
 #include <zircon/errors.h>
 
 #include "driver.h"
-#include "src/devices/bin/driver_host/device_group_desc_util.h"
+#include "src/devices/bin/driver_host/node_group_desc_util.h"
 #include "src/devices/misc/drivers/compat/composite.h"
 
 namespace fdf {
@@ -918,7 +918,7 @@ zx_status_t Device::AddComposite(const char* name, const composite_device_desc_t
   return ZX_OK;
 }
 
-zx_status_t Device::AddDeviceGroup(const char* name, const device_group_desc_t* group_desc) {
+zx_status_t Device::AddNodeGroup(const char* name, const node_group_desc_t* group_desc) {
   if (!name || !group_desc) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -931,17 +931,17 @@ zx_status_t Device::AddDeviceGroup(const char* name, const device_group_desc_t* 
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto device_group_manager =
-      driver_->driver_namespace().Connect<fuchsia_driver_framework::DeviceGroupManager>();
-  if (device_group_manager.is_error()) {
-    FDF_LOG(ERROR, "Error connecting: %s", device_group_manager.status_string());
-    return device_group_manager.status_value();
+  auto node_group_manager =
+      driver_->driver_namespace().Connect<fuchsia_driver_framework::NodeGroupManager>();
+  if (node_group_manager.is_error()) {
+    FDF_LOG(ERROR, "Error connecting: %s", node_group_manager.status_string());
+    return node_group_manager.status_value();
   }
 
   fidl::Arena allocator;
-  auto nodes = fidl::VectorView<fdf::wire::DeviceGroupNode>(allocator, group_desc->nodes_count);
+  auto nodes = fidl::VectorView<fdf::wire::NodeRepresentation>(allocator, group_desc->nodes_count);
   for (size_t i = 0; i < group_desc->nodes_count; i++) {
-    auto node_result = ConvertDeviceGroupNode(allocator, group_desc->nodes[i]);
+    auto node_result = ConvertNodeRepresentation(allocator, group_desc->nodes[i]);
     if (!node_result.is_ok()) {
       return node_result.error_value();
     }
@@ -950,15 +950,15 @@ zx_status_t Device::AddDeviceGroup(const char* name, const device_group_desc_t* 
 
   // TODO(fxb/111891): Support metadata for AddComposite().
   if (group_desc->metadata_count > 0) {
-    FDF_LOG(WARNING, "AddDeviceGroup() currently doesn't support metadata. See fxb/111891.");
+    FDF_LOG(WARNING, "AddNodeGroup() currently doesn't support metadata. See fxb/111891.");
   }
 
-  auto device_group = fdf::wire::DeviceGroup::Builder(allocator)
-                          .name(fidl::StringView(allocator, name))
-                          .nodes(std::move(nodes))
-                          .Build();
+  auto node_group = fdf::wire::NodeGroup::Builder(allocator)
+                        .name(fidl::StringView(allocator, name))
+                        .nodes(std::move(nodes))
+                        .Build();
 
-  auto result = fidl::WireCall(*device_group_manager)->CreateDeviceGroup(std::move(device_group));
+  auto result = fidl::WireCall(*node_group_manager)->CreateNodeGroup(std::move(node_group));
   if (result.status() != ZX_OK) {
     FDF_LOG(ERROR, "Error calling connect fidl: %s", result.status_string());
     return result.status();

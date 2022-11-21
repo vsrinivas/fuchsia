@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "driver",
+        binary: "driver/nodegroup_root.so",
+        bind: "meta/bind/root.bindbc",
+    },
+    capabilities: [
+        { service: "fuchsia.nodegroup.test.Service" },
+    ],
+    use: [
+        { protocol: "fuchsia.driver.framework.NodeGroupManager" },
+    ],
+    expose: [
+        {
+            service: "fuchsia.nodegroup.test.Service",
+            from: "self",
+        },
+    ],
+}

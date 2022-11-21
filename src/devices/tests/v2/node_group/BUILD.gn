@@ -1,0 +1,121 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/rust/rustc_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":nodegroup_test" ]
+}
+
+fidl("fuchsia.nodegroup.test") {
+  testonly = true
+  sources = [ "nodegroup.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+bind_library("fuchsia.nodegroupbind.test") {
+  source = "nodegroup.test.bind"
+}
+
+driver_bind_rules("root_bind") {
+  disable_autobind = true
+  bind_output = "root.bindbc"
+}
+
+fuchsia_driver("root_driver") {
+  testonly = true
+  output_name = "nodegroup_root"
+  sources = [ "root_driver.cc" ]
+  deps = [
+    ":fuchsia.nodegroup.test_cpp_wire",
+    ":fuchsia.nodegroupbind.test_cpp",
+    ":root_bind",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
+    "//sdk/lib/driver/compat/cpp",
+    "//sdk/lib/driver/component/cpp:cpp",
+    "//src/devices/lib/driver:driver_runtime",
+  ]
+}
+
+fuchsia_driver_component("root") {
+  testonly = true
+  manifest = "meta/root.cml"
+  deps = [ ":root_driver" ]
+  info = "root-info.json"
+}
+
+driver_bind_rules("nodegroup_leaf_bind") {
+  rules = "leaf.bind"
+  bind_output = "leaf.bindbc"
+  deps = [ ":fuchsia.nodegroupbind.test" ]
+}
+
+fuchsia_driver("leaf_driver") {
+  testonly = true
+  output_name = "nodegroup_leaf"
+  sources = [ "leaf_driver.cc" ]
+  deps = [
+    ":fuchsia.nodegroup.test_cpp_wire",
+    ":nodegroup_leaf_bind",
+    "//sdk/lib/driver/component/cpp:cpp",
+    "//src/devices/lib/driver:driver_runtime",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}
+
+fuchsia_driver_component("leaf") {
+  testonly = true
+  manifest = "meta/leaf.cml"
+  deps = [ ":leaf_driver" ]
+  info = "leaf-info.json"
+}
+
+rustc_test("bin") {
+  edition = "2021"
+  testonly = true
+  output_name = "nodegroup_bin"
+  source_root = "test.rs"
+  sources = [ "test.rs" ]
+  deps = [
+    ":fuchsia.nodegroup.test_rust",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+cmc_merge("realm.cml") {
+  sources = [
+    "//sdk/lib/driver_test_realm/meta/driver_test_realm.cml",
+    "meta/realm.shard.cml",
+  ]
+}
+
+fuchsia_test_component("realm") {
+  manifest = "${target_out_dir}/realm.cml"
+  manifest_deps = [ ":realm.cml" ]
+}
+
+fuchsia_unittest_package("nodegroup_test") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  deps = [
+    ":bin",
+    ":leaf",
+    ":realm",
+    ":root",
+    "//src/devices/bin/driver_host2:component",
+  ]
+}

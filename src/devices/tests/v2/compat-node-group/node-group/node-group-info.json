@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework node group test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

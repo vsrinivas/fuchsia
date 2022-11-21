@@ -64,9 +64,9 @@ rustc_binary("bin") {
   test_deps = [ "//src/lib/storage/vfs/rust:vfs" ]
 
   sources = [
-    "src/device_group_manager.rs",
     "src/main.rs",
     "src/match_common.rs",
+    "src/node_group_manager.rs",
     "src/package_resolver.rs",
     "src/resolved_driver.rs",
   ]

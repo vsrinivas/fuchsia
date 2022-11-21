@@ -67,21 +67,21 @@ type MatchedCompositeInfo = table {
     5: driver_info MatchedDriverInfo;
 };
 
-/// Information for a device group that contains a matched node.
-type MatchedDeviceGroupInfo = table {
-    /// The name of the node's device group.
+/// Information for a node group that contains a matched node.
+type MatchedNodeGroupInfo = table {
+    /// The name of the node's node group.
     1: name string:MAX;
 
-    /// The node's index in its device group.
+    /// The node's index in its node group.
     2: node_index uint32;
 
-    /// The composite info of the driver that matches to the transform of this device group.
+    /// The composite info of the driver that matches to the transform of this node group.
     3: composite MatchedCompositeInfo;
 
-    /// Total number of nodes in the device group.
+    /// Total number of nodes in the node group.
     4: num_nodes uint32;
 
-    /// A list of all the node names for this device group.
+    /// A list of all the node names for this node group.
     /// These are ordered according to index.
     5: node_names vector<string:MAX>:MAX;
 
@@ -89,10 +89,10 @@ type MatchedDeviceGroupInfo = table {
     6: primary_index uint32;
 };
 
-/// Information for a device group node that's matched by the driver index.
-type MatchedDeviceGroupNodeInfo = table {
-    /// A list of device groups that contain the matched node.
-    1: device_groups vector<MatchedDeviceGroupInfo>:MAX;
+/// Information for a node group node that's matched by the driver index.
+type MatchedNodeRepresentationInfo = table {
+    /// A list of node groups that contain the matched node.
+    1: node_groups vector<MatchedNodeGroupInfo>:MAX;
 };
 
 /// Driver matched by the driver index.
@@ -103,8 +103,8 @@ type MatchedDriver = flexible union {
     /// Information for a composite driver.
     2: composite_driver MatchedCompositeInfo;
 
-    /// Information for a device group node.
-    3: device_group_node MatchedDeviceGroupNodeInfo;
+    /// Information for a node group node.
+    3: node_representation MatchedNodeRepresentationInfo;
 };
 
 /// Protocol through which the driver index can be queried.
@@ -130,11 +130,11 @@ protocol DriverIndex {
         drivers vector<MatchedDriver>:MAX;
     }) error zx.status;
 
-    /// Adds a device group to the driver index. The driver index stores the
-    /// device group and maps it by the name. The stored device groups are
+    /// Adds a node group to the driver index. The driver index stores the
+    /// node group and maps it by the name. The stored node groups are
     /// included in the driver matching process.
     // TODO(fxbug.dev/111076): Return just the status.
-    AddDeviceGroup(fuchsia.driver.framework.DeviceGroup) -> (struct {
+    AddNodeGroup(fuchsia.driver.framework.NodeGroup) -> (struct {
         composite_driver MatchedCompositeInfo;
         node_names vector<string:MAX>:MAX;
     }) error zx.status;

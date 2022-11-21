@@ -9,7 +9,7 @@
 #include <zircon/status.h>
 
 #include "src/devices/bin/driver_manager/coordinator.h"
-#include "src/devices/bin/driver_manager/v1/device_group_v1.h"
+#include "src/devices/bin/driver_manager/v1/node_group_v1.h"
 #include "src/devices/lib/log/log.h"
 
 BindDriverManager::BindDriverManager(Coordinator* coordinator) : coordinator_(coordinator) {}
@@ -22,12 +22,12 @@ zx_status_t BindDriverManager::BindDriverToDevice(const MatchedDriver& driver,
     return BindDriverToFragment(*info, dev);
   }
 
-  if (auto info = std::get_if<fdi::MatchedDeviceGroupNodeInfo>(&driver); info) {
+  if (auto info = std::get_if<fdi::MatchedNodeRepresentationInfo>(&driver); info) {
     auto device_ptr = std::shared_ptr<DeviceV1Wrapper>(new DeviceV1Wrapper{
         .device = dev,
     });
-    return coordinator_->device_group_manager()
-        ->BindDeviceGroupNode(*info, device_ptr)
+    return coordinator_->node_group_manager()
+        ->BindNodeRepresentation(*info, device_ptr)
         .status_value();
   }
 
@@ -174,7 +174,7 @@ void BindDriverManager::BindAllDevices(const DriverLoader::MatchDeviceConfig& co
   }
 }
 
-zx_status_t BindDriverManager::MatchAndBindDeviceGroups(const fbl::RefPtr<Device>& dev) {
+zx_status_t BindDriverManager::MatchAndBindNodeGroups(const fbl::RefPtr<Device>& dev) {
   DriverLoader::MatchDeviceConfig config;
   auto result = MatchDevice(dev, config);
   if (!result.is_ok()) {
@@ -186,17 +186,17 @@ zx_status_t BindDriverManager::MatchAndBindDeviceGroups(const fbl::RefPtr<Device
 
   auto matched_drivers = std::move(result.value());
   for (auto driver : matched_drivers) {
-    if (!std::holds_alternative<fdi::MatchedDeviceGroupNodeInfo>(driver)) {
+    if (!std::holds_alternative<fdi::MatchedNodeRepresentationInfo>(driver)) {
       continue;
     }
 
     auto device_ptr = std::shared_ptr<DeviceV1Wrapper>(new DeviceV1Wrapper{
         .device = dev,
     });
-    auto bind_result = coordinator_->device_group_manager()->BindDeviceGroupNode(
-        std::get<fdi::MatchedDeviceGroupNodeInfo>(driver), device_ptr);
+    auto bind_result = coordinator_->node_group_manager()->BindNodeRepresentation(
+        std::get<fdi::MatchedNodeRepresentationInfo>(driver), device_ptr);
     if (bind_result.is_error()) {
-      LOGF(WARNING, "Failed to bind device group node: %d", bind_result.status_value());
+      LOGF(WARNING, "Failed to bind node group node: %d", bind_result.status_value());
     }
   }
 

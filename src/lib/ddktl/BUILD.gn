@@ -15,12 +15,12 @@ config("include") {
 
 source_set("ddktl") {
   sources = [
-    "include/ddktl/device-group.h",
     "include/ddktl/device-internal.h",
     "include/ddktl/device.h",
     "include/ddktl/fidl.h",
     "include/ddktl/init-txn.h",
     "include/ddktl/metadata.h",
+    "include/ddktl/node-group.h",
     "include/ddktl/resume-txn.h",
     "include/ddktl/suspend-txn.h",
     "include/ddktl/unbind-txn.h",

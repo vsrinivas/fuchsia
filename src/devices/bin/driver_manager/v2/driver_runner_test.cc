@@ -301,7 +301,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
         });
       } else if (args.name().get() == "dev-group-0") {
         return zx::ok(FakeDriverIndex::MatchResult{
-            .device_group = fuchsia_driver_index::MatchedDeviceGroupInfo({
+            .node_group = fuchsia_driver_index::MatchedNodeGroupInfo({
                 .name = "test-group",
                 .node_index = 0,
                 .composite = fuchsia_driver_index::MatchedCompositeInfo(
@@ -316,7 +316,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
             })});
       } else if (args.name().get() == "dev-group-1") {
         return zx::ok(FakeDriverIndex::MatchResult{
-            .device_group = fuchsia_driver_index::MatchedDeviceGroupInfo({
+            .node_group = fuchsia_driver_index::MatchedNodeGroupInfo({
                 .name = "test-group",
                 .node_index = 1,
                 .composite = fuchsia_driver_index::MatchedCompositeInfo(
@@ -1717,7 +1717,7 @@ TEST_F(DriverRunnerTest, StartCompositeDriver) {
   StopDriverComponent(std::move(root_driver.value()));
 }
 
-TEST_F(DriverRunnerTest, CreateAndBindDeviceGroup) {
+TEST_F(DriverRunnerTest, CreateAndBindNodeGroup) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
   ASSERT_EQ(ZX_OK, driver_index_client.status_value());
@@ -1726,9 +1726,9 @@ TEST_F(DriverRunnerTest, CreateAndBindDeviceGroup) {
 
   auto defer = fit::defer([this] { Unbind(); });
 
-  // Add a match for the device group that we are creating.
+  // Add a match for the node group that we are creating.
   std::string name("test-group");
-  const fuchsia_driver_index::MatchedDeviceGroupInfo match({
+  const fuchsia_driver_index::MatchedNodeGroupInfo match({
       .composite = fuchsia_driver_index::MatchedCompositeInfo(
           {.composite_name = "test-composite",
            .num_nodes = 2,
@@ -1738,42 +1738,41 @@ TEST_F(DriverRunnerTest, CreateAndBindDeviceGroup) {
       .node_names = {{"node-0", "node-1"}},
       .primary_index = 1,
   });
-  driver_index.AddDeviceGroupMatch(name, match);
+  driver_index.AddNodeGroupMatch(name, match);
 
-  const fuchsia_driver_framework::DeviceGroup fidl_group(
+  const fuchsia_driver_framework::NodeGroup fidl_group(
       {.name = name,
-       .nodes = std::vector<fuchsia_driver_framework::DeviceGroupNode>{
-           fuchsia_driver_framework::DeviceGroupNode({
+       .nodes = std::vector<fuchsia_driver_framework::NodeRepresentation>{
+           fuchsia_driver_framework::NodeRepresentation({
                .bind_rules = std::vector<fuchsia_driver_framework::BindRule>(),
                .bind_properties = std::vector<fuchsia_driver_framework::NodeProperty>(),
            }),
-           fuchsia_driver_framework::DeviceGroupNode({
+           fuchsia_driver_framework::NodeRepresentation({
                .bind_rules = std::vector<fuchsia_driver_framework::BindRule>(),
                .bind_properties = std::vector<fuchsia_driver_framework::NodeProperty>(),
            })}});
 
-  auto device_group = std::make_unique<DeviceGroupV2>(
-      DeviceGroupCreateInfo{
+  auto node_group = std::make_unique<NodeGroupV2>(
+      NodeGroupCreateInfo{
           .name = name,
           .size = 2,
       },
       dispatcher(), &driver_runner);
   fidl::Arena<> arena;
-  auto added = driver_runner.device_group_manager().AddDeviceGroup(fidl::ToWire(arena, fidl_group),
-                                                                   std::move(device_group));
+  auto added = driver_runner.node_group_manager().AddNodeGroup(fidl::ToWire(arena, fidl_group),
+                                                               std::move(node_group));
   ASSERT_TRUE(added.is_ok());
 
   RunLoopUntilIdle();
 
   ASSERT_EQ(
-      2u,
-      driver_runner.device_group_manager().device_groups().at(name)->device_group_nodes().size());
+      2u, driver_runner.node_group_manager().node_groups().at(name)->node_representations().size());
 
   ASSERT_FALSE(
-      driver_runner.device_group_manager().device_groups().at(name)->device_group_nodes().at(0));
+      driver_runner.node_group_manager().node_groups().at(name)->node_representations().at(0));
 
   ASSERT_FALSE(
-      driver_runner.device_group_manager().device_groups().at(name)->device_group_nodes().at(1));
+      driver_runner.node_group_manager().node_groups().at(name)->node_representations().at(1));
 
   fdf::NodeControllerPtr node_controller;
   driver_host().SetStartHandler(
@@ -1799,10 +1798,10 @@ TEST_F(DriverRunnerTest, CreateAndBindDeviceGroup) {
   ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   ASSERT_TRUE(
-      driver_runner.device_group_manager().device_groups().at(name)->device_group_nodes().at(0));
+      driver_runner.node_group_manager().node_groups().at(name)->node_representations().at(0));
 
   ASSERT_TRUE(
-      driver_runner.device_group_manager().device_groups().at(name)->device_group_nodes().at(1));
+      driver_runner.node_group_manager().node_groups().at(name)->node_representations().at(1));
 
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
     auto& entries = start_args.program().entries();

@@ -238,7 +238,7 @@ zx_status_t CompositeDeviceManager::AddCompositeDevice(
 }
 
 void CompositeDeviceManager::RebindNodes() {
-  // Take our composite nodes and run them through the device groups again.
+  // Take our composite nodes and run them through the node groups again.
   std::list<std::weak_ptr<Node>> nodes = std::move(nodes_);
   for (auto& weak_node : nodes) {
     auto node = weak_node.lock();
