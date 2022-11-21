@@ -486,12 +486,10 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
   std::vector<uint64_t> layers;
   {
     std::scoped_lock lock(lock_);
-    auto it = display_engine_data_map_.find(data.display_id);
-    FX_DCHECK(it != display_engine_data_map_.end());
-    layers = it->second.layers;
-    if (layers.size() < num_images) {
-      return false;
-    }
+    layers = display_engine_data_map_.at(data.display_id).layers;
+  }
+  if (layers.size() < num_images) {
+    return false;
   }
 
   for (uint32_t i = 0; i < num_images; i++) {
@@ -639,7 +637,119 @@ fuchsia::hardware::display::ConfigStamp DisplayCompositor::ApplyConfig() {
   return pending_config_stamp;
 }
 
-void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation_time,
+bool DisplayCompositor::PerformGpuComposition(
+    const uint64_t frame_number, const zx::time presentation_time,
+    const std::vector<RenderData>& render_data_list, std::vector<zx::event> release_fences,
+    scheduling::FrameRenderer::FramePresentedCallback callback) {
+  // Create an event that will be signaled when the final display's content has finished
+  // rendering; it will be passed into |release_fence_manager_.OnGpuCompositedFrame()|.  If there
+  // are multiple displays which require GPU-composited content, we pass this event to be signaled
+  // when the final display's content has finished rendering (thus guaranteeing that all previous
+  // content has also finished rendering).
+  // TODO(fxbug.dev/77640): we might want to reuse events, instead of creating a new one every
+  // frame.
+  zx::event render_finished_fence = utils::CreateEvent();
+
+  for (size_t i = 0; i < render_data_list.size(); ++i) {
+    const bool is_final_display = i == (render_data_list.size() - 1);
+    const auto& render_data = render_data_list[i];
+    const auto display_engine_data_it = display_engine_data_map_.find(render_data.display_id);
+    FX_DCHECK(display_engine_data_it != display_engine_data_map_.end());
+    auto& display_engine_data = display_engine_data_it->second;
+
+    // Clear any past CC state here, before applying GPU CC.
+    if (cc_state_machine_.GpuRequiresDisplayClearing()) {
+      const zx_status_t status =
+          (*display_controller_)
+              ->SetDisplayColorConversion(render_data.display_id, kDefaultColorConversionOffsets,
+                                          kDefaultColorConversionCoefficients,
+                                          kDefaultColorConversionOffsets);
+      FX_CHECK(status == ZX_OK) << "Could not apply hardware color conversion: " << status;
+      cc_state_machine_.DisplayCleared();
+    }
+
+    if (display_engine_data.vmo_count == 0) {
+      FX_LOGS(WARNING) << "No VMOs were created when creating display.";
+      return false;
+    }
+    const uint32_t curr_vmo = display_engine_data.curr_vmo;
+    display_engine_data.curr_vmo =
+        (display_engine_data.curr_vmo + 1) % display_engine_data.vmo_count;
+    const auto& render_targets = renderer_->RequiresRenderInProtected(render_data.images)
+                                     ? display_engine_data.protected_render_targets
+                                     : display_engine_data.render_targets;
+    FX_DCHECK(curr_vmo < render_targets.size()) << curr_vmo << "/" << render_targets.size();
+    FX_DCHECK(curr_vmo < display_engine_data.frame_event_datas.size())
+        << curr_vmo << "/" << display_engine_data.frame_event_datas.size();
+    const auto& render_target = render_targets[curr_vmo];
+
+    // Reset the event data.
+    auto& event_data = display_engine_data.frame_event_datas[curr_vmo];
+
+    // TODO(fxbug.dev/91737): Remove this after the direct-to-display path is stable.
+    // We expect the retired event to already have been signaled. Verify this without waiting.
+    {
+      zx_status_t status = event_data.signal_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr);
+      if (status != ZX_OK) {
+        FX_DCHECK(status == ZX_ERR_TIMED_OUT) << "unexpected status: " << status;
+        FX_LOGS(ERROR)
+            << "flatland::DisplayCompositor::RenderFrame rendering into in-use backbuffer";
+      }
+    }
+
+    event_data.wait_event.signal(ZX_EVENT_SIGNALED, 0);
+    event_data.signal_event.signal(ZX_EVENT_SIGNALED, 0);
+
+    // Apply the debugging color to the images.
+#ifdef VISUAL_DEBUGGING_ENABLED
+    auto images = render_data.images;
+    for (auto& image : images) {
+      image.multiply_color[0] *= kDebugColor[0];
+      image.multiply_color[1] *= kDebugColor[1];
+      image.multiply_color[2] *= kDebugColor[2];
+      image.multiply_color[3] *= kDebugColor[3];
+    }
+#else
+    auto& images = render_data.images;
+#endif  // VISUAL_DEBUGGING_ENABLED
+
+    const auto apply_cc = (cc_state_machine_.GetDataToApply() != std::nullopt);
+    std::vector<zx::event> render_fences;
+    render_fences.push_back(std::move(event_data.wait_event));
+    // Only add render_finished_fence if we're rendering the final display's framebuffer.
+    if (is_final_display) {
+      render_fences.push_back(std::move(render_finished_fence));
+      renderer_->Render(render_target, render_data.rectangles, images, render_fences, apply_cc);
+      // Retrieve fence.
+      render_finished_fence = std::move(render_fences.back());
+    } else {
+      renderer_->Render(render_target, render_data.rectangles, images, render_fences, apply_cc);
+    }
+
+    // Retrieve fence.
+    event_data.wait_event = std::move(render_fences[0]);
+
+    const auto layer = display_engine_data.layers[0];
+    SetDisplayLayers(render_data.display_id, {layer});
+    ApplyLayerImage(layer, {glm::vec2(0), glm::vec2(render_target.width, render_target.height)},
+                    render_target, event_data.wait_id, event_data.signal_id);
+
+    const auto [result, /*ops*/ _] = CheckConfig();
+    if (result != fuchsia::hardware::display::ConfigResult::OK) {
+      FX_LOGS(ERROR) << "Both display hardware composition and GPU rendering have failed.";
+      // TODO(fxbug.dev/59646): Figure out how we really want to handle this case here.
+      return false;
+    }
+  }
+
+  // See ReleaseFenceManager comments for details.
+  FX_DCHECK(render_finished_fence);
+  release_fence_manager_.OnGpuCompositedFrame(frame_number, std::move(render_finished_fence),
+                                              std::move(release_fences), std::move(callback));
+  return true;
+}
+
+void DisplayCompositor::RenderFrame(const uint64_t frame_number, const zx::time presentation_time,
                                     const std::vector<RenderData>& render_data_list,
                                     std::vector<zx::event> release_fences,
                                     scheduling::FrameRenderer::FramePresentedCallback callback) {
@@ -648,42 +758,13 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
 
   // Config should be reset before doing anything new.
   DiscardConfig();
+  const bool hardware_failure = !SetRenderDatasOnDisplay(render_data_list);
 
-  // Create and set layers, one per image/rectangle, set the layer images and the layer transforms.
-  // Afterwards we check the config, if it fails for whatever reason, such as there being too many
-  // layers, then we fall back to software composition.
-  bool hardware_fail = false;
-  if (!kDisableDisplayComposition) {
-    for (auto& data : render_data_list) {
-      if (!SetRenderDataOnDisplay(data)) {
-        // TODO(fxbug.dev/77416): just because setting the data on one display fails (e.g. due to
-        // too many layers), that doesn't mean that all displays need to use GPU-composition.  Some
-        // day we might want to use GPU-composition for some client images, and direct-scanout for
-        // others.
-        hardware_fail = true;
-        break;
-      }
-
-      // Check the state machine to see if there's any CC data to apply.
-      auto cc_data = cc_state_machine_.GetDataToApply();
-      if (cc_data != std::nullopt) {
-        // Apply direct-to-display color conversion here.
-        zx_status_t status =
-            (*display_controller_)
-                ->SetDisplayColorConversion(data.display_id, (*cc_data).preoffsets,
-                                            (*cc_data).coefficients, (*cc_data).postoffsets);
-        FX_CHECK(status == ZX_OK) << "Could not apply hardware color conversion: " << status;
-      }
-    }
-  }
-
-  // Determine whether we need to fall back to GPU composition.  Avoid calling CheckConfig() if we
+  // Determine whether we need to fall back to GPU composition. Avoid calling CheckConfig() if we
   // don't need to, because this requires a round-trip to the display controller.
-  bool fallback_to_gpu_composition = false;
-  if (hardware_fail || kDisableDisplayComposition) {
-    fallback_to_gpu_composition = true;
-  } else {
-    auto [result, ops] = CheckConfig();
+  bool fallback_to_gpu_composition = hardware_failure || kDisableDisplayComposition;
+  if (!fallback_to_gpu_composition) {
+    const auto [result, /*ops*/ _] = CheckConfig();
     fallback_to_gpu_composition = (result != fuchsia::hardware::display::ConfigResult::OK);
 
     // CC was successfully applied to the config so we update the state machine.
@@ -692,117 +773,12 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
     }
   }
 
-  // If the results are not okay, we have to do GPU composition using the renderer.
   if (fallback_to_gpu_composition) {
     DiscardConfig();
-
-    // Create an event that will be signaled when the final display's content has finished
-    // rendering; it will be passed into |release_fence_manager_.OnGpuCompositedFrame()|.  If there
-    // are multiple displays which require GPU-composited content, we pass this event to be signaled
-    // when the final display's content has finished rendering (thus guaranteeing that all previous
-    // content has also finished rendering).
-    // TODO(fxbug.dev/77640): we might want to reuse events, instead of creating a new one every
-    // frame.
-    zx::event render_finished_fence = utils::CreateEvent();
-
-    for (size_t i = 0; i < render_data_list.size(); ++i) {
-      const bool is_final_display = (i + 1 == render_data_list.size());
-      const auto& data = render_data_list[i];
-      const auto it = display_engine_data_map_.find(data.display_id);
-      FX_DCHECK(it != display_engine_data_map_.end());
-
-      // Clear any past CC state here, before applying GPU CC.
-      if (cc_state_machine_.GpuRequiresDisplayClearing()) {
-        zx_status_t status =
-            (*display_controller_)
-                ->SetDisplayColorConversion(data.display_id, kDefaultColorConversionOffsets,
-                                            kDefaultColorConversionCoefficients,
-                                            kDefaultColorConversionOffsets);
-        FX_CHECK(status == ZX_OK) << "Could not apply hardware color conversion: " << status;
-        cc_state_machine_.DisplayCleared();
-      }
-
-      auto& display_engine_data = it->second;
-      if (display_engine_data.vmo_count == 0) {
-        FX_LOGS(WARNING) << "No VMOs were created when creating display.";
-        return;
-      }
-      const uint32_t curr_vmo = display_engine_data.curr_vmo;
-      display_engine_data.curr_vmo =
-          (display_engine_data.curr_vmo + 1) % display_engine_data.vmo_count;
-      const auto& render_targets = renderer_->RequiresRenderInProtected(data.images)
-                                       ? display_engine_data.protected_render_targets
-                                       : display_engine_data.render_targets;
-      FX_DCHECK(curr_vmo < render_targets.size()) << curr_vmo << "/" << render_targets.size();
-      FX_DCHECK(curr_vmo < display_engine_data.frame_event_datas.size())
-          << curr_vmo << "/" << display_engine_data.frame_event_datas.size();
-      const auto& render_target = render_targets[curr_vmo];
-
-      // Reset the event data.
-      auto& event_data = display_engine_data.frame_event_datas[curr_vmo];
-
-      // TODO(fxbug.dev/91737): Remove this after the direct-to-display path is stable.
-      // We expect the retired event to already have been signaled. Verify this without waiting.
-      {
-        zx_status_t status =
-            event_data.signal_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr);
-        if (status != ZX_OK) {
-          FX_DCHECK(status == ZX_ERR_TIMED_OUT) << "unexpected status: " << status;
-          FX_LOGS(ERROR)
-              << "flatland::DisplayCompositor::RenderFrame rendering into in-use backbuffer";
-        }
-      }
-
-      event_data.wait_event.signal(ZX_EVENT_SIGNALED, 0);
-      event_data.signal_event.signal(ZX_EVENT_SIGNALED, 0);
-
-      // Apply the debugging color to the images.
-#ifdef VISUAL_DEBUGGING_ENABLED
-      auto images = data.images;
-      for (auto& image : images) {
-        image.multiply_color[0] *= kGpuRenderingDebugColor[0];
-        image.multiply_color[1] *= kGpuRenderingDebugColor[1];
-        image.multiply_color[2] *= kGpuRenderingDebugColor[2];
-        image.multiply_color[3] *= kGpuRenderingDebugColor[3];
-      }
-#else
-      auto& images = data.images;
-#endif  // VISUAL_DEBUGGING_ENABLED
-
-      auto apply_cc = (cc_state_machine_.GetDataToApply() != std::nullopt);
-      std::vector<zx::event> render_fences;
-      render_fences.push_back(std::move(event_data.wait_event));
-      // Only add render_finished_fence if we're rendering the final display's framebuffer.
-      if (is_final_display) {
-        render_fences.push_back(std::move(render_finished_fence));
-        renderer_->Render(render_target, data.rectangles, images, render_fences, apply_cc);
-        // Retrieve fence.
-        render_finished_fence = std::move(render_fences.back());
-      } else {
-        renderer_->Render(render_target, data.rectangles, images, render_fences, apply_cc);
-      }
-
-      // Retrieve fence.
-      event_data.wait_event = std::move(render_fences[0]);
-
-      auto layer = display_engine_data.layers[0];
-      SetDisplayLayers(data.display_id, {layer});
-      ApplyLayerImage(layer, {glm::vec2(0), glm::vec2(render_target.width, render_target.height)},
-                      render_target, event_data.wait_id, event_data.signal_id);
-
-      auto [result, /*ops*/ _] = CheckConfig();
-      if (result != fuchsia::hardware::display::ConfigResult::OK) {
-        FX_LOGS(ERROR) << "Both display hardware composition and GPU rendering have failed.";
-
-        // TODO(fxbug.dev/59646): Figure out how we really want to handle this case here.
-        return;
-      }
+    if (!PerformGpuComposition(frame_number, presentation_time, render_data_list,
+                               std::move(release_fences), std::move(callback))) {
+      return;
     }
-
-    // See ReleaseFenceManager comments for details.
-    FX_DCHECK(render_finished_fence);
-    release_fence_manager_.OnGpuCompositedFrame(frame_number, std::move(render_finished_fence),
-                                                std::move(release_fences), std::move(callback));
   } else {
     // Unsignal image events before applying config.
     for (auto id : pending_images_in_config_) {
@@ -821,6 +797,34 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
   // version of ApplyConfig2(), which latter proved to be infeasible for some drivers to implement.
   const auto& config_stamp = ApplyConfig();
   pending_apply_configs_.push_back({.config_stamp = config_stamp, .frame_number = frame_number});
+}
+
+bool DisplayCompositor::SetRenderDatasOnDisplay(const std::vector<RenderData>& render_data_list) {
+  if (kDisableDisplayComposition) {
+    return false;
+  }
+
+  for (const auto& data : render_data_list) {
+    if (!SetRenderDataOnDisplay(data)) {
+      // TODO(fxbug.dev/77416): just because setting the data on one display fails (e.g. due to
+      // too many layers), that doesn't mean that all displays need to use GPU-composition.  Some
+      // day we might want to use GPU-composition for some client images, and direct-scanout for
+      // others.
+      return false;
+    }
+
+    // Check the state machine to see if there's any CC data to apply.
+    if (const auto cc_data = cc_state_machine_.GetDataToApply()) {
+      // Apply direct-to-display color conversion here.
+      const zx_status_t status =
+          (*display_controller_)
+              ->SetDisplayColorConversion(data.display_id, (*cc_data).preoffsets,
+                                          (*cc_data).coefficients, (*cc_data).postoffsets);
+      FX_CHECK(status == ZX_OK) << "Could not apply hardware color conversion: " << status;
+    }
+  }
+
+  return true;
 }
 
 void DisplayCompositor::OnVsync(zx::time timestamp,

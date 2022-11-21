@@ -184,10 +184,20 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   fuchsia::sysmem::BufferCollectionSyncPtr TakeDisplayBufferCollectionPtr(
       allocation::GlobalBufferCollectionId collection_id);
 
+  // Used when we're forced to fall back to GPU rendering.
+  bool PerformGpuComposition(uint64_t frame_number, zx::time presentation_time,
+                             const std::vector<RenderData>& render_data_list,
+                             std::vector<zx::event> release_fences,
+                             scheduling::FrameRenderer::FramePresentedCallback callback);
+
   // Does all the setup for applying the render data, which includes images and rectangles,
   // onto the display via the display controller interface. Returns false if this cannot
   // be completed.
   bool SetRenderDataOnDisplay(const RenderData& data);
+
+  // Calls SetRenderData for each item in |render_data_list| and applies direct-to-display color
+  // conversion. Return false if this fails for any RenderData.
+  bool SetRenderDatasOnDisplay(const std::vector<RenderData>& render_data_list);
 
   // Sets the provided layers onto the display referenced by the given display_id.
   void SetDisplayLayers(uint64_t display_id, const std::vector<uint64_t>& layers);
