@@ -176,7 +176,7 @@ protocol Provider {
 adb protocol specifies several [services][adb-services], but we intend to support only a subset of
 those - shell, logcat, sync (for adb push/pull). These services may not emulate all behaviors of adb
 on other platforms and will be tailored for Fuchsia, such as, shell commands will have to match
-Fuchsia supported commands and logs might be in Fuschia system log format. adb shell service is
+Fuchsia supported commands and logs might be in Fuchsia system log format. adb shell service is
 discussed in detail in the next section. Adding support for more services in the future will be
 considered on a case by case basis.
 
