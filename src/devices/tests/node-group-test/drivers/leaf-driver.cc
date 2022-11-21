@@ -28,7 +28,7 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
   // Add node group.
   const uint32_t node_1_bind_rule_1_values[] = {10, 3};
   const ddk::NodeGroupBindRule node_1_bind_rules[] = {
-      ddk::BindRuleAcceptList(50, node_1_bind_rule_1_values),
+      ddk::MakeAcceptBindRuleList(50, node_1_bind_rule_1_values),
       ddk::MakeRejectBindRule(bind_test::FLAG, true),
   };
 
@@ -40,7 +40,7 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
   const char* node_2_props_values_1[] = {bind_test::TEST_PROP_VALUE_1.c_str(),
                                          bind_test::TEST_PROP_VALUE_2.c_str()};
   const ddk::NodeGroupBindRule node_2_bind_rules[] = {
-      ddk::BindRuleAcceptList(bind_test::TEST_PROP, node_2_props_values_1),
+      ddk::MakeAcceptBindRuleList(bind_test::TEST_PROP, node_2_props_values_1),
       ddk::MakeRejectBindRule(20, 10),
   };
 
@@ -51,7 +51,7 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
   const char* node_3_props_values_1[] = {bind_test::TEST_PROP_VALUE_3.c_str(),
                                          bind_test::TEST_PROP_VALUE_4.c_str()};
   const ddk::NodeGroupBindRule node_3_bind_rules[] = {
-      ddk::BindRuleAcceptList(bind_test::TEST_PROP, node_3_props_values_1),
+      ddk::MakeAcceptBindRuleList(bind_test::TEST_PROP, node_3_props_values_1),
       ddk::MakeRejectBindRule(20, 10),
   };
 

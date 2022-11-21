@@ -27,7 +27,7 @@ zx_status_t Root::Bind(void* ctx, zx_device_t* dev) {
 
   const uint32_t node_1_bind_rule_1_values[] = {10, 3};
   const ddk::NodeGroupBindRule node_1_bind_rules[] = {
-      ddk::BindRuleAcceptList(50, node_1_bind_rule_1_values),
+      ddk::MakeAcceptBindRuleList(50, node_1_bind_rule_1_values),
       ddk::MakeRejectBindRule("sandpiper", true),
   };
 
@@ -38,7 +38,7 @@ zx_status_t Root::Bind(void* ctx, zx_device_t* dev) {
 
   const uint32_t node_2_props_values_1[] = {88, 99};
   const ddk::NodeGroupBindRule node_2_bind_rules[] = {
-      ddk::BindRuleAcceptList(BIND_PLATFORM_DEV_VID, node_2_props_values_1),
+      ddk::MakeAcceptBindRuleList(BIND_PLATFORM_DEV_VID, node_2_props_values_1),
       ddk::MakeRejectBindRule(20, 10),
   };
 

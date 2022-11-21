@@ -176,56 +176,58 @@ inline NodeGroupBindRule MakeRejectBindRule(const char* key, const char* val) {
                            device_bind_prop_str_val(val));
 }
 
-inline NodeGroupBindRule BindRuleAcceptList(uint32_t key, cpp20::span<const uint32_t> values) {
+inline NodeGroupBindRule MakeAcceptBindRuleList(uint32_t key, cpp20::span<const uint32_t> values) {
   return ddk::NodeGroupBindRule::CreateWithIntList(device_bind_prop_int_key(key),
                                                    DEVICE_BIND_RULE_CONDITION_ACCEPT, values);
 }
 
-inline NodeGroupBindRule BindRuleAcceptList(const std::string& key,
-                                            cpp20::span<const uint32_t> values) {
+inline NodeGroupBindRule MakeAcceptBindRuleList(const std::string& key,
+                                                cpp20::span<const uint32_t> values) {
   return ddk::NodeGroupBindRule::CreateWithIntList(device_bind_prop_str_key(key.c_str()),
                                                    DEVICE_BIND_RULE_CONDITION_ACCEPT, values);
 }
 
-inline NodeGroupBindRule BindRuleAcceptList(const char* key, cpp20::span<const uint32_t> values) {
+inline NodeGroupBindRule MakeAcceptBindRuleList(const char* key,
+                                                cpp20::span<const uint32_t> values) {
   return ddk::NodeGroupBindRule::CreateWithIntList(device_bind_prop_str_key(key),
                                                    DEVICE_BIND_RULE_CONDITION_ACCEPT, values);
 }
 
-inline NodeGroupBindRule BindRuleAcceptList(const std::string& key,
-                                            cpp20::span<const char*> values) {
+inline NodeGroupBindRule MakeAcceptBindRuleList(const std::string& key,
+                                                cpp20::span<const char*> values) {
   return ddk::NodeGroupBindRule::CreateWithStringList(device_bind_prop_str_key(key.c_str()),
                                                       DEVICE_BIND_RULE_CONDITION_ACCEPT, values);
 }
 
-inline NodeGroupBindRule BindRuleAcceptList(const char* key, cpp20::span<const char*> values) {
+inline NodeGroupBindRule MakeAcceptBindRuleList(const char* key, cpp20::span<const char*> values) {
   return ddk::NodeGroupBindRule::CreateWithStringList(device_bind_prop_str_key(key),
                                                       DEVICE_BIND_RULE_CONDITION_ACCEPT, values);
 }
 
-inline NodeGroupBindRule BindRuleRejectList(uint32_t key, cpp20::span<const uint32_t> values) {
+inline NodeGroupBindRule MakeRejectBindRuleList(uint32_t key, cpp20::span<const uint32_t> values) {
   return ddk::NodeGroupBindRule::CreateWithIntList(device_bind_prop_int_key(key),
                                                    DEVICE_BIND_RULE_CONDITION_REJECT, values);
 }
 
-inline NodeGroupBindRule BindRuleRejectList(const std::string& key,
-                                            cpp20::span<const uint32_t> values) {
+inline NodeGroupBindRule MakeRejectBindRuleList(const std::string& key,
+                                                cpp20::span<const uint32_t> values) {
   return ddk::NodeGroupBindRule::CreateWithIntList(device_bind_prop_str_key(key.c_str()),
                                                    DEVICE_BIND_RULE_CONDITION_REJECT, values);
 }
 
-inline NodeGroupBindRule BindRuleRejectList(const char* key, cpp20::span<const uint32_t> values) {
+inline NodeGroupBindRule MakeRejectBindRuleList(const char* key,
+                                                cpp20::span<const uint32_t> values) {
   return ddk::NodeGroupBindRule::CreateWithIntList(device_bind_prop_str_key(key),
                                                    DEVICE_BIND_RULE_CONDITION_REJECT, values);
 }
 
-inline NodeGroupBindRule BindRuleRejectList(const std::string& key,
-                                            cpp20::span<const char*> values) {
+inline NodeGroupBindRule MakeRejectBindRuleList(const std::string& key,
+                                                cpp20::span<const char*> values) {
   return ddk::NodeGroupBindRule::CreateWithStringList(device_bind_prop_str_key(key.c_str()),
                                                       DEVICE_BIND_RULE_CONDITION_REJECT, values);
 }
 
-inline NodeGroupBindRule BindRuleRejectList(const char* key, cpp20::span<const char*> values) {
+inline NodeGroupBindRule MakeRejectBindRuleList(const char* key, cpp20::span<const char*> values) {
   return ddk::NodeGroupBindRule::CreateWithStringList(device_bind_prop_str_key(key),
                                                       DEVICE_BIND_RULE_CONDITION_REJECT, values);
 }
