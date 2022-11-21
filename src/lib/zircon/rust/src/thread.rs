@@ -56,8 +56,9 @@ impl Thread {
         ok(status)
     }
 
-    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
     /// Terminate the current running thread.
+    ///
+    /// # Safety
     ///
     /// Extreme caution should be used-- this is basically always UB in Rust.
     /// There's almost no "normal" program code where this is okay to call.

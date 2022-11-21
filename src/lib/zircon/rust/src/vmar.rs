@@ -68,7 +68,7 @@ impl Vmar {
         unsafe { self.map_unsafe(vmar_offset, vmo, vmo_offset, len, flags) }
     }
 
-    /// Directly call zx_vmar_map.
+    /// Directly call `zx_vmar_map`.
     ///
     /// # Safety
     ///
@@ -95,19 +95,57 @@ impl Vmar {
         ok(status).map(|_| mapped)
     }
 
-    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
+    /// Directly call `zx_vmar_unmap`.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because unmapping memory regions can arbitrarily
+    /// cause read, write, and execution errors. Among other things, the caller
+    /// must ensure that:
+    ///
+    /// - The region being unmapped will not be accessed after unmapping.
+    /// - All references to memory in the region must be dropped or forgotten
+    ///   prior to calling this method.
+    /// - If the region contained executable code, then code in the region must
+    ///   not be currently executing and may not be executed in the future.
+    ///
+    /// This is not an exhaustive list, as there are many ways to cause memory
+    /// unsafety with memory mappings.
     pub unsafe fn unmap(&self, addr: usize, len: usize) -> Result<(), Status> {
-        ok(sys::zx_vmar_unmap(self.0.raw_handle(), addr, len))
+        // SAFETY: The caller has guaranteed that unmapping the given region
+        // will not cause undefined behavior.
+        ok(unsafe { sys::zx_vmar_unmap(self.0.raw_handle(), addr, len) })
     }
 
-    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
+    /// Directly call `zx_vmar_protect`.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because changing the access protections for
+    /// memory regions can arbitrarily cause read, write, and execution errors.
+    /// Among other things, the caller must ensure that if a read, write, or
+    /// execute permission is removed from a memory region, it must not read,
+    /// write, or execute it respetively.
+    ///
+    /// This is not an exhaustive list, as there are many ways to cause memory
+    /// unsafety with memory mappings.
     pub unsafe fn protect(&self, addr: usize, len: usize, flags: VmarFlags) -> Result<(), Status> {
-        ok(sys::zx_vmar_protect(self.raw_handle(), flags.bits(), addr, len))
+        // SAFETY: The caller has guaranteed that protecting the given region
+        // will not cause undefined behavior.
+        ok(unsafe { sys::zx_vmar_protect(self.raw_handle(), flags.bits(), addr, len) })
     }
 
-    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
+    /// Directly call `zx_vmar_destroy`.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because destroying a region unmaps all of the
+    /// mappings within it. See [`Vmar::unmap`] for more details on how
+    /// unmapping memory regions can cause memory unsafety.
     pub unsafe fn destroy(&self) -> Result<(), Status> {
-        ok(sys::zx_vmar_destroy(self.raw_handle()))
+        // SAFETY: The caller has guaranteed that destroying the given region
+        // will not cause undefined behavior.
+        ok(unsafe { sys::zx_vmar_destroy(self.raw_handle()) })
     }
 
     /// Wraps the

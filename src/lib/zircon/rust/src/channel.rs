@@ -406,14 +406,11 @@ impl Channel {
         }
         let mut zx_handle_dispositions: [std::mem::MaybeUninit<sys::zx_handle_disposition_t>;
             sys::ZX_CHANNEL_MAX_MSG_HANDLES as usize] =
-            unsafe { std::mem::MaybeUninit::uninit().assume_init() };
+            [std::mem::MaybeUninit::uninit(); sys::ZX_CHANNEL_MAX_MSG_HANDLES as usize];
         for i in 0..write_num_handle_dispositions as usize {
-            unsafe {
-                let handle_disposition =
-                    std::mem::replace(&mut handle_dispositions[i], HandleDisposition::invalid());
-                zx_handle_dispositions[i] =
-                    std::mem::MaybeUninit::new(handle_disposition.into_raw());
-            }
+            let handle_disposition =
+                std::mem::replace(&mut handle_dispositions[i], HandleDisposition::invalid());
+            zx_handle_dispositions[i].write(handle_disposition.into_raw());
         }
         buf.clear();
         let read_num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());

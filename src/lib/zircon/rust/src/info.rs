@@ -19,10 +19,11 @@ impl Deref for Topic {
     }
 }
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
 /// A query to get info about a zircon object.
 ///
-/// Safety: `TOPIC` must correspond to a valid `zx_object_get_info` topic,
+/// # Safety
+///
+/// `TOPIC` must correspond to a valid `zx_object_get_info` topic,
 /// and `InfoTy` must be a type that can be safely replaced with the byte
 /// representation of the associated `zx_object_get_info` buffer type.
 pub unsafe trait ObjectQuery {
