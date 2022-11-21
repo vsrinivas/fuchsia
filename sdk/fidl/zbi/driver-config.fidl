@@ -52,6 +52,9 @@ type KernelDriver = enum : uint32 {
 
     /// '370P'
     As370Power = 0x50303733;
+
+    /// 'IMXU'
+    ImxUart = 0x55584d49;
 };
 
 /// Kernel driver struct that can be used for simple drivers.

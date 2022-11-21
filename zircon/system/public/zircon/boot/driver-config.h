@@ -63,6 +63,9 @@ typedef uint32_t zbi_kernel_driver_t;
 // '370P'
 #define ZBI_KERNEL_DRIVER_AS370_POWER ((zbi_kernel_driver_t)(0x50303733u))
 
+// 'IMXU'
+#define ZBI_KERNEL_DRIVER_IMX_UART ((zbi_kernel_driver_t)(0x55584d49u))
+
 // Kernel driver struct that can be used for simple drivers.
 // Used by ZBI_KERNEL_DRIVER_PL011_UART, ZBI_KERNEL_DRIVER_AMLOGIC_UART, and
 // ZBI_KERNEL_DRIVER_I8250_MMIO_UART.
