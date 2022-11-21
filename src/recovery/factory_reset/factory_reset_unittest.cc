@@ -83,14 +83,12 @@ class FactoryResetTest : public Test {
 
   void TearDown() override { ASSERT_EQ(ramdisk_destroy(ramdisk_client_), ZX_OK); }
 
-  bool PartitionHasFormat(fs_management::DiskFormat format) {
+  void WithPartitionHasFormat(void (*fn)(fs_management::DiskFormat)) {
     fdio_cpp::UnownedFdioCaller caller(devmgr_.devfs_root());
     zx::result channel =
         component::ConnectAt<fuchsia_hardware_block::Block>(caller.directory(), fvm_block_path_);
-    if (channel.is_error()) {
-      return false;
-    }
-    return fs_management::DetectDiskFormat(channel.value()) == format;
+    ASSERT_TRUE(channel.is_ok()) << channel.status_string();
+    fn(fs_management::DetectDiskFormat(channel.value()));
   }
 
   void CreateZxcrypt() {
@@ -292,13 +290,17 @@ TEST_F(FactoryResetTest, CanShredVolume) {
       binding.AddBinding(&mock_admin).Bind();
 
   factory_reset::FactoryReset reset(devfs_root(), std::move(admin));
-  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatZxcrypt));
+  WithPartitionHasFormat([](fs_management::DiskFormat format) {
+    EXPECT_EQ(format, fs_management::kDiskFormatZxcrypt);
+  });
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
   loop.RunUntilIdle();
   EXPECT_EQ(status, ZX_OK);
   EXPECT_TRUE(mock_admin.suspend_called());
-  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatUnknown));
+  WithPartitionHasFormat([](fs_management::DiskFormat format) {
+    EXPECT_EQ(format, fs_management::kDiskFormatUnknown);
+  });
 }
 
 TEST_F(FactoryResetTest, ShredsVolumeWithInvalidSuperblockIfMagicPresent) {
@@ -318,19 +320,22 @@ TEST_F(FactoryResetTest, ShredsVolumeWithInvalidSuperblockIfMagicPresent) {
 
   // Verify that we re-shred that superblock anyway when we run factory reset.
   factory_reset::FactoryReset reset(devfs_root(), std::move(admin));
-  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatZxcrypt));
+  WithPartitionHasFormat([](fs_management::DiskFormat format) {
+    EXPECT_EQ(format, fs_management::kDiskFormatZxcrypt);
+  });
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
   loop.RunUntilIdle();
   EXPECT_EQ(status, ZX_OK);
   EXPECT_TRUE(mock_admin.suspend_called());
-  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatUnknown));
+  WithPartitionHasFormat([](fs_management::DiskFormat format) {
+    EXPECT_EQ(format, fs_management::kDiskFormatUnknown);
+  });
 }
 
 TEST_F(FactoryResetTest, DoesntShredUnknownVolumeType) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  // Make this block device look like it contains blobfs.
   CreateFakeBlobfs();
 
   MockAdmin mock_admin;
@@ -339,7 +344,9 @@ TEST_F(FactoryResetTest, DoesntShredUnknownVolumeType) {
       binding.AddBinding(&mock_admin).Bind();
 
   factory_reset::FactoryReset reset(devfs_root(), std::move(admin));
-  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatBlobfs));
+  WithPartitionHasFormat([](fs_management::DiskFormat format) {
+    EXPECT_EQ(format, fs_management::kDiskFormatBlobfs);
+  });
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
   loop.RunUntilIdle();
@@ -349,13 +356,14 @@ TEST_F(FactoryResetTest, DoesntShredUnknownVolumeType) {
   // In a world where fshost knew more about expected topology, we'd want to
   // shred this block device anyway, but that won't happen until we have a
   // clearer block device topology story.
-  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatBlobfs));
+  WithPartitionHasFormat([](fs_management::DiskFormat format) {
+    EXPECT_EQ(format, fs_management::kDiskFormatBlobfs);
+  });
 }
 
 TEST_F(FactoryResetTest, ShredsFxfs) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  // Make this block device look like it contains blobfs.
   CreateFakeFxfs();
 
   MockAdmin mock_admin;
@@ -364,13 +372,15 @@ TEST_F(FactoryResetTest, ShredsFxfs) {
       binding.AddBinding(&mock_admin).Bind();
 
   factory_reset::FactoryReset reset(devfs_root(), std::move(admin));
-  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatFxfs));
+  WithPartitionHasFormat(
+      [](fs_management::DiskFormat format) { EXPECT_EQ(format, fs_management::kDiskFormatFxfs); });
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
   loop.RunUntilIdle();
   EXPECT_EQ(status, ZX_OK);
   EXPECT_TRUE(mock_admin.suspend_called());
-  EXPECT_FALSE(PartitionHasFormat(fs_management::kDiskFormatFxfs));
+  WithPartitionHasFormat(
+      [](fs_management::DiskFormat format) { EXPECT_NE(format, fs_management::kDiskFormatFxfs); });
 }
 
 }  // namespace
