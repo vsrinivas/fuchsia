@@ -62,6 +62,9 @@ def main():
         nargs='*',
         help='Bazel output paths, relative to bazel-bin/.')
     parser.add_argument(
+        '--bazel-platform',
+        help='Set the Bazel target/default platform for this action.')
+    parser.add_argument(
         '--ninja-outputs',
         default=[],
         nargs='*',
@@ -122,9 +125,15 @@ For more details, see the comments in //build/bazel/legacy_ninja_build_outputs.g
         return parser.error(
             'Bazel launcher does not exist: %s' % args.bazel_launcher)
 
-    cmd = [args.bazel_launcher, 'build'] + [
+    cmd = [args.bazel_launcher, 'build']
+
+    if args.bazel_platform:
+        cmd.append('--platforms=' + args.bazel_platform)
+
+    cmd += [
         shlex.quote(arg) for arg in args.extra_bazel_args
     ] + args.bazel_targets
+
     ret = subprocess.run(cmd)
     if ret.returncode != 0:
         print(

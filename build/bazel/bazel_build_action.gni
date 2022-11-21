@@ -151,6 +151,19 @@ template("bazel_build_action") {
            ] + _inputs + [ "--bazel-outputs" ] + invoker.bazel_outputs +
            [ "--bazel-targets" ] + invoker.bazel_targets +
            [ "--ninja-outputs" ] + rebase_path(_outputs, root_build_dir)
+
+    # Ensure that the default platform is set correctly when this build action
+    # is invoked from a Fuchsia or host toolchain. For other ones. Other toolchains
+    # will inherit the 'default' platforms which may be set to
+    # //build/bazel/platforms:common in the future, and does not target any
+    # specific system intentionally.
+    if (is_host || is_fuchsia) {
+      args += [
+        "--bazel-platform",
+        "//build/bazel/platforms:${current_os}_${current_cpu}",
+      ]
+    }
+
     if (defined(invoker.extra_bazel_args)) {
       args += [ "--" ] + invoker.extra_bazel_args
     }
