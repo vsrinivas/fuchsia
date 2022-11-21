@@ -21,7 +21,7 @@ from pathlib import Path
 import json
 import sys
 from types import SimpleNamespace
-from pprint import pformat
+from pprint import pformat, pprint
 from typing import List
 import logging
 from contextlib import contextmanager
@@ -54,8 +54,10 @@ def setup_path_variables(target_outdir, target="fuchsia"):
         f"{paths.ASSEMBLY_BUNDLES}/legacy")
     paths.LEGACY_AIB_MANIFEST = Path(
         f"{paths.LEGACY_ASSEMBLY_INPUT_BUNDLE}/assembly_config.json")
+    paths.LEGACY_IMAGE_ASSEMBLY_CONFIG = Path(
+        f"{paths.ASSEMBLY_BUNDLES}.legacy_image_assembly_config.json")
     paths.IMAGE_ASSEMBLY_CONFIG = Path(
-        f"{paths.ASSEMBLY_BUNDLES}.image_assembly_config.json")
+        f"{paths.ASSEMBLY_BUNDLES}/image_assembly.json")
     paths.IMAGES_CONFIG = Path(f"{paths.ASSEMBLY_BUNDLES}.images_config.json")
     paths.IMAGE_ASSEMBLY_INPUTS = Path(
         f"{paths.ASSEMBLY_BUNDLES}.image_assembly_inputs")
@@ -86,8 +88,26 @@ def cli_args():
     parser.add_argument(
         "--commit-hash",
         required=False,
-        help="An optional commit-hash prefix (8 or more digits) specifying which stored copy of the\
+        help=
+        "An optional commit-hash prefix (8 or more digits) specifying which stored copy of the\
         image assembly config to compare against")
+    parser.add_argument(
+        "--diff-only",
+        required=False,
+        action="store_true",
+        default=False,
+        help=
+        "An optional flag which when provided will forgo the fx build of any uncommitted changes\
+        and will attempt to use the outdir of the build directory without rebuilding."
+    )
+    parser.add_argument(
+        "--use-latest",
+        required=False,
+        action="store_true",
+        default=False,
+        help=
+        "An optional flag which when provided will use the latest historical build artifacts stored\
+        in the 'latest' directory of the tmp dir.")
     args = parser.parse_args()
 
     return args
@@ -113,7 +133,7 @@ def get_build_dir():
     return Path(result.decode("utf-8").strip())
 
 
-def copy_config_to_tmp_dir(tmp_dir: Path, new_iac, stored_iac: Path,  commit_hash: str):
+def copy_config_to_tmp_dir(new_iac, stored_iac: Path):
     """Copies a config file from the git HEAD to the tmp directory in a path that contains the
     commit hash as a prefix
     """
@@ -130,7 +150,11 @@ def stash_uncommitted():
     stash = _uncommitted_changes()
     try:
         if stash:
-            subprocess.run(["git", "stash", "save", '"Stashing during validate_gn_to_aib invocation"'])
+            subprocess.run(
+                [
+                    "git", "stash", "save",
+                    '"Stashing during validate_gn_to_aib invocation"'
+                ])
         yield
     finally:
         if stash:
@@ -146,13 +170,14 @@ def compare(old: Path, new: Path):
         _diff_dicts(old_iac, new_iac, [""])
 
 
-def get_prev_iac_path(tmp_dir: Path, iac_name: str, commit_hash: str):
+def get_prev_iac_path(
+        tmp_dir: Path, iac_name: str, target_name: str, commit_hash: str):
     """Gets a path to the previous iac.
 
     Optional commit hash allows for comparing against a historically saved
     commit, if it exists
     """
-    return _get_path_to_historic_iac(tmp_dir, iac_name, commit_hash)
+    return tmp_dir.joinpath(commit_hash, target_name, iac_name)
 
 
 def _create_tmp_dir_if_not_exists(
@@ -180,10 +205,6 @@ def _copy_file(src, dst, overwrite=False):
         dst.write_bytes(src.read_bytes())
 
 
-def _get_path_to_historic_iac(tmp_dir, iac_name, commit_hash):
-    return tmp_dir.joinpath(commit_hash, iac_name)
-
-
 def _uncommitted_changes() -> bool:
     """Determines if the current git project has uncommitted changes"""
     # returns all files with uncommitted changes
@@ -201,9 +222,12 @@ def _diff_dicts(old, new, path: List):
     not met.
     """
     for key in old.keys():
+        if key == "qemu_kernel":
+            continue
         path.append(key)
         if key not in new:
-            raise Exception(f"Keys should not have changed. Found {key} was missing")
+            raise Exception(
+                f"Keys should not have changed. Found {key} was missing")
         if isinstance(old[key], dict):
             _diff_dicts(old[key], new[key], path + [key])
         elif isinstance(old[key], list):
@@ -220,37 +244,55 @@ def _diff_dicts(old, new, path: List):
                     print("NEW IAC has the following values missing from OLD:")
                     print(new_not_old)
             else:
-                discrepencies = []
-                for old_val, new_val in zip(old[key], new[key]):
-                    if old_val != new_val:
-                        discrepencies.append(f"OLD: {old_val}")
-                        discrepencies.append(f"NEW: {new_val}")
-                        discrepencies.append("")
+                getter = lambda x, y: set([obj[y] for obj in x])
+                if path[-1] == "bootfs_files":
+                    discrepencies = getter(old[key], "source") ^ getter(
+                        new[key], "source")
+                elif path[-1] == "kernel":
+                    discrepencies = getter(old[key], "path") ^ getter(
+                        new[key], "path")
+                else:
+                    discrepencies = set(old[key]) ^ set(new[key])
                 if discrepencies:
-                    print(f"List at {'.'.join(path)} differs from the comparison")
-                    list(map(print, discrepencies))
+                    print(
+                        f"List at {'.'.join(path)} differs from the comparison")
+                    pprint(
+                        f"Discrepancies: {sorted(list(discrepencies), key=lambda x: (Path(x).name, Path(x).absolute()))}"
+                    )
 
-def attempt_clean_build(tmp_dir, outdir_iac, commit_hash):
-    stored_iac_path = _get_path_to_historic_iac(tmp_dir, outdir_iac.name, commit_hash)
+
+def attempt_clean_build(
+        outdir_iac, stored_iac_path, latest_iac_path, commit_hash):
     if not stored_iac_path.exists():
         with stash_uncommitted():
             subprocess.run(["fx", "clean"])
             subprocess.run(["fx", "build"])
             # Creates a copy of the image assembly config in the tmp dir for the given HEAD commit
             # hash if one doesn't already exist.
-            copy_config_to_tmp_dir(tmp_dir, outdir_iac, stored_iac_path, commit_hash)
+            copy_config_to_tmp_dir(outdir_iac, stored_iac_path)
+            copy_config_to_tmp_dir(outdir_iac, latest_iac_path)
     else:
-        logger.info(f"The IAC from {commit_hash} already exists, so skipping the clean build.\n\
+        logger.info(
+            f"The IAC from {commit_hash} already exists, so skipping the clean build.\n\
             If you'd like to trigger a clean build and rewrite the existing config at the given\
             hash, delete the file at {stored_iac_path}")
 
+
+def make_latest_iac_path(prev_iac):
+    latest_iac_path = prev_iac.joinpath("../../../latest").resolve()
+    return latest_iac_path.joinpath(prev_iac.parent.name, prev_iac.name)
+
+
 def main():
+
     def validate_commit_hash(commit_hash):
         if len(commit_hash) < 8 or tmp_dir.joinpath(
                 commit_hash[0:8]) not in tmp_dir.iterdir():
             t = f"Must pass a commit hash of length >=8 that exists in tmp_dir. Valid options are:"
-            sys.exit("\n".join(textwrap.wrap(t, width=100)) + "\n" +
-                     pformat([path.name for path in tmp_dir.iterdir()]))
+            sys.exit(
+                "\n".join(textwrap.wrap(t, width=100)) + "\n" +
+                pformat([path.name for path in tmp_dir.iterdir()]))
+        return True
 
     args = cli_args()
     target_outdir = get_build_dir()
@@ -264,20 +306,27 @@ def main():
             sys.exit("Select the appropriate build with 'fx set' and try again")
 
     if args.commit_hash and validate_commit_hash(args.commit_hash):
-        prev_iac = get_prev_iac_path(tmp_dir, outdir_iac.name,
-                                args.commit_hash)
+        prev_iac = get_prev_iac_path(
+            tmp_dir, outdir_iac.name, target_outdir.name, args.commit_hash)
     else:
-        prev_iac = get_prev_iac_path(tmp_dir, outdir_iac.name, commit_hash)
+        prev_iac = get_prev_iac_path(
+            tmp_dir, outdir_iac.name, target_outdir.name, commit_hash)
+
+    latest_iac_path = make_latest_iac_path(prev_iac)
 
     # We want to run a clean build whenever the parent commit has changed and we don't have a valid
     # IAC for the parent commit stored in the tmp dir.
-    attempt_clean_build(tmp_dir, outdir_iac, commit_hash)
+    if args.use_latest:
+        prev_iac = latest_iac_path
+    else:
+        attempt_clean_build(outdir_iac, prev_iac, latest_iac_path, commit_hash)
 
     if not _uncommitted_changes():
         sys.exit(
             "Please make changes to the appropriate GN files and try again.")
-
-    subprocess.run(["fx", "build"]) # again, this time with uncommitted changes
+    if not args.diff_only:
+        subprocess.run(
+            ["fx", "build"])  # again, this time with uncommitted changes
     compare(prev_iac, outdir_iac)
 
 
