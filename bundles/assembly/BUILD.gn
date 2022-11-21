@@ -83,6 +83,8 @@ assembly_input_bundle("common_minimal") {
 
     # Hardware Information
     "//src/hwinfo:hwinfo",
+
+    "//src/sys/stash:pkg",
   ]
 
   # Create package and archive for use OOT.
