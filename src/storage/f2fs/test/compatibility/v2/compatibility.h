@@ -10,6 +10,7 @@
 
 #include <cinttypes>
 #include <cstddef>
+#include <filesystem>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -164,11 +165,14 @@ class FuchsiaOperator : public CompatibilityTestOperator {
   void Umount() final;
 
   void Mkdir(std::string_view path, mode_t mode) final;
-  int Rmdir(std::string_view path) final { return -1; }
+  int Rmdir(std::string_view path) final;
   std::unique_ptr<TestFile> Open(std::string_view path, int flags, mode_t mode) final;
   void Rename(std::string_view oldpath, std::string_view newpath) final {}
 
  private:
+  zx::result<std::pair<fbl::RefPtr<fs::Vnode>, std::string>> GetLastDirVnodeAndFileName(
+      std::string_view absolute_path);
+
   size_t block_count_;
   size_t block_size_;
   std::unique_ptr<Bcache> bc_;

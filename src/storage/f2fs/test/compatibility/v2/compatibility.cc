@@ -179,6 +179,19 @@ void FuchsiaOperator::Mkdir(std::string_view path, mode_t mode) {
   ASSERT_TRUE(new_dir->IsValid());
 }
 
+int FuchsiaOperator::Rmdir(std::string_view path) {
+  auto ret = GetLastDirVnodeAndFileName(path);
+  if (ret.is_error()) {
+    return -1;
+  }
+  auto [parent_vnode, child_name] = ret.value();
+
+  if (zx_status_t status = fs_->vfs()->Unlink(parent_vnode, child_name, true); status != ZX_OK) {
+    return -1;
+  }
+  return 0;
+}
+
 std::unique_ptr<TestFile> FuchsiaOperator::Open(std::string_view path, int flags, mode_t mode) {
   auto result = fs_->vfs()->Open(root_, path, ConvertFlag(flags), fs::Rights::ReadWrite(), mode);
   if (result.is_error()) {
@@ -190,6 +203,22 @@ std::unique_ptr<TestFile> FuchsiaOperator::Open(std::string_view path, int flags
   std::unique_ptr<TestFile> ret = std::make_unique<FuchsiaTestFile>(std::move(vnode));
 
   return ret;
+}
+
+zx::result<std::pair<fbl::RefPtr<fs::Vnode>, std::string>>
+FuchsiaOperator::GetLastDirVnodeAndFileName(std::string_view absolute_path) {
+  std::filesystem::path path(absolute_path);
+  if (!path.has_root_directory() || !path.has_filename()) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  fbl::RefPtr<fs::Vnode> vnode = root_;
+
+  for (auto token : path.parent_path().relative_path()) {
+    if (auto ret = vnode->Lookup(token.string(), &vnode); ret != ZX_OK) {
+      return zx::error(ret);
+    }
+  }
+  return zx::ok(make_pair(std::move(vnode), path.filename().string()));
 }
 
 fs::VnodeConnectionOptions ConvertFlag(int flags) {
