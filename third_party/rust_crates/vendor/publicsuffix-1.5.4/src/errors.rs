@@ -18,6 +18,8 @@ error_chain! {
 
         NoHost { }
 
+        NoPort { }
+
         InvalidHost { }
 
         InvalidEmail { }
@@ -32,7 +34,7 @@ error_chain! {
             display("invalid domain: '{}'", t)
         }
 
-        Uts46(t: ::idna::uts46::Errors) {
+        Uts46(t: ::idna::Errors) {
             description("UTS #46 processing failed")
             display("UTS #46 processing error: '{:?}'", t)
         }

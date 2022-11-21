@@ -1119,9 +1119,6 @@ name = "error-chain"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07e791d3be96241c77c43846b665ef1384606da2cd2a48730abe606a12906e02"
-dependencies = [
- "backtrace",
-]
 
 [[package]]
 name = "euclid"
@@ -1386,7 +1383,7 @@ dependencies = [
  "paste",
  "pathdiff",
  "pem",
- "percent-encoding 2.1.0",
+ "percent-encoding 2.2.0",
  "pest",
  "pest_derive",
  "pest_generator",
@@ -2607,9 +2604,9 @@ checksum = "31010dd2e1ac33d5b46a5b413495239882813e0369f8ed8a5e266f173602f831"
 
 [[package]]
 name = "percent-encoding"
-version = "2.1.0"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
+checksum = "478c572c3d73181ff3c2539045f6eb99e5491218eae919370993b890cdbdd98e"
 
 [[package]]
 name = "pest"
@@ -2968,15 +2965,15 @@ dependencies = [
 
 [[package]]
 name = "publicsuffix"
-version = "1.5.2"
+version = "1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5afecba86dcf1e4fd610246f89899d1924fe12e1e89f555eb7c7f710f3c5ad1d"
+checksum = "3bbaa49075179162b49acac1c6aa45fb4dafb5f13cf6794276d77bc7fd95757b"
 dependencies = [
  "error-chain",
- "idna 0.1.5",
+ "idna 0.2.3",
  "lazy_static",
  "regex",
- "url 1.7.2",
+ "url 2.1.0",
 ]
 
 [[package]]
@@ -4361,7 +4358,7 @@ dependencies = [
  "hyper",
  "itoa 0.4.3",
  "log",
- "percent-encoding 2.1.0",
+ "percent-encoding 2.2.0",
  "ring",
  "serde",
  "serde_derive",
@@ -4578,7 +4575,7 @@ checksum = "75b414f6c464c879d7f9babf951f23bc3743fb7313c081b2e6ca719067ea9d61"
 dependencies = [
  "idna 0.2.3",
  "matches",
- "percent-encoding 2.1.0",
+ "percent-encoding 2.2.0",
 ]
 
 [[package]]

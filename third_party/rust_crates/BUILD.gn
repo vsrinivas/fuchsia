@@ -572,7 +572,7 @@ group("pem") {
 }
 
 group("percent-encoding") {
-  public_deps = [ ":percent-encoding-v2_1_0" ]
+  public_deps = [ ":percent-encoding-v2_2_0" ]
 }
 
 group("pest") {
@@ -3868,7 +3868,6 @@ rust_library("error-chain-v0_12_0") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":backtrace-v0_3_42" ]
 
   rustenv = []
 
@@ -3877,9 +3876,6 @@ rust_library("error-chain-v0_12_0") {
     "--edition=2015",
     "-Cmetadata=ba7b1075069f9cf9",
     "-Cextra-filename=-ba7b1075069f9cf9",
-    "--cfg=feature=\"backtrace\"",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"example_generated\"",
   ]
 
   visibility = [ ":*" ]
@@ -7062,10 +7058,11 @@ rust_library("percent-encoding-v1_0_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("percent-encoding-v2_1_0") {
+rust_library("percent-encoding-v2_2_0") {
   crate_name = "percent_encoding"
-  crate_root = "//third_party/rust_crates/vendor/percent-encoding-2.1.0/lib.rs"
-  output_name = "percent_encoding-d6833841fde4a923"
+  crate_root =
+      "//third_party/rust_crates/vendor/percent-encoding-2.2.0/src/lib.rs"
+  output_name = "percent_encoding-58f6833f792480e7"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -7074,9 +7071,11 @@ rust_library("percent-encoding-v2_1_0") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=d6833841fde4a923",
-    "-Cextra-filename=-d6833841fde4a923",
+    "--edition=2018",
+    "-Cmetadata=58f6833f792480e7",
+    "-Cextra-filename=-58f6833f792480e7",
+    "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"default\"",
   ]
 
   visibility = [ ":*" ]
@@ -7884,26 +7883,26 @@ rust_library("prost-types-v0_11_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("publicsuffix-v1_5_2") {
+rust_library("publicsuffix-v1_5_4") {
   crate_name = "publicsuffix"
-  crate_root = "//third_party/rust_crates/vendor/publicsuffix-1.5.2/src/lib.rs"
-  output_name = "publicsuffix-432c80925f3efce9"
+  crate_root = "//third_party/rust_crates/vendor/publicsuffix-1.5.4/src/lib.rs"
+  output_name = "publicsuffix-a0801fd98f37af12"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
   deps += [ ":error-chain-v0_12_0" ]
-  deps += [ ":idna-v0_1_5" ]
+  deps += [ ":idna-v0_2_3" ]
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":regex-v1_5_6" ]
-  deps += [ ":url-v1_7_2" ]
+  deps += [ ":url-v2_1_0" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=432c80925f3efce9",
-    "-Cextra-filename=-432c80925f3efce9",
+    "-Cmetadata=a0801fd98f37af12",
+    "-Cextra-filename=-a0801fd98f37af12",
   ]
 
   visibility = [ ":*" ]
@@ -11297,7 +11296,7 @@ rust_library("tuf-v0_3_0-beta11") {
   deps += [ ":hyper-v0_14_19" ]
   deps += [ ":itoa-v0_4_3" ]
   deps += [ ":log-v0_4_11" ]
-  deps += [ ":percent-encoding-v2_1_0" ]
+  deps += [ ":percent-encoding-v2_2_0" ]
   deps += [ ":ring-v0_16_12" ]
   deps += [ ":serde-v1_0_147" ]
   deps += [ ":serde_derive-v1_0_147($host_toolchain)" ]
@@ -11908,7 +11907,7 @@ rust_library("url-v2_1_0") {
   deps = []
   deps += [ ":idna-v0_2_3" ]
   deps += [ ":matches-v0_1_9" ]
-  deps += [ ":percent-encoding-v2_1_0" ]
+  deps += [ ":percent-encoding-v2_2_0" ]
 
   rustenv = []
 
@@ -12033,7 +12032,7 @@ rust_library("valico-v2_4_2") {
   deps += [ ":chrono-v0_4_19" ]
   deps += [ ":jsonway-v2_0_0" ]
   deps += [ ":phf-v0_7_24" ]
-  deps += [ ":publicsuffix-v1_5_2" ]
+  deps += [ ":publicsuffix-v1_5_4" ]
   deps += [ ":regex-v1_5_6" ]
   deps += [ ":serde-v1_0_147" ]
   deps += [ ":serde_json-v1_0_87" ]

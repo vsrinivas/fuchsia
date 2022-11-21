@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -12,7 +12,7 @@
 
 [package]
 name = "publicsuffix"
-version = "1.5.2"
+version = "1.5.4"
 authors = ["rushmorem <rushmore@webenchanter.com>"]
 description = "Robust domain name parsing and RFC compliant email address validation"
 documentation = "https://docs.rs/publicsuffix"
@@ -22,9 +22,10 @@ license = "MIT/Apache-2.0"
 repository = "https://github.com/rushmorem/publicsuffix"
 [dependencies.error-chain]
 version = "0.12"
+default-features = false
 
 [dependencies.idna]
-version = "0.1"
+version = "0.2"
 
 [dependencies.lazy_static]
 version = "1.0"
@@ -35,9 +36,11 @@ optional = true
 
 [dependencies.regex]
 version = "1.0"
+features = ["std"]
+default-features = false
 
 [dependencies.url]
-version = "1.7"
+version = "2.0"
 [dev-dependencies.rspec]
 version = "=1.0.0-beta.3"
 
