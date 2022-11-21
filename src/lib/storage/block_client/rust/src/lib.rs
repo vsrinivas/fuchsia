@@ -583,9 +583,6 @@ impl BlockClient for RemoteBlockClient {
     }
 
     async fn close(&self) -> Result<(), Error> {
-        // It's OK to leak the VMO id because the server will dump all VMOs when the fifo is torn
-        // down.
-        self.common.temp_vmo_id.take().into_id();
         let () = self.session.close().await?.map_err(zx::Status::from_raw)?;
         Ok(())
     }
@@ -673,9 +670,6 @@ impl RemoteBlockClientSync {
     }
 
     pub fn close(&self) -> Result<(), Error> {
-        // It's OK to leak the VMO id because the server will dump all VMOs when the fifo is torn
-        // down.
-        self.common.temp_vmo_id.take().into_id();
         let () = self.session.close(zx::Time::INFINITE)?.map_err(zx::Status::from_raw)?;
         Ok(())
     }

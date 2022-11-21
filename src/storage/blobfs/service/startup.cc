@@ -88,57 +88,71 @@ StartupService::StartupService(async_dispatcher_t* dispatcher, const ComponentOp
       configure_(std::move(cb)) {}
 
 void StartupService::Start(StartRequestView request, StartCompleter::Sync& completer) {
-  std::unique_ptr<block_client::RemoteBlockDevice> device;
-  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not initialize block device";
-    completer.ReplyError(status);
-    return;
-  }
-  zx::result<> res = configure_(
-      std::move(device),
-      MergeComponentConfigIntoMountOptions(component_config_, ParseMountOptions(request->options)));
-  if (res.is_error()) {
-    completer.ReplyError(res.status_value());
-    return;
-  }
-  completer.ReplySuccess();
+  // Use a closure to ensure that any sessions created are destroyed before we respond to the
+  // request.
+  //
+  // TODO(https://fxbug.dev/97783): Consider removing this when multiple sessions are permitted.
+  zx::result<> result = [&]() -> zx::result<> {
+    std::unique_ptr<block_client::RemoteBlockDevice> device;
+    zx_status_t status =
+        block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Could not initialize block device";
+      return zx::error(status);
+    }
+    return configure_(std::move(device),
+                      MergeComponentConfigIntoMountOptions(component_config_,
+                                                           ParseMountOptions(request->options)));
+  }();
+  completer.Reply(result);
 }
 
 void StartupService::Format(FormatRequestView request, FormatCompleter::Sync& completer) {
-  std::unique_ptr<block_client::RemoteBlockDevice> device;
-  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not initialize block device: " << zx_status_get_string(status);
-    completer.ReplyError(status);
-    return;
-  }
-  status = FormatFilesystem(device.get(), ParseFormatOptions(request->options));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to format blobfs: " << zx_status_get_string(status);
-    completer.ReplyError(status);
-    return;
-  }
-  completer.ReplySuccess();
+  // Use a closure to ensure that any sessions created are destroyed before we respond to the
+  // request.
+  //
+  // TODO(https://fxbug.dev/97783): Consider removing this when multiple sessions are permitted.
+  zx::result<> result = [&]() -> zx::result<> {
+    std::unique_ptr<block_client::RemoteBlockDevice> device;
+    zx_status_t status =
+        block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Could not initialize block device: " << zx_status_get_string(status);
+      return zx::error(status);
+    }
+    status = FormatFilesystem(device.get(), ParseFormatOptions(request->options));
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to format blobfs: " << zx_status_get_string(status);
+      return zx::error(status);
+    }
+    return zx::ok();
+  }();
+  completer.Reply(result);
 }
 
 void StartupService::Check(CheckRequestView request, CheckCompleter::Sync& completer) {
-  std::unique_ptr<block_client::RemoteBlockDevice> device;
-  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not initialize block device";
-    completer.ReplyError(status);
-    return;
-  }
-  // Blobfs supports none of the check options.
-  MountOptions options;
-  status = Fsck(std::move(device), options);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Consistency check failed for blobfs" << zx_status_get_string(status);
-    completer.ReplyError(status);
-    return;
-  }
-  completer.ReplySuccess();
+  // Use a closure to ensure that any sessions created are destroyed before we respond to the
+  // request.
+  //
+  // TODO(https://fxbug.dev/97783): Consider removing this when multiple sessions are permitted.
+  zx::result<> result = [&]() -> zx::result<> {
+    std::unique_ptr<block_client::RemoteBlockDevice> device;
+    zx_status_t status =
+        block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Could not initialize block device";
+      return zx::error(status);
+    }
+    // Blobfs supports none of the check options.
+    MountOptions options;
+    status = Fsck(std::move(device), options);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Consistency check failed for blobfs";
+      return zx::error(status);
+    }
+    return zx::ok();
+  }();
+  completer.Reply(result);
 }
 
 }  // namespace blobfs

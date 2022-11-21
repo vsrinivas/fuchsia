@@ -23,15 +23,17 @@ use {
         StartupMarker,
     },
     fidl_fuchsia_fxfs::MountOptions,
-    fidl_fuchsia_io as fio,
+    fidl_fuchsia_hardware_block as fhardware_block, fidl_fuchsia_io as fio,
     fuchsia_async::OnSignals,
     fuchsia_component::client::{
         connect_to_named_protocol_at_dir_root, connect_to_protocol,
-        connect_to_protocol_at_dir_root, open_childs_exposed_directory,
+        connect_to_protocol_at_dir_root, connect_to_protocol_at_path,
+        open_childs_exposed_directory,
     },
     fuchsia_runtime::{HandleInfo, HandleType},
-    fuchsia_zircon as zx,
-    fuchsia_zircon::{AsHandleRef, Channel, Handle, Process, Signals, Status, Task},
+    fuchsia_zircon::{
+        self as zx, AsHandleRef as _, Channel, HandleBased as _, Process, Signals, Status, Task,
+    },
     std::{
         collections::HashMap,
         sync::{
@@ -65,9 +67,8 @@ impl<FSC: FSConfig> Filesystem<FSC> {
 
     /// Creates a new `Filesystem` from the block device at the given path.
     pub fn from_path(path: &str, config: FSC) -> Result<Self, Error> {
-        let (client, server) = create_endpoints::<fio::NodeMarker>()?;
-        fdio::service_connect(&path, server.into_channel())?;
-        Ok(Self::from_node(client.into_proxy()?, config))
+        let proxy = connect_to_protocol_at_path::<fio::NodeMarker>(path)?;
+        Ok(Self::from_node(proxy, config))
     }
 
     /// Creates a new `Filesystem` with the block device represented by `channel`.
@@ -76,10 +77,14 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     }
 
     // Clone a Channel to the block device.
-    fn get_block_handle(&self) -> Result<Handle, fidl::Error> {
-        let (block_device, server) = Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
-        self.block_device.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server))?;
-        Ok(block_device.into())
+    fn get_block_handle(
+        &self,
+    ) -> Result<fidl::endpoints::ClientEnd<fhardware_block::BlockMarker>, fidl::Error> {
+        let (client, server) = fidl::endpoints::create_endpoints()?;
+        // TODO(https://fxbug.dev/112484): this relies on multiplexing.
+        let () = self.block_device.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server)?;
+        let client = client.into_channel();
+        Ok(client.into())
     }
 
     async fn get_component_exposed_dir(&mut self) -> Result<fio::DirectoryProxy, Error> {
@@ -178,7 +183,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
                         // device handle is passed in as a PA_USER0 handle at argument 1
                         SpawnAction::add_handle(
                             HandleInfo::new(HandleType::User0, 1),
-                            self.get_block_handle()?,
+                            self.get_block_handle()?.into_handle(),
                         ),
                     ];
                     launch_process(&args, actions)?
@@ -200,15 +205,13 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     ///
     /// Returns [`Err`] if the filesystem process failed to launch or returned a non-zero exit code.
     pub async fn fsck(&mut self) -> Result<(), Error> {
+        let handle = self.get_block_handle()?;
         match self.config.mode() {
             Mode::Component { .. } => {
                 let exposed_dir = self.get_component_exposed_dir().await?;
                 let proxy = connect_to_protocol_at_dir_root::<StartupMarker>(&exposed_dir)?;
                 let mut options = CheckOptions::new_empty();
-                proxy
-                    .check(self.get_block_handle()?.into(), &mut options)
-                    .await?
-                    .map_err(Status::from_raw)?;
+                proxy.check(handle, &mut options).await?.map_err(Status::from_raw)?;
             }
             Mode::Legacy(mut config) => {
                 // SpawnAction is not Send, so make sure it is dropped before any `await`s.
@@ -219,7 +222,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
                         // device handle is passed in as a PA_USER0 handle at argument 1
                         SpawnAction::add_handle(
                             HandleInfo::new(HandleType::User0, 1),
-                            self.get_block_handle()?,
+                            handle.into(),
                         ),
                     ];
                     launch_process(&args, actions)?
@@ -327,7 +330,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
                 // device handle is passed in as a PA_USER0 handle at argument 1
                 SpawnAction::add_handle(
                     HandleInfo::new(HandleType::User0, 1),
-                    self.get_block_handle()?,
+                    self.get_block_handle()?.into(),
                 ),
             ];
 
@@ -736,16 +739,14 @@ async fn wait_for_successful_exit(process: Process) -> Result<(), CommandError> 
 
 #[cfg(test)]
 mod tests {
-    use std::io::Read;
-
     use {
         super::*,
         crate::{BlobCompression, BlobEvictionPolicy, Blobfs, Factoryfs, Fxfs, Minfs},
-        fidl_fuchsia_io as fio, fuchsia_async as fasync,
-        fuchsia_zircon::HandleBased,
+        fuchsia_async as fasync,
         ramdevice_client::RamdiskClient,
+        remote_block_device::{BlockClient as _, RemoteBlockClient},
         std::{
-            io::{Seek, Write},
+            io::{Read as _, Write as _},
             time::Duration,
         },
     };
@@ -795,26 +796,32 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
+    #[ignore]
     #[fuchsia::test]
     async fn blobfs_format_fsck_error() {
-        let block_size = 512;
-        let ramdisk = ramdisk(block_size);
+        const BLOCK_SIZE: usize = 512;
+
+        let ramdisk = ramdisk(BLOCK_SIZE.try_into().expect("overflow"));
         let mut blobfs = new_fs(&ramdisk, Blobfs::default());
-        blobfs.format().await.expect("failed to format blobfs");
-        let device_channel = ramdisk.open().expect("failed to get channel to device");
+        let () = blobfs.format().await.expect("failed to format blobfs");
 
         // force fsck to fail by stomping all over one of blobfs's metadata blocks after formatting
         // TODO(fxbug.dev/35860): corrupt something other than the superblock
         {
-            let mut file = fdio::create_fd::<std::fs::File>(device_channel.into_handle())
-                .expect("failed to convert to file descriptor");
-            let mut bytes: Vec<u8> = std::iter::repeat(0xff).take(block_size as usize).collect();
-            file.write_all(&mut bytes).expect("failed to write to device");
+            let device_channel = ramdisk.open().expect("failed to get channel to device");
+            let device_proxy = device_channel.into_proxy().expect("into proxy");
+            let block_client = RemoteBlockClient::new(device_proxy).await.expect("block client");
+            let bytes = Box::new([0xff; BLOCK_SIZE]);
+            let () = block_client
+                .write_at(remote_block_device::BufferSlice::Memory(&(*bytes)[..]), 0)
+                .await
+                .expect("write to device");
         }
 
-        blobfs.fsck().await.expect_err("fsck succeeded when it shouldn't have");
+        let _: anyhow::Error =
+            blobfs.fsck().await.expect_err("fsck succeeded when it shouldn't have");
 
-        ramdisk.destroy().expect("failed to destroy ramdisk");
+        let () = ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
     #[fuchsia::test]
@@ -950,35 +957,38 @@ mod tests {
 
     #[fuchsia::test]
     async fn minfs_format_fsck_error() {
-        let block_size = 8192;
-        let ramdisk = ramdisk(block_size);
+        const BLOCK_SIZE: usize = 8192;
+
+        let ramdisk = ramdisk(BLOCK_SIZE.try_into().expect("overflow"));
         let mut minfs = new_fs(&ramdisk, Minfs::default());
 
-        minfs.format().await.expect("failed to format minfs");
+        let () = minfs.format().await.expect("failed to format minfs");
 
         // force fsck to fail by stomping all over one of minfs's metadata blocks after formatting
         {
             let device_channel = ramdisk.open().expect("failed to get channel to device");
-            let mut file = fdio::create_fd::<std::fs::File>(device_channel.into_handle())
-                .expect("failed to convert to file descriptor");
+            let device_proxy = device_channel.into_proxy().expect("into proxy");
+            let block_client = RemoteBlockClient::new(device_proxy).await.expect("block client");
+            let bytes = Box::new([0xff; BLOCK_SIZE]);
 
-            // when minfs isn't on an fvm, the location for it's bitmap offset is the 8th block.
+            // when minfs isn't on an fvm, the location for its bitmap offset is the 8th block.
             // TODO(fxbug.dev/35861): parse the superblock for this offset and the block size.
             let bitmap_block_offset = 8;
-            let bitmap_offset = block_size * bitmap_block_offset;
+            let bitmap_offset = BLOCK_SIZE * bitmap_block_offset;
 
-            let mut stomping_bytes: Vec<u8> =
-                std::iter::repeat(0xff).take(block_size as usize).collect();
-            let actual_offset = file
-                .seek(std::io::SeekFrom::Start(bitmap_offset))
-                .expect("failed to seek to bitmap");
-            assert_eq!(actual_offset, bitmap_offset);
-            file.write_all(&mut stomping_bytes).expect("failed to write to device");
+            let () = block_client
+                .write_at(
+                    remote_block_device::BufferSlice::Memory(&(*bytes)[..]),
+                    bitmap_offset.try_into().expect("overflow"),
+                )
+                .await
+                .expect("write to device");
         }
 
-        minfs.fsck().await.expect_err("fsck succeeded when it shouldn't have");
+        let _: anyhow::Error =
+            minfs.fsck().await.expect_err("fsck succeeded when it shouldn't have");
 
-        ramdisk.destroy().expect("failed to destroy ramdisk");
+        let () = ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
     #[fuchsia::test]

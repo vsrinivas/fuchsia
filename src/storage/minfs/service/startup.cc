@@ -54,89 +54,98 @@ StartupService::StartupService(async_dispatcher_t* dispatcher, ConfigureCallback
       configure_(std::move(cb)) {}
 
 void StartupService::Start(StartRequestView request, StartCompleter::Sync& completer) {
-  std::unique_ptr<block_client::RemoteBlockDevice> device;
-  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not initialize block device";
-    completer.ReplyError(status);
-    return;
-  }
+  // Use a closure to ensure that any sessions created are destroyed before we respond to the
+  // request.
+  //
+  // TODO(https://fxbug.dev/97783): Consider removing this when multiple sessions are permitted.
+  zx::result<> result = [&]() -> zx::result<> {
+    std::unique_ptr<block_client::RemoteBlockDevice> device;
+    zx_status_t status =
+        block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Could not initialize block device";
+      return zx::error(status);
+    }
 
-  auto bcache_res = CreateBcache(std::move(device));
-  if (bcache_res.is_error()) {
-    FX_LOGS(ERROR) << "Could not initialize bcache";
-    completer.ReplyError(bcache_res.status_value());
-    return;
-  }
-  auto [bcache, bcache_read_only] = *std::move(bcache_res);
+    auto bcache_res = CreateBcache(std::move(device));
+    if (bcache_res.is_error()) {
+      FX_PLOGS(ERROR, bcache_res.error_value()) << "Could not initialize bcache";
+      return bcache_res.take_error();
+    }
+    auto [bcache, bcache_read_only] = *std::move(bcache_res);
 
-  zx::result<> res =
-      configure_(std::move(bcache), ParseMountOptions(request->options, bcache_read_only));
-  if (res.is_error()) {
-    completer.ReplyError(res.status_value());
-    return;
-  }
-  completer.ReplySuccess();
+    return configure_(std::move(bcache), ParseMountOptions(request->options, bcache_read_only));
+  }();
+  completer.Reply(result);
 }
 
 void StartupService::Format(FormatRequestView request, FormatCompleter::Sync& completer) {
-  std::unique_ptr<block_client::RemoteBlockDevice> device;
-  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not initialize block device: " << zx_status_get_string(status);
-    completer.ReplyError(status);
-    return;
-  }
+  // Use a closure to ensure that any sessions created are destroyed before we respond to the
+  // request.
+  //
+  // TODO(https://fxbug.dev/97783): Consider removing this when multiple sessions are permitted.
+  zx::result<> result = [&]() -> zx::result<> {
+    std::unique_ptr<block_client::RemoteBlockDevice> device;
+    zx_status_t status =
+        block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Could not initialize block device";
+      return zx::error(status);
+    }
 
-  auto bcache_res = CreateBcache(std::move(device));
-  if (bcache_res.is_error()) {
-    FX_LOGS(ERROR) << "Could not initialize bcache";
-    completer.ReplyError(bcache_res.status_value());
-    return;
-  }
-  auto [bcache, bcache_read_only] = *std::move(bcache_res);
-  if (bcache_read_only) {
-    FX_LOGS(ERROR) << "Failed to format minfs: read only block device";
-    completer.ReplyError(ZX_ERR_BAD_STATE);
-    return;
-  }
+    auto bcache_res = CreateBcache(std::move(device));
+    if (bcache_res.is_error()) {
+      FX_PLOGS(ERROR, bcache_res.error_value()) << "Could not initialize bcache";
+      return bcache_res.take_error();
+    }
+    auto [bcache, bcache_read_only] = *std::move(bcache_res);
+    if (bcache_read_only) {
+      FX_LOGS(ERROR) << "Failed to format minfs: read only block device";
+      return zx::error(ZX_ERR_BAD_STATE);
+    }
 
-  zx::result mkfs_res = Mkfs(ParseFormatOptions(request->options), bcache.get());
-  if (mkfs_res.is_error()) {
-    FX_LOGS(ERROR) << "Failed to format minfs: " << mkfs_res.status_string();
-    completer.ReplyError(mkfs_res.status_value());
-    return;
-  }
-  completer.ReplySuccess();
+    zx::result mkfs_res = Mkfs(ParseFormatOptions(request->options), bcache.get());
+    if (mkfs_res.is_error()) {
+      FX_PLOGS(ERROR, mkfs_res.error_value()) << "Failed to format minfs";
+      return mkfs_res.take_error();
+    }
+    return zx::ok();
+  }();
+  completer.Reply(result);
 }
 
 void StartupService::Check(CheckRequestView request, CheckCompleter::Sync& completer) {
-  std::unique_ptr<block_client::RemoteBlockDevice> device;
-  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not initialize block device";
-    completer.ReplyError(status);
-    return;
-  }
+  // Use a closure to ensure that any sessions created are destroyed before we respond to the
+  // request.
+  //
+  // TODO(https://fxbug.dev/97783): Consider removing this when multiple sessions are permitted.
+  zx::result<> result = [&]() -> zx::result<> {
+    std::unique_ptr<block_client::RemoteBlockDevice> device;
+    zx_status_t status =
+        block_client::RemoteBlockDevice::Create(std::move(request->device), &device);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Could not initialize block device";
+      return zx::error(status);
+    }
 
-  auto bcache_res = CreateBcache(std::move(device));
-  if (bcache_res.is_error()) {
-    FX_LOGS(ERROR) << "Could not initialize bcache";
-    completer.ReplyError(bcache_res.status_value());
-    return;
-  }
-  auto [bcache, bcache_read_only] = *std::move(bcache_res);
+    auto bcache_res = CreateBcache(std::move(device));
+    if (bcache_res.is_error()) {
+      FX_PLOGS(ERROR, bcache_res.error_value()) << "Could not initialize bcache";
+      return bcache_res.take_error();
+    }
+    auto [bcache, bcache_read_only] = *std::move(bcache_res);
 
-  FsckOptions fsck_options;
-  fsck_options.read_only = bcache_read_only;
-  fsck_options.repair = !bcache_read_only;
-  auto bcache_or = Fsck(std::move(bcache), fsck_options);
-  if (bcache_or.is_error()) {
-    FX_LOGS(ERROR) << "Consistency check failed for minfs" << bcache_or.status_string();
-    completer.ReplyError(bcache_or.status_value());
-    return;
-  }
-  completer.ReplySuccess();
+    FsckOptions fsck_options;
+    fsck_options.read_only = bcache_read_only;
+    fsck_options.repair = !bcache_read_only;
+    auto bcache_or = Fsck(std::move(bcache), fsck_options);
+    if (bcache_or.is_error()) {
+      FX_PLOGS(ERROR, bcache_or.error_value()) << "Consistency check failed for minfs";
+      return bcache_or.take_error();
+    }
+    return zx::ok();
+  }();
+  completer.Reply(result);
 }
 
 }  // namespace minfs

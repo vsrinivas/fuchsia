@@ -36,6 +36,7 @@ rustc_library("fs_management") {
   test_deps = [
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-fs",
+    "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/ramdevice_client",
     "//src/storage/fs_test:crypt_service",
     "//third_party/rust_crates:futures",
