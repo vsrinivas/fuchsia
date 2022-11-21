@@ -67,7 +67,7 @@ List people who should review the RFC, but whose approval is not required.
 
 - Input: quiche@google.com, neelsa@google.com
 - Accessibility: neelsa@google.com, lucasradaelli@google.com
-- Component Framework: yaneury@google.com, geb@google.com, dgonyeo@google.com
+- Component Framework: yaneury@google.com, geb@google.com, cgonyeo@google.com
 - Flutter: akbiggs@google.com
 - Chromium: sergeyu@google.com
 - Opal: cligh@google.com, anwilson@google.com, robinsontom@google.com

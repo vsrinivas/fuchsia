@@ -1149,7 +1149,7 @@
 - name: 'RFC-0089'
   title: 'Core realm variations'
   short_description: 'Generate custom core component realms per product configurations.'
-  authors: ['dgonyeo@google.com']
+  authors: ['cgonyeo@google.com']
   file: '0089_core_realm_variations.md'
   area: ['Component Framework']
   issue: ['74801']
@@ -1194,7 +1194,7 @@
   issue: ['']
   gerrit_change_id: ['513028']
   status: 'Accepted'
-  reviewers: [ 'aaronwood@google.com', 'bryanhenry@google.com', 'dgonyeo@google.com', 'geb@google.com', 'hjfreyer@google.com', 'jsankey@google.com', 'thatguy@google.com' ]
+  reviewers: [ 'aaronwood@google.com', 'bryanhenry@google.com', 'cgonyeo@google.com', 'geb@google.com', 'hjfreyer@google.com', 'jsankey@google.com', 'thatguy@google.com' ]
   submitted: '2021-04-08'
   reviewed: '2021-05-05'
 
@@ -1311,7 +1311,7 @@
   issue: ['']
   gerrit_change_id: ['531642']
   status: 'Accepted'
-  reviewers: [ 'bryanhenry@google.com', 'geb@google.com', 'dgonyeo@google.com', 'shayba@google.com', 'thatguy@google.com']
+  reviewers: [ 'bryanhenry@google.com', 'geb@google.com', 'cgonyeo@google.com', 'shayba@google.com', 'thatguy@google.com']
   submitted: '2021-05-18'
   reviewed: '2021-06-02'
 
@@ -1815,7 +1815,7 @@
 - name: 'RFC-0140'
   title: 'Realm Builder'
   short_description: 'The design an feature set of Realm Builder is outlined and described'
-  authors: ['dgonyeo@google.com']
+  authors: ['cgonyeo@google.com']
   file: '0140_realm_builder.md'
   area: ['Component Framework']
   issue: ['']
@@ -2006,14 +2006,14 @@
   issue: ['89252']
   gerrit_change_id: ['637489']
   status: 'Accepted'
-  reviewers: ['hjfreyer@google.com', 'wittrock@google.com', 'jsankey@google.com', 'abarth@google.com', 'geb@google.com', 'shayba@google.com', 'ampearce@google.com', 'etryzelaar@google.com', 'aaronwood@google.com', 'dgonyeo@google.com']
+  reviewers: ['hjfreyer@google.com', 'wittrock@google.com', 'jsankey@google.com', 'abarth@google.com', 'geb@google.com', 'shayba@google.com', 'ampearce@google.com', 'etryzelaar@google.com', 'aaronwood@google.com', 'cgonyeo@google.com']
   submitted: '2022-01-25'
   reviewed: '2022-03-23'
 
 - name: 'RFC-0155'
   title: 'Optional capability routes'
   short_description: 'A new field is added to the offer and use sections of component manifests to denote when a given capability may not exist.'
-  authors: ['dgonyeo@google.com']
+  authors: ['cgonyeo@google.com']
   file: '0155_optional_capability_routes.md'
   area: ['Component Framework']
   issue: ['87164']
