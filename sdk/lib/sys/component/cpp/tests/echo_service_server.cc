@@ -10,8 +10,9 @@
 #include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
-// An implementation of the Echo protocol. Protocols are implemented in LLCPP by
-// creating a subclass of the ::Interface class for the protocol.
+// An implementation of the Echo protocol. Protocols are implemented in the new
+// C++ bindings by creating a subclass of the |Server| or |WireServer| class for
+// the protocol.
 class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
  public:
   explicit EchoImpl(bool reverse) : reverse_(reverse) {}
@@ -33,6 +34,13 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
     completer.Reply(reply);
   }
 
+  void OnFidlClosed(fidl::UnbindInfo info) {
+    if (info.is_user_initiated() || info.is_peer_closed()) {
+      return;
+    }
+    FX_LOGS(ERROR) << "EchoImpl server error: " << info;
+  }
+
  private:
   const bool reverse_;
 };
@@ -42,12 +50,16 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
 
-  auto regular_echo = std::make_unique<EchoImpl>(/*reverse=*/false);
-  auto reversed_echo = std::make_unique<EchoImpl>(/*reverse=*/true);
+  auto regular_echo = EchoImpl{/*reverse=*/false};
+  auto reversed_echo = EchoImpl{/*reverse=*/true};
+  fidl::ServerBindingGroup<fuchsia_examples::Echo> bindings;
   auto result = outgoing.AddService<fuchsia_examples::EchoService>(
-      fuchsia_examples::EchoService::InstanceHandler(
-          {.regular_echo = regular_echo->bind_handler(loop.dispatcher()),
-           .reversed_echo = reversed_echo->bind_handler(loop.dispatcher())}));
+      fuchsia_examples::EchoService::InstanceHandler({
+          .regular_echo = bindings.CreateHandler(&regular_echo, loop.dispatcher(),
+                                                 std::mem_fn(&EchoImpl::OnFidlClosed)),
+          .reversed_echo = bindings.CreateHandler(&reversed_echo, loop.dispatcher(),
+                                                  std::mem_fn(&EchoImpl::OnFidlClosed)),
+      }));
 
   if (result.is_error()) {
     FX_LOGS(ERROR) << "Failed to add EchoService: " << result.status_string();
