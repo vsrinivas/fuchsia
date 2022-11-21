@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/kernel/c/fidl.h>
+#include <fidl/fuchsia.kernel/cpp/fidl.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -15,60 +16,32 @@
 
 namespace {
 
-zx_status_t connect_to_service(const char* service, zx_handle_t* channel) {
-  zx_handle_t channel_local, channel_remote;
-  zx_status_t status = zx_channel_create(0, &channel_local, &channel_remote);
-  if (status != ZX_OK) {
-    fprintf(stderr, "failed to create channel: %d\n", status);
-    return ZX_ERR_INTERNAL;
-  }
-
-  status = fdio_service_connect(service, channel_remote);
-  if (status != ZX_OK) {
-    zx_handle_close(channel_local);
-    fprintf(stderr, "failed to connect to service: %d\n", status);
-    return ZX_ERR_INTERNAL;
-  }
-
-  *channel = channel_local;
-  return ZX_OK;
-}
-
 // Ask the kernel to run its unit tests.
 TEST(KernelUnittests, run_kernel_unittests) {
   constexpr char command[] = "ut all";
 
-  zx_handle_t channel;
-  zx_status_t status = connect_to_service("/svc/fuchsia.kernel.DebugBroker", &channel);
-  ASSERT_EQ(status, ZX_OK);
+  auto client_end = component::Connect<fuchsia_kernel::DebugBroker>();
+  ASSERT_OK(client_end.status_value());
 
-  zx_status_t call_status;
-  status =
-      fuchsia_kernel_DebugBrokerSendDebugCommand(channel, command, strlen(command), &call_status);
-  zx_handle_close(channel);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(call_status, ZX_OK);
+  auto result = fidl::WireCall(*client_end)->SendDebugCommand(command);
+  ASSERT_OK(result.status());
 }
 
 // Run certain unit tests in loops, to shake out flakes.
 TEST(KernelUnittests, repeated_run_certain_unittests) {
-  constexpr std::array commands{ "ut timer", "ut pi" };
+  constexpr std::array<std::string_view, 2> commands{"ut timer", "ut pi"};
   constexpr int kLoops = 10;
 
-  zx_handle_t channel;
-  zx_status_t status = connect_to_service("/svc/fuchsia.kernel.DebugBroker", &channel);
-  ASSERT_OK(status);
+  auto client_end = component::Connect<fuchsia_kernel::DebugBroker>();
+  ASSERT_OK(client_end.status_value());
 
   for (int i = 0; i < kLoops; i++) {
     for (auto command : commands) {
-      zx_status_t call_status;
-      status = fuchsia_kernel_DebugBrokerSendDebugCommand(channel, command, strlen(command),
-                                                          &call_status);
-      ASSERT_OK(status);
-      ASSERT_OK(call_status);
+      auto result =
+          fidl::WireCall(*client_end)->SendDebugCommand(fidl::StringView::FromExternal(command));
+      ASSERT_OK(result.status());
     }
   }
-  zx_handle_close(channel);
 }
 
 }  // namespace

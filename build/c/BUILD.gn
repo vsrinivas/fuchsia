@@ -159,7 +159,6 @@ config("fidl-deprecated-c-bindings") {
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/zx/test:zx",
     "//zircon/system/utest/fidl-utils",
-    "//zircon/system/utest/kernel-unittests",
     "//zircon/system/utest/runtests-utils",
     "//zircon/system/utest/svchost",
     "//zircon/third_party/uapp/dash",
