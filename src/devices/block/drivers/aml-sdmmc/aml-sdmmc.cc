@@ -142,14 +142,14 @@ zx::result<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInte
       AML_SDMMC_TRACE("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
                       status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
-                      req.cmd_idx, req.arg, status_irq.reg_value(), ++consecutive_data_errors_);
+      AML_SDMMC_WARNING("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                        req.cmd_idx, req.arg, status_irq.reg_value(), ++consecutive_data_errors_);
     }
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
   if (status_irq.txd_err()) {
-    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
-                    req.cmd_idx, req.arg, status_irq.reg_value(), ++consecutive_data_errors_);
+    AML_SDMMC_WARNING("TX Data CRC Error, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                      req.cmd_idx, req.arg, status_irq.reg_value(), ++consecutive_data_errors_);
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
   if (status_irq.desc_err()) {
@@ -162,8 +162,8 @@ zx::result<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInte
       AML_SDMMC_TRACE("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
                       status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
-                      req.cmd_idx, req.arg, status_irq.reg_value(), ++consecutive_cmd_errors_);
+      AML_SDMMC_WARNING("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                        req.cmd_idx, req.arg, status_irq.reg_value(), ++consecutive_cmd_errors_);
     }
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }

@@ -852,8 +852,7 @@ zx::result<SdioControllerDevice::SdioTxnPosition> SdioControllerDevice::DoOneRwT
   }
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Error %s func %d: %s", txn.write ? "writing to" : "reading from", fn_idx,
-           zx_status_get_string(status));
+    (txn.write ? tx_errors_ : rx_errors_).Add(1);
     return zx::error(status);
   }
 
