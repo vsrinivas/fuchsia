@@ -21,7 +21,6 @@ group("psutils") {
 source_set("ps_internal") {
   sources = [ "ps_internal.c" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
@@ -34,7 +33,6 @@ source_set("handles_internal") {
     "object-utils.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
@@ -46,7 +44,6 @@ executable("ps") {
   sources = [ "ps.c" ]
   deps = [
     ":ps_internal",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
@@ -56,7 +53,6 @@ executable("ps") {
 executable("top") {
   sources = [ "top.c" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
     "//src/lib/listnode",
     "//zircon/system/ulib/pretty",
@@ -67,7 +63,6 @@ executable("top") {
 executable("kill") {
   sources = [ "kill.c" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/task-utils",
   ]
@@ -76,7 +71,6 @@ executable("kill") {
 executable("killall") {
   sources = [ "killall.c" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/task-utils",
   ]
@@ -98,10 +92,22 @@ executable("vmos") {
     "vmos.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
+  ]
+}
+
+source_set("resources") {
+  sources = [
+    "resources.cc",
+    "resources.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp",
+    "//sdk/lib/component/incoming/cpp",
+    "//sdk/lib/fdio",
   ]
 }
 
@@ -109,20 +115,15 @@ executable("memgraph") {
   sources = [
     "memgraph.cc",
     "object-utils.cc",
-    "resources.c",
     "vmo-utils.c",
   ]
   include_dirs = [ target_gen_dir ]
   deps = [
     ":gen-memgraph-schema",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    ":resources",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/task-utils",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 # Generate an include file that contains the schema JSON.
@@ -135,19 +136,12 @@ action("gen-memgraph-schema") {
 }
 
 executable("kstats") {
-  sources = [
-    "kstats.c",
-    "resources.c",
-  ]
+  sources = [ "kstats.c" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    ":resources",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/pretty",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 executable("threads") {
@@ -169,7 +163,6 @@ executable("threads") {
 executable("signal") {
   sources = [ "signal.c" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/task-utils",
   ]
@@ -180,7 +173,6 @@ executable("handles") {
   sources = [ "handles.cc" ]
   deps = [
     ":handles_internal",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/task-utils",
   ]
