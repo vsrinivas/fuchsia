@@ -317,6 +317,7 @@
                 "fuchsia.boot.RootResource",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.kernel.MexecResource",
+                "fuchsia.kernel.PowerResource",
                 "fuchsia.kernel.RootJob",
 
                 // This is only used when the kernel commandline flag devmgr.enable-ephemeral

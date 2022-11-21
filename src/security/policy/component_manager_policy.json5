@@ -231,6 +231,7 @@
                 capability: "protocol",
                 target_monikers: [
                     "/bootstrap",
+                    "/bootstrap/driver_manager",
                     "/core",
                     "/core/thermd",
                     "/core/test_manager/system-tests:**",
