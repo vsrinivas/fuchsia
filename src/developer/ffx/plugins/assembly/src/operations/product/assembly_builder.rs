@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::compiled_package::CompiledPackageBuilder;
 use crate::util;
 use anyhow::{anyhow, ensure, Context, Result};
 use assembly_config_data::ConfigDataBuilder;
+use assembly_config_schema::product_config::CompiledPackageDefinition;
 use assembly_config_schema::{
     product_config::{
         AssemblyInputBundle, DriverDetails, ProductConfigData, ProductPackageDetails,
@@ -17,6 +19,7 @@ use assembly_package_utils::{PackageInternalPathBuf, PackageManifestPathBuf};
 use assembly_platform_configuration::{PackageConfigPatch, StructuredConfigPatches};
 use assembly_shell_commands::ShellCommandsBuilder;
 use assembly_structured_config::Repackager;
+use assembly_tool::ToolProvider;
 use assembly_util::{DuplicateKeyError, InsertAllUniqueExt, InsertUniqueExt, MapEntry};
 use camino::{Utf8Path, Utf8PathBuf};
 use fuchsia_pkg::PackageManifest;
@@ -65,6 +68,9 @@ pub struct ImageAssemblyConfigBuilder {
 
     /// A set of all unique packageUrls across all AIBs passed to the builder
     package_urls: BTreeSet<UnpinnedAbsolutePackageUrl>,
+
+    /// The packages for assembly to create specified by AIBs
+    packages_to_compile: BTreeMap<String, CompiledPackageBuilder>,
 }
 
 /// An enum representing unique identifiers for the 4 types of supported package sets in the
@@ -108,6 +114,7 @@ impl ImageAssemblyConfigBuilder {
             kernel_clock_backstop: None,
             qemu_kernel: None,
             package_urls: BTreeSet::default(),
+            packages_to_compile: BTreeMap::default(),
         }
     }
 
@@ -143,7 +150,7 @@ impl ImageAssemblyConfigBuilder {
             blobs: _,
             base_drivers,
             shell_commands,
-            packages_to_compile: _,
+            packages_to_compile,
         } = bundle;
 
         self.add_bundle_packages(bundle_path, &bundle)?;
@@ -193,6 +200,10 @@ impl ImageAssemblyConfigBuilder {
             for binary in binaries {
                 self.add_shell_command_entry(&package, binary)?;
             }
+        }
+
+        for compiled_package in packages_to_compile {
+            self.add_compiled_package(&compiled_package)?;
         }
 
         assembly_util::set_option_once_or(
@@ -404,6 +415,19 @@ impl ImageAssemblyConfigBuilder {
         }
     }
 
+    pub fn add_compiled_package(
+        &mut self,
+        compiled_package_def: &CompiledPackageDefinition,
+    ) -> Result<()> {
+        let name = compiled_package_def.name();
+        self.packages_to_compile
+            .entry(name.to_string())
+            .or_insert_with(|| CompiledPackageBuilder::new(name))
+            .add_package_def(compiled_package_def)
+            .context("adding package def")?;
+        Ok(())
+    }
+
     /// Construct an ImageAssembly ImageAssemblyConfig from the collected items in the
     /// builder.
     ///
@@ -411,11 +435,15 @@ impl ImageAssemblyConfigBuilder {
     /// created in the outdir, and it will be added to the returned
     /// ImageAssemblyConfig.
     ///
+    /// If there are compiled packages specified, the compiled packages will
+    /// also be created in the outdir and added to the ImageAssemblyConfig.
+    ///
     /// If this cannot create a completed ImageAssemblyConfig, it will return an error
     /// instead.
     pub fn build(
         self,
         outdir: impl AsRef<Utf8Path>,
+        tools: &impl ToolProvider,
     ) -> Result<assembly_config_schema::ImageAssemblyConfig> {
         let outdir = outdir.as_ref();
         // Decompose the fields in self, so that they can be recomposed into the generated
@@ -437,7 +465,10 @@ impl ImageAssemblyConfigBuilder {
             qemu_kernel,
             shell_commands,
             package_urls: _,
+            packages_to_compile,
         } = self;
+
+        let cmc_tool = tools.get_tool("cmc")?;
 
         // add structured config value files to bootfs
         let mut bootfs_repackager = Repackager::for_bootfs(&mut bootfs_files.entries, &outdir);
@@ -485,11 +516,11 @@ impl ImageAssemblyConfigBuilder {
             for (package_url, driver_details) in base_drivers.entries {
                 driver_manifest_builder
                     .add_driver(driver_details, &package_url)
-                    .with_context(|| format!("Adding driver {}", &package_url))?;
+                    .with_context(|| format!("adding driver {}", &package_url))?;
             }
             let driver_manifest_package_manifest_path = driver_manifest_builder
                 .build_driver_manifest_package(outdir)
-                .context("Building driver manifest package")?;
+                .context("building driver manifest package")?;
 
             base.add_package(PackageEntry::parse_from(driver_manifest_package_manifest_path)?)?;
         }
@@ -507,19 +538,26 @@ impl ImageAssemblyConfigBuilder {
                 }
             }
             let manifest_path = config_data_builder
-                .build(&outdir)
-                .context("Writing the 'config_data' package metafar.")?;
+                .build(outdir)
+                .context("writing the 'config_data' package metafar.")?;
             base.add_package_from_path(manifest_path)
-                .context("Adding generated config-data package")?;
+                .context("adding generated config-data package")?;
         }
 
         if !shell_commands.is_empty() {
             let mut shell_commands_builder = ShellCommandsBuilder::new();
             shell_commands_builder.add_shell_commands(shell_commands, "fuchsia.com".to_string());
             let manifest =
-                shell_commands_builder.build(&outdir).context("Building shell commands package")?;
+                shell_commands_builder.build(outdir).context("building shell commands package")?;
             base.add_package_from_path(manifest)
-                .context("Adding shell commands package to base")?;
+                .context("adding shell commands package to base")?;
+        }
+
+        for (_, package_builder) in packages_to_compile {
+            let package_manifest_path = package_builder
+                .build(cmc_tool.as_ref(), outdir)
+                .context("building compiled package")?;
+            base.add_package_from_path(package_manifest_path).context("adding compiled package")?;
         }
 
         // Construct a single "partial" config from the combined fields, and
@@ -701,14 +739,19 @@ impl FileEntryMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assembly_config_schema::product_config::AdditionalPackageContents;
+    use assembly_config_schema::product_config::MainPackageDefinition;
     use assembly_config_schema::product_config::ShellCommands;
     use assembly_driver_manifest::DriverManifest;
     use assembly_package_utils::PackageManifestPathBuf;
     use assembly_test_util::generate_test_manifest;
+    use assembly_tool::testing::FakeToolProvider;
+    use assembly_tool::ToolCommandLog;
     use camino::{Utf8Path, Utf8PathBuf};
     use fuchsia_archive;
     use fuchsia_pkg::{PackageBuilder, PackageManifest};
     use itertools::Itertools;
+    use serde_json::json;
     use std::fs::File;
     use std::io::BufReader;
     use std::io::Write;
@@ -787,7 +830,7 @@ mod tests {
             config_data: BTreeMap::default(),
             blobs: Vec::default(),
             shell_commands: ShellCommands::default(),
-            packages_to_compile: BTreeMap::default(),
+            packages_to_compile: Vec::default(),
         }
     }
 
@@ -833,7 +876,7 @@ mod tests {
             config_data: BTreeMap::default(),
             blobs: Vec::default(),
             shell_commands: ShellCommands::default(),
-            packages_to_compile: BTreeMap::default(),
+            packages_to_compile: Vec::default(),
         };
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir.as_ref().join("minimum_bundle"), minimum_bundle).unwrap();
@@ -844,10 +887,12 @@ mod tests {
     fn test_builder() {
         let tmp = TempDir::new().unwrap();
         let outdir = Utf8Path::from_path(tmp.path()).unwrap();
+        let tools = FakeToolProvider::default();
 
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir, make_test_assembly_bundle(outdir)).unwrap();
-        let result: assembly_config_schema::ImageAssemblyConfig = builder.build(&outdir).unwrap();
+        let result: assembly_config_schema::ImageAssemblyConfig =
+            builder.build(&outdir, &tools).unwrap();
 
         assert_eq!(
             result.base,
@@ -892,6 +937,7 @@ mod tests {
     #[test]
     fn test_builder_with_config_data() {
         let vars = TempdirPathsForTest::new();
+        let tools = FakeToolProvider::default();
 
         // Create an assembly bundle and add a config_data entry to it.
         let mut bundle = make_test_assembly_bundle(&vars.bundle_path);
@@ -906,7 +952,7 @@ mod tests {
 
         let builder = setup_builder(&vars, vec![bundle]);
         let result: assembly_config_schema::ImageAssemblyConfig =
-            builder.build(&vars.outdir).unwrap();
+            builder.build(&vars.outdir, &tools).unwrap();
 
         // config_data's manifest is in outdir
         let expected_config_data_manifest_path =
@@ -952,6 +998,7 @@ mod tests {
     #[test]
     fn test_builder_with_shell_commands() {
         let vars = TempdirPathsForTest::new();
+        let tools = FakeToolProvider::default();
 
         // Make an assembly input bundle with Shell Commands in it
         let mut bundle = make_test_assembly_bundle(&vars.bundle_path);
@@ -965,7 +1012,7 @@ mod tests {
         let builder = setup_builder(&vars, vec![bundle]);
 
         let result: assembly_config_schema::ImageAssemblyConfig =
-            builder.build(&vars.outdir).unwrap();
+            builder.build(&vars.outdir, &tools).unwrap();
 
         // config_data's manifest is in outdir
         let expected_manifest_path =
@@ -980,6 +1027,7 @@ mod tests {
     fn test_builder_with_product_packages_and_config() {
         let tmp = TempDir::new().unwrap();
         let outdir = Utf8Path::from_path(tmp.path()).unwrap();
+        let tools = FakeToolProvider::default();
 
         // Create some config_data source files
         let config_data_source_dir = outdir.join("config_data_source");
@@ -1022,7 +1070,8 @@ mod tests {
             vec!["platform_a".to_owned(), "platform_b".to_owned()],
         );
         builder.add_product_packages(packages).unwrap();
-        let result: assembly_config_schema::ImageAssemblyConfig = builder.build(&outdir).unwrap();
+        let result: assembly_config_schema::ImageAssemblyConfig =
+            builder.build(&outdir, &tools).unwrap();
 
         assert_eq!(
             result.base,
@@ -1064,6 +1113,7 @@ mod tests {
     fn test_builder_with_product_drivers() -> Result<()> {
         let tmp = TempDir::new().unwrap();
         let outdir = Utf8Path::from_path(tmp.path()).unwrap();
+        let tools = FakeToolProvider::default();
 
         let mut builder = get_minimum_config_builder(
             &outdir,
@@ -1073,7 +1123,8 @@ mod tests {
         let base_driver_2 = make_test_driver("driver2", &outdir)?;
 
         builder.add_product_drivers(vec![base_driver_1, base_driver_2])?;
-        let result: assembly_config_schema::ImageAssemblyConfig = builder.build(&outdir).unwrap();
+        let result: assembly_config_schema::ImageAssemblyConfig =
+            builder.build(&outdir, &tools).unwrap();
 
         assert_eq!(
             result.base.iter().map(|p| p.to_owned()).sorted().collect::<Vec<_>>(),
@@ -1107,6 +1158,90 @@ mod tests {
                 }
             ]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_builder_with_compiled_packages() -> Result<()> {
+        let vars = TempdirPathsForTest::new();
+        let tools = FakeToolProvider::default();
+        // Write the expected output component files since the component
+        // compiler is mocked.
+        let component1_dir = vars.outdir.join("foo/component1");
+        let component2_dir = vars.outdir.join("foo/component2");
+        std::fs::create_dir_all(&component1_dir).unwrap();
+        std::fs::create_dir_all(&component2_dir).unwrap();
+        std::fs::write(component1_dir.join("component1.cm"), "component fake contents").unwrap();
+        std::fs::write(component2_dir.join("component2.cm"), "component fake contents").unwrap();
+
+        // Create 2 assembly bundle and add a config_data entry to it.
+        let mut bundle1 = make_test_assembly_bundle(&vars.bundle_path);
+        bundle1.packages_to_compile.push(CompiledPackageDefinition::MainDefinition(
+            MainPackageDefinition {
+                name: "foo".into(),
+                components: BTreeMap::from([
+                    ("component1".into(), "cml1".into()),
+                    ("component2".into(), "cml2".into()),
+                ]),
+                contents: Vec::default(),
+            },
+        ));
+        let bundle2 = AssemblyInputBundle {
+            packages_to_compile: vec![CompiledPackageDefinition::Additional(
+                AdditionalPackageContents {
+                    name: "foo".into(),
+                    component_shards: BTreeMap::from([(
+                        "component2".into(),
+                        vec!["shard1".into()],
+                    )]),
+                },
+            )],
+            ..Default::default()
+        };
+
+        let builder = setup_builder(&vars, vec![bundle1, bundle2]);
+        let _: assembly_config_schema::ImageAssemblyConfig =
+            builder.build(&vars.outdir, &tools).unwrap();
+
+        // Make sure all the components and CML shards from the separate bundles
+        // are merged.
+        let expected_commands: ToolCommandLog = serde_json::from_value(json!({
+            "commands": [
+                {
+                    "tool": "./host_x64/cmc",
+                    "args": [
+                        "merge",
+                         "--output",
+                          vars.outdir.join("foo/component1/component1.cml").as_str(),
+                          "cml1"
+                    ]
+                },
+                {
+                    "tool": "./host_x64/cmc",
+                    "args": [
+                        "compile",
+                        "-o",
+                        vars.outdir.join("foo/component1/component1.cm").as_str(),
+                        vars.outdir.join("foo/component1/component1.cml").as_str()
+                    ]
+                },
+                {
+                    "tool": "./host_x64/cmc",
+                    "args": ["merge", "--output", vars.outdir.join("foo/component2/component2.cml").as_str(), "cml2", "shard1"]
+                },
+                {
+                    "tool": "./host_x64/cmc",
+                    "args": [
+                        "compile",
+                        "-o",
+                        vars.outdir.join("foo/component2/component2.cm").as_str(),
+                        vars.outdir.join("foo/component2/component2.cml").as_str()
+                    ]
+                }
+            ]
+        })).unwrap();
+        assert_eq!(&expected_commands, tools.log());
 
         Ok(())
     }
@@ -1276,6 +1411,7 @@ mod tests {
         let dir_path1 = Utf8Path::from_path(tmp_path1.path()).unwrap();
         let tmp_path2 = TempDir::new_in(&outdir).unwrap();
         let dir_path2 = Utf8Path::from_path(tmp_path2.path()).unwrap();
+        let tools = FakeToolProvider::default();
         let aib = AssemblyInputBundle {
             image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
                 base: vec![write_empty_pkg(dir_path1, "base_package2", None).into()],
@@ -1295,7 +1431,7 @@ mod tests {
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir, aib).ok();
         builder.add_parsed_bundle(outdir, aib2).ok();
-        assert!(builder.build(outdir).is_err());
+        assert!(builder.build(outdir, &tools).is_err());
     }
     /// Asserts that attempting to add a package to the base package set with the same
     /// PackageName but a different package manifest path will result in an error if coming

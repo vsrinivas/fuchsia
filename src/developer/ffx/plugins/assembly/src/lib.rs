@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+
 use anyhow::Context;
 use errors::FfxError;
 use {anyhow::Result, ffx_assembly_args::*, ffx_core::ffx_plugin};
@@ -9,6 +11,7 @@ use {anyhow::Result, ffx_assembly_args::*, ffx_core::ffx_plugin};
 mod base_package;
 mod blob_json_generator;
 mod blobfs;
+mod compiled_package;
 mod extra_hash_descriptor;
 mod fvm;
 mod operations;

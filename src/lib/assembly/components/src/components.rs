@@ -9,8 +9,6 @@ use std::collections::BTreeSet;
 
 /// Builder for compiling a component out of cml shards.
 pub struct ComponentBuilder {
-    /// The cmc host tool.
-    cmc_tool: Box<dyn Tool>,
     /// The name of the component.
     name: String,
     /// A list of component manifest shards to be merged
@@ -20,8 +18,8 @@ pub struct ComponentBuilder {
 
 impl ComponentBuilder {
     /// Construct a new ComponentBuilder that uses the cmc |tool|.
-    pub fn new(cmc_tool: Box<dyn Tool>, name: impl Into<String>) -> Self {
-        ComponentBuilder { cmc_tool, name: name.into(), manifest_shards: BTreeSet::default() }
+    pub fn new(name: impl Into<String>) -> Self {
+        ComponentBuilder { name: name.into(), manifest_shards: BTreeSet::default() }
     }
 
     /// Add a CML shard or the primary CML file for this component.
@@ -37,26 +35,28 @@ impl ComponentBuilder {
     }
 
     /// Build the component.
-    pub fn build(self, gendir: impl AsRef<Utf8Path>) -> Result<()> {
+    pub fn build(self, outdir: impl AsRef<Utf8Path>, cmc_tool: &dyn Tool) -> Result<Utf8PathBuf> {
         // Write all generated files in a subdir with the name of the package.
-        let gendir = gendir.as_ref().join(&self.name);
-        let cmlfile = gendir.join(format!("{}.cml", &self.name));
+        let outdir = outdir.as_ref().join(&self.name);
+        let cmlfile = outdir.join(format!("{}.cml", &self.name));
         let mut args = vec!["merge".to_owned(), "--output".to_owned(), cmlfile.to_string()];
 
         args.extend(self.manifest_shards.iter().map(|shard| shard.to_string()));
 
-        self.cmc_tool
+        cmc_tool
             .run(&args)
             .with_context(|| format!("Failed to run cmc merge with shards {:?}", args))?;
 
-        let cmfile = gendir.join(format!("{}.cm", &self.name));
+        let cmfile = outdir.join(format!("{}.cm", &self.name));
 
         let args =
             vec!["compile".to_owned(), "-o".to_owned(), cmfile.to_string(), cmlfile.to_string()];
 
-        self.cmc_tool
+        cmc_tool
             .run(&args)
-            .with_context(|| format!("Failed to run cmc compile with args {:?}", args))
+            .with_context(|| format!("Failed to run cmc compile with args {:?}", args))?;
+
+        Ok(cmfile)
     }
 }
 
@@ -71,8 +71,7 @@ mod tests {
 
     #[test]
     fn add_shard_with_duplicates_returns_err() {
-        let tools = FakeToolProvider::default();
-        let mut builder = ComponentBuilder::new(tools.get_tool("cmc").unwrap(), "foo");
+        let mut builder = ComponentBuilder::new("foo");
         builder.add_shard("foobar").unwrap();
 
         let result = builder.add_shard("foobar");
@@ -88,7 +87,7 @@ mod tests {
         let shard_path_2 = outdir.join("shard2.cml");
         let shard_path_3 = outdir.join("shard3.cml");
         let tools = FakeToolProvider::default();
-        let mut builder = ComponentBuilder::new(tools.get_tool("cmc").unwrap(), "test");
+        let mut builder = ComponentBuilder::new("test");
         builder.add_shard(&shard_path_1).unwrap();
         builder.add_shard(&shard_path_2).unwrap().add_shard(&shard_path_3).unwrap();
         let expected_commands: ToolCommandLog = serde_json::from_value(json!({
@@ -117,7 +116,7 @@ mod tests {
         }))
         .unwrap();
 
-        let result = builder.build(outdir);
+        let result = builder.build(outdir, tools.get_tool("cmc").unwrap().as_ref());
 
         assert!(result.is_ok());
         assert_eq!(&expected_commands, tools.log());

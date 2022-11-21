@@ -9,4 +9,8 @@ python_library("run_assembly") {
     "__init__.py",
     "lib.py",
   ]
+  deps = [
+    # We need the sdk since ffx assembly product uses the cmc tool
+    "//sdk:host_tools.modular($host_toolchain)",
+  ]
 }

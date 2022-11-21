@@ -9,6 +9,7 @@ use assembly_config_schema::{
     board_config::BoardInformation,
     product_config::{BuildType, FeatureSupportLevel, ProductAssemblyConfig},
 };
+use assembly_tool::SdkToolProvider;
 use camino::Utf8PathBuf;
 use ffx_assembly_args::ProductArgs;
 use tracing::info;
@@ -101,7 +102,11 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
         builder.add_product_packages(additional_packages).context("Adding additional packages")?;
     }
 
-    let image_assembly = builder.build(&outdir).context("Building Image Assembly config")?;
+    // Get the tool set.
+    let tools = SdkToolProvider::try_new()?;
+
+    let image_assembly =
+        builder.build(&outdir, &tools).context("Building Image Assembly config")?;
     assembly_validate_product::validate_product(&image_assembly)?;
 
     let image_assembly_path = outdir.join("image_assembly.json");

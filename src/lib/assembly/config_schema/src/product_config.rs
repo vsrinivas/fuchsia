@@ -331,38 +331,55 @@ pub struct AssemblyInputBundle {
 
     /// Packages to create dynamically as part of the Assembly process.
     #[serde(default)]
-    pub packages_to_compile: BTreeMap<PackageName, PackageEntry>,
+    pub packages_to_compile: Vec<CompiledPackageDefinition>,
 }
 
-type ComponentManifestSource = Utf8PathBuf;
-type ComponentManifestShard = Utf8PathBuf;
-type ComponentName = String;
-
+/// Contents of a compiled package. The contents provided by all
+/// selected AIBs are merged by `name` into a single package
+/// at assembly time.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 #[serde(deny_unknown_fields)]
-pub enum PackageEntry {
-    /// Primary definition of a compiled package. Only a single AIB should
-    /// contain the main definition for a given package.
-    MainDefinition {
-        name: PackageName,
-        /// Components to add to the package, mapping component name to
-        /// the primary cml definition of the component.
-        components: BTreeMap<ComponentName, ComponentManifestSource>,
-        /// Non-component files to add to the package
-        #[serde(default)]
-        contents: Vec<FileEntry>,
-    },
-    /// Additional contents of the package to be defined in
-    /// secondary AssemblyInputBundles. There can be many of these, and
-    /// they will be merged into the final compiled package.
-    Additional {
-        /// Name of the package to which these contents are associated.
-        /// This package should have a corresponding MainDefinition in another
-        /// AIB.
-        name: PackageName,
-        /// Additional component shards to combine with the primary manifest.
-        component_shards: BTreeMap<ComponentName, Vec<ComponentManifestShard>>,
-    },
+#[serde(untagged)]
+pub enum CompiledPackageDefinition {
+    MainDefinition(MainPackageDefinition),
+    Additional(AdditionalPackageContents),
+}
+
+/// Primary definition of a compiled package. Only a single AIB should
+/// contain the main definition for a given package.
+#[derive(Debug, Default, Deserialize, Serialize, PartialEq, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct MainPackageDefinition {
+    pub name: PackageName,
+    /// Components to add to the package, mapping component name to
+    /// the primary cml definition of the component.
+    pub components: BTreeMap<String, Utf8PathBuf>,
+    /// Non-component files to add to the package.
+    #[serde(default)]
+    pub contents: Vec<FileEntry>,
+}
+
+/// Additional contents of the package to be defined in
+/// secondary AssemblyInputBundles. There can be many of these, and
+/// they will be merged into the final compiled package.
+#[derive(Debug, Default, Deserialize, Serialize, PartialEq, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct AdditionalPackageContents {
+    /// Name of the package to which these contents are associated.
+    /// This package should have a corresponding MainDefinition in another
+    /// AIB.
+    pub name: PackageName,
+    /// Additional component shards to combine with the primary manifest.
+    pub component_shards: BTreeMap<String, Vec<Utf8PathBuf>>,
+}
+
+impl CompiledPackageDefinition {
+    pub fn name(&self) -> &str {
+        match self {
+            CompiledPackageDefinition::MainDefinition(MainPackageDefinition { name, .. }) => name,
+            CompiledPackageDefinition::Additional(AdditionalPackageContents { name, .. }) => name,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
@@ -711,7 +728,31 @@ mod tests {
               ],
               shell_commands: {
                 "package1": ["path/to/binary1", "path/to/binary2"]
-              }
+              },
+              packages_to_compile: [
+                {
+                    name: "package_name",
+                    components: {
+                        "component1": "path/to/component1.cml",
+                        "component2": "path/to/component2.cml",
+                    },
+                    contents: [
+                        {
+                            source: "path/to/source",
+                            destination: "path/to/destination",
+                        }
+                    ]
+                },
+                {
+                   name: "package_name",
+                   component_shards: {
+                        "component1": [
+                            "path/to/shard1.cml",
+                            "path/to/shard2.cml"
+                        ]
+                   }
+                }
+              ]
             }
         "#;
         let bundle =
