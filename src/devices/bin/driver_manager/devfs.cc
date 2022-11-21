@@ -561,9 +561,6 @@ Devfs::Devfs(std::optional<Devnode>& root, Device* device,
       // TODO(https://fxbug.dev/113842): Remove.
       "thermal",
 
-      // TODO(https://fxbug.dev/113844): Remove.
-      "usb-hci-test",
-
       // TODO(https://fxbug.dev/113845): Remove.
       "zxcrypt",
   });
