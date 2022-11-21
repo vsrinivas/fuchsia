@@ -275,27 +275,33 @@ func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
 }
 
 type Transport struct {
-	Name          string
-	Namespace     string
-	Type          string
-	HasEvents     bool
-	HasSyncClient bool
+	Name                     string
+	Namespace                string
+	Type                     string
+	HasEvents                bool
+	HasSyncClient            bool
+	AsyncDispatcher          string
+	UnknownMethodReplySender string
 }
 
 var channelTransport = Transport{
-	Name:          "Channel",
-	Namespace:     "fidl",
-	Type:          "::fidl::internal::ChannelTransport",
-	HasEvents:     true,
-	HasSyncClient: true,
+	Name:                     "Channel",
+	Namespace:                "fidl",
+	Type:                     "::fidl::internal::ChannelTransport",
+	HasEvents:                true,
+	HasSyncClient:            true,
+	AsyncDispatcher:          "async_dispatcher_t",
+	UnknownMethodReplySender: "::fidl::internal::SendChannelUnknownMethodReply",
 }
 
 var driverTransport = Transport{
-	Name:          "Driver",
-	Namespace:     "fdf",
-	Type:          "::fidl::internal::DriverTransport",
-	HasEvents:     false,
-	HasSyncClient: true,
+	Name:                     "Driver",
+	Namespace:                "fdf",
+	Type:                     "::fidl::internal::DriverTransport",
+	HasEvents:                false,
+	HasSyncClient:            true,
+	AsyncDispatcher:          "fdf_dispatcher_t",
+	UnknownMethodReplySender: "::fidl::internal::SendDriverUnknownMethodReply",
 }
 
 var transports = map[string]*Transport{
@@ -366,6 +372,8 @@ type Protocol struct {
 	// Generated struct holding variant-agnostic details about protocol.
 	ProtocolDetails name
 
+	// Transport contains information about the transport the protocol is
+	// used over.
 	Transport *Transport
 }
 
@@ -418,10 +426,7 @@ func (p Protocol) OpennessValue() string {
 // to send the UnknownMethod reply. This is used to fill the send_reply field of
 // UnknownMethodHandlerEntry.
 func (p Protocol) UnknownMethodReplySender() string {
-	if p.Transport.Name == "Driver" {
-		return "::fidl::internal::SendDriverUnknownMethodReply"
-	}
-	return "::fidl::internal::SendChannelUnknownMethodReply"
+	return p.Transport.UnknownMethodReplySender
 }
 
 // endpointTypeName formats endpoint type names for this protocol in the new C++ bindings.
@@ -456,11 +461,7 @@ func (p Protocol) UnownedServerEnd() string {
 }
 
 func (p Protocol) Dispatcher() string {
-	if p.Transport.Name == "Driver" {
-		return "fdf_dispatcher_t"
-	}
-
-	return "async_dispatcher_t"
+	return p.Transport.AsyncDispatcher
 }
 
 func newProtocol(inner protocolInner) Protocol {
@@ -1095,6 +1096,14 @@ func anyEventHasFlexibleEnvelope(methods []Method) bool {
 }
 
 func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
+	transport, ok := transports[p.OverTransport()]
+	if !ok {
+		panic(fmt.Sprintf("transport %s not found", p.OverTransport()))
+	}
+	if transport == nil {
+		return nil
+	}
+
 	protocolName := c.compileNameVariants(p.Name)
 	codingTableName := codingTableName(p.Name)
 	hlMessaging := compileHlMessagingDetails(protocolName)
@@ -1266,10 +1275,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		FuzzingName: fuzzingName,
 		TestBase:    testBaseNames,
 	})
-	transport, ok := transports[p.OverTransport()]
-	if !ok {
-		panic(fmt.Sprintf("transport %s not found", p.OverTransport()))
-	}
+
 	r.Transport = transport
 	for i := 0; i < len(methods); i++ {
 		methods[i].Protocol = &r

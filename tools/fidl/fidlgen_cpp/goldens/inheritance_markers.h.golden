@@ -52,4 +52,14 @@ class Sub final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_inheritance
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_inheritance::Super> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_inheritance::Sub> : public std::true_type {};
+
+}  // namespace fidl

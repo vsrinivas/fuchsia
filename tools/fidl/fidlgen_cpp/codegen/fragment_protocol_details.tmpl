@@ -12,7 +12,6 @@ struct {{ .ProtocolDetails }} {
   {{- if .DiscoverableName }}
     static constexpr char DiscoverableName[] = {{ .DiscoverableName }};
   {{- end }}
-  static constexpr bool kIsProtocol = true;
 };
 {{- EndifFuchsia }}
 {{- end }}

@@ -855,7 +855,9 @@ func compile(r fidlgen.Root) *Root {
 	}
 
 	for _, v := range r.Protocols {
-		decls[v.Name] = c.compileProtocol(v)
+		if p := c.compileProtocol(v); p != nil {
+			decls[v.Name] = p
+		}
 	}
 
 	for _, v := range r.Services {

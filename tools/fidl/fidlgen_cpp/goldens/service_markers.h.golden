@@ -52,4 +52,14 @@ class SecondProtocol final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_service
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_service::FirstProtocol> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_service::SecondProtocol> : public std::true_type {};
+
+}  // namespace fidl

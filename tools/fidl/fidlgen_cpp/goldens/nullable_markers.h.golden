@@ -29,4 +29,11 @@ class SimpleProtocol final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_nullable
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_nullable::SimpleProtocol> : public std::true_type {};
+
+}  // namespace fidl

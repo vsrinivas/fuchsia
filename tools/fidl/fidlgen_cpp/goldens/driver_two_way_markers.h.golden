@@ -29,4 +29,11 @@ class TwoWay final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_drivertwoway
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_drivertwoway::TwoWay> : public std::true_type {};
+
+}  // namespace fidl

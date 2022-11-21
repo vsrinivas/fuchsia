@@ -29,4 +29,11 @@ class ExampleProtocol final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_placementofattributes
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_placementofattributes::ExampleProtocol> : public std::true_type {};
+
+}  // namespace fidl

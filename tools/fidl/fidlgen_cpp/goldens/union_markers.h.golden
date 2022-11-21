@@ -43,4 +43,11 @@ class TestProtocol final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_union
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_union::TestProtocol> : public std::true_type {};
+
+}  // namespace fidl

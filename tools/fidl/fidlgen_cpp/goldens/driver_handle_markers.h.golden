@@ -38,4 +38,14 @@ class HandlesInProtocol final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_driverhandle
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_driverhandle::DriverProtocol> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_driverhandle::HandlesInProtocol> : public std::true_type {};
+
+}  // namespace fidl

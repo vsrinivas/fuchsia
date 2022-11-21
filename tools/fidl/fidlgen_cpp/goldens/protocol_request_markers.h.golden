@@ -80,4 +80,14 @@ class Parent final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_protocolrequest
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_protocolrequest::Child> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_protocolrequest::Parent> : public std::true_type {};
+
+}  // namespace fidl

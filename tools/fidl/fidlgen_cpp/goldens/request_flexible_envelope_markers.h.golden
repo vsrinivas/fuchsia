@@ -43,4 +43,11 @@ class Protocol final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_requestflexibleenvelope
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_requestflexibleenvelope::Protocol> : public std::true_type {};
+
+}  // namespace fidl

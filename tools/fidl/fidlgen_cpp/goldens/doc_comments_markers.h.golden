@@ -52,4 +52,11 @@ class Interface final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_doccomments
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_doccomments::Interface> : public std::true_type {};
+
+}  // namespace fidl

@@ -29,7 +29,6 @@ class SomeProtocol;
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_handles::SomeProtocol> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

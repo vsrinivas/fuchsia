@@ -29,4 +29,11 @@ class SomeProtocol final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_anonymous
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_anonymous::SomeProtocol> : public std::true_type {};
+
+}  // namespace fidl

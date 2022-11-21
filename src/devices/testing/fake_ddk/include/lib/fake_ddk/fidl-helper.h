@@ -35,6 +35,9 @@ class fidl::internal::WireWeakEventSender<fake_ddk::FidlProtocol> {
   fidl::internal::WeakEventSenderInner inner_;
 };
 
+template <>
+struct fidl::IsProtocol<fake_ddk::FidlProtocol> : public std::true_type {};
+
 namespace fake_ddk {
 
 typedef zx_status_t(MessageOp)(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);

@@ -502,4 +502,38 @@ class MethodWithUnion final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_protocols
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_protocols::WithAndWithoutRequestResponse> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_protocols::WithErrorSyntax> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_protocols::ChannelProtocol> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_protocols::Transitional> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_protocols::DiscoverableProtocol> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_protocols::AnotherDiscoverableProtocol> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_protocols::HandleRightsProtocol> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_protocols::WithProtocolEnds> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_protocols::ManyParameters> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_protocols::MethodWithUnion> : public std::true_type {};
+
+}  // namespace fidl

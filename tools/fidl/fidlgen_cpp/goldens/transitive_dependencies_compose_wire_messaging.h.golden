@@ -40,7 +40,6 @@ namespace test_transitivedependenciescompose {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_transitivedependenciescompose::Top> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

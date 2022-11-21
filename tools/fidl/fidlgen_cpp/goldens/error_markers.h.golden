@@ -29,4 +29,11 @@ class Example final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_error
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_error::Example> : public std::true_type {};
+
+}  // namespace fidl

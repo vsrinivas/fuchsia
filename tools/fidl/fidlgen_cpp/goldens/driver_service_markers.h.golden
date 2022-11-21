@@ -15,4 +15,11 @@ class SomeDriverProtocol final {
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
 };
+
 }  // namespace test_driverservice
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_driverservice::SomeDriverProtocol> : public std::true_type {};
+
+}  // namespace fidl

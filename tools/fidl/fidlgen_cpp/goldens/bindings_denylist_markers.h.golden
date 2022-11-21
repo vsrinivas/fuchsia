@@ -149,4 +149,23 @@ class ImportsSameNameContext final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_bindingsdenylist
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_bindingsdenylist::OnlyCppAndDeps> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_bindingsdenylist::DenyEachBinding> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_bindingsdenylist::Allowed> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_bindingsdenylist::ImportsSameNameContext> : public std::true_type {};
+
+}  // namespace fidl

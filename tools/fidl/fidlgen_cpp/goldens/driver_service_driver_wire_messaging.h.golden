@@ -29,7 +29,6 @@ class DriverOnlyService;
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_driverservice::SomeDriverProtocol> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

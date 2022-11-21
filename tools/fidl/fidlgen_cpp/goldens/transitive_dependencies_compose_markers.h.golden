@@ -29,4 +29,11 @@ class Top final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_transitivedependenciescompose
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_transitivedependenciescompose::Top> : public std::true_type {};
+
+}  // namespace fidl

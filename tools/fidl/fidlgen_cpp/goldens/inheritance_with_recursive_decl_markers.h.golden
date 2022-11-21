@@ -66,4 +66,14 @@ class Child final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_inheritancewithrecursivedecl
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_inheritancewithrecursivedecl::Parent> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_inheritancewithrecursivedecl::Child> : public std::true_type {};
+
+}  // namespace fidl

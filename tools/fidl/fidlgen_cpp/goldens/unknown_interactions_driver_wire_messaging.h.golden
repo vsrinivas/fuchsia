@@ -151,7 +151,6 @@ namespace test_unknowninteractions {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::UnknownInteractionsDriverProtocol> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -5347,7 +5346,6 @@ namespace test_unknowninteractions {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -8121,7 +8119,6 @@ namespace test_unknowninteractions {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

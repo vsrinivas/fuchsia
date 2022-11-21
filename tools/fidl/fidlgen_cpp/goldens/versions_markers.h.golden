@@ -38,4 +38,14 @@ class Protocol final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_versions
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_versions::OtherProtocol> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_versions::Protocol> : public std::true_type {};
+
+}  // namespace fidl

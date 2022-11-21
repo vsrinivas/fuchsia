@@ -57,4 +57,11 @@ class EmptyProtocol final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_emptystruct
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_emptystruct::EmptyProtocol> : public std::true_type {};
+
+}  // namespace fidl

@@ -29,7 +29,6 @@ class Parent;
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_protocolrequest::Child> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -209,7 +208,6 @@ namespace test_protocolrequest {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_protocolrequest::Parent> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

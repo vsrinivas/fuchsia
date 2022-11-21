@@ -213,8 +213,10 @@ struct MockProtocol {
 template <>
 struct fidl::internal::ProtocolDetails<MockProtocol> {
   static constexpr char DiscoverableName[] = "mock";
-  static constexpr bool kIsProtocol = true;
 };
+
+template <>
+struct fidl::IsProtocol<MockProtocol> : public std::true_type {};
 
 // Test compile time path concatenation.
 TEST(SingletonService, DefaultPath) {

@@ -120,7 +120,6 @@ namespace test_protocols {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::WithAndWithoutRequestResponse> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -2063,7 +2062,6 @@ namespace test_protocols {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::WithErrorSyntax> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -3657,7 +3655,6 @@ namespace test_protocols {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::ChannelProtocol> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -5162,7 +5159,6 @@ namespace test_protocols {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::Transitional> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -5979,7 +5975,6 @@ namespace test_protocols {
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::DiscoverableProtocol> {
     static constexpr char DiscoverableName[] = "test.protocols.DiscoverableProtocol";
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -6301,7 +6296,6 @@ namespace test_protocols {
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::AnotherDiscoverableProtocol> {
     static constexpr char DiscoverableName[] = "fake.library.FakeProtocol";
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -6490,7 +6484,6 @@ namespace test_protocols {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::HandleRightsProtocol> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -7380,7 +7373,6 @@ namespace test_protocols {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::WithProtocolEnds> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -8699,7 +8691,6 @@ namespace test_protocols {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::ManyParameters> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -9056,7 +9047,6 @@ namespace test_protocols {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::MethodWithUnion> {
-  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

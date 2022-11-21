@@ -1656,4 +1656,26 @@ class UnknownInteractionsClosedDriverProtocol final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_unknowninteractions
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_unknowninteractions::UnknownInteractionsProtocol> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_unknowninteractions::UnknownInteractionsClosedProtocol> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_unknowninteractions::UnknownInteractionsDriverProtocol> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> : public std::true_type {};
+
+template <>
+struct IsProtocol<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> : public std::true_type {};
+
+}  // namespace fidl

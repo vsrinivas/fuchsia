@@ -19,7 +19,6 @@ fidl/{{ .LibraryDots }}/cpp/markers.h
   #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
   {{ range .Protocols }}
-  {{- if .Transport }}
     {{- $protocol := . }}
     {{ EnsureNamespace . }}
     {{ .Docs }}
@@ -48,6 +47,12 @@ fidl/{{ .LibraryDots }}/cpp/markers.h
       {{- end }}
     };
   {{- end }}
-  {{- end }}
+
+  {{ EnsureNamespace "fidl" }}
+  {{ range .Protocols }}
+  template <>
+  struct IsProtocol<{{ . }}> : public std::true_type {};
+  {{ end }}
+
   {{ EndOfFile }}
 {{ end }}

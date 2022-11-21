@@ -365,4 +365,11 @@ class MainProtocol final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_protocollayouts
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_protocollayouts::MainProtocol> : public std::true_type {};
+
+}  // namespace fidl

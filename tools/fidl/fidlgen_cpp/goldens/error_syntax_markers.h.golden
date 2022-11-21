@@ -43,4 +43,11 @@ class ExampleUseOfErrorSyntax final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_errorsyntax
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_errorsyntax::ExampleUseOfErrorSyntax> : public std::true_type {};
+
+}  // namespace fidl

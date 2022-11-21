@@ -273,11 +273,8 @@ struct ContainsHandle<Array<T, N>> : ContainsHandle<T> {};
 template <typename T, size_t N>
 struct IsResource<Array<T, N>> : public IsResource<T> {};
 
-template <typename T, typename = void>
-struct IsProtocol : public ::std::false_type {};
 template <typename T>
-struct IsProtocol<T, std::void_t<decltype(::fidl::internal::ProtocolDetails<T>::kIsProtocol)>>
-    : public std::true_type {};
+struct IsProtocol : public ::std::false_type {};
 
 template <typename T>
 constexpr inline auto IsProtocolV = IsProtocol<T>::value;

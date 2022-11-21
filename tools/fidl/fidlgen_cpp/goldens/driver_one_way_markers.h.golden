@@ -29,4 +29,11 @@ class OneWay final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_driveroneway
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_driveroneway::OneWay> : public std::true_type {};
+
+}  // namespace fidl

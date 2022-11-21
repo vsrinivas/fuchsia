@@ -295,4 +295,11 @@ class MainProtocol final {
     static constexpr bool kHasFrameworkError = false;
   };
 };
+
 }  // namespace test_protocolpayloads
+namespace fidl {
+
+template <>
+struct IsProtocol<::test_protocolpayloads::MainProtocol> : public std::true_type {};
+
+}  // namespace fidl
