@@ -51,9 +51,30 @@ impl SpawnBuilder {
         self.add_dir_to_namespace_impl(path.into(), dir)
     }
 
-    fn add_dir_to_namespace_impl(mut self, path: String, dir: File) -> Result<Self, Error> {
-        let path = CString::new(path).map_err(Error::ConvertNamespacePathToCString)?;
+    fn add_dir_to_namespace_impl(self, path: String, dir: File) -> Result<Self, Error> {
         let handle = transfer_fd(dir).map_err(Error::TransferFd)?;
+        self.add_handle_to_namespace(path, handle)
+    }
+
+    /// Add a directory that will be added to the spawned process's namespace.
+    pub fn add_directory_to_namespace(
+        self,
+        path: impl Into<String>,
+        client_end: fidl::endpoints::ClientEnd<fidl_fuchsia_io::DirectoryMarker>,
+    ) -> Result<Self, Error> {
+        self.add_directory_to_namespace_impl(path.into(), client_end)
+    }
+
+    fn add_directory_to_namespace_impl(
+        self,
+        path: String,
+        client_end: fidl::endpoints::ClientEnd<fidl_fuchsia_io::DirectoryMarker>,
+    ) -> Result<Self, Error> {
+        self.add_handle_to_namespace(path, client_end.into())
+    }
+
+    fn add_handle_to_namespace(mut self, path: String, handle: zx::Handle) -> Result<Self, Error> {
+        let path = CString::new(path).map_err(Error::ConvertNamespacePathToCString)?;
         self.dirs.push((path, Some(handle)));
         Ok(self)
     }

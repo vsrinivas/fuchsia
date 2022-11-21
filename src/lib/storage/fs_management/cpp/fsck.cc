@@ -23,7 +23,6 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
-#include "sdk/lib/component/incoming/cpp/service_client.h"
 #include "src/lib/storage/fs_management/cpp/component.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/launch.h"

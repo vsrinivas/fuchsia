@@ -12,14 +12,12 @@ use {
     anyhow::{anyhow, Error},
     async_trait::async_trait,
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
-    fidl_fuchsia_hardware_block as fblock, fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_hardware_block as fhardware_block, fidl_fuchsia_io as fio,
+    fuchsia_async as fasync,
     fuchsia_runtime::HandleType,
-    fuchsia_zircon::{self as zx, AsHandleRef, HandleBased},
-    remote_block_device::{Cache, RemoteBlockClientSync},
-    std::{
-        io::{Seek, SeekFrom},
-        sync::{Arc, Mutex},
-    },
+    fuchsia_zircon as zx,
+    remote_block_device::{BlockClient as _, BufferSlice, MutableBufferSlice, RemoteBlockClient},
+    std::sync::Arc,
     vfs::{
         common::{rights_to_posix_mode_bits, send_on_open_with_error},
         directory::entry::{DirectoryEntry, EntryInfo},
@@ -31,8 +29,8 @@ use {
 };
 
 fn map_to_status(err: Error) -> zx::Status {
-    if let Some(status) = err.root_cause().downcast_ref::<zx::Status>() {
-        status.clone()
+    if let Some(&status) = err.root_cause().downcast_ref::<zx::Status>() {
+        status
     } else {
         // Print the internal error if we re-map it because we will lose any context after this.
         println!("Internal error: {:?}", err);
@@ -41,7 +39,7 @@ fn map_to_status(err: Error) -> zx::Status {
 }
 
 struct BlockFile {
-    cache: Mutex<Cache>,
+    block_client: RemoteBlockClient,
 }
 
 impl DirectoryEntry for BlockFile {
@@ -80,11 +78,15 @@ impl File for BlockFile {
     }
 
     async fn get_size(&self) -> Result<u64, zx::Status> {
-        Ok(self.cache.lock().unwrap().seek(SeekFrom::End(0)).unwrap())
+        let block_size = self.block_client.block_size();
+        let block_count = self.block_client.block_count();
+        Ok(block_count.checked_mul(block_size.into()).unwrap())
     }
 
     async fn get_attrs(&self) -> Result<fio::NodeAttributes, zx::Status> {
-        let device_size = self.cache.lock().unwrap().seek(SeekFrom::End(0)).unwrap();
+        let block_size = self.block_client.block_size();
+        let block_count = self.block_client.block_count();
+        let device_size = block_count.checked_mul(block_size.into()).unwrap();
         Ok(fio::NodeAttributes {
             mode: fio::MODE_TYPE_FILE
                 | rights_to_posix_mode_bits(/*r*/ true, /*w*/ true, /*x*/ false),
@@ -110,7 +112,7 @@ impl File for BlockFile {
     }
 
     async fn sync(&self) -> Result<(), zx::Status> {
-        self.cache.lock().unwrap().flush_device().map_err(map_to_status)
+        self.block_client.flush().await.map_err(map_to_status)
     }
 
     fn query_filesystem(&self) -> Result<fio::FilesystemInfo, zx::Status> {
@@ -121,13 +123,21 @@ impl File for BlockFile {
 #[async_trait]
 impl FileIo for BlockFile {
     async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, zx::Status> {
-        self.cache.lock().unwrap().read_at(buffer, offset).map_err(map_to_status)?;
-        Ok(buffer.len() as u64)
+        let () = self
+            .block_client
+            .read_at(MutableBufferSlice::Memory(buffer), offset)
+            .await
+            .map_err(map_to_status)?;
+        Ok(buffer.len().try_into().unwrap())
     }
 
     async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, zx::Status> {
-        self.cache.lock().unwrap().write_at(content, offset).map_err(map_to_status)?;
-        Ok(content.len() as u64)
+        let () = self
+            .block_client
+            .write_at(BufferSlice::Memory(content), offset)
+            .await
+            .map_err(map_to_status)?;
+        Ok(content.len().try_into().unwrap())
     }
 
     async fn append(&self, _content: &[u8]) -> Result<(u64, u64), zx::Status> {
@@ -135,73 +145,62 @@ impl FileIo for BlockFile {
     }
 }
 
-async fn run(
-    client: ClientEnd<fblock::BlockMarker>,
-    server: ServerEnd<fio::DirectoryMarker>,
-) -> Result<(), Error> {
-    let scope = ExecutionScope::new();
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+    let (client, server) = create_endpoints::<fio::DirectoryMarker>()?;
 
-    let dir = pseudo_directory! {
-        "block" => Arc::new(BlockFile {
-            cache: Mutex::new(Cache::new(RemoteBlockClientSync::new(client)?)?),
-        }),
-    };
-
-    dir.open(
-        scope.clone(),
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-        0,
-        Path::dot(),
-        ServerEnd::new(server.into_channel()),
-    );
-
-    scope.wait().await;
-
-    Ok(())
-}
-
-fn main() -> Result<(), Error> {
-    let device = ClientEnd::new(zx::Channel::from(
-        fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
+    let server_fut = {
+        let handle = fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
             HandleType::User0,
             1,
         ))
-        .ok_or(anyhow!("Missing device handle"))?,
-    ));
+        .ok_or(anyhow!("missing device handle"))?;
+        let channel = zx::Channel::from(handle);
+        let client_end: ClientEnd<fhardware_block::BlockMarker> = channel.into();
+        let proxy = client_end.into_proxy()?;
+        let block_client = RemoteBlockClient::new(proxy).await?;
+        let dir = pseudo_directory! {
+            "block" => Arc::new(BlockFile {
+                block_client,
+            }),
+        };
 
-    let (client, server) = create_endpoints::<fio::DirectoryMarker>()?;
+        let scope = ExecutionScope::new();
+        let () = dir.open(
+            scope.clone(),
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            0,
+            Path::dot(),
+            ServerEnd::new(server.into_channel()),
+        );
+        async move { scope.wait().await }
+    };
 
-    let adapter_thread = std::thread::spawn(move || {
-        let mut executor = fasync::LocalExecutor::new().expect("Failed to create executor");
-        executor.run_singlethreaded(run(device, server))
-    });
+    let client_fut = {
+        let mut args = std::env::args();
+        let name = args.next().ok_or(anyhow!("no arguments provided"))?;
+        let binary = args.next().ok_or(anyhow!("{} invoked without path to child binary", name))?;
 
-    let dir = fdio::create_fd(client.into_handle())?;
-
-    let mut args = std::env::args();
-    args.next().ok_or(anyhow!("Expected path of executable"))?;
-    let binary = args.next().ok_or(anyhow!("Missing binary argument"))?;
-
-    let mut builder = fdio::SpawnBuilder::new()
-        .options(fdio::SpawnOptions::CLONE_ALL)
-        .add_dir_to_namespace("/device", dir)?
-        .arg(&binary)?;
-
-    for arg in args {
-        builder = builder.arg(arg)?;
-    }
-    builder = builder.arg("/device/block")?;
-
-    let process = builder.spawn_from_path(binary, &fuchsia_runtime::job_default())?;
-
-    process.wait_handle(zx::Signals::PROCESS_TERMINATED, zx::Time::INFINITE)?;
-    adapter_thread.join().unwrap()?;
-
-    let info = process.info()?;
-    if info.flags & zx::ProcessInfoFlags::EXITED.bits() != 0 {
-        if let Ok(return_code) = info.return_code.try_into() {
-            std::process::exit(return_code);
+        let mut builder = fdio::SpawnBuilder::new()
+            .options(fdio::SpawnOptions::CLONE_ALL)
+            .add_directory_to_namespace("/device", client)?
+            .arg(&binary)?;
+        for arg in args {
+            builder = builder.arg(arg)?;
         }
-    }
-    Err(anyhow!("Child failed"))
+        builder = builder.arg("/device/block")?;
+        let process = builder.spawn_from_path(binary, &fuchsia_runtime::job_default())?;
+
+        async move {
+            let _: zx::Signals =
+                fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED).await?;
+            let info = process.info()?;
+            Ok::<_, Error>(info.return_code)
+        }
+    };
+
+    let ((), return_code) = futures::future::join(server_fut, client_fut).await;
+    let return_code = return_code?;
+    let return_code = return_code.try_into()?;
+    std::process::exit(return_code);
 }
