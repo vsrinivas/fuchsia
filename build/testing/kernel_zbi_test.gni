@@ -2,15 +2,104 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/assembly/assembled_system.gni")
+import("//build/board.gni")
 import("//build/testing/zbi_test.gni")
+
+cuckoo_kernel_zbi_test_params = {
+  # Name of the core realm package that is expected by the assembled cuckoo kernel zbi.
+  core_realm_package_name = "cuckoo-core"
+
+  # List of assembly input groups that the kernel cuckoo zbi will use. Each one may provide
+  # packages, core realm shards, etc.
+  input_groups = [
+    "bootstrap",
+    "debugging",
+    "bootfs-package-support",
+    "telemetry",
+    "diagnostics",
+    "build-info",
+    "time-service",
+    "package-resolver",
+    "package-updates",
+    "session-manager",
+    "ffx",
+    "fx",
+    "network",
+    "test-manager",
+    "forensics",
+    "swd_policy.unrestricted",
+  ]
+}
+
+# Given a kernel_zbi, that will eventually reach userboot, will assemble a system
+# capable of interacting with ffx and fx. This allows data exfiltration from arbitrary
+# devices for gathering data from the provided zbi. E.g. coverage, profile, etc.
+#
+# TODO(fxbug.dev/101831): This template longer term goal is to facilitate the
+# construction of Cuckoo Testing.
+#
+#  Parameters:
+#    kernel_zbi: (Required)
+#    [label] Path to a ZBI target that eventually reaches userboot.
+#
+#    kernel_image_name:(Optional, defaults: get_label_info(kernel_zbi, "name"))
+#    [string] Use to filter the zbi image from images.json.
+#
+#
+# At this moment `kernel_zbi_test` has no additional parameters from a
+# zbi_test().
+template("cuckoo_kernel_zbi_test") {
+  assert(current_toolchain == default_toolchain)
+  assert(defined(invoker.kernel_zbi))
+
+  cuckoo_target_name = target_name
+
+  assembly_kernel_zbi = invoker.kernel_zbi
+  assembly_kernel_image_name = get_label_info(assembly_kernel_zbi, "name")
+  if (defined(invoker.kernel_image_name)) {
+    assembly_kernel_image_name = invoker.kernel_image_name
+  }
+
+  assembly_input = {
+    testonly = true
+    generate_fvm = true
+    include_component_id_index = true
+    kernel_zbi = assembly_kernel_zbi
+    kernel_image_name = assembly_kernel_image_name
+    bootfs_labels = board_bootfs_labels
+    base_packages = board_package_labels
+    base_driver_packages = board_driver_package_labels
+    cmdline_deps = []
+    system_image_deps = board_system_image_deps
+    fshost_config = board_fshost_config
+  }
+
+  foreach(input_group, cuckoo_kernel_zbi_test_params.input_groups) {
+    input_group_label = "//bundles/assembly_input_groups:${input_group}"
+    assembly_input.base_packages += [ "${input_group_label}.base_packages" ]
+    assembly_input.bootfs_labels += [ "${input_group_label}.bootfs_labels" ]
+    assembly_input.cmdline_deps += [ "${input_group_label}.cmdline_deps" ]
+    assembly_input.system_image_deps +=
+        [ "${input_group_label}.system_image_deps" ]
+  }
+
+  assembly_input.bootfs_labels += [ "//build/testing:cuckoo-root-realm" ]
+  assembly_input.base_packages += [ "//build/testing:cuckoo-core-realm" ]
+
+  assembled_system(cuckoo_target_name) {
+    forward_variables_from(assembly_input, "*")
+  }
+}
 
 # Composes a bootable kernel zbi test. That is, a zircon kernel that will launch
 # a custom user space process instead of component manager.
 #
-# TODO(fxbug.dev/101831): This template longer term goal is to facilitate the construction
-# of Cuckoo Testing.
+# TODO(fxbug.dev/101831): This template longer term goal is to facilitate the
+# construction of Cuckoo Testing.
 #
-# At this moment `kernel_zbi_test` has no additional parameters from a `zbi_test`.
+# At this moment `kernel_zbi_test` has no additional parameters from a
+# zbi_test().
 template("kernel_zbi_test") {
   zbi_test(target_name) {
     assert(current_cpu != "")

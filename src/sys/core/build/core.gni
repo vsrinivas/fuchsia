@@ -83,6 +83,7 @@ template("core_realm") {
 
   generated_file_target = "${target_name}_shard_list"
   generated_file(generated_file_target) {
+    forward_variables_from(invoker, [ "testonly" ])
     deps = shard_deps
     data_keys = [ "shard_files" ]
     outputs = [ "$target_out_dir/${target_name}_core_shard_list" ]

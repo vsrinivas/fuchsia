@@ -1,0 +1,27 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/kernel_zbi_test.gni")
+import("//src/sys/core/build/core.gni")
+import("//src/sys/root/build/root.gni")
+
+# These targets exist here, since they are shared by all instances of cuckoo_kernel_zbi_test().
+# Root realm definition to be used only instances of cuckoo_kernel_zbi_test()
+root_realm("cuckoo-root-realm") {
+  testonly = true
+  core_package_name = cuckoo_kernel_zbi_test_params.core_realm_package_name
+}
+
+# Core realm definition to be used only instances of cuckoo_kernel_zbi_test()
+core_realm("cuckoo-core-realm") {
+  testonly = true
+  package_name = cuckoo_kernel_zbi_test_params.core_realm_package_name
+  restrict_persistent_storage = true
+  restrict_core_env_to_base = false
+  deps = board_core_realm_shards
+  foreach(input_group, cuckoo_kernel_zbi_test_params.input_groups) {
+    input_group_label = "//bundles/assembly_input_groups:${input_group}"
+    deps += [ "${input_group_label}.core_realm_shards" ]
+  }
+}

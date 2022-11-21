@@ -11,9 +11,9 @@ import("//bundles/assembly_input_groups/assembly_input_groups.gni")
 
 # Turn security policies into input groupss.
 foreach(policy, policies_swd) {
-  assembly_input_groups("swd_policy.${pol.name}") {
+  assembly_input_groups("swd_policy.${policy.name}") {
     base_packages = policy.base_package_deps
-    system_image_deps = polcy.system_image_deps
+    system_image_deps = policy.system_image_deps
   }
 }
 
@@ -207,8 +207,6 @@ assembly_input_groups("package-resolver") {
   base_packages = [
     "//src/sys/pkg/bin/pkg-cache",
     "//src/sys/pkg/bin/pkg-resolver",
-    "//src/developer/build_info:build-info-service",
-    "//src/hwinfo:hwinfo",
   ]
 }
 
@@ -222,8 +220,11 @@ assembly_input_groups("package-updates") {
 assembly_input_groups("build-info") {
   base_packages = [
     "//build/info:build-info",
+    "//src/hwinfo:hwinfo",
+    "//src/developer/build_info:build-info-service",
     "//src/hwinfo:default_product_config",
   ]
+  core_realm_shards = [ "//src/developer/build_info:build_info_core_shard" ]
 }
 
 assembly_input_groups("usb") {
