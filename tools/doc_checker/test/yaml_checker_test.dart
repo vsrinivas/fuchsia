@@ -216,8 +216,8 @@ void main() {
       expect(checker.errors.length, equals(1));
       expect(
           checker.errors[0].content,
-          startsWith(
-              'FileSystemException: Cannot open file, path = \'${Directory.systemTemp.path}/docs/included_notfound/_toc.yaml\''));
+          contains(
+              'Cannot open file, path = \'${Directory.systemTemp.path}/docs/included_notfound/_toc.yaml\''));
     });
 
     // Test when there is a directory with the same name and there is a README.md in that
