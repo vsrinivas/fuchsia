@@ -148,8 +148,8 @@
     // Bazel
     //
     "bazel.enableCodeLens": true,
-    # See: fxbug.dev/115691
-    "bazel.executable": "../../../../../../tools/devshell/bazel",
+    // See: https://github.com/bazelbuild/vscode-bazel/issues/236
+    //"bazel.executable": "${workspaceFolder}/tools/devshell/bazel",
 
     ////////
     // VSCode file exclusions (marked as hidden in the Workspace Explorer)
