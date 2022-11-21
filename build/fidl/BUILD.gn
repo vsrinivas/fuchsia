@@ -4,8 +4,9 @@
 
 import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
-import("//build/python/python_host_test.gni")
 import("//build/toolchain/basic_toolchain.gni")
+
+assert(current_toolchain == default_toolchain)
 
 basic_toolchain("fidling") {
   expected_label = fidl_toolchain
@@ -57,14 +58,7 @@ validate_json("validate_fidl_project_json") {
   deps = [ ":gen_fidl_project" ]
 }
 
-if (is_host) {
-  python_host_test("gen_fidldocs_test") {
-    main_source = "gen_fidldocs_test.py"
-    sources = [ "gen_fidldocs.py" ]
-  }
-}
-
 group("tests") {
   testonly = true
-  deps = [ ":gen_fidldocs_test($host_toolchain)" ]
+  deps = [ "tests($host_toolchain)" ]
 }
