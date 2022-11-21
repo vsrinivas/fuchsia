@@ -11,9 +11,9 @@
 #include <memory>
 #include <variant>
 
+#include "src/media/audio/services/common/delay_watcher_client.h"
+#include "src/media/audio/services/common/delay_watcher_server.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
-#include "src/media/audio/services/mixer/fidl/delay_watcher_client.h"
-#include "src/media/audio/services/mixer/fidl/delay_watcher_server.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/fidl/stream_sink_server.h"

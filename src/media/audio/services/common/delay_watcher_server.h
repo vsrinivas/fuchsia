@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_DELAY_WATCHER_SERVER_H_
-#define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_DELAY_WATCHER_SERVER_H_
+#ifndef SRC_MEDIA_AUDIO_SERVICES_COMMON_DELAY_WATCHER_SERVER_H_
+#define SRC_MEDIA_AUDIO_SERVICES_COMMON_DELAY_WATCHER_SERVER_H_
 
 #include <fidl/fuchsia.audio/cpp/wire.h>
 #include <lib/zx/time.h>
@@ -13,7 +13,6 @@
 #include <string>
 
 #include "src/media/audio/services/common/base_fidl_server.h"
-#include "src/media/audio/services/mixer/common/basic_types.h"
 
 namespace media_audio {
 
@@ -87,4 +86,4 @@ class DelayWatcherServerGroup {
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_DELAY_WATCHER_SERVER_H_
+#endif  // SRC_MEDIA_AUDIO_SERVICES_COMMON_DELAY_WATCHER_SERVER_H_

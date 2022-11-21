@@ -7,8 +7,8 @@
 
 #include <zircon/types.h>
 
+#include "src/media/audio/services/common/delay_watcher_client.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
-#include "src/media/audio/services/mixer/fidl/delay_watcher_client.h"
 #include "src/media/audio/services/mixer/fidl/graph_mix_thread.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/mix/consumer_stage.h"
