@@ -110,22 +110,7 @@ The handler increments these properties on each incoming request:
 `echo-server/main.cc`:
 
 ```cpp
-struct EchoConnectionStats {
-  inspect::UintProperty bytes_processed;
-  inspect::UintProperty total_requests;
-};
-
-// Handler for incoming service requests
-class EchoImplementation : public fidl::examples::routing::echo::Echo {
-public:
-  void EchoString(fidl::StringPtr value, EchoStringCallback callback) override {
-    stats_->total_requests.Add(1);
-    stats_->bytes_processed.Add(value->size());
-    callback(std::move(value));
-  }
-  fidl::examples::routing::echo::Echo_EventSender* event_sender_;
-  std::unique_ptr<EchoConnectionStats> stats_;
-};
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/inspect_server/main.cc" region_tag="handler" adjust_indentation="auto" %}
 ```
 
 Add the following code to `main()` to initialize the Inspect propertes and pass
@@ -137,25 +122,9 @@ them to the updated handler:
 int main(int argc, const char** argv) {
   // ...
 
-  // Serve the Echo protocol
-  EchoImplementation echo_instance;
-  fidl::Binding<fidl::examples::routing::echo::Echo> binding(&echo_instance);
-  echo_instance.event_sender_ = &binding.events();
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/inspect_server/main.cc" region_tag="echo_instance" %}
 
-  {{ '<strong>' }}// Create request tracking properties {{ '</strong>' }}
-  {{ '<strong>' }}inspect::Node& root_node = inspector.root(); {{ '</strong>' }}
-  {{ '<strong>' }}auto total_requests = root_node.CreateUint("total_requests", 0); {{ '</strong>' }}
-  {{ '<strong>' }}auto bytes_processed = root_node.CreateUint("bytes_processed", 0); {{ '</strong>' }}
-  {{ '<strong>' }}echo_instance.stats_ = std::make_unique<EchoConnectionStats>(EchoConnectionStats{ {{ '</strong>' }}
-    {{ '<strong>' }}std::move(bytes_processed), {{ '</strong>' }}
-    {{ '<strong>' }}std::move(total_requests), {{ '</strong>' }}
-  {{ '<strong>' }}}); {{ '</strong>' }}
-
-  fidl::InterfaceRequestHandler<fidl::examples::routing::echo::Echo> handler =
-      [&](fidl::InterfaceRequest<fidl::examples::routing::echo::Echo> request) {
-        binding.Bind(std::move(request));
-      };
-  context->outgoing()->AddPublicService(std::move(handler));
+{{ '<strong>' }}{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/inspect_server/main.cc" region_tag="add_properties" %} {{ '</strong>' }}
 
   // ...
 }
@@ -177,13 +146,7 @@ Finally, update the imports to include the new Inspect libraries:
 `echo-server/main.cc`:
 
 ```cpp
-#include <fidl/examples/routing/echo/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/inspect/cpp/inspect.h>
-#include <lib/sys/cpp/component_context.h>
-#include <lib/sys/inspect/cpp/component.h>
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/inspect_server/main.cc" region_tag="imports" adjust_indentation="auto" %}
 ```
 
 Build and publish the updated package to the `fuchsiasamples.com` repository:
