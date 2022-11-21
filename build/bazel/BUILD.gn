@@ -108,6 +108,8 @@ action("generate_main_workspace") {
   args = [
     "--gn_output_dir",
     rebase_path(root_build_dir, root_build_dir),
+    "--target_arch",
+    target_cpu,
   ]
 
   # This cannot be hermetic since it creates a collection of

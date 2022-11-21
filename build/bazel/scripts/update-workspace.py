@@ -341,6 +341,10 @@ def main():
         '--gn_output_dir',
         help='GN output directory, auto-detected by default.')
     parser.add_argument(
+        '--target_arch',
+        help='Equivalent to `target_cpu` in GN. Defaults to host CPU.',
+        choices=['arm64', 'x64'])
+    parser.add_argument(
         '--bazel-bin',
         help=
         'Path to bazel binary, defaults to $FUCHSIA_DIR/prebuilt/third_party/bazel/${host_platform}/bazel'
@@ -384,6 +388,9 @@ def main():
             return 1
 
     gn_output_dir = os.path.abspath(args.gn_output_dir)
+
+    if not args.target_arch:
+        args.target_arch = get_host_arch()
 
     if not args.topdir:
         args.topdir = os.path.join(gn_output_dir, 'gen/build/bazel')
@@ -552,7 +559,7 @@ block *
     # Generate the content of .bazelrc
     bazelrc_content = expand_template_file(
         'template.bazelrc',
-        default_platform=host_tag_alt,
+        default_platform=f'fuchsia_{args.target_arch}',
         host_platform=host_tag_alt,
         log_file=os.path.join(logs_dir, 'workspace-events.log'),
         config_file=os.path.join(topdir, 'download_config_file'),
