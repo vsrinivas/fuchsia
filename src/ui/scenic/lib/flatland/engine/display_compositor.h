@@ -38,6 +38,11 @@ using allocation::BufferCollectionUsage;
 // BufferCollectionImporter interface is how Flatland instances communicate with the
 // DisplayCompositor, providing it with the necessary data to render without exposing to Flatland
 // the DisplayController or other dependencies.
+//
+// TODO(fxbug.dev/77414): we use a weak ptr to safely post a task that might outlive this
+// DisplayCompositor, see RenderFrame().  This task simulates a vsync callback that we aren't yet
+// receiving because the display controller doesn't yet implement the ApplyConfig2() method. It's
+// likely that shared_from_this will become unnecessary at that time.
 class DisplayCompositor final : public allocation::BufferCollectionImporter,
                                 public std::enable_shared_from_this<DisplayCompositor> {
  public:
@@ -210,8 +215,8 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
                        scenic_impl::DisplayEventId wait_id, scenic_impl::DisplayEventId signal_id);
 
   // Checks if the display controller is capable of applying the configuration settings that
-  // have been set up until that point
-  DisplayConfigResponse CheckConfig();
+  // have been set up until that point.
+  bool CheckConfig();
 
   // Erases the configuration that has been set on the display controller.
   void DiscardConfig();
@@ -290,12 +295,6 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   BufferCollectionImportMode import_mode_ = BufferCollectionImportMode::AttemptDisplayConstraints;
 
   ColorConversionStateMachine cc_state_machine_;
-
-  // TODO(fxbug.dev/77414): we use a weak ptr to safely post a task that might outlive this
-  // DisplayCompositor, see RenderFrame().  This task simulates a vsync callback that we aren't yet
-  // receiving because the display controller doesn't yet implement the ApplyConfig2() method. It's
-  // likely that this weak_factory_ will become unnecessary at that time.
-  fxl::WeakPtrFactory<DisplayCompositor> weak_factory_;  // must be last
 };
 
 }  // namespace flatland

@@ -250,8 +250,7 @@ DisplayCompositor::DisplayCompositor(
       renderer_(renderer),
       release_fence_manager_(dispatcher),
       sysmem_allocator_(std::move(sysmem_allocator)),
-      import_mode_(import_mode),
-      weak_factory_(this) {
+      import_mode_(import_mode) {
   FX_DCHECK(dispatcher);
   FX_DCHECK(renderer_);
   FX_DCHECK(sysmem_allocator_);
@@ -275,10 +274,10 @@ DisplayCompositor::~DisplayCompositor() {
 }
 
 bool DisplayCompositor::ImportBufferCollection(
-    allocation::GlobalBufferCollectionId collection_id,
+    const allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-    BufferCollectionUsage usage, std::optional<fuchsia::math::SizeU> size) {
+    const BufferCollectionUsage usage, const std::optional<fuchsia::math::SizeU> size) {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::ImportBufferCollection");
   FX_DCHECK(display_controller_);
   // Expect the default Buffer Collection usage type.
@@ -341,8 +340,8 @@ bool DisplayCompositor::ImportBufferCollection(
       fuchsia::hardware::display::ImageConfig{.pixel_format = ZX_PIXEL_FORMAT_NONE, .type = 0});
 }
 
-void DisplayCompositor::ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id,
-                                                BufferCollectionUsage usage) {
+void DisplayCompositor::ReleaseBufferCollection(
+    const allocation::GlobalBufferCollectionId collection_id, const BufferCollectionUsage usage) {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::ReleaseBufferCollection");
   FX_DCHECK(usage == BufferCollectionUsage::kClientImage);
   std::scoped_lock lock(lock_);
@@ -443,7 +442,7 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
   return true;
 }
 
-void DisplayCompositor::ReleaseBufferImage(allocation::GlobalImageId image_id) {
+void DisplayCompositor::ReleaseBufferImage(const allocation::GlobalImageId image_id) {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::ReleaseBufferImage");
 
   // Locks the rest of the function.
@@ -461,7 +460,7 @@ uint64_t DisplayCompositor::CreateDisplayLayer() {
   std::scoped_lock lock(lock_);
   uint64_t layer_id;
   zx_status_t create_layer_status;
-  zx_status_t transport_status =
+  const zx_status_t transport_status =
       (*display_controller_)->CreateLayer(&create_layer_status, &layer_id);
   if (create_layer_status != ZX_OK || transport_status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create layer, " << create_layer_status;
@@ -470,10 +469,11 @@ uint64_t DisplayCompositor::CreateDisplayLayer() {
   return layer_id;
 }
 
-void DisplayCompositor::SetDisplayLayers(uint64_t display_id, const std::vector<uint64_t>& layers) {
+void DisplayCompositor::SetDisplayLayers(const uint64_t display_id,
+                                         const std::vector<uint64_t>& layers) {
   // Set all of the layers for each of the images on the display.
   std::scoped_lock lock(lock_);
-  auto status = (*display_controller_)->SetDisplayLayers(display_id, layers);
+  const auto status = (*display_controller_)->SetDisplayLayers(display_id, layers);
   FX_DCHECK(status == ZX_OK);
 }
 
@@ -499,7 +499,7 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
     } else {
       // If the event is not signaled, image must still be in use by the display and cannot be used
       // again.
-      auto status =
+      const auto status =
           image_event_map_[image_id].signal_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr);
       if (status != ZX_OK) {
         return false;
@@ -540,8 +540,8 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
   return true;
 }
 
-void DisplayCompositor::ApplyLayerColor(uint64_t layer_id, ImageRect rectangle,
-                                        allocation::ImageMetadata image) {
+void DisplayCompositor::ApplyLayerColor(const uint64_t layer_id, const ImageRect rectangle,
+                                        const allocation::ImageMetadata image) {
   std::scoped_lock lock(lock_);
 
   // We have to convert the image_metadata's multiply color, which is an array of normalized
@@ -565,9 +565,10 @@ void DisplayCompositor::ApplyLayerColor(uint64_t layer_id, ImageRect rectangle,
 // the rect. So implementing that solution on the display path as well is problematic.
 #if 0
 
-  auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
+  const auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
 
-  fhd_Transform transform = GetDisplayTransformFromOrientationAndFlip(rectangle.orientation, image.flip);
+  const fhd_Transform transform =
+      GetDisplayTransformFromOrientationAndFlip(rectangle.orientation, image.flip);
 
   (*display_controller_)->SetLayerPrimaryPosition(layer_id, transform, src, dst);
   auto alpha_mode = GetAlphaMode(image.blend_mode);
@@ -575,46 +576,36 @@ void DisplayCompositor::ApplyLayerColor(uint64_t layer_id, ImageRect rectangle,
 #endif
 }
 
-void DisplayCompositor::ApplyLayerImage(uint64_t layer_id, ImageRect rectangle,
-                                        allocation::ImageMetadata image,
-                                        scenic_impl::DisplayEventId wait_id,
-                                        scenic_impl::DisplayEventId signal_id) {
-  auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
-  fhd_Transform transform =
-      GetDisplayTransformFromOrientationAndFlip(rectangle.orientation, image.flip);
-
-  std::scoped_lock lock(lock_);
-
-  // TODO(fxbug.dev/71344): Pixel format should be ignored when using sysmem. We do not want to have
-  // to deal with this default image format.
-  FX_DCHECK(buffer_collection_pixel_format_.count(image.collection_id));
-  auto pixel_format = buffer_collection_pixel_format_[image.collection_id];
-  fuchsia::hardware::display::ImageConfig image_config = {
-      .width = image.width,
-      .height = image.height,
-      .pixel_format = BufferCollectionPixelFormatToZirconFormat(pixel_format),
-      .type = BufferCollectionPixelFormatToImageType(pixel_format)};
-
-  (*display_controller_)->SetLayerPrimaryConfig(layer_id, image_config);
-
+void DisplayCompositor::ApplyLayerImage(const uint64_t layer_id, const ImageRect rectangle,
+                                        const allocation::ImageMetadata image,
+                                        const scenic_impl::DisplayEventId wait_id,
+                                        const scenic_impl::DisplayEventId signal_id) {
+  const auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
   FX_DCHECK(src.width && src.height) << "Source frame cannot be empty.";
   FX_DCHECK(dst.width && dst.height) << "Destination frame cannot be empty.";
+  const fhd_Transform transform =
+      GetDisplayTransformFromOrientationAndFlip(rectangle.orientation, image.flip);
+  const auto alpha_mode = GetAlphaMode(image.blend_mode);
+
+  std::scoped_lock lock(lock_);
+  // TODO(fxbug.dev/71344): Pixel format should be ignored when using sysmem. We do not want to have
+  // to deal with this default image format.
+  const auto pixel_format = buffer_collection_pixel_format_.at(image.collection_id);
+  const fuchsia::hardware::display::ImageConfig image_config = CreateImageConfig(image);
+  (*display_controller_)->SetLayerPrimaryConfig(layer_id, image_config);
   (*display_controller_)->SetLayerPrimaryPosition(layer_id, transform, src, dst);
-
-  auto alpha_mode = GetAlphaMode(image.blend_mode);
   (*display_controller_)->SetLayerPrimaryAlpha(layer_id, alpha_mode, image.multiply_color[3]);
-
   // Set the imported image on the layer.
   (*display_controller_)->SetLayerImage(layer_id, image.identifier, wait_id, signal_id);
 }
 
-DisplayCompositor::DisplayConfigResponse DisplayCompositor::CheckConfig() {
+bool DisplayCompositor::CheckConfig() {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::CheckConfig");
   fuchsia::hardware::display::ConfigResult result;
   std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
   std::scoped_lock lock(lock_);
   (*display_controller_)->CheckConfig(/*discard*/ false, &result, &ops);
-  return {.result = result, .ops = ops};
+  return result == fuchsia::hardware::display::ConfigResult::OK;
 }
 
 void DisplayCompositor::DiscardConfig() {
@@ -629,11 +620,15 @@ void DisplayCompositor::DiscardConfig() {
 fuchsia::hardware::display::ConfigStamp DisplayCompositor::ApplyConfig() {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::ApplyConfig");
   std::scoped_lock lock(lock_);
-  auto status = (*display_controller_)->ApplyConfig();
-  FX_DCHECK(status == ZX_OK);
+  {
+    const auto status = (*display_controller_)->ApplyConfig();
+    FX_DCHECK(status == ZX_OK);
+  }
   fuchsia::hardware::display::ConfigStamp pending_config_stamp;
-  status = (*display_controller_)->GetLatestAppliedConfigStamp(&pending_config_stamp);
-  FX_DCHECK(status == ZX_OK);
+  {
+    const auto status = (*display_controller_)->GetLatestAppliedConfigStamp(&pending_config_stamp);
+    FX_DCHECK(status == ZX_OK);
+  }
   return pending_config_stamp;
 }
 
@@ -689,7 +684,8 @@ bool DisplayCompositor::PerformGpuComposition(
     // TODO(fxbug.dev/91737): Remove this after the direct-to-display path is stable.
     // We expect the retired event to already have been signaled. Verify this without waiting.
     {
-      zx_status_t status = event_data.signal_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr);
+      const zx_status_t status =
+          event_data.signal_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr);
       if (status != ZX_OK) {
         FX_DCHECK(status == ZX_ERR_TIMED_OUT) << "unexpected status: " << status;
         FX_LOGS(ERROR)
@@ -734,8 +730,7 @@ bool DisplayCompositor::PerformGpuComposition(
     ApplyLayerImage(layer, {glm::vec2(0), glm::vec2(render_target.width, render_target.height)},
                     render_target, event_data.wait_id, event_data.signal_id);
 
-    const auto [result, /*ops*/ _] = CheckConfig();
-    if (result != fuchsia::hardware::display::ConfigResult::OK) {
+    if (!CheckConfig()) {
       FX_LOGS(ERROR) << "Both display hardware composition and GPU rendering have failed.";
       // TODO(fxbug.dev/59646): Figure out how we really want to handle this case here.
       return false;
@@ -762,16 +757,8 @@ void DisplayCompositor::RenderFrame(const uint64_t frame_number, const zx::time 
 
   // Determine whether we need to fall back to GPU composition. Avoid calling CheckConfig() if we
   // don't need to, because this requires a round-trip to the display controller.
-  bool fallback_to_gpu_composition = hardware_failure || kDisableDisplayComposition;
-  if (!fallback_to_gpu_composition) {
-    const auto [result, /*ops*/ _] = CheckConfig();
-    fallback_to_gpu_composition = (result != fuchsia::hardware::display::ConfigResult::OK);
-
-    // CC was successfully applied to the config so we update the state machine.
-    if (!fallback_to_gpu_composition) {
-      cc_state_machine_.SetApplyConfigSucceeded();
-    }
-  }
+  const bool fallback_to_gpu_composition =
+      hardware_failure || kDisableDisplayComposition || !CheckConfig();
 
   if (fallback_to_gpu_composition) {
     DiscardConfig();
@@ -780,6 +767,9 @@ void DisplayCompositor::RenderFrame(const uint64_t frame_number, const zx::time 
       return;
     }
   } else {
+    // CC was successfully applied to the config so we update the state machine.
+    cc_state_machine_.SetApplyConfigSucceeded();
+
     // Unsignal image events before applying config.
     for (auto id : pending_images_in_config_) {
       image_event_map_[id].signal_event.signal(ZX_EVENT_SIGNALED, 0);
@@ -839,10 +829,11 @@ void DisplayCompositor::OnVsync(zx::time timestamp,
   }
 
   // Verify that the configuration from Vsync is in the [pending_apply_configs_] queue.
-  auto vsync_frame_it = std::find_if(pending_apply_configs_.begin(), pending_apply_configs_.end(),
-                                     [applied_config_stamp](const ApplyConfigInfo& info) {
-                                       return fidl::Equals(info.config_stamp, applied_config_stamp);
-                                     });
+  const auto vsync_frame_it =
+      std::find_if(pending_apply_configs_.begin(), pending_apply_configs_.end(),
+                   [applied_config_stamp](const ApplyConfigInfo& info) {
+                     return fidl::Equals(info.config_stamp, applied_config_stamp);
+                   });
 
   // It is possible that the config stamp doesn't match any config applied by this DisplayCompositor
   // instance. i.e. it could be from another client. Thus we just ignore these events.
@@ -864,45 +855,47 @@ void DisplayCompositor::OnVsync(zx::time timestamp,
 
 DisplayCompositor::FrameEventData DisplayCompositor::NewFrameEventData() {
   FrameEventData result;
+  {  // The DC waits on this to be signaled by the renderer.
+    const auto status = zx::event::create(0, &result.wait_event);
+    FX_DCHECK(status == ZX_OK);
+  }
+  {  // The DC signals this once it has set the layer image.  We pre-signal this event so the first
+    // frame rendered with it behaves as though it was previously OKed for recycling.
+    const auto status = zx::event::create(0, &result.signal_event);
+    FX_DCHECK(status == ZX_OK);
+  }
 
   std::scoped_lock lock(lock_);
-
-  // The DC waits on this to be signaled by the renderer.
-  auto status = zx::event::create(0, &result.wait_event);
-  FX_DCHECK(status == ZX_OK);
-  result.wait_id = scenic_impl::ImportEvent(*display_controller_.get(), result.wait_event);
+  result.wait_id = scenic_impl::ImportEvent(*display_controller_, result.wait_event);
   FX_DCHECK(result.wait_id != fuchsia::hardware::display::INVALID_DISP_ID);
-
-  // The DC signals this once it has set the layer image.  We pre-signal this event so the first
-  // frame rendered with it behaves as though it was previously OKed for recycling.
-  status = zx::event::create(0, &result.signal_event);
-  FX_DCHECK(status == ZX_OK);
   result.signal_event.signal(0, ZX_EVENT_SIGNALED);
-  result.signal_id = scenic_impl::ImportEvent(*display_controller_.get(), result.signal_event);
+  result.signal_id = scenic_impl::ImportEvent(*display_controller_, result.signal_event);
   FX_DCHECK(result.signal_id != fuchsia::hardware::display::INVALID_DISP_ID);
-
   return result;
 }
 
 DisplayCompositor::ImageEventData DisplayCompositor::NewImageEventData() {
   ImageEventData result;
-
-  std::scoped_lock lock(lock_);
-
   // The DC signals this once it has set the layer image.  We pre-signal this event so the first
   // frame rendered with it behaves as though it was previously OKed for recycling.
-  auto status = zx::event::create(0, &result.signal_event);
-  FX_DCHECK(status == ZX_OK);
-  status = result.signal_event.signal(0, ZX_EVENT_SIGNALED);
-  FX_DCHECK(status == ZX_OK);
-  result.signal_id = scenic_impl::ImportEvent(*display_controller_.get(), result.signal_event);
+  {
+    const auto status = zx::event::create(0, &result.signal_event);
+    FX_DCHECK(status == ZX_OK);
+  }
+  {
+    const auto status = result.signal_event.signal(0, ZX_EVENT_SIGNALED);
+    FX_DCHECK(status == ZX_OK);
+  }
+
+  std::scoped_lock lock(lock_);
+  result.signal_id = scenic_impl::ImportEvent(*display_controller_, result.signal_event);
   FX_DCHECK(result.signal_id != fuchsia::hardware::display::INVALID_DISP_ID);
 
   return result;
 }
 
-void DisplayCompositor::AddDisplay(scenic_impl::display::Display* display, DisplayInfo info,
-                                   uint32_t num_render_targets,
+void DisplayCompositor::AddDisplay(scenic_impl::display::Display* display, const DisplayInfo info,
+                                   const uint32_t num_render_targets,
                                    fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info) {
   const auto display_id = display->display_id();
   FX_DCHECK(display_engine_data_map_.find(display_id) == display_engine_data_map_.end())
@@ -975,9 +968,9 @@ void DisplayCompositor::SetColorConversionValues(const std::array<float, 9>& coe
   renderer_->SetColorConversionValues(coefficients, preoffsets, postoffsets);
 }
 
-bool DisplayCompositor::SetMinimumRgb(uint8_t minimum_rgb) {
+bool DisplayCompositor::SetMinimumRgb(const uint8_t minimum_rgb) {
   fuchsia::hardware::display::Controller_SetMinimumRgb_Result cmd_result;
-  auto status = (*display_controller_)->SetMinimumRgb(minimum_rgb, &cmd_result);
+  const auto status = (*display_controller_)->SetMinimumRgb(minimum_rgb, &cmd_result);
   if (status != ZX_OK || cmd_result.is_err()) {
     FX_LOGS(WARNING) << "FlatlandDisplayCompositor SetMinimumRGB failed";
     return false;
@@ -986,40 +979,46 @@ bool DisplayCompositor::SetMinimumRgb(uint8_t minimum_rgb) {
 }
 
 std::vector<allocation::ImageMetadata> DisplayCompositor::AllocateDisplayRenderTargets(
-    bool use_protected_memory, uint32_t num_render_targets, const fuchsia::math::SizeU& size,
-    zx_pixel_format_t pixel_format, fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info) {
+    const bool use_protected_memory, const uint32_t num_render_targets,
+    const fuchsia::math::SizeU& size, const zx_pixel_format_t pixel_format,
+    fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info) {
   // Create the buffer collection token to be used for frame buffers.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr compositor_token;
-  auto status = sysmem_allocator_->AllocateSharedCollection(compositor_token.NewRequest());
-  FX_DCHECK(status == ZX_OK);
+  {
+    const auto status = sysmem_allocator_->AllocateSharedCollection(compositor_token.NewRequest());
+    FX_DCHECK(status == ZX_OK) << "status: " << zx_status_get_string(status);
+  }
 
-  // Dup the token for the renderer.
+  // Duplicate the token for the display and for the renderer.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr renderer_token;
-  status = compositor_token->Duplicate(std::numeric_limits<uint32_t>::max(),
-                                       renderer_token.NewRequest());
-  FX_DCHECK(status == ZX_OK);
-
-  // Dup the token for the display.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
-  status =
-      compositor_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
-  FX_DCHECK(status == ZX_OK);
+  {
+    std::vector<fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>> dup_tokens;
+    const auto status =
+        compositor_token->DuplicateSync({ZX_RIGHT_SAME_RIGHTS, ZX_RIGHT_SAME_RIGHTS}, &dup_tokens);
+    FX_DCHECK(status == ZX_OK) << "status: " << zx_status_get_string(status);
+    FX_DCHECK(dup_tokens.size() == 2);
+    renderer_token = dup_tokens.at(0).BindSync();
+    display_token = dup_tokens.at(1).BindSync();
+  }
 
   // Set renderer constraints.
-  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
-  auto result = renderer_->ImportBufferCollection(
-      collection_id, sysmem_allocator_.get(), std::move(renderer_token),
-      BufferCollectionUsage::kRenderTarget, std::optional<fuchsia::math::SizeU>(size));
-  FX_DCHECK(result);
+  const auto collection_id = allocation::GenerateUniqueBufferCollectionId();
+  {
+    const auto result = renderer_->ImportBufferCollection(
+        collection_id, sysmem_allocator_.get(), std::move(renderer_token),
+        BufferCollectionUsage::kRenderTarget, std::optional<fuchsia::math::SizeU>(size));
+    FX_DCHECK(result);
+  }
 
-  // Set display constraints.
-  fuchsia::hardware::display::ImageConfig image_config;
-  image_config.pixel_format = pixel_format;
-  result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
-                                               std::move(display_token), image_config);
-  FX_DCHECK(result);
+  {  // Set display constraints.
+    const auto result = scenic_impl::ImportBufferCollection(
+        collection_id, *display_controller_, std::move(display_token),
+        fuchsia::hardware::display::ImageConfig{.pixel_format = pixel_format});
+    FX_DCHECK(result);
+  }
 
-  // Set local constraints.
+// Set local constraints.
 #ifdef CPU_ACCESSIBLE_VMO
   const bool make_cpu_accessible = true;
 #else
@@ -1028,7 +1027,7 @@ std::vector<allocation::ImageMetadata> DisplayCompositor::AllocateDisplayRenderT
 
   fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr;
   if (make_cpu_accessible && !use_protected_memory) {
-    auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
+    const auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
     collection_ptr = CreateBufferCollectionSyncPtrAndSetConstraints(
         sysmem_allocator_.get(), std::move(compositor_token), num_render_targets, size.width,
         size.height, buffer_usage, ConvertZirconFormatToSysmemFormat(pixel_format),
@@ -1044,23 +1043,30 @@ std::vector<allocation::ImageMetadata> DisplayCompositor::AllocateDisplayRenderT
       constraints.buffer_memory_constraints.cpu_domain_supported = false;
       constraints.buffer_memory_constraints.ram_domain_supported = false;
     }
-    status = sysmem_allocator_->BindSharedCollection(std::move(compositor_token),
-                                                     collection_ptr.NewRequest());
+
+    sysmem_allocator_->BindSharedCollection(std::move(compositor_token),
+                                            collection_ptr.NewRequest());
     collection_ptr->SetName(10u, use_protected_memory
                                      ? "FlatlandDisplayCompositorProtectedRenderTarget"
                                      : "FlatlandDisplayCompositorRenderTarget");
-    status = collection_ptr->SetConstraints(true, constraints);
-    FX_DCHECK(status == ZX_OK);
+    const auto status = collection_ptr->SetConstraints(true, constraints);
+    FX_DCHECK(status == ZX_OK) << "status: " << zx_status_get_string(status);
   }
 
   // Wait for buffers allocated so it can populate its information struct with the vmo data.
-  zx_status_t allocation_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 collection_info;
-  status = collection_ptr->WaitForBuffersAllocated(&allocation_status, &collection_info);
-  FX_DCHECK(status == ZX_OK) << "status: " << status;
-  FX_DCHECK(allocation_status == ZX_OK) << "status: " << allocation_status;
-  status = collection_ptr->Close();
-  FX_DCHECK(status == ZX_OK);
+  {
+    zx_status_t allocation_status = ZX_OK;
+    const auto status =
+        collection_ptr->WaitForBuffersAllocated(&allocation_status, &collection_info);
+    FX_DCHECK(status == ZX_OK) << "status: " << zx_status_get_string(status);
+    FX_DCHECK(allocation_status == ZX_OK) << "status: " << zx_status_get_string(allocation_status);
+  }
+
+  {
+    const auto status = collection_ptr->Close();
+    FX_DCHECK(status == ZX_OK) << "status: " << zx_status_get_string(status);
+  }
 
   // We know that this collection is supported by display because we collected constraints from
   // display in scenic_impl::ImportBufferCollection() and waited for successful allocation.
@@ -1073,11 +1079,11 @@ std::vector<allocation::ImageMetadata> DisplayCompositor::AllocateDisplayRenderT
 
   std::vector<allocation::ImageMetadata> render_targets;
   for (uint32_t i = 0; i < num_render_targets; i++) {
-    allocation::ImageMetadata target = {.collection_id = collection_id,
-                                        .identifier = allocation::GenerateUniqueImageId(),
-                                        .vmo_index = i,
-                                        .width = size.width,
-                                        .height = size.height};
+    const allocation::ImageMetadata target = {.collection_id = collection_id,
+                                              .identifier = allocation::GenerateUniqueImageId(),
+                                              .vmo_index = i,
+                                              .width = size.width,
+                                              .height = size.height};
     render_targets.push_back(target);
     bool res = ImportBufferImage(target, BufferCollectionUsage::kRenderTarget);
     FX_DCHECK(res);
