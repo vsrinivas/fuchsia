@@ -33,6 +33,11 @@ rustc_binary("bin") {
   ]
 }
 
+fuchsia_component("dev_authenticator_component") {
+  deps = [ ":bin" ]
+  manifest = "meta/dev_authenticator.cml"
+}
+
 fuchsia_component("dev_authenticator_always_succeed") {
   deps = [ ":bin" ]
   manifest = "meta/dev_authenticator_always_succeed.cml"
@@ -47,5 +52,6 @@ fuchsia_package("dev_authenticator") {
   deps = [
     ":dev_authenticator_always_fail_authentication",
     ":dev_authenticator_always_succeed",
+    ":dev_authenticator_component",
   ]
 }

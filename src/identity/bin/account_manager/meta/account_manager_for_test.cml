@@ -8,6 +8,7 @@
             protocol: [
                 "fuchsia.identity.authentication.AlwaysFailStorageUnlockMechanism",
                 "fuchsia.identity.authentication.AlwaysSucceedStorageUnlockMechanism",
+                "fuchsia.identity.authentication.TestStorageUnlockMechanism",
             ],
             from: "parent",
             to: "#account_handlers",
