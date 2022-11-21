@@ -219,6 +219,7 @@ vfs::PseudoDir& GetOrCreate(std::string_view sink_name, DataType type, SinkDirMa
   //    +    /static
   //    +    /dynamic
   if (it == sink_map.end()) {
+    FX_LOGS(INFO) << "Encountered sink " << sink_name << " static and dynamic subdirs created";
     it = sink_map.insert(std::make_pair(sink_name, std::make_unique<vfs::PseudoDir>())).first;
     it->second->AddEntry(std::string(kStaticDir), std::make_unique<vfs::PseudoDir>());
     it->second->AddEntry(std::string(kDynamicDir), std::make_unique<vfs::PseudoDir>());
@@ -246,9 +247,11 @@ zx::result<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, SinkDirMap
 
   exported_fds.emplace_back(
       ExportedFd{.fd = std::move(kernel_profile), .export_name = std::string(kKernelFile)});
+  FX_LOGS(INFO) << "Exposing " << kKernelFile;
 
   fbl::unique_fd kernel_log(openat(kernel_data_dir.get(), kKernelSymbolizerLog.data(), O_RDONLY));
   if (kernel_log) {
+    FX_LOGS(INFO) << "Exposing " << kKernelSymbolizerFile;
     exported_fds.emplace_back(
         ExportedFd{.fd = std::move(kernel_log), .export_name = std::string(kKernelSymbolizerFile)});
   }
@@ -266,9 +269,11 @@ zx::result<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, SinkDi
 
   exported_fds.emplace_back(
       ExportedFd{.fd = std::move(phys_profile), .export_name = std::string(kPhysFile)});
+  FX_LOGS(INFO) << "Exposing " << kPhysFile;
 
   fbl::unique_fd phys_log(openat(physboot_data_dir.get(), kPhysbootSymbolizerLog.data(), O_RDONLY));
   if (phys_log) {
+    FX_LOGS(INFO) << "Exposing " << kPhysSymbolizerFile;
     exported_fds.emplace_back(
         ExportedFd{.fd = std::move(phys_log), .export_name = std::string(kPhysSymbolizerFile)});
   }
@@ -308,6 +313,9 @@ SinkDirMap ExtractDebugData(zx::unowned_channel svc_stash) {
           name += "." + name_prop;
         }
       }
+      FX_LOGS(INFO) << "Exposing " << sink << "/"
+                    << (published_data_type == DataType::kStatic ? "static/" : "dynamic/") << name
+                    << " size: " << content_size << " bytes";
       dir.AddEntry(std::move(name), std::make_unique<vfs::VmoFile>(std::move(vmo), content_size));
       ++req_id;
     } else {
@@ -330,6 +338,7 @@ SinkDirMap ExtractDebugData(zx::unowned_channel svc_stash) {
     if (auto open_data_or = GetOpenData(bytes, handles); open_data_or.is_ok()) {
       auto& [path, service_request] = *open_data_or;
       if (path == fuchsia_debugdata_Publisher_Name) {
+        FX_LOGS(INFO) << "Encountered  open request to debugdata.Publisher";
         zx::unowned_channel service_request(handles[0]);
         OnEachMessage(service_request, on_publish_request);
       } else {
@@ -367,6 +376,7 @@ SinkDirMap ExtractDebugData(zx::unowned_channel svc_stash) {
     }
 
     zx::unowned_channel stashed_svc(handles[0]);
+    FX_LOGS(INFO) << " Encountered stashed svc handle";
     OnEachMessage(stashed_svc, on_open_request);
     req_id = 0;
     svc_id++;
