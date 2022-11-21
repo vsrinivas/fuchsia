@@ -120,13 +120,6 @@ test("common_tests") {
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
-fuchsia_driver_package("wlanphy-testdev-driver") {
-  testonly = true
-
-  driver_components =
-      [ "//src/connectivity/wlan/drivers/testing:wlanphy-testdev" ]
-}
-
 tests = [
   "buffer_utils",
   "common",
@@ -142,11 +135,6 @@ foreach(test, tests) {
 }
 
 fuchsia_test_package("wlan_tests") {
-  deps = [
-    ":wlanphy-testdev-driver",
-    "//src/connectivity/wlan/drivers/testing",
-  ]
-
   test_components = []
   foreach(test, tests) {
     test_components += [ ":${test}_test_component" ]
