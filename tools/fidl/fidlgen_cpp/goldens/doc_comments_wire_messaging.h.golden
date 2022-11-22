@@ -35,6 +35,26 @@ struct ::fidl::internal::WireOrdinal<::test_doccomments::Interface::OnEvent> fin
   static constexpr uint64_t value = 28780186509098736lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_doccomments::Interface::Method> {
+  static constexpr bool HasRequestPayload = false;
+
+  using Completer = fidl::Completer<>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_doccomments::Interface::OnEvent> {
+  static constexpr bool HasRequestPayload = false;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_doccomments {
 
 }  // namespace test_doccomments
@@ -68,6 +88,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_doccomments::Interface> fin
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method> final {
   FIDL_ALIGNDECL
@@ -94,6 +115,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent> final {
   FIDL_ALIGNDECL
@@ -121,31 +145,11 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_doccomments::Interface::Method> {
-  using Completer = fidl::Completer<>;
-
-  static constexpr bool HasRequestPayload = false;
-
-  using Request = void;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_doccomments::Interface::Method,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_doccomments::Interface::Method,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>, ::fidl::internal::ChannelTransport>>;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>> : public std::true_type {};
 template <>
@@ -171,14 +175,13 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_doccomments::Int
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>, header) == 0);
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> : public std::false_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>> {
@@ -200,22 +203,8 @@ struct TypeTraits<::fidl::internal::TransactionalEvent<::test_doccomments::Inter
 static_assert(sizeof(::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>) == TypeTraits<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>, header) == 0);
 
-template <>
-struct TypeTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> {
-  static constexpr const fidl_type_t* kType =
-      nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-};
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 }  // namespace fidl
 

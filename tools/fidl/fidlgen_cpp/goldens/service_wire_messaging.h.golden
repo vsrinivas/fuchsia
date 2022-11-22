@@ -38,6 +38,17 @@ struct ::fidl::internal::WireOrdinal<::test_service::FirstProtocol::MethodOnFirs
   static constexpr uint64_t value = 6352548393671797041lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_service::FirstProtocol::MethodOnFirst> {
+  static constexpr bool HasRequestPayload = false;
+
+  using Completer = fidl::Completer<>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_service {
 
 }  // namespace test_service
@@ -71,6 +82,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_service::FirstProtocol> fin
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst> final {
   FIDL_ALIGNDECL
@@ -97,31 +109,11 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_service::FirstProtocol::MethodOnFirst> {
-  using Completer = fidl::Completer<>;
-
-  static constexpr bool HasRequestPayload = false;
-
-  using Request = void;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_service::FirstProtocol::MethodOnFirst,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_service::FirstProtocol::MethodOnFirst,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>, ::fidl::internal::ChannelTransport>>;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>> : public std::true_type {};
 template <>
@@ -146,6 +138,9 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_service::FirstPr
 
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>, header) == 0);
+
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 }  // namespace fidl
 
@@ -315,6 +310,17 @@ struct ::fidl::internal::WireOrdinal<::test_service::SecondProtocol::MethodOnSec
   static constexpr uint64_t value = 8121179205110225988lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_service::SecondProtocol::MethodOnSecond> {
+  static constexpr bool HasRequestPayload = false;
+
+  using Completer = fidl::Completer<>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_service {
 
 }  // namespace test_service
@@ -348,6 +354,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_service::SecondProtocol> fi
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond> final {
   FIDL_ALIGNDECL
@@ -374,31 +381,11 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_service::SecondProtocol::MethodOnSecond> {
-  using Completer = fidl::Completer<>;
-
-  static constexpr bool HasRequestPayload = false;
-
-  using Request = void;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_service::SecondProtocol::MethodOnSecond,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_service::SecondProtocol::MethodOnSecond,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>, ::fidl::internal::ChannelTransport>>;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>> : public std::true_type {};
 template <>
@@ -423,6 +410,9 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_service::SecondP
 
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>, header) == 0);
+
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 }  // namespace fidl
 

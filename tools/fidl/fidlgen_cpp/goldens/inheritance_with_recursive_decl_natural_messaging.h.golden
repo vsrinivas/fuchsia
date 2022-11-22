@@ -21,9 +21,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_inheritancewithrecursivedecl:
   using Request = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_inheritancewithrecursivedecl::Parent::First>&)>;
 };
 namespace test_inheritancewithrecursivedecl {
 __LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ParentFirstRequestTable;
@@ -173,9 +170,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_inheritancewithrecursivedecl:
   using Request = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_inheritancewithrecursivedecl::Child::First>&)>;
 };
 
 template <>
@@ -183,9 +177,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_inheritancewithrecursivedecl:
   using Request = ::test_inheritancewithrecursivedecl::ChildSecondRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_inheritancewithrecursivedecl::Child::Second>&)>;
 };
 
 namespace test_inheritancewithrecursivedecl {

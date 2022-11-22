@@ -29,7 +29,18 @@ namespace fidl {
 //
 // When |Method| request has no body, the alias will be undefined.
 template <typename Method>
-using Request = typename fidl::internal::NaturalMethodTypes<Method>::Request;
+using Request = std::enable_if_t<Method::kHasRequest,
+                                 typename fidl::internal::NaturalMethodTypes<Method>::Request>;
+
+// |Event| is a type alias referencing the request body of a FIDL event,
+// using natural types. See |WireEvent| for the equivalent using wire types.
+//
+// When |Method| request has a body, |Event| aliases to the body type.
+//
+// When |Method| request has no body, the alias will be undefined.
+template <typename Method>
+using Event = std::enable_if_t<Method::kHasResponse && !Method::kHasRequest,
+                               typename fidl::internal::NaturalMethodTypes<Method>::Request>;
 
 namespace internal {
 

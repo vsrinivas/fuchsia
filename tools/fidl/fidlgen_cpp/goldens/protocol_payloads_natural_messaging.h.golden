@@ -22,9 +22,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
   using Request = ::test_protocolpayloads_imported::ImportStructPayload;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OneWayComposed>&)>;
 };
 
 template <>
@@ -34,7 +31,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
   using Response = ::test_protocolpayloads_imported::ImportStructPayload;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposed>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayComposed>&)>;
 };
@@ -46,7 +42,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
   using Response = ::test_protocolpayloads_imported::ComposedProtocolTwoWayComposedWithErrorTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>&)>;
 };
@@ -54,21 +49,11 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnComposed> {
   using Request = ::test_protocolpayloads_imported::ImportStructPayload;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnComposed>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnComposed>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnComposedWithError> {
   using Request = ::test_protocolpayloads_imported::ComposedProtocolOnComposedWithErrorRequest;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnComposedWithError>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnComposedWithError>&)>;
 };
 
 template <>
@@ -76,9 +61,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
   using Request = ::test_protocolpayloads::LocalStructPayload;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OneWayLocal>&)>;
 };
 
 template <>
@@ -88,7 +70,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
   using Response = ::test_protocolpayloads::LocalStructPayload;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayLocal>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayLocal>&)>;
 };
@@ -100,7 +81,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
   using Response = ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>&)>;
 };
@@ -108,21 +88,11 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnLocal> {
   using Request = ::test_protocolpayloads::LocalStructPayload;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnLocal>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnLocal>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnLocalWithError> {
   using Request = ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnLocalWithError>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnLocalWithError>&)>;
 };
 
 template <>
@@ -130,9 +100,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
   using Request = ::test_protocolpayloads_imported::ImportStructPayload;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OneWayImport>&)>;
 };
 
 template <>
@@ -142,7 +109,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
   using Response = ::test_protocolpayloads_imported::ImportStructPayload;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayImport>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayImport>&)>;
 };
@@ -154,7 +120,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
   using Response = ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>&)>;
 };
@@ -162,21 +127,11 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnImport> {
   using Request = ::test_protocolpayloads_imported::ImportStructPayload;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnImport>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnImport>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnImportWithError> {
   using Request = ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnImportWithError>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnImportWithError>&)>;
 };
 
 template <>
@@ -184,9 +139,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
   using Request = ::test_protocolpayloads::MainProtocolOneWayAnonRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OneWayAnon>&)>;
 };
 
 template <>
@@ -196,7 +148,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
   using Response = ::test_protocolpayloads::MainProtocolTwoWayAnonResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayAnon>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnon>&)>;
 };
@@ -208,7 +159,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
   using Response = ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>&)>;
 };
@@ -216,21 +166,11 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtoco
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnAnon> {
   using Request = ::test_protocolpayloads::MainProtocolOnAnonRequest;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnAnon>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnAnon>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnAnonWithError> {
   using Request = ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnAnonWithError>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnAnonWithError>&)>;
 };
 namespace test_protocolpayloads {
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_imported_ImportStructPayloadTable;
@@ -264,78 +204,6 @@ __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOnAnonReq
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
 
 #ifdef __Fuchsia__
-}  // namespace test_protocolpayloads
-
-template <>
-class ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposed> final : public ::test_protocolpayloads_imported::ImportStructPayload {
- public:
-  using ::test_protocolpayloads_imported::ImportStructPayload::ImportStructPayload;
-  Event(::test_protocolpayloads_imported::ImportStructPayload v) : ImportStructPayload(std::move(v)) {}
-};
-namespace test_protocolpayloads {
-}  // namespace test_protocolpayloads
-
-template <>
-class ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposedWithError> final : public ::test_protocolpayloads_imported::ComposedProtocolOnComposedWithErrorRequest {
- public:
-  using ::test_protocolpayloads_imported::ComposedProtocolOnComposedWithErrorRequest::ComposedProtocolOnComposedWithErrorRequest;
-  Event(::test_protocolpayloads_imported::ComposedProtocolOnComposedWithErrorRequest v) : ComposedProtocolOnComposedWithErrorRequest(std::move(v)) {}
-};
-namespace test_protocolpayloads {
-}  // namespace test_protocolpayloads
-
-template <>
-class ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocal> final : public ::test_protocolpayloads::LocalStructPayload {
- public:
-  using ::test_protocolpayloads::LocalStructPayload::LocalStructPayload;
-  Event(::test_protocolpayloads::LocalStructPayload v) : LocalStructPayload(std::move(v)) {}
-};
-namespace test_protocolpayloads {
-}  // namespace test_protocolpayloads
-
-template <>
-class ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocalWithError> final : public ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest {
- public:
-  using ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest::MainProtocolOnLocalWithErrorRequest;
-  Event(::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest v) : MainProtocolOnLocalWithErrorRequest(std::move(v)) {}
-};
-namespace test_protocolpayloads {
-}  // namespace test_protocolpayloads
-
-template <>
-class ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImport> final : public ::test_protocolpayloads_imported::ImportStructPayload {
- public:
-  using ::test_protocolpayloads_imported::ImportStructPayload::ImportStructPayload;
-  Event(::test_protocolpayloads_imported::ImportStructPayload v) : ImportStructPayload(std::move(v)) {}
-};
-namespace test_protocolpayloads {
-}  // namespace test_protocolpayloads
-
-template <>
-class ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImportWithError> final : public ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest {
- public:
-  using ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest::MainProtocolOnImportWithErrorRequest;
-  Event(::test_protocolpayloads::MainProtocolOnImportWithErrorRequest v) : MainProtocolOnImportWithErrorRequest(std::move(v)) {}
-};
-namespace test_protocolpayloads {
-}  // namespace test_protocolpayloads
-
-template <>
-class ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnon> final : public ::test_protocolpayloads::MainProtocolOnAnonRequest {
- public:
-  using ::test_protocolpayloads::MainProtocolOnAnonRequest::MainProtocolOnAnonRequest;
-  Event(::test_protocolpayloads::MainProtocolOnAnonRequest v) : MainProtocolOnAnonRequest(std::move(v)) {}
-};
-namespace test_protocolpayloads {
-}  // namespace test_protocolpayloads
-
-template <>
-class ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnonWithError> final : public ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest {
- public:
-  using ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest::MainProtocolOnAnonWithErrorRequest;
-  Event(::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest v) : MainProtocolOnAnonWithErrorRequest(std::move(v)) {}
-};
-namespace test_protocolpayloads {
 }  // namespace test_protocolpayloads
 
 template <>

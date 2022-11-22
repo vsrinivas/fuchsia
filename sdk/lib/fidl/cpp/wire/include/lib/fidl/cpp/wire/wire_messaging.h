@@ -32,14 +32,6 @@ using WireClientCallback =
 
 namespace internal {
 
-// Default specialization for one-way completers.
-template <typename FidlMethod>
-struct WireMethodTypes {
-  using Completer = fidl::Completer<>;
-  static constexpr bool HasRequestPayload = false;
-  using Request = void;
-};
-
 template <typename FidlMethod>
 using WireCompleter = typename fidl::internal::WireMethodTypes<FidlMethod>::Completer;
 
@@ -54,8 +46,25 @@ using WireBufferThenable = typename fidl::internal::WireMethodTypes<FidlMethod>:
 
 }  // namespace internal
 
+// |WireRequest| is a type alias referencing the request body of a FIDL method,
+// using wire types. See |Request| for the equivalent using natural types.
+//
+// When |FidlMethod| request has a body, |WireRequest| aliases to the body type.
+//
+// When |FidlMethod| request has no body, the alias will be undefined.
 template <typename FidlMethod>
-using WireRequest = typename fidl::internal::WireMethodTypes<FidlMethod>::Request;
+using WireRequest = std::enable_if_t<FidlMethod::kHasRequest,
+                                     typename fidl::internal::WireMethodTypes<FidlMethod>::Request>;
+
+// |WireEvent| is a type alias referencing the request body of a FIDL event,
+// using wire types. See |Event| for the equivalent using natural types.
+//
+// When |FidlMethod| request has a body, |WireEvent| aliases to the body type.
+//
+// When |FidlMethod| request has no body, the alias will be undefined.
+template <typename FidlMethod>
+using WireEvent = std::enable_if_t<FidlMethod::kHasResponse && !FidlMethod::kHasRequest,
+                                   typename fidl::internal::WireMethodTypes<FidlMethod>::Request>;
 
 enum class DispatchResult;
 
@@ -137,23 +146,32 @@ auto InplaceDecodeTransactionalMessage(::fidl::IncomingHeaderAndMessage&& messag
 
 template <typename FidlMethod>
 auto InplaceDecodeTransactionalResponse(::fidl::IncomingHeaderAndMessage&& message) {
-  using Body = std::conditional_t<FidlMethod::kHasResponseBody, ::fidl::WireResponse<FidlMethod>,
-                                  std::nullopt_t>;
-  return ::fidl::internal::InplaceDecodeTransactionalMessage<Body>(std::move(message));
+  if constexpr (!FidlMethod::kHasResponseBody) {
+    return ::fidl::internal::InplaceDecodeTransactionalMessage(std::move(message));
+  } else {
+    return ::fidl::internal::InplaceDecodeTransactionalMessage<::fidl::WireResponse<FidlMethod>>(
+        std::move(message));
+  }
 }
 
 template <typename FidlMethod>
 auto InplaceDecodeTransactionalRequest(::fidl::IncomingHeaderAndMessage&& message) {
-  using Body = std::conditional_t<FidlMethod::kHasRequestBody,
-                                  typename WireMethodTypes<FidlMethod>::Request, std::nullopt_t>;
-  return ::fidl::internal::InplaceDecodeTransactionalMessage<Body>(std::move(message));
+  if constexpr (!FidlMethod::kHasRequestBody) {
+    return ::fidl::internal::InplaceDecodeTransactionalMessage(std::move(message));
+  } else {
+    return ::fidl::internal::InplaceDecodeTransactionalMessage<::fidl::WireRequest<FidlMethod>>(
+        std::move(message));
+  }
 }
 
 template <typename FidlMethod>
 auto InplaceDecodeTransactionalEvent(::fidl::IncomingHeaderAndMessage&& message) {
-  using Body = std::conditional_t<FidlMethod::kHasResponseBody, ::fidl::WireEvent<FidlMethod>,
-                                  std::nullopt_t>;
-  return ::fidl::internal::InplaceDecodeTransactionalMessage<Body>(std::move(message));
+  if constexpr (!FidlMethod::kHasResponseBody) {
+    return ::fidl::internal::InplaceDecodeTransactionalMessage(std::move(message));
+  } else {
+    return ::fidl::internal::InplaceDecodeTransactionalMessage<::fidl::WireEvent<FidlMethod>>(
+        std::move(message));
+  }
 }
 
 #endif  // __Fuchsia__

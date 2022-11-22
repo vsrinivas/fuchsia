@@ -194,9 +194,12 @@ void fidl::internal::WireBufferCompleterImpl<::test_inheritance::Super::Foo>::Ma
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_inheritance::ksuper_foo_Ordinal, ::test_inheritance::ksuper_foo_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_inheritance::ksuper_foo_Ordinal, ::test_inheritance::ksuper_foo_DynamicFlags);
@@ -396,9 +399,12 @@ void fidl::internal::WireBufferCompleterImpl<::test_inheritance::Sub::Foo>::Make
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_inheritance::ksub_foo_Ordinal, ::test_inheritance::ksub_foo_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_inheritance::ksub_foo_Ordinal, ::test_inheritance::ksub_foo_DynamicFlags);

@@ -6,49 +6,7 @@
 
 {{- define "Method:Event:WireMessagingHeader" }}
 {{- EnsureNamespace "" }}
-{{- if .Response.IsResource }}
 {{- IfdefFuchsia -}}
-{{- end }}
-
-{{- if .HasResponsePayload }}
-  template<>
-  struct {{ .WireEvent }} final {{- if .HasResponsePayload }} : public {{ .ResponsePayload }}{{ end }} {
-  {{- range .ResponseAnonymousChildren }}
-    using {{ .ScopedName }} = {{ .FlattenedName }};
-  {{- end }}
-
-    {{ if (and .ResponseFlattened .HasResponsePayload) }}
-    explicit {{ .WireEvent.Self }}({{ .ResponsePayload }} base) : {{ .ResponsePayload }}(std::move(base)) {}
-    {{- end }}
-
-    {{- if .ResponseArgs }}
-    explicit {{ .WireEvent.Self }}({{ RenderParams .ResponseArgs }}) : {{ .ResponsePayload }}
-    {{- if .ResponseFlattened -}}
-      { {{ RenderForwardStructParams .ResponseArgs }} }
-    {{- else -}}
-      ({{ RenderForwardParams .ResponseArgs }})
-    {{- end -}}{}
-    {{- end }}
-    {{ .WireEvent.Self }}() = default;
-  };
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<{{ .WireEvent }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<{{ .WireEvent }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = {{ .Response.TypeShapeV2.InlineSize }};
-
-  static void Encode(
-    internal::WireEncoder* encoder, {{ .WireEvent }}* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<{{ .ResponsePayload }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<{{ .ResponsePayload }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
-{{- end }}
 
 template<>
 struct {{ .WireTransactionalEvent }} final {
@@ -59,7 +17,7 @@ struct {{ .WireTransactionalEvent }} final {
     {{ .WireEvent }} body;
 
     explicit {{ .WireTransactionalEvent.Self }}({{ RenderParams .ResponseArgs }})
-    : body({{ .WireEvent }}({{ RenderForwardParams .ResponseArgs }})) {
+    : body{ {{ RenderForwardParams .ResponseArgs }} } {
       _InitHeader();
     }
   {{- end }}
@@ -101,44 +59,24 @@ struct ::fidl::internal::WireCodingTraits<{{ .WireTransactionalEvent }}, ::fidl:
     {{- end }}
   }
 };
-{{- if .Response.IsResource }}
 {{- EndifFuchsia -}}
-{{- end }}
 {{- end }}
 
 
 
 {{- define "Method:Event:WireMessagingSource" }}
 {{- EnsureNamespace "" }}
-{{- if .Response.IsResource }}
 {{- IfdefFuchsia -}}
-{{- end }}
 
   void {{ .WireTransactionalEvent }}::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, {{ .OrdinalName }}, {{ .DynamicFlagsName }});
   }
-{{- if .Response.IsResource }}
 {{- EndifFuchsia -}}
-{{- end }}
 {{- end }}
 
 
 
 {{- define "Method:Event:NaturalMessagingHeader" }}
-{{- IfdefFuchsia -}}
-{{- EnsureNamespace "" }}
-
-template <>
-class {{ .NaturalEvent }} final
-    {{- if .HasResponsePayload }} : public {{ .ResponsePayload }} {{ end }} {
- public:
-  {{- if .HasResponsePayload }}
-    using {{ .ResponsePayload }}::{{ .ResponsePayload.Self }};
-    {{ .NaturalEvent.Self }}({{ .ResponsePayload }} v) : {{ .ResponsePayload.Self }}(std::move(v)) {}
-  {{- end }}
-};
-
-{{- EndifFuchsia -}}
 {{- end }}
 
 
@@ -149,44 +87,9 @@ class {{ .NaturalEvent }} final
 
 
 {{- define "Method:Event:Traits:TypeConversionsHeader" }}
-{{- if .HasResponsePayload }}
-template <>
-struct WireNaturalConversionTraits<{{ .WireEvent }}, {{ .NaturalEvent }}> {
-  static {{ .NaturalEvent }} ToNatural({{ .WireEvent }} src);
-  static {{ .WireEvent }} ToWire(fidl::AnyArena& arena, {{ .NaturalEvent }} src);
-};
-
-template <>
-struct NaturalTypeForWireType<{{ .WireEvent }}> {
-    using type = {{ .NaturalEvent }};
-};
-template <>
-struct WireTypeForNaturalType<{{ .NaturalEvent }}> {
-    using type = {{ .WireEvent }};
-};
-{{- end }}
 {{- end }}
 
 
 
 {{- define "Method:Event:Traits:TypeConversionsSource" }}
-{{- if .HasResponsePayload }}
-{{ .NaturalEvent }}  WireNaturalConversionTraits<{{ .WireEvent }}, {{ .NaturalEvent }}>::ToNatural({{ .WireEvent }} src) {
-  {{- if .HasResponsePayload }}
-  return {{ .NaturalEvent }}(
-    WireNaturalConversionTraits<{{ .ResponsePayload.Wire }}, {{ .ResponsePayload }}>::ToNatural(std::move(src)));
-  {{- else }}
-  return {{ .NaturalEvent }}();
-  {{- end }}
-}
-
-{{ .WireEvent }}  WireNaturalConversionTraits<{{ .WireEvent }}, {{ .NaturalEvent }}>::ToWire(fidl::AnyArena& arena, {{ .NaturalEvent }} src) {
-  {{- if .HasResponsePayload }}
-  return {{ .WireEvent }}(
-    WireNaturalConversionTraits<{{ .ResponsePayload.Wire }}, {{ .ResponsePayload }}>::ToWire(arena, std::move(src)));
-  {{- else }}
-  return {{ .WireEvent }}();
-  {{- end }}
-}
-{{- end }}
 {{- end }}

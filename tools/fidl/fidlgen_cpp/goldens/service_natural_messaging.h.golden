@@ -19,9 +19,6 @@ namespace fidl {
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_service::FirstProtocol::MethodOnFirst> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_service::FirstProtocol::MethodOnFirst>&)>;
 };
 
 #ifdef __Fuchsia__
@@ -162,9 +159,6 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_service::FirstProtocol> 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_service::SecondProtocol::MethodOnSecond> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_service::SecondProtocol::MethodOnSecond>&)>;
 };
 
 #ifdef __Fuchsia__

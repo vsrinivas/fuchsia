@@ -23,7 +23,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_foreigntypeinresponseusedthro
   using Response = ::test_middle::MiddleGetFooResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&)>;
 };

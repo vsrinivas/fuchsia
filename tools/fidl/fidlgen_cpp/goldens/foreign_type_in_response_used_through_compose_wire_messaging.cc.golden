@@ -191,9 +191,12 @@ void fidl::internal::WireBufferCompleterImpl<::test_foreigntypeinresponseusedthr
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal, ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal, ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_DynamicFlags);

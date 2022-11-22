@@ -30,6 +30,18 @@ struct ::fidl::internal::WireOrdinal<::test_driveroneway::OneWay::Send> final {
   static constexpr uint64_t value = 7942965975761529343lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_driveroneway::OneWay::Send> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_driveroneway::wire::OneWaySendRequest;
+
+  using Completer = fidl::Completer<>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_driveroneway {
 
 }  // namespace test_driveroneway
@@ -63,6 +75,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay> final
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send> final {
   FIDL_ALIGNDECL
@@ -98,31 +111,11 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_driveroneway::OneWay::Send> {
-  using Completer = fidl::Completer<>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_driveroneway::wire::OneWaySendRequest;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_driveroneway::OneWay::Send,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>, ::fidl::internal::DriverTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_driveroneway::OneWay::Send,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>, ::fidl::internal::DriverTransport>>;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>> : public std::true_type {};
 template <>
@@ -150,6 +143,9 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_driveronewa
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>, body) == sizeof(fidl_message_header_t));
 static_assert(sizeof(::test_driveroneway::wire::OneWaySendRequest) == TypeTraits<::test_driveroneway::wire::OneWaySendRequest>::kPrimarySize);
 static_assert(offsetof(::test_driveroneway::wire::OneWaySendRequest, payload) == 0);
+
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 }  // namespace fidl
 

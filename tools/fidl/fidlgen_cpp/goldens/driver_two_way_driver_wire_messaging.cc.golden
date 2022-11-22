@@ -147,9 +147,12 @@ void fidl::internal::WireBufferCompleterImpl<::test_drivertwoway::TwoWay::Add>::
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_drivertwoway::kTwoWay_Add_Ordinal, ::test_drivertwoway::kTwoWay_Add_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_drivertwoway::kTwoWay_Add_Ordinal, ::test_drivertwoway::kTwoWay_Add_DynamicFlags);

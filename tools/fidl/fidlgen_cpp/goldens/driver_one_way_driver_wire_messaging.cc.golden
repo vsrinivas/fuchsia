@@ -124,6 +124,9 @@ void fdf::WireServer<::test_driveroneway::OneWay>::dispatch_message(
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_driveroneway::kOneWay_Send_Ordinal, ::test_driveroneway::kOneWay_Send_DynamicFlags);
 }
+
+#endif  // __Fuchsia__

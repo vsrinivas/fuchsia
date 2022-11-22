@@ -135,9 +135,12 @@ void fidl::WireServer<::test_placementofattributes::ExampleProtocol>::dispatch_m
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_placementofattributes::kExampleProtocol_Method_Ordinal, ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 

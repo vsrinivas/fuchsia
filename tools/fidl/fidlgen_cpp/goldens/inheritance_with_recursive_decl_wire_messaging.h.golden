@@ -32,6 +32,18 @@ struct ::fidl::internal::WireOrdinal<::test_inheritancewithrecursivedecl::Parent
   static constexpr uint64_t value = 3973163707930985819lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_inheritancewithrecursivedecl::Parent::First> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest;
+
+  using Completer = fidl::Completer<>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_inheritancewithrecursivedecl {
 
 }  // namespace test_inheritancewithrecursivedecl
@@ -66,7 +78,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritancewithrecursivedec
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First> final {
   FIDL_ALIGNDECL
@@ -107,36 +118,13 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_inheritancewithrecursivedecl::Parent::First> {
-  using Completer = fidl::Completer<>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_inheritancewithrecursivedecl::Parent::First,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_inheritancewithrecursivedecl::Parent::First,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>> : public std::true_type {};
-#ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>> : public std::true_type {};
 
@@ -345,6 +333,30 @@ struct ::fidl::internal::WireOrdinal<::test_inheritancewithrecursivedecl::Child:
   static constexpr uint64_t value = 2545123272820824165lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_inheritancewithrecursivedecl::Child::First> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest;
+
+  using Completer = fidl::Completer<>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_inheritancewithrecursivedecl::Child::Second> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest;
+
+  using Completer = fidl::Completer<>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_inheritancewithrecursivedecl {
 
 }  // namespace test_inheritancewithrecursivedecl
@@ -379,7 +391,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritancewithrecursivedec
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First> final {
   FIDL_ALIGNDECL
@@ -421,7 +432,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second> final {
   FIDL_ALIGNDECL
@@ -462,59 +472,13 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_inheritancewithrecursivedecl::Child::First> {
-  using Completer = fidl::Completer<>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_inheritancewithrecursivedecl::Child::First,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_inheritancewithrecursivedecl::Child::First,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_inheritancewithrecursivedecl::Child::Second> {
-  using Completer = fidl::Completer<>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_inheritancewithrecursivedecl::Child::Second,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_inheritancewithrecursivedecl::Child::Second,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>> : public std::true_type {};
-#ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>> : public std::true_type {};
 
@@ -543,11 +507,11 @@ static_assert(offsetof(::test_inheritancewithrecursivedecl::wire::ParentFirstReq
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>> : public std::true_type {};
-#ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>> : public std::true_type {};
 

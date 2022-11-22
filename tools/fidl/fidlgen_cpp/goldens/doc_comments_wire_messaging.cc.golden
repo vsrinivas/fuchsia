@@ -157,13 +157,19 @@ void fidl::WireServer<::test_doccomments::Interface>::dispatch_message(
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_doccomments::kInterface_Method_Ordinal, ::test_doccomments::kInterface_Method_DynamicFlags);
 }
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_doccomments::kInterface_OnEvent_Ordinal, ::test_doccomments::kInterface_OnEvent_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 

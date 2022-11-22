@@ -220,9 +220,12 @@ void fidl::internal::WireBufferCompleterImpl<::test_anonymous::SomeProtocol::Som
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_anonymous::SomeProtocol::SomeMethod>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal, ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal, ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags);

@@ -148,9 +148,6 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_versions::OtherProtocol>
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_versions::Protocol::Foo> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_versions::Protocol::Foo>&)>;
 };
 
 #ifdef __Fuchsia__

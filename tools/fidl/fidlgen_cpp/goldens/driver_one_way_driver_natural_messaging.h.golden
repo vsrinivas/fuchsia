@@ -16,9 +16,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_driveroneway::OneWay::Send> {
   using Request = ::test_driveroneway::OneWaySendRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fdf::Result<::test_driveroneway::OneWay::Send>&)>;
 };
 namespace test_driveroneway {
 __LOCAL extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;

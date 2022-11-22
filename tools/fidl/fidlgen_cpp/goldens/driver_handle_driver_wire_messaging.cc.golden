@@ -161,7 +161,6 @@ void fdf::WireServer<::test_driverhandle::HandlesInProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 void ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal, ::test_driverhandle::kHandlesInProtocol_SendHandles_DynamicFlags);
 }

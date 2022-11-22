@@ -179,9 +179,12 @@ void fidl::WireServer<::test_versions::Protocol>::dispatch_message(
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_versions::kProtocol_Foo_Ordinal, ::test_versions::kProtocol_Foo_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 

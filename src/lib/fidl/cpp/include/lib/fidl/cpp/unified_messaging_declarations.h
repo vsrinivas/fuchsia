@@ -30,22 +30,6 @@ namespace fidl {
 template <typename Method>
 class Response;
 
-// |Event| represents an incoming FIDL event using natural types. See
-// |WireEvent| for the equivalent using wire types.
-//
-// When |Method| event has a payload, |Event| inherits from:
-//
-// - If |Method| uses the error syntax:
-//     - If the success value is empty: `fit::result<AppError>`.
-//     - Otherwise: `fit::result<AppError, SuccessValue>`.
-// - If |Method| does not use the error syntax: the payload type.
-//
-// When |Method| has no payload, those operations will be absent.
-//
-// When |Method| is not an event, this class will be undefined.
-template <typename Method>
-class Event;
-
 // |Result| represents the result of calling a two-way FIDL method |Method|.
 //
 // It inherits from different `fit::result` types depending on |Method|:

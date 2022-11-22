@@ -98,9 +98,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_driverhandle::HandlesInProtoc
   using Request = ::test_driverhandle::HandlesInProtocolSendHandlesRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fdf::Result<::test_driverhandle::HandlesInProtocol::SendHandles>&)>;
 };
 namespace test_driverhandle {
 __LOCAL extern "C" const fidl_type_t test_driverhandle_HandlesInProtocolSendHandlesRequestTable;

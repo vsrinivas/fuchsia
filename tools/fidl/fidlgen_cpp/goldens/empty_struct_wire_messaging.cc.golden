@@ -306,17 +306,26 @@ void fidl::internal::WireBufferCompleterImpl<::test_emptystruct::EmptyProtocol::
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_emptystruct::kEmptyProtocol_Send_Ordinal, ::test_emptystruct::kEmptyProtocol_Send_DynamicFlags);
 }
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_emptystruct::kEmptyProtocol_Receive_Ordinal, ::test_emptystruct::kEmptyProtocol_Receive_DynamicFlags);
 }
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal, ::test_emptystruct::kEmptyProtocol_SendAndReceive_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal, ::test_emptystruct::kEmptyProtocol_SendAndReceive_DynamicFlags);

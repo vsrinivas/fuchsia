@@ -132,9 +132,12 @@ void fidl::WireServer<::test_service::FirstProtocol>::dispatch_message(
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_service::kFirstProtocol_MethodOnFirst_Ordinal, ::test_service::kFirstProtocol_MethodOnFirst_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -268,9 +271,12 @@ void fidl::WireServer<::test_service::SecondProtocol>::dispatch_message(
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_service::kSecondProtocol_MethodOnSecond_Ordinal, ::test_service::kSecondProtocol_MethodOnSecond_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 

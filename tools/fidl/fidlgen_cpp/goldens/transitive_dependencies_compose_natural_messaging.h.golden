@@ -23,7 +23,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_transitivedependenciescompose
   using Response = ::test_bottom::BottomGetFooResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_transitivedependenciescompose::Top::GetFoo>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_transitivedependenciescompose::Top::GetFoo>&)>;
 };

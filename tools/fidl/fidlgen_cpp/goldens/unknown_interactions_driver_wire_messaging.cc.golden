@@ -2107,21 +2107,33 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
 #endif  // __Fuchsia__
 
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictOneWay_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleOneWay_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWay_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2131,9 +2143,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayFields_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2143,9 +2159,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayUnion_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2155,9 +2175,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayTable_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2167,9 +2191,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2179,9 +2207,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2191,9 +2223,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2203,9 +2239,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayTableErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2215,9 +2255,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWay_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2227,9 +2271,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayFields_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2239,9 +2287,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2251,9 +2303,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayTable_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2263,9 +2319,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2275,9 +2335,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2287,9 +2351,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2299,9 +2367,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -3479,21 +3551,33 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriver
 #endif  // __Fuchsia__
 
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictOneWay_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_FlexibleOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_FlexibleOneWay_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWay_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -3503,9 +3587,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriver
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayFields_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -3515,9 +3603,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriver
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayUnion_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -3527,9 +3619,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriver
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayTable_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -3539,9 +3635,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriver
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -3551,9 +3651,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriver
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -3563,9 +3667,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriver
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -3575,9 +3683,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriver
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -4638,15 +4750,23 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriv
 #endif  // __Fuchsia__
 
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictOneWay_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWay_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -4656,9 +4776,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriv
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayFields_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -4668,9 +4792,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriv
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayUnion_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -4680,9 +4808,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriv
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayTable_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -4692,9 +4824,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriv
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -4704,9 +4840,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriv
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -4716,9 +4856,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriv
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -4728,9 +4872,13 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriv
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 

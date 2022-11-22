@@ -23,7 +23,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_anonymous::SomeProtocol::Some
   using Response = ::test_anonymous::SomeProtocolSomeMethodTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_anonymous::SomeProtocol::SomeMethod>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod>&)>;
 };

@@ -200,6 +200,72 @@ struct ::fidl::internal::WireOrdinal<::test_protocolrequest::Parent::TakeChildRe
   static constexpr uint64_t value = 2333981071306416007lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_protocolrequest::Parent::GetChild> {
+  static constexpr bool HasRequestPayload = false;
+  using Response = ::test_protocolrequest::wire::ParentGetChildResponse;
+
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolrequest::Parent::GetChild>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolrequest::Parent::GetChild,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>, ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolrequest::Parent::GetChild,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>, ::fidl::internal::ChannelTransport>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_protocolrequest::Parent::GetChildRequest> {
+  static constexpr bool HasRequestPayload = false;
+  using Response = ::test_protocolrequest::wire::ParentGetChildRequestResponse;
+
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolrequest::Parent::GetChildRequest>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolrequest::Parent::GetChildRequest,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>, ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolrequest::Parent::GetChildRequest,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>, ::fidl::internal::ChannelTransport>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_protocolrequest::Parent::TakeChild> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_protocolrequest::wire::ParentTakeChildRequest;
+
+  using Completer = fidl::Completer<>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_protocolrequest::Parent::TakeChildRequest> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_protocolrequest::wire::ParentTakeChildRequestRequest;
+
+  using Completer = fidl::Completer<>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_protocolrequest {
 
 }  // namespace test_protocolrequest
@@ -233,6 +299,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Parent> fi
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild> final {
   FIDL_ALIGNDECL
@@ -259,6 +326,8 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -326,6 +395,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest> final {
   FIDL_ALIGNDECL
@@ -352,6 +422,8 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -420,7 +492,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild> final {
   FIDL_ALIGNDECL
@@ -462,7 +533,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest> final {
   FIDL_ALIGNDECL
@@ -503,100 +573,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_protocolrequest::Parent::TakeChild> {
-  using Completer = fidl::Completer<>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_protocolrequest::wire::ParentTakeChildRequest;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolrequest::Parent::TakeChild,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolrequest::Parent::TakeChild,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_protocolrequest::Parent::TakeChildRequest> {
-  using Completer = fidl::Completer<>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_protocolrequest::wire::ParentTakeChildRequestRequest;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolrequest::Parent::TakeChildRequest,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolrequest::Parent::TakeChildRequest,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_protocolrequest::Parent::GetChild> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolrequest::Parent::GetChild>>;
-
-  static constexpr bool HasRequestPayload = false;
-
-  using Request = void;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolrequest::Parent::GetChild,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolrequest::Parent::GetChild,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_protocolrequest::Parent::GetChildRequest> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolrequest::Parent::GetChildRequest>>;
-
-  static constexpr bool HasRequestPayload = false;
-
-  using Request = void;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolrequest::Parent::GetChildRequest,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolrequest::Parent::GetChildRequest,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
 template <>
@@ -621,6 +600,8 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocolrequest:
 
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>, header) == 0);
+
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
@@ -677,6 +658,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocolrequest::Parent::GetC
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {};
 template <>
@@ -701,6 +683,8 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocolrequest:
 
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>, header) == 0);
+
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {};
@@ -757,11 +741,11 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocolrequest::Parent::GetC
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>> : public std::true_type {};
-#ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>> : public std::true_type {};
 
@@ -790,11 +774,11 @@ static_assert(offsetof(::test_protocolrequest::wire::ParentTakeChildRequest, c) 
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>> : public std::true_type {};
-#ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>> : public std::true_type {};
 

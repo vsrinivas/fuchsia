@@ -901,15 +901,23 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestR
 #endif  // __Fuchsia__
 
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestNoResponse_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -919,9 +927,13 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestR
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestWithResponse_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -931,15 +943,23 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestR
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -949,9 +969,13 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestR
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -963,19 +987,25 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestR
     
     
 
-
-  void ::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
     
     
 
-
-  void ::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
   
@@ -1883,9 +1913,13 @@ return MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Wi
 #endif  // __Fuchsia__
 
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal, ::test_protocols::kWithErrorSyntax_ResponseAsStruct_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -1895,9 +1929,13 @@ return MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Wi
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal, ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -1907,9 +1945,13 @@ return MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Wi
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal, ::test_protocols::kWithErrorSyntax_ErrorAsEnum_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -1919,9 +1961,13 @@ return MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Wi
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::HandleInResult>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::HandleInResult>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal, ::test_protocols::kWithErrorSyntax_HandleInResult_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2595,24 +2641,35 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtocol::Mutat
 #endif  // __Fuchsia__
 
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kChannelProtocol_MethodA_Ordinal, ::test_protocols::kChannelProtocol_MethodA_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
     
     
 
-
-  void ::fidl::internal::TransactionalEvent<::test_protocols::ChannelProtocol::EventA>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalEvent<::test_protocols::ChannelProtocol::EventA>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kChannelProtocol_EventA_Ordinal, ::test_protocols::kChannelProtocol_EventA_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kChannelProtocol_MethodB_Ordinal, ::test_protocols::kChannelProtocol_MethodB_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2623,8 +2680,7 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtocol::Mutat
     
 
 #ifdef __Fuchsia__
-
-  void ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>::_InitHeader() {
+void ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kChannelProtocol_TakeHandle_Ordinal, ::test_protocols::kChannelProtocol_TakeHandle_DynamicFlags);
   }
 
@@ -2640,8 +2696,7 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtocol::Mutat
     
 
 #ifdef __Fuchsia__
-
-  void ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>::_InitHeader() {
+void ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kChannelProtocol_MutateSocket_Ordinal, ::test_protocols::kChannelProtocol_MutateSocket_DynamicFlags);
   }
 
@@ -3064,9 +3119,13 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::Transitional::Request>
 #endif  // __Fuchsia__
 
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kTransitional_Request_Ordinal, ::test_protocols::kTransitional_Request_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -3076,18 +3135,25 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::Transitional::Request>
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kTransitional_OneWay_Ordinal, ::test_protocols::kTransitional_OneWay_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
     
     
 
-
-  void ::fidl::internal::TransactionalEvent<::test_protocols::Transitional::Event>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalEvent<::test_protocols::Transitional::Event>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kTransitional_Event_Ordinal, ::test_protocols::kTransitional_Event_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
   
@@ -3297,9 +3363,13 @@ void fidl::WireServer<::test_protocols::DiscoverableProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::DiscoverableProtocol::Method>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::DiscoverableProtocol::Method>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kDiscoverableProtocol_Method_Ordinal, ::test_protocols::kDiscoverableProtocol_Method_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
   
@@ -3726,8 +3796,7 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::HandleRightsProtocol::
 
 
 #ifdef __Fuchsia__
-
-  void ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>::_InitHeader() {
+void ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal, ::test_protocols::kHandleRightsProtocol_NoResponseMethod_DynamicFlags);
   }
 
@@ -3737,8 +3806,7 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::HandleRightsProtocol::
     
 
 #ifdef __Fuchsia__
-
-  void ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>::_InitHeader() {
+void ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal, ::test_protocols::kHandleRightsProtocol_ResponseMethod_DynamicFlags);
   }
 
@@ -3761,9 +3829,7 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::HandleRightsProtocol::
     
 
 #ifdef __Fuchsia__
-
-
-  void ::fidl::internal::TransactionalEvent<::test_protocols::HandleRightsProtocol::AnEvent>::_InitHeader() {
+void ::fidl::internal::TransactionalEvent<::test_protocols::HandleRightsProtocol::AnEvent>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal, ::test_protocols::kHandleRightsProtocol_AnEvent_DynamicFlags);
   }
 
@@ -4371,8 +4437,7 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEnds::Stru
 
 
 #ifdef __Fuchsia__
-
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>::_InitHeader() {
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal, ::test_protocols::kWithProtocolEnds_ClientEnds_DynamicFlags);
   }
 
@@ -4393,8 +4458,7 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEnds::Stru
     
 
 #ifdef __Fuchsia__
-
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>::_InitHeader() {
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal, ::test_protocols::kWithProtocolEnds_ServerEnds_DynamicFlags);
   }
 
@@ -4415,8 +4479,7 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEnds::Stru
     
 
 #ifdef __Fuchsia__
-
-  void ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>::_InitHeader() {
+void ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal, ::test_protocols::kWithProtocolEnds_StructContainingEnds_DynamicFlags);
   }
 
@@ -4595,9 +4658,13 @@ void fidl::WireServer<::test_protocols::ManyParameters>::dispatch_message(
 #endif  // __Fuchsia__
 
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kManyParameters_Fifteen_Ordinal, ::test_protocols::kManyParameters_Fifteen_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
   
@@ -4830,9 +4897,13 @@ fidl::internal::WireBufferCompleterImpl<::test_protocols::MethodWithUnion::Union
 #endif  // __Fuchsia__
 
 
-  void ::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal, ::test_protocols::kMethodWithUnion_UnionMethod_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 

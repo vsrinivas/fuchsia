@@ -146,6 +146,486 @@ struct ::fidl::internal::WireOrdinal<::test_protocolpayloads::MainProtocol::OnAn
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocolpayloads::MainProtocol::OnAnonWithError> final { static constexpr uint64_t value = 5024931894357412354lu; };
 
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OneWayComposed> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
+    
+      using Completer = fidl::Completer<>;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayComposed> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
+      using Response = ::test_protocolpayloads_imported::wire::ImportStructPayload;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposed>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposed,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposed,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
+      using Response = ::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorTopResponse;
+  
+  using DomainError = uint32_t;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OnComposed> {
+    
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OnComposedWithError> {
+    
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads_imported::wire::ComposedProtocolOnComposedWithErrorRequest;
+  
+  using DomainError = uint32_t;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OneWayLocal> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads::wire::LocalStructPayload;
+    
+      using Completer = fidl::Completer<>;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayLocal> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads::wire::LocalStructPayload;
+      using Response = ::test_protocolpayloads::wire::LocalStructPayload;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayLocal>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocal,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocal,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads::wire::LocalStructPayload;
+      using Response = ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorTopResponse;
+  
+  using DomainError = uint32_t;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OnLocal> {
+    
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads::wire::LocalStructPayload;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OnLocalWithError> {
+    
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest;
+  
+  using DomainError = uint32_t;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OneWayImport> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
+    
+      using Completer = fidl::Completer<>;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayImport> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
+      using Response = ::test_protocolpayloads_imported::wire::ImportStructPayload;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayImport>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayImport,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayImport,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
+      using Response = ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorTopResponse;
+  
+  using DomainError = uint32_t;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OnImport> {
+    
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OnImportWithError> {
+    
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest;
+  
+  using DomainError = uint32_t;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OneWayAnon> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest;
+    
+      using Completer = fidl::Completer<>;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayAnon> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest;
+      using Response = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayAnon>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnon,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnon,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest;
+      using Response = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorTopResponse;
+  
+  using DomainError = uint32_t;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OnAnon> {
+    
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads::wire::MainProtocolOnAnonRequest;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OnAnonWithError> {
+    
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest;
+  
+  using DomainError = uint32_t;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
 namespace test_protocolpayloads {
 
 }  // namespace test_protocolpayloads
@@ -181,7 +661,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocolpayloads::MainProto
 #endif  // __Fuchsia__
 
 
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayComposed> final {
   FIDL_ALIGNDECL
@@ -217,7 +697,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+#endif  // __Fuchsia__
 
+
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed> final {
   FIDL_ALIGNDECL
@@ -253,6 +736,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed> final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
@@ -316,7 +802,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> final {
   FIDL_ALIGNDECL
@@ -352,6 +838,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> final : public ::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorTopResponse {
@@ -415,32 +904,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-  template<>
-  struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed> final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
-
-    
-    explicit WireEvent(::test_protocolpayloads_imported::wire::ImportStructPayload base) : ::test_protocolpayloads_imported::wire::ImportStructPayload(std::move(base)) {}
-    explicit WireEvent(int32_t a) : ::test_protocolpayloads_imported::wire::ImportStructPayload{ .a = std::move(a) }{}
-    WireEvent() = default;
-  };
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads_imported::wire::ImportStructPayload, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads_imported::wire::ImportStructPayload, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposed> final {
   FIDL_ALIGNDECL
@@ -450,7 +914,7 @@ struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtoco
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed> body;
 
     explicit TransactionalEvent(int32_t a)
-    : body(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>(a)) {
+    : body{ a } {
       _InitHeader();
     }
 
@@ -480,32 +944,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-  template<>
-  struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError> final : public ::test_protocolpayloads_imported::wire::ComposedProtocolOnComposedWithErrorRequest {
+#endif  // __Fuchsia__
 
-    
-    explicit WireEvent(::test_protocolpayloads_imported::wire::ComposedProtocolOnComposedWithErrorRequest base) : ::test_protocolpayloads_imported::wire::ComposedProtocolOnComposedWithErrorRequest(std::move(base)) {}
-    explicit WireEvent(::test_protocolpayloads_imported::wire::ComposedProtocolOnComposedWithErrorResult result) : ::test_protocolpayloads_imported::wire::ComposedProtocolOnComposedWithErrorRequest{ .result = std::move(result) }{}
-    WireEvent() = default;
-  };
 
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads_imported::wire::ComposedProtocolOnComposedWithErrorRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads_imported::wire::ComposedProtocolOnComposedWithErrorRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError> final {
   FIDL_ALIGNDECL
@@ -515,7 +957,7 @@ struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtoco
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError> body;
 
     explicit TransactionalEvent(::test_protocolpayloads_imported::wire::ComposedProtocolOnComposedWithErrorResult result)
-    : body(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>(result)) {
+    : body{ result } {
       _InitHeader();
     }
 
@@ -545,7 +987,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+#endif  // __Fuchsia__
 
+
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayLocal> final {
   FIDL_ALIGNDECL
@@ -581,7 +1026,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+#endif  // __Fuchsia__
 
+
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal> final {
   FIDL_ALIGNDECL
@@ -617,6 +1065,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal> final : public ::test_protocolpayloads::wire::LocalStructPayload {
@@ -680,7 +1131,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> final {
   FIDL_ALIGNDECL
@@ -716,6 +1167,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> final : public ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorTopResponse {
@@ -780,32 +1234,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-  template<>
-  struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal> final : public ::test_protocolpayloads::wire::LocalStructPayload {
-
-    
-    explicit WireEvent(::test_protocolpayloads::wire::LocalStructPayload base) : ::test_protocolpayloads::wire::LocalStructPayload(std::move(base)) {}
-    explicit WireEvent(uint32_t a, uint32_t b) : ::test_protocolpayloads::wire::LocalStructPayload{ .a = std::move(a), .b = std::move(b) }{}
-    WireEvent() = default;
-  };
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 8;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::LocalStructPayload, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::LocalStructPayload, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocal> final {
   FIDL_ALIGNDECL
@@ -815,7 +1244,7 @@ struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtoco
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal> body;
 
     explicit TransactionalEvent(uint32_t a, uint32_t b)
-    : body(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>(a, b)) {
+    : body{ a, b } {
       _InitHeader();
     }
 
@@ -845,33 +1274,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-  template<>
-  struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError> final : public ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest {
-    using Result = test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult;
+#endif  // __Fuchsia__
 
-    
-    explicit WireEvent(::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest base) : ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest(std::move(base)) {}
-    explicit WireEvent(::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult result) : ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest{ .result = std::move(result) }{}
-    WireEvent() = default;
-  };
 
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError> final {
   FIDL_ALIGNDECL
@@ -881,7 +1287,7 @@ struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtoco
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError> body;
 
     explicit TransactionalEvent(::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult result)
-    : body(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>(result)) {
+    : body{ result } {
       _InitHeader();
     }
 
@@ -911,7 +1317,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+#endif  // __Fuchsia__
 
+
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayImport> final {
   FIDL_ALIGNDECL
@@ -947,7 +1356,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+#endif  // __Fuchsia__
 
+
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport> final {
   FIDL_ALIGNDECL
@@ -983,6 +1395,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport> final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
@@ -1046,7 +1461,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> final {
   FIDL_ALIGNDECL
@@ -1082,6 +1497,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> final : public ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorTopResponse {
@@ -1146,32 +1564,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-  template<>
-  struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport> final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
-
-    
-    explicit WireEvent(::test_protocolpayloads_imported::wire::ImportStructPayload base) : ::test_protocolpayloads_imported::wire::ImportStructPayload(std::move(base)) {}
-    explicit WireEvent(int32_t a) : ::test_protocolpayloads_imported::wire::ImportStructPayload{ .a = std::move(a) }{}
-    WireEvent() = default;
-  };
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads_imported::wire::ImportStructPayload, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads_imported::wire::ImportStructPayload, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImport> final {
   FIDL_ALIGNDECL
@@ -1181,7 +1574,7 @@ struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtoco
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport> body;
 
     explicit TransactionalEvent(int32_t a)
-    : body(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>(a)) {
+    : body{ a } {
       _InitHeader();
     }
 
@@ -1211,33 +1604,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-  template<>
-  struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError> final : public ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest {
-    using Result = test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult;
+#endif  // __Fuchsia__
 
-    
-    explicit WireEvent(::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest base) : ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest(std::move(base)) {}
-    explicit WireEvent(::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult result) : ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest{ .result = std::move(result) }{}
-    WireEvent() = default;
-  };
 
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImportWithError> final {
   FIDL_ALIGNDECL
@@ -1247,7 +1617,7 @@ struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtoco
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError> body;
 
     explicit TransactionalEvent(::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult result)
-    : body(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>(result)) {
+    : body{ result } {
       _InitHeader();
     }
 
@@ -1277,7 +1647,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+#endif  // __Fuchsia__
 
+
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayAnon> final {
   FIDL_ALIGNDECL
@@ -1313,7 +1686,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+#endif  // __Fuchsia__
 
+
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon> final {
   FIDL_ALIGNDECL
@@ -1349,6 +1725,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon> final : public ::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse {
@@ -1412,7 +1791,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> final {
   FIDL_ALIGNDECL
@@ -1448,6 +1827,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> final : public ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorTopResponse {
@@ -1512,32 +1894,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-  template<>
-  struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon> final : public ::test_protocolpayloads::wire::MainProtocolOnAnonRequest {
-
-    
-    explicit WireEvent(::test_protocolpayloads::wire::MainProtocolOnAnonRequest base) : ::test_protocolpayloads::wire::MainProtocolOnAnonRequest(std::move(base)) {}
-    explicit WireEvent(uint32_t a, uint32_t b) : ::test_protocolpayloads::wire::MainProtocolOnAnonRequest{ .a = std::move(a), .b = std::move(b) }{}
-    WireEvent() = default;
-  };
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 8;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolOnAnonRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolOnAnonRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnon> final {
   FIDL_ALIGNDECL
@@ -1547,7 +1904,7 @@ struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtoco
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon> body;
 
     explicit TransactionalEvent(uint32_t a, uint32_t b)
-    : body(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>(a, b)) {
+    : body{ a, b } {
       _InitHeader();
     }
 
@@ -1577,33 +1934,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-  template<>
-  struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError> final : public ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest {
-    using Result = test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult;
+#endif  // __Fuchsia__
 
-    
-    explicit WireEvent(::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest base) : ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest(std::move(base)) {}
-    explicit WireEvent(::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult result) : ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest{ .result = std::move(result) }{}
-    WireEvent() = default;
-  };
 
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError> final {
   FIDL_ALIGNDECL
@@ -1613,7 +1947,7 @@ struct ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtoco
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError> body;
 
     explicit TransactionalEvent(::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult result)
-    : body(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>(result)) {
+    : body{ result } {
       _InitHeader();
     }
 
@@ -1643,478 +1977,13 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OneWayComposed> {
-  
-    using Completer = fidl::Completer<>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
-  
-
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::OneWayComposed,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::OneWayComposed,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OneWayLocal> {
-  
-    using Completer = fidl::Completer<>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_protocolpayloads::wire::LocalStructPayload;
-  
-
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::OneWayLocal,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::OneWayLocal,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OneWayImport> {
-  
-    using Completer = fidl::Completer<>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
-  
-
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::OneWayImport,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayImport>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::OneWayImport,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayImport>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::OneWayAnon> {
-  
-    using Completer = fidl::Completer<>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest;
-  
-
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::OneWayAnon,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::OneWayAnon,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayComposed> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposed>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
-  
-
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposed,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposed,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
-  
-
-  
-  
-  using DomainError = uint32_t;
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayLocal> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayLocal>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_protocolpayloads::wire::LocalStructPayload;
-  
-
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocal,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocal,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_protocolpayloads::wire::LocalStructPayload;
-  
-
-  
-  
-  using DomainError = uint32_t;
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayImport> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayImport>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
-  
-
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayImport,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayImport,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_protocolpayloads_imported::wire::ImportStructPayload;
-  
-
-  
-  
-  using DomainError = uint32_t;
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayAnon> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayAnon>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest;
-  
-
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnon,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnon,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest;
-  
-
-  
-  
-  using DomainError = uint32_t;
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
 #endif  // __Fuchsia__
 
 
 namespace fidl {
 
 
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>> : public std::true_type {};
 template <>
@@ -2146,6 +2015,9 @@ static_assert(sizeof(::test_protocolpayloads_imported::wire::ImportStructPayload
     == TypeTraits<::test_protocolpayloads_imported::wire::ImportStructPayload>::kPrimarySize);
 static_assert(offsetof(::test_protocolpayloads_imported::wire::ImportStructPayload, a) == 0);
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>> : public std::true_type {};
 template <>
@@ -2176,6 +2048,9 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocolpay
 static_assert(sizeof(::test_protocolpayloads_imported::wire::ImportStructPayload)
     == TypeTraits<::test_protocolpayloads_imported::wire::ImportStructPayload>::kPrimarySize);
 static_assert(offsetof(::test_protocolpayloads_imported::wire::ImportStructPayload, a) == 0);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> : public std::true_type {};
@@ -2227,7 +2102,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::Tw
 static_assert(sizeof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>)
     == TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>, a) == 0);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> : public std::true_type {};
 template <>
@@ -2258,6 +2133,9 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocolpay
 static_assert(sizeof(::test_protocolpayloads_imported::wire::ImportStructPayload)
     == TypeTraits<::test_protocolpayloads_imported::wire::ImportStructPayload>::kPrimarySize);
 static_assert(offsetof(::test_protocolpayloads_imported::wire::ImportStructPayload, a) == 0);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> : public std::true_type {};
@@ -2309,15 +2187,11 @@ struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::Tw
 static_assert(sizeof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>)
     == TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>, result) == 0);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposed>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposed>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>> : public std::false_type {};
 
 
 template <>
@@ -2342,34 +2216,13 @@ static_assert(sizeof(::fidl::internal::TransactionalEvent<::test_protocolpayload
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposed>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposed>, body) == sizeof(fidl_message_header_t));
 
-template <>
-struct TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocolpayloads::test_protocolpayloads_imported_ImportStructPayloadTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-static_assert(sizeof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>)
-    == TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>, a) == 0);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>> : public std::false_type {};
 
 
 template <>
@@ -2394,26 +2247,9 @@ static_assert(sizeof(::fidl::internal::TransactionalEvent<::test_protocolpayload
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>, body) == sizeof(fidl_message_header_t));
 
-template <>
-struct TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocolpayloads::test_protocolpayloads_imported_ComposedProtocolOnComposedWithErrorRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 8;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-static_assert(sizeof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>)
-    == TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>, result) == 0);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>> : public std::true_type {};
 template <>
@@ -2446,6 +2282,9 @@ static_assert(sizeof(::test_protocolpayloads::wire::LocalStructPayload)
 static_assert(offsetof(::test_protocolpayloads::wire::LocalStructPayload, a) == 0);
 static_assert(offsetof(::test_protocolpayloads::wire::LocalStructPayload, b) == 4);
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>> : public std::true_type {};
 template <>
@@ -2477,6 +2316,9 @@ static_assert(sizeof(::test_protocolpayloads::wire::LocalStructPayload)
     == TypeTraits<::test_protocolpayloads::wire::LocalStructPayload>::kPrimarySize);
 static_assert(offsetof(::test_protocolpayloads::wire::LocalStructPayload, a) == 0);
 static_assert(offsetof(::test_protocolpayloads::wire::LocalStructPayload, b) == 4);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> : public std::true_type {};
@@ -2529,7 +2371,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol:
     == TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>, a) == 0);
 static_assert(offsetof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>, b) == 4);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> : public std::true_type {};
 template <>
@@ -2561,6 +2403,9 @@ static_assert(sizeof(::test_protocolpayloads::wire::LocalStructPayload)
     == TypeTraits<::test_protocolpayloads::wire::LocalStructPayload>::kPrimarySize);
 static_assert(offsetof(::test_protocolpayloads::wire::LocalStructPayload, a) == 0);
 static_assert(offsetof(::test_protocolpayloads::wire::LocalStructPayload, b) == 4);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> : public std::true_type {};
@@ -2612,15 +2457,11 @@ struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::Tw
 static_assert(sizeof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>)
     == TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>, result) == 0);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocal>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocal>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>> : public std::false_type {};
 
 
 template <>
@@ -2645,35 +2486,13 @@ static_assert(sizeof(::fidl::internal::TransactionalEvent<::test_protocolpayload
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocal>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocal>, body) == sizeof(fidl_message_header_t));
 
-template <>
-struct TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 8;
-  static constexpr uint32_t kPrimarySizeV1 = 8;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-static_assert(sizeof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>)
-    == TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>, a) == 0);
-static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>, b) == 4);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>> : public std::false_type {};
 
 
 template <>
@@ -2698,26 +2517,9 @@ static_assert(sizeof(::fidl::internal::TransactionalEvent<::test_protocolpayload
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>, body) == sizeof(fidl_message_header_t));
 
-template <>
-struct TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocolpayloads::test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
-  static constexpr uint32_t kMaxOutOfLine = 8;
-  static constexpr uint32_t kMaxOutOfLineV1 = 8;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-static_assert(sizeof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>)
-    == TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>, result) == 0);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayImport>> : public std::true_type {};
 template <>
@@ -2749,6 +2551,9 @@ static_assert(sizeof(::test_protocolpayloads_imported::wire::ImportStructPayload
     == TypeTraits<::test_protocolpayloads_imported::wire::ImportStructPayload>::kPrimarySize);
 static_assert(offsetof(::test_protocolpayloads_imported::wire::ImportStructPayload, a) == 0);
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>> : public std::true_type {};
 template <>
@@ -2779,6 +2584,9 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocolpay
 static_assert(sizeof(::test_protocolpayloads_imported::wire::ImportStructPayload)
     == TypeTraits<::test_protocolpayloads_imported::wire::ImportStructPayload>::kPrimarySize);
 static_assert(offsetof(::test_protocolpayloads_imported::wire::ImportStructPayload, a) == 0);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> : public std::true_type {};
@@ -2830,7 +2638,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::Tw
 static_assert(sizeof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>)
     == TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>, a) == 0);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> : public std::true_type {};
 template <>
@@ -2861,6 +2669,9 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocolpay
 static_assert(sizeof(::test_protocolpayloads_imported::wire::ImportStructPayload)
     == TypeTraits<::test_protocolpayloads_imported::wire::ImportStructPayload>::kPrimarySize);
 static_assert(offsetof(::test_protocolpayloads_imported::wire::ImportStructPayload, a) == 0);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> : public std::true_type {};
@@ -2912,15 +2723,11 @@ struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::Tw
 static_assert(sizeof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>)
     == TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>, result) == 0);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImport>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImport>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>> : public std::false_type {};
 
 
 template <>
@@ -2945,34 +2752,13 @@ static_assert(sizeof(::fidl::internal::TransactionalEvent<::test_protocolpayload
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImport>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImport>, body) == sizeof(fidl_message_header_t));
 
-template <>
-struct TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocolpayloads::test_protocolpayloads_imported_ImportStructPayloadTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-static_assert(sizeof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>)
-    == TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>, a) == 0);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>> : public std::false_type {};
 
 
 template <>
@@ -2997,26 +2783,9 @@ static_assert(sizeof(::fidl::internal::TransactionalEvent<::test_protocolpayload
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>, body) == sizeof(fidl_message_header_t));
 
-template <>
-struct TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocolpayloads::test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 8;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-static_assert(sizeof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>)
-    == TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>, result) == 0);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>> : public std::true_type {};
 template <>
@@ -3049,6 +2818,9 @@ static_assert(sizeof(::test_protocolpayloads::wire::MainProtocolOneWayAnonReques
 static_assert(offsetof(::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest, a) == 0);
 static_assert(offsetof(::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest, b) == 4);
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>> : public std::true_type {};
 template <>
@@ -3080,6 +2852,9 @@ static_assert(sizeof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonReques
     == TypeTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest>::kPrimarySize);
 static_assert(offsetof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest, a) == 0);
 static_assert(offsetof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest, b) == 4);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> : public std::true_type {};
@@ -3132,7 +2907,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol:
     == TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>, a) == 0);
 static_assert(offsetof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>, b) == 4);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> : public std::true_type {};
 template <>
@@ -3164,6 +2939,9 @@ static_assert(sizeof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithEr
     == TypeTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest>::kPrimarySize);
 static_assert(offsetof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest, a) == 0);
 static_assert(offsetof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest, b) == 4);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> : public std::true_type {};
@@ -3215,15 +2993,11 @@ struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::Tw
 static_assert(sizeof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>)
     == TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>, result) == 0);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnon>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnon>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>> : public std::false_type {};
 
 
 template <>
@@ -3248,35 +3022,13 @@ static_assert(sizeof(::fidl::internal::TransactionalEvent<::test_protocolpayload
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnon>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnon>, body) == sizeof(fidl_message_header_t));
 
-template <>
-struct TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocolpayloads::test_protocolpayloads_MainProtocolOnAnonRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 8;
-  static constexpr uint32_t kPrimarySizeV1 = 8;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-static_assert(sizeof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>)
-    == TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>, a) == 0);
-static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>, b) == 4);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>> : public std::false_type {};
 
 
 template <>
@@ -3301,25 +3053,8 @@ static_assert(sizeof(::fidl::internal::TransactionalEvent<::test_protocolpayload
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>, body) == sizeof(fidl_message_header_t));
 
-template <>
-struct TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocolpayloads::test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
-  static constexpr uint32_t kMaxOutOfLine = 8;
-  static constexpr uint32_t kMaxOutOfLineV1 = 8;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-static_assert(sizeof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>)
-    == TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>, result) == 0);
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 }  // namespace fidl
 

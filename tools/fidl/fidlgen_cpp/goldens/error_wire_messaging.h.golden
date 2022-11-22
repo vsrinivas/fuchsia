@@ -31,6 +31,30 @@ struct ::fidl::internal::WireOrdinal<::test_error::Example::Foo> final {
   static constexpr uint64_t value = 1107623248440401476lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_error::Example::Foo> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_error::wire::ExampleFooRequest;
+  using Response = ::test_error::wire::ExampleFooTopResponse;
+
+  using DomainError = uint32_t;
+
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_error::Example::Foo>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_error::Example::Foo,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_error::Example::Foo,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, ::fidl::internal::ChannelTransport>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_error {
 
 }  // namespace test_error
@@ -64,6 +88,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_error::Example> final {
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_error::Example::Foo> final {
   FIDL_ALIGNDECL
@@ -99,6 +124,8 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
 
 template <>
 struct ::fidl::WireResponse<::test_error::Example::Foo> final : public ::test_error::wire::ExampleFooTopResponse {
@@ -161,33 +188,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_error::Example::Foo> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_error::Example::Foo>>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_error::wire::ExampleFooRequest;
-
-  using DomainError = uint32_t;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_error::Example::Foo,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_error::Example::Foo,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_error::Example::Foo>> : public std::true_type {};
 template <>
@@ -215,6 +218,8 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_error::Exam
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, body) == sizeof(fidl_message_header_t));
 static_assert(sizeof(::test_error::wire::ExampleFooRequest) == TypeTraits<::test_error::wire::ExampleFooRequest>::kPrimarySize);
 static_assert(offsetof(::test_error::wire::ExampleFooRequest, s) == 0);
+
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> : public std::true_type {};

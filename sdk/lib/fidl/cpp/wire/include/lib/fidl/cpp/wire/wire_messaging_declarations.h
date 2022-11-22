@@ -23,9 +23,6 @@ namespace fidl {
 template <typename FidlMethod>
 struct WireResponse;
 
-template <typename FidlMethod>
-struct WireEvent;
-
 namespace internal {
 
 // |WireResultUnwrap| is a template which will be specialized by generated code

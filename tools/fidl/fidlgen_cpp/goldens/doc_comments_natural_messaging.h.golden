@@ -19,25 +19,13 @@ namespace fidl {
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_doccomments::Interface::Method> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_doccomments::Interface::Method>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_doccomments::Interface::OnEvent> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_doccomments::Interface::OnEvent>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_doccomments::Interface::OnEvent>&)>;
 };
 
 #ifdef __Fuchsia__
-
-template <>
-class ::fidl::Event<::test_doccomments::Interface::OnEvent> final {
- public:
-};
 
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_doccomments::Interface> final : public ::fidl::internal::NaturalClientBase {

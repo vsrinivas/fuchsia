@@ -331,17 +331,23 @@ void fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::Flexibl
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal, ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal, ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags);
 }
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal, ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal, ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags);

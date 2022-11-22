@@ -42,6 +42,54 @@ struct ::fidl::internal::WireOrdinal<::test_errorsyntax::ExampleUseOfErrorSyntax
   static constexpr uint64_t value = 3757408930698888354lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest;
+  using Response = ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse;
+
+  using DomainError = uint32_t;
+
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::fidl::internal::ChannelTransport>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
+  using Response = ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
+
+  using DomainError = uint32_t;
+
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::fidl::internal::ChannelTransport>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_errorsyntax {
 
 }  // namespace test_errorsyntax
@@ -75,6 +123,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_errorsyntax::ExampleUseOfEr
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> final {
   FIDL_ALIGNDECL
@@ -110,6 +159,8 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
 
 template <>
 struct ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> final : public ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse {
@@ -170,6 +221,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> final {
   FIDL_ALIGNDECL
@@ -205,6 +257,8 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
 
 template <>
 struct ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> final : public ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse {
@@ -267,58 +321,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest;
-
-  using DomainError = uint32_t;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
-
-  using DomainError = uint32_t;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> : public std::true_type {};
 template <>
@@ -346,6 +351,8 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_errorsyntax
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, body) == sizeof(fidl_message_header_t));
 static_assert(sizeof(::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest) == TypeTraits<::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest>::kPrimarySize);
 static_assert(offsetof(::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest, s) == 0);
+
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> : public std::true_type {};
@@ -394,7 +401,7 @@ struct TypeTraits<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSynt
 };
 static_assert(sizeof(::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>) == TypeTraits<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, result) == 0);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> : public std::true_type {};
 template <>
@@ -422,6 +429,8 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_errorsyntax
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, body) == sizeof(fidl_message_header_t));
 static_assert(sizeof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest) == TypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::kPrimarySize);
 static_assert(offsetof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, s) == 0);
+
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> : public std::true_type {};

@@ -107,21 +107,6 @@ struct WireTypeForNaturalType<::fidl::Response<::test_emptystruct::EmptyProtocol
   using type = ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>;
 };
 
-template <>
-struct WireNaturalConversionTraits<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>, ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>> {
-  static ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive> ToNatural(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> src);
-  static ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>> {
-  using type = ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>> {
-  using type = ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>;
-};
-
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

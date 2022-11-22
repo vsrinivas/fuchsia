@@ -545,9 +545,12 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::Get
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_protocolrequest::kParent_GetChild_Ordinal, ::test_protocolrequest::kParent_GetChild_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -557,9 +560,12 @@ void ::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::Get
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_protocolrequest::kParent_GetChildRequest_Ordinal, ::test_protocolrequest::kParent_GetChildRequest_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -570,7 +576,6 @@ void ::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::Get
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_protocolrequest::kParent_TakeChild_Ordinal, ::test_protocolrequest::kParent_TakeChild_DynamicFlags);
 }
@@ -578,7 +583,6 @@ void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::Take
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_protocolrequest::kParent_TakeChildRequest_Ordinal, ::test_protocolrequest::kParent_TakeChildRequest_DynamicFlags);
 }

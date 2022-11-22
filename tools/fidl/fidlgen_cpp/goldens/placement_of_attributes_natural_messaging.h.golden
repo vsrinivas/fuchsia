@@ -22,9 +22,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_placementofattributes::Exampl
   using Request = ::test_placementofattributes::ExampleProtocolMethodRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_placementofattributes::ExampleProtocol::Method>&)>;
 };
 namespace test_placementofattributes {
 __LOCAL extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;

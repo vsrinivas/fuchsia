@@ -19,15 +19,11 @@ namespace fidl {
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>&)>;
 };
@@ -37,7 +33,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequ
   using Response = ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>&)>;
 };
@@ -47,9 +42,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequ
   using Request = ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>&)>;
 };
 
 template <>
@@ -57,7 +49,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequ
   using Request = ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>&)>;
 };
@@ -69,27 +60,17 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequ
   using Response = ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> {
   using Request = ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>&)>;
 };
 
 namespace test_protocols {
@@ -106,22 +87,6 @@ __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestRespons
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 
 #ifdef __Fuchsia__
-}  // namespace test_protocols
-
-template <>
-class ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> final {
- public:
-};
-namespace test_protocols {
-}  // namespace test_protocols
-
-template <>
-class ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> final : public ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest {
- public:
-  using ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest::WithAndWithoutRequestResponseOnWithResponseRequest;
-  Event(::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest v) : WithAndWithoutRequestResponseOnWithResponseRequest(std::move(v)) {}
-};
-namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
@@ -426,7 +391,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::R
   using Response = ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::ResponseAsStruct>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithErrorSyntax::ResponseAsStruct>&)>;
 };
@@ -436,7 +400,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::E
   using Response = ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>&)>;
 };
@@ -446,7 +409,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::E
   using Response = ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::ErrorAsEnum>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsEnum>&)>;
 };
@@ -456,7 +418,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::H
   using Response = ::test_protocols::WithErrorSyntaxHandleInResultTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::HandleInResult>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithErrorSyntax::HandleInResult>&)>;
 };
@@ -799,19 +760,11 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::M
   using Request = ::test_protocols::ChannelProtocolMethodARequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::MethodA>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::EventA> {
   using Request = ::test_protocols::ChannelProtocolEventARequest;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::EventA>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::EventA>&)>;
 };
 
 template <>
@@ -821,7 +774,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::M
   using Response = ::test_protocols::ChannelProtocolMethodBResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::MethodB>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::MethodB>&)>;
 };
@@ -831,7 +783,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::T
   using Request = ::test_protocols::ChannelProtocolTakeHandleRequest;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::TakeHandle>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::TakeHandle>&)>;
 };
@@ -843,7 +794,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::M
   using Response = ::test_protocols::ChannelProtocolMutateSocketResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::MutateSocket>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::MutateSocket>&)>;
 };
@@ -863,15 +813,6 @@ __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketR
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketResponseTable;
 
 #ifdef __Fuchsia__
-}  // namespace test_protocols
-
-template <>
-class ::fidl::Event<::test_protocols::ChannelProtocol::EventA> final : public ::test_protocols::ChannelProtocolEventARequest {
- public:
-  using ::test_protocols::ChannelProtocolEventARequest::ChannelProtocolEventARequest;
-  Event(::test_protocols::ChannelProtocolEventARequest v) : ChannelProtocolEventARequest(std::move(v)) {}
-};
-namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
@@ -1132,7 +1073,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::Transitional::Requ
   using Response = ::test_protocols::TransitionalRequestResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::Transitional::Request>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::Transitional::Request>&)>;
 };
@@ -1142,19 +1082,11 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::Transitional::OneW
   using Request = ::test_protocols::TransitionalOneWayRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::Transitional::OneWay>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::Transitional::Event> {
   using Request = ::test_protocols::TransitionalEventRequest;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::Transitional::Event>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::Transitional::Event>&)>;
 };
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
@@ -1166,15 +1098,6 @@ __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTab
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
 
 #ifdef __Fuchsia__
-}  // namespace test_protocols
-
-template <>
-class ::fidl::Event<::test_protocols::Transitional::Event> final : public ::test_protocols::TransitionalEventRequest {
- public:
-  using ::test_protocols::TransitionalEventRequest::TransitionalEventRequest;
-  Event(::test_protocols::TransitionalEventRequest v) : TransitionalEventRequest(std::move(v)) {}
-};
-namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
@@ -1366,9 +1289,6 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::Transitional>
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::DiscoverableProtocol::Method> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::DiscoverableProtocol::Method>&)>;
 };
 
 #ifdef __Fuchsia__
@@ -1638,9 +1558,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::HandleRightsProtoc
   using Request = ::test_protocols::HandleRightsProtocolNoResponseMethodRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::HandleRightsProtocol::NoResponseMethod>&)>;
 };
 
 template <>
@@ -1650,7 +1567,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::HandleRightsProtoc
   using Response = ::test_protocols::HandleRightsProtocolResponseMethodResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::HandleRightsProtocol::ResponseMethod>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod>&)>;
 };
@@ -1658,11 +1574,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::HandleRightsProtoc
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::HandleRightsProtocol::AnEvent> {
   using Request = ::test_protocols::HandleRightsProtocolAnEventRequest;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::HandleRightsProtocol::AnEvent>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::HandleRightsProtocol::AnEvent>&)>;
 };
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
@@ -1674,15 +1585,6 @@ __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponse
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTable;
 
 #ifdef __Fuchsia__
-}  // namespace test_protocols
-
-template <>
-class ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> final : public ::test_protocols::HandleRightsProtocolAnEventRequest {
- public:
-  using ::test_protocols::HandleRightsProtocolAnEventRequest::HandleRightsProtocolAnEventRequest;
-  Event(::test_protocols::HandleRightsProtocolAnEventRequest v) : HandleRightsProtocolAnEventRequest(std::move(v)) {}
-};
-namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
@@ -1875,7 +1777,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::
   using Response = ::test_protocols::WithProtocolEndsClientEndsResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds>&)>;
 };
@@ -1887,7 +1788,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::
   using Response = ::test_protocols::WithProtocolEndsServerEndsResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ServerEnds>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds>&)>;
 };
@@ -1899,7 +1799,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::
   using Response = ::test_protocols::WithProtocolEndsStructContainingEndsResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::StructContainingEnds>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds>&)>;
 };
@@ -2158,9 +2057,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ManyParameters::Fi
   using Request = ::test_protocols::ManyParametersFifteenRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::ManyParameters::Fifteen>&)>;
 };
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
@@ -2312,7 +2208,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::MethodWithUnion::U
   using Response = ::test_protocols::MethodWithUnionUnionMethodResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::MethodWithUnion::UnionMethod>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod>&)>;
 };

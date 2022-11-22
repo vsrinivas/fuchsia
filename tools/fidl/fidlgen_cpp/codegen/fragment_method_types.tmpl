@@ -11,24 +11,37 @@
 {{ EnsureNamespace "" }}
 template<>
 struct {{ .WireMethodTypes }} {
-  {{ if .HasResponse }}
-    using Completer = fidl::Completer<{{ .WireCompleterBase }}>;
-  {{ else }}
-    using Completer = fidl::Completer<>;
-  {{ end }}
+  {{- if and .HasResponse (not .HasRequest) }}
+    {{/* Events */}}
+    static constexpr bool HasRequestPayload = {{ .HasResponsePayload }};
+    {{- if .HasResponsePayload }}
+      using Request = {{ .ResponsePayload }};
+    {{- end }}
+  {{- else }}
+    static constexpr bool HasRequestPayload = {{ .HasRequestPayload }};
+    {{- if .HasRequestPayload }}
+      using Request = {{ .RequestPayload }};
+    {{- end }}
+    {{- if .HasResponsePayload }}
+      using Response = {{ .ResponsePayload }};
+    {{- end }}
+  {{- end }}
 
-  static constexpr bool HasRequestPayload = {{ .HasRequestPayload }};
-  {{ if .HasRequestPayload }}
-    using Request = {{ .RequestPayload }};
-  {{ else }}
-    using Request = void;
-  {{ end }}
-
-  {{ if .HasDomainError }}
+  {{- if .HasDomainError }}
   {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
   using DomainError = {{ .Result.ErrorDecl }};
-  {{ end }}
+  {{- end }}
 
+  {{- if or (not .HasResponse) .HasRequest }}
+    {{/* One way or two way client calls */}}
+    {{- if .HasResponse }}
+      using Completer = fidl::Completer<{{ .WireCompleterBase }}>;
+    {{- else }}
+      using Completer = fidl::Completer<>;
+    {{- end }}
+  {{- end }}
+
+  {{- if and .HasRequest .HasResponse }}
   using Thenable = ::fidl::internal::WireThenableImpl<
       {{ .Marker }},
       ::fidl::internal::OwnedEncodedMessage<
@@ -42,6 +55,7 @@ struct {{ .WireMethodTypes }} {
           {{ .WireTransactionalRequest }}, {{ .Transport.Type }}
       >
   >;
+  {{- end }}
 };
 
 {{ EndifFuchsia }}
@@ -68,14 +82,19 @@ struct {{ .NaturalMethodTypes }} {
     {{ end }}
   {{ end }}
 
-  {{ if .HasResponse }}
-    using Completer = fidl::Completer<{{ .NaturalCompleterBase }}>;
-  {{ else }}
-    using Completer = fidl::Completer<>;
-  {{ end }}
+  {{- if or (not .HasResponse) .HasRequest }}
+    {{/* One way or two way client calls */}}
+    {{- if .HasResponse }}
+      using Completer = fidl::Completer<{{ .NaturalCompleterBase }}>;
+    {{- else }}
+      using Completer = fidl::Completer<>;
+    {{- end }}
+  {{- end }}
 
+  {{- if and .HasRequest .HasResponse }}
   using ResultCallback =
       ::fit::callback<void ({{ .NaturalResult }}&)>;
+  {{- end }}
 };
 
 {{- end }}

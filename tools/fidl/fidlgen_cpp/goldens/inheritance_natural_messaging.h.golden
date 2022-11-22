@@ -23,7 +23,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_inheritance::Super::Foo> {
   using Response = ::test_inheritance::SuperFooResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_inheritance::Super::Foo>&)>;
 };
@@ -206,7 +205,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_inheritance::Sub::Foo> {
   using Response = ::test_inheritance::SuperFooResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_inheritance::Sub::Foo>&)>;
 };

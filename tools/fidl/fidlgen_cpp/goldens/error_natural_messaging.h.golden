@@ -23,7 +23,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_error::Example::Foo> {
   using Response = ::test_error::ExampleFooTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_error::Example::Foo>&)>;
 };

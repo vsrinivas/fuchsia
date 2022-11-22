@@ -21,19 +21,11 @@ struct ::fidl::internal::NaturalMethodTypes<::test_emptystruct::EmptyProtocol::S
   using Request = ::test_emptystruct::EmptyProtocolSendRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_emptystruct::EmptyProtocol::Send>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_emptystruct::EmptyProtocol::Receive> {
   using Request = ::test_emptystruct::EmptyProtocolReceiveRequest;
-
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_emptystruct::EmptyProtocol::Receive>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_emptystruct::EmptyProtocol::Receive>&)>;
 };
 
 template <>
@@ -43,7 +35,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_emptystruct::EmptyProtocol::S
   using Response = ::test_emptystruct::EmptyProtocolSendAndReceiveResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_emptystruct::EmptyProtocol::SendAndReceive>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive>&)>;
 };
@@ -57,15 +48,6 @@ __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiv
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 
 #ifdef __Fuchsia__
-}  // namespace test_emptystruct
-
-template <>
-class ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive> final : public ::test_emptystruct::EmptyProtocolReceiveRequest {
- public:
-  using ::test_emptystruct::EmptyProtocolReceiveRequest::EmptyProtocolReceiveRequest;
-  Event(::test_emptystruct::EmptyProtocolReceiveRequest v) : EmptyProtocolReceiveRequest(std::move(v)) {}
-};
-namespace test_emptystruct {
 }  // namespace test_emptystruct
 
 template <>

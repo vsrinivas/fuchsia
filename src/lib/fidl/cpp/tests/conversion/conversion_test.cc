@@ -507,14 +507,14 @@ TEST(NaturalToWireConversion, ResponseResultError) {
 
 TEST(WireToNaturalConversion, Event) {
   fidl::Event<test_types::Baz::FooEvent> event =
-      fidl::ToNatural(fidl::WireEvent<test_types::Baz::FooEvent>(123));
+      fidl::ToNatural(fidl::WireEvent<test_types::Baz::FooEvent>{123});
   EXPECT_EQ(123, event.bar());
 }
 
 TEST(NaturalToWireConversion, Event) {
   fidl::Arena arena;
   fidl::WireEvent<test_types::Baz::FooEvent> event =
-      fidl::ToWire(arena, fidl::Event<test_types::Baz::FooEvent>(123));
+      fidl::ToWire(arena, fidl::Event<test_types::Baz::FooEvent>{123});
   EXPECT_EQ(123, event.bar);
 }
 #endif

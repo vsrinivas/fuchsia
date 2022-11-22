@@ -15,7 +15,6 @@ group("conformance") {
     ":fidl_llcpp_conformance_tests_bin($host_toolchain)",
     ":fidl_llcpp_manual_conformance_tests",
     ":fidl_llcpp_request_response_tests",
-    ":fidl_llcpp_request_response_tests_bin($host_toolchain)",
   ]
 }
 

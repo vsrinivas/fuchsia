@@ -32,6 +32,18 @@ struct ::fidl::internal::WireOrdinal<::test_placementofattributes::ExampleProtoc
   static constexpr uint64_t value = 6023439637367187273lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_placementofattributes::ExampleProtocol::Method> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_placementofattributes::wire::ExampleProtocolMethodRequest;
+
+  using Completer = fidl::Completer<>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_placementofattributes {
 
 }  // namespace test_placementofattributes
@@ -65,6 +77,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_placementofattributes::Exam
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method> final {
   FIDL_ALIGNDECL
@@ -100,31 +113,11 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_placementofattributes::ExampleProtocol::Method> {
-  using Completer = fidl::Completer<>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_placementofattributes::wire::ExampleProtocolMethodRequest;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_placementofattributes::ExampleProtocol::Method,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_placementofattributes::ExampleProtocol::Method,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::internal::ChannelTransport>>;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::true_type {};
 template <>
@@ -152,6 +145,9 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_placementof
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, body) == sizeof(fidl_message_header_t));
 static_assert(sizeof(::test_placementofattributes::wire::ExampleProtocolMethodRequest) == TypeTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest>::kPrimarySize);
 static_assert(offsetof(::test_placementofattributes::wire::ExampleProtocolMethodRequest, arg) == 0);
+
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 }  // namespace fidl
 

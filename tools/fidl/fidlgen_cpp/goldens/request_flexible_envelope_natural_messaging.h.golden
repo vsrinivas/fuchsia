@@ -23,7 +23,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_requestflexibleenvelope::Prot
   using Response = ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&)>;
 };
@@ -35,7 +34,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_requestflexibleenvelope::Prot
   using Response = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&)>;
 };

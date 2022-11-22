@@ -14,23 +14,16 @@
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>&)>;
 };
@@ -40,7 +33,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>&)>;
 };
@@ -50,7 +42,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>&)>;
 };
@@ -60,7 +51,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>&)>;
 };
@@ -70,7 +60,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>&)>;
 };
@@ -80,7 +69,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>&)>;
 };
@@ -90,7 +78,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>&)>;
 };
@@ -100,7 +87,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>&)>;
 };
@@ -110,7 +96,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>&)>;
 };
@@ -120,7 +105,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>&)>;
 };
@@ -130,7 +114,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>&)>;
 };
@@ -140,7 +123,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>&)>;
 };
@@ -150,7 +132,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>&)>;
 };
@@ -160,7 +141,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>&)>;
 };
@@ -170,7 +150,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>&)>;
 };
@@ -180,7 +159,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>&)>;
 };
@@ -976,23 +954,16 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unk
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>&)>;
 };
@@ -1002,7 +973,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>&)>;
 };
@@ -1012,7 +982,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>&)>;
 };
@@ -1022,7 +991,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>&)>;
 };
@@ -1032,7 +1000,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>&)>;
 };
@@ -1042,7 +1009,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>&)>;
 };
@@ -1052,7 +1018,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>&)>;
 };
@@ -1062,7 +1027,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>&)>;
 };
@@ -1496,15 +1460,11 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unk
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>&)>;
 };
@@ -1514,7 +1474,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>&)>;
 };
@@ -1524,7 +1483,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>&)>;
 };
@@ -1534,7 +1492,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>&)>;
 };
@@ -1544,7 +1501,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>&)>;
 };
@@ -1554,7 +1510,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>&)>;
 };
@@ -1564,7 +1519,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>&)>;
 };
@@ -1574,7 +1528,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
   using Response = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>>;
-
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>&)>;
 };

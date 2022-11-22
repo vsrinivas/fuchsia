@@ -389,17 +389,23 @@ void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErr
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal, ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal, ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags);
 }
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal, ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal, ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags);

@@ -150,7 +150,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::GetC
   using Response = ::test_protocolrequest::ParentGetChildResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChild>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolrequest::Parent::GetChild>&)>;
 };
@@ -160,7 +159,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::GetC
   using Response = ::test_protocolrequest::ParentGetChildRequestResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChildRequest>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolrequest::Parent::GetChildRequest>&)>;
 };
@@ -170,9 +168,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::Take
   using Request = ::test_protocolrequest::ParentTakeChildRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolrequest::Parent::TakeChild>&)>;
 };
 
 template <>
@@ -180,9 +175,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::Take
   using Request = ::test_protocolrequest::ParentTakeChildRequestRequest;
 
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocolrequest::Parent::TakeChildRequest>&)>;
 };
 
 namespace test_protocolrequest {

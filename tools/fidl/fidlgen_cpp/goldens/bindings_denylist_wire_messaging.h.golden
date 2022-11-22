@@ -420,6 +420,176 @@ struct ::fidl::internal::WireOrdinal<::test_bindingsdenylist::DenyEachBinding::O
 template<>
 struct ::fidl::internal::WireOrdinal<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final { static constexpr uint64_t value = 2319043834522757514lu; };
 
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest;
+      using Response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse;
+  
+  using DomainError = uint32_t;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest;
+      using Response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse;
+  
+  using DomainError = uint32_t;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest;
+      using Response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse;
+  
+  using DomainError = uint32_t;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest;
+      using Response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse;
+  
+  using DomainError = uint32_t;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> {
+    static constexpr bool HasRequestPayload = true;
+      using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest;
+      using Response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse;
+  
+  using DomainError = uint32_t;
+    
+      using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
 namespace test_bindingsdenylist {
 
 }  // namespace test_bindingsdenylist
@@ -455,7 +625,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::DenyEachB
 #endif  // __Fuchsia__
 
 
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> final {
   FIDL_ALIGNDECL
@@ -491,6 +661,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> final : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse {
@@ -555,7 +728,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final {
   FIDL_ALIGNDECL
@@ -591,6 +764,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse {
@@ -655,7 +831,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> final {
   FIDL_ALIGNDECL
@@ -691,6 +867,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> final : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse {
@@ -755,7 +934,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> final {
   FIDL_ALIGNDECL
@@ -791,6 +970,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> final : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse {
@@ -855,7 +1037,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final {
   FIDL_ALIGNDECL
@@ -891,6 +1073,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
+
 
 template<>
 struct ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse {
@@ -955,215 +1140,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest;
-  
-
-  
-  
-  using DomainError = uint32_t;
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest;
-  
-
-  
-  
-  using DomainError = uint32_t;
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest;
-  
-
-  
-  
-  using DomainError = uint32_t;
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest;
-  
-
-  
-  
-  using DomainError = uint32_t;
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> {
-  
-    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>;
-  
-
-  static constexpr bool HasRequestPayload = true;
-  
-    using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest;
-  
-
-  
-  
-  using DomainError = uint32_t;
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
 namespace fidl {
 
 
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> : public std::true_type {};
 template <>
@@ -1194,6 +1174,9 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsden
 static_assert(sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest)
     == TypeTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest>::kPrimarySize);
 static_assert(offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest, a) == 0);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> : public std::true_type {};
@@ -1245,7 +1228,7 @@ struct TypeTraits<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding:
 static_assert(sizeof(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>)
     == TypeTraits<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, result) == 0);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> : public std::true_type {};
 template <>
@@ -1276,6 +1259,9 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsden
 static_assert(sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest)
     == TypeTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest>::kPrimarySize);
 static_assert(offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest, a) == 0);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> : public std::true_type {};
@@ -1327,7 +1313,7 @@ struct TypeTraits<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding:
 static_assert(sizeof(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>)
     == TypeTraits<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, result) == 0);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> : public std::true_type {};
 template <>
@@ -1358,6 +1344,9 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsden
 static_assert(sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest)
     == TypeTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest>::kPrimarySize);
 static_assert(offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest, a) == 0);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> : public std::true_type {};
@@ -1409,7 +1398,7 @@ struct TypeTraits<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding:
 static_assert(sizeof(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>)
     == TypeTraits<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, result) == 0);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> : public std::true_type {};
 template <>
@@ -1440,6 +1429,9 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsden
 static_assert(sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest)
     == TypeTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest>::kPrimarySize);
 static_assert(offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest, a) == 0);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> : public std::true_type {};
@@ -1491,7 +1483,7 @@ struct TypeTraits<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding:
 static_assert(sizeof(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>)
     == TypeTraits<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, result) == 0);
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> : public std::true_type {};
 template <>
@@ -1522,6 +1514,9 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsden
 static_assert(sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest)
     == TypeTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest>::kPrimarySize);
 static_assert(offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest, a) == 0);
+
+#endif  // __Fuchsia__
+
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> : public std::true_type {};
@@ -2562,6 +2557,40 @@ struct ::fidl::internal::WireOrdinal<::test_bindingsdenylist::ImportsSameNameCon
 template<>
 struct ::fidl::internal::WireOrdinal<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> final { static constexpr uint64_t value = 2914965219653596920lu; };
 
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> {
+    static constexpr bool HasRequestPayload = false;
+    
+      using Completer = fidl::Completer<>;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> {
+    static constexpr bool HasRequestPayload = false;
+    
+      using Completer = fidl::Completer<>;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
 namespace test_bindingsdenylist {
 
 }  // namespace test_bindingsdenylist
@@ -2597,7 +2626,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::ImportsSa
 #endif  // __Fuchsia__
 
 
-
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> final {
   FIDL_ALIGNDECL
@@ -2624,7 +2653,10 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+#endif  // __Fuchsia__
 
+
+#ifdef __Fuchsia__
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> final {
   FIDL_ALIGNDECL
@@ -2651,86 +2683,13 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> {
-  
-    using Completer = fidl::Completer<>;
-  
-
-  static constexpr bool HasRequestPayload = false;
-  
-    using Request = void;
-  
-
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
-#endif  // __Fuchsia__
-
-
-#ifdef __Fuchsia__
-
-
-
-
-template<>
-struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> {
-  
-    using Completer = fidl::Completer<>;
-  
-
-  static constexpr bool HasRequestPayload = false;
-  
-    using Request = void;
-  
-
-  
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::internal::ChannelTransport
-      >
-  >;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::internal::ChannelTransport
-      >
-  >;
-};
-
-
-
 #endif  // __Fuchsia__
 
 
 namespace fidl {
 
 
-
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>> : public std::true_type {};
 template <>
@@ -2758,6 +2717,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_bindingsdenyl
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, header) == 0);
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>> : public std::true_type {};
 template <>
@@ -2784,6 +2746,9 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_bindingsdenylist
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>)
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, header) == 0);
+
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 }  // namespace fidl
 

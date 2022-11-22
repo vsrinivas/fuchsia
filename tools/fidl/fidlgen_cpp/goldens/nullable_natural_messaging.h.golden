@@ -23,7 +23,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_nullable::SimpleProtocol::Add
   using Response = ::test_nullable::SimpleProtocolAddResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_nullable::SimpleProtocol::Add>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_nullable::SimpleProtocol::Add>&)>;
 };

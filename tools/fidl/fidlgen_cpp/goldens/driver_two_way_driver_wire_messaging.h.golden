@@ -31,6 +31,28 @@ struct ::fidl::internal::WireOrdinal<::test_drivertwoway::TwoWay::Add> final {
   static constexpr uint64_t value = 989730524426044687lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_drivertwoway::TwoWay::Add> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_drivertwoway::wire::TwoWayAddRequest;
+  using Response = ::test_drivertwoway::wire::TwoWayAddResponse;
+
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_drivertwoway::TwoWay::Add,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>, ::fidl::internal::DriverTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_drivertwoway::TwoWay::Add,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>, ::fidl::internal::DriverTransport>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_drivertwoway {
 
 }  // namespace test_drivertwoway
@@ -64,6 +86,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay> final
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add> final {
   FIDL_ALIGNDECL
@@ -99,6 +122,8 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
 
 template <>
 struct ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> final : public ::test_drivertwoway::wire::TwoWayAddResponse {
@@ -159,31 +184,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_drivertwoway::TwoWay::Add> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_drivertwoway::wire::TwoWayAddRequest;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_drivertwoway::TwoWay::Add,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>, ::fidl::internal::DriverTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_drivertwoway::TwoWay::Add,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>, ::fidl::internal::DriverTransport>>;
-};
-
-#endif  // __Fuchsia__
-
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};
 template <>
@@ -212,6 +215,8 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_drivertwowa
 static_assert(sizeof(::test_drivertwoway::wire::TwoWayAddRequest) == TypeTraits<::test_drivertwoway::wire::TwoWayAddRequest>::kPrimarySize);
 static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddRequest, addend1) == 0);
 static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddRequest, addend2) == 2);
+
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};

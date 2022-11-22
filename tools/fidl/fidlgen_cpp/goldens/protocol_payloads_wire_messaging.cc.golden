@@ -2021,15 +2021,23 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
 #endif  // __Fuchsia__
 
 
-  void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OneWayComposed_Ordinal, ::test_protocolpayloads::kMainProtocol_OneWayComposed_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayComposed_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2039,9 +2047,13 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2053,31 +2065,45 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
     
     
 
-
-  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposed>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposed>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal, ::test_protocolpayloads::kMainProtocol_OnComposed_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
     
     
 
-
-  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnComposedWithError_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OneWayLocal_Ordinal, ::test_protocolpayloads::kMainProtocol_OneWayLocal_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayLocal_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2087,9 +2113,13 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2101,31 +2131,45 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
     
     
 
-
-  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocal>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocal>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal, ::test_protocolpayloads::kMainProtocol_OnLocal_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
     
     
 
-
-  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnLocalWithError_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayImport>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayImport>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OneWayImport_Ordinal, ::test_protocolpayloads::kMainProtocol_OneWayImport_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayImport_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2135,9 +2179,13 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2149,31 +2197,45 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
     
     
 
-
-  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImport>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImport>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal, ::test_protocolpayloads::kMainProtocol_OnImport_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
     
     
 
-
-  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnImportWithError_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OneWayAnon_Ordinal, ::test_protocolpayloads::kMainProtocol_OneWayAnon_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayAnon_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2183,9 +2245,13 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
     
     
 
-  void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
 
@@ -2197,19 +2263,25 @@ return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorR
     
     
 
-
-  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnon>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnon>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal, ::test_protocolpayloads::kMainProtocol_OnAnon_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
     
     
 
-
-  void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>::_InitHeader() {
+#ifdef __Fuchsia__
+void ::fidl::internal::TransactionalEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal, ::test_protocolpayloads::kMainProtocol_OnAnonWithError_DynamicFlags);
   }
+
+#endif  // __Fuchsia__
+
     
     
   

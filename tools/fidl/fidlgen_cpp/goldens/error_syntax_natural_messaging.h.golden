@@ -24,7 +24,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_errorsyntax::ExampleUseOfErro
   using Response = ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>&)>;
 };
@@ -36,7 +35,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_errorsyntax::ExampleUseOfErro
   using Response = ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&)>;
 };

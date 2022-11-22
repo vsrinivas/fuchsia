@@ -280,7 +280,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::DenyEachBin
   using Response = ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&)>;
 };
@@ -292,7 +291,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::DenyEachBin
   using Response = ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&)>;
 };
@@ -304,7 +302,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::DenyEachBin
   using Response = ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&)>;
 };
@@ -316,7 +313,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::DenyEachBin
   using Response = ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&)>;
 };
@@ -328,7 +324,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::DenyEachBin
   using Response = ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&)>;
 };
@@ -860,17 +855,11 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowe
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> {
   using Completer = fidl::Completer<>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>&)>;
 };
 
 #ifdef __Fuchsia__

@@ -21,7 +21,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_union::TestProtocol::StrictXU
   using Response = ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>&)>;
 };
@@ -31,7 +30,6 @@ struct ::fidl::internal::NaturalMethodTypes<::test_union::TestProtocol::Flexible
   using Response = ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
 
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>;
-
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>&)>;
 };

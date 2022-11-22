@@ -194,9 +194,12 @@ void fidl::internal::WireBufferCompleterImpl<::test_nullable::SimpleProtocol::Ad
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_nullable::kSimpleProtocol_Add_Ordinal, ::test_nullable::kSimpleProtocol_Add_DynamicFlags);
 }
+
+#endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_nullable::kSimpleProtocol_Add_Ordinal, ::test_nullable::kSimpleProtocol_Add_DynamicFlags);

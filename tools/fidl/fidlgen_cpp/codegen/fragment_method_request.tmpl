@@ -6,9 +6,7 @@
 
 {{- define "Method:Request:WireMessagingHeader" }}
 {{- EnsureNamespace "" }}
-{{- if .Request.IsResource }}
 {{- IfdefFuchsia -}}
-{{- end }}
 
 template<>
 struct {{ .WireTransactionalRequest }} final {
@@ -61,27 +59,20 @@ struct ::fidl::internal::WireCodingTraits<{{ .WireTransactionalRequest }}, ::fid
     {{- end }}
   }
 };
-{{- if .Request.IsResource }}
 {{- EndifFuchsia -}}
-{{- end }}
 {{- end }}
 
 
 
 
 {{- define "Method:Request:WireMessagingSource" }}
-  {{- EnsureNamespace "" }}
-
-{{- if .Request.IsResource }}
+{{- EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
-{{- end }}
+
   void {{ .WireTransactionalRequest }}::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, {{ .OrdinalName }}, {{ .DynamicFlagsName }});
   }
-
-{{- if .Request.IsResource }}
 {{- EndifFuchsia -}}
-{{- end }}
 {{- end }}
 
 

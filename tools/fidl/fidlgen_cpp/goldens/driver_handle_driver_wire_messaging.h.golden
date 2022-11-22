@@ -137,6 +137,18 @@ struct ::fidl::internal::WireOrdinal<::test_driverhandle::HandlesInProtocol::Sen
   static constexpr uint64_t value = 8904504160365833729lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_driverhandle::HandlesInProtocol::SendHandles> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest;
+
+  using Completer = fidl::Completer<>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_driverhandle {
 
 }  // namespace test_driverhandle
@@ -171,7 +183,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_driverhandle::HandlesInProt
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles> final {
   FIDL_ALIGNDECL
@@ -212,36 +223,13 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_driverhandle::HandlesInProtocol::SendHandles> {
-  using Completer = fidl::Completer<>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_driverhandle::HandlesInProtocol::SendHandles,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>, ::fidl::internal::DriverTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_driverhandle::HandlesInProtocol::SendHandles,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>, ::fidl::internal::DriverTransport>>;
-};
-
-#endif  // __Fuchsia__
-
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>> : public std::true_type {};
-#ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>> : public std::true_type {};
 

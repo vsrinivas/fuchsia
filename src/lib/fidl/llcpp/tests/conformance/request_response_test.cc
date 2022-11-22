@@ -7,10 +7,6 @@
 
 #include <fidl/test.types/cpp/wire.h>
 
-#ifndef __Fuchsia__
-#include <lib/fidl/cpp/wire/internal/transport_channel_host.h>
-#endif
-
 #include <gtest/gtest.h>
 
 TEST(FidlHost, Request) {

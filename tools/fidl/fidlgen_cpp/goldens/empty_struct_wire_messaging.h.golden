@@ -45,6 +45,50 @@ struct ::fidl::internal::WireOrdinal<::test_emptystruct::EmptyProtocol::SendAndR
   static constexpr uint64_t value = 534401212734647530lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_emptystruct::EmptyProtocol::Send> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_emptystruct::wire::EmptyProtocolSendRequest;
+
+  using Completer = fidl::Completer<>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_emptystruct::EmptyProtocol::Receive> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_emptystruct::wire::EmptyProtocolReceiveRequest;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_emptystruct::EmptyProtocol::SendAndReceive> {
+  static constexpr bool HasRequestPayload = true;
+  using Request = ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest;
+  using Response = ::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse;
+
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_emptystruct::EmptyProtocol::SendAndReceive>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_emptystruct::EmptyProtocol::SendAndReceive,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_emptystruct::EmptyProtocol::SendAndReceive,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::internal::ChannelTransport>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_emptystruct {
 
 }  // namespace test_emptystruct
@@ -78,6 +122,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send> final {
   FIDL_ALIGNDECL
@@ -113,30 +158,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-template <>
-struct ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> final : public ::test_emptystruct::wire::EmptyProtocolReceiveRequest {
-  explicit WireEvent(::test_emptystruct::wire::EmptyProtocolReceiveRequest base) : ::test_emptystruct::wire::EmptyProtocolReceiveRequest(std::move(base)) {}
-  explicit WireEvent(const ::test_emptystruct::wire::Empty& e) : ::test_emptystruct::wire::EmptyProtocolReceiveRequest{.e = std::move(e)} {}
-  WireEvent() = default;
-};
+#endif  // __Fuchsia__
 
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 1;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-        encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-        decoder, position, recursion_depth);
-  }
-};
-
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive> final {
   FIDL_ALIGNDECL
@@ -145,7 +169,7 @@ struct ::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::R
   ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> body;
 
   explicit TransactionalEvent(const ::test_emptystruct::wire::Empty& e)
-      : body(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>(e)) {
+      : body{e} {
     _InitHeader();
   }
 
@@ -175,6 +199,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive> final {
   FIDL_ALIGNDECL
@@ -210,6 +237,8 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#endif  // __Fuchsia__
 
 template <>
 struct ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive> final : public ::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse {
@@ -270,54 +299,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_emptystruct::EmptyProtocol::Send> {
-  using Completer = fidl::Completer<>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_emptystruct::wire::EmptyProtocolSendRequest;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_emptystruct::EmptyProtocol::Send,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_emptystruct::EmptyProtocol::Send,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_emptystruct::EmptyProtocol::SendAndReceive> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_emptystruct::EmptyProtocol::SendAndReceive>>;
-
-  static constexpr bool HasRequestPayload = true;
-
-  using Request = ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_emptystruct::EmptyProtocol::SendAndReceive,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_emptystruct::EmptyProtocol::SendAndReceive,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>> : public std::true_type {};
 template <>
@@ -346,14 +330,13 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_emptystruct
 static_assert(sizeof(::test_emptystruct::wire::EmptyProtocolSendRequest) == TypeTraits<::test_emptystruct::wire::EmptyProtocolSendRequest>::kPrimarySize);
 static_assert(offsetof(::test_emptystruct::wire::EmptyProtocolSendRequest, e) == 0);
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>> : public std::false_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>> {
@@ -376,25 +359,9 @@ static_assert(sizeof(::fidl::internal::TransactionalEvent<::test_emptystruct::Em
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>, body) == sizeof(fidl_message_header_t));
 
-template <>
-struct TypeTraits<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>> {
-  static constexpr const fidl_type_t* kType =
-      &::test_emptystruct::test_emptystruct_EmptyProtocolReceiveRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 1;
-  static constexpr uint32_t kPrimarySizeV1 = 1;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-static_assert(sizeof(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>) == TypeTraits<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>, e) == 0);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> : public std::true_type {};
 template <>
@@ -422,6 +389,8 @@ static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_emptystruct
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, body) == sizeof(fidl_message_header_t));
 static_assert(sizeof(::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest) == TypeTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest>::kPrimarySize);
 static_assert(offsetof(::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest, e) == 0);
+
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> : public std::true_type {};

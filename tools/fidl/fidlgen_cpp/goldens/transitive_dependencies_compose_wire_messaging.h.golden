@@ -32,6 +32,27 @@ struct ::fidl::internal::WireOrdinal<::test_transitivedependenciescompose::Top::
   static constexpr uint64_t value = 2618685789258237543lu;
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_transitivedependenciescompose::Top::GetFoo> {
+  static constexpr bool HasRequestPayload = false;
+  using Response = ::test_bottom::wire::BottomGetFooResponse;
+
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_transitivedependenciescompose::Top::GetFoo>>;
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_transitivedependenciescompose::Top::GetFoo,
+      ::fidl::internal::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_transitivedependenciescompose::Top::GetFoo,
+      ::fidl::internal::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::internal::ChannelTransport>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace test_transitivedependenciescompose {
 
 }  // namespace test_transitivedependenciescompose
@@ -65,6 +86,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_transitivedependenciescompo
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo> final {
   FIDL_ALIGNDECL
@@ -91,6 +113,8 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
+#endif  // __Fuchsia__
 
 template <>
 struct ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo> final : public ::test_bottom::wire::BottomGetFooResponse {
@@ -151,31 +175,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_transitivedependenciescompose::Top::GetFoo> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_transitivedependenciescompose::Top::GetFoo>>;
-
-  static constexpr bool HasRequestPayload = false;
-
-  using Request = void;
-
-  using Thenable = ::fidl::internal::WireThenableImpl<
-      ::test_transitivedependenciescompose::Top::GetFoo,
-      ::fidl::internal::OwnedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::internal::ChannelTransport>>;
-
-  using BufferThenable = ::fidl::internal::WireThenableImpl<
-      ::test_transitivedependenciescompose::Top::GetFoo,
-      ::fidl::internal::UnownedEncodedMessage<
-          ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::internal::ChannelTransport>>;
-};
-
-#endif  // __Fuchsia__
-
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>> : public std::true_type {};
 template <>
@@ -200,6 +202,8 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_transitivedepend
 
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>, header) == 0);
+
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>> : public std::true_type {};

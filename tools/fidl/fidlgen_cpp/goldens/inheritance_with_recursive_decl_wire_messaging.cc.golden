@@ -136,7 +136,6 @@ void fidl::WireServer<::test_inheritancewithrecursivedecl::Parent>::dispatch_mes
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 void ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_inheritancewithrecursivedecl::kParent_First_Ordinal, ::test_inheritancewithrecursivedecl::kParent_First_DynamicFlags);
 }
@@ -362,7 +361,6 @@ void fidl::WireServer<::test_inheritancewithrecursivedecl::Child>::dispatch_mess
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 void ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_inheritancewithrecursivedecl::kChild_First_Ordinal, ::test_inheritancewithrecursivedecl::kChild_First_DynamicFlags);
 }
@@ -370,7 +368,6 @@ void ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl:
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
 void ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal, ::test_inheritancewithrecursivedecl::kChild_Second_DynamicFlags);
 }
