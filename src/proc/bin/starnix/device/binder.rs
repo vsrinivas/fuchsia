@@ -14,7 +14,7 @@ use crate::fs::{
     NamespaceNode, SeekOrigin, SpecialNode, WaitAsyncOptions,
 };
 use crate::lock::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use crate::logging::{log_error, log_warn, not_implemented, not_implemented_log_once};
+use crate::logging::*;
 use crate::mm::vmo::round_up_to_increment;
 use crate::mm::{
     DesiredAddress, MappedVmo, MappingOptions, MemoryAccessor, MemoryAccessorExt, UserMemoryCursor,
@@ -693,12 +693,32 @@ impl ThreadPool {
             .values()
             .find(|thread| {
                 let thread_state = thread.read();
-                thread_state
+                if !thread_state
                     .registration
                     .intersects(RegistrationState::MAIN | RegistrationState::REGISTERED)
-                    && thread_state.command_queue.is_empty()
-                    && thread_state.waiter.is_valid()
-                    && thread_state.transactions.is_empty()
+                {
+                    log_trace!(
+                        "thread {:?} not registered {:?}",
+                        thread.tid,
+                        thread_state.registration
+                    );
+                    false
+                } else if !thread_state.command_queue.is_empty() {
+                    log_trace!("thread {:?} has non empty queue", thread.tid);
+                    false
+                } else if !thread_state.waiter.is_valid() {
+                    log_trace!("thread {:?} is not waiting", thread.tid);
+                    false
+                } else if !thread_state.transactions.is_empty() {
+                    log_trace!(
+                        "thread {:?} is in a transaction {:?}",
+                        thread.tid,
+                        thread_state.transactions
+                    );
+                    false
+                } else {
+                    true
+                }
             })
             .cloned()
     }
@@ -941,13 +961,16 @@ impl BinderThreadState {
 
     /// Get the binder process and thread to reply to, or fail if there is no ongoing transaction or
     /// the calling process/thread are dead.
-    pub fn transaction_caller(
-        &self,
+    pub fn pop_transaction_caller(
+        &mut self,
     ) -> Result<(Arc<BinderProcess>, Arc<BinderThread>), TransactionError> {
-        let transaction = self.transactions.last().ok_or_else(|| errno!(EINVAL))?;
+        let transaction = self.transactions.pop().ok_or_else(|| errno!(EINVAL))?;
         match transaction {
             TransactionRole::Receiver(peer) => peer.upgrade().ok_or(TransactionError::Dead),
-            TransactionRole::Sender(_) => error!(EINVAL)?,
+            TransactionRole::Sender(_) => {
+                log_warn!("binder got confused, nothing to reply to!");
+                error!(EINVAL)?
+            }
         }
     }
 }
@@ -1023,6 +1046,7 @@ enum Command {
     OnewayTransaction(TransactionData),
     /// Commands a binder thread to start processing an incoming synchronous transaction from
     /// another binder process.
+    /// Sent from the client to the server.
     Transaction {
         /// The binder peer that sent this transaction.
         sender: WeakBinderPeer,
@@ -1030,10 +1054,13 @@ enum Command {
         data: TransactionData,
     },
     /// Commands a binder thread to process an incoming reply to its transaction.
+    /// Sent from the server to the client.
     Reply(TransactionData),
     /// Notifies a binder thread that a transaction has completed.
+    /// Sent from binder to the server.
     TransactionComplete,
     /// Notifies a binder thread that a oneway transaction has been sent.
+    /// Sent from binder to the client.
     OnewayTransactionComplete,
     /// The transaction was well formed but failed. Possible causes are a nonexistent handle, no
     /// more memory available to allocate a buffer.
@@ -2220,7 +2247,7 @@ impl BinderDriver {
         data: binder_transaction_data_sg,
     ) -> Result<(), TransactionError> {
         // Find the process and thread that initiated the transaction. This reply is for them.
-        let (target_proc, target_thread) = binder_thread.read().transaction_caller()?;
+        let (target_proc, target_thread) = binder_thread.write().pop_transaction_caller()?;
 
         let target_task = self.get_binder_task(current_task.kernel(), target_proc.pid)?;
 
@@ -2298,11 +2325,16 @@ impl BinderDriver {
                         let tx = TransactionRole::Receiver(sender);
                         thread_state.transactions.push(tx);
                     }
-                    Command::Reply(..) | Command::TransactionComplete => {
-                        // A transaction is complete, pop it from the transaction stack.
-                        thread_state.transactions.pop().expect("transaction stack underflow!");
+                    Command::Reply(..) => {
+                        // The sender got a reply, pop the sender entry from the transaction stac.
+                        let transaction =
+                            thread_state.transactions.pop().expect("transaction stack underflow!");
+                        // Command::Reply is sent to the receiver side. So the popped transaction
+                        // must be a Sender role.
+                        assert!(matches!(transaction, TransactionRole::Sender(..)));
                     }
-                    Command::OnewayTransaction(..)
+                    Command::TransactionComplete
+                    | Command::OnewayTransaction(..)
                     | Command::OnewayTransactionComplete
                     | Command::AcquireRef(..)
                     | Command::ReleaseRef(..)
