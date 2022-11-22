@@ -1027,8 +1027,8 @@ void Coordinator::UnregisterSystemStorageForShutdown(
 
 void Coordinator::SuspendWithoutExit(SuspendWithoutExitCompleter::Sync& completer) {
   LOGF(INFO, "Received administrator suspend event");
-  suspend_resume_manager().Suspend(
-      suspend_resume_manager().GetSuspendFlagsFromSystemPowerState(shutdown_system_state()),
+  suspend_resume_manager()->Suspend(
+      suspend_resume_manager()->GetSuspendFlagsFromSystemPowerState(shutdown_system_state()),
       [](zx_status_t status) {
         LOGF(INFO, "Administrator suspend completed with status: %s", zx_status_get_string(status));
       });

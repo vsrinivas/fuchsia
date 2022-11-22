@@ -206,7 +206,7 @@ void SuspendHandler::UnregisterSystemStorageForShutdown(SuspendCallback callback
     return device.DriverLivesInSystemStorage();
   };
 
-  uint32_t sflags = coordinator_->suspend_resume_manager().GetSuspendFlagsFromSystemPowerState(
+  uint32_t sflags = coordinator_->suspend_resume_manager()->GetSuspendFlagsFromSystemPowerState(
       coordinator_->shutdown_system_state());
 
   unregister_system_storage_task_ = SuspendMatchingTask::Create(

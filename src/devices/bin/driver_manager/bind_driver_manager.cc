@@ -27,7 +27,7 @@ zx_status_t BindDriverManager::BindDriverToDevice(const MatchedDriver& driver,
         .device = dev,
     });
     return coordinator_->node_group_manager()
-        .BindNodeRepresentation(*info, device_ptr)
+        ->BindNodeRepresentation(*info, device_ptr)
         .status_value();
   }
 
@@ -193,7 +193,7 @@ zx_status_t BindDriverManager::MatchAndBindNodeGroups(const fbl::RefPtr<Device>&
     auto device_ptr = std::shared_ptr<DeviceV1Wrapper>(new DeviceV1Wrapper{
         .device = dev,
     });
-    auto bind_result = coordinator_->node_group_manager().BindNodeRepresentation(
+    auto bind_result = coordinator_->node_group_manager()->BindNodeRepresentation(
         std::get<fdi::MatchedNodeRepresentationInfo>(driver), device_ptr);
     if (bind_result.is_error()) {
       LOGF(WARNING, "Failed to bind node group node: %d", bind_result.status_value());
