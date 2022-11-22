@@ -188,10 +188,10 @@ not support Fuchsia installation. If you just received your VIM3
 from Khadas you must update your Android image:
 
 1. Click the following URL to download the updated Android image:
-   <https://dl.khadas.com/firmware/vim3/android/VIM3_Pie_V210527.7z>
+   <https://dl.khadas.com/firmware/vim3/android/VIM3_Pie_V211220.7z>
 
-1. Extract the compressed archive file (`VIM3_Pie_V210527.7z`).
-   After the extraction you should have a `VIM3_Pie_V210527` directory
+1. Extract the compressed archive file (`VIM3_Pie_V211220.7z`).
+   After the extraction you should have a `VIM3_Pie_V211220` directory
    with an `update.img` file in it.
 
 1. Follow the instructions in [Install OS into
@@ -200,7 +200,7 @@ from Khadas you must update your Android image:
    path to your `update.img` file. Your command should look similar to this:
 
    ```posix-terminal
-   aml-burn-tool -b VIM3 -i ~/Downloads/VIM3_Pie_V210527/update.img
+   aml-burn-tool -b VIM3 -i ~/Downloads/VIM3_Pie_V211220/update.img
    ```
 
    Caution: Make sure that you're following the instructions for Ubuntu
