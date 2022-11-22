@@ -33,14 +33,10 @@ const char kSchema[] = R"({
         "enabled",
         "read_from_privacy_settings"
       ]
-    },
-    "daily_per_product_quota": {
-      "type": "number"
     }
   },
   "required": [
-    "crash_report_upload_policy",
-    "daily_per_product_quota"
+    "crash_report_upload_policy"
   ],
   "additionalProperties": false
 })";
@@ -99,19 +95,6 @@ std::optional<Config> ParseConfig(const std::string& filepath) {
     config.crash_report_upload_policy = Config::UploadPolicy::kReadFromPrivacySettings;
   } else {
     FX_LOGS(FATAL) << "Upload policy '" << upload_policy << "' not permitted by schema";
-  }
-
-  if (const int64_t daily_per_product_quota = doc[kDailyPerProductQuotaKey].GetInt64();
-      daily_per_product_quota > 0) {
-    config.daily_per_product_quota = daily_per_product_quota;
-  } else {
-    config.daily_per_product_quota = std::nullopt;
-  }
-
-  // If crash reports won't be uploaded, there shouldn't be a quota in the config.
-  if (config.crash_report_upload_policy == Config::UploadPolicy::kDisabled) {
-    FX_CHECK(config.daily_per_product_quota == std::nullopt)
-        << "quota is " << *config.daily_per_product_quota;
   }
 
   return config;

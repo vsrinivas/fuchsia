@@ -96,7 +96,7 @@ CrashReporter::CrashReporter(
       queue_(dispatcher_, services_, info_context, tags_, report_store, crash_server_),
       snapshot_collector_(dispatcher, clock, data_provider, report_store->GetSnapshotStore(),
                           &queue_, snapshot_collector_window_duration),
-      product_quotas_(dispatcher_, clock, config.daily_per_product_quota,
+      product_quotas_(dispatcher_, clock, build_type_config.daily_per_product_crash_report_quota,
                       feedback::kProductQuotasPath, &utc_clock_ready_watcher_,
                       product_quota_reset_offset),
       info_(info_context),
@@ -106,6 +106,13 @@ CrashReporter::CrashReporter(
   FX_CHECK(services_);
   FX_CHECK(crash_register_);
   FX_CHECK(crash_server_);
+
+  // If crash reports won't be uploaded, there shouldn't be a quota in the config.
+  if (config.crash_report_upload_policy == Config::UploadPolicy::kDisabled) {
+    const auto quota = build_type_config.daily_per_product_crash_report_quota;
+    FX_CHECK(!quota.has_value()) << "Can't have quota when upload policy is disabled: quota is "
+                                 << *quota;
+  }
 
   next_report_id_ = SeedReportId();
 

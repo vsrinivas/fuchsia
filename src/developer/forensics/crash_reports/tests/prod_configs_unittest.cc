@@ -29,7 +29,6 @@ TEST_F(ProdConfigTest, Default) {
   ASSERT_TRUE(config.has_value());
 
   EXPECT_EQ(config->crash_report_upload_policy, kDisabled);
-  EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
 }
 
 TEST_F(ProdConfigTest, UploadToProdServer) {
@@ -37,7 +36,6 @@ TEST_F(ProdConfigTest, UploadToProdServer) {
   ASSERT_TRUE(config.has_value());
 
   EXPECT_EQ(config->crash_report_upload_policy, kEnabled);
-  EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
 }
 
 TEST_F(ProdConfigTest, User) {
@@ -45,7 +43,6 @@ TEST_F(ProdConfigTest, User) {
   ASSERT_TRUE(config.has_value());
 
   EXPECT_EQ(config->crash_report_upload_policy, kReadFromPrivacySettings);
-  EXPECT_EQ(config->daily_per_product_quota, 100);
 }
 
 TEST_F(ProdConfigTest, Userdebug) {
@@ -53,7 +50,6 @@ TEST_F(ProdConfigTest, Userdebug) {
   ASSERT_TRUE(config.has_value());
 
   EXPECT_EQ(config->crash_report_upload_policy, kReadFromPrivacySettings);
-  EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
 }
 
 }  // namespace

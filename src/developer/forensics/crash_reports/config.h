@@ -36,7 +36,6 @@ struct Config {
   };
 
   UploadPolicy crash_report_upload_policy;
-  std::optional<uint64_t> daily_per_product_quota;
 };
 
 // Parses the JSON config at |filepath|. Returns std::nullopt if an error occurs.

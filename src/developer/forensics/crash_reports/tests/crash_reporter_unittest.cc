@@ -69,6 +69,7 @@ using inspect::testing::UintIs;
 using testing::ByRef;
 using testing::Contains;
 using testing::ElementsAre;
+using testing::HasSubstr;
 using testing::IsEmpty;
 using testing::IsSupersetOf;
 using testing::Not;
@@ -188,12 +189,12 @@ class CrashReporterTest : public UnitTestFixture {
         std::make_unique<StubCrashServer>(dispatcher(), services(), upload_attempt_results);
 
     const feedback::BuildTypeConfig build_type_config{
+        .daily_per_product_crash_report_quota = daily_per_product_quota,
         .enable_hourly_snapshots = enable_hourly_snapshots,
     };
 
     const Config config{
         .crash_report_upload_policy = crash_report_upload_policy,
-        .daily_per_product_quota = daily_per_product_quota,
     };
 
     crash_reporter_ = std::make_unique<CrashReporter>(
@@ -776,7 +777,7 @@ TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
       std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kEmptyAttachmentBundleKey));
   SetUpCrashReporter(
       /*crash_report_upload_policy=*/Config::UploadPolicy::kDisabled,
-      /*daily_per_product_quota=*/kDailyPerProductQuota,
+      /*daily_per_product_quota=*/std::nullopt,
       /*enable_hourly_snapshots=*/true);
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
@@ -890,6 +891,19 @@ TEST_F(CrashReporterTest, Check_CobaltAfterInvalidInputCrashReport) {
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
                                           cobalt::Event(cobalt::CrashState::kDropped),
                                       }));
+}
+
+TEST_F(CrashReporterTest, Crash_UploadDisabledWithQuota) {
+  ASSERT_DEATH(
+      {
+        SetUpDataProviderServer(std::make_unique<stubs::DataProvider>(kFeedbackAnnotations,
+                                                                      kDefaultAttachmentBundleKey));
+        SetUpCrashReporter(
+            /*crash_report_upload_policy=*/Config::UploadPolicy::kDisabled,
+            /*daily_per_product_quota=*/kDailyPerProductQuota,
+            /*enable_hourly_snapshots=*/true);
+      },
+      HasSubstr("quota is 100"));
 }
 
 // Test fixture that replaces the runtime clock before starting.

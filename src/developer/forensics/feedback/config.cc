@@ -141,6 +141,9 @@ std::optional<ProductConfig> ParseProductConfig(const rapidjson::Document& json)
 const char kBuildTypeConfigSchema[] = R"({
   "type": "object",
   "properties": {
+    "daily_per_product_crash_report_quota": {
+      "type": "number"
+    },
     "enable_data_redaction": {
       "type": "boolean"
     },
@@ -152,6 +155,7 @@ const char kBuildTypeConfigSchema[] = R"({
     }
   },
   "required": [
+    "daily_per_product_crash_report_quota",
     "enable_data_redaction",
     "enable_hourly_snapshots",
     "enable_limit_inspect_data"
@@ -160,11 +164,19 @@ const char kBuildTypeConfigSchema[] = R"({
 })";
 
 std::optional<BuildTypeConfig> ParseBuildTypeConfig(const rapidjson::Document& json) {
-  return BuildTypeConfig{
+  BuildTypeConfig config{
       .enable_data_redaction = json["enable_data_redaction"].GetBool(),
       .enable_hourly_snapshots = json["enable_hourly_snapshots"].GetBool(),
       .enable_limit_inspect_data = json["enable_limit_inspect_data"].GetBool(),
   };
+
+  if (const int64_t quota = json["daily_per_product_crash_report_quota"].GetInt64(); quota > 0) {
+    config.daily_per_product_crash_report_quota = quota;
+  } else {
+    config.daily_per_product_crash_report_quota = std::nullopt;
+  }
+
+  return config;
 }
 
 }  // namespace

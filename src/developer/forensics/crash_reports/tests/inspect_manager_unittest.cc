@@ -304,7 +304,6 @@ TEST_F(InspectManagerTest, Fail_MarkReportAsGarbageCollected_UnknownReport) {
 TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
   inspect_manager_->ExposeConfig(Config{
       /*crash_report_upload_policy=*/kConfigEnabled,
-      /*daily_per_product_quota=*/100u,
   });
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(
@@ -319,7 +318,6 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
 TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
   inspect_manager_->ExposeConfig(Config{
       /*crash_report_upload_policy=*/kConfigDisabled,
-      /*per_product_config=*/100,
   });
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(
@@ -333,7 +331,6 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
 TEST_F(InspectManagerTest, ExposeConfig_UploadReadFromPrivacySettings) {
   inspect_manager_->ExposeConfig(Config{
       /*crash_report_upload_policy=*/kConfigReadFromPrivacySettings,
-      /*per_product_config=*/100u,
   });
   EXPECT_THAT(
       InspectTree(),

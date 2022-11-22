@@ -49,6 +49,7 @@ TEST_F(ProdConfigTest, Default) {
   const std::optional<BuildTypeConfig> config = ReadBuildTypeConfig("default.json");
   ASSERT_TRUE(config.has_value());
 
+  EXPECT_EQ(config->daily_per_product_crash_report_quota, std::nullopt);
   EXPECT_FALSE(config->enable_data_redaction);
   EXPECT_FALSE(config->enable_hourly_snapshots);
   EXPECT_FALSE(config->enable_limit_inspect_data);
@@ -58,6 +59,7 @@ TEST_F(ProdConfigTest, User) {
   const std::optional<BuildTypeConfig> config = ReadBuildTypeConfig("user.json");
   ASSERT_TRUE(config.has_value());
 
+  EXPECT_EQ(config->daily_per_product_crash_report_quota, 100);
   EXPECT_TRUE(config->enable_data_redaction);
   EXPECT_FALSE(config->enable_hourly_snapshots);
   EXPECT_TRUE(config->enable_limit_inspect_data);
@@ -67,6 +69,7 @@ TEST_F(ProdConfigTest, Userdebug) {
   const std::optional<BuildTypeConfig> config = ReadBuildTypeConfig("userdebug.json");
   ASSERT_TRUE(config.has_value());
 
+  EXPECT_EQ(config->daily_per_product_crash_report_quota, std::nullopt);
   EXPECT_FALSE(config->enable_data_redaction);
   EXPECT_TRUE(config->enable_hourly_snapshots);
   EXPECT_FALSE(config->enable_limit_inspect_data);

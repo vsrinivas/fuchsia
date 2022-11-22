@@ -23,6 +23,7 @@ struct ProductConfig {
 };
 
 struct BuildTypeConfig {
+  std::optional<uint64_t> daily_per_product_crash_report_quota;
   bool enable_data_redaction;
   bool enable_hourly_snapshots;
   bool enable_limit_inspect_data;

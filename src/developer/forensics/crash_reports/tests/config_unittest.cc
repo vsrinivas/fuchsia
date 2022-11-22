@@ -42,43 +42,26 @@ class ConfigTest : public testing::Test {
 #define ASSERT_IS_BAD_CONFIG(config_str) \
   ASSERT_FALSE(ParseConfig(WriteConfig(config_str)).has_value());
 
-TEST_F(ConfigTest, MissingDailyPerProductQuota) {
-  ASSERT_IS_BAD_CONFIG(R"({
-    "crash_report_upload_policy": "disabled"
-})");
-}
-
-TEST_F(ConfigTest, BadDailyPerProductQuotaValue) {
-  ASSERT_IS_BAD_CONFIG(R"({
-    "daily_per_product_quota": "",
-    "crash_report_upload_policy": "disabled"
-})");
-}
-
 TEST_F(ConfigTest, MissingCrashReportUploadPolicy) {
   ASSERT_IS_BAD_CONFIG(R"({
-    "daily_per_product_quota": -1
 })");
 }
 
 TEST_F(ConfigTest, BadCrashReportUploadPolicy) {
   ASSERT_IS_BAD_CONFIG(R"({
-    "daily_per_product_quota": -1,
     "crash_report_upload_policy": "other"
 })");
 }
 
 TEST_F(ConfigTest, SpruiousFields) {
   ASSERT_IS_BAD_CONFIG(R"({
-    "daily_per_product_quota": -1,
-    "crash_report_upload_policy": "disabled"
+    "crash_report_upload_policy": "disabled",
     "spurious": ""
 })");
 }
 
 TEST_F(ConfigTest, UploadDisabled) {
   PARSE_OR_ASSERT(config, R"({
-    "daily_per_product_quota": -1,
     "crash_report_upload_policy": "disabled"
 })");
   EXPECT_EQ(config.crash_report_upload_policy, kDisabled);
@@ -86,7 +69,6 @@ TEST_F(ConfigTest, UploadDisabled) {
 
 TEST_F(ConfigTest, UploadEnabled) {
   PARSE_OR_ASSERT(config, R"({
-    "daily_per_product_quota": -1,
     "crash_report_upload_policy": "enabled"
 })");
   EXPECT_EQ(config.crash_report_upload_policy, kEnabled);
@@ -94,35 +76,9 @@ TEST_F(ConfigTest, UploadEnabled) {
 
 TEST_F(ConfigTest, UploadReadFromPrivacySettings) {
   PARSE_OR_ASSERT(config, R"({
-    "daily_per_product_quota": -1,
     "crash_report_upload_policy": "read_from_privacy_settings"
 })");
   EXPECT_EQ(config.crash_report_upload_policy, kReadFromPrivacySettings);
-}
-
-TEST_F(ConfigTest, PositiveDailyPerProductQuota) {
-  PARSE_OR_ASSERT(config, R"({
-    "daily_per_product_quota": 100,
-    "crash_report_upload_policy": "enabled"
-})");
-  ASSERT_TRUE(config.daily_per_product_quota.has_value());
-  EXPECT_EQ(config.daily_per_product_quota.value(), 100u);
-}
-
-TEST_F(ConfigTest, ZeroDailyPerProductQuota) {
-  PARSE_OR_ASSERT(config, R"({
-    "daily_per_product_quota": 0,
-    "crash_report_upload_policy": "enabled"
-})");
-  ASSERT_FALSE(config.daily_per_product_quota.has_value());
-}
-
-TEST_F(ConfigTest, NegativeDailyPerProductQuota) {
-  PARSE_OR_ASSERT(config, R"({
-    "daily_per_product_quota": -1,
-    "crash_report_upload_policy": "enabled"
-})");
-  ASSERT_FALSE(config.daily_per_product_quota.has_value());
 }
 
 TEST_F(ConfigTest, MissingConfig) { ASSERT_FALSE(ParseConfig("undefined file").has_value()); }
