@@ -4,7 +4,7 @@
 use {
     crate::io::Directory,
     anyhow::Result,
-    fidl::endpoints::{create_endpoints, create_proxy_and_stream, ClientEnd, ServerEnd},
+    fidl::endpoints::{create_proxy_and_stream, ServerEnd},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys,
@@ -29,6 +29,7 @@ pub fn serve_realm_query(
                 }
                 _ => panic!("Unexpected RealmQuery request"),
             };
+
             let response = instances.remove(&moniker);
 
             match response {
@@ -111,14 +112,4 @@ pub async fn read_data_from_namespace(
     let ns_dir = Directory::from_proxy(ns_proxy.to_owned());
     let file_data = ns_dir.read_file_bytes(PathBuf::from(data_path)).await.unwrap();
     Ok(file_data)
-}
-
-// Duplicates the client end to a namespace.
-pub fn duplicate_namespace_client(ns_dir: &DirectoryProxy) -> Result<DirectoryProxy> {
-    let (duplicate_ns_dir, duplicate_ns_server) = create_endpoints::<fio::NodeMarker>().unwrap();
-    ns_dir.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, duplicate_ns_server).unwrap();
-    let duplicate_ns_dir = ClientEnd::<fio::DirectoryMarker>::new(duplicate_ns_dir.into_channel())
-        .into_proxy()
-        .unwrap();
-    Ok(duplicate_ns_dir)
 }

@@ -9,6 +9,7 @@ ffx_plugin("ffx_component_copy") {
   edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/plugins/component/common:ffx_component",
     "//src/sys/lib/component_debug",
   ]

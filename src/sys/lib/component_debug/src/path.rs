@@ -5,6 +5,7 @@
 use {
     crate::io::Directory,
     anyhow::{anyhow, bail, Error, Result},
+    fidl_fuchsia_io as fio,
     fuchsia_fs::directory::DirentKind,
     std::path::{Component, PathBuf},
 };
@@ -110,6 +111,7 @@ pub const REMOTE_PATH_HELP: &'static str = r#"Remote paths have the following fo
 
    To learn more about absolute monikers, see https://fuchsia.dev/go/components/moniker#absolute"#;
 
+#[derive(Clone)]
 pub struct RemotePath {
     pub remote_id: String,
     pub relative_path: PathBuf,
@@ -149,8 +151,19 @@ impl RemotePath {
             }
         }
     }
+
+    pub fn contains_wildcard(&self) -> bool {
+        return self.to_string().contains("*");
+    }
 }
 
+impl ToString for RemotePath {
+    fn to_string(&self) -> String {
+        format!("{}::/{}", self.remote_id, self.relative_path.to_string_lossy().to_string())
+    }
+}
+
+#[derive(Clone)]
 pub enum HostOrRemotePath {
     Host(PathBuf),
     Remote(RemotePath),
@@ -164,4 +177,9 @@ impl HostOrRemotePath {
             Err(_) => HostOrRemotePath::Host(PathBuf::from(path)),
         }
     }
+}
+
+pub struct NamespacedPath {
+    pub path: RemotePath,
+    pub ns: fio::DirectoryProxy,
 }

@@ -5,40 +5,250 @@
 use {
     crate::{
         io::Directory,
-        path::{finalize_destination_to_filepath, HostOrRemotePath, RemotePath, REMOTE_PATH_HELP},
+        path::{
+            finalize_destination_to_filepath, HostOrRemotePath, NamespacedPath, RemotePath,
+            REMOTE_PATH_HELP,
+        },
     },
-    anyhow::{anyhow, bail, Result},
-    fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2 as fsys,
-    std::fs::{read, write},
-    std::path::PathBuf,
+    anyhow::{bail, Result},
+    fidl::endpoints::{create_endpoints, ClientEnd},
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    regex::Regex,
+    std::{
+        collections::HashMap,
+        fs::{read, write},
+        path::PathBuf,
+    },
+    thiserror::Error,
 };
 
-/// Transfer a file between a component's namespace to/from the host machine.
+#[derive(Error, Debug)]
+pub enum CopyError {
+    #[error("Destination can not have a wildcard.")]
+    DestinationContainWildcard,
+
+    #[error("At least two paths (host or remote) must be provided.")]
+    NotEnoughPaths,
+
+    #[error("Could not write to host: {error}.")]
+    FailedToWriteToHost { error: std::io::Error },
+
+    #[error("File name was unexpectedly empty.")]
+    EmptyFileName,
+
+    #[error("Path does not contain a parent folder.")]
+    NoParentFolder { path: String },
+
+    #[error("Could not find files in device that matched pattern: {pattern}.")]
+    NoWildCardMatches { pattern: String },
+
+    #[error("Could not write to device.")]
+    FailedToWriteToDevice,
+
+    #[error("Unexpected error. Destination namespace was non empty but destination path is not a remote path.")]
+    UnexpectedHostDestination,
+
+    #[error("Could not create Regex pattern \"{pattern}\": {error}.")]
+    FailedToCreateRegex { pattern: String, error: regex::Error },
+
+    #[error("At least one path must be a remote path. {}", REMOTE_PATH_HELP)]
+    NoRemotePaths,
+
+    #[error(
+        "Could not find an instance with the moniker: {moniker}\n\
+    Use `ffx component list` or `ffx component show` to find the correct moniker of your instance."
+    )]
+    InstanceNotFound { moniker: String },
+
+    #[error("Encountered an unexpected error when attempting to retrieve namespace with the provider moniker: {moniker}. {error:?}.")]
+    UnexpectedErrorFromMoniker { moniker: String, error: fsys::RealmQueryError },
+}
+
+/// Transfer files between a component's namespace to/from the host machine.
 ///
 /// # Arguments
 /// * `realm_query`: |RealmQueryProxy| to fetch the component's namespace.
-/// * `source_path`: A path containing either a host filepath or a component namespace entry to retrieve file contents.
-/// * `destination_path`: A path to a host filepath or a component namespace entry to copy over file contents.
-pub async fn copy(
+/// * `paths`: The host and remote paths used for file copying.
+pub async fn copy(realm_query: &fsys::RealmQueryProxy, mut paths: Vec<String>) -> Result<()> {
+    validate_paths(&paths)?;
+
+    let mut namespaces: HashMap<String, fio::DirectoryProxy> = HashMap::new();
+    // paths is safe to unwrap as validate_paths ensures that it is non-empty.
+    let destination_path = paths.pop().unwrap();
+
+    for source_path in paths {
+        let result = match (
+            HostOrRemotePath::parse(&source_path),
+            HostOrRemotePath::parse(&destination_path),
+        ) {
+            (HostOrRemotePath::Remote(source), HostOrRemotePath::Host(destination)) => {
+                let source_namespace = get_namespace_or_insert(
+                    &realm_query,
+                    source.clone().remote_id,
+                    &mut namespaces,
+                )
+                .await?;
+
+                let paths = normalize_paths(source, &source_namespace).await?;
+
+                for source_path in paths {
+                    copy_remote_file_to_host(
+                        NamespacedPath { path: source_path, ns: source_namespace.to_owned() },
+                        destination.clone(),
+                    )
+                    .await?;
+                }
+                Ok(())
+            }
+
+            (HostOrRemotePath::Remote(source), HostOrRemotePath::Remote(destination)) => {
+                let source_namespace = get_namespace_or_insert(
+                    &realm_query,
+                    source.clone().remote_id,
+                    &mut namespaces,
+                )
+                .await?;
+
+                let destination_namespace = get_namespace_or_insert(
+                    &realm_query,
+                    destination.clone().remote_id,
+                    &mut namespaces,
+                )
+                .await?;
+                let paths = normalize_paths(source, &source_namespace).await?;
+
+                for source in paths {
+                    copy_remote_file_to_remote(
+                        NamespacedPath { path: source, ns: source_namespace.to_owned() },
+                        NamespacedPath {
+                            path: destination.clone(),
+                            ns: destination_namespace.to_owned(),
+                        },
+                    )
+                    .await?;
+                }
+                Ok(())
+            }
+
+            (HostOrRemotePath::Host(source), HostOrRemotePath::Remote(destination)) => {
+                let destination_namespace = get_namespace_or_insert(
+                    &realm_query,
+                    destination.clone().remote_id,
+                    &mut namespaces,
+                )
+                .await?;
+
+                copy_host_file_to_remote(
+                    source,
+                    NamespacedPath { path: destination, ns: destination_namespace },
+                )
+                .await
+            }
+
+            (HostOrRemotePath::Host(_), HostOrRemotePath::Host(_)) => {
+                Err(CopyError::NoRemotePaths.into())
+            }
+        };
+
+        match result {
+            Ok(_) => continue,
+            Err(e) => bail!(
+                "Copy failed for source path: {} and destination path: {}. {}",
+                &source_path,
+                &destination_path,
+                e
+            ),
+        };
+    }
+
+    Ok(())
+}
+
+// Normalizes the remote source path that may contain a wildcard.
+// If the source contains a wildcard, the source is expanded to multiple paths.
+// # Arguments
+// * `source`: A wildcard path or path on a component's namespace.
+// * `namespace`: The source path's namespace directory.
+pub async fn normalize_paths(
+    source: RemotePath,
+    namespace: &fio::DirectoryProxy,
+) -> Result<Vec<RemotePath>> {
+    if !&source.contains_wildcard() {
+        return Ok(vec![source]);
+    }
+
+    let directory = match &source.relative_path.parent() {
+        Some(directory) => PathBuf::from(directory),
+        None => {
+            return Err(CopyError::NoParentFolder {
+                path: source.relative_path.as_path().display().to_string(),
+            }
+            .into())
+        }
+    };
+
+    let file_pattern = source
+        .clone()
+        .relative_path
+        .file_name()
+        .map_or_else(
+            || Err(CopyError::EmptyFileName),
+            |file| Ok(file.to_string_lossy().to_string()),
+        )?
+        .replace("*", ".*"); // Regex syntax requires a . before wildcard.
+
+    let namespace = Directory::from_proxy(namespace.to_owned())
+        .open_dir(&directory, fio::OpenFlags::RIGHT_READABLE)?;
+    let entries = get_matching_ns_entries(namespace, file_pattern.clone()).await?;
+
+    if entries.len() == 0 {
+        return Err(CopyError::NoWildCardMatches { pattern: file_pattern }.into());
+    }
+
+    let paths = entries
+        .iter()
+        .map(|file| {
+            RemotePath::parse(&format!(
+                "{}::/{}",
+                &source.remote_id,
+                directory.join(file).as_path().display().to_string()
+            ))
+        })
+        .collect::<Result<Vec<RemotePath>>>()?;
+
+    Ok(paths)
+}
+
+// Checks whether the hashmap contains the existing moniker and creates a new (moniker, DirectoryProxy) pair if it doesn't exist.
+// # Arguments
+// * `realm_query`: |RealmQueryProxy| to fetch the component's namespace.
+// * `moniker`: A moniker used to retrieve a namespace directory.
+// * `namespaces`: A table of monikers that map to namespace directories.
+pub async fn get_namespace_or_insert(
     realm_query: &fsys::RealmQueryProxy,
-    source_path: String,
-    destination_path: String,
-) -> Result<()> {
-    match (HostOrRemotePath::parse(&source_path), HostOrRemotePath::parse(&destination_path)) {
-        (HostOrRemotePath::Remote(source), HostOrRemotePath::Host(destination)) => {
-            let namespace = retrieve_namespace(realm_query, &source.remote_id).await?;
-            copy_file_from_namespace(&namespace, source, destination).await?;
-            Ok(())
-        }
-        (HostOrRemotePath::Host(source), HostOrRemotePath::Remote(destination)) => {
-            let namespace = retrieve_namespace(realm_query, &destination.remote_id).await?;
-            copy_file_to_namespace(&namespace, source, destination).await?;
-            Ok(())
-        }
-        _ => {
-            bail!("Currently only copying from Target to Host is supported. {}\n", REMOTE_PATH_HELP)
-        }
+    moniker: String,
+    namespaces: &mut HashMap<String, fio::DirectoryProxy>,
+) -> Result<fio::DirectoryProxy> {
+    if !namespaces.contains_key(&moniker) {
+        let namespace = retrieve_namespace(&realm_query, &moniker).await?;
+        namespaces.insert(moniker.clone(), namespace);
+    }
+
+    Ok(namespaces.get(&moniker).unwrap().to_owned())
+}
+
+// Checks that the paths meet the following conditions:
+// Destination path does not contain a wildcard.
+// At least two paths are provided.
+// # Arguments
+// *`paths`: list of filepaths to be processed.
+pub fn validate_paths(paths: &Vec<String>) -> Result<()> {
+    if paths.len() < 2 {
+        Err(CopyError::NotEnoughPaths.into())
+    } else if paths.last().unwrap().contains("*") {
+        Err(CopyError::DestinationContainWildcard.into())
+    } else {
+        Ok(())
     }
 }
 
@@ -49,22 +259,20 @@ pub async fn copy(
 pub async fn retrieve_namespace(
     realm_query: &fsys::RealmQueryProxy,
     moniker: &str,
-) -> Result<DirectoryProxy> {
+) -> Result<fio::DirectoryProxy> {
     // A relative moniker is required for |fuchsia.sys2/RealmQuery.GetInstanceInfo|
     let relative_moniker = format!(".{moniker}");
     let (_, resolved_state) = match realm_query.get_instance_info(&relative_moniker).await? {
         Ok((info, state)) => (info, state),
         Err(fsys::RealmQueryError::InstanceNotFound) => {
-            bail!("Could not find an instance with the moniker: {}\n\
-                       Use `ffx component list` or `ffx component show` to find the correct moniker of your instance.",
-                &moniker
-            );
+            return Err(CopyError::InstanceNotFound { moniker: moniker.to_string() }.into());
         }
         Err(e) => {
-            bail!(
-                "Encountered an unexpected error when looking for instance with the provider moniker: {:?}\n",
-                e
-            );
+            return Err(CopyError::UnexpectedErrorFromMoniker {
+                moniker: moniker.to_string(),
+                error: e,
+            }
+            .into())
         }
     };
     // resolved_state is safe to unwrap as an error would be thrown otherwise in the above statement.
@@ -73,54 +281,106 @@ pub async fn retrieve_namespace(
     Ok(namespace)
 }
 
-/// Writes file contents to a directory to a component's namespace.
+/// Writes file contents from a directory to a component's namespace.
 ///
 /// # Arguments
-/// * `namespace`: A proxy to the component's namespace directory.
 /// * `source`: The host filepath.
-/// * `destination`: The path of a component namespace entry.
-pub async fn copy_file_to_namespace(
-    namespace: &DirectoryProxy,
-    source: PathBuf,
-    destination: RemotePath,
-) -> Result<()> {
-    let file_path = source.clone();
-    let namespace = Directory::from_proxy(namespace.to_owned());
+/// * `destination`: The path and proxy of a namespace directory.
+pub async fn copy_host_file_to_remote(source: PathBuf, destination: NamespacedPath) -> Result<()> {
+    let destination_namespace = Directory::from_proxy(destination.ns.to_owned());
     let destination_path = finalize_destination_to_filepath(
-        &namespace,
-        HostOrRemotePath::Host(source),
-        HostOrRemotePath::Remote(destination),
+        &destination_namespace,
+        HostOrRemotePath::Host(source.clone()),
+        HostOrRemotePath::Remote(destination.path),
     )
     .await?;
-    let data = read(file_path)?;
-    namespace.verify_directory_is_read_write(&destination_path.parent().unwrap()).await?;
-    namespace.create_file(destination_path, data.as_slice()).await?;
+
+    let data = read(&source)?;
+
+    destination_namespace
+        .verify_directory_is_read_write(&destination_path.parent().unwrap())
+        .await?;
+    destination_namespace.create_file(destination_path, data.as_slice()).await?;
     Ok(())
 }
 
 /// Writes file contents to a directory from a component's namespace.
 ///
 /// # Arguments
-/// * `namespace`: A proxy to the component's namespace directory.
-/// * `source`: The path of a component namespace entry.
+/// * `source`: The path and proxy of a namespace directory.
 /// * `destination`: The host filepath.
-pub async fn copy_file_from_namespace(
-    namespace: &DirectoryProxy,
-    source: RemotePath,
-    destination: PathBuf,
-) -> Result<()> {
-    let file_path = source.relative_path.clone();
-    let namespace = Directory::from_proxy(namespace.to_owned());
+pub async fn copy_remote_file_to_host(source: NamespacedPath, destination: PathBuf) -> Result<()> {
+    let file_path = &source.path.relative_path.clone();
+    let source_namespace = Directory::from_proxy(source.ns.to_owned());
     let destination_path = finalize_destination_to_filepath(
-        &namespace,
-        HostOrRemotePath::Remote(source),
+        &source_namespace,
+        HostOrRemotePath::Remote(source.path),
         HostOrRemotePath::Host(destination),
     )
     .await?;
 
-    let data = namespace.read_file_bytes(file_path).await?;
-    write(destination_path, data).map_err(|e| anyhow!("Could not write file to host: {:?}", e))?;
+    let data = source_namespace.read_file_bytes(file_path).await?;
+    write(destination_path, data).map_err(|e| CopyError::FailedToWriteToHost { error: e })?;
+
     Ok(())
+}
+
+/// Writes file contents to a component's namespace from a component's namespace.
+///
+/// # Arguments
+/// * `source`: The path and proxy of a namespace directory.
+/// * `destination`: The path and proxy of a namespace directory.
+pub async fn copy_remote_file_to_remote(
+    source: NamespacedPath,
+    destination: NamespacedPath,
+) -> Result<()> {
+    let source_namespace = Directory::from_proxy(source.ns.to_owned());
+    let destination_namespace = Directory::from_proxy(destination.ns.to_owned());
+    let destination_path = finalize_destination_to_filepath(
+        &destination_namespace,
+        HostOrRemotePath::Remote(source.path.clone()),
+        HostOrRemotePath::Remote(destination.path),
+    )
+    .await?;
+
+    let data = source_namespace.read_file_bytes(&source.path.relative_path).await?;
+    destination_namespace
+        .verify_directory_is_read_write(&destination_path.parent().unwrap())
+        .await?;
+    destination_namespace.create_file(destination_path, data.as_slice()).await?;
+    Ok(())
+}
+
+// Retrieves all entries within a directory in a namespace containing a file pattern.
+///
+/// # Arguments
+/// * `namespace`: A directory to a component's namespace.
+/// * `file_pattern`: A file pattern to match in a component's directory.
+pub async fn get_matching_ns_entries(
+    namespace: Directory,
+    file_pattern: String,
+) -> Result<Vec<String>> {
+    let mut entries = namespace.entry_names().await?;
+
+    let file_pattern = Regex::new(format!(r"^{}$", file_pattern).as_str()).map_err(|e| {
+        CopyError::FailedToCreateRegex { pattern: file_pattern.to_string(), error: e }
+    })?;
+
+    entries.retain(|file_name| file_pattern.is_match(file_name.as_str()));
+
+    Ok(entries)
+}
+
+// Duplicates the client end of a namespace directory.
+///
+/// # Arguments
+/// * `ns_dir`: A proxy to the component's namespace directory.
+pub fn duplicate_namespace_client(ns_dir: &fio::DirectoryProxy) -> Result<fio::DirectoryProxy> {
+    let (client, server) = create_endpoints::<fio::NodeMarker>().unwrap();
+    ns_dir.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server).unwrap();
+    let client =
+        ClientEnd::<fio::DirectoryMarker>::new(client.into_channel()).into_proxy().unwrap();
+    Ok(client)
 }
 
 #[cfg(test)]
@@ -128,8 +388,8 @@ mod tests {
     use {
         super::*,
         crate::test_utils::{
-            duplicate_namespace_client, populate_host_with_file_contents, read_data_from_namespace,
-            serve_realm_query, serve_realm_query_with_namespace, set_path_to_read_only,
+            populate_host_with_file_contents, read_data_from_namespace, serve_realm_query,
+            serve_realm_query_with_namespace, set_path_to_read_only,
         },
         fidl::endpoints::{create_endpoints, create_proxy, ClientEnd, Proxy},
         fidl_fuchsia_io as fio,
@@ -208,7 +468,7 @@ mod tests {
     fn create_realm_query_with_ns_client(
         seed_files: Vec<(&'static str, &'static str)>,
         is_read_only: bool,
-    ) -> (fsys::RealmQueryProxy, DirectoryProxy) {
+    ) -> (fsys::RealmQueryProxy, fio::DirectoryProxy) {
         let (ns_dir, ns_server) = create_proxy::<fio::DirectoryMarker>().unwrap();
         let dup_client = duplicate_namespace_client(&ns_dir).unwrap();
         let seed_files =
@@ -246,7 +506,9 @@ mod tests {
         populate_host_with_file_contents(&root_path, host_seed_files).unwrap();
         let realm_query = create_realm_query(device_seed_files, READ_ONLY);
 
-        copy(&realm_query, source_path.to_owned(), destination_path.to_owned()).await.unwrap();
+        copy(&realm_query, vec![source_path.to_owned(), destination_path.to_owned()])
+            .await
+            .unwrap();
 
         let expected_data = expected_data.to_owned().into_bytes();
         let actual_data_path_string = format!("{}{}", root_path, actual_data_path);
@@ -269,8 +531,8 @@ mod tests {
         let root_path = root.path().to_str().unwrap();
         let destination_path = format!("{}{}", root_path, destination_path);
         let realm_query = create_realm_query(seed_files, READ_ONLY);
-
-        let result = copy(&realm_query, source_path.to_owned(), destination_path.to_string()).await;
+        let result =
+            copy(&realm_query, vec![source_path.to_owned(), destination_path.to_owned()]).await;
 
         assert!(result.is_err());
     }
@@ -287,7 +549,8 @@ mod tests {
         set_path_to_read_only(PathBuf::from(&destination_path)).unwrap();
         let realm_query = create_realm_query(vec![], READ_ONLY);
 
-        let result = copy(&realm_query, source_path.to_owned(), destination_path.to_string()).await;
+        let result =
+            copy(&realm_query, vec![source_path.to_owned(), destination_path.to_owned()]).await;
 
         assert!(result.is_err());
     }
@@ -314,7 +577,9 @@ mod tests {
         write(&source_path, expected_data.to_owned().into_bytes()).unwrap();
         let (realm_query, ns_dir) = create_realm_query_with_ns_client(seed_files, READ_WRITE);
 
-        copy(&realm_query, source_path.to_owned(), destination_path.to_owned()).await.unwrap();
+        copy(&realm_query, vec![source_path.to_owned(), destination_path.to_owned()])
+            .await
+            .unwrap();
 
         let actual_data = read_data_from_namespace(&ns_dir, actual_data_path).await.unwrap();
         let expected_data = expected_data.to_owned().into_bytes();
@@ -339,7 +604,8 @@ mod tests {
         write(&source_path, source_data.to_owned().into_bytes()).unwrap();
         let realm_query = create_realm_query(vec![], READ_WRITE);
 
-        let result = copy(&realm_query, source_path.to_owned(), destination_path.to_owned()).await;
+        let result =
+            copy(&realm_query, vec![source_path.to_owned(), destination_path.to_owned()]).await;
 
         assert!(result.is_err());
     }
@@ -359,7 +625,8 @@ mod tests {
         write(&source_path, source_data.to_owned().into_bytes()).unwrap();
         let realm_query = create_realm_query(vec![], READ_ONLY);
 
-        let result = copy(&realm_query, source_path.to_owned(), destination_path.to_owned()).await;
+        let result =
+            copy(&realm_query, vec![source_path.to_owned(), destination_path.to_owned()]).await;
 
         assert!(result.is_err());
     }
