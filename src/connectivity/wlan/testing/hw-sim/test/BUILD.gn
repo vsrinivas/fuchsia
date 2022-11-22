@@ -124,6 +124,7 @@ shared_deps = [
   "//src/connectivity/location/regulatory_region:regulatory_region_component",
   "//src/connectivity/wlan/testing:wlan_test_driver_deps",
   "//src/connectivity/wlan/wlancfg:service",
+  "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-legacy-wlanstack-values",
   "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor_component",
   "//src/connectivity/wlan/wlanstack:wlanstack-comp",
   "//src/sys/stash:stash_secure_v2",

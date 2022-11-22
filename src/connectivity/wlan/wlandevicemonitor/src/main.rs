@@ -25,6 +25,7 @@ use {
     },
     log::{error, info},
     std::sync::Arc,
+    wlandevicemonitor_config,
 };
 
 const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
@@ -37,6 +38,7 @@ async fn serve_fidl(
     watcher_service: watcher_service::WatcherService<device::PhyDevice, device::IfaceDevice>,
     dev_svc: fidl_svc::DeviceServiceProxy,
     new_iface_sink: mpsc::UnboundedSender<device::NewIface>,
+    cfg: wlandevicemonitor_config::Config,
 ) -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(move |reqs| {
         let fut = service::serve_monitor_requests(
@@ -46,6 +48,7 @@ async fn serve_fidl(
             watcher_service.clone(),
             dev_svc.clone(),
             new_iface_sink.clone(),
+            wlandevicemonitor_config::Config { ..cfg },
         )
         .unwrap_or_else(|e| error!("error serving device monitor API: {}", e));
         fasync::Task::spawn(fut).detach()
@@ -86,13 +89,15 @@ async fn main() -> Result<(), Error> {
 
     let inspector = Inspector::new_with_size(inspect::VMO_SIZE_BYTES);
     inspect_runtime::serve(&inspector, &mut fs)?;
+    let cfg = wlandevicemonitor_config::Config::take_from_startup_handle();
+    inspector.root().record_child("config", |config_node| cfg.record_inspect(config_node));
     let inspect_tree = Arc::new(inspect::WlanMonitorTree::new(inspector));
 
     let phy_server = serve_phys(phys.clone(), inspect_tree.clone());
 
     let (new_iface_sink, new_iface_stream) = mpsc::unbounded();
     let fidl_fut =
-        serve_fidl(fs, phys.clone(), ifaces.clone(), watcher_service, dev_svc, new_iface_sink);
+        serve_fidl(fs, phys.clone(), ifaces.clone(), watcher_service, dev_svc, new_iface_sink, cfg);
 
     let new_iface_fut =
         service::handle_new_iface_stream(phys.clone(), ifaces.clone(), new_iface_stream);

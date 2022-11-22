@@ -29,7 +29,7 @@ group("drivers") {
 group("_packages_common") {
   deps = [
     "wlancfg",
-    "wlandevicemonitor:wlandevicemonitor",
+    "wlandevicemonitor:wlandevicemonitor-legacy-wlanstack",
     "//src/connectivity/location/regulatory_region",
   ]
 }

@@ -24,6 +24,7 @@ metrics_registry("wlan_metrics_registry") {
 }
 
 wlandevicemonitor_deps = [
+  ":wlandevicemonitor_config",
   "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
   "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_rust",
   "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_rust",
@@ -78,12 +79,75 @@ rustc_binary("bin") {
   sources = wlandevicemonitor_srcs
 }
 
-fuchsia_package_with_single_component("wlandevicemonitor") {
+# TODO(fxbug.dev/91927): fuchsia_component_manifest will soon be unnecessary and can
+#                        folded into the component
+fuchsia_component_manifest("wlandevicemonitor-manifest") {
+  component_name = "wlandevicemonitor"
+  manifest = "meta/wlandevicemonitor.cml"
+}
+
+fuchsia_component("wlandevicemonitor_component") {
+  cm_label = ":wlandevicemonitor-manifest"
   deps = [
     ":bin",
     ":wlan_metrics_registry",
   ]
-  manifest = "meta/wlandevicemonitor.cml"
+}
+
+fuchsia_structured_config_values("wlandevicemonitor-values") {
+  cm_label = ":wlandevicemonitor-manifest"
+  values = {
+    wep_supported = false
+    wpa1_supported = false
+    wlanstack_supported = false
+  }
+}
+
+fuchsia_structured_config_values("wlandevicemonitor-legacy-privacy-values") {
+  cm_label = ":wlandevicemonitor-manifest"
+  values = {
+    wep_supported = true
+    wpa1_supported = true
+    wlanstack_supported = false
+  }
+}
+
+fuchsia_structured_config_values("wlandevicemonitor-legacy-wlanstack-values") {
+  cm_label = ":wlandevicemonitor-manifest"
+  values = {
+    # `wep_supported` and `wpa1_supported` have no effect here, as wlanstack itself
+    # already defines equivalent configs
+    wep_supported = false
+    wpa1_supported = false
+    wlanstack_supported = true
+  }
+}
+
+fuchsia_structured_config_rust_lib("wlandevicemonitor_config") {
+  cm_label = ":wlandevicemonitor-manifest"
+}
+
+fuchsia_package("wlandevicemonitor") {
+  deps = [
+    ":wlandevicemonitor-values",
+    ":wlandevicemonitor_component",
+  ]
+}
+
+fuchsia_package("wlandevicemonitor-legacy-privacy") {
+  package_name = "wlandevicemonitor"
+  deps = [
+    ":wlandevicemonitor-legacy-privacy-values",
+    ":wlandevicemonitor_component",
+  ]
+}
+
+fuchsia_package("wlandevicemonitor-legacy-wlanstack") {
+  package_name = "wlandevicemonitor"
+  deps = [
+    ":wlandevicemonitor-legacy-wlanstack-values",
+    ":wlandevicemonitor_component",
+  ]
 }
 
 fuchsia_component("wlandevicemonitor-test-component") {

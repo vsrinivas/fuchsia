@@ -36,4 +36,9 @@
             from: "self",
         },
     ],
+    config: {
+        wep_supported: { type: "bool" },
+        wpa1_supported: { type: "bool" },
+        wlanstack_supported: { type: "bool" },
+    },
 }

@@ -138,27 +138,26 @@ if (is_fuchsia) {
     core_package_name = core_name
   }
 
-  recovery_packages =
-      board_recovery_package_labels + [
-        "//build/info:build-info",
-        "//src/connectivity/location/regulatory_region:regulatory_region",
-        "//src/connectivity/network",
-        "//src/connectivity/network/netcfg:config-default",
-        "//src/connectivity/wlan/wlancfg",
-        "//src/connectivity/wlan/wlandevicemonitor",
-        "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy",
-        "//src/devices/sysmem/bin/sysmem_connector",
-        "//src/recovery/factory_reset",
-        "//src/recovery/system:system_recovery",
-        "//src/security/bin/root_ssl_certificates",
-        "//src/sys/appmgr",
-        "//src/sys/appmgr:appmgr_scheme_config",
-        "//src/sys/appmgr:component_id_index_no_restrict_storage",
-        "//src/sys/pkg:recovery",
-        "//src/sys/stash:pkg",
-        "//src/sys/time:recovery",
-        "//src/ui/bin/brightness_manager:auto-brightness",
-      ]
+  recovery_packages = board_recovery_package_labels + [
+                        "//build/info:build-info",
+                        "//src/connectivity/location/regulatory_region:regulatory_region",
+                        "//src/connectivity/network",
+                        "//src/connectivity/network/netcfg:config-default",
+                        "//src/connectivity/wlan/wlancfg",
+                        "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-legacy-wlanstack",
+                        "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy",
+                        "//src/devices/sysmem/bin/sysmem_connector",
+                        "//src/recovery/factory_reset",
+                        "//src/recovery/system:system_recovery",
+                        "//src/security/bin/root_ssl_certificates",
+                        "//src/sys/appmgr",
+                        "//src/sys/appmgr:appmgr_scheme_config",
+                        "//src/sys/appmgr:component_id_index_no_restrict_storage",
+                        "//src/sys/pkg:recovery",
+                        "//src/sys/stash:pkg",
+                        "//src/sys/time:recovery",
+                        "//src/ui/bin/brightness_manager:auto-brightness",
+                      ]
 
   recovery_eng_packages =
       recovery_packages + [
