@@ -63,9 +63,9 @@ where
 {
     match &command.sub {
         SubCommand::List(cmd) => pb_list(ui, &cmd).await,
-        SubCommand::Get(cmd) => pb_get(ui, &cmd, repos).await,
+        SubCommand::Get(cmd) => pb_get(ui, &cmd, &repos).await,
         SubCommand::Create(cmd) => pb_create(&cmd).await,
-        SubCommand::Remove(cmd) => pb_remove(ui, &cmd, repos).await,
+        SubCommand::Remove(cmd) => pb_remove(ui, &cmd, &repos).await,
     }
 }
 
@@ -97,7 +97,11 @@ where
 }
 
 /// `ffx product-bundle remove` sub-command.
-async fn pb_remove<I>(ui: &mut I, cmd: &RemoveCommand, repos: RepositoryRegistryProxy) -> Result<()>
+async fn pb_remove<I>(
+    ui: &mut I,
+    cmd: &RemoveCommand,
+    repos: &RepositoryRegistryProxy,
+) -> Result<()>
 where
     I: structured_ui::Interface + Sync,
 {
@@ -167,7 +171,7 @@ async fn pb_remove_all<I>(
     ui: &mut I,
     pbs_to_remove: Vec<Url>,
     force: bool,
-    repos: RepositoryRegistryProxy,
+    repos: &RepositoryRegistryProxy,
 ) -> Result<()>
 where
     I: structured_ui::Interface + Sync,
@@ -317,7 +321,7 @@ where
 ///
 /// Once the download step is complete, the final step is to set up the package repository for the
 /// downloaded product bundle based on the repository name determined earlier in the command.
-async fn pb_get<I>(ui: &mut I, cmd: &GetCommand, repos: RepositoryRegistryProxy) -> Result<()>
+async fn pb_get<I>(ui: &mut I, cmd: &GetCommand, repos: &RepositoryRegistryProxy) -> Result<()>
 where
     I: structured_ui::Interface + Sync,
 {
@@ -334,7 +338,7 @@ where
         }
     };
 
-    let repo_name = match get_repository_name(cmd, &repos, &product_url).await {
+    let repo_name = match get_repository_name(cmd, repos, &product_url).await {
         Ok(name) => name,
         Err(e) => {
             let mut note = TableRows::builder();
@@ -345,7 +349,7 @@ where
         }
     };
 
-    match download_product_bundle(ui, cmd, &product_url).await {
+    match download_product_bundle(ui, cmd, &product_url, repos).await {
         Ok(true) => tracing::debug!("Product Bundle downloaded successfully."),
         Ok(false) => tracing::debug!("Product Bundle download skipped."),
         Err(e) => {
@@ -357,7 +361,7 @@ where
         }
     }
 
-    match set_up_package_repository(&repo_name, &repos, &product_url).await {
+    match set_up_package_repository(&repo_name, repos, &product_url).await {
         Ok(()) => {
             tracing::debug!("Repository '{}' added for '{}'.", &repo_name, product_url);
             let mut note = TableRows::builder();
@@ -411,17 +415,31 @@ async fn get_repository_name(
         bail!("invalid repository name {}: {}", repo_name, err);
     }
 
-    // If a repo with the selected name already exists, that's an error.
-    let repo_list = get_repos(&repos).await?;
-    if !cmd.force_repo && repo_list.iter().any(|r| r.name == repo_name) {
-        bail!(
-            "A package repository already exists with the name '{}'. \
-            Specify an alternative name using the --repository flag.",
-            repo_name
-        );
-    } else {
-        Ok(repo_name)
+    // If a repo with the selected name already exists, that's an error unless
+    // the user told us to replace it, or if it's already associated with a
+    // bundle that matches the product_url.
+    let repo_list = get_repos(repos).await?;
+    let repo_path = pbms::get_packages_dir(product_url).await?;
+    if let Some(r) = repo_list.iter().find(|r| r.name == repo_name) {
+        let replace_anyway =
+            // --force-repo means "Replace this repo if it exists".
+            cmd.force_repo ||
+            // If it's already associated with the matching bundle.
+            match &r.spec {
+                RepositorySpec::Pm { path } => {
+                    path.clone().into_std_path_buf() == repo_path
+                }
+                _ => false,
+            };
+        if !replace_anyway {
+            bail!(
+                "A package repository already exists with the name '{}'. \
+                Specify an alternative name using the --repository flag.",
+                repo_name
+            );
+        }
     }
+    Ok(repo_name)
 }
 
 /// Downloads the selected product bundle contents to the local storage directory.
@@ -430,7 +448,12 @@ async fn get_repository_name(
 ///   - Ok(false) if the download is skipped because the product bundle is already
 ///     available in local storage.
 ///   - Ok(true) if the files are successfully downloaded.
-async fn download_product_bundle<I>(ui: &mut I, cmd: &GetCommand, product_url: &Url) -> Result<bool>
+async fn download_product_bundle<I>(
+    ui: &mut I,
+    cmd: &GetCommand,
+    product_url: &Url,
+    repos: &RepositoryRegistryProxy,
+) -> Result<bool>
 where
     I: structured_ui::Interface + Sync,
 {
@@ -438,11 +461,22 @@ where
 
     // Go ahead and download the product images.
     let path = get_images_dir(&product_url).await;
-    if path.is_ok() && path.unwrap().exists() && !cmd.force {
-        let mut note = TableRows::builder();
-        note.title("This product bundle is already downloaded. Use --force to replace it.");
-        ui.present(&Presentation::Table(note)).expect("Problem presenting the note.");
-        return Ok(false);
+    if path.is_ok() && path.unwrap().exists() {
+        if cmd.force {
+            if let Err(e) = pb_remove_all(ui, vec![product_url.clone()], true, repos).await {
+                let mut note = TableRows::builder();
+                let message =
+                    format!("Unexpected error removing the existing product bundle: {:?}", e);
+                note.title(message);
+                ui.present(&Presentation::Table(note)).expect("Problem presenting the note.");
+                return Ok(false);
+            }
+        } else {
+            let mut note = TableRows::builder();
+            note.title("This product bundle is already downloaded. Use --force to replace it.");
+            ui.present(&Presentation::Table(note)).expect("Problem presenting the note.");
+            return Ok(false);
+        }
     }
 
     get_product_data(&product_url, &output_dir, select_auth(cmd.oob_auth, cmd.auth), ui).await
