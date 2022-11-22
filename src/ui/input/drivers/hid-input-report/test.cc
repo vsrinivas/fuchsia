@@ -4,8 +4,8 @@
 
 #include <fuchsia/hardware/hiddevice/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <lib/zx/channel.h>
@@ -24,6 +24,7 @@
 #include <zxtest/zxtest.h>
 
 #include "driver_v1.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace hid_input_report_dev {
 const uint8_t boot_mouse_desc[] = {
@@ -53,24 +54,6 @@ const uint8_t boot_mouse_desc[] = {
     0x81, 0x06,  //     Input (Data,Var,Rel,No Wrap,Linear,No Null Position)
     0xC0,        //   End Collection
     0xC0,        // End Collection
-};
-
-class SaveInspectVmoBind : public fake_ddk::Bind {
- public:
-  zx::vmo TakeInspectVmo() { return std::move(inspect_vmo_); }
-
- protected:
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    if (args) {
-      inspect_vmo_.reset(args->inspect_vmo);
-      args->inspect_vmo = ZX_HANDLE_INVALID;
-    }
-    return fake_ddk::Bind::DeviceAdd(drv, parent, args, out);
-  }
-
- private:
-  zx::vmo inspect_vmo_;
 };
 
 class FakeHidDevice : public ddk::HidDeviceProtocol<FakeHidDevice> {
@@ -147,35 +130,28 @@ class FakeHidDevice : public ddk::HidDeviceProtocol<FakeHidDevice> {
 class HidDevTest : public zxtest::Test {
   void SetUp() override {
     client_ = ddk::HidDeviceProtocolClient(&fake_hid_.proto_);
-    device_ = new InputReportDriver(fake_ddk::kFakeParent, client_);
+    fake_parent_ = MockDevice::FakeRootParent();
+
+    device_ = new InputReportDriver(fake_parent_.get(), client_);
+    fidl_loop_.StartThread("fidl-thread");
     // Each test is responsible for calling |device_->Bind()|.
   }
 
-  void TearDown() override {
-    device_->DdkAsyncRemove();
-    EXPECT_TRUE(ddk_.Ok());
-
-    // This should delete the object, which means this test should not leak.
-    device_->DdkRelease();
-  }
+  void TearDown() override { mock_ddk::ReleaseFlaggedDevices(fake_parent_.get()); }
 
  protected:
   fidl::WireSyncClient<fuchsia_input_report::InputDevice> GetSyncClient() {
-    return fidl::WireSyncClient(ddk_.FidlClient<fuchsia_input_report::InputDevice>());
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputDevice>();
+    ZX_ASSERT(endpoints.is_ok());
+    fidl::BindServer(fidl_loop_.dispatcher(), std::move(endpoints->server), device_);
+    return fidl::WireSyncClient(std::move(endpoints->client));
   }
 
-  SaveInspectVmoBind ddk_;
+  async::Loop fidl_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  std::shared_ptr<MockDevice> fake_parent_;
   FakeHidDevice fake_hid_;
   InputReportDriver* device_;
   ddk::HidDeviceProtocolClient client_;
-};
-
-class FakeDdkBindFailure : public fake_ddk::Bind {
- protected:
-  virtual zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                                zx_device_t** out) override {
-    return ZX_ERR_INTERNAL;
-  }
 };
 
 TEST_F(HidDevTest, HidLifetimeTest) {
@@ -186,40 +162,35 @@ TEST_F(HidDevTest, HidLifetimeTest) {
 }
 
 TEST(HidDevTest, InputReportUnregisterTest) {
-  fake_ddk::Bind ddk_;
+  auto fake_parent = MockDevice::FakeRootParent();
   FakeHidDevice fake_hid_;
   InputReportDriver* device_;
   ddk::HidDeviceProtocolClient client_;
 
   client_ = ddk::HidDeviceProtocolClient(&fake_hid_.proto_);
-  device_ = new InputReportDriver(fake_ddk::kFakeParent, client_);
+  device_ = new InputReportDriver(fake_parent.get(), client_);
 
   std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
   fake_hid_.SetReportDesc(boot_mouse);
 
   ASSERT_OK(device_->Bind());
 
-  device_->DdkAsyncRemove();
-  EXPECT_TRUE(ddk_.Ok());
-
-  // This should delete the object, which means this test should not leak.
-  device_->DdkRelease();
+  mock_ddk::ReleaseFlaggedDevices(fake_parent.get());
+  fake_parent.reset();
 
   // Make sure that the InputReport class has unregistered from the HID device.
   ASSERT_FALSE(fake_hid_.listener_);
 }
 
 TEST(HidDevTest, InputReportUnregisterTestBindFailed) {
-  FakeDdkBindFailure ddk;
+  auto fake_parent = MockDevice::FakeRootParent();
   FakeHidDevice fake_hid;
   ddk::HidDeviceProtocolClient client;
 
   client = ddk::HidDeviceProtocolClient(&fake_hid.proto_);
-  auto device = std::make_unique<InputReportDriver>(fake_ddk::kFakeParent, client);
+  auto device = std::make_unique<InputReportDriver>(fake_parent.get(), client);
 
-  std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
-  fake_hid.SetReportDesc(boot_mouse);
-
+  // We don't set a input report on `fake_hid` so the bind will fail.
   ASSERT_EQ(device->Bind(), ZX_ERR_INTERNAL);
 
   // Make sure that the InputReport class is not registered to the HID device.
@@ -841,7 +812,7 @@ TEST_F(HidDevTest, TouchLatencyMeasurements) {
 
   device_->Bind();
 
-  const zx::vmo inspect_vmo = ddk_.TakeInspectVmo();
+  const zx::vmo& inspect_vmo = fake_parent_->GetLatestChild()->GetInspectVmo();
   ASSERT_TRUE(inspect_vmo.is_valid());
 
   // Send five reports, and verify that the inspect stats make sense.
@@ -893,7 +864,7 @@ TEST_F(HidDevTest, InspectDeviceTypes) {
 
   device_->Bind();
 
-  const zx::vmo inspect_vmo = ddk_.TakeInspectVmo();
+  const zx::vmo& inspect_vmo = fake_parent_->GetLatestChild()->GetInspectVmo();
   ASSERT_TRUE(inspect_vmo.is_valid());
 
   inspect::InspectTestHelper inspector;

@@ -105,9 +105,7 @@ test("hid-input-report-test-bin") {
     ":hid_input_report_bind",
     "//sdk/lib/fidl",
     "//sdk/lib/inspect/testing/cpp:zxtest",
-
-    # TODO(fxb/115092): Migrate from fake_ddk to mock-ddk.
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/ui/input/lib/hid-input-report",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -130,4 +128,9 @@ test("hid-input-report-test-bin") {
 
 fuchsia_unittest_package("hid-input-report-test") {
   deps = [ ":hid-input-report-test-bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
