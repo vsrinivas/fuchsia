@@ -7,7 +7,7 @@
 use crate::{object_get_property, object_set_property};
 use crate::{ok, Status};
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Process, Thread};
-use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
+use crate::{Property, PropertyQuery};
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon

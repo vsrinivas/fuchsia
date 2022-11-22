@@ -24,22 +24,20 @@ impl Deref for Property {
 ///
 /// # Safety
 ///
-/// `PROPERTY` must correspond to a valid property type and `PropTy` must be a type that can be
-/// safely replaced with the byte representation of the associated value. Additionally `PropTy`
-/// must be a type that is safe to drop when uninitialized, i.e. it must be a PoD type.
+/// `PROPERTY` must correspond to a valid property type and `PropTy` must be the
+/// corresponding value type for that property. See
+/// https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_property for a
+/// list of available properties and their corresponding value types.
+///
+/// It must be valid to treat `PropTy` as its corresponding property type and
+/// writing the property type to a `PropTy` must completely initialize it. That
+/// is, `PropTy` must be "transparent" over the property type.
 pub unsafe trait PropertyQuery {
     /// The raw `Property` value
     const PROPERTY: Property;
     /// The data type of this property
     type PropTy;
 }
-
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
-/// Indicates that it is valid to get the property for an object.
-pub unsafe trait PropertyQueryGet: PropertyQuery {}
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
-/// Indicates that it is valid to set the property for an object.
-pub unsafe trait PropertyQuerySet: PropertyQuery {}
 
 assoc_values!(Property, [
     NAME = sys::ZX_PROP_NAME;

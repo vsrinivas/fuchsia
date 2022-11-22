@@ -6,8 +6,7 @@
 //!
 use crate::{
     object_get_info, object_get_property, object_set_property, ok, ObjectQuery, Port, Property,
-    PropertyQuery, PropertyQueryGet, PropertyQuerySet, Rights, Signals, Status, Time, Topic,
-    WaitAsyncOpts,
+    PropertyQuery, Rights, Signals, Status, Time, Topic, WaitAsyncOpts,
 };
 
 use fuchsia_zircon_sys as sys;
@@ -99,8 +98,6 @@ unsafe impl PropertyQuery for NameProperty {
     const PROPERTY: Property = Property::NAME;
     type PropTy = [u8; sys::ZX_MAX_NAME_LEN];
 }
-unsafe impl PropertyQueryGet for NameProperty {}
-unsafe impl PropertyQuerySet for NameProperty {}
 
 /// A borrowed value of type `T`.
 ///

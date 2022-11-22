@@ -11,7 +11,7 @@ use crate::{ObjectQuery, Topic};
 use fuchsia_zircon_sys as sys;
 
 #[cfg(target_arch = "x86_64")]
-use crate::{object_set_property, Property, PropertyQuery, PropertyQuerySet};
+use crate::{object_set_property, Property, PropertyQuery};
 
 /// An object representing a Zircon thread.
 ///

@@ -7,7 +7,7 @@
 use {
     crate::{
         object_get_property, object_set_property, ok, AsHandleRef, Handle, HandleBased, HandleRef,
-        Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet, Status, Vmo,
+        Property, PropertyQuery, Status, Vmo,
     },
     bitflags::bitflags,
     fuchsia_zircon_sys as sys,

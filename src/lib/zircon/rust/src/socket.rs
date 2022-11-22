@@ -8,7 +8,7 @@ use crate::{object_get_info, object_get_property, object_set_property};
 use crate::{ok, Status};
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Peered};
 use crate::{ObjectQuery, Topic};
-use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
+use crate::{Property, PropertyQuery};
 use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
 

@@ -77,7 +77,6 @@ macro_rules! unsafe_handle_properties {
             }
 
             $(
-                unsafe impl PropertyQueryGet for $query_tag {}
                 impl $object_ty {
                     pub fn $get(&self) -> Result<$prop_ty, Status> {
                         object_get_property::<$query_tag>(self.as_handle_ref())
@@ -86,7 +85,6 @@ macro_rules! unsafe_handle_properties {
             )*
 
             $(
-                unsafe impl PropertyQuerySet for $query_tag {}
                 impl $object_ty {
                     pub fn $set(&self, val: &$prop_ty) -> Result<(), Status> {
                         object_set_property::<$query_tag>(self.as_handle_ref(), val)
@@ -274,9 +272,7 @@ pub fn object_get_info<Q: ObjectQuery>(
 }
 
 /// Get a property on a zircon object
-pub fn object_get_property<P: PropertyQueryGet>(
-    handle: HandleRef<'_>,
-) -> Result<P::PropTy, Status> {
+pub fn object_get_property<P: PropertyQuery>(handle: HandleRef<'_>) -> Result<P::PropTy, Status> {
     // this is safe due to the contract on the P::PropTy type in the ObjectProperty trait.
     let mut out = ::std::mem::MaybeUninit::<P::PropTy>::uninit();
     let status = unsafe {
@@ -291,7 +287,7 @@ pub fn object_get_property<P: PropertyQueryGet>(
 }
 
 /// Set a property on a zircon object
-pub fn object_set_property<P: PropertyQuerySet>(
+pub fn object_set_property<P: PropertyQuery>(
     handle: HandleRef<'_>,
     val: &P::PropTy,
 ) -> Result<(), Status> {
