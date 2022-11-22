@@ -41,16 +41,14 @@ class RootDriver : public driver::DriverBase,
     ft::Service::Handler service(&handler);
 
     auto setter = [this](fdf::ServerEnd<ft::Setter> server_end) mutable -> void {
-      fdf::BindServer<fdf::Server<ft::Setter>>(driver_dispatcher()->get(), std::move(server_end),
-                                               this);
+      fdf::BindServer(driver_dispatcher()->get(), std::move(server_end), this);
     };
     zx::result<> status = service.add_setter(std::move(setter));
     if (status.is_error()) {
       FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
     }
     auto getter = [this](fdf::ServerEnd<ft::Getter> server_end) mutable -> void {
-      fdf::BindServer<fdf::Server<ft::Getter>>(driver_dispatcher()->get(), std::move(server_end),
-                                               this);
+      fdf::BindServer(driver_dispatcher()->get(), std::move(server_end), this);
     };
     status = service.add_getter(std::move(getter));
     if (status.is_error()) {

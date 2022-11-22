@@ -44,8 +44,7 @@ class I2cChild : public I2cChildType {
 
  private:
   void Bind(fidl::ServerEnd<fidl_i2c::Device> request) {
-    fidl::BindServer<fidl::WireServer<fidl_i2c::Device>>(
-        fdf::Dispatcher::GetCurrent()->async_dispatcher(), std::move(request), this);
+    fidl::BindServer(fdf::Dispatcher::GetCurrent()->async_dispatcher(), std::move(request), this);
   }
 
   std::optional<svc::Outgoing> outgoing_dir_;

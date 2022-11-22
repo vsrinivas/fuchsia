@@ -23,7 +23,8 @@ inline constexpr uint32_t kThermalEvent = 0x90;
 class IntelThermal;
 using DeviceType = ddk::Device<IntelThermal, ddk::Initializable,
                                ddk::Messageable<fuchsia_hardware_thermal::Device>::Mixin>;
-class IntelThermal : public DeviceType, fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler> {
+class IntelThermal : public DeviceType,
+                     public fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler> {
  public:
   explicit IntelThermal(zx_device_t* parent, acpi::Client acpi, async_dispatcher_t* dispatcher)
       : DeviceType(parent), acpi_(std::move(acpi)), dispatcher_(dispatcher) {}

@@ -38,8 +38,8 @@ void MagmaDependencyInjectionDevice::SetMemoryPressureProvider(
     MAGMA_LOG(WARNING, "Failed to create fidl Endpoints");
     return;
   }
-  pressure_server_ = fidl::BindServer<fidl::WireServer<fuchsia_memorypressure::Watcher>>(
-      server_loop_.dispatcher(), std::move(endpoints->server), this);
+  pressure_server_ =
+      fidl::BindServer(server_loop_.dispatcher(), std::move(endpoints->server), this);
 
   fidl::WireSyncClient provider{std::move(request->provider)};
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.

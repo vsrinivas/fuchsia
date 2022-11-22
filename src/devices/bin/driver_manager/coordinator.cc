@@ -1036,22 +1036,21 @@ void Coordinator::SuspendWithoutExit(SuspendWithoutExitCompleter::Sync& complete
 
 void Coordinator::PublishDriverDevelopmentService(component::OutgoingDirectory& outgoing) {
   auto driver_dev = [this](fidl::ServerEnd<fdd::DriverDevelopment> request) {
-    fidl::BindServer<fidl::WireServer<fdd::DriverDevelopment>>(
-        dispatcher_, std::move(request), this,
-        [](fidl::WireServer<fdd::DriverDevelopment>* self, fidl::UnbindInfo info,
-           fidl::ServerEnd<fdd::DriverDevelopment> server_end) {
-          if (info.is_user_initiated()) {
-            return;
-          }
-          if (info.is_peer_closed()) {
-            // For this development protocol, the client is free to disconnect
-            // at any time.
-            return;
-          }
-          LOGF(ERROR, "Error serving '%s': %s",
-               fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
-               info.FormatDescription().c_str());
-        });
+    fidl::BindServer(dispatcher_, std::move(request), this,
+                     [](Coordinator* self, fidl::UnbindInfo info,
+                        fidl::ServerEnd<fdd::DriverDevelopment> server_end) {
+                       if (info.is_user_initiated()) {
+                         return;
+                       }
+                       if (info.is_peer_closed()) {
+                         // For this development protocol, the client is free to disconnect
+                         // at any time.
+                         return;
+                       }
+                       LOGF(ERROR, "Error serving '%s': %s",
+                            fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
+                            info.FormatDescription().c_str());
+                     });
   };
   auto result = outgoing.AddProtocol<fdd::DriverDevelopment>(driver_dev);
   ZX_ASSERT(result.is_ok());

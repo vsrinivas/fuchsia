@@ -25,7 +25,8 @@ Allocator::~Allocator() { LogInfo(FROM_HERE, "~Allocator"); }
 void Allocator::CreateChannelOwned(zx::channel request, Device* device) {
   auto allocator = std::unique_ptr<Allocator>(new Allocator(device));
   // Ignore the result - allocator will be destroyed and the channel will be closed on error.
-  fidl::BindServer(device->dispatcher(), std::move(request), std::move(allocator));
+  fidl::BindServer<fuchsia_sysmem::Allocator>(device->dispatcher(), std::move(request),
+                                              std::move(allocator));
 }
 
 void Allocator::AllocateNonSharedCollection(AllocateNonSharedCollectionRequestView request,

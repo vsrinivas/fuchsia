@@ -91,6 +91,9 @@ class ClientBaseSpy {
 }  // namespace fidl_testing
 
 template <>
+struct ::fidl::IsProtocol<fidl_testing::TestProtocol> : public std::true_type {};
+
+template <>
 class ::fidl::WireAsyncEventHandler<fidl_testing::TestProtocol>
     : public fidl::internal::AsyncEventHandler, public fidl::internal::BaseEventHandlerInterface {
  public:

@@ -41,13 +41,13 @@ class ServerBindingRef : public fidl::internal::ServerBindingRefBase {
 // The behavior of |fdf::BindServer| is identical to |fidl::BindServer|, the
 // specialization for channels. Please see documentation in channel.h for more
 // details.
-template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
-ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
-    fdf_dispatcher_t* dispatcher, ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
-    ServerImpl* impl, OnUnbound&& on_unbound = nullptr) {
-  static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol::Transport,
-                               fidl::internal::DriverTransport>);
-  return fidl::internal::BindServerImpl<ServerImpl>(
+//
+// Usually all template parameters can be automatically inferred.
+template <typename Protocol, typename ServerImpl, typename OnUnbound = std::nullptr_t>
+ServerBindingRef<Protocol> BindServer(fdf_dispatcher_t* dispatcher, ServerEnd<Protocol> server_end,
+                                      ServerImpl* impl, OnUnbound&& on_unbound = nullptr) {
+  static_assert(fidl::IsProtocolV<Protocol>, "|Protocol| must be a FIDL protocol marker");
+  return fidl::internal::BindServerImpl<Protocol, ServerImpl>(
       fdf_dispatcher_get_async_dispatcher(dispatcher), std::move(server_end), impl,
       fidl::internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
 }
@@ -59,14 +59,13 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
 // The behavior of |fdf::BindServer| is identical to |fidl::BindServer|, the
 // specialization for channels. Please see documentation in channel.h for more
 // details.
-template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
-ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
-    fdf_dispatcher_t* dispatcher, ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
-    std::unique_ptr<ServerImpl>&& impl, OnUnbound&& on_unbound = nullptr) {
-  static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol::Transport,
-                               fidl::internal::DriverTransport>);
+template <typename Protocol, typename ServerImpl, typename OnUnbound = std::nullptr_t>
+ServerBindingRef<Protocol> BindServer(fdf_dispatcher_t* dispatcher, ServerEnd<Protocol> server_end,
+                                      std::unique_ptr<ServerImpl>&& impl,
+                                      OnUnbound&& on_unbound = nullptr) {
+  static_assert(fidl::IsProtocolV<Protocol>, "|Protocol| must be a FIDL protocol marker");
   ServerImpl* impl_raw = impl.get();
-  return fidl::internal::BindServerImpl<ServerImpl>(
+  return fidl::internal::BindServerImpl<Protocol, ServerImpl>(
       fdf_dispatcher_get_async_dispatcher(dispatcher), std::move(server_end), impl_raw,
       fidl::internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
 }
@@ -78,14 +77,13 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
 // The behavior of |fdf::BindServer| is identical to |fidl::BindServer|, the
 // specialization for channels. Please see documentation in channel.h for more
 // details.
-template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
-ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
-    fdf_dispatcher_t* dispatcher, ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
-    std::shared_ptr<ServerImpl> impl, OnUnbound&& on_unbound = nullptr) {
-  static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol::Transport,
-                               fidl::internal::DriverTransport>);
+template <typename Protocol, typename ServerImpl, typename OnUnbound = std::nullptr_t>
+ServerBindingRef<Protocol> BindServer(fdf_dispatcher_t* dispatcher, ServerEnd<Protocol> server_end,
+                                      std::shared_ptr<ServerImpl> impl,
+                                      OnUnbound&& on_unbound = nullptr) {
+  static_assert(fidl::IsProtocolV<Protocol>, "|Protocol| must be a FIDL protocol marker");
   ServerImpl* impl_raw = impl.get();
-  return fidl::internal::BindServerImpl<ServerImpl>(
+  return fidl::internal::BindServerImpl<Protocol, ServerImpl>(
       fdf_dispatcher_get_async_dispatcher(dispatcher), std::move(server_end), impl_raw,
       fidl::internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
 }

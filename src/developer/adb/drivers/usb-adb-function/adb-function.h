@@ -39,7 +39,7 @@ using UsbAdb = ddk::Device<UsbAdbDevice, ddk::Suspendable, ddk::Unbindable,
 class UsbAdbDevice : public UsbAdb,
                      public ddk::UsbFunctionInterfaceProtocol<UsbAdbDevice>,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_ADB>,
-                     fidl::WireServer<fuchsia_hardware_adb::UsbAdbImpl> {
+                     public fidl::WireServer<fuchsia_hardware_adb::UsbAdbImpl> {
  public:
   // Driver bind method.
   static zx_status_t Bind(void* ctx, zx_device_t* parent);

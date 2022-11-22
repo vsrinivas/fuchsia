@@ -31,7 +31,8 @@ class PhyServer : public fidl::WireServer<fuchsia_hardware_registers::Device> {
     zx::channel channels[2];
     zx::channel::create(0, channels, channels + 1);
     channel_ = std::move(channels[1]);
-    fidl::BindServer(loop_.dispatcher(), std::move(channels[0]), this);
+    fidl::BindServer<fuchsia_hardware_registers::Device>(loop_.dispatcher(), std::move(channels[0]),
+                                                         this);
     loop_.StartThread();
   }
   void ReadRegister8(ReadRegister8RequestView request,

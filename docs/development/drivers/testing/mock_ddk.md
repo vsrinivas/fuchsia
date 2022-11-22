@@ -222,7 +222,7 @@ MyDevice* test_dev = child_dev->GetDeviceContext<MyDevice>();
 async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 auto endpoints = fidl::CreateEndpoints<fidl_proto>();
 std::optional<fidl::ServerBindingRef<fidl_proto>> fidl_server;
-fidl_server = fidl::BindServer<fidl::WireServer<fidl_proto>>(
+fidl_server = fidl::BindServer(
     loop.dispatcher(), std::move(endpoints->server), test_dev);
 loop.StartThread("thread-name");
 fidl::WireSyncClient fidl_client{std::move(endpoints->client)};

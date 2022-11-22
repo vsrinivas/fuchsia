@@ -97,9 +97,8 @@ void IntelHDAStreamConfigBase::Connect(ConnectRequestView request,
         this->ProcessClientDeactivateLocked(stream_channel.get());
       };
 
-  fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfig>>(
-      loop_.dispatcher(), std::move(request->protocol), stream_channel.get(),
-      std::move(on_unbound));
+  fidl::BindServer(loop_.dispatcher(), std::move(request->protocol), stream_channel.get(),
+                   std::move(on_unbound));
 
   if (privileged) {
     stream_channel_ = stream_channel;

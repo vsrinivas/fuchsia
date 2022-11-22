@@ -94,7 +94,7 @@ zx_status_t FidlMessenger::SetMessageOp(void* op_ctx, MessageOp* op,
     return status;
   }
 
-  auto binding = fidl::BindServer(loop_.dispatcher(), std::move(remote), this);
+  auto binding = fidl::BindServer<FidlProtocol>(loop_.dispatcher(), std::move(remote), this);
   binding_ = std::make_unique<fidl::ServerBindingRef<FidlProtocol>>(std::move(binding));
   return ZX_OK;
 }

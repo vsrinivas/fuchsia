@@ -52,6 +52,9 @@ class GoodMessage {
 namespace fidl {
 
 template <>
+struct IsProtocol<TestProtocol> : public std::true_type {};
+
+template <>
 class WireAsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler,
                                             public fidl::internal::BaseEventHandlerInterface {};
 

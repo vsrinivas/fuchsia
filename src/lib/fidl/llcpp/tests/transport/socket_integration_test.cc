@@ -201,7 +201,11 @@ struct ProtocolMarker {
   using Transport = fidl::internal::SocketTransport;
 };
 
-class TestServer : public fidl::internal::IncomingMessageDispatcher {
+template <>
+class ::fidl::socket::WireServer<ProtocolMarker>
+    : public fidl::internal::IncomingMessageDispatcher {};
+
+class TestServer : public fidl::socket::WireServer<ProtocolMarker> {
  public:
   using _EnclosingProtocol = ProtocolMarker;
   using _Transport = fidl::internal::SocketTransport;
@@ -223,6 +227,9 @@ class TestServer : public fidl::internal::IncomingMessageDispatcher {
     txn->Reply(&encoded.GetOutgoingMessage());
   }
 };
+
+template <>
+struct ::fidl::IsProtocol<ProtocolMarker> : public std::true_type {};
 
 template <>
 class fidl::internal::WireWeakEventSender<ProtocolMarker> {

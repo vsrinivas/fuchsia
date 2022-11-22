@@ -288,9 +288,8 @@ void UsbAudioStream::Connect(ConnectRequestView request, ConnectCompleter::Sync&
         this->DeactivateStreamChannelLocked(stream_channel.get());
       };
 
-  stream_channel->BindServer(fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfig>>(
-      loop_.dispatcher(), std::move(request->protocol), stream_channel.get(),
-      std::move(on_unbound)));
+  stream_channel->BindServer(fidl::BindServer(loop_.dispatcher(), std::move(request->protocol),
+                                              stream_channel.get(), std::move(on_unbound)));
 
   if (privileged) {
     ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
@@ -595,8 +594,8 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
         this->DeactivateRingBufferChannelLocked(rb_channel_.get());
       };
 
-  rb_channel_->BindServer(fidl::BindServer<fidl::WireServer<audio_fidl::RingBuffer>>(
-      loop_.dispatcher(), std::move(ring_buffer), this, std::move(on_unbound)));
+  rb_channel_->BindServer(
+      fidl::BindServer(loop_.dispatcher(), std::move(ring_buffer), this, std::move(on_unbound)));
 }
 
 void UsbAudioStream::WatchGainState(StreamChannel* channel,

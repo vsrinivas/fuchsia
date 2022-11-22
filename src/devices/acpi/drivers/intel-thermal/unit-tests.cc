@@ -62,8 +62,7 @@ class IntelThermalTest : public InspectTestHelper, public zxtest::Test {
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_thermal::Device>();
     ASSERT_OK(endpoints.status_value());
 
-    fidl::BindServer<fidl::WireServer<fuchsia_hardware_thermal::Device>>(
-        loop_.dispatcher(), std::move(endpoints->server), ptr);
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), ptr);
     thermal_client_.Bind(std::move(endpoints->client));
   }
 

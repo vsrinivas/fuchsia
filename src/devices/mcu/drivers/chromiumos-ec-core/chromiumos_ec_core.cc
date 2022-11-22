@@ -227,12 +227,11 @@ fpromise::promise<void, zx_status_t> ChromiumosEcCore::BindFidlClients(
     if (!endpoints.is_ok()) {
       completer.complete_error(endpoints.status_value());
     }
-    notify_ref_ = fidl::BindServer<fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler>>(
-        loop_.dispatcher(), std::move(endpoints->server), this,
-        [this](fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler>*, fidl::UnbindInfo,
-               fidl::ServerEnd<fuchsia_hardware_acpi::NotifyHandler>) {
-          server_teardown_.completer.complete_ok();
-        });
+    notify_ref_ = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), this,
+                                   [this](ChromiumosEcCore*, fidl::UnbindInfo,
+                                          fidl::ServerEnd<fuchsia_hardware_acpi::NotifyHandler>) {
+                                     server_teardown_.completer.complete_ok();
+                                   });
     ec_client_.Bind(std::move(ec_client), loop_.dispatcher(),
                     fidl::ObserveTeardown([this]() { ec_teardown_.completer.complete_ok(); }));
     acpi_client_.Bind(std::move(acpi_client), loop_.dispatcher(),

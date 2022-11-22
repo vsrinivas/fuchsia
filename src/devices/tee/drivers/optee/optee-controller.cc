@@ -583,8 +583,7 @@ void OpteeController::ConnectToDeviceInfo(
     [[maybe_unused]] ConnectToDeviceInfoCompleter::Sync& _completer) {
   ZX_DEBUG_ASSERT(request->device_info_request.is_valid());
 
-  fidl::BindServer<fidl::WireServer<fuchsia_tee::DeviceInfo>>(
-      loop_.dispatcher(), std::move(request->device_info_request), this);
+  fidl::BindServer(loop_.dispatcher(), std::move(request->device_info_request), this);
 }
 
 void OpteeController::ConnectToApplication(

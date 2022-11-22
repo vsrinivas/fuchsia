@@ -96,7 +96,7 @@ class ServerBindingBase {
                     CloseHandler&& close_handler) {
     CloseHandlerRequirement<Impl, CloseHandler>();
     lifetime_ = std::make_shared<Lifetime>();
-    binding_.emplace(internal::UniqueServerBindingOwner(BindServerImpl(
+    binding_.emplace(internal::UniqueServerBindingOwner(BindServerImpl<FidlProtocol>(
         dispatcher, std::move(server_end), impl,
         [error_handler = std::forward<CloseHandler>(close_handler),
          weak_lifetime = std::weak_ptr(lifetime_)](

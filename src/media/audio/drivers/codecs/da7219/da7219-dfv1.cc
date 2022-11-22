@@ -37,9 +37,8 @@ void Driver::Connect(ConnectRequestView request, ConnectCompleter::Sync& complet
       server_.reset();
     }
   };
-  fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::Codec>>(
-      core_->dispatcher(), std::move(request->codec_protocol), server_.get(),
-      std::move(on_unbound));
+  fidl::BindServer(core_->dispatcher(), std::move(request->codec_protocol), server_.get(),
+                   std::move(on_unbound));
 }
 
 zx_status_t Driver::Bind(void* ctx, zx_device_t* parent) {

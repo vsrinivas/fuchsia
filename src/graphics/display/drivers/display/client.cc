@@ -1611,8 +1611,8 @@ Client::Init(zx::channel server_channel) {
     client->proxy_->OnClientDead();
   };
 
-  auto binding = fidl::BindServer(controller_->loop().dispatcher(), std::move(server_channel), this,
-                                  std::move(cb));
+  auto binding = fidl::BindServer<fuchsia_hardware_display::Controller>(
+      controller_->loop().dispatcher(), std::move(server_channel), this, std::move(cb));
   // Keep a copy of fidl binding so we can safely unbind from it during shutdown
   binding_state_.SetBound(binding);
 

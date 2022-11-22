@@ -666,15 +666,13 @@ fit::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> No
   }
 
   if (controller.is_valid()) {
-    child->controller_ref_ = fidl::BindServer<fidl::WireServer<fdf::NodeController>>(
-        dispatcher_, std::move(controller), child.get());
+    child->controller_ref_ = fidl::BindServer(dispatcher_, std::move(controller), child.get());
   }
   if (node.is_valid()) {
-    child->node_ref_ = fidl::BindServer<fidl::WireServer<fdf::Node>>(
-        dispatcher_, std::move(node), child, [](fidl::WireServer<fdf::Node>* node, auto, auto) {
-          LOGF(WARNING, "Removing node %s because of binding closed",
-               static_cast<Node*>(node)->name().c_str());
-          static_cast<Node*>(node)->Remove(RemovalSet::kAll, nullptr);
+    child->node_ref_ =
+        fidl::BindServer(dispatcher_, std::move(node), child, [](Node* node, auto, auto) {
+          LOGF(WARNING, "Removing node %s because of binding closed", node->name().c_str());
+          node->Remove(RemovalSet::kAll, nullptr);
         });
   } else {
     // We don't care about tracking binds here, sending nullptr is fine.
@@ -733,13 +731,13 @@ zx::result<> Node::StartDriver(
   if (endpoints.is_error()) {
     return zx::error(endpoints.error_value());
   }
-  node_ref_ = fidl::BindServer<fidl::WireServer<fdf::Node>>(
-      dispatcher_, std::move(endpoints->server), shared_from_this(),
-      [](fidl::WireServer<fdf::Node>* node, fidl::UnbindInfo info, auto) {
-        LOGF(WARNING, "Removing node %s because of fdf::Node binding closed: %s",
-             static_cast<Node*>(node)->name().c_str(), info.FormatDescription().c_str());
-        static_cast<Node*>(node)->Remove(RemovalSet::kAll, nullptr);
-      });
+  node_ref_ =
+      fidl::BindServer(dispatcher_, std::move(endpoints->server), shared_from_this(),
+                       [](Node* node, fidl::UnbindInfo info, auto) {
+                         LOGF(WARNING, "Removing node %s because of fdf::Node binding closed: %s",
+                              node->name().c_str(), info.FormatDescription().c_str());
+                         node->Remove(RemovalSet::kAll, nullptr);
+                       });
 
   LOGF(INFO, "Binding %.*s to  %s", static_cast<int>(url.size()), url.data(), name().c_str());
   // Start the driver within the driver host.
@@ -751,15 +749,13 @@ zx::result<> Node::StartDriver(
   }
 
   driver_component_ = DriverComponent{
-      .component_controller_ref =
-          fidl::BindServer<fidl::WireServer<fuchsia_component_runner::ComponentController>>(
-              dispatcher_, std::move(controller), shared_from_this(),
-              [](fidl::WireServer<fuchsia_component_runner::ComponentController>* node,
-                 fidl::UnbindInfo info, auto) {
-                LOGF(WARNING, "Removing node %s because of ComponentController binding closed: %s",
-                     static_cast<Node*>(node)->name().c_str(), info.FormatDescription().c_str());
-                static_cast<Node*>(node)->Remove(RemovalSet::kAll, nullptr);
-              }),
+      .component_controller_ref = fidl::BindServer(
+          dispatcher_, std::move(controller), shared_from_this(),
+          [](Node* node, fidl::UnbindInfo info, auto) {
+            LOGF(WARNING, "Removing node %s because of ComponentController binding closed: %s",
+                 node->name().c_str(), info.FormatDescription().c_str());
+            node->Remove(RemovalSet::kAll, nullptr);
+          }),
 
       .driver =
           fidl::WireSharedClient<fuchsia_driver_host::Driver>(std::move(*start), dispatcher_, this),

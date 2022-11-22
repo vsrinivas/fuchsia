@@ -34,6 +34,9 @@ class TestProtocol {
 }  // namespace fidl_test
 
 template <>
+struct ::fidl::IsProtocol<fidl_test::TestProtocol> : public std::true_type {};
+
+template <>
 class ::fidl::internal::WireWeakEventSender<fidl_test::TestProtocol> {
  public:
   explicit WireWeakEventSender(std::weak_ptr<fidl::internal::AsyncServerBinding>&& binding) {}

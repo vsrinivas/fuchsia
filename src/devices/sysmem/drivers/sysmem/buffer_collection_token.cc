@@ -51,13 +51,13 @@ BufferCollectionToken& BufferCollectionToken::EmplaceInTree(
 
 void BufferCollectionToken::BindInternal(zx::channel token_request,
                                          ErrorHandlerWrapper error_handler_wrapper) {
-  server_binding_ =
-      fidl::BindServer(parent_device()->dispatcher(), std::move(token_request), this,
-                       [error_handler_wrapper = std::move(error_handler_wrapper)](
-                           BufferCollectionToken* token, fidl::UnbindInfo info,
-                           fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> channel) {
-                         error_handler_wrapper(info);
-                       });
+  server_binding_ = fidl::BindServer<fuchsia_sysmem::BufferCollectionToken>(
+      parent_device()->dispatcher(), std::move(token_request), this,
+      [error_handler_wrapper = std::move(error_handler_wrapper)](
+          BufferCollectionToken* token, fidl::UnbindInfo info,
+          fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> channel) {
+        error_handler_wrapper(info);
+      });
 }
 
 void BufferCollectionToken::DuplicateSync(DuplicateSyncRequestView request,

@@ -578,8 +578,7 @@ zx_status_t Device::Start(const rust_wlan_softmac_ifc_protocol_copy_t* ifc,
     return endpoints.status_value();
   }
 
-  fdf::BindServer<fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmacIfc>>(
-      server_dispatcher_.get(), std::move(endpoints->server), this);
+  fdf::BindServer(server_dispatcher_.get(), std::move(endpoints->server), this);
 
   // The protocol functions are stored in this class, which will act as
   // the server end of WlanSoftmacifc FIDL protocol, and this set of function pointers will be

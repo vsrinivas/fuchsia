@@ -531,11 +531,10 @@ TEST(MockDdk, SetProtocol) {
   EXPECT_FALSE(test_device->GetProtocol(kFakeProtocolID2).is_ok());
 }
 
-class EchoServer : fidl::WireServer<fidl_examples_echo::Echo> {
+class EchoServer : public fidl::WireServer<fidl_examples_echo::Echo> {
  public:
   void Bind(async_dispatcher_t* dispatcher, fidl::ServerEnd<fidl_examples_echo::Echo> request) {
-    fidl::BindServer<fidl::WireServer<fidl_examples_echo::Echo>>(dispatcher, std::move(request),
-                                                                 this);
+    fidl::BindServer(dispatcher, std::move(request), this);
   }
 
  private:

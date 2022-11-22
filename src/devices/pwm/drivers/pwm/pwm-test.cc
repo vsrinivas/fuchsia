@@ -106,8 +106,7 @@ class PwmDeviceTest : public zxtest::Test {
 
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_pwm::Pwm>();
     std::optional<fidl::ServerBindingRef<fuchsia_hardware_pwm::Pwm>> fidl_server;
-    fidl_server = fidl::BindServer<fidl::WireServer<fuchsia_hardware_pwm::Pwm>>(
-        loop_.dispatcher(), std::move(endpoints->server), pwm_);
+    fidl_server = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), pwm_);
     loop_.StartThread("pwm-fidl-test");
 
     client_ = fidl::WireSyncClient(std::move(endpoints->client));

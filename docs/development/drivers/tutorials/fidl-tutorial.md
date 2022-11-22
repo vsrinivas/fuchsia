@@ -113,8 +113,7 @@ class Device : public fidl::WireServer<fidl_examples_echo::Echo> {
   // server. Note that we continue to utilize the same framework provided
   // dispatcher to service the work.
   void Bind(fidl::ServerEnd<fidl_examples_echo::Echo> request) {
-    fidl::BindServer<fidl::WireServer<fidl_examples_echo::Echo>>(device_get_dispatcher(parent()),
-                                                                 std::move(request), this);
+    fidl::BindServer(device_get_dispatcher(parent()), std::move(request), this);
   }
 
   // This is the implementation of the only method our FIDL protocol requires.

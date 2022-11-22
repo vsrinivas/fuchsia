@@ -49,13 +49,11 @@ class FakeAudioDevice
   void GetProperties(GetPropertiesCompleter::Sync& completer) override { completer.Reply({}); }
 
   fbl::RefPtr<fs::Service> AsService() {
-    return fbl::MakeRefCounted<fs::Service>([this](zx::channel c) {
-      connector_binding_ =
-          fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::StreamConfigConnector>>(
-              dispatcher(),
-              fidl::ServerEnd<fuchsia_hardware_audio::StreamConfigConnector>(std::move(c)), this);
-      return ZX_OK;
-    });
+    return fbl::MakeRefCounted<fs::Service>(
+        [this](fidl::ServerEnd<fuchsia_hardware_audio::StreamConfigConnector> c) {
+          connector_binding_ = fidl::BindServer(dispatcher(), std::move(c), this);
+          return ZX_OK;
+        });
   }
 
   bool is_bound() const { return stream_config_binding_.has_value(); }
@@ -64,11 +62,7 @@ class FakeAudioDevice
  private:
   // FIDL method for fuchsia.hardware.audio.StreamConfigConnector.
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override {
-    stream_config_binding_ =
-        fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::StreamConfig>>(
-            dispatcher(),
-            fidl::ServerEnd<fuchsia_hardware_audio::StreamConfig>(std::move(request->protocol)),
-            this);
+    stream_config_binding_ = fidl::BindServer(dispatcher(), std::move(request->protocol), this);
   }
 
   async_dispatcher_t* dispatcher_;

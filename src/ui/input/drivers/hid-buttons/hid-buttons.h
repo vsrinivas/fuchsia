@@ -191,7 +191,7 @@ class ButtonsNotifyInterface : public fidl::WireServer<Buttons> {
     fidl::OnUnboundFn<ButtonsNotifyInterface> unbound =
         [this](ButtonsNotifyInterface*, fidl::UnbindInfo,
                fidl::ServerEnd<fuchsia_buttons::Buttons>) { device_->ClosingChannel(this); };
-    binding_ = fidl::BindServer(dispatcher, std::move(chan), this, std::move(unbound));
+    binding_ = fidl::BindServer<Buttons>(dispatcher, std::move(chan), this, std::move(unbound));
     return ZX_OK;
   }
 

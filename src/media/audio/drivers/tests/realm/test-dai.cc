@@ -30,8 +30,7 @@ class TestDai : public TestDaiDeviceType,
  protected:
   // FIDL LLCPP method for fuchsia.hardware.audio.DaiConnector.
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override {
-    fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::Dai>>(
-        loop_.dispatcher(), std::move(request->dai_protocol), this);
+    fidl::BindServer(loop_.dispatcher(), std::move(request->dai_protocol), this);
   }
 
   // FIDL LLCPP methods for fuchsia.hardware.audio.Dai.

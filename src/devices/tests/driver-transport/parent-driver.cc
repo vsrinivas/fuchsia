@@ -82,8 +82,7 @@ zx_status_t Device::Bind(void* ctx, zx_device_t* device) {
 
   auto protocol =
       [dev = dev.get()](fdf::ServerEnd<fdtt::DriverTransportProtocol> server_end) mutable {
-        fdf::BindServer<fdf::WireServer<fdtt::DriverTransportProtocol>>(
-            fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), dev);
+        fdf::BindServer(fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), dev);
       };
   auto add_status = service.add_driver_transport_protocol(std::move(protocol));
   if (add_status.is_error()) {

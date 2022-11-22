@@ -242,7 +242,8 @@ TEST_F(SpiDeviceTest, SpiTest) {
 
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
-    fidl::BindServer(loop_.dispatcher(), std::move(server), (*it)->GetDeviceContext<SpiChild>());
+    fidl::BindServer<fuchsia_hardware_spi::Device>(loop_.dispatcher(), std::move(server),
+                                                   (*it)->GetDeviceContext<SpiChild>());
 
     spi_impl_.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kTransmit;
     zx_status_t status = spilib_transmit(client.get(), txbuf, sizeof txbuf);

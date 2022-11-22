@@ -35,8 +35,7 @@ zx_status_t WlanphyImplDevice::DdkServiceConnect(const char* service_name, fdf::
     return ZX_ERR_NOT_SUPPORTED;
   }
   fdf::ServerEnd<fuchsia_wlan_wlanphyimpl::WlanphyImpl> server_end(std::move(channel));
-  fdf::BindServer<fdf::WireServer<fuchsia_wlan_wlanphyimpl::WlanphyImpl>>(
-      fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), this);
+  fdf::BindServer(fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), this);
   return ZX_OK;
 }
 

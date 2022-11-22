@@ -279,9 +279,8 @@ TEST(FastbootTest, DownloadFailsOnetDownloadBuffer) {
 class TestPaver : public paver_test::FakePaver {
  public:
   void UseBlockDevice(UseBlockDeviceRequestView request,
-                      UseBlockDeviceCompleter::Sync& _completer) override {
-    fidl::BindServer<fidl::WireServer<fuchsia_paver::DynamicDataSink>>(
-        dispatcher(), std::move(request->data_sink), this);
+                      UseBlockDeviceCompleter::Sync& completer) override {
+    fidl::BindServer(dispatcher(), std::move(request->data_sink), this);
   }
 };
 

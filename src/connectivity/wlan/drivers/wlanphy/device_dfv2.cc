@@ -69,8 +69,7 @@ void Device::Connect(ConnectRequestView request, ConnectCompleter::Sync& complet
 
 void Device::Connect(fidl::ServerEnd<fuchsia_wlan_device::Phy> server_end) {
   ltrace_fn();
-  fidl::BindServer<fidl::WireServer<fuchsia_wlan_device::Phy>>(server_dispatcher_,
-                                                               std::move(server_end), this);
+  fidl::BindServer<fuchsia_wlan_device::Phy>(server_dispatcher_, std::move(server_end), this);
 }
 
 zx_status_t Device::ConnectToWlanphyImpl(fdf::Channel server_channel) {

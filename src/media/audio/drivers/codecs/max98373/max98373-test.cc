@@ -66,8 +66,7 @@ class Max98373Test : public zxtest::Test {
       return {};
     }
 
-    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
-                                        &mock_i2c_);
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &mock_i2c_);
     return std::move(endpoints->client);
   }
 

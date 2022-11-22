@@ -107,8 +107,7 @@ struct WlantapMacImpl : WlantapMac,
 
   zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel) {
     fdf::ServerEnd<fuchsia_wlan_softmac::WlanSoftmac> server_end(std::move(channel));
-    fdf::BindServer<fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmac>>(
-        wlan_softmac_dispatcher_.get(), std::move(server_end), this);
+    fdf::BindServer(wlan_softmac_dispatcher_.get(), std::move(server_end), this);
     return ZX_OK;
   }
 

@@ -28,8 +28,7 @@ class Da7219Test : public zxtest::Test {
     EXPECT_TRUE(i2c_endpoints.is_ok());
 
     EXPECT_OK(loop_.StartThread());
-    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(i2c_endpoints->server),
-                                        &mock_i2c_);
+    fidl::BindServer(loop_.dispatcher(), std::move(i2c_endpoints->server), &mock_i2c_);
     ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq_));
     zx::interrupt irq2;
     ASSERT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &irq2));
@@ -44,8 +43,8 @@ class Da7219Test : public zxtest::Test {
 
     auto output_device = std::make_unique<Driver>(fake_root_.get(), core_, false);
 
-    fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::CodecConnector>>(
-        core_->dispatcher(), std::move(codec_connector_endpoints->server), output_device.get());
+    fidl::BindServer(core_->dispatcher(), std::move(codec_connector_endpoints->server),
+                     output_device.get());
 
     auto codec_endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::Codec>();
     EXPECT_TRUE(codec_endpoints.is_ok());
@@ -381,8 +380,8 @@ TEST_F(Da7219Test, PlugDetectNoMicrophoneWatchBeforeReset) {
   auto input_codec_connector =
       fidl::WireSyncClient(std::move(input_codec_connector_endpoints->client));
   auto input_device = std::make_unique<Driver>(fake_root_.get(), core_, true);
-  fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::CodecConnector>>(
-      core_->dispatcher(), std::move(input_codec_connector_endpoints->server), input_device.get());
+  fidl::BindServer(core_->dispatcher(), std::move(input_codec_connector_endpoints->server),
+                   input_device.get());
 
   auto input_codec_endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::Codec>();
   EXPECT_TRUE(input_codec_endpoints.is_ok());
@@ -450,8 +449,8 @@ TEST_F(Da7219Test, PlugDetectWithMicrophoneWatchBeforeReset) {
   auto input_codec_connector =
       fidl::WireSyncClient(std::move(input_codec_connector_endpoints->client));
   auto input_device = std::make_unique<Driver>(fake_root_.get(), core_, true);
-  fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::CodecConnector>>(
-      core_->dispatcher(), std::move(input_codec_connector_endpoints->server), input_device.get());
+  fidl::BindServer(core_->dispatcher(), std::move(input_codec_connector_endpoints->server),
+                   input_device.get());
 
   auto input_codec_endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::Codec>();
   EXPECT_TRUE(input_codec_endpoints.is_ok());

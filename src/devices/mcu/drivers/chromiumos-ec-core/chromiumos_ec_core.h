@@ -55,7 +55,8 @@ struct CommandResult {
 
 class ChromiumosEcCore;
 using DeviceType = ddk::Device<ChromiumosEcCore, ddk::Initializable, ddk::Unbindable>;
-class ChromiumosEcCore : public DeviceType, fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler> {
+class ChromiumosEcCore : public DeviceType,
+                         public fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler> {
  public:
   explicit ChromiumosEcCore(zx_device_t* parent)
       : DeviceType(parent),

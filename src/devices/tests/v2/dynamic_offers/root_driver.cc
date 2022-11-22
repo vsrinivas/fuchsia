@@ -32,8 +32,8 @@ class RootDriver : public driver::DriverBase, public fidl::Server<ft::Handshake>
       component::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
 
-      auto device = [this](fidl::ServerEnd<ft::Handshake> server_end) mutable -> void {
-        fidl::BindServer<fidl::Server<ft::Handshake>>(dispatcher(), std::move(server_end), this);
+      auto device = [this](fidl::ServerEnd<ft::Handshake> server_end) -> void {
+        fidl::BindServer(dispatcher(), std::move(server_end), this);
       };
       zx::result<> status = service.add_device(std::move(device));
       if (status.is_error()) {

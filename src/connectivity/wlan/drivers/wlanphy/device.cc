@@ -61,8 +61,7 @@ static zx_protocol_device_t wlanphy_device_ops = {
 
 zx_status_t Device::Connect(fidl::ServerEnd<fuchsia_wlan_device::Phy> server_end) {
   ltrace_fn();
-  fidl::BindServer<fidl::WireServer<fuchsia_wlan_device::Phy>>(server_dispatcher_,
-                                                               std::move(server_end), this);
+  fidl::BindServer(server_dispatcher_, std::move(server_end), this);
   return ZX_OK;
 }
 

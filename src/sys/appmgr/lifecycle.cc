@@ -11,7 +11,8 @@
 namespace component {
 
 zx_status_t LifecycleServer::Create(async_dispatcher_t* dispatcher, zx::channel channel) {
-  lifecycle_ = fidl::BindServer(dispatcher, std::move(channel), this);
+  lifecycle_ =
+      fidl::BindServer<fuchsia_process_lifecycle::Lifecycle>(dispatcher, std::move(channel), this);
   return ZX_OK;
 }
 

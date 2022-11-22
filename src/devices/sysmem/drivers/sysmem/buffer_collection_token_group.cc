@@ -149,13 +149,13 @@ BufferCollectionTokenGroup::BufferCollectionTokenGroup(fbl::RefPtr<LogicalBuffer
 
 void BufferCollectionTokenGroup::BindInternal(zx::channel group_request,
                                               ErrorHandlerWrapper error_handler_wrapper) {
-  server_binding_ =
-      fidl::BindServer(parent_device()->dispatcher(), std::move(group_request), this,
-                       [error_handler_wrapper = std::move(error_handler_wrapper)](
-                           BufferCollectionTokenGroup* group, fidl::UnbindInfo info,
-                           fidl::ServerEnd<fuchsia_sysmem::BufferCollectionTokenGroup> channel) {
-                         error_handler_wrapper(info);
-                       });
+  server_binding_ = fidl::BindServer<fuchsia_sysmem::BufferCollectionTokenGroup>(
+      parent_device()->dispatcher(), std::move(group_request), this,
+      [error_handler_wrapper = std::move(error_handler_wrapper)](
+          BufferCollectionTokenGroup* group, fidl::UnbindInfo info,
+          fidl::ServerEnd<fuchsia_sysmem::BufferCollectionTokenGroup> channel) {
+        error_handler_wrapper(info);
+      });
 }
 
 bool BufferCollectionTokenGroup::ReadyForAllocation() { return is_all_children_present_; }

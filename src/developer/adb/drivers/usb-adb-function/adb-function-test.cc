@@ -130,8 +130,7 @@ class UsbAdbTest : public zxtest::Test {
     ASSERT_TRUE(endpoints.is_ok());
     fidl_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNeverAttachToThread);
     ASSERT_OK(fidl_loop_->StartThread("usb-adb-test-loop"));
-    fidl::BindServer<fidl::WireServer<fuchsia_hardware_adb::Device>>(
-        fidl_loop_->dispatcher(), std::move(endpoints->server), adb_);
+    fidl::BindServer(fidl_loop_->dispatcher(), std::move(endpoints->server), adb_);
     client_ = std::move(endpoints->client);
   }
 

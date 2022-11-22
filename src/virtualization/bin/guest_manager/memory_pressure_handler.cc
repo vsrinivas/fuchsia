@@ -118,8 +118,8 @@ zx_status_t MemoryPressureHandler::Start(sys::ComponentContext* context) {
   fidl::Client memory_provider(std::move(*mempressure_client_end), dispatcher_, this);
 
   auto mempressure_endpoints = fidl::CreateEndpoints<fuchsia_memorypressure::Watcher>();
-  memory_pressure_server_ = fidl::BindServer<fidl::Server<fuchsia_memorypressure::Watcher>>(
-      dispatcher_, std::move(mempressure_endpoints->server), this);
+  memory_pressure_server_ =
+      fidl::BindServer(dispatcher_, std::move(mempressure_endpoints->server), this);
   auto res = memory_provider->RegisterWatcher(std::move(mempressure_endpoints->client));
   if (res.is_error()) {
     FX_LOGS(ERROR) << "Failed to register memory pressure watcher. Error=" << res.error_value();

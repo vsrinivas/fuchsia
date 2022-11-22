@@ -266,7 +266,7 @@ class I2cHidTest : public zxtest::Test,
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
     EXPECT_TRUE(endpoints.is_ok());
 
-    fidl::BindServer<FakeI2cHid>(loop_.dispatcher(), std::move(endpoints->server), &fake_i2c_hid_);
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &fake_i2c_hid_);
 
     i2c_ = std::move(endpoints->client);
     // Each test is responsible for calling Bind().

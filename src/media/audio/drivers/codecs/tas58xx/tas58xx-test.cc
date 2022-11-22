@@ -59,8 +59,7 @@ class Tas58xxTest : public inspect::InspectTestHelper, public zxtest::Test {
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
     ASSERT_TRUE(endpoints.is_ok());
 
-    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
-                                        &mock_i2c_);
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &mock_i2c_);
 
     loop_.StartThread();
     mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_ERR_INTERNAL);  // Error will retry.
@@ -328,8 +327,7 @@ class Tas58xxSignalProcessingTest : public zxtest::Test {
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
     ASSERT_TRUE(endpoints.is_ok());
 
-    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
-                                        &mock_i2c_);
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &mock_i2c_);
 
     loop_.StartThread();
     mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_OK);  // Check DIE ID.
@@ -424,7 +422,7 @@ TEST(Tas58xxSignalProcessingTest, SignalProcessingConnectTooManyConnections) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
   loop.StartThread();
 
   ddk::MockGpio mock_fault;
@@ -1386,7 +1384,7 @@ TEST(Tas58xxTest, Reset) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
   loop.StartThread();
 
   ddk::MockGpio mock_fault;
@@ -1433,7 +1431,7 @@ TEST(Tas58xxTest, BadFaultGpio) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
   loop.StartThread();
 
   gpio_protocol bad_protocol = {};
@@ -1468,7 +1466,7 @@ TEST(Tas58xxTest, Bridged) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
   loop.StartThread();
 
   ddk::MockGpio mock_fault;
@@ -1580,7 +1578,7 @@ TEST(Tas58xxTest, ExternalConfig) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
   loop.StartThread();
 
   ddk::MockGpio mock_fault;

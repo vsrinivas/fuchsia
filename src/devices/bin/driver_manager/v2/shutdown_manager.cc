@@ -104,9 +104,10 @@ void ShutdownManager::Publish(component::OutgoingDirectory& outgoing,
       zx::channel(zx_take_startup_handle(PA_LIFECYCLE)));
 
   if (lifecycle_server.is_valid()) {
-    lifecycle_binding_ = fidl::BindServer<fidl::WireServer<fuchsia_process_lifecycle::Lifecycle>>(
-        dispatcher_, std::move(lifecycle_server), this,
-        [this](auto* server, fidl::UnbindInfo info, auto) { OnUnbound("Lifecycle", info); });
+    lifecycle_binding_ = fidl::BindServer(dispatcher_, std::move(lifecycle_server), this,
+                                          [](ShutdownManager* server, fidl::UnbindInfo info, auto) {
+                                            server->OnUnbound("Lifecycle", info);
+                                          });
   } else {
     LOGF(INFO,
          "No valid handle found for lifecycle events, assuming test environment and continuing");
@@ -116,11 +117,10 @@ void ShutdownManager::Publish(component::OutgoingDirectory& outgoing,
       fidl::CreateEndpoints<fuchsia_device_manager::SystemStateTransition>();
   ZX_ASSERT(system_state_endpoints.is_ok());
   sys_state_binding_ =
-      fidl::BindServer<fidl::WireServer<fuchsia_device_manager::SystemStateTransition>>(
-          dispatcher_, std::move(system_state_endpoints->server), this,
-          [this](auto* server, fidl::UnbindInfo info, auto channel) {
-            OnUnbound("Power Manager", info);
-          });
+      fidl::BindServer(dispatcher_, std::move(system_state_endpoints->server), this,
+                       [](ShutdownManager* server, fidl::UnbindInfo info, auto channel) {
+                         server->OnUnbound("Power Manager", info);
+                       });
 
   auto fpm_result = component::Connect<fuchsia_power_manager::DriverManagerRegistration>();
   if (fpm_result.is_error()) {

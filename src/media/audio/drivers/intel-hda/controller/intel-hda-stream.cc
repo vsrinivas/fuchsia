@@ -188,8 +188,7 @@ zx_status_t IntelHDAStream::SetStreamFormat(async_dispatcher_t* dispatcher, uint
       };
 
   fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer> server(std::move(server_endpoint));
-  fidl::BindServer<fidl::WireServer<audio_fidl::RingBuffer>>(dispatcher, std::move(server), this,
-                                                             std::move(on_unbound));
+  fidl::BindServer(dispatcher, std::move(server), this, std::move(on_unbound));
 
   // Record and program the stream format, then record the fifo depth we get
   // based on this format selection.

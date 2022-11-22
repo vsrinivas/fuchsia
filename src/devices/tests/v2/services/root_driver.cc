@@ -21,8 +21,7 @@ class RootDriver : public driver::DriverBase,
     ft::Device::Handler device(&handler);
 
     auto control = [this](fidl::ServerEnd<ft::ControlPlane> server_end) -> void {
-      fidl::BindServer<fidl::WireServer<ft::ControlPlane>>(dispatcher(), std::move(server_end),
-                                                           this);
+      fidl::BindServer(dispatcher(), std::move(server_end), this);
     };
     auto result = device.add_control(control);
     if (result.is_error()) {
@@ -31,7 +30,7 @@ class RootDriver : public driver::DriverBase,
     }
 
     auto data = [this](fidl::ServerEnd<ft::DataPlane> server_end) -> void {
-      fidl::BindServer<fidl::WireServer<ft::DataPlane>>(dispatcher(), std::move(server_end), this);
+      fidl::BindServer(dispatcher(), std::move(server_end), this);
     };
     result = device.add_data(data);
     if (result.is_error()) {

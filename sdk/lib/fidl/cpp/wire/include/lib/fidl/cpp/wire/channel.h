@@ -305,9 +305,9 @@ class ServerBindingRef : public internal::ServerBindingRefBase {
 //
 // ## Template Ergonomics
 //
-// This function is able to infer the type of |ServerImpl| and |OnUnbound| in
-// most cases. The following code would compile without explicitly specializing
-// |BindServer|:
+// This function is able to infer the type of |Protocol|, |ServerImpl|, and
+// |OnUnbound| in most cases. The following code would compile without
+// explicitly specializing |BindServer|:
 //
 //     // Suppose |this| is a server implementation class |Foo|, that
 //     // implements the |Bar| FIDL protocol.
@@ -317,14 +317,12 @@ class ServerBindingRef : public internal::ServerBindingRefBase {
 //
 // TODO(fxbug.dev/66343): Consider using a "DidUnbind" virtual function
 // in the server interface to replace the |on_unbound| handler lambda.
-template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
-ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
-    async_dispatcher_t* dispatcher,
-    fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol> server_end,
-    ServerImpl* impl, OnUnbound&& on_unbound = nullptr) {
-  static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol::Transport,
-                               fidl::internal::ChannelTransport>);
-  return internal::BindServerImpl<ServerImpl>(
+template <typename Protocol, typename ServerImpl, typename OnUnbound = std::nullptr_t>
+ServerBindingRef<Protocol> BindServer(async_dispatcher_t* dispatcher,
+                                      fidl::ServerEnd<Protocol> server_end, ServerImpl* impl,
+                                      OnUnbound&& on_unbound = nullptr) {
+  static_assert(fidl::IsProtocolV<Protocol>, "|Protocol| must be a FIDL protocol marker");
+  return internal::BindServerImpl<Protocol, ServerImpl>(
       dispatcher, std::move(server_end), impl,
       internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
 }
@@ -332,15 +330,14 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
 // Overload of |BindServer| that takes ownership of the server as a |unique_ptr|.
 // The pointer is destroyed on the same thread as the one calling |on_unbound|,
 // and happens right after |on_unbound|. See |BindServer| for details.
-template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
-ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
-    async_dispatcher_t* dispatcher,
-    fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol> server_end,
-    std::unique_ptr<ServerImpl>&& impl, OnUnbound&& on_unbound = nullptr) {
-  static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol::Transport,
-                               fidl::internal::ChannelTransport>);
+template <typename Protocol, typename ServerImpl, typename OnUnbound = std::nullptr_t>
+ServerBindingRef<Protocol> BindServer(async_dispatcher_t* dispatcher,
+                                      fidl::ServerEnd<Protocol> server_end,
+                                      std::unique_ptr<ServerImpl>&& impl,
+                                      OnUnbound&& on_unbound = nullptr) {
+  static_assert(fidl::IsProtocolV<Protocol>, "|Protocol| must be a FIDL protocol marker");
   ServerImpl* impl_raw = impl.get();
-  return internal::BindServerImpl<ServerImpl>(
+  return internal::BindServerImpl<Protocol, ServerImpl>(
       dispatcher, std::move(server_end), impl_raw,
       internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
 }
@@ -348,15 +345,14 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
 // Overload of |BindServer| that shares ownership of the server via a |shared_ptr|.
 // The pointer is destroyed on the same thread as the one calling |on_unbound|,
 // and happens right after |on_unbound|. See |BindServer| for details.
-template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
-ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
-    async_dispatcher_t* dispatcher,
-    fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol> server_end,
-    std::shared_ptr<ServerImpl> impl, OnUnbound&& on_unbound = nullptr) {
-  static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol::Transport,
-                               fidl::internal::ChannelTransport>);
+template <typename Protocol, typename ServerImpl, typename OnUnbound = std::nullptr_t>
+ServerBindingRef<Protocol> BindServer(async_dispatcher_t* dispatcher,
+                                      fidl::ServerEnd<Protocol> server_end,
+                                      std::shared_ptr<ServerImpl> impl,
+                                      OnUnbound&& on_unbound = nullptr) {
+  static_assert(fidl::IsProtocolV<Protocol>, "|Protocol| must be a FIDL protocol marker");
   ServerImpl* impl_raw = impl.get();
-  return internal::BindServerImpl<ServerImpl>(
+  return internal::BindServerImpl<Protocol, ServerImpl>(
       dispatcher, std::move(server_end), impl_raw,
       internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
 }

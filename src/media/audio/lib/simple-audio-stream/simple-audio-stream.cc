@@ -233,8 +233,8 @@ void SimpleAudioStream::Connect(ConnectRequestView request, ConnectCompleter::Sy
         this->DeactivateStreamChannel(stream_channel.get());
       };
 
-  fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfig>>(
-      dispatcher(), std::move(request->protocol), stream_channel.get(), std::move(on_unbound));
+  fidl::BindServer(dispatcher(), std::move(request->protocol), stream_channel.get(),
+                   std::move(on_unbound));
 
   if (privileged) {
     ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
@@ -440,8 +440,7 @@ void SimpleAudioStream::CreateRingBuffer(
           this->DeactivateRingBufferChannel(rb_channel_.get());
         };
 
-    fidl::BindServer<fidl::WireServer<audio_fidl::RingBuffer>>(dispatcher(), std::move(ring_buffer),
-                                                               this, std::move(on_unbound));
+    fidl::BindServer(dispatcher(), std::move(ring_buffer), this, std::move(on_unbound));
   }
 }
 

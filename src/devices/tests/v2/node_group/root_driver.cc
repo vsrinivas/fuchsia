@@ -194,8 +194,7 @@ class RootDriver : public driver::DriverBase {
       component::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
       auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
-        fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher(), std::move(server_end),
-                                                       &this->left_server_);
+        fidl::BindServer(dispatcher(), std::move(server_end), &this->left_server_);
       };
       zx::result<> status = service.add_device(std::move(device));
       if (status.is_error()) {
@@ -212,8 +211,7 @@ class RootDriver : public driver::DriverBase {
       component::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
       auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
-        fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher(), std::move(server_end),
-                                                       &this->right_server_);
+        fidl::BindServer(dispatcher(), std::move(server_end), &this->right_server_);
       };
       zx::result<> status = service.add_device(std::move(device));
       if (status.is_error()) {
@@ -230,8 +228,7 @@ class RootDriver : public driver::DriverBase {
       component::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
       auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
-        fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher(), std::move(server_end),
-                                                       &this->optional_server_);
+        fidl::BindServer(dispatcher(), std::move(server_end), &this->optional_server_);
       };
       zx::result<> status = service.add_device(std::move(device));
       if (status.is_error()) {

@@ -46,8 +46,7 @@ void IntelDspStream::CreateRingBuffer(DaiChannel* channel, audio_fidl::wire::Dai
       [this](fidl::WireServer<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
              fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) { ring_buffer_.reset(); };
 
-  fidl::BindServer<fidl::WireServer<audio_fidl::RingBuffer>>(dispatcher(), std::move(ring_buffer),
-                                                             this, std::move(on_unbound));
+  fidl::BindServer(dispatcher(), std::move(ring_buffer), this, std::move(on_unbound));
 
   ring_buffer_ = std::move(client);
   IntelHDADaiBase::CreateRingBuffer(channel, std::move(dai_format), std::move(ring_buffer_format),

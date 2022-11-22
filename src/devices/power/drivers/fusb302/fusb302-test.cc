@@ -49,8 +49,8 @@ class Fusb302TestFixture : public InspectTestHelper, public zxtest::Test {
     EXPECT_OK(loop_.StartThread());
 
     dut_ = std::make_unique<Fusb302Test>(std::move(endpoints->client));
-    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
-                                        &mock_i2c_);
+    fidl::BindServer<fuchsia_hardware_i2c::Device>(loop_.dispatcher(), std::move(endpoints->server),
+                                                   &mock_i2c_);
 
     // InitInspect
     mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0x91});  // Device ID

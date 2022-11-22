@@ -158,9 +158,8 @@ class HidDeviceTest : public zxtest::Test {
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_input::Device>();
     ASSERT_OK(endpoints.status_value());
     sync_client_ = fidl::WireSyncClient(std::move(endpoints->client));
-    fidl::BindServer<fidl::WireServer<fuchsia_hardware_input::Device>>(
-        loop_.dispatcher(), std::move(endpoints->server),
-        instance_driver_->GetDeviceContext<hid_driver::HidInstance>());
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server),
+                     instance_driver_->GetDeviceContext<hid_driver::HidInstance>());
 
     auto result = sync_client_->GetReportsEvent();
     ASSERT_OK(result.status());
@@ -246,9 +245,8 @@ TEST_F(HidDeviceTest, TestQuery) {
   ASSERT_OK(endpoints.status_value());
   auto sync_client =
       fidl::WireSyncClient<fuchsia_hardware_input::Device>(std::move(endpoints->client));
-  fidl::BindServer<fidl::WireServer<fuchsia_hardware_input::Device>>(
-      loop_.dispatcher(), std::move(endpoints->server),
-      open_dev->GetDeviceContext<hid_driver::HidInstance>());
+  fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server),
+                   open_dev->GetDeviceContext<hid_driver::HidInstance>());
 
   auto result = sync_client->GetDeviceIds();
   ASSERT_OK(result.status());

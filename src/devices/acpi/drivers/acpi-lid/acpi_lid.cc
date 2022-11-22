@@ -112,8 +112,7 @@ zx_status_t AcpiLid::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
     return endpoints.error_value();
   }
 
-  fidl::BindServer<fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler>>(
-      dispatcher_, std::move(endpoints->server), this);
+  fidl::BindServer(dispatcher_, std::move(endpoints->server), this);
 
   auto result = acpi_.borrow()->InstallNotifyHandler(facpi::NotificationMode::kDevice,
                                                      std::move(endpoints->client));
@@ -222,8 +221,7 @@ zx_status_t AcpiLid::UpdateLidStateLocked() {
 
 void AcpiLid::QueueHidReportLocked() {
   if (client_.is_valid()) {
-    zxlogf(INFO, "Queueing report: lid is %s",
-           (lid_state_ == LidState::kOpen ? "open" : "closed"));
+    zxlogf(INFO, "Queueing report: lid is %s", (lid_state_ == LidState::kOpen ? "open" : "closed"));
     uint8_t report = LidStateToHidReport(lid_state_);
     client_.IoQueue(&report, sizeof(report), zx_clock_get_monotonic());
   }

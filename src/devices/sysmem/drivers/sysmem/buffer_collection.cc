@@ -84,13 +84,13 @@ void BufferCollection::CloseServerBinding(zx_status_t epitaph) {
 
 void BufferCollection::BindInternal(zx::channel collection_request,
                                     ErrorHandlerWrapper error_handler_wrapper) {
-  server_binding_ =
-      fidl::BindServer(parent_device()->dispatcher(), std::move(collection_request), this,
-                       [error_handler_wrapper = std::move(error_handler_wrapper)](
-                           BufferCollection* collection, fidl::UnbindInfo info,
-                           fidl::ServerEnd<fuchsia_sysmem::BufferCollection> channel) {
-                         error_handler_wrapper(info);
-                       });
+  server_binding_ = fidl::BindServer<fuchsia_sysmem::BufferCollection>(
+      parent_device()->dispatcher(), std::move(collection_request), this,
+      [error_handler_wrapper = std::move(error_handler_wrapper)](
+          BufferCollection* collection, fidl::UnbindInfo info,
+          fidl::ServerEnd<fuchsia_sysmem::BufferCollection> channel) {
+        error_handler_wrapper(info);
+      });
 }
 
 void BufferCollection::Sync(SyncCompleter::Sync& completer) { SyncImplV1(completer); }

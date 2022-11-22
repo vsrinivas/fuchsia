@@ -56,8 +56,7 @@ class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
     ft::Service::Handler service(&handler);
 
     auto root = [this](fdf::ServerEnd<ft::Root> server_end) {
-      fdf::BindServer<fdf::Server<ft::Root>>(driver_dispatcher()->get(), std::move(server_end),
-                                             this);
+      fdf::BindServer(driver_dispatcher()->get(), std::move(server_end), this);
     };
     auto status = service.add_root(std::move(root));
     if (status.is_error()) {

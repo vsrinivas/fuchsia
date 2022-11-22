@@ -63,8 +63,7 @@ zx_status_t AddProtocolPassthrough(const char* name, cpp20::span<const zx_device
   fuchsia_hardware_platform_bus::Service::Handler service(&handler);
 
   auto protocol = [parent](fdf::ServerEnd<fuchsia_hardware_platform_bus::PlatformBus> server_end) {
-    fdf::BindServer<fdf::WireServer<fuchsia_hardware_platform_bus::PlatformBus>>(
-        fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), parent);
+    fdf::BindServer(fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), parent);
   };
 
   auto status = service.add_platform_bus(std::move(protocol));

@@ -46,8 +46,8 @@ class ServerAndClient {
                     auto logger_factory = std::make_unique<MetricEventLoggerFactory>(this);
                     // Ignore the result - logger_factory will be destroyed and the channel will be
                     // closed on error.
-                    fidl::BindServer<MetricEventLoggerFactory>(
-                        loop_.dispatcher(), std::move(llcpp_server_end), std::move(logger_factory));
+                    fidl::BindServer(loop_.dispatcher(), std::move(llcpp_server_end),
+                                     std::move(logger_factory));
                   });
       outgoing_aux_service_directory_ =
           outgoing_aux_service_directory_parent_->GetOrCreateDirectory("svc");
@@ -181,8 +181,7 @@ class ServerAndClient {
       parent_->IncLoggerFactoryMessageCount();
       auto logger =
           std::make_unique<MetricEventLogger>(parent_, request->project_spec.project_id());
-      fidl::BindServer<MetricEventLogger>(parent_->dispatcher_, std::move(request->logger),
-                                          std::move(logger));
+      fidl::BindServer(parent_->dispatcher_, std::move(request->logger), std::move(logger));
       completer.ReplySuccess();
     }
 

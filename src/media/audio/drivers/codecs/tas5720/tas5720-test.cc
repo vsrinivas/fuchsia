@@ -68,8 +68,7 @@ struct Tas5720Test : public inspect::InspectTestHelper, public zxtest::Test {
       return {};
     }
 
-    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
-                                        &mock_i2c_);
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &mock_i2c_);
     return std::move(endpoints->client);
   }
 
@@ -124,7 +123,7 @@ TEST(Tas5720Test, CodecInitBad) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
   loop.StartThread();
 
   ASSERT_EQ(ZX_ERR_TIMED_OUT, SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(
@@ -469,7 +468,7 @@ TEST(Tas5720Test, InstanceCount) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
   ASSERT_TRUE(endpoints.is_ok());
 
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
   loop.StartThread();
 
   ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(),

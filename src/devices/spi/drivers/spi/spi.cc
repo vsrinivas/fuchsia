@@ -208,12 +208,13 @@ void SpiDevice::ConnectServer(zx::channel server, fbl::RefPtr<SpiChild> child) {
   // Make sure that the child reference counter doesn't get decreased when it goes out of scope
   // here. The dispatcher now holds a pointer to the child, so the child can't be freed until after
   // the callback runs.
-  fidl::BindServer(loop_.dispatcher(), std::move(server), fbl::ExportToRawPtr(&child),
-                   [](SpiChild* ref_counted_child, fidl::UnbindInfo info,
-                      fidl::ServerEnd<fuchsia_hardware_spi::Device> server) {
-                     fbl::RefPtr<SpiChild> child_ref_ptr = fbl::ImportFromRawPtr(ref_counted_child);
-                     child_ref_ptr->Close();
-                   });
+  fidl::BindServer<fuchsia_hardware_spi::Device>(
+      loop_.dispatcher(), std::move(server), fbl::ExportToRawPtr(&child),
+      [](SpiChild* ref_counted_child, fidl::UnbindInfo info,
+         fidl::ServerEnd<fuchsia_hardware_spi::Device> server) {
+        fbl::RefPtr<SpiChild> child_ref_ptr = fbl::ImportFromRawPtr(ref_counted_child);
+        child_ref_ptr->Close();
+      });
 }
 
 static zx_driver_ops_t driver_ops = []() {

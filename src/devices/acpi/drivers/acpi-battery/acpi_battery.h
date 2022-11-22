@@ -64,7 +64,8 @@ using DeviceType = ddk::Device<AcpiBattery, ddk::Initializable,
                                ddk::Messageable<fuchsia_hardware_power::Source>::Mixin>;
 // Note that we don't use ddk::Messageable for NotifyHandler because we only use it directly with
 // ACPI.
-class AcpiBattery : public DeviceType, fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler> {
+class AcpiBattery : public DeviceType,
+                    public fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler> {
  public:
   explicit AcpiBattery(zx_device_t* parent, acpi::Client acpi, async_dispatcher_t* dispatcher)
       : DeviceType(parent), acpi_(std::move(acpi)), dispatcher_(dispatcher) {}

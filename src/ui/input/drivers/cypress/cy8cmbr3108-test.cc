@@ -58,8 +58,7 @@ class Cy8cmbr3108Test : public Cy8cmbr3108 {
     EXPECT_OK(loop_.StartThread());
 
     i2c_ = std::move(endpoints->client);
-    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
-                                        &mock_i2c_);
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &mock_i2c_);
 
     auto gpio_proto = ddk::GpioProtocolClient(mock_touch_gpio_.GetProto());
     touch_gpio_ = std::move(gpio_proto);

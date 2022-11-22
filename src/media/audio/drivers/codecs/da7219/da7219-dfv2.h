@@ -41,8 +41,7 @@ class ServerConnector : public fidl::WireServer<fuchsia_hardware_audio::CodecCon
       server_.reset();  // Allow re-connecting after unbind.
     };
     server_ = std::make_unique<Server>(logger_, core_, is_input_);
-    fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::Codec>>(
-        core_->dispatcher(), std::move(request), server_.get(), std::move(on_unbound));
+    fidl::BindServer(core_->dispatcher(), std::move(request), server_.get(), std::move(on_unbound));
   }
 
   // LLCPP implementation for the CodecConnector API.

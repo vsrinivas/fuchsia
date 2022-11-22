@@ -29,8 +29,7 @@ namespace fpci = ::fuchsia_hardware_pci;
 namespace pci {
 
 void FidlDevice::Bind(fidl::ServerEnd<fuchsia_hardware_pci::Device> request) {
-  fidl::BindServer<fidl::WireServer<fuchsia_hardware_pci::Device>>(
-      fdf::Dispatcher::GetCurrent()->async_dispatcher(), std::move(request), this);
+  fidl::BindServer(fdf::Dispatcher::GetCurrent()->async_dispatcher(), std::move(request), this);
 }
 
 zx::result<> FidlDevice::Create(zx_device_t* parent, pci::Device* device) {

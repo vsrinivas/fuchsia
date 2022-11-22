@@ -91,9 +91,8 @@ void IntelHDADaiBase::Connect(ConnectRequestView request, ConnectCompleter::Sync
         this->ProcessClientDeactivateLocked(dai_channel.get());
       };
 
-  fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::Dai>>(
-      loop_.dispatcher(), std::move(request->dai_protocol), dai_channel.get(),
-      std::move(on_unbound));
+  fidl::BindServer(loop_.dispatcher(), std::move(request->dai_protocol), dai_channel.get(),
+                   std::move(on_unbound));
 
   if (privileged) {
     dai_channel_ = dai_channel;

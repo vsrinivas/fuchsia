@@ -569,8 +569,7 @@ TEST_F(AmlG12TdmDaiTest, ClientCloseDaiChannel) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::DaiConnector>();
   std::optional<fidl::ServerBindingRef<fuchsia_hardware_audio::DaiConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::DaiConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
   loop.StartThread("test-server");
 
   auto endpoints2 = fidl::CreateEndpoints<fuchsia_hardware_audio::Dai>();
@@ -620,8 +619,7 @@ TEST_F(AmlG12TdmDaiTest, ClientCloseRingBufferChannel) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::DaiConnector>();
   std::optional<fidl::ServerBindingRef<fuchsia_hardware_audio::DaiConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::DaiConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
   loop.StartThread("test-server");
 
   auto endpoints2 = fidl::CreateEndpoints<fuchsia_hardware_audio::Dai>();

@@ -53,8 +53,7 @@ zx_status_t DeviceServer::Serve(async_dispatcher_t* dispatcher,
   fuchsia_driver_compat::Service::Handler compat_service(&handler);
   auto device = [this, dispatcher](
                     fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) mutable -> void {
-    fidl::BindServer<fidl::WireServer<fuchsia_driver_compat::Device>>(dispatcher,
-                                                                      std::move(server_end), this);
+    fidl::BindServer(dispatcher, std::move(server_end), this);
   };
   zx::result<> status = compat_service.add_device(std::move(device));
   if (status.is_error()) {
@@ -80,8 +79,7 @@ zx_status_t DeviceServer::Serve(async_dispatcher_t* dispatcher,
   fuchsia_driver_compat::Service::Handler compat_service(&handler);
   auto device = [this, dispatcher](
                     fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) mutable -> void {
-    fidl::BindServer<fidl::WireServer<fuchsia_driver_compat::Device>>(dispatcher,
-                                                                      std::move(server_end), this);
+    fidl::BindServer(dispatcher, std::move(server_end), this);
   };
   zx::result<> status = compat_service.add_device(std::move(device));
   if (status.is_error()) {

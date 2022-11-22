@@ -129,8 +129,8 @@ class CtapHidDevTest : public zxtest::Test {
     ASSERT_OK(loop_.StartThread("test-loop-thread"));
     auto endpoints = fidl::CreateEndpoints<fuchsia_fido_report::SecurityKeyDevice>();
     ASSERT_OK(endpoints.status_value());
-    binding_ = fidl::BindServer<fidl::WireServer<fuchsia_fido_report::SecurityKeyDevice>>(
-        loop_.dispatcher(), std::move(endpoints->server), ctap_driver_device_);
+    binding_ =
+        fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), ctap_driver_device_);
     sync_client_.Bind(std::move(endpoints->client));
   }
 

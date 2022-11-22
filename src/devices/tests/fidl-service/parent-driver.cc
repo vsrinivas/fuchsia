@@ -87,8 +87,7 @@ class Device : public DeviceParent, public fidl::WireServer<fidl_examples_echo::
  private:
   void EchoHandler(fidl::ServerEnd<fidl_examples_echo::Echo> request) {
     auto* dispatcher = fdf::Dispatcher::GetCurrent()->async_dispatcher();
-    fidl::BindServer<fidl::WireServer<fidl_examples_echo::Echo>>(dispatcher, std::move(request),
-                                                                 this);
+    fidl::BindServer(dispatcher, std::move(request), this);
   }
   void EchoString(EchoStringRequestView request, EchoStringCompleter::Sync& completer) override {
     completer.Reply(request->value);

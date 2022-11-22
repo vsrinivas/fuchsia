@@ -328,8 +328,7 @@ TEST(BindServerTestCase, CallbackErrorClientTriggered) {
     sync_completion_signal(&error);
   };
 
-  fidl::BindServer<ErrorServer>(loop.dispatcher(), std::move(remote), server.get(),
-                                std::move(on_unbound));
+  fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
 
   ASSERT_FALSE(sync_completion_signaled(&worker_start));
   ASSERT_FALSE(sync_completion_signaled(&worker_done));
@@ -471,8 +470,7 @@ TEST(BindServerTestCase, CallbackErrorServerTriggered) {
     sync_completion_signal(&closed);
   };
 
-  fidl::BindServer<ErrorServer>(loop.dispatcher(), std::move(remote), server.get(),
-                                std::move(on_unbound));
+  fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
 
   ASSERT_FALSE(sync_completion_signaled(&worker_start));
   ASSERT_FALSE(sync_completion_signaled(&worker_done));

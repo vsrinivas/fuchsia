@@ -23,6 +23,10 @@ template <typename Protocol>
 class ServerEnd;
 template <typename Protocol>
 class ServerBindingRef;
+template <typename Protocol>
+class WireServer;
+template <typename Protocol>
+class Server;
 }  // namespace socket
 
 namespace internal {
@@ -47,6 +51,10 @@ struct SocketTransport {
   using ServerEnd = fidl::socket::ServerEnd<Protocol>;
   template <typename Protocol>
   using ServerBindingRef = fidl::socket::ServerBindingRef<Protocol>;
+  template <typename Protocol>
+  using WireServer = fidl::socket::WireServer<Protocol>;
+  template <typename Protocol>
+  using Server = fidl::socket::Server<Protocol>;
   using MessageStorageView = SocketMessageStorageView;
 
   static constexpr bool kTransportProvidesReadBuffer = false;
@@ -173,9 +181,10 @@ template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
 ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
     async_dispatcher_t* dispatcher, ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
     ServerImpl* impl, OnUnbound&& on_unbound = nullptr) {
+  using Protocol = typename ServerImpl::_EnclosingProtocol;
   static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol::Transport,
                                fidl::internal::SocketTransport>);
-  return fidl::internal::BindServerImpl<ServerImpl>(
+  return fidl::internal::BindServerImpl<Protocol, ServerImpl>(
       dispatcher, std::move(server_end), impl,
       fidl::internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
 }
@@ -184,10 +193,11 @@ template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
 ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
     async_dispatcher_t* dispatcher, ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
     std::unique_ptr<ServerImpl>&& impl, OnUnbound&& on_unbound = nullptr) {
+  using Protocol = typename ServerImpl::_EnclosingProtocol;
   static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol::Transport,
                                fidl::internal::SocketTransport>);
   ServerImpl* impl_raw = impl.get();
-  return fidl::internal::BindServerImpl<ServerImpl>(
+  return fidl::internal::BindServerImpl<Protocol, ServerImpl>(
       dispatcher, std::move(server_end), impl_raw,
       fidl::internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
 }
@@ -196,10 +206,11 @@ template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
 ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
     async_dispatcher_t* dispatcher, ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
     std::shared_ptr<ServerImpl> impl, OnUnbound&& on_unbound = nullptr) {
+  using Protocol = typename ServerImpl::_EnclosingProtocol;
   static_assert(std::is_same_v<typename ServerImpl::_EnclosingProtocol::Transport,
                                fidl::internal::SocketTransport>);
   ServerImpl* impl_raw = impl.get();
-  return fidl::internal::BindServerImpl<ServerImpl>(
+  return fidl::internal::BindServerImpl<Protocol, ServerImpl>(
       dispatcher, std::move(server_end), impl_raw,
       fidl::internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
 }

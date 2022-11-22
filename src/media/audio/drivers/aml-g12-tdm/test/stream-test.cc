@@ -455,8 +455,7 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -524,8 +523,7 @@ TEST(AmlG12Tdm, I2sOutCodecsTurnOnDelay) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -584,8 +582,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -757,8 +754,7 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantAgc) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -819,8 +815,7 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantMute) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -876,8 +871,7 @@ TEST(AmlG12Tdm, I2sOutCodecsStop) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -957,8 +951,7 @@ TEST(AmlG12Tdm, I2sOutCodecsChannelsActive) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -1128,8 +1121,7 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -1214,8 +1206,7 @@ TEST(AmlG12Tdm, PcmChangeRates) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev2);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev2);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -1346,8 +1337,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev2);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev2);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -1438,8 +1428,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev2);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev2);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -1514,8 +1503,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev2);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev2);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -1763,8 +1751,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
     std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-    binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-        loop.dispatcher(), std::move(endpoints->server), test_dev);
+    binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
     loop.StartThread("test-server");
 
     auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -1803,8 +1790,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
     std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-    binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-        loop.dispatcher(), std::move(endpoints->server), test_dev);
+    binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
     loop.StartThread("test-server");
 
     auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -1850,8 +1836,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
     std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-    binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-        loop.dispatcher(), std::move(endpoints->server), test_dev);
+    binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
     loop.StartThread("test-server");
 
     auto stream_client = GetStreamClient(std::move(endpoints->client));
@@ -1924,8 +1909,7 @@ TEST_F(AmlG12TdmTest, Inspect) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfigConnector>();
   std::optional<fidl::ServerBindingRef<audio_fidl::StreamConfigConnector>> binding;
-  binding = fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfigConnector>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
+  binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), test_dev);
   loop.StartThread("test-server");
 
   auto stream_client = GetStreamClient(std::move(endpoints->client));

@@ -322,8 +322,7 @@ TEST_F(WlanSoftmacDeviceTest, MacStart) {
   auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_softmac::WlanSoftmacIfc>();
   ASSERT_FALSE(endpoints.is_error());
 
-  fdf::BindServer<fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmacIfc>>(
-      server_dispatcher_.get(), std::move(endpoints->server), this);
+  fdf::BindServer(server_dispatcher_.get(), std::move(endpoints->server), this);
 
   // This FIDL call should invoke mac_start() and pass the pointer of WlanSoftmacDeviceTest to it,
   // the pointer will be copied to mvmvif_->ifc.ctx.
@@ -372,8 +371,7 @@ TEST_F(WlanSoftmacDeviceTest, SingleRxPacket) {
   auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_softmac::WlanSoftmacIfc>();
   ASSERT_FALSE(endpoints.is_error());
 
-  fdf::BindServer<fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmacIfc>>(
-      server_dispatcher_.get(), std::move(endpoints->server), this);
+  fdf::BindServer(server_dispatcher_.get(), std::move(endpoints->server), this);
 
   // This FIDL call should invoke mac_start() and pass the pointer of WlanSoftmacDeviceTest to it,
   // the pointer will be copied to mvmvif_->ifc.ctx.
@@ -436,8 +434,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
 
     // Created the end points for WlanSoftmacIfc protocol, and pass the client end to
     // WlanSoftmacDevice.
-    fdf::BindServer<fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmacIfc>>(
-        server_dispatcher_.get(), std::move(endpoints->server), this);
+    fdf::BindServer(server_dispatcher_.get(), std::move(endpoints->server), this);
 
     // This FIDL call should invoke mac_start() and pass the pointer of WlanSoftmacDeviceTest to it,
     // the pointer will be copied to mvmvif_->ifc.ctx.

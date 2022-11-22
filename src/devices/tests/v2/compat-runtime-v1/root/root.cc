@@ -50,8 +50,7 @@ class Root : public DeviceType, public fdf::Server<fuchsia_compat_runtime::Root>
     fuchsia_compat_runtime::Service::Handler service(&handler);
 
     auto protocol = [this](fdf::ServerEnd<fuchsia_compat_runtime::Root> server_end) {
-      fdf::BindServer<fdf::Server<fuchsia_compat_runtime::Root>>(
-          fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), this);
+      fdf::BindServer(fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), this);
     };
     auto status = service.add_root(std::move(protocol));
     if (status.is_error()) {

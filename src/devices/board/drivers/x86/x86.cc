@@ -206,8 +206,8 @@ zx_status_t X86::Bind() {
     zxlogf(ERROR, "%s: Could not create suspend callback endpoints: %s", __func__,
            endpoints.status_string());
   } else {
-    fdf::BindServer<fdf::WireServer<fpbus::SysSuspend>>(fdf::Dispatcher::GetCurrent()->get(),
-                                                        std::move(endpoints->server), &suspender_);
+    fdf::BindServer(fdf::Dispatcher::GetCurrent()->get(), std::move(endpoints->server),
+                    &suspender_);
     auto result = pbus_.buffer(arena)->RegisterSysSuspendCallback(std::move(endpoints->client));
     if (!result.ok()) {
       zxlogf(ERROR, "RegisterSysSuspendCallback request failed: %s",

@@ -103,19 +103,19 @@ zx::result<> Driver::Serve(std::string_view name, bool is_input) {
   }
   auto result = service.add_codec_connector(
       [this, is_input](fidl::ServerEnd<fuchsia_hardware_audio::CodecConnector> request) -> void {
-        auto on_unbound =
-            [this](fidl::WireServer<fuchsia_hardware_audio::CodecConnector>*, fidl::UnbindInfo info,
-                   fidl::ServerEnd<fuchsia_hardware_audio::CodecConnector> server_end) {
-              if (info.is_peer_closed()) {
-                DA7219_LOG(DEBUG, "Client disconnected");
-              } else if (!info.is_user_initiated() && info.status() != ZX_ERR_CANCELED) {
-                // Do not log canceled cases which happens too often in particular in test cases.
-                DA7219_LOG(ERROR, "Client connection unbound: %s", info.status_string());
-              }
-            };
-        fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::CodecConnector>>(
-            dispatcher(), std::move(request), is_input ? server_input_.get() : server_output_.get(),
-            std::move(on_unbound));
+        auto on_unbound = [this](
+                              ServerConnector*, fidl::UnbindInfo info,
+                              fidl::ServerEnd<fuchsia_hardware_audio::CodecConnector> server_end) {
+          if (info.is_peer_closed()) {
+            DA7219_LOG(DEBUG, "Client disconnected");
+          } else if (!info.is_user_initiated() && info.status() != ZX_ERR_CANCELED) {
+            // Do not log canceled cases which happens too often in particular in test cases.
+            DA7219_LOG(ERROR, "Client connection unbound: %s", info.status_string());
+          }
+        };
+        fidl::BindServer(dispatcher(), std::move(request),
+                         is_input ? server_input_.get() : server_output_.get(),
+                         std::move(on_unbound));
       });
   ZX_ASSERT(result.is_ok());
 

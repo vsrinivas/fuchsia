@@ -574,8 +574,8 @@ zx_status_t PlatformDevice::Start() {
     fuchsia_hardware_platform_bus::Service::Handler service(&handler);
 
     auto protocol = [this](fdf::ServerEnd<fuchsia_hardware_platform_bus::PlatformBus> server_end) {
-      fdf::BindServer<fdf::WireServer<fuchsia_hardware_platform_bus::PlatformBus>>(
-          fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), restricted_.get());
+      fdf::BindServer(fdf::Dispatcher::GetCurrent()->get(), std::move(server_end),
+                      restricted_.get());
     };
 
     auto status = service.add_platform_bus(std::move(protocol));

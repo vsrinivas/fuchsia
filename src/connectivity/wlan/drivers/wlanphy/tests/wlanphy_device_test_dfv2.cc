@@ -89,8 +89,7 @@ class WlanphyDeviceTest : public ::zxtest::Test,
     // ReleaseFlaggedDevices() is called. We just call it as soon as the device is created here.
     wlanphy_device_->DdkAsyncRemove();
 
-    fdf::BindServer<fdf::WireServer<fuchsia_wlan_wlanphyimpl::WlanphyImpl>>(
-        server_dispatcher_phy_impl_.get(), std::move(endpoints_phy_impl->server), this);
+    fdf::BindServer(server_dispatcher_phy_impl_.get(), std::move(endpoints_phy_impl->server), this);
 
     // Establish FIDL connection based on fuchsia_wlan_device::Phy protocol.
     wlanphy_device_->Connect(std::move(endpoints_phy->server));

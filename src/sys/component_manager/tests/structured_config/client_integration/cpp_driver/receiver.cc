@@ -25,8 +25,7 @@ class ReceiverDriver : public driver::DriverBase,
     scrs::ConfigService::Handler device(&handler);
 
     auto puppet = [this](fidl::ServerEnd<scr::ConfigReceiverPuppet> server_end) -> void {
-      fidl::BindServer<fidl::WireServer<scr::ConfigReceiverPuppet>>(dispatcher(),
-                                                                    std::move(server_end), this);
+      fidl::BindServer(dispatcher(), std::move(server_end), this);
     };
 
     auto result = device.add_puppet(puppet);

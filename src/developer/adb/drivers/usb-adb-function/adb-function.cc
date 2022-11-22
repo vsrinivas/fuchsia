@@ -40,7 +40,7 @@ void UsbAdbDevice::Start(StartRequestView request, StartCompleter::Sync& complet
     if (adb_binding_.has_value()) {
       status = ZX_ERR_ALREADY_BOUND;
     } else {
-      adb_binding_ = fidl::BindServer<fidl::WireServer<fuchsia_hardware_adb::UsbAdbImpl>>(
+      adb_binding_ = fidl::BindServer<fuchsia_hardware_adb::UsbAdbImpl>(
           dispatcher_, std::move(request->interface), this,
           [this](auto* server, fidl::UnbindInfo info, auto server_end) {
             zxlogf(INFO, "Device closed with reason '%s'", info.FormatDescription().c_str());

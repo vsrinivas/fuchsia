@@ -52,7 +52,7 @@ class WlanSoftmacHandle {
 
 class Device : public DeviceInterface,
                ddk::Device<Device, ddk::Unbindable>,
-               fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmacIfc> {
+               public fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmacIfc> {
  public:
   Device(zx_device_t* device, fdf::ClientEnd<fuchsia_wlan_softmac::WlanSoftmac> client);
   ~Device();

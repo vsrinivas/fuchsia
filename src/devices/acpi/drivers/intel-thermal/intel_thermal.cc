@@ -121,8 +121,7 @@ void IntelThermal::DdkInit(ddk::InitTxn txn) {
     return;
   }
 
-  fidl::BindServer<fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler>>(
-      dispatcher_, std::move(endpoints->server), this);
+  fidl::BindServer(dispatcher_, std::move(endpoints->server), this);
 
   auto result = acpi_.borrow()->InstallNotifyHandler(facpi::NotificationMode::kDevice,
                                                      std::move(endpoints->client));

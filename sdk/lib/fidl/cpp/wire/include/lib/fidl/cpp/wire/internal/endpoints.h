@@ -19,6 +19,7 @@ namespace internal {
 // Base class for the owned client or server endpoint of a FIDL handle.
 template <typename Protocol, typename Transport>
 class TransportEnd {
+  static_assert(::fidl::IsProtocolV<Protocol>, "|Protocol| must be a FIDL protocol marker");
   using OwnedType = typename Transport::OwnedType;
   using UnownedType = typename Transport::UnownedType;
 

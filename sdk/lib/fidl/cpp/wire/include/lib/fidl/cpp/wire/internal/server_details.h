@@ -28,9 +28,8 @@ class ServerBindingRef;
 //
 // It is not required to wrap the callback lambda in this type; |BindServer|
 // accepts a lambda function directly.
-template <typename ServerImpl>
-using OnUnboundFn = fit::callback<void(
-    ServerImpl*, UnbindInfo, internal::ServerEndType<typename ServerImpl::_EnclosingProtocol>)>;
+template <typename ServerImpl, typename Protocol = typename ServerImpl::_EnclosingProtocol>
+using OnUnboundFn = fit::callback<void(ServerImpl*, UnbindInfo, internal::ServerEndType<Protocol>)>;
 
 namespace internal {
 
@@ -261,71 +260,75 @@ ServerBindingRefType<Protocol> BindServerTypeErased(async_dispatcher_t* dispatch
 //
 // Note: if you see a compiler error that ends up in this function, that is
 // probably because you passed in an incompatible |on_unbound| handler.
-template <typename ServerImpl, typename OnUnbound>
-ServerBindingRefType<typename ServerImpl::_EnclosingProtocol> BindServerImpl(
-    async_dispatcher_t* dispatcher,
-    fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol> server_end,
+template <typename Protocol, typename ServerImpl, typename OnUnbound>
+ServerBindingRefType<Protocol> BindServerImpl(
+    async_dispatcher_t* dispatcher, fidl::internal::ServerEndType<Protocol> server_end,
     ServerImpl* impl, OnUnbound&& on_unbound,
     ThreadingPolicy threading_policy = ThreadingPolicy::kCreateAndTeardownFromAnyThread) {
-  using ProtocolType = typename ServerImpl::_EnclosingProtocol;
-  using Transport = typename ProtocolType::Transport;
-  return BindServerTypeErased<ProtocolType>(
-      dispatcher, std::move(server_end), impl, threading_policy,
+  using Transport = typename Protocol::Transport;
+  static constexpr const bool kIsWire =
+      std::is_base_of_v<typename Transport::template WireServer<Protocol>, ServerImpl>;
+  static constexpr const bool kIsNatural =
+      std::is_base_of_v<typename Transport::template Server<Protocol>, ServerImpl>;
+
+  static_assert(!(kIsWire && kIsNatural),
+                "|ServerImpl| should not simultaneously implement |WireServer| and |Server|");
+  static_assert(kIsWire || kIsNatural,
+                "|ServerImpl| should implement either |WireServer| or |Server|");
+
+  // Some server implementations inherit from multiple server interfaces, which
+  // leads to multiple base |IncomingMessageDispatcher| classes.
+  // This conditional cast lets us find the right one.
+  // Later during unbinding we do a corresponding reverse cast to get back
+  // the original server implementation pointer.
+  IncomingMessageDispatcher* interface = nullptr;
+  if constexpr (kIsWire) {
+    interface = static_cast<typename Transport::template WireServer<Protocol>*>(impl);
+  } else {
+    interface = static_cast<typename Transport::template Server<Protocol>*>(impl);
+  }
+
+  return BindServerTypeErased<Protocol>(
+      dispatcher, std::move(server_end), interface, threading_policy,
       [on_unbound = std::forward<OnUnbound>(on_unbound)](
           internal::IncomingMessageDispatcher* any_interface, UnbindInfo info,
           AnyTransport channel) mutable {
         // Note: this cast may change the value of the pointer, due to how C++
         // implements classes with virtual tables.
-        auto* impl = static_cast<ServerImpl*>(any_interface);
-        std::invoke(on_unbound, impl, info,
-                    fidl::internal::ServerEndType<ProtocolType>(channel.release<Transport>()));
+        ServerImpl* impl = nullptr;
+        if constexpr (kIsWire) {
+          impl = static_cast<ServerImpl*>(
+              static_cast<typename Transport::template WireServer<Protocol>*>(any_interface));
+        } else {
+          impl = static_cast<ServerImpl*>(
+              static_cast<typename Transport::template Server<Protocol>*>(any_interface));
+        }
+        on_unbound(impl, info,
+                   fidl::internal::ServerEndType<Protocol>(channel.release<Transport>()));
       });
 }
-
-template <typename OnUnbound>
-using OnUnboundIsNull = std::is_same<std::remove_reference_t<OnUnbound>, std::nullptr_t>;
-
-// This base class provides either a functioning `operator()` or a no-op,
-// depending on whether the |OnUnbound| type is a nullptr.
-template <typename Derived, typename OnUnbound, typename Enable = void>
-struct UnboundThunkCallOperator;
-
-template <typename Derived, typename OnUnbound>
-struct UnboundThunkCallOperator<Derived, OnUnbound,
-                                std::enable_if_t<!OnUnboundIsNull<OnUnbound>::value>> {
-  template <typename ServerImpl>
-  void operator()(
-      ServerImpl* impl_ptr, UnbindInfo info,
-      fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol>&& server_end) {
-    static_assert(std::is_convertible_v<OnUnbound, OnUnboundFn<ServerImpl>>,
-                  "|on_unbound| must have the same signature as fidl::OnUnboundFn<ServerImpl>.");
-    auto* self = static_cast<Derived*>(this);
-    std::invoke(self->on_unbound_, impl_ptr, info, std::move(server_end));
-  }
-};
-
-template <typename Derived, typename OnUnbound>
-struct UnboundThunkCallOperator<Derived, OnUnbound,
-                                std::enable_if_t<OnUnboundIsNull<OnUnbound>::value>> {
-  template <typename ServerImpl>
-  void operator()(
-      ServerImpl* impl_ptr, UnbindInfo info,
-      fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol>&& server_end) {
-    // |fn_| is a nullptr, meaning the user did not provide an |on_unbound| callback.
-    static_assert(std::is_same_v<OnUnbound, std::nullptr_t>, "|on_unbound| is no-op here");
-  }
-};
 
 // An |UnboundThunk| is a functor that delegates to an |OnUnbound| callable,
 // and which ensures that the server implementation is only destroyed after
 // the invocation and destruction of the |OnUnbound| callable, when the server
 // is managed in a |shared_ptr| or |unique_ptr|.
 template <typename ServerImplMaybeOwned, typename OnUnbound>
-struct UnboundThunk
-    : public UnboundThunkCallOperator<UnboundThunk<ServerImplMaybeOwned, OnUnbound>, OnUnbound> {
+struct UnboundThunk {
   UnboundThunk(ServerImplMaybeOwned&& impl, OnUnbound&& on_unbound)
       : impl_(std::forward<ServerImplMaybeOwned>(impl)),
         on_unbound_(std::forward<OnUnbound>(on_unbound)) {}
+
+  template <typename ServerImpl, typename Endpoint>
+  void operator()(ServerImpl* impl_ptr, UnbindInfo info, Endpoint&& server_end) {
+    if constexpr (std::is_same_v<cpp20::remove_cvref_t<OnUnbound>, std::nullptr_t>) {
+      // |fn_| is a nullptr, meaning the user did not provide an |on_unbound| callback.
+    } else {
+      using Protocol = typename Endpoint::ProtocolType;
+      static_assert(std::is_convertible_v<OnUnbound, OnUnboundFn<ServerImpl, Protocol>>,
+                    "|on_unbound| must have the same signature as fidl::OnUnboundFn<ServerImpl>.");
+      std::invoke(on_unbound_, impl_ptr, info, std::forward<Endpoint>(server_end));
+    }
+  }
 
   std::remove_reference_t<ServerImplMaybeOwned> impl_;
   std::remove_reference_t<OnUnbound> on_unbound_;

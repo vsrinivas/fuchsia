@@ -29,8 +29,7 @@ class Tmp112DeviceTest : public zxtest::Test {
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
     EXPECT_TRUE(endpoints.is_ok());
 
-    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
-                                        &mock_i2c_);
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &mock_i2c_);
 
     dev_ = std::make_unique<Tmp112Device>(fake_ddk::kFakeParent,
                                           ddk::I2cChannel(std::move(endpoints->client)));
