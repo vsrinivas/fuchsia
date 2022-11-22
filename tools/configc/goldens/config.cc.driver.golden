@@ -251,50 +251,46 @@ Config Config::TakeFromStartArgs(
   ZX_ASSERT_MSG(checksum == expected_checksum,
                 "Invalid checksum for config VMO");
 
-  // Read the FIDL struct into memory
-  // Skip the checksum length + checksum + FIDL persistent header
-  // Align the struct pointer to 8 bytes (as required by FIDL)
-  size_t header = 2 + checksum_length + 8;
+  // Read the FIDL struct into memory, skipping the checksum length and the
+  // checksum itself
+  size_t header = 2 + checksum_length;
   size_t fidl_struct_size = vmo_content_size - header;
+
+  // Align the struct pointer to 8 bytes by using a generic allocation (as
+  // required by FIDL)
   std::unique_ptr<uint8_t[]> fidl_struct(new uint8_t[fidl_struct_size]);
   status = config_vmo.read(fidl_struct.get(), header, fidl_struct_size);
   ZX_ASSERT_MSG(status == ZX_OK, "Could not read FIDL struct from config VMO");
 
-  // TODO(https://fxbug.dev/100147) use fidl::Unpersist(header_and_struct_bytes)
-  // instead Decode the FIDL struct
-  fidl::internal::DecodedMessage<::my_config_lib::wire::Config> decoded(
-      fidl::internal::WireFormatVersion::kV2, fidl_struct.get(),
-      static_cast<uint32_t>(fidl_struct_size));
-  ZX_ASSERT_MSG(decoded.ok(), "Could not decode Config FIDL structure");
-  ::my_config_lib::wire::Config* fidl_config = decoded.PrimaryObject();
+  // Decode the FIDL struct
+  fit::result result = fidl::InplaceUnpersist<my_config_lib::wire::Config>(
+      cpp20::span(fidl_struct.get(), fidl_struct_size));
+  ZX_ASSERT_MSG(result.is_ok(), "Could not decode Config FIDL structure");
+  my_config_lib::wire::Config& fidl_config = *result.value();
 
   // Convert the configuration into a new struct
   Config c{
-      {.my_flag = fidl_config->my_flag,
-       .my_int16 = fidl_config->my_int16,
-       .my_int32 = fidl_config->my_int32,
-       .my_int64 = fidl_config->my_int64,
-       .my_int8 = fidl_config->my_int8,
-       .my_string = std::string(fidl_config->my_string.get()),
-       .my_uint16 = fidl_config->my_uint16,
-       .my_uint32 = fidl_config->my_uint32,
-       .my_uint64 = fidl_config->my_uint64,
-       .my_uint8 = fidl_config->my_uint8,
-       .my_vector_of_flag = from_vector_view(fidl_config->my_vector_of_flag),
-       .my_vector_of_int16 = from_vector_view(fidl_config->my_vector_of_int16),
-       .my_vector_of_int32 = from_vector_view(fidl_config->my_vector_of_int32),
-       .my_vector_of_int64 = from_vector_view(fidl_config->my_vector_of_int64),
-       .my_vector_of_int8 = from_vector_view(fidl_config->my_vector_of_int8),
+      {.my_flag = fidl_config.my_flag,
+       .my_int16 = fidl_config.my_int16,
+       .my_int32 = fidl_config.my_int32,
+       .my_int64 = fidl_config.my_int64,
+       .my_int8 = fidl_config.my_int8,
+       .my_string = std::string(fidl_config.my_string.get()),
+       .my_uint16 = fidl_config.my_uint16,
+       .my_uint32 = fidl_config.my_uint32,
+       .my_uint64 = fidl_config.my_uint64,
+       .my_uint8 = fidl_config.my_uint8,
+       .my_vector_of_flag = from_vector_view(fidl_config.my_vector_of_flag),
+       .my_vector_of_int16 = from_vector_view(fidl_config.my_vector_of_int16),
+       .my_vector_of_int32 = from_vector_view(fidl_config.my_vector_of_int32),
+       .my_vector_of_int64 = from_vector_view(fidl_config.my_vector_of_int64),
+       .my_vector_of_int8 = from_vector_view(fidl_config.my_vector_of_int8),
        .my_vector_of_string =
-           from_vector_string_view(fidl_config->my_vector_of_string),
-       .my_vector_of_uint16 =
-           from_vector_view(fidl_config->my_vector_of_uint16),
-       .my_vector_of_uint32 =
-           from_vector_view(fidl_config->my_vector_of_uint32),
-       .my_vector_of_uint64 =
-           from_vector_view(fidl_config->my_vector_of_uint64),
-       .my_vector_of_uint8 =
-           from_vector_view(fidl_config->my_vector_of_uint8)}};
+           from_vector_string_view(fidl_config.my_vector_of_string),
+       .my_vector_of_uint16 = from_vector_view(fidl_config.my_vector_of_uint16),
+       .my_vector_of_uint32 = from_vector_view(fidl_config.my_vector_of_uint32),
+       .my_vector_of_uint64 = from_vector_view(fidl_config.my_vector_of_uint64),
+       .my_vector_of_uint8 = from_vector_view(fidl_config.my_vector_of_uint8)}};
 
   return c;
 }
@@ -329,50 +325,46 @@ Config Config::TakeFromStartArgs(
   ZX_ASSERT_MSG(checksum == expected_checksum,
                 "Invalid checksum for config VMO");
 
-  // Read the FIDL struct into memory
-  // Skip the checksum length + checksum + FIDL persistent header
-  // Align the struct pointer to 8 bytes (as required by FIDL)
-  size_t header = 2 + checksum_length + 8;
+  // Read the FIDL struct into memory, skipping the checksum length and the
+  // checksum itself
+  size_t header = 2 + checksum_length;
   size_t fidl_struct_size = vmo_content_size - header;
+
+  // Align the struct pointer to 8 bytes by using a generic allocation (as
+  // required by FIDL)
   std::unique_ptr<uint8_t[]> fidl_struct(new uint8_t[fidl_struct_size]);
   status = config_vmo.read(fidl_struct.get(), header, fidl_struct_size);
   ZX_ASSERT_MSG(status == ZX_OK, "Could not read FIDL struct from config VMO");
 
-  // TODO(https://fxbug.dev/100147) use fidl::Unpersist(header_and_struct_bytes)
-  // instead Decode the FIDL struct
-  fidl::internal::DecodedMessage<::my_config_lib::wire::Config> decoded(
-      fidl::internal::WireFormatVersion::kV2, fidl_struct.get(),
-      static_cast<uint32_t>(fidl_struct_size));
-  ZX_ASSERT_MSG(decoded.ok(), "Could not decode Config FIDL structure");
-  ::my_config_lib::wire::Config* fidl_config = decoded.PrimaryObject();
+  // Decode the FIDL struct
+  fit::result result = fidl::InplaceUnpersist<my_config_lib::wire::Config>(
+      cpp20::span(fidl_struct.get(), fidl_struct_size));
+  ZX_ASSERT_MSG(result.is_ok(), "Could not decode Config FIDL structure");
+  my_config_lib::wire::Config& fidl_config = *result.value();
 
   // Convert the configuration into a new struct
   Config c{
-      {.my_flag = fidl_config->my_flag,
-       .my_int16 = fidl_config->my_int16,
-       .my_int32 = fidl_config->my_int32,
-       .my_int64 = fidl_config->my_int64,
-       .my_int8 = fidl_config->my_int8,
-       .my_string = std::string(fidl_config->my_string.get()),
-       .my_uint16 = fidl_config->my_uint16,
-       .my_uint32 = fidl_config->my_uint32,
-       .my_uint64 = fidl_config->my_uint64,
-       .my_uint8 = fidl_config->my_uint8,
-       .my_vector_of_flag = from_vector_view(fidl_config->my_vector_of_flag),
-       .my_vector_of_int16 = from_vector_view(fidl_config->my_vector_of_int16),
-       .my_vector_of_int32 = from_vector_view(fidl_config->my_vector_of_int32),
-       .my_vector_of_int64 = from_vector_view(fidl_config->my_vector_of_int64),
-       .my_vector_of_int8 = from_vector_view(fidl_config->my_vector_of_int8),
+      {.my_flag = fidl_config.my_flag,
+       .my_int16 = fidl_config.my_int16,
+       .my_int32 = fidl_config.my_int32,
+       .my_int64 = fidl_config.my_int64,
+       .my_int8 = fidl_config.my_int8,
+       .my_string = std::string(fidl_config.my_string.get()),
+       .my_uint16 = fidl_config.my_uint16,
+       .my_uint32 = fidl_config.my_uint32,
+       .my_uint64 = fidl_config.my_uint64,
+       .my_uint8 = fidl_config.my_uint8,
+       .my_vector_of_flag = from_vector_view(fidl_config.my_vector_of_flag),
+       .my_vector_of_int16 = from_vector_view(fidl_config.my_vector_of_int16),
+       .my_vector_of_int32 = from_vector_view(fidl_config.my_vector_of_int32),
+       .my_vector_of_int64 = from_vector_view(fidl_config.my_vector_of_int64),
+       .my_vector_of_int8 = from_vector_view(fidl_config.my_vector_of_int8),
        .my_vector_of_string =
-           from_vector_string_view(fidl_config->my_vector_of_string),
-       .my_vector_of_uint16 =
-           from_vector_view(fidl_config->my_vector_of_uint16),
-       .my_vector_of_uint32 =
-           from_vector_view(fidl_config->my_vector_of_uint32),
-       .my_vector_of_uint64 =
-           from_vector_view(fidl_config->my_vector_of_uint64),
-       .my_vector_of_uint8 =
-           from_vector_view(fidl_config->my_vector_of_uint8)}};
+           from_vector_string_view(fidl_config.my_vector_of_string),
+       .my_vector_of_uint16 = from_vector_view(fidl_config.my_vector_of_uint16),
+       .my_vector_of_uint32 = from_vector_view(fidl_config.my_vector_of_uint32),
+       .my_vector_of_uint64 = from_vector_view(fidl_config.my_vector_of_uint64),
+       .my_vector_of_uint8 = from_vector_view(fidl_config.my_vector_of_uint8)}};
 
   return c;
 }

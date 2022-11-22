@@ -20,35 +20,34 @@ std::vector<uint8_t> expected_checksum {
 };
 ZX_ASSERT_MSG(checksum == expected_checksum, "Invalid checksum for config VMO");
 
-// Read the FIDL struct into memory
-// Skip the checksum length + checksum + FIDL persistent header
-// Align the struct pointer to 8 bytes (as required by FIDL)
-size_t header = 2 + checksum_length + 8;
+// Read the FIDL struct into memory, skipping the checksum length and the checksum itself
+size_t header = 2 + checksum_length;
 size_t fidl_struct_size = vmo_content_size - header;
+
+// Align the struct pointer to 8 bytes by using a generic allocation (as required by FIDL)
 std::unique_ptr<uint8_t[]> fidl_struct(new uint8_t[fidl_struct_size]);
 status = config_vmo.read(fidl_struct.get(), header, fidl_struct_size);
 ZX_ASSERT_MSG(status == ZX_OK, "Could not read FIDL struct from config VMO");
 
-// TODO(https://fxbug.dev/100147) use fidl::Unpersist(header_and_struct_bytes) instead
 // Decode the FIDL struct
-fidl::internal::DecodedMessage<::{{fidl_cpp_namespace}}::wire::Config> decoded(
-fidl::internal::WireFormatVersion::kV2, fidl_struct.get(), static_cast<uint32_t>(fidl_struct_size));
-ZX_ASSERT_MSG(decoded.ok(), "Could not decode Config FIDL structure");
-::{{fidl_cpp_namespace}}::wire::Config* fidl_config = decoded.PrimaryObject();
+fit::result result = fidl::InplaceUnpersist<{{fidl_cpp_namespace}}::wire::Config>(
+    cpp20::span(fidl_struct.get(), fidl_struct_size));
+ZX_ASSERT_MSG(result.is_ok(), "Could not decode Config FIDL structure");
+{{fidl_cpp_namespace}}::wire::Config& fidl_config = *result.value();
 
 // Convert the configuration into a new struct
 Config c\{{
 {{#each fields}}
     {{#if (is_string_vector type_)}}
-    .{{ident}} = from_vector_string_view(fidl_config->{{ident}})
+    .{{ident}} = from_vector_string_view(fidl_config.{{ident}})
     {{else}}
     {{#if (is_vector type_)}}
-        .{{ident}} = from_vector_view(fidl_config->{{ident}})
+        .{{ident}} = from_vector_view(fidl_config.{{ident}})
     {{else}}
         {{#if (is_string type_)}}
-        .{{ident}} = std::string(fidl_config->{{ident}}.get())
+        .{{ident}} = std::string(fidl_config.{{ident}}.get())
         {{else}}
-        .{{ident}} = fidl_config->{{ident}}
+        .{{ident}} = fidl_config.{{ident}}
         {{/if}}
     {{/if}}
     {{/if}}
