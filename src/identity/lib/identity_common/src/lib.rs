@@ -15,6 +15,15 @@ mod task_group;
 // Staged file atomic write support.
 mod staged_file;
 
+/// Data associated with authentication enrollment.
+#[derive(Debug, PartialEq, Eq)]
+pub struct EnrollmentData(pub Vec<u8>);
+
+/// Data associated with an enrollment of an authentication mechanism
+/// capable of storage unlock.
+#[derive(Debug, PartialEq, Eq)]
+pub struct PrekeyMaterial(pub Vec<u8>);
+
 pub use crate::task_group::{cancel_or, TaskGroup, TaskGroupCancel, TaskGroupError};
 
 pub use crate::staged_file::{StagedFile, StagedFileError};

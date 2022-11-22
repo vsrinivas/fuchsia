@@ -17,6 +17,7 @@ use {
     fuchsia_component::client,
     fuchsia_zircon as zx,
     futures::{Future, TryStreamExt},
+    identity_common::{EnrollmentData, PrekeyMaterial},
     std::{cell::RefCell, rc::Rc},
     tracing::warn,
 };
@@ -28,15 +29,6 @@ type StateHangingGet =
 
 type StatePublisher =
     Publisher<InteractionWatchStateResponse, InteractionWatchStateResponder, NotifyFn>;
-
-/// Data associated with authentication enrollment.
-/// TODO(fxb/114073): Remove this and start using a common type across all modules.
-pub struct EnrollmentData(Vec<u8>);
-
-/// Data associated with an enrollment of an authentication mechanism
-/// capable of storage unlock.
-/// TODO(fxb/114074): Remove this and start using a common type across all modules.
-pub struct PrekeyMaterial(Vec<u8>);
 
 /// Generate an InteractionWatchStateResponse when the `Mode` and `Mechanism`
 /// are specified.
