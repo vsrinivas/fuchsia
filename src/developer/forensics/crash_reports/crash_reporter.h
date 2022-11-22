@@ -13,7 +13,6 @@
 #include <memory>
 #include <string>
 
-#include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/crash_register.h"
 #include "src/developer/forensics/crash_reports/crash_server.h"
 #include "src/developer/forensics/crash_reports/info/crash_reporter_info.h"
@@ -43,9 +42,9 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashReporter(async_dispatcher_t* dispatcher,
                 const std::shared_ptr<sys::ServiceDirectory>& services, timekeeper::Clock* clock,
                 const std::shared_ptr<InfoContext>& info_context,
-                feedback::BuildTypeConfig build_type_config, Config config,
-                CrashRegister* crash_register, LogTags* tags, CrashServer* crash_server,
-                ReportStore* report_store, feedback_data::DataProviderInternal* data_provider,
+                feedback::BuildTypeConfig build_type_config, CrashRegister* crash_register,
+                LogTags* tags, CrashServer* crash_server, ReportStore* report_store,
+                feedback_data::DataProviderInternal* data_provider,
                 zx::duration snapshot_collector_window_duration,
                 zx::duration product_quota_reset_offset = ProductQuotas::RandomResetOffset());
 

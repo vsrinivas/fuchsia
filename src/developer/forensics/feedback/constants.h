@@ -50,9 +50,6 @@ const char kBuildBoardPath[] = "/config/build-info/board";
 const char kBuildProductPath[] = "/config/build-info/product";
 const char kBuildCommitDatePath[] = "/config/build-info/latest-commit-date";
 
-const char kDefaultCrashReportsConfigPath[] = "/pkg/data/crash_reports/default_config.json";
-const char kOverrideCrashReportsConfigPath[] = "/config/data/crash_reports/override_config.json";
-
 constexpr char kCrashRegisterPath[] = "/tmp/crash_register.json";
 constexpr char kProductQuotasPath[] = "/cache/product_quotas.json";
 constexpr char kCrashServerUrl[] = "https://clients2.google.com/cr/report";

@@ -19,22 +19,6 @@ source_set("annotation_map") {
   ]
 }
 
-source_set("config") {
-  public = [ "config.h" ]
-
-  sources = [
-    "config.cc",
-    "config.h",
-  ]
-
-  deps = [
-    ":constants",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/files",
-    "//third_party/rapidjson",
-  ]
-}
-
 source_set("constants") {
   sources = [ "constants.h" ]
 

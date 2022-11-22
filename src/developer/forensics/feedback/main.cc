@@ -34,12 +34,6 @@ namespace forensics::feedback {
 int main() {
   syslog::SetTags({"forensics", "feedback"});
 
-  auto crash_reports_config = GetCrashReportsConfig();
-  if (!crash_reports_config) {
-    FX_LOGS(FATAL) << "Failed to get config for crash reporting";
-    return EXIT_FAILURE;
-  }
-
   auto feedback_data_config = GetFeedbackDataConfig();
   if (!feedback_data_config) {
     FX_LOGS(FATAL) << "Failed to get config for feedback data";
@@ -109,7 +103,6 @@ int main() {
           },
           CrashReports::Options{
               .build_type_config = *build_type_config,
-              .config = *crash_reports_config,
               .snapshot_store_max_archives_size = kSnapshotArchivesMaxSize,
               .snapshot_persistence_max_tmp_size =
                   product_config->snapshot_persistence_max_tmp_size,

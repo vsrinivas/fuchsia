@@ -24,7 +24,6 @@
 #include <utility>
 #include <variant>
 
-#include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/crash_server.h"
 #include "src/developer/forensics/crash_reports/product.h"
@@ -62,15 +61,15 @@ ReportId SeedReportId() {
 // Make the appropriate ReportingPolicyWatcher for the upload policy in |config|.
 std::unique_ptr<ReportingPolicyWatcher> MakeReportingPolicyWatcher(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const Config& config) {
-  switch (config.crash_report_upload_policy) {
-    case Config::UploadPolicy::kEnabled:
+    const feedback::CrashReportUploadPolicy policy) {
+  switch (policy) {
+    case feedback::CrashReportUploadPolicy::kEnabled:
       // Uploads being enabled in |config| is explicit consent to upload all reports.
       return std::make_unique<StaticReportingPolicyWatcher<ReportingPolicy::kUpload>>();
-    case Config::UploadPolicy::kDisabled:
+    case feedback::CrashReportUploadPolicy::kDisabled:
       // Uploads being disabled in |config| means that reports should be archived.
       return std::make_unique<StaticReportingPolicyWatcher<ReportingPolicy::kArchive>>();
-    case Config::UploadPolicy::kReadFromPrivacySettings:
+    case feedback::CrashReportUploadPolicy::kReadFromPrivacySettings:
       return std::make_unique<UserReportingPolicyWatcher>(dispatcher, std::move(services));
   }
 }
@@ -80,8 +79,8 @@ std::unique_ptr<ReportingPolicyWatcher> MakeReportingPolicyWatcher(
 CrashReporter::CrashReporter(
     async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
     timekeeper::Clock* clock, const std::shared_ptr<InfoContext>& info_context,
-    feedback::BuildTypeConfig build_type_config, Config config, CrashRegister* crash_register,
-    LogTags* tags, CrashServer* crash_server, ReportStore* report_store,
+    feedback::BuildTypeConfig build_type_config, CrashRegister* crash_register, LogTags* tags,
+    CrashServer* crash_server, ReportStore* report_store,
     feedback_data::DataProviderInternal* data_provider,
     zx::duration snapshot_collector_window_duration, const zx::duration product_quota_reset_offset)
     : dispatcher_(dispatcher),
@@ -101,14 +100,16 @@ CrashReporter::CrashReporter(
                       product_quota_reset_offset),
       info_(info_context),
       network_watcher_(dispatcher_, *services_),
-      reporting_policy_watcher_(MakeReportingPolicyWatcher(dispatcher_, services, config)) {
+      reporting_policy_watcher_(MakeReportingPolicyWatcher(
+          dispatcher_, services, build_type_config.crash_report_upload_policy)) {
   FX_CHECK(dispatcher_);
   FX_CHECK(services_);
   FX_CHECK(crash_register_);
   FX_CHECK(crash_server_);
 
   // If crash reports won't be uploaded, there shouldn't be a quota in the config.
-  if (config.crash_report_upload_policy == Config::UploadPolicy::kDisabled) {
+  if (build_type_config.crash_report_upload_policy ==
+      feedback::CrashReportUploadPolicy::kDisabled) {
     const auto quota = build_type_config.daily_per_product_crash_report_quota;
     FX_CHECK(!quota.has_value()) << "Can't have quota when upload policy is disabled: quota is "
                                  << *quota;

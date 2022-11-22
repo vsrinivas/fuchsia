@@ -12,9 +12,9 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
+#include "src/developer/forensics/feedback/config.h"
 #include "src/developer/forensics/utils/inspect_node_manager.h"
 #include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/fxl/macros.h"
@@ -28,8 +28,8 @@ class InspectManager {
  public:
   InspectManager(inspect::Node* root_node, timekeeper::Clock* clock);
 
-  // Exposes the static configuration of the crash reporter.
-  void ExposeConfig(const crash_reports::Config& config);
+  // Exposes the static configuration related to the crash reporter.
+  void ExposeConfig(const feedback::BuildTypeConfig& config);
 
   // Exposes the reporting policy of the crash reporter.
   void ExposeReportingPolicy(ReportingPolicyWatcher* watcher);

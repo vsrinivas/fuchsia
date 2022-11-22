@@ -141,6 +141,14 @@ std::optional<ProductConfig> ParseProductConfig(const rapidjson::Document& json)
 const char kBuildTypeConfigSchema[] = R"({
   "type": "object",
   "properties": {
+    "crash_report_upload_policy": {
+      "type": "string",
+      "enum": [
+        "disabled",
+        "enabled",
+        "read_from_privacy_settings"
+      ]
+    },
     "daily_per_product_crash_report_quota": {
       "type": "number"
     },
@@ -155,6 +163,7 @@ const char kBuildTypeConfigSchema[] = R"({
     }
   },
   "required": [
+    "crash_report_upload_policy",
     "daily_per_product_crash_report_quota",
     "enable_data_redaction",
     "enable_hourly_snapshots",
@@ -169,6 +178,17 @@ std::optional<BuildTypeConfig> ParseBuildTypeConfig(const rapidjson::Document& j
       .enable_hourly_snapshots = json["enable_hourly_snapshots"].GetBool(),
       .enable_limit_inspect_data = json["enable_limit_inspect_data"].GetBool(),
   };
+
+  if (const std::string policy = json["crash_report_upload_policy"].GetString();
+      policy == "disabled") {
+    config.crash_report_upload_policy = CrashReportUploadPolicy::kDisabled;
+  } else if (policy == "enabled") {
+    config.crash_report_upload_policy = CrashReportUploadPolicy::kEnabled;
+  } else if (policy == "read_from_privacy_settings") {
+    config.crash_report_upload_policy = CrashReportUploadPolicy::kReadFromPrivacySettings;
+  } else {
+    FX_LOGS(FATAL) << "Upload policy '" << policy << "' not permitted by schema";
+  }
 
   if (const int64_t quota = json["daily_per_product_crash_report_quota"].GetInt64(); quota > 0) {
     config.daily_per_product_crash_report_quota = quota;
@@ -193,25 +213,6 @@ std::optional<BuildTypeConfig> GetBuildTypeConfig(const std::string& default_pat
                                     default_path, override_path);
 }
 
-std::optional<crash_reports::Config> GetCrashReportsConfig(const std::string& default_path,
-                                                           const std::string& override_path) {
-  std::optional<crash_reports::Config> config;
-  if (files::IsFile(override_path)) {
-    if (config = crash_reports::ParseConfig(override_path); !config.has_value()) {
-      FX_LOGS(ERROR) << "Failed to read override config file at " << override_path
-                     << " - falling back to default config file";
-    }
-  }
-
-  if (!config.has_value()) {
-    if (config = crash_reports::ParseConfig(default_path); !config.has_value()) {
-      FX_LOGS(ERROR) << "Failed to read default config file at " << default_path;
-    }
-  }
-
-  return config;
-}
-
 std::optional<feedback_data::Config> GetFeedbackDataConfig(const std::string& path) {
   feedback_data::Config config;
   if (const zx_status_t status = feedback_data::ParseConfig(path, &config); status != ZX_OK) {
@@ -220,6 +221,17 @@ std::optional<feedback_data::Config> GetFeedbackDataConfig(const std::string& pa
   }
 
   return config;
+}
+
+std::string ToString(const CrashReportUploadPolicy upload_policy) {
+  switch (upload_policy) {
+    case CrashReportUploadPolicy::kDisabled:
+      return "DISABLED";
+    case CrashReportUploadPolicy::kEnabled:
+      return "ENABLED";
+    case CrashReportUploadPolicy::kReadFromPrivacySettings:
+      return "READ_FROM_PRIVACY_SETTINGS";
+  }
 }
 
 }  // namespace forensics::feedback

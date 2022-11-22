@@ -1,4 +1,5 @@
 {
+    "crash_report_upload_policy": "disabled",
     "daily_per_product_crash_report_quota": -1,
     "enable_data_redaction": false,
     "enable_hourly_snapshots": false,

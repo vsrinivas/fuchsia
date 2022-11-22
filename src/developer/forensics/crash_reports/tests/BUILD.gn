@@ -23,24 +23,6 @@ executable("annotation_map_unittest_exe") {
   ]
 }
 
-executable("config_unittest_exe") {
-  testonly = true
-
-  # "config_unittest" is rather generic for the default_output_dir that is set
-  # to root_out_dir so instead we write the binary to target_out_dir.
-  output_dir = target_out_dir
-
-  sources = [ "config_unittest.cc" ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/crash_reports:config",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/lib/files",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("crash_register_unittest_exe") {
   testonly = true
 
@@ -156,6 +138,7 @@ executable("inspect_manager_unittest_exe") {
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:errors",
     "//src/developer/forensics/crash_reports/info:inspect_manager",
+    "//src/developer/forensics/feedback:config",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/lib/fxl",
@@ -163,19 +146,6 @@ executable("inspect_manager_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",
-  ]
-}
-
-executable("prod_configs_unittest_exe") {
-  testonly = true
-
-  sources = [ "prod_configs_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/crash_reports:config",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/lib/files",
-    "//third_party/googletest:gtest",
   ]
 }
 
@@ -402,17 +372,6 @@ source_set("scoped_test_report_store") {
 ###############################################################################
 # RESOURCES
 ###############################################################################
-resource("prod_configss") {
-  sources = [
-    "//src/developer/forensics/crash_reports/configs/default.json",
-    "//src/developer/forensics/crash_reports/configs/upload_to_prod_server.json",
-    "//src/developer/forensics/crash_reports/configs/user.json",
-    "//src/developer/forensics/crash_reports/configs/userdebug.json",
-  ]
-
-  outputs = [ "data/configs/{{source_file_part}}" ]
-}
-
 resource("test_data") {
   sources = [ "resources/test_data.zip" ]
 
@@ -424,13 +383,6 @@ resource("test_data") {
 ###############################################################################
 fuchsia_unittest_component("annotation_map_unittest") {
   deps = [ ":annotation_map_unittest_exe" ]
-}
-
-fuchsia_unittest_component("config_unittest") {
-  deps = [
-    ":config_unittest_exe",
-    "//src/sys/test_runners:tmp_storage",
-  ]
 }
 
 fuchsia_unittest_component("crash_register_unittest") {
@@ -461,13 +413,6 @@ fuchsia_unittest_component("dart_module_parser_unittest") {
 
 fuchsia_unittest_component("inspect_manager_unittest") {
   deps = [ ":inspect_manager_unittest_exe" ]
-}
-
-fuchsia_unittest_component("prod_configs_unittest") {
-  deps = [
-    ":prod_configs_unittest_exe",
-    ":prod_configss",
-  ]
 }
 
 fuchsia_unittest_component("product_quotas_unittest") {
@@ -555,14 +500,12 @@ fuchsia_unittest_component("report_store_unittest") {
 fuchsia_test_package("crash-reports-tests") {
   test_components = [
     ":annotation_map_unittest",
-    ":config_unittest",
     ":crash_register_unittest",
     ":crash_reporter_unittest",
     ":crash_server_unittest",
     ":dart_module_parser_unittest",
     ":reporting_policy_watcher_unittest",
     ":inspect_manager_unittest",
-    ":prod_configs_unittest",
     ":product_quotas_unittest",
     ":queue_unittest",
     ":report_util_unittest",

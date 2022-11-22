@@ -26,8 +26,8 @@ source_set("info") {
     ":inspect_manager",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
-    "//src/developer/forensics/crash_reports:config",
     "//src/developer/forensics/crash_reports:product",
+    "//src/developer/forensics/feedback:config",
     "//src/developer/forensics/utils:inspect_protocol_stats",
     "//src/developer/forensics/utils:storage_size",
     "//src/developer/forensics/utils/cobalt",
@@ -47,10 +47,10 @@ source_set("inspect_manager") {
 
   public_deps = [
     "//sdk/lib/sys/inspect/cpp",
-    "//src/developer/forensics/crash_reports:config",
     "//src/developer/forensics/crash_reports:errors",
     "//src/developer/forensics/crash_reports:product",
     "//src/developer/forensics/crash_reports:reporting_policy_watcher",
+    "//src/developer/forensics/feedback:config",
     "//src/developer/forensics/utils:inspect_node_manager",
     "//src/developer/forensics/utils:storage_size",
     "//src/lib/fxl",

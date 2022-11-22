@@ -37,17 +37,11 @@ group("tests") {
 }
 
 group("userdebug_configs") {
-  deps = [
-    ":crash_reports_userdebug_config",
-    ":feedback_userdebug_config",
-  ]
+  deps = [ ":feedback_userdebug_config" ]
 }
 
 group("user_configs") {
-  deps = [
-    ":crash_reports_user_config",
-    ":feedback_user_config",
-  ]
+  deps = [ ":feedback_user_config" ]
 }
 
 group("workstation_configs") {
@@ -82,7 +76,6 @@ fuchsia_component("feedback") {
   manifest = "feedback/meta/feedback.cml"
 
   deps = [
-    ":crash_reports_default_config",
     ":feedback_data_config",
     ":feedback_default_build_type_config",
     ":feedback_default_product_config",
@@ -137,36 +130,6 @@ forensics_unified_binary("system_log_recorder_exe") {
 ###############################################################################
 # CONFIGS
 ###############################################################################
-resource("crash_reports_default_config") {
-  sources = [ "crash_reports/configs/default.json" ]
-
-  outputs = [ "data/crash_reports/default_config.json" ]
-}
-
-config_data("crash_reports_user_config") {
-  for_pkg = "forensics"
-
-  sources = [ "crash_reports/configs/user.json" ]
-
-  outputs = [ "crash_reports/override_config.json" ]
-}
-
-config_data("crash_reports_userdebug_config") {
-  for_pkg = "forensics"
-
-  sources = [ "crash_reports/configs/userdebug.json" ]
-
-  outputs = [ "crash_reports/override_config.json" ]
-}
-
-config_data("crash_reports_upload_to_prod_server_config") {
-  for_pkg = "forensics"
-
-  sources = [ "crash_reports/configs/upload_to_prod_server.json" ]
-
-  outputs = [ "crash_reports/override_config.json" ]
-}
-
 resource("feedback_default_product_config") {
   sources = [ "feedback/configs/product/default.json" ]
 

@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
+#include "src/developer/forensics/feedback/config.h"
 #include "src/developer/forensics/utils/inspect_protocol_stats.h"
 
 namespace forensics {
@@ -20,7 +20,7 @@ struct MainServiceInfo {
   MainServiceInfo(std::shared_ptr<InfoContext> context);
 
   // Exposes the static configuration of the agent.
-  void ExposeConfig(const Config& config);
+  void ExposeConfig(const feedback::BuildTypeConfig& config);
 
  private:
   std::shared_ptr<InfoContext> context_;

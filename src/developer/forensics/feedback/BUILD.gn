@@ -24,7 +24,6 @@ source_set("config") {
 
   public_deps = [
     ":constants",
-    "//src/developer/forensics/crash_reports:config",
     "//src/developer/forensics/feedback_data:config",
   ]
 

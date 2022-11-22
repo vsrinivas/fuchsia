@@ -15,9 +15,6 @@
 namespace forensics::feedback {
 namespace {
 
-constexpr auto kUploadDisabled = crash_reports::Config::UploadPolicy::kDisabled;
-constexpr auto kUploadEnabled = crash_reports::Config::UploadPolicy::kEnabled;
-
 class ConfigTest : public testing::Test {
  public:
   // Writes |config| to a file and returns the path of the config.
@@ -321,8 +318,20 @@ TEST_F(ProductConfigTest, MissingOverrideAndDefaultConfigs) {
   EXPECT_FALSE(config.has_value());
 }
 
+TEST_F(BuildTypeConfigTest, MissingCrashReportUploadPolicy) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "daily_per_product_crash_report_quota": -1,
+  "enable_data_redaction": false,
+  "enable_hourly_snapshots": false,
+  "enable_limit_inspect_data": false
+})");
+
+  EXPECT_FALSE(config.has_value());
+}
+
 TEST_F(BuildTypeConfigTest, MissingDailyPerProductCrashReportQuota) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "enable_data_redaction": false,
   "enable_hourly_snapshots": false,
   "enable_limit_inspect_data": false
@@ -333,6 +342,7 @@ TEST_F(BuildTypeConfigTest, MissingDailyPerProductCrashReportQuota) {
 
 TEST_F(BuildTypeConfigTest, MissingEnableDataRedaction) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_hourly_snapshots": false,
   "enable_limit_inspect_data": false
@@ -343,6 +353,7 @@ TEST_F(BuildTypeConfigTest, MissingEnableDataRedaction) {
 
 TEST_F(BuildTypeConfigTest, MissingEnableHourlySnapshots) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": false,
   "enable_limit_inspect_data": false
@@ -353,6 +364,7 @@ TEST_F(BuildTypeConfigTest, MissingEnableHourlySnapshots) {
 
 TEST_F(BuildTypeConfigTest, MissingEnableLimitInspectData) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": false,
   "enable_hourly_snapshots": false
@@ -363,6 +375,7 @@ TEST_F(BuildTypeConfigTest, MissingEnableLimitInspectData) {
 
 TEST_F(BuildTypeConfigTest, SpuriousField) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": false,
   "enable_hourly_snapshots": false,
@@ -373,8 +386,72 @@ TEST_F(BuildTypeConfigTest, SpuriousField) {
   EXPECT_FALSE(config.has_value());
 }
 
+TEST_F(BuildTypeConfigTest, CrashReportUploadPolicyDisabled) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
+  "daily_per_product_crash_report_quota": -1,
+  "enable_data_redaction": false,
+  "enable_hourly_snapshots": false,
+  "enable_limit_inspect_data": false
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_EQ(config->crash_report_upload_policy, CrashReportUploadPolicy::kDisabled);
+}
+
+TEST_F(BuildTypeConfigTest, CrashReportUploadPolicyEnabled) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "enabled",
+  "daily_per_product_crash_report_quota": -1,
+  "enable_data_redaction": false,
+  "enable_hourly_snapshots": false,
+  "enable_limit_inspect_data": false
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_EQ(config->crash_report_upload_policy, CrashReportUploadPolicy::kEnabled);
+}
+
+TEST_F(BuildTypeConfigTest, CrashReportUploadPolicyReadFromPrivacySettings) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "read_from_privacy_settings",
+  "daily_per_product_crash_report_quota": -1,
+  "enable_data_redaction": false,
+  "enable_hourly_snapshots": false,
+  "enable_limit_inspect_data": false
+})");
+
+  ASSERT_TRUE(config.has_value());
+  EXPECT_EQ(config->crash_report_upload_policy, CrashReportUploadPolicy::kReadFromPrivacySettings);
+}
+
+TEST_F(BuildTypeConfigTest, CrashReportUploadPolicyNotAllowedValue) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "not_allowed",
+  "daily_per_product_crash_report_quota": -1,
+  "enable_data_redaction": false,
+  "enable_hourly_snapshots": false,
+  "enable_limit_inspect_data": false
+})");
+
+  EXPECT_FALSE(config.has_value());
+}
+
+TEST_F(BuildTypeConfigTest, CrashReportUploadPolicyNotString) {
+  const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": 0,
+  "daily_per_product_crash_report_quota": -1,
+  "enable_data_redaction": false,
+  "enable_hourly_snapshots": false,
+  "enable_limit_inspect_data": false
+})");
+
+  EXPECT_FALSE(config.has_value());
+}
+
 TEST_F(BuildTypeConfigTest, DailyPerProductCrashReportQuotaNegative) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": false,
   "enable_hourly_snapshots": false,
@@ -387,6 +464,7 @@ TEST_F(BuildTypeConfigTest, DailyPerProductCrashReportQuotaNegative) {
 
 TEST_F(BuildTypeConfigTest, DailyPerProductCrashReportQuotaZero) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": 0,
   "enable_data_redaction": false,
   "enable_hourly_snapshots": false,
@@ -399,6 +477,7 @@ TEST_F(BuildTypeConfigTest, DailyPerProductCrashReportQuotaZero) {
 
 TEST_F(BuildTypeConfigTest, DailyPerProductCrashReportQuotaPositive) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": 100,
   "enable_data_redaction": false,
   "enable_hourly_snapshots": false,
@@ -411,6 +490,7 @@ TEST_F(BuildTypeConfigTest, DailyPerProductCrashReportQuotaPositive) {
 
 TEST_F(BuildTypeConfigTest, DailyPerProductCrashReportQuotaNotNumber) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": "",
   "enable_data_redaction": false,
   "enable_hourly_snapshots": false,
@@ -422,6 +502,7 @@ TEST_F(BuildTypeConfigTest, DailyPerProductCrashReportQuotaNotNumber) {
 
 TEST_F(BuildTypeConfigTest, EnableDataRedactionTrue) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": true,
   "enable_hourly_snapshots": false,
@@ -434,6 +515,7 @@ TEST_F(BuildTypeConfigTest, EnableDataRedactionTrue) {
 
 TEST_F(BuildTypeConfigTest, EnableDataRedactionFalse) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": false,
   "enable_hourly_snapshots": false,
@@ -446,6 +528,7 @@ TEST_F(BuildTypeConfigTest, EnableDataRedactionFalse) {
 
 TEST_F(BuildTypeConfigTest, EnableDataRedactionNotBoolean) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": "",
   "enable_hourly_snapshots": false,
@@ -457,6 +540,7 @@ TEST_F(BuildTypeConfigTest, EnableDataRedactionNotBoolean) {
 
 TEST_F(BuildTypeConfigTest, EnableHourlySnapshotsTrue) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": false,
   "enable_hourly_snapshots": true,
@@ -469,6 +553,7 @@ TEST_F(BuildTypeConfigTest, EnableHourlySnapshotsTrue) {
 
 TEST_F(BuildTypeConfigTest, EnableHourlySnapshotsFalse) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": false,
   "enable_hourly_snapshots": false,
@@ -481,6 +566,7 @@ TEST_F(BuildTypeConfigTest, EnableHourlySnapshotsFalse) {
 
 TEST_F(BuildTypeConfigTest, EnableHourlySnapshotsNotBoolean) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": false,
   "enable_hourly_snapshots": "",
@@ -492,6 +578,7 @@ TEST_F(BuildTypeConfigTest, EnableHourlySnapshotsNotBoolean) {
 
 TEST_F(BuildTypeConfigTest, EnableLimitInspectDataTrue) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": false,
   "enable_hourly_snapshots": false,
@@ -504,6 +591,7 @@ TEST_F(BuildTypeConfigTest, EnableLimitInspectDataTrue) {
 
 TEST_F(BuildTypeConfigTest, EnableLimitInspectDataFalse) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": false,
   "enable_hourly_snapshots": false,
@@ -516,6 +604,7 @@ TEST_F(BuildTypeConfigTest, EnableLimitInspectDataFalse) {
 
 TEST_F(BuildTypeConfigTest, EnableLimitInspectDataNotBoolean) {
   const std::optional<BuildTypeConfig> config = ParseConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": false,
   "enable_hourly_snapshots": false,
@@ -527,6 +616,7 @@ TEST_F(BuildTypeConfigTest, EnableLimitInspectDataNotBoolean) {
 
 TEST_F(BuildTypeConfigTest, UseOverrideBuildTypeConfig) {
   const std::string override_path = WriteConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": true,
   "enable_hourly_snapshots": true,
@@ -543,6 +633,7 @@ TEST_F(BuildTypeConfigTest, UseOverrideBuildTypeConfig) {
 
 TEST_F(BuildTypeConfigTest, UseDefaultBuildTypeConfig) {
   const std::string default_path = WriteConfig(R"({
+  "crash_report_upload_policy": "disabled",
   "daily_per_product_crash_report_quota": -1,
   "enable_data_redaction": true,
   "enable_hourly_snapshots": true,
@@ -561,42 +652,6 @@ TEST_F(BuildTypeConfigTest, MissingOverrideAndDefaultBuildTypeConfigs) {
   const std::optional<BuildTypeConfig> config = GetBuildTypeConfig("/bad/path", "/bad/path");
 
   EXPECT_FALSE(config.has_value());
-}
-
-TEST_F(ConfigTest, GetCrashReportsConfig) {
-  const std::string default_config_path = WriteConfig(R"({
-    "crash_report_upload_policy": "disabled"
-})");
-
-  const std::string override_config_path = WriteConfig(R"({
-    "crash_report_upload_policy": "enabled"
-})");
-
-  const std::string invalid_config_path = WriteConfig(R"({
-    "invalid": {}
-})");
-  //
-  // The override config should be read regardless of the default config being valid.
-  auto config = GetCrashReportsConfig("/bad/path", override_config_path);
-  ASSERT_TRUE(config);
-  EXPECT_EQ(config->crash_report_upload_policy, kUploadEnabled);
-
-  config = GetCrashReportsConfig(invalid_config_path, override_config_path);
-  ASSERT_TRUE(config);
-  EXPECT_EQ(config->crash_report_upload_policy, kUploadEnabled);
-
-  // The default config should be read if there's an issue using the override config.
-  config = GetCrashReportsConfig(default_config_path, "/bad/path");
-  ASSERT_TRUE(config);
-  EXPECT_EQ(config->crash_report_upload_policy, kUploadDisabled);
-
-  config = GetCrashReportsConfig(default_config_path, invalid_config_path);
-  ASSERT_TRUE(config);
-  EXPECT_EQ(config->crash_report_upload_policy, kUploadDisabled);
-
-  // No config should be returned if neither config can be read.
-  EXPECT_FALSE(GetCrashReportsConfig("/bad/path", "/bad/path"));
-  EXPECT_FALSE(GetCrashReportsConfig(invalid_config_path, invalid_config_path));
 }
 
 TEST_F(ConfigTest, GetFeedbackDataConfig) {

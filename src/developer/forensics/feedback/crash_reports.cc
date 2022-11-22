@@ -4,9 +4,10 @@
 
 #include "src/developer/forensics/feedback/crash_reports.h"
 
+#include <fuchsia/feedback/cpp/fidl.h>
+
 #include <utility>
 
-#include "fuchsia/feedback/cpp/fidl.h"
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/snapshot_persistence.h"
 #include "src/developer/forensics/feedback/constants.h"
@@ -53,10 +54,10 @@ CrashReports::CrashReports(async_dispatcher_t* dispatcher,
                     kGarbageCollectedSnapshotsPath, options.snapshot_store_max_archives_size),
       crash_register_(info_context_, kCrashRegisterPath),
       crash_reporter_(dispatcher, services, clock, info_context_, options.build_type_config,
-                      options.config, &crash_register_, &tags_, &crash_server_, &report_store_,
-                      data_provider, options.snapshot_collector_window_duration),
+                      &crash_register_, &tags_, &crash_server_, &report_store_, data_provider,
+                      options.snapshot_collector_window_duration),
       info_(info_context_) {
-  info_.ExposeConfig(options.config);
+  info_.ExposeConfig(options.build_type_config);
 }
 
 void CrashReports::Handle(::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request,

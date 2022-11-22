@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/developer/forensics/feedback/config.h"
+
 namespace forensics {
 namespace crash_reports {
 
@@ -14,7 +16,8 @@ MainServiceInfo::MainServiceInfo(std::shared_ptr<InfoContext> context)
   FX_CHECK(context_);
 }
 
-void MainServiceInfo::ExposeConfig(const Config& config) {
+void MainServiceInfo::ExposeConfig(const feedback::BuildTypeConfig& config) {
+  // TODO(fxbug.dev/111700): expose config  at a high-level in the Feedback component.
   context_->InspectManager().ExposeConfig(config);
 }
 

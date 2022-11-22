@@ -10,7 +10,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 
 #include "src/developer/forensics/crash_reports/annotation_map.h"
-#include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/crash_register.h"
 #include "src/developer/forensics/crash_reports/crash_reporter.h"
 #include "src/developer/forensics/crash_reports/crash_server.h"
@@ -30,7 +29,6 @@ class CrashReports {
  public:
   struct Options {
     BuildTypeConfig build_type_config;
-    crash_reports::Config config;
     StorageSize snapshot_store_max_archives_size;
     std::optional<StorageSize> snapshot_persistence_max_tmp_size;
     std::optional<StorageSize> snapshot_persistence_max_cache_size;

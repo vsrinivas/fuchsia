@@ -13,11 +13,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/errors.h"
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
+#include "src/developer/forensics/feedback/config.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -51,10 +51,10 @@ constexpr char kTime1Str[] = "1970-01-01 00:00:00 GMT";
 constexpr char kTime2Str[] = "1970-01-01 07:14:52 GMT";
 constexpr char kTime3Str[] = "1970-01-04 15:33:17 GMT";
 
-constexpr Config::UploadPolicy kConfigDisabled = Config::UploadPolicy::kDisabled;
-constexpr Config::UploadPolicy kConfigEnabled = Config::UploadPolicy::kEnabled;
-constexpr Config::UploadPolicy kConfigReadFromPrivacySettings =
-    Config::UploadPolicy::kReadFromPrivacySettings;
+constexpr auto kConfigDisabled = feedback::CrashReportUploadPolicy::kDisabled;
+constexpr auto kConfigEnabled = feedback::CrashReportUploadPolicy::kEnabled;
+constexpr auto kConfigReadFromPrivacySettings =
+    feedback::CrashReportUploadPolicy::kReadFromPrivacySettings;
 
 class InspectManagerTest : public UnitTestFixture {
  public:
@@ -302,8 +302,8 @@ TEST_F(InspectManagerTest, Fail_MarkReportAsGarbageCollected_UnknownReport) {
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
-  inspect_manager_->ExposeConfig(Config{
-      /*crash_report_upload_policy=*/kConfigEnabled,
+  inspect_manager_->ExposeConfig(feedback::BuildTypeConfig{
+      .crash_report_upload_policy = kConfigEnabled,
   });
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(
@@ -316,8 +316,8 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
-  inspect_manager_->ExposeConfig(Config{
-      /*crash_report_upload_policy=*/kConfigDisabled,
+  inspect_manager_->ExposeConfig(feedback::BuildTypeConfig{
+      .crash_report_upload_policy = kConfigDisabled,
   });
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(
@@ -329,8 +329,8 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadReadFromPrivacySettings) {
-  inspect_manager_->ExposeConfig(Config{
-      /*crash_report_upload_policy=*/kConfigReadFromPrivacySettings,
+  inspect_manager_->ExposeConfig(feedback::BuildTypeConfig{
+      .crash_report_upload_policy = kConfigReadFromPrivacySettings,
   });
   EXPECT_THAT(
       InspectTree(),
