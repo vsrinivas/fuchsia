@@ -154,7 +154,7 @@ class {{ .NaturalEventHandlerInterface }} : public ::fidl::internal::BaseEventHa
   virtual ~{{ .NaturalEventHandlerInterface.Self }}() = default;
   {{- range .Events -}}
     {{- .Docs }}
-    virtual void {{ .Name }}({{ .NaturalEvent }}&) = 0;
+    virtual void {{ .Name }}({{ if .HasResponsePayload }}{{ .NaturalEvent }}&{{ end }}) = 0;
   {{- end }}
 };
 
@@ -166,7 +166,7 @@ class {{ .NaturalAsyncEventHandler }}
 
   {{- range .Events -}}
     {{- .Docs }}
-    void {{ .Name }}({{ .NaturalEvent }}&) override {}
+    void {{ .Name }}({{ if .HasResponsePayload }}{{ .NaturalEvent }}&{{ end }}) override {}
   {{- end }}
 };
 
@@ -179,7 +179,9 @@ class {{ .NaturalAsyncEventHandler }}
 
     {{- range .Events }}
       {{- if .Transitional }}
-        void {{ .Name }}({{ .NaturalEvent }}&) override { OnTransitionalEvent_(); }
+        void {{ .Name }}({{ if .HasResponsePayload }}{{ .NaturalEvent }}&{{ end }}) override {
+          OnTransitionalEvent_();
+        }
       {{- end }}
     {{- end }}
 
@@ -237,11 +239,10 @@ class {{ .NaturalEventDispatcher }} final :
           return decoded.error_value();
         }
         if (event_handler()) {
-          {{ .NaturalEvent }} event
           {{- if .HasResponsePayload }}
-              = std::move(decoded.value())
+            {{ .NaturalEvent }} event = std::move(decoded.value())
           {{- end }};
-          event_handler()->{{ .Name }}(event);
+          event_handler()->{{ .Name }}({{ if .HasResponsePayload }}event{{ end }});
         }
         return ::fidl::Status::Ok();
       }

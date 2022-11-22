@@ -873,9 +873,8 @@ namespace test_unknowninteractions {
         if (decoded.is_error()) {
           return decoded.error_value();
         }
-        if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> event;
-          event_handler()->StrictEvent(event);
+        if (event_handler()) {;
+          event_handler()->StrictEvent();
         }
         return ::fidl::Status::Ok();
       }
@@ -886,8 +885,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields> event = std::move(decoded.value());
           event_handler()->StrictEventFields(event);
         }
         return ::fidl::Status::Ok();
@@ -899,8 +897,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion> event = std::move(decoded.value());
           event_handler()->StrictEventUnion(event);
         }
         return ::fidl::Status::Ok();
@@ -912,8 +909,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable> event = std::move(decoded.value());
           event_handler()->StrictEventTable(event);
         }
         return ::fidl::Status::Ok();
@@ -925,8 +921,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> event = std::move(decoded.value());
           event_handler()->StrictEventErr(event);
         }
         return ::fidl::Status::Ok();
@@ -938,8 +933,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> event = std::move(decoded.value());
           event_handler()->StrictEventFieldsErr(event);
         }
         return ::fidl::Status::Ok();
@@ -951,8 +945,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> event = std::move(decoded.value());
           event_handler()->StrictEventUnionErr(event);
         }
         return ::fidl::Status::Ok();
@@ -964,8 +957,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> event = std::move(decoded.value());
           event_handler()->StrictEventTableErr(event);
         }
         return ::fidl::Status::Ok();
@@ -976,9 +968,8 @@ namespace test_unknowninteractions {
         if (decoded.is_error()) {
           return decoded.error_value();
         }
-        if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> event;
-          event_handler()->FlexibleEvent(event);
+        if (event_handler()) {;
+          event_handler()->FlexibleEvent();
         }
         return ::fidl::Status::Ok();
       }
@@ -989,8 +980,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields> event = std::move(decoded.value());
           event_handler()->FlexibleEventFields(event);
         }
         return ::fidl::Status::Ok();
@@ -1002,8 +992,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion> event = std::move(decoded.value());
           event_handler()->FlexibleEventUnion(event);
         }
         return ::fidl::Status::Ok();
@@ -1015,8 +1004,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable> event = std::move(decoded.value());
           event_handler()->FlexibleEventTable(event);
         }
         return ::fidl::Status::Ok();
@@ -1028,8 +1016,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> event = std::move(decoded.value());
           event_handler()->FlexibleEventErr(event);
         }
         return ::fidl::Status::Ok();
@@ -1041,8 +1028,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> event = std::move(decoded.value());
           event_handler()->FlexibleEventFieldsErr(event);
         }
         return ::fidl::Status::Ok();
@@ -1054,8 +1040,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> event = std::move(decoded.value());
           event_handler()->FlexibleEventUnionErr(event);
         }
         return ::fidl::Status::Ok();
@@ -1067,8 +1052,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> event = std::move(decoded.value());
           event_handler()->FlexibleEventTableErr(event);
         }
         return ::fidl::Status::Ok();
@@ -2445,9 +2429,8 @@ namespace test_unknowninteractions {
         if (decoded.is_error()) {
           return decoded.error_value();
         }
-        if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> event;
-          event_handler()->StrictEvent(event);
+        if (event_handler()) {;
+          event_handler()->StrictEvent();
         }
         return ::fidl::Status::Ok();
       }
@@ -2458,8 +2441,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields> event = std::move(decoded.value());
           event_handler()->StrictEventFields(event);
         }
         return ::fidl::Status::Ok();
@@ -2471,8 +2453,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion> event = std::move(decoded.value());
           event_handler()->StrictEventUnion(event);
         }
         return ::fidl::Status::Ok();
@@ -2484,8 +2465,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable> event = std::move(decoded.value());
           event_handler()->StrictEventTable(event);
         }
         return ::fidl::Status::Ok();
@@ -2497,8 +2477,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> event = std::move(decoded.value());
           event_handler()->StrictEventErr(event);
         }
         return ::fidl::Status::Ok();
@@ -2510,8 +2489,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> event = std::move(decoded.value());
           event_handler()->StrictEventFieldsErr(event);
         }
         return ::fidl::Status::Ok();
@@ -2523,8 +2501,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> event = std::move(decoded.value());
           event_handler()->StrictEventUnionErr(event);
         }
         return ::fidl::Status::Ok();
@@ -2536,8 +2513,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> event = std::move(decoded.value());
           event_handler()->StrictEventTableErr(event);
         }
         return ::fidl::Status::Ok();
@@ -2548,9 +2524,8 @@ namespace test_unknowninteractions {
         if (decoded.is_error()) {
           return decoded.error_value();
         }
-        if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> event;
-          event_handler()->FlexibleEvent(event);
+        if (event_handler()) {;
+          event_handler()->FlexibleEvent();
         }
         return ::fidl::Status::Ok();
       }
@@ -2561,8 +2536,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields> event = std::move(decoded.value());
           event_handler()->FlexibleEventFields(event);
         }
         return ::fidl::Status::Ok();
@@ -2574,8 +2548,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion> event = std::move(decoded.value());
           event_handler()->FlexibleEventUnion(event);
         }
         return ::fidl::Status::Ok();
@@ -2587,8 +2560,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable> event = std::move(decoded.value());
           event_handler()->FlexibleEventTable(event);
         }
         return ::fidl::Status::Ok();
@@ -2600,8 +2572,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> event = std::move(decoded.value());
           event_handler()->FlexibleEventErr(event);
         }
         return ::fidl::Status::Ok();
@@ -2613,8 +2584,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> event = std::move(decoded.value());
           event_handler()->FlexibleEventFieldsErr(event);
         }
         return ::fidl::Status::Ok();
@@ -2626,8 +2596,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> event = std::move(decoded.value());
           event_handler()->FlexibleEventUnionErr(event);
         }
         return ::fidl::Status::Ok();
@@ -2639,8 +2608,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> event = std::move(decoded.value());
           event_handler()->FlexibleEventTableErr(event);
         }
         return ::fidl::Status::Ok();
@@ -3715,9 +3683,8 @@ namespace test_unknowninteractions {
         if (decoded.is_error()) {
           return decoded.error_value();
         }
-        if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> event;
-          event_handler()->StrictEvent(event);
+        if (event_handler()) {;
+          event_handler()->StrictEvent();
         }
         return ::fidl::Status::Ok();
       }
@@ -3728,8 +3695,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields> event = std::move(decoded.value());
           event_handler()->StrictEventFields(event);
         }
         return ::fidl::Status::Ok();
@@ -3741,8 +3707,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion> event = std::move(decoded.value());
           event_handler()->StrictEventUnion(event);
         }
         return ::fidl::Status::Ok();
@@ -3754,8 +3719,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable> event = std::move(decoded.value());
           event_handler()->StrictEventTable(event);
         }
         return ::fidl::Status::Ok();
@@ -3767,8 +3731,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> event = std::move(decoded.value());
           event_handler()->StrictEventErr(event);
         }
         return ::fidl::Status::Ok();
@@ -3780,8 +3743,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> event = std::move(decoded.value());
           event_handler()->StrictEventFieldsErr(event);
         }
         return ::fidl::Status::Ok();
@@ -3793,8 +3755,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> event = std::move(decoded.value());
           event_handler()->StrictEventUnionErr(event);
         }
         return ::fidl::Status::Ok();
@@ -3806,8 +3767,7 @@ namespace test_unknowninteractions {
           return decoded.error_value();
         }
         if (event_handler()) {
-          ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> event
-              = std::move(decoded.value());
+            ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> event = std::move(decoded.value());
           event_handler()->StrictEventTableErr(event);
         }
         return ::fidl::Status::Ok();

@@ -352,11 +352,11 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
         return true;
       }
 
-      void StrictEvent(fidl::Event<fidl_clientsuite::OpenTarget::StrictEvent>& event) override {
+      void StrictEvent() override {
         ReportEvent(fidl_clientsuite::OpenTargetEventReport::WithStrictEvent({}));
       }
 
-      void FlexibleEvent(fidl::Event<fidl_clientsuite::OpenTarget::FlexibleEvent>& event) override {
+      void FlexibleEvent() override {
         ReportEvent(fidl_clientsuite::OpenTargetEventReport::WithFlexibleEvent({}));
       }
 

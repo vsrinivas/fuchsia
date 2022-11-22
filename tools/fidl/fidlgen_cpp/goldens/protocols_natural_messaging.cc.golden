@@ -215,8 +215,8 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestRe
         return decoded.error_value();
       }
       if (event_handler()) {
-        ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> event;
-        event_handler()->OnEmptyResponse(event);
+        ;
+        event_handler()->OnEmptyResponse();
       }
       return ::fidl::Status::Ok();
     }

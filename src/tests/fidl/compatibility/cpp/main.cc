@@ -27,7 +27,7 @@ class EventProxy : public fidl::AsyncEventHandler<Echo> {
   explicit EventProxy(::fidl::ServerBindingRef<Echo>& server_binding)
       : server_binding_(server_binding), result_(fit::ok()) {}
 
-  void EchoMinimalEvent(fidl::Event<Echo::EchoMinimalEvent>& event) override {
+  void EchoMinimalEvent() override {
     result_ = fidl::SendEvent(server_binding_)->EchoMinimalEvent();
     sync_completion_signal(&completion);
   }

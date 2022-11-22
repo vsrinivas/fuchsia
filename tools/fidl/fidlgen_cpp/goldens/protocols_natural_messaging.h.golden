@@ -242,7 +242,7 @@ class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithAndWi
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
-  virtual void OnEmptyResponse(::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>&) = 0;
+  virtual void OnEmptyResponse() = 0;
   virtual void OnWithResponse(::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>&) = 0;
 };
 
@@ -251,7 +251,7 @@ class ::fidl::AsyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>
     : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
-  void OnEmptyResponse(::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>&) override {}
+  void OnEmptyResponse() override {}
   void OnWithResponse(::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>&) override {}
 };
 
@@ -1251,7 +1251,9 @@ class ::fidl::SyncEventHandler<::test_protocols::Transitional>
     : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>, public ::fidl::internal::SyncEventHandler {
  public:
   SyncEventHandler() = default;
-  void Event(::fidl::Event<::test_protocols::Transitional::Event>&) override { OnTransitionalEvent_(); }
+  void Event(::fidl::Event<::test_protocols::Transitional::Event>&) override {
+    OnTransitionalEvent_();
+  }
 
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the corresponding virtual

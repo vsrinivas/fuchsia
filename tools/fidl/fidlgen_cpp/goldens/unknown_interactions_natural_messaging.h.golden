@@ -1497,7 +1497,7 @@ class ::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions:
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
-    virtual void StrictEvent(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>&) = 0;
+    virtual void StrictEvent() = 0;
     virtual void StrictEventFields(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>&) = 0;
     virtual void StrictEventUnion(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>&) = 0;
     virtual void StrictEventTable(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>&) = 0;
@@ -1505,7 +1505,7 @@ class ::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions:
     virtual void StrictEventFieldsErr(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>&) = 0;
     virtual void StrictEventUnionErr(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>&) = 0;
     virtual void StrictEventTableErr(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>&) = 0;
-    virtual void FlexibleEvent(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>&) = 0;
+    virtual void FlexibleEvent() = 0;
     virtual void FlexibleEventFields(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>&) = 0;
     virtual void FlexibleEventUnion(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>&) = 0;
     virtual void FlexibleEventTable(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>&) = 0;
@@ -1520,7 +1520,7 @@ class ::fidl::AsyncEventHandler<::test_unknowninteractions::UnknownInteractionsP
     : public ::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsProtocol>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
-    void StrictEvent(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>&) override {}
+    void StrictEvent() override {}
     void StrictEventFields(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>&) override {}
     void StrictEventUnion(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>&) override {}
     void StrictEventTable(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>&) override {}
@@ -1528,7 +1528,7 @@ class ::fidl::AsyncEventHandler<::test_unknowninteractions::UnknownInteractionsP
     void StrictEventFieldsErr(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>&) override {}
     void StrictEventUnionErr(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>&) override {}
     void StrictEventTableErr(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>&) override {}
-    void FlexibleEvent(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>&) override {}
+    void FlexibleEvent() override {}
     void FlexibleEventFields(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>&) override {}
     void FlexibleEventUnion(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>&) override {}
     void FlexibleEventTable(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>&) override {}
@@ -3028,7 +3028,7 @@ class ::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions:
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
-    virtual void StrictEvent(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>&) = 0;
+    virtual void StrictEvent() = 0;
     virtual void StrictEventFields(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>&) = 0;
     virtual void StrictEventUnion(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>&) = 0;
     virtual void StrictEventTable(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>&) = 0;
@@ -3036,7 +3036,7 @@ class ::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions:
     virtual void StrictEventFieldsErr(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>&) = 0;
     virtual void StrictEventUnionErr(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>&) = 0;
     virtual void StrictEventTableErr(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>&) = 0;
-    virtual void FlexibleEvent(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>&) = 0;
+    virtual void FlexibleEvent() = 0;
     virtual void FlexibleEventFields(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>&) = 0;
     virtual void FlexibleEventUnion(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>&) = 0;
     virtual void FlexibleEventTable(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>&) = 0;
@@ -3051,7 +3051,7 @@ class ::fidl::AsyncEventHandler<::test_unknowninteractions::UnknownInteractionsA
     : public ::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarProtocol>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
-    void StrictEvent(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>&) override {}
+    void StrictEvent() override {}
     void StrictEventFields(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>&) override {}
     void StrictEventUnion(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>&) override {}
     void StrictEventTable(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>&) override {}
@@ -3059,7 +3059,7 @@ class ::fidl::AsyncEventHandler<::test_unknowninteractions::UnknownInteractionsA
     void StrictEventFieldsErr(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>&) override {}
     void StrictEventUnionErr(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>&) override {}
     void StrictEventTableErr(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>&) override {}
-    void FlexibleEvent(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>&) override {}
+    void FlexibleEvent() override {}
     void FlexibleEventFields(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>&) override {}
     void FlexibleEventUnion(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>&) override {}
     void FlexibleEventTable(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>&) override {}
@@ -4155,7 +4155,7 @@ class ::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions:
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
-    virtual void StrictEvent(::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>&) = 0;
+    virtual void StrictEvent() = 0;
     virtual void StrictEventFields(::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>&) = 0;
     virtual void StrictEventUnion(::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>&) = 0;
     virtual void StrictEventTable(::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>&) = 0;
@@ -4170,7 +4170,7 @@ class ::fidl::AsyncEventHandler<::test_unknowninteractions::UnknownInteractionsC
     : public ::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsClosedProtocol>, public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
-    void StrictEvent(::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>&) override {}
+    void StrictEvent() override {}
     void StrictEventFields(::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>&) override {}
     void StrictEventUnion(::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>&) override {}
     void StrictEventTable(::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>&) override {}

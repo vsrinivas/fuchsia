@@ -62,8 +62,8 @@ fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>::DispatchE
         return decoded.error_value();
       }
       if (event_handler()) {
-        ::fidl::Event<::test_doccomments::Interface::OnEvent> event;
-        event_handler()->OnEvent(event);
+        ;
+        event_handler()->OnEvent();
       }
       return ::fidl::Status::Ok();
     }
