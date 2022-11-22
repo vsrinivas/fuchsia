@@ -24,7 +24,13 @@ namespace {
 
 const size_t kPageSize{static_cast<size_t>(sysconf(_SC_PAGESIZE))};
 
-const std::string kTempPathTemplate{"/tmp/fdio_mmap_test.XXXXXX"};
+std::string TempPathTemplate() {
+  static std::string path_template = ([] {
+    char* tmp = getenv("TEST_TMPDIR");
+    return std::string((tmp == nullptr ? "/tmp" : std::string(tmp)) + "/fdio_mmap_test.XXXXXX");
+  })();
+  return path_template;
+}
 
 /// Helper function that returns a RAII object that wraps a pointer obtained by mmap so that it
 /// is automatically unmapped (via `munmap`) when it goes out of scope. Will cause test failure
@@ -45,12 +51,13 @@ class MmapTestFixture : public zxtest::Test {
   int fd() const { return fd_.get(); }
 
   void SetUp() override {
-    std::string temp_path{kTempPathTemplate};
+    std::string temp_path = TempPathTemplate();
     // Create a temporary file/directory based on fd_flags.
     if (fd_flags & O_DIRECTORY) {
       ASSERT_NE(mkdtemp(temp_path.data()), nullptr, "%s", strerror(errno));
     } else {
-      ASSERT_TRUE(fd_ = fbl::unique_fd{mkstemp(temp_path.data())}, "%s", strerror(errno));
+      ASSERT_TRUE(fd_ = fbl::unique_fd{mkstemp(temp_path.data())}, "mkstemp(%s) failed: %s",
+                  temp_path.c_str(), strerror(errno));
     }
     // Re-open it with the specified flags, and remove/unlink it from disk.
     EXPECT_TRUE(fd_ = fbl::unique_fd{open(temp_path.c_str(), fd_flags)}, "%s", strerror(errno));
