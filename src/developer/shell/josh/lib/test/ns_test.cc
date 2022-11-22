@@ -61,10 +61,7 @@ TEST_F(NsTest, ListFiles) {
   ASSERT_EQ(ZX_OK, memfs_install_at(loop.dispatcher(), "/ns_test_tmp", &fs));
 
   std::string test_string = R"(
-      globalThis.resultOne = undefined;
-      ns.ls("/ns_test_tmp").
-        then((result) => { globalThis.resultOne = result; }).
-        catch((e) => { globalThis.resultOne = e;});
+      globalThis.resultOne = ns.ls("/ns_test_tmp");
   )";
   ASSERT_TRUE(Eval(test_string));
   js_std_loop(ctx_->Get());
@@ -76,8 +73,8 @@ TEST_F(NsTest, ListFiles) {
       if (res.length != 1) {
           throw "Length != 1 in " + res;
       }
-      if (res[0].name != ".")  {
-          throw "Unexpected name " + res[0].name;
+      if (res[0] != ".")  {
+          throw "Unexpected name " + res[0];
       }
   )";
   ASSERT_TRUE(Eval(test_string));
@@ -90,14 +87,8 @@ TEST_F(NsTest, ListFiles) {
   std::string filename = buffer.get();
 
   test_string = R"(
-      globalThis.resultTwo = undefined;
-      ns.ls("/ns_test_tmp").
-        then((result) => { globalThis.resultTwo = result; }).
-        catch((e) => { globalThis.resultTwo = e;});
-      globalThis.resultThree = undefined;
-      ns.ls("/pkg/data/fidling").
-        then((result) => { globalThis.resultThree = result; }).
-        catch((e) => { globalThis.resultThree = e;});
+      globalThis.resultTwo = ns.ls("/ns_test_tmp");
+      globalThis.resultThree = ns.ls("/pkg/data/fidling");
   )";
   ASSERT_TRUE(Eval(test_string));
   js_std_loop(ctx_->Get());
@@ -106,7 +97,7 @@ TEST_F(NsTest, ListFiles) {
       if ("stack" in resTwo) {
         throw resTwo;
       }
-      let actualTwo = resTwo.map((x) => { return x.name; }).sort();
+      let actualTwo = resTwo.map((x) => { return x; }).sort();
       if (actualTwo.length != 2) {
           throw "Length != 2 in " + actualTwo;
       }
@@ -137,10 +128,7 @@ TEST_F(NsTest, ListFiles) {
 TEST_F(NsTest, ListRootDir) {
   InitBuiltins("/pkg/data/fidling", "/pkg/data/lib");
   std::string test_string = R"(
-      globalThis.resultOne = undefined;
-      ns.ls("/pkg").
-        then((result) => { globalThis.resultOne = result; }).
-        catch((e) => { globalThis.resultOne = e;});
+      globalThis.resultOne = ns.ls("/pkg");
   )";
   ASSERT_TRUE(Eval(test_string));
   js_std_loop(ctx_->Get());
@@ -154,7 +142,7 @@ TEST_F(NsTest, ListRootDir) {
       }
       let elt = -1;
       for (let i = 0; i < res.length; i++) {
-        if (res[i].name == "meta") {
+        if (res[i] == "meta") {
           elt = i;
         }
       }
