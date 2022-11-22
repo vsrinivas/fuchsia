@@ -199,6 +199,14 @@ class Coordinator : public CompositeManagerBridge,
 
   // Returns URL to driver that should be bound to fragments of composite devices.
   std::string GetFragmentDriverUrl() const;
+  std::string GetFragmentProxyDriverUrl() const;
+
+  const Driver* LoadFragmentDriver() {
+    return driver_loader_.LoadDriverUrl(GetFragmentDriverUrl());
+  }
+  const Driver* LoadFragmentProxyDriver() {
+    return driver_loader_.LoadDriverUrl(GetFragmentProxyDriverUrl());
+  }
 
   using RegisterWithPowerManagerCompletion = fit::callback<void(zx_status_t)>;
   void RegisterWithPowerManager(fidl::ClientEnd<fuchsia_io::Directory> devfs,
@@ -218,8 +226,6 @@ class Coordinator : public CompositeManagerBridge,
   zx_status_t SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi);
 
   SuspendResumeManager* suspend_resume_manager() { return suspend_resume_manager_.get(); }
-
-  const Driver* fragment_driver() { return driver_loader_.LoadDriverUrl(GetFragmentDriverUrl()); }
 
   InspectManager& inspect_manager() { return *inspect_manager_; }
   DriverLoader& driver_loader() { return driver_loader_; }

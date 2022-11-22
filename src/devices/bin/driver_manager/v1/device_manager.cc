@@ -127,6 +127,34 @@ zx_status_t DeviceManager::AddDevice(
     }
   }
 
+  // If we're creating a device that's using the fragment driver, inform the
+  // fragment.
+  if (dev->libname() == coordinator_->GetFragmentProxyDriverUrl()) {
+    bool found = false;
+    for (auto& fragment : dev->parent()->parent()->fragments()) {
+      // We are looking for the fragment that is our parent.
+      if ((fragment.fragment_device() == nullptr) ||
+          (fragment.fragment_device() != dev->parent())) {
+        continue;
+      }
+      if (fragment.proxy_device() != nullptr) {
+        LOGF(ERROR, "Fragment %s in composite %s has two proxy devices!", fragment.name().data(),
+             fragment.composite()->name().c_str());
+        continue;
+      }
+      fragment.set_proxy_device(dev);
+      status = fragment.composite()->TryAssemble();
+      if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
+        LOGF(ERROR, "Failed to assemble composite device: %s", zx_status_get_string(status));
+      }
+      found = true;
+      break;
+    }
+    if (!found) {
+      LOGF(ERROR, "Failed to find composite for device: %s", dev->name().c_str());
+    }
+  }
+
   VLOGF(1, "Added device %p '%s'", dev.get(), dev->name().data());
   // TODO(fxbug.dev/43370): remove this once init tasks can be enabled for all devices.
   if (!want_init_task) {

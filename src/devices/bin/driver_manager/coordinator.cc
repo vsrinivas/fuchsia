@@ -1067,6 +1067,7 @@ void Coordinator::InitOutgoingServices(component::OutgoingDirectory& outgoing) {
 }
 
 std::string Coordinator::GetFragmentDriverUrl() const { return "#driver/fragment.so"; }
+std::string Coordinator::GetFragmentProxyDriverUrl() const { return "#driver/fragment.proxy.so"; }
 
 // TODO(fxb/107737): Ideally, we try to match and bind all devices, regardless if they
 // match with a node group or not. However, this causes issues because the driver manager

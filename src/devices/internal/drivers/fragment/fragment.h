@@ -35,10 +35,12 @@
 #include <fuchsia/hardware/usb/modeswitch/cpp/banjo.h>
 #include <fuchsia/hardware/usb/phy/cpp/banjo.h>
 #include <fuchsia/hardware/vreg/cpp/banjo.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/fragment-device.h>
 #include <lib/sync/completion.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/zx/channel.h>
 
 #include <ddktl/device.h>
@@ -65,11 +67,11 @@ class ProtocolClient {
 };
 
 class Fragment;
-using FragmentBase = ddk::Device<Fragment, ddk::Rxrpcable, ddk::GetProtocolable>;
+using FragmentBase = ddk::Device<Fragment, ddk::GetProtocolable, ddk::Unbindable>;
 
 class Fragment : public FragmentBase {
  public:
-  explicit Fragment(zx_device_t* parent)
+  explicit Fragment(zx_device_t* parent, async_dispatcher_t* dispatcher)
       : FragmentBase(parent),
         canvas_client_(parent, ZX_PROTOCOL_AMLOGIC_CANVAS),
         clock_client_(parent, ZX_PROTOCOL_CLOCK),
@@ -101,15 +103,21 @@ class Fragment : public FragmentBase {
         vreg_client_(parent, ZX_PROTOCOL_VREG),
         dsi_client_(parent, ZX_PROTOCOL_DSI),
         pci_client_(parent, ZX_PROTOCOL_PCI),
-        power_sensor_client_(parent, ZX_PROTOCOL_POWER_SENSOR) {}
+        power_sensor_client_(parent, ZX_PROTOCOL_POWER_SENSOR),
+        dispatcher_(dispatcher),
+        outgoing_(component::OutgoingDirectory::Create(dispatcher)) {}
 
   static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
-  zx_status_t DdkRxrpc(zx_handle_t channel);
   void DdkRelease();
+  void DdkUnbind(ddk::UnbindTxn txn);
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
 
  private:
+  // This method should be called when there is a new message on `rpc_channel_`.
+  // It will read and handle the FIDL message from the channel.
+  zx_status_t ReadFidlFromChannel();
+
   struct CodecTransactContext {
     sync_completion_t completion;
     zx_status_t status;
@@ -209,6 +217,11 @@ class Fragment : public FragmentBase {
   ProtocolClient<ddk::DsiProtocolClient, dsi_protocol_t> dsi_client_;
   ProtocolClient<ddk::PciProtocolClient, pci_protocol_t> pci_client_;
   ProtocolClient<ddk::PowerSensorProtocolClient, power_sensor_protocol_t> power_sensor_client_;
+
+  async::Wait rpc_wait_;
+  zx::channel rpc_channel_;
+  async_dispatcher_t* dispatcher_;
+  std::optional<component::OutgoingDirectory> outgoing_;
 };
 
 }  // namespace fragment
