@@ -346,9 +346,9 @@ pub struct InnerTextUi<'a> {
     #[allow(unused)]
     error_output: &'a mut (dyn Write + Send + Sync + 'a),
 
-    /// Progress output overwrites itself at each iteration, but the first iteration needs to
-    /// not overwrite the existing text on the terminal.
-    progress_needs_to_scroll: bool,
+    /// Some text UI overwrites itself at each iteration other than the first.
+    /// Track how many lines to overwrite.
+    overwrite_line_count: usize,
 }
 
 #[allow(dead_code)]
@@ -382,7 +382,7 @@ impl<'a> TextUi<'a> {
                 input,
                 output,
                 error_output,
-                progress_needs_to_scroll: true,
+                overwrite_line_count: 0,
             }),
         }
     }
@@ -395,18 +395,21 @@ impl<'a> TextUi<'a> {
         }
         let mut inner = self.inner.lock().expect("present_progress lock");
         // Move back to overwrite the previous progress rendering.
-        if !inner.progress_needs_to_scroll {
-            cursor_move_up(inner.output, 1 + progress.entries.len() * 2)?;
-        } else {
-            inner.progress_needs_to_scroll = false;
+        let mut lines_to_overwrite = inner.overwrite_line_count;
+        if lines_to_overwrite > 0 {
+            cursor_move_up(inner.output, lines_to_overwrite)?;
         }
+        inner.overwrite_line_count = 0;
         write!(inner.output, "Progress for \"{}\"{}\n", progress.title, CLEAR_TO_EOL)?;
+        inner.overwrite_line_count += 1;
+        let term_width = termion::terminal_size().unwrap_or((80, 40)).0 as usize;
+        const MARGINS: usize = /*indent=*/ 2 + /*right_side=*/ 1;
+        let limit = term_width.saturating_sub(MARGINS);
         for entry in &progress.entries {
-            let (term_width, _) = termion::terminal_size().unwrap_or((80, 40));
             write!(
                 inner.output,
                 "  {}{}\n",
-                ellipsis(&entry.name, (term_width - 1) as usize, Some('/')),
+                ellipsis(&entry.name, limit, Some('/')),
                 CLEAR_TO_EOL
             )?;
             write!(
@@ -418,6 +421,11 @@ impl<'a> TextUi<'a> {
                 progress_percentage(entry.at, entry.of),
                 CLEAR_TO_EOL
             )?;
+            inner.overwrite_line_count += 2;
+        }
+        while lines_to_overwrite > inner.overwrite_line_count {
+            write!(inner.output, "{}\n", CLEAR_TO_EOL)?;
+            lines_to_overwrite -= 1;
         }
         Ok(Response::Default)
     }
@@ -492,7 +500,8 @@ impl<'a> Interface for TextUi<'a> {
 /// If the string is longer than `limit`, ellipsis the string in the middle so
 /// that the overall len is `limit` in length.
 fn ellipsis(s: &str, limit: usize, prefer: Option<char>) -> String {
-    // Should this be MLA style "[...]" or Chicago manual style "..."?
+    // UX has determined that this should be Chicago manual style "..." (without
+    // extra spaces) rather than MLA style "[...]".
     const ELLIPSE: &str = "...";
     // Optimization: if the byte length is less than limit, it's very unlikely
     // that the grapheme count will be larger. (I think that's not possible.)
@@ -506,7 +515,7 @@ fn ellipsis(s: &str, limit: usize, prefer: Option<char>) -> String {
         return s.to_string();
     }
     if limit < ELLIPSE.len() {
-        return ELLIPSE.to_string();
+        return ELLIPSE[..limit].to_string();
     }
     // Determine offsets (end of first piece and start of second piece).
     let mut first = (limit - ELLIPSE.len()) / 2;
@@ -637,7 +646,9 @@ mod tests {
         assert_eq!(ellipsis("cake/drought/fins", 11, /*prefer=*/ None), "cake...fins");
         assert_eq!(ellipsis("cake/drought/fins", 5, /*prefer=*/ None), "c...s");
         assert_eq!(ellipsis("cake/drought/fins", 4, /*prefer=*/ None), "...s");
-        assert_eq!(ellipsis("cake/drought/fins", 0, /*prefer=*/ None), "...");
+        assert_eq!(ellipsis("cake/drought/fins", 3, /*prefer=*/ None), "...");
+        assert_eq!(ellipsis("cake/drought/fins", 1, /*prefer=*/ None), ".");
+        assert_eq!(ellipsis("cake/drought/fins", 0, /*prefer=*/ None), "");
 
         assert_eq!(ellipsis("cake/drought/fins", 100, Some('/')), "cake/drought/fins");
         assert_eq!(ellipsis("cake/drought/fins", 17, Some('/')), "cake/drought/fins");
@@ -648,6 +659,19 @@ mod tests {
         assert_eq!(ellipsis("cake/drought/fins", 11, Some('/')), "cake...fins");
         assert_eq!(ellipsis("cake/drought/fins", 5, Some('/')), "c...s");
         assert_eq!(ellipsis("cake/drought/fins", 4, Some('/')), "...s");
-        assert_eq!(ellipsis("cake/drought/fins", 0, Some('/')), "...");
+        assert_eq!(ellipsis("cake/drought/fins", 3, Some('/')), "...");
+        assert_eq!(ellipsis("cake/drought/fins", 1, Some('/')), ".");
+        assert_eq!(ellipsis("cake/drought/fins", 0, Some('/')), "");
+
+        assert_eq!(ellipsis("/x/cake/drought_fins", 20, Some('/')), "/x/cake/drought_fins");
+        assert_eq!(ellipsis("/x/cake/drought_fins", 19, Some('/')), "/x/cake/...ght_fins");
+        assert_eq!(ellipsis("/x/cake/drought_fins", 18, Some('/')), "/x/...drought_fins");
+        assert_eq!(ellipsis("/x/cake/drought_fins", 17, Some('/')), "/x/...rought_fins");
+        assert_eq!(ellipsis("/x/cake/drought_fins", 16, Some('/')), "/x/...ought_fins");
+        assert_eq!(ellipsis("/x/cake/drought_fins", 15, Some('/')), "/x/...ught_fins");
+        assert_eq!(ellipsis("/x/cake/drought_fins", 14, Some('/')), "/x/...ght_fins");
+        assert_eq!(ellipsis("/x/cake/drought_fins", 13, Some('/')), "/x/...ht_fins");
+        assert_eq!(ellipsis("/x/cake/drought_fins", 12, Some('/')), "/x/...t_fins");
+        assert_eq!(ellipsis("/x/cake/drought_fins", 11, Some('/')), "/x/..._fins");
     }
 }
