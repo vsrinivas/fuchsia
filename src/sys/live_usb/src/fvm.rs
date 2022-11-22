@@ -13,7 +13,6 @@ use {
     futures::TryFutureExt,
     payload_streamer::{BlockDevicePayloadStreamer, PayloadStreamer},
     ramdevice_client::{RamdiskClient, RamdiskClientBuilder},
-    std::fs::File,
     tracing::{error, info},
 };
 
@@ -143,11 +142,13 @@ impl FvmRamdisk {
     async fn create_ramdisk_with_fvm(size: u64) -> Result<RamdiskClient, Error> {
         let blocks = size / BLOCK_SIZE;
         let ramdisk =
-            RamdiskClientBuilder::new(BLOCK_SIZE, blocks).build().context("Building ramdisk")?;
+            RamdiskClientBuilder::new(BLOCK_SIZE, blocks).build().context("building ramdisk")?;
         let channel = ramdisk.open().context("Opening ramdisk")?;
-
-        let file: File = fdio::create_fd(channel.into()).context("Creating FD")?;
-        gpt::write_ramdisk(Box::new(file)).context("writing GPT")?;
+        let block_client = remote_block_device::RemoteBlockClientSync::new(channel)
+            .context("creating remote block client")?;
+        let cache = remote_block_device::cache::Cache::new(block_client)
+            .context("creating remote block client cache")?;
+        gpt::write_ramdisk(Box::new(cache)).context("writing GPT")?;
 
         Ok(ramdisk)
     }

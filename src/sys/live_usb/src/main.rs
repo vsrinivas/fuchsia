@@ -157,7 +157,7 @@ mod tests {
         fidl_fuchsia_device::ControllerMarker,
         fidl_fuchsia_hardware_block_partition::PartitionProxy,
         ramdevice_client::{RamdiskClient, RamdiskClientBuilder},
-        std::{collections::BTreeMap, fs::File},
+        std::collections::BTreeMap,
     };
 
     async fn create_ramdisk_with_partitions(uuids: Vec<&'static str>) -> RamdiskClient {
@@ -172,9 +172,11 @@ mod tests {
         .expect("ramctl appears");
         let ramdisk = builder.build().expect("creating ramdisk succeeds");
         let channel = ramdisk.open().expect("opening ramdisk succeeds");
-
-        let file: File = fdio::create_fd(channel.into()).expect("creating file OK");
-        let wrapper = Box::new(WrappedBlockDevice::new(file, 512));
+        let block_client = remote_block_device::RemoteBlockClientSync::new(channel)
+            .expect("creating remote block client succeeds");
+        let cache = remote_block_device::cache::Cache::new(block_client)
+            .expect("creating remote block client cache succeeds");
+        let wrapper = Box::new(WrappedBlockDevice::new(cache, 512));
         let mut disk = GptConfig::new()
             .writable(true)
             .initialized(false)

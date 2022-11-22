@@ -7,18 +7,27 @@ use std::{
     io::{Read, Result, Seek, SeekFrom, Write},
 };
 
-pub trait FileLike: Read + Write + Seek + Sized + Debug {}
+pub trait FileLike: Read + Write + Seek + Sized {}
 
-impl<T: Read + Write + Seek + Sized + Debug> FileLike for T {}
+impl<T: Read + Write + Seek + Sized> FileLike for T {}
 
-#[derive(Debug)]
 /// Naive wrapper that aligns all reads and writes to be block-sized.
 /// This means that a write involves a read (to get current content of the device) followed by a
 /// write (with the relevant ranges overwritten).
-pub struct WrappedBlockDevice<T: FileLike> {
+pub struct WrappedBlockDevice<T> {
     inner: T,
     cur_pos: u64,
     block_size: u64,
+}
+
+impl<T> Debug for WrappedBlockDevice<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { inner: _, cur_pos, block_size } = self;
+        f.debug_struct("WrappedBlockDevice")
+            .field("cur_pos", cur_pos)
+            .field("block_size", block_size)
+            .finish()
+    }
 }
 
 fn round_down(val: u64, divisor: u64) -> u64 {
