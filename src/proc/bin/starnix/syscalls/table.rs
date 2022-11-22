@@ -71,6 +71,7 @@ pub fn dispatch_syscall(
         clone[5],
         close[1],
         connect[3],
+        creat[2],
         dup2[2],
         dup3[3],
         dup[1],

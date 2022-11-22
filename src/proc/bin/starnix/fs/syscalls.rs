@@ -289,6 +289,20 @@ fn lookup_at(
     parent.lookup_child(current_task, &mut context, basename)
 }
 
+// https://pubs.opengroup.org/onlinepubs/9699919799/functions/creat.html
+pub fn sys_creat(
+    current_task: &CurrentTask,
+    user_path: UserCString,
+    mode: FileMode,
+) -> Result<FdNumber, Errno> {
+    sys_open(
+        current_task,
+        user_path,
+        (OpenFlags::WRONLY | OpenFlags::CREAT | OpenFlags::TRUNC).bits(),
+        mode,
+    )
+}
+
 pub fn sys_open(
     current_task: &CurrentTask,
     user_path: UserCString,
@@ -1857,6 +1871,18 @@ mod tests {
         let files = &current_task.files;
         let fd = files.add(file_handle).expect("add");
         assert_eq!(sys_dup2(&current_task, fd, fd), Ok(fd));
+    }
+
+    #[::fuchsia::test]
+    fn test_sys_creat() -> Result<(), Errno> {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let path_addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        let path = b"newfile.txt";
+        current_task.mm.write_memory(path_addr, path)?;
+        let fd = sys_creat(&current_task, UserCString::new(path_addr), FileMode::default())?;
+        let _file_handle = current_task.open_file(path, OpenFlags::RDONLY)?;
+        assert!(!current_task.files.get_fd_flags(fd)?.contains(FdFlags::CLOEXEC));
+        Ok(())
     }
 
     #[::fuchsia::test]
