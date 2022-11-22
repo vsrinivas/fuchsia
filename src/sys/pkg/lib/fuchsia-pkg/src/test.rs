@@ -10,7 +10,7 @@ use {
 
 #[cfg(test)]
 use {
-    crate::{CreationManifest, MetaPackage},
+    crate::{MetaPackage, PackageBuildManifest},
     fuchsia_url::test::random_resource_path,
 };
 
@@ -92,10 +92,10 @@ prop_compose! {
             random_external_resource_path(), random_host_path(1, 2), 1..4),
          mut far_content in prop::collection::btree_map(
              random_far_resource_path(), random_host_path(1, 2), 1..4),)
-         -> Result<CreationManifest, crate::errors::CreationManifestError>
+         -> Result<PackageBuildManifest, crate::errors::PackageBuildManifestError>
     {
         far_content.insert("meta/package".to_string(), "meta/package".to_string());
-        CreationManifest::from_external_and_far_contents(
+        PackageBuildManifest::from_external_and_far_contents(
             external_content, far_content)
     }
 }
@@ -107,7 +107,7 @@ prop_compose! {
             "path combinations cannot have file/directory collisions, like ['foo', 'foo/bar']",
             |r| r.is_ok()
         ))
-         -> CreationManifest
+         -> PackageBuildManifest
     {
         manifest_result.unwrap()
     }

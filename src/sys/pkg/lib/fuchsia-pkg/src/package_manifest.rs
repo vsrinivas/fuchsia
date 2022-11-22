@@ -496,7 +496,7 @@ pub mod host {
 mod tests {
     use {
         super::*,
-        crate::CreationManifest,
+        crate::PackageBuildManifest,
         fuchsia_merkle::Hash,
         pretty_assertions::assert_eq,
         serde_json::json,
@@ -722,7 +722,7 @@ mod tests {
         )]);
 
         let creation_manifest =
-            CreationManifest::from_external_and_far_contents(external_contents, far_contents)
+            PackageBuildManifest::from_external_and_far_contents(external_contents, far_contents)
                 .unwrap();
 
         let gen_meta_far_path = temp.path().join("meta.far");

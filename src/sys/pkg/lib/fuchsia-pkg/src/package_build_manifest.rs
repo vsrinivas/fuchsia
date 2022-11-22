@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::errors::CreationManifestError,
+    crate::errors::PackageBuildManifestError,
     fuchsia_url::validate_resource_path,
     serde::{Deserialize, Serialize},
     std::{
@@ -15,18 +15,18 @@ use {
     walkdir::WalkDir,
 };
 
-/// A `CreationManifest` lists the files that should be included in a Fuchsia package.
-/// Both `external_contents` and `far_contents` are maps from package resource paths in
-/// the to-be-created package to paths on the local filesystem.
-/// Package resource paths start with "meta/" if and only if they are in `far_contents`.
+/// A `PackageBuildManifest` lists the files that should be included in a Fuchsia package. Both
+/// `external_contents` and `far_contents` are maps from package resource paths in the to-be-created
+/// package to paths on the local filesystem. Package resource paths start with "meta/" if and only
+/// if they are in `far_contents`.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CreationManifest {
+pub struct PackageBuildManifest {
     external_contents: BTreeMap<String, String>,
     far_contents: BTreeMap<String, String>,
 }
 
-impl CreationManifest {
-    /// Creates a `CreationManifest` from external and far contents maps.
+impl PackageBuildManifest {
+    /// Creates a `PackageBuildManifest` from external and far contents maps.
     ///
     /// `external_contents` is a map from package resource paths to their locations
     /// on the host filesystem. These are the files that will be listed in
@@ -41,7 +41,7 @@ impl CreationManifest {
     /// # Examples
     ///
     /// ```
-    /// # use fuchsia_pkg::CreationManifest;
+    /// # use fuchsia_pkg::PackageBuildManifest;
     /// # use maplit::btreemap;
     /// let external_contents = btreemap! {
     ///     "lib/mylib.so".to_string() => "build/system/path/mylib.so".to_string()
@@ -51,29 +51,32 @@ impl CreationManifest {
     ///         "other/build/system/path/my_component_manifest.cmx".to_string()
     /// };
     /// let creation_manifest =
-    ///     CreationManifest::from_external_and_far_contents(external_contents, far_contents)
+    ///     PackageBuildManifest::from_external_and_far_contents(external_contents, far_contents)
     ///         .unwrap();
     /// ```
     pub fn from_external_and_far_contents(
         external_contents: BTreeMap<String, String>,
         far_contents: BTreeMap<String, String>,
-    ) -> Result<Self, CreationManifestError> {
+    ) -> Result<Self, PackageBuildManifestError> {
         for (resource_path, _) in external_contents.iter().chain(far_contents.iter()) {
             validate_resource_path(resource_path).map_err(|e| {
-                CreationManifestError::ResourcePath { cause: e, path: resource_path.to_string() }
+                PackageBuildManifestError::ResourcePath {
+                    cause: e,
+                    path: resource_path.to_string(),
+                }
             })?;
         }
         let external_paths =
             external_contents.keys().map(|path| path.as_str()).collect::<HashSet<_>>();
         for resource_path in &external_paths {
             if resource_path.starts_with("meta/") || resource_path.eq(&"meta") {
-                return Err(CreationManifestError::ExternalContentInMetaDirectory {
+                return Err(PackageBuildManifestError::ExternalContentInMetaDirectory {
                     path: resource_path.to_string(),
                 });
             }
             for (i, _) in resource_path.match_indices('/') {
                 if external_paths.contains(&resource_path[..i]) {
-                    return Err(CreationManifestError::FileDirectoryCollision {
+                    return Err(PackageBuildManifestError::FileDirectoryCollision {
                         path: resource_path[..i].to_string(),
                     });
                 }
@@ -81,19 +84,19 @@ impl CreationManifest {
         }
         for (resource_path, _) in far_contents.iter() {
             if !resource_path.starts_with("meta/") {
-                return Err(CreationManifestError::FarContentNotInMetaDirectory {
+                return Err(PackageBuildManifestError::FarContentNotInMetaDirectory {
                     path: resource_path.to_string(),
                 });
             }
         }
-        Ok(CreationManifest { external_contents, far_contents })
+        Ok(PackageBuildManifest { external_contents, far_contents })
     }
 
-    /// Deserializes a `CreationManifest` from versioned json.
+    /// Deserializes a `PackageBuildManifest` from versioned json.
     ///
     /// # Examples
     /// ```
-    /// # use fuchsia_pkg::CreationManifest;
+    /// # use fuchsia_pkg::PackageBuildManifest;
     /// let json_string = r#"
     /// {
     ///   "version": "1",
@@ -105,28 +108,31 @@ impl CreationManifest {
     ///      "my_component_manifest.cml": "other/build/system/path/my_component_manifest.cml"
     ///    }
     /// }"#;
-    /// let creation_manifest = CreationManifest::from_json(json_string.as_bytes());
+    /// let creation_manifest = PackageBuildManifest::from_json(json_string.as_bytes());
     /// ```
-    pub fn from_json<R: io::Read>(reader: R) -> Result<Self, CreationManifestError> {
-        match serde_json::from_reader::<R, VersionedCreationManifest>(reader)? {
-            VersionedCreationManifest::Version1(v1) => CreationManifest::from_v1(v1),
+    pub fn from_json<R: io::Read>(reader: R) -> Result<Self, PackageBuildManifestError> {
+        match serde_json::from_reader::<R, VersionedPackageBuildManifest>(reader)? {
+            VersionedPackageBuildManifest::Version1(v1) => PackageBuildManifest::from_v1(v1),
         }
     }
 
-    fn from_v1(v1: CreationManifestV1) -> Result<Self, CreationManifestError> {
+    fn from_v1(v1: PackageBuildManifestV1) -> Result<Self, PackageBuildManifestError> {
         let mut far_contents = BTreeMap::new();
         // Validate package resource paths in far contents before "meta/" is prepended
         // for better error messages.
         for (resource_path, host_path) in v1.far_contents.into_iter() {
             validate_resource_path(&resource_path).map_err(|e| {
-                CreationManifestError::ResourcePath { cause: e, path: resource_path.to_string() }
+                PackageBuildManifestError::ResourcePath {
+                    cause: e,
+                    path: resource_path.to_string(),
+                }
             })?;
             far_contents.insert(format!("meta/{}", resource_path), host_path);
         }
-        CreationManifest::from_external_and_far_contents(v1.external_contents, far_contents)
+        PackageBuildManifest::from_external_and_far_contents(v1.external_contents, far_contents)
     }
 
-    pub fn from_dir(root: impl AsRef<Path>) -> Result<Self, CreationManifestError> {
+    pub fn from_dir(root: impl AsRef<Path>) -> Result<Self, PackageBuildManifestError> {
         let root = root.as_ref();
         let mut far_contents = BTreeMap::new();
         let mut external_contents = BTreeMap::new();
@@ -139,14 +145,17 @@ impl CreationManifest {
                 continue;
             }
             if !(file_type.is_file() || file_type.is_symlink()) {
-                return Err(CreationManifestError::InvalidFileType { path: path.to_path_buf() });
+                return Err(PackageBuildManifestError::InvalidFileType {
+                    path: path.to_path_buf(),
+                });
             }
 
             let relative_path = path
                 .strip_prefix(root)?
                 .to_str()
-                .ok_or(CreationManifestError::EmptyResourcePath)?;
-            let path = path.to_str().ok_or(CreationManifestError::EmptyResourcePath)?.to_owned();
+                .ok_or(PackageBuildManifestError::EmptyResourcePath)?;
+            let path =
+                path.to_str().ok_or(PackageBuildManifestError::EmptyResourcePath)?.to_owned();
             if relative_path.starts_with("meta") {
                 far_contents.insert(relative_path.to_owned(), path);
             } else {
@@ -154,10 +163,10 @@ impl CreationManifest {
             }
         }
 
-        CreationManifest::from_external_and_far_contents(external_contents, far_contents)
+        PackageBuildManifest::from_external_and_far_contents(external_contents, far_contents)
     }
 
-    /// Create a `CreationManifest` from a `pm-build`-style Fuchsia INI file (fini). fini is a
+    /// Create a `PackageBuildManifest` from a `pm-build`-style Fuchsia INI file (fini). fini is a
     /// simple format where each line is an entry of `$PKG_PATH=$HOST_PATH`. This copies the
     /// parsing algorithm from pm, where:
     ///
@@ -173,14 +182,14 @@ impl CreationManifest {
     /// # Examples
     ///
     /// ```
-    /// # use fuchsia_pkg::CreationManifest;
+    /// # use fuchsia_pkg::PackageBuildManifest;
     /// let fini_string = "\
     ///     lib/mylib.so=build/system/path/mylib.so\n\
     ///     meta/my_component_manifest.cml=other/build/system/path/my_component_manifest.cml\n";
     ///
-    /// let creation_manifest = CreationManifest::from_pm_fini(fini_string.as_bytes()).unwrap();
+    /// let creation_manifest = PackageBuildManifest::from_pm_fini(fini_string.as_bytes()).unwrap();
     /// ```
-    pub fn from_pm_fini<R: io::BufRead>(mut reader: R) -> Result<Self, CreationManifestError> {
+    pub fn from_pm_fini<R: io::BufRead>(mut reader: R) -> Result<Self, PackageBuildManifestError> {
         let mut external_contents = BTreeMap::new();
         let mut far_contents = BTreeMap::new();
 
@@ -217,7 +226,7 @@ impl CreationManifest {
                     // `pm build` manifests allow for duplicate entries, as long as they point to
                     // the same file.
                     if !same_file_contents(Path::new(&entry.get()), Path::new(&host_path))? {
-                        return Err(CreationManifestError::DuplicateResourcePath {
+                        return Err(PackageBuildManifestError::DuplicateResourcePath {
                             path: entry.key().clone(),
                         });
                     }
@@ -312,13 +321,13 @@ fn same_file_contents(lhs: &Path, rhs: &Path) -> io::Result<bool> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "version", content = "content", deny_unknown_fields)]
-enum VersionedCreationManifest {
+enum VersionedPackageBuildManifest {
     #[serde(rename = "1")]
-    Version1(CreationManifestV1),
+    Version1(PackageBuildManifestV1),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-struct CreationManifestV1 {
+struct PackageBuildManifestV1 {
     #[serde(rename = "/")]
     external_contents: BTreeMap<String, String>,
     #[serde(rename = "/meta/")]
@@ -338,15 +347,15 @@ mod tests {
 
     fn from_json_value(
         value: serde_json::Value,
-    ) -> Result<CreationManifest, CreationManifestError> {
-        CreationManifest::from_json(value.to_string().as_bytes())
+    ) -> Result<PackageBuildManifest, PackageBuildManifestError> {
+        PackageBuildManifest::from_json(value.to_string().as_bytes())
     }
 
     #[test]
     fn test_malformed_json() {
         assert_matches!(
-            CreationManifest::from_json("<invalid json document>".as_bytes()),
-            Err(CreationManifestError::Json(err)) if err.is_syntax()
+            PackageBuildManifest::from_json("<invalid json document>".as_bytes()),
+            Err(PackageBuildManifestError::Json(err)) if err.is_syntax()
         );
     }
 
@@ -354,7 +363,7 @@ mod tests {
     fn test_invalid_version() {
         assert_matches!(
             from_json_value(json!({"version": "2", "content": {}})),
-            Err(CreationManifestError::Json(err)) if err.is_data()
+            Err(PackageBuildManifestError::Json(err)) if err.is_data()
         );
     }
 
@@ -373,7 +382,7 @@ mod tests {
                     }
                 )
             ),
-            Err(CreationManifestError::ResourcePath {
+            Err(PackageBuildManifestError::ResourcePath {
                 cause: PathStartsWithSlash,
                 path: s
             }) if s == "/starts-with-slash"
@@ -394,7 +403,7 @@ mod tests {
                     }
                 )
             ),
-            Err(CreationManifestError::ExternalContentInMetaDirectory{path: s}) if s == "meta/foo"
+            Err(PackageBuildManifestError::ExternalContentInMetaDirectory{path: s}) if s == "meta/foo"
         );
     }
 
@@ -412,7 +421,7 @@ mod tests {
                     }
                 })
             ),
-            Err(CreationManifestError::ExternalContentInMetaDirectory{path: s}) if s == "meta"
+            Err(PackageBuildManifestError::ExternalContentInMetaDirectory{path: s}) if s == "meta"
         );
     }
 
@@ -428,8 +437,8 @@ mod tests {
                 path1.to_string() => String::new(),
             };
             assert_matches!(
-                CreationManifest::from_external_and_far_contents(external, BTreeMap::new()),
-                Err(CreationManifestError::FileDirectoryCollision { path })
+                PackageBuildManifest::from_external_and_far_contents(external, BTreeMap::new()),
+                Err(PackageBuildManifestError::FileDirectoryCollision { path })
                     if path == expected_conflict
             );
         }
@@ -451,7 +460,7 @@ mod tests {
                 }
             ))
             .unwrap(),
-            CreationManifest {
+            PackageBuildManifest {
                 external_contents: btreemap! {
                     "this-path".to_string() => "this-host-path".to_string(),
                     "that/path".to_string() => "that/host/path".to_string()
@@ -467,7 +476,7 @@ mod tests {
     #[test]
     fn test_from_pm_fini() {
         assert_eq!(
-            CreationManifest::from_pm_fini(
+            PackageBuildManifest::from_pm_fini(
                 "this-path=this-host-path\n\
                  that/path=that/host/path\n\
                  another/path=another/host=path\n
@@ -479,7 +488,7 @@ mod tests {
                     .as_bytes()
             )
             .unwrap(),
-            CreationManifest {
+            PackageBuildManifest {
                 external_contents: btreemap! {
                     "this-path".to_string() => "this-host-path".to_string(),
                     "that/path".to_string() => "that/host/path".to_string(),
@@ -498,8 +507,8 @@ mod tests {
     #[test]
     fn test_from_pm_fini_empty() {
         assert_eq!(
-            CreationManifest::from_pm_fini("".as_bytes()).unwrap(),
-            CreationManifest { external_contents: btreemap! {}, far_contents: btreemap! {} },
+            PackageBuildManifest::from_pm_fini("".as_bytes()).unwrap(),
+            PackageBuildManifest { external_contents: btreemap! {}, far_contents: btreemap! {} },
         );
     }
 
@@ -521,8 +530,8 @@ mod tests {
         );
 
         assert_eq!(
-            CreationManifest::from_pm_fini(fini.as_bytes()).unwrap(),
-            CreationManifest {
+            PackageBuildManifest::from_pm_fini(fini.as_bytes()).unwrap(),
+            PackageBuildManifest {
                 external_contents: btreemap! {
                     "path".to_string() => path.to_str().unwrap().to_string(),
                 },
@@ -549,8 +558,8 @@ mod tests {
         );
 
         assert_matches!(
-            CreationManifest::from_pm_fini(fini.as_bytes()),
-            Err(CreationManifestError::DuplicateResourcePath { path }) if path == "path"
+            PackageBuildManifest::from_pm_fini(fini.as_bytes()),
+            Err(PackageBuildManifestError::DuplicateResourcePath { path }) if path == "path"
         );
     }
 
@@ -571,7 +580,7 @@ mod tests {
         fs::write(&meta_package, b"meta_package").unwrap();
         fs::write(&meta_data, b"meta_data").unwrap();
 
-        let creation_manifest = CreationManifest::from_dir(dir.path()).unwrap();
+        let creation_manifest = PackageBuildManifest::from_dir(dir.path()).unwrap();
         let far_contents = creation_manifest.far_contents();
         let external_contents = creation_manifest.external_contents();
         assert!(far_contents.contains_key("meta/data"));
@@ -597,8 +606,8 @@ mod tests {
         );
 
         assert_matches!(
-            CreationManifest::from_pm_fini(fini.as_bytes()),
-            Err(CreationManifestError::IoError(err)) if err.kind() == io::ErrorKind::NotFound
+            PackageBuildManifest::from_pm_fini(fini.as_bytes()),
+            Err(PackageBuildManifestError::IoError(err)) if err.kind() == io::ErrorKind::NotFound
         );
     }
 
@@ -626,8 +635,8 @@ mod tests {
         );
 
         assert_eq!(
-            CreationManifest::from_pm_fini(fini.as_bytes()).unwrap(),
-            CreationManifest {
+            PackageBuildManifest::from_pm_fini(fini.as_bytes()).unwrap(),
+            PackageBuildManifest {
                 external_contents: btreemap! {
                     "path".to_string() => path.to_str().unwrap().to_string(),
                 },
@@ -652,7 +661,7 @@ mod tests {
                 far_resource_path => far_host_path.to_string()
             };
 
-            let creation_manifest = CreationManifest::from_external_and_far_contents(
+            let creation_manifest = PackageBuildManifest::from_external_and_far_contents(
                 external_contents.clone(), far_contents.clone())
                 .unwrap();
 

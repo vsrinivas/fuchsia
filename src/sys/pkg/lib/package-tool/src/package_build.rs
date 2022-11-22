@@ -6,7 +6,7 @@ use {
     crate::args::PackageBuildCommand,
     anyhow::{bail, Context as _, Result},
     fuchsia_pkg::{
-        CreationManifest, PackageBuilder, SubpackagesManifest, SubpackagesManifestEntryKind,
+        PackageBuildManifest, PackageBuilder, SubpackagesManifest, SubpackagesManifestEntryKind,
     },
     serde::Serialize,
     std::{
@@ -33,15 +33,16 @@ fn to_writer_json_pretty<S: Serialize>(writer: impl Write, value: S) -> Result<(
 }
 
 pub async fn cmd_package_build(cmd: PackageBuildCommand) -> Result<()> {
-    let creation_manifest = File::open(&cmd.creation_manifest_path)
-        .with_context(|| format!("opening {}", cmd.creation_manifest_path))?;
+    let package_build_manifest = File::open(&cmd.package_build_manifest_path)
+        .with_context(|| format!("opening {}", cmd.package_build_manifest_path))?;
 
-    let creation_manifest = CreationManifest::from_pm_fini(BufReader::new(creation_manifest))
-        .with_context(|| format!("reading {}", cmd.creation_manifest_path))?;
+    let package_build_manifest =
+        PackageBuildManifest::from_pm_fini(BufReader::new(package_build_manifest))
+            .with_context(|| format!("reading {}", cmd.package_build_manifest_path))?;
 
-    let mut builder =
-        PackageBuilder::from_creation_manifest(&creation_manifest).with_context(|| {
-            format!("creating package manifest from {}", cmd.creation_manifest_path)
+    let mut builder = PackageBuilder::from_package_build_manifest(&package_build_manifest)
+        .with_context(|| {
+            format!("creating package manifest from {}", cmd.package_build_manifest_path)
         })?;
 
     if let Some(abi_revision) = get_abi_revision(&cmd)? {
@@ -102,10 +103,10 @@ pub async fn cmd_package_build(cmd: PackageBuildCommand) -> Result<()> {
 
         write!(file, "{}:", meta_far_path)?;
 
-        let mut deps = creation_manifest
+        let mut deps = package_build_manifest
             .far_contents()
             .values()
-            .chain(creation_manifest.external_contents().values())
+            .chain(package_build_manifest.external_contents().values())
             .map(|s| s.as_str())
             .collect::<BTreeSet<_>>();
 
@@ -238,12 +239,12 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn test_creation_manifest_does_not_exist() {
+    async fn test_package_build_manifest_does_not_exist() {
         let tempdir = tempfile::tempdir().unwrap();
         let root = Utf8Path::from_path(tempdir.path()).unwrap();
 
         let cmd = PackageBuildCommand {
-            creation_manifest_path: root.join("invalid path"),
+            package_build_manifest_path: root.join("invalid path"),
             out: Utf8PathBuf::from("out"),
             api_level: Some(8),
             abi_revision: None,
@@ -265,11 +266,11 @@ mod test {
         let root = Utf8Path::from_path(tempdir.path()).unwrap();
         let out = root.join("out");
 
-        let creation_manifest_path = root.join("creation.manifest");
+        let package_build_manifest_path = root.join("package-build.manifest");
         File::create(&out).unwrap();
 
         let cmd = PackageBuildCommand {
-            creation_manifest_path,
+            package_build_manifest_path,
             out,
             api_level: Some(8),
             abi_revision: None,
@@ -296,15 +297,15 @@ mod test {
         let meta_package = MetaPackage::from_name("my-package".parse().unwrap());
         meta_package.serialize(meta_package_file).unwrap();
 
-        let creation_manifest_path = root.join("creation.manifest");
-        let mut creation_manifest = File::create(&creation_manifest_path).unwrap();
+        let package_build_manifest_path = root.join("package-build.manifest");
+        let mut package_build_manifest = File::create(&package_build_manifest_path).unwrap();
 
-        creation_manifest
+        package_build_manifest
             .write_all(format!("meta/package={}", meta_package_path).as_bytes())
             .unwrap();
 
         cmd_package_build(PackageBuildCommand {
-            creation_manifest_path,
+            package_build_manifest_path,
             out: out.clone(),
             api_level: Some(8),
             abi_revision: None,
@@ -379,15 +380,15 @@ mod test {
         let meta_package = MetaPackage::from_name("my-package".parse().unwrap());
         meta_package.serialize(meta_package_file).unwrap();
 
-        let creation_manifest_path = root.join("creation.manifest");
-        let mut creation_manifest = File::create(&creation_manifest_path).unwrap();
+        let package_build_manifest_path = root.join("package-build.manifest");
+        let mut package_build_manifest = File::create(&package_build_manifest_path).unwrap();
 
-        creation_manifest
+        package_build_manifest
             .write_all(format!("meta/package={}", meta_package_path).as_bytes())
             .unwrap();
 
         cmd_package_build(PackageBuildCommand {
-            creation_manifest_path,
+            package_build_manifest_path,
             out: out.clone(),
             api_level: None,
             abi_revision: None,
@@ -463,15 +464,15 @@ mod test {
         let meta_package = MetaPackage::from_name("my-package".parse().unwrap());
         meta_package.serialize(meta_package_file).unwrap();
 
-        let creation_manifest_path = root.join("creation.manifest");
-        let mut creation_manifest = File::create(&creation_manifest_path).unwrap();
+        let package_build_manifest_path = root.join("package-build.manifest");
+        let mut package_build_manifest = File::create(&package_build_manifest_path).unwrap();
 
-        creation_manifest
+        package_build_manifest
             .write_all(format!("meta/package={}", meta_package_path).as_bytes())
             .unwrap();
 
         assert!(cmd_package_build(PackageBuildCommand {
-            creation_manifest_path,
+            package_build_manifest_path,
             out: out.clone(),
             api_level: Some(8),
             abi_revision: Some(0xA56735A6690E09D8),
@@ -499,13 +500,13 @@ mod test {
         let meta_package = MetaPackage::from_name("my-package".parse().unwrap());
         meta_package.serialize(meta_package_file).unwrap();
 
-        let creation_manifest_path = root.join("creation.manifest");
-        let mut creation_manifest = File::create(&creation_manifest_path).unwrap();
+        let package_build_manifest_path = root.join("package-build.manifest");
+        let mut package_build_manifest = File::create(&package_build_manifest_path).unwrap();
 
         let empty_file_path = root.join("empty-file");
         File::create(&empty_file_path).unwrap();
 
-        creation_manifest
+        package_build_manifest
             .write_all(
                 format!("empty-file={}\nmeta/package={}\n", empty_file_path, meta_package_path,)
                     .as_bytes(),
@@ -513,7 +514,7 @@ mod test {
             .unwrap();
 
         cmd_package_build(PackageBuildCommand {
-            creation_manifest_path,
+            package_build_manifest_path,
             out: out.clone(),
             api_level: Some(8),
             abi_revision: None,
@@ -624,8 +625,8 @@ mod test {
         .unwrap();
 
         // Write the creation manifest file.
-        let creation_manifest_path = root.join("creation.manifest");
-        let mut creation_manifest = File::create(&creation_manifest_path).unwrap();
+        let package_build_manifest_path = root.join("package-build.manifest");
+        let mut package_build_manifest = File::create(&package_build_manifest_path).unwrap();
 
         let empty_file_path = root.join("empty-file");
         std::fs::write(&empty_file_path, b"").unwrap();
@@ -633,7 +634,7 @@ mod test {
         // Compute the empty-file's expected hash.
         let empty_file_hash = file_merkle(&empty_file_path);
 
-        creation_manifest
+        package_build_manifest
             .write_all(
                 format!("empty-file={}\nmeta/package={}", empty_file_path, meta_package_path)
                     .as_bytes(),
@@ -642,7 +643,7 @@ mod test {
 
         // Build the package.
         cmd_package_build(PackageBuildCommand {
-            creation_manifest_path,
+            package_build_manifest_path,
             out: out.clone(),
             api_level: Some(8),
             abi_revision: None,

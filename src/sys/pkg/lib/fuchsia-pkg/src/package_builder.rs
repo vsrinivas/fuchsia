@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        path_to_string::PathToStringExt, CreationManifest, MetaPackage, MetaSubpackages,
+        path_to_string::PathToStringExt, MetaPackage, MetaSubpackages, PackageBuildManifest,
         PackageManifest, RelativeTo,
     },
     anyhow::{anyhow, bail, ensure, Context, Result},
@@ -76,8 +76,8 @@ impl PackageBuilder {
         }
     }
 
-    /// Create a PackageBuilder from a CreationManifest.
-    pub fn from_creation_manifest(manifest: &CreationManifest) -> Result<Self> {
+    /// Create a PackageBuilder from a PackageBuildManifest.
+    pub fn from_package_build_manifest(manifest: &PackageBuildManifest) -> Result<Self> {
         // Read the package name from `meta/package`, or error out if it's missing.
         let meta_package = if let Some(path) = manifest.far_contents().get("meta/package") {
             let f = File::open(path).with_context(|| format!("opening {}", path))?;
@@ -448,12 +448,12 @@ impl PackageBuilder {
             );
         }
 
-        let creation_manifest =
-            CreationManifest::from_external_and_far_contents(blobs, far_contents)
+        let package_build_manifest =
+            PackageBuildManifest::from_external_and_far_contents(blobs, far_contents)
                 .with_context(|| "creating creation manifest".to_string())?;
 
         let package_manifest = crate::build::build(
-            &creation_manifest,
+            &package_build_manifest,
             metafar_path,
             published_name.unwrap_or(name),
             repository,

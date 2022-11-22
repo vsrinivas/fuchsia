@@ -40,13 +40,13 @@ test_deps = [
 
 lib_sources = [
   "src/build.rs",
-  "src/creation_manifest.rs",
   "src/errors.rs",
   "src/lib.rs",
   "src/meta_contents.rs",
   "src/meta_package.rs",
   "src/meta_subpackages.rs",
   "src/package.rs",
+  "src/package_build_manifest.rs",
   "src/package_builder.rs",
   "src/package_directory.rs",
   "src/package_manifest.rs",

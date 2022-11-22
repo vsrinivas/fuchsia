@@ -49,8 +49,8 @@ pub struct PackageBuildCommand {
     #[argh(option, description = "path to the subpackages manifest file (experimental)")]
     pub subpackages_manifest_path: Option<Utf8PathBuf>,
 
-    #[argh(positional, description = "path to the creation manifest file")]
-    pub creation_manifest_path: Utf8PathBuf,
+    #[argh(positional, description = "path to the package build manifest file")]
+    pub package_build_manifest_path: Utf8PathBuf,
 }
 
 /// Create a repository.

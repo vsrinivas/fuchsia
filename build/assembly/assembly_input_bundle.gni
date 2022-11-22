@@ -50,7 +50,7 @@ template("assembly_input_bundle_package") {
     creation_manifest = "$package_outdir/creation_manifest.fini"
   }
 
-  # Build a package CreationManifest that includes the contents in
+  # Build a package PackageBuildManifest that includes the contents in
   # |invoker.manifest| and a generated meta/package file.
   python_action(labels.package_manifest_creation) {
     forward_variables_from(invoker,

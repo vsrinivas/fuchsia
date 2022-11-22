@@ -8,12 +8,12 @@
 pub mod test;
 
 mod build;
-mod creation_manifest;
 mod errors;
 mod meta_contents;
 mod meta_package;
 mod meta_subpackages;
 mod package;
+mod package_build_manifest;
 mod package_builder;
 pub mod package_directory;
 mod package_manifest;
@@ -24,16 +24,16 @@ mod subpackages_manifest;
 
 pub use {
     crate::{
-        creation_manifest::CreationManifest,
         errors::{
-            BuildError, CreationManifestError, MetaContentsError, MetaPackageError,
-            MetaSubpackagesError, PackageManifestError, ParsePackagePathError,
+            BuildError, MetaContentsError, MetaPackageError, MetaSubpackagesError,
+            PackageBuildManifestError, PackageManifestError, ParsePackagePathError,
         },
         meta_contents::MetaContents,
         meta_package::MetaPackage,
         meta_subpackages::transitional,
         meta_subpackages::MetaSubpackages,
         package::{BlobEntry, Package},
+        package_build_manifest::PackageBuildManifest,
         package_builder::PackageBuilder,
         package_directory::{
             LoadAbiRevisionError, LoadMetaContentsError, OpenRights, PackageDirectory,

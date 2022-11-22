@@ -114,7 +114,7 @@ impl BlobEntry {
 mod test_package {
     use super::*;
     use crate::build::{build_with_file_system, FileSystem};
-    use crate::CreationManifest;
+    use crate::PackageBuildManifest;
 
     use fuchsia_merkle::Hash;
     use maplit::{btreemap, hashmap};
@@ -183,7 +183,7 @@ mod test_package {
         let outdir = tempdir().unwrap();
         let meta_far_path = outdir.path().join("base.far");
 
-        let creation_manifest = CreationManifest::from_external_and_far_contents(
+        let creation_manifest = PackageBuildManifest::from_external_and_far_contents(
             btreemap! {
                 "lib/mylib.so".to_string() => "host/mylib.so".to_string()
             },

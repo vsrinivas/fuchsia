@@ -10,7 +10,7 @@ use {
 };
 
 #[derive(Debug, Error)]
-pub enum CreationManifestError {
+pub enum PackageBuildManifestError {
     #[error("manifest contains an invalid resource path '{}'.", path)]
     ResourcePath {
         #[source]

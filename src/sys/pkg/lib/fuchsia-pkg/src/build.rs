@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::errors::BuildError;
-use crate::{CreationManifest, MetaContents, MetaPackageError, Package, PackageManifest};
+use crate::{MetaContents, MetaPackageError, Package, PackageBuildManifest, PackageManifest};
 use fuchsia_merkle::{Hash, MerkleTree};
 use std::collections::{btree_map, BTreeMap};
 use std::io::{Seek, SeekFrom};
@@ -12,7 +12,7 @@ use std::{fs, io};
 use tempfile::NamedTempFile;
 
 pub(crate) fn build(
-    creation_manifest: &CreationManifest,
+    creation_manifest: &PackageBuildManifest,
     meta_far_path: impl AsRef<Path>,
     published_name: impl AsRef<str>,
     repository: Option<String>,
@@ -50,7 +50,7 @@ impl FileSystem<'_> for ActualFileSystem {
 }
 
 pub(crate) fn build_with_file_system<'a>(
-    creation_manifest: &CreationManifest,
+    creation_manifest: &PackageBuildManifest,
     meta_far_path: impl AsRef<Path>,
     published_name: impl AsRef<str>,
     repository: Option<String>,
@@ -188,7 +188,7 @@ mod test_build_with_file_system {
 
     impl FakeFileSystem {
         fn from_creation_manifest_with_random_contents(
-            creation_manifest: &CreationManifest,
+            creation_manifest: &PackageBuildManifest,
             rng: &mut impl rand::Rng,
         ) -> FakeFileSystem {
             let mut content_map = HashMap::new();
@@ -230,7 +230,7 @@ mod test_build_with_file_system {
         let outdir = TempDir::new().unwrap();
         let meta_far_path = outdir.path().join("meta.far");
 
-        let creation_manifest = CreationManifest::from_external_and_far_contents(
+        let creation_manifest = PackageBuildManifest::from_external_and_far_contents(
             btreemap! {
                 "lib/mylib.so".to_string() => "host/mylib.so".to_string()
             },
@@ -277,7 +277,7 @@ mod test_build_with_file_system {
         let outdir = TempDir::new().unwrap();
         let meta_far_path = outdir.path().join("meta.far");
 
-        let creation_manifest = CreationManifest::from_external_and_far_contents(
+        let creation_manifest = PackageBuildManifest::from_external_and_far_contents(
             BTreeMap::new(),
             btreemap! {
                 "meta/contents".to_string() => "some-host-path".to_string(),
@@ -435,14 +435,14 @@ mod test_build {
     use std::path::PathBuf;
     use tempfile::TempDir;
 
-    // Creates a temporary directory, then for each host path in the `CreationManifest`'s
-    // external contents and far contents maps creates a file in the temporary directory
-    // with path "${TEMP_DIR}/${HOST_PATH}" and random size and contents.
-    // Returns a new `CreationManifest` with updated host paths and the `TempDir`.
+    // Creates a temporary directory, then for each host path in the `PackageBuildManifest`'s
+    // external contents and far contents maps creates a file in the temporary directory with path
+    // "${TEMP_DIR}/${HOST_PATH}" and random size and contents. Returns a new `PackageBuildManifest`
+    // with updated host paths and the `TempDir`.
     fn populate_filesystem_from_creation_manifest(
-        creation_manifest: CreationManifest,
+        creation_manifest: PackageBuildManifest,
         rng: &mut impl rand::Rng,
-    ) -> (CreationManifest, TempDir) {
+    ) -> (PackageBuildManifest, TempDir) {
         let temp_dir = TempDir::new().unwrap();
         let temp_dir_path = temp_dir.path();
         fn populate_filesystem_and_make_new_map(
@@ -485,7 +485,7 @@ mod test_build {
             creation_manifest.external_contents(),
             rng,
         );
-        let new_creation_manifest = CreationManifest::from_external_and_far_contents(
+        let new_creation_manifest = PackageBuildManifest::from_external_and_far_contents(
             new_external_contents,
             new_far_contents,
         )
