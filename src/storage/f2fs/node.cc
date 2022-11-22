@@ -143,21 +143,21 @@ void NodeManager::GetCurrentNatPage(nid_t nid, LockedPage *out) {
   fs_->GetMetaPage(index, out);
 }
 
-void NodeManager::GetNextNatPage(nid_t nid, LockedPage *out) {
+zx::result<LockedPage> NodeManager::GetNextNatPage(nid_t nid) {
   pgoff_t src_off = CurrentNatAddr(nid);
   pgoff_t dst_off = NextNatAddr(src_off);
 
   // get current nat block page with lock
   LockedPage src_page;
-  fs_->GetMetaPage(src_off, &src_page);
-
+  if (zx_status_t ret = fs_->GetMetaPage(src_off, &src_page); ret != ZX_OK) {
+    return zx::error(ret);
+  }
   // Dirty src_page means that it is already the new target NAT page
 #if 0  // porting needed
   // if (PageDirty(src_page))
 #endif
   if (IsUpdatedNatPage(nid)) {
-    *out = std::move(src_page);
-    return;
+    return zx::ok(std::move(src_page));
   }
 
   LockedPage dst_page;
@@ -168,7 +168,7 @@ void NodeManager::GetNextNatPage(nid_t nid, LockedPage *out) {
 
   SetToNextNat(nid);
 
-  *out = std::move(dst_page);
+  return zx::ok(std::move(dst_page));
 }
 
 // Readahead NAT pages
@@ -1336,7 +1336,7 @@ bool NodeManager::FlushNatsInJournal() {
 }
 
 // This function is called during the checkpointing process.
-void NodeManager::FlushNatEntries() {
+zx_status_t NodeManager::FlushNatEntries() {
   CursegInfo *curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotData);
   SummaryBlock *sum = curseg->sum_blk;
   LockedPage page;
@@ -1389,7 +1389,11 @@ void NodeManager::FlushNatEntries() {
 
           // get nat block with dirty flag, increased reference
           // count, mapped and lock
-          GetNextNatPage(start_nid, &page);
+          auto page_or = GetNextNatPage(start_nid);
+          if (page_or.is_error()) {
+            return page_or.error_value();
+          }
+          page = std::move(*page_or);
           nat_blk = page->GetAddress<NatBlock>();
         }
 
@@ -1430,6 +1434,7 @@ void NodeManager::FlushNatEntries() {
   // 2) shrink nat caches if necessary
   TryToFreeNats(safemath::checked_cast<int>(nat_entries_count_) -
                 safemath::checked_cast<int>(kNmWoutThreshold));
+  return ZX_OK;
 }
 
 zx_status_t NodeManager::InitNodeManager() {

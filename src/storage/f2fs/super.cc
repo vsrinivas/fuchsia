@@ -91,6 +91,11 @@ void F2fs::SyncFs(bool bShutdown) {
       // If necessary, do gc.
       if (segment_manager_->HasNotEnoughFreeSecs()) {
         if (auto ret = gc_manager_->F2fsGc(); ret.is_error()) {
+          // If CpFlag::kCpErrorFlag is set, it cannot be synchronized to disk. So we will drop all
+          // dirty pages.
+          if (superblock_info_->TestCpFlags(CpFlag::kCpErrorFlag)) {
+            break;
+          }
           // F2fsGc() returns ZX_ERR_UNAVAILABLE when there is no available victim section,
           // otherwise BUG
           ZX_DEBUG_ASSERT(ret.error_value() == ZX_ERR_UNAVAILABLE);

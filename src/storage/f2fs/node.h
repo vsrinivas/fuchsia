@@ -172,7 +172,7 @@ class NodeManager {
 
   void DecValidNodeCount(VnodeF2fs *vnode, uint32_t count, bool isInode);
   bool FlushNatsInJournal();
-  void FlushNatEntries();
+  zx_status_t FlushNatEntries();
 
   zx::result<block_t> GetBlockAddrForDirtyNodePage(LockedPage &page, bool is_reclaim = false);
 
@@ -215,7 +215,7 @@ class NodeManager {
   void SetToNextNat(nid_t start_nid);
 
   void GetCurrentNatPage(nid_t nid, LockedPage *out);
-  void GetNextNatPage(nid_t nid, LockedPage *out);
+  zx::result<LockedPage> GetNextNatPage(nid_t nid);
   void RaNatPages(nid_t nid);
 
   void SetNatCacheDirty(NatEntry &ne) __TA_REQUIRES(nat_tree_lock_);

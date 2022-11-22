@@ -215,8 +215,8 @@ class F2fs final {
   zx_status_t ValidateCheckpoint(block_t cp_addr, uint64_t *version, LockedPage *out);
   void BlockOperations();
   void UnblockOperations() const;
-  void DoCheckpoint(bool is_umount);
-  void WriteCheckpoint(bool blocked, bool is_umount);
+  zx_status_t DoCheckpoint(bool is_umount);
+  zx_status_t WriteCheckpoint(bool blocked, bool is_umount);
   uint32_t GetFreeSectionsForDirtyPages();
   bool IsCheckpointAvailable();
 

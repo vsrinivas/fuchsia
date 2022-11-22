@@ -1022,7 +1022,9 @@ zx_status_t SegmentManager::ReadCompactedSummaries() {
 
   start = StartSumBlock();
 
-  fs_->GetMetaPage(start++, &page);
+  if (zx_status_t ret = fs_->GetMetaPage(start++, &page); ret != ZX_OK) {
+    return ret;
+  }
   kaddr = page->GetAddress<uint8_t>();
 
   // Step 1: restore nat cache
@@ -1060,7 +1062,9 @@ zx_status_t SegmentManager::ReadCompactedSummaries() {
 
       page.reset();
 
-      fs_->GetMetaPage(start++, &page);
+      if (zx_status_t ret = fs_->GetMetaPage(start++, &page); ret != ZX_OK) {
+        return ret;
+      }
       kaddr = page->GetAddress<uint8_t>();
       offset = 0;
     }
@@ -1094,7 +1098,9 @@ zx_status_t SegmentManager::ReadNormalSummaries(int type) {
   }
 
   LockedPage new_page;
-  fs_->GetMetaPage(blk_addr, &new_page);
+  if (zx_status_t ret = fs_->GetMetaPage(blk_addr, &new_page); ret != ZX_OK) {
+    return ret;
+  }
   sum = new_page->GetAddress<SummaryBlock>();
 
   if (IsNodeSeg(static_cast<CursegType>(type))) {
@@ -1240,7 +1246,7 @@ int LookupJournalInCursum(SummaryBlock *sum, JournalType type, uint32_t val, int
   return -1;
 }
 
-void SegmentManager::GetCurrentSitPage(uint32_t segno, LockedPage *out) {
+zx::result<LockedPage> SegmentManager::GetCurrentSitPage(uint32_t segno) {
   uint32_t offset = SitBlockOffset(segno);
   block_t blk_addr = sit_info_->sit_base_addr + offset;
 
@@ -1250,10 +1256,14 @@ void SegmentManager::GetCurrentSitPage(uint32_t segno, LockedPage *out) {
   if (TestValidBitmap(offset, sit_info_->sit_bitmap.get()))
     blk_addr += sit_info_->sit_blocks;
 
-  fs_->GetMetaPage(blk_addr, out);
+  LockedPage locked_page;
+  if (zx_status_t ret = fs_->GetMetaPage(blk_addr, &locked_page); ret != ZX_OK) {
+    return zx::error(ret);
+  }
+  return zx::ok(std::move(locked_page));
 }
 
-void SegmentManager::GetNextSitPage(uint32_t start, LockedPage *out) {
+zx::result<LockedPage> SegmentManager::GetNextSitPage(uint32_t start) {
   pgoff_t src_off, dst_off;
 
   src_off = CurrentSitAddr(start);
@@ -1261,7 +1271,9 @@ void SegmentManager::GetNextSitPage(uint32_t start, LockedPage *out) {
 
   // get current sit block page without lock
   LockedPage src_page;
-  fs_->GetMetaPage(src_off, &src_page);
+  if (zx_status_t ret = fs_->GetMetaPage(src_off, &src_page); ret != ZX_OK) {
+    return zx::error(ret);
+  }
   LockedPage dst_page;
   fs_->GrabMetaPage(dst_off, &dst_page);
   ZX_ASSERT(!src_page->IsDirty());
@@ -1272,7 +1284,7 @@ void SegmentManager::GetNextSitPage(uint32_t start, LockedPage *out) {
 
   SetToNextSit(start);
 
-  *out = std::move(dst_page);
+  return zx::ok(std::move(dst_page));
 }
 
 bool SegmentManager::FlushSitsInJournal() {
@@ -1296,7 +1308,7 @@ bool SegmentManager::FlushSitsInJournal() {
 
 // CP calls this function, which flushes SIT entries including SitJournal,
 // and moves prefree segs to free segs.
-void SegmentManager::FlushSitEntries() {
+zx_status_t SegmentManager::FlushSitEntries() {
   uint8_t *bitmap = sit_info_->dirty_sentries_bitmap.get();
   CursegInfo *curseg = CURSEG_I(CursegType::kCursegColdData);
   SummaryBlock *sum = curseg->sum_blk;
@@ -1340,7 +1352,11 @@ void SegmentManager::FlushSitEntries() {
           end = start + kSitEntryPerBlock - 1;
 
           // read sit block that will be updated
-          GetNextSitPage(start, &page);
+          auto page_or = GetNextSitPage(start);
+          if (page_or.is_error()) {
+            return page_or.error_value();
+          }
+          page = std::move(*page_or);
           raw_sit = page->GetAddress<SitBlock>();
         }
 
@@ -1358,6 +1374,7 @@ void SegmentManager::FlushSitEntries() {
   }
 
   SetPrefreeAsFreeSegments();
+  return ZX_OK;
 }
 
 zx_status_t SegmentManager::BuildSitInfo() {
@@ -1452,7 +1469,7 @@ zx_status_t SegmentManager::BuildCurseg() {
   return RestoreCursegSummaries();
 }
 
-void SegmentManager::BuildSitEntries() {
+zx_status_t SegmentManager::BuildSitEntries() {
   CursegInfo *curseg = CURSEG_I(CursegType::kCursegColdData);
   SummaryBlock *sum = curseg->sum_blk;
 
@@ -1473,7 +1490,11 @@ void SegmentManager::BuildSitEntries() {
     }
     if (!got_it) {
       LockedPage page;
-      GetCurrentSitPage(start, &page);
+      auto page_or = GetCurrentSitPage(start);
+      if (page_or.is_error()) {
+        return page_or.error_value();
+      }
+      page = std::move(*page_or);
       sit_blk = page->GetAddress<SitBlock>();
       sit = sit_blk->entries[SitEntryOffset(start)];
     }
@@ -1484,6 +1505,7 @@ void SegmentManager::BuildSitEntries() {
       e->valid_blocks += segment_entry.valid_blocks;
     }
   }
+  return ZX_OK;
 }
 
 void SegmentManager::InitFreeSegmap() {
@@ -1567,7 +1589,6 @@ void SegmentManager::InitMinMaxMtime() {
 zx_status_t SegmentManager::BuildSegmentManager() {
   const Superblock &raw_super = superblock_info_->GetRawSuperblock();
   Checkpoint &ckpt = superblock_info_->GetCheckpoint();
-  zx_status_t err = 0;
 
   seg0_blkaddr_ = LeToCpu(raw_super.segment0_blkaddr);
   main_blkaddr_ = LeToCpu(raw_super.main_blkaddr);
@@ -1577,25 +1598,27 @@ zx_status_t SegmentManager::BuildSegmentManager() {
   main_segments_ = LeToCpu(raw_super.segment_count_main);
   ssa_blkaddr_ = LeToCpu(raw_super.ssa_blkaddr);
 
-  err = BuildSitInfo();
-  if (err)
-    return err;
+  if (zx_status_t ret = BuildSitInfo(); ret != ZX_OK) {
+    return ret;
+  }
 
-  err = BuildFreeSegmap();
-  if (err)
-    return err;
+  if (zx_status_t ret = BuildFreeSegmap(); ret != ZX_OK) {
+    return ret;
+  }
 
-  err = BuildCurseg();
-  if (err)
-    return err;
+  if (zx_status_t ret = BuildCurseg(); ret != ZX_OK) {
+    return ret;
+  }
 
   // reinit free segmap based on SIT
-  BuildSitEntries();
+  if (zx_status_t ret = BuildSitEntries(); ret != ZX_OK) {
+    return ret;
+  }
 
   InitFreeSegmap();
-  err = BuildDirtySegmap();
-  if (err)
-    return err;
+  if (zx_status_t ret = BuildDirtySegmap(); ret != ZX_OK) {
+    return ret;
+  }
 
   InitMinMaxMtime();
   return ZX_OK;

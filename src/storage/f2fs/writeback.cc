@@ -52,7 +52,8 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion) {
         }
         operations.Completion(ret, [ret](fbl::RefPtr<Page> page) {
           if (ret != ZX_OK && page->IsUptodate()) {
-            if (page->GetVnode().IsMeta() || ret == ZX_ERR_UNAVAILABLE) {
+            if (page->GetVnode().IsMeta() || ret == ZX_ERR_UNAVAILABLE ||
+                ret == ZX_ERR_PEER_CLOSED) {
               // When it fails to write metadata or the block device is not available,
               // set kCpErrorFlag to enter read-only mode.
               page->GetVnode().fs()->GetSuperblockInfo().SetCpFlags(CpFlag::kCpErrorFlag);
@@ -125,7 +126,13 @@ zx::result<std::vector<LockedPage>> Reader::SubmitPages(std::vector<LockedPage> 
     zx_status_t ret;
     ret = transaction_handler_->RunRequests(operation_or.value().TakeOperations());
     operation_or.value().Completion(ret, [ret](const fbl::RefPtr<Page> &page) {
-      if (ret == ZX_OK) {
+      if (ret != ZX_OK) {
+        if (ret == ZX_ERR_UNAVAILABLE || ret == ZX_ERR_PEER_CLOSED) {
+          // It is not available when the block device is ZX_ERR_UNAVAILABLE or ZX_ERR_PEER_CLOSED
+          // state. Set kCpErrorFlag to enter read-only mode.
+          page->GetVnode().fs()->GetSuperblockInfo().SetCpFlags(CpFlag::kCpErrorFlag);
+        }
+      } else {
         page->SetUptodate();
       }
       return ZX_OK;

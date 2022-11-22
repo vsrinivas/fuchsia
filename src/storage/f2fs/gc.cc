@@ -189,7 +189,9 @@ zx::result<uint32_t> GcManager::F2fsGc() {
     // free by checkpoint. Then, we secure free segments which doesn't need fggc any more.
     if (segment_manager.PrefreeSegments()) {
       auto before = segment_manager.FreeSections();
-      fs_->WriteCheckpoint(false, false);
+      if (zx_status_t ret = fs_->WriteCheckpoint(false, false); ret != ZX_OK) {
+        return zx::error(ret);
+      }
       sec_freed = (safemath::CheckSub<uint32_t>(segment_manager.FreeSections(), before) + sec_freed)
                       .ValueOrDie();
       // After acquiring free sections, check if further gc is necessary.
@@ -213,7 +215,9 @@ zx::result<uint32_t> GcManager::F2fsGc() {
 
     if (gc_type == GcType::kFgGc) {
       SetCurVictimSec(kNullSecNo);
-      fs_->WriteCheckpoint(false, false);
+      if (zx_status_t ret = fs_->WriteCheckpoint(false, false); ret != ZX_OK) {
+        return zx::error(ret);
+      }
       ++sec_freed;
     }
   }

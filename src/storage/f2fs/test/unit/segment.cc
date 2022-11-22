@@ -541,5 +541,48 @@ TEST(SegmentManagerOptionTest, ModeLfs) {
   EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
 }
 
+TEST(SegmentManagerExceptionTest, BuildSitEntriesDiskFail) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDevWithOptions(&bc, MkfsOptions{});
+
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  auto superblock = F2fs::LoadSuperblock(*bc);
+  ASSERT_TRUE(superblock.is_ok());
+
+  // Create a vfs object for unit tests.
+  auto vfs_or = Runner::CreateRunner(loop.dispatcher());
+  ASSERT_TRUE(vfs_or.is_ok());
+  std::unique_ptr<F2fs> fs = std::make_unique<F2fs>(
+      loop.dispatcher(), std::move(bc), std::move(*superblock), MountOptions{}, (*vfs_or).get());
+
+  ASSERT_EQ(fs->FillSuper(), ZX_OK);
+
+  pgoff_t target_addr = fs->GetSegmentManager().CurrentSitAddr(0) * kDefaultSectorsPerBlock;
+
+  auto hook = [target_addr](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.dev_offset == target_addr) {
+      return ZX_ERR_PEER_CLOSED;
+    }
+    return ZX_OK;
+  };
+
+  fs->GetSegmentManager().DestroySegmentManager();
+
+  // Invalidate sit page to read from disk
+  LockedPage sit_page;
+  ASSERT_EQ(fs->GetMetaPage(target_addr / kDefaultSectorsPerBlock, &sit_page), ZX_OK);
+  sit_page->Invalidate();
+  sit_page.reset();
+
+  // Expect fail in BuildSitEntries()
+  static_cast<block_client::FakeBlockDevice *>(fs->GetBc().GetDevice())->set_hook(std::move(hook));
+  ASSERT_EQ(fs->GetSegmentManager().BuildSegmentManager(), ZX_ERR_PEER_CLOSED);
+  static_cast<block_client::FakeBlockDevice *>(fs->GetBc().GetDevice())->set_hook(nullptr);
+
+  fs->GetVCache().Reset();
+  fs->Reset();
+}
+
 }  // namespace
 }  // namespace f2fs

@@ -264,15 +264,15 @@ class SegmentManager {
   void WriteDataSummaries(block_t start_blk);
   void WriteNodeSummaries(block_t start_blk);
 
-  void GetCurrentSitPage(uint32_t segno, LockedPage *out);
-  void GetNextSitPage(uint32_t start, LockedPage *out);
+  zx::result<LockedPage> GetCurrentSitPage(uint32_t segno);
+  zx::result<LockedPage> GetNextSitPage(uint32_t start);
   bool FlushSitsInJournal();
-  void FlushSitEntries();
+  zx_status_t FlushSitEntries();
 
   zx_status_t BuildSitInfo();
   zx_status_t BuildFreeSegmap();
   zx_status_t BuildCurseg();
-  void BuildSitEntries();
+  zx_status_t BuildSitEntries();
   void InitFreeSegmap();
   void InitDirtySegmap();
   zx_status_t InitVictimSecmap();

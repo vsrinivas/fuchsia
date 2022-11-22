@@ -439,6 +439,32 @@ void MapTester::DoWriteNat(F2fs *fs, nid_t nid, block_t blkaddr, uint8_t version
   nm_i->dirty_nat_list_.push_back(cache_entry);
 }
 
+void MapTester::DoWriteSit(F2fs *fs, CursegType type, uint32_t exp_segno, block_t *new_blkaddr) {
+  SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
+  SegmentManager &segment_manager = fs->GetSegmentManager();
+  SitInfo &sit_i = fs->GetSegmentManager().GetSitInfo();
+
+  if (!segment_manager.HasCursegSpace(type)) {
+    segment_manager.AllocateSegmentByDefault(type, false);
+  }
+
+  CursegInfo *curseg = segment_manager.CURSEG_I(type);
+  if (exp_segno != kNullSegNo) {
+    ASSERT_EQ(curseg->segno, exp_segno);
+  }
+
+  std::lock_guard curseg_lock(curseg->curseg_mutex);
+  *new_blkaddr = segment_manager.NextFreeBlkAddr(type);
+  uint32_t old_cursegno = curseg->segno;
+
+  std::lock_guard sentry_lock(sit_i.sentry_lock);
+  segment_manager.RefreshNextBlkoff(curseg);
+  superblock_info.IncBlockCount(curseg->alloc_type);
+
+  segment_manager.RefreshSitEntry(kNullSegNo, *new_blkaddr);
+  segment_manager.LocateDirtySegment(old_cursegno);
+}
+
 void MapTester::RemoveAllNatEntries(NodeManager &manager) {
   std::lock_guard nat_lock(manager.nat_tree_lock_);
   for (auto &nat_entry : manager.nat_cache_) {

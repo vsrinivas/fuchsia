@@ -102,7 +102,9 @@ zx_status_t F2fs::RecoverOrphanInodes() {
 
   for (block_t i = 0; i < orphan_blkaddr; ++i) {
     LockedPage page;
-    GetMetaPage(start_blk + i, &page);
+    if (zx_status_t ret = GetMetaPage(start_blk + i, &page); ret != ZX_OK) {
+      return ret;
+    }
 
     OrphanBlock *orphan_blk;
 
@@ -173,7 +175,9 @@ zx_status_t F2fs::ValidateCheckpoint(block_t cp_addr, uint64_t *version, LockedP
   size_t crc_offset;
 
   // Read the 1st cp block in this CP pack
-  GetMetaPage(cp_addr, &cp_page_1);
+  if (zx_status_t ret = GetMetaPage(cp_addr, &cp_page_1); ret != ZX_OK) {
+    return ret;
+  }
 
   // get the version number
   cp_block = cp_page_1->GetAddress<Checkpoint>();
@@ -191,7 +195,9 @@ zx_status_t F2fs::ValidateCheckpoint(block_t cp_addr, uint64_t *version, LockedP
 
   // Read the 2nd cp block in this CP pack
   cp_addr += LeToCpu(cp_block->cp_pack_total_block_count) - 1;
-  GetMetaPage(cp_addr, &cp_page_2);
+  if (zx_status_t ret = GetMetaPage(cp_addr, &cp_page_2); ret != ZX_OK) {
+    return ret;
+  }
 
   cp_block = cp_page_2->GetAddress<Checkpoint>();
   crc_offset = LeToCpu(cp_block->checksum_offset);
@@ -256,7 +262,9 @@ zx_status_t F2fs::GetValidCheckpoint() {
   std::vector<FsBlock> checkpoint_trailer(fsb.cp_payload);
   for (uint32_t i = 0; i < LeToCpu(fsb.cp_payload); ++i) {
     LockedPage cp_page;
-    GetMetaPage(cp_start_blk_no + 1 + i, &cp_page);
+    if (zx_status_t ret = GetMetaPage(cp_start_blk_no + 1 + i, &cp_page); ret != ZX_OK) {
+      return ret;
+    }
     memcpy(&checkpoint_trailer[i], cp_page->GetAddress(), blk_size);
   }
   superblock_info_->SetCheckpointTrailer(std::move(checkpoint_trailer));
@@ -328,7 +336,7 @@ void F2fs::UnblockOperations() const __TA_NO_THREAD_SAFETY_ANALYSIS {
   superblock_info.mutex_unlock_op(LockType::kFileOp);
 }
 
-void F2fs::DoCheckpoint(bool is_umount) {
+zx_status_t F2fs::DoCheckpoint(bool is_umount) {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   Checkpoint &ckpt = superblock_info.GetCheckpoint();
   nid_t last_nid = 0;
@@ -460,15 +468,26 @@ void F2fs::DoCheckpoint(bool is_umount) {
     ZX_ASSERT(superblock_info.GetPageCount(CountType::kWriteback) == 0);
     ZX_ASSERT(superblock_info.GetPageCount(CountType::kDirtyMeta) == 1);
     // TODO: Use FUA when it is available.
-    GetBc().Flush();
+    if (zx_status_t ret = GetBc().Flush(); ret != ZX_OK) {
+      if (ret == ZX_ERR_UNAVAILABLE || ret == ZX_ERR_PEER_CLOSED) {
+        superblock_info.SetCpFlags(CpFlag::kCpErrorFlag);
+      }
+      return ret;
+    }
     WritebackOperation op = {.bSync = true};
     FlushDirtyMetaPages(op);
-    GetBc().Flush();
+    if (zx_status_t ret = GetBc().Flush(); ret != ZX_OK) {
+      if (ret == ZX_ERR_UNAVAILABLE || ret == ZX_ERR_PEER_CLOSED) {
+        superblock_info.SetCpFlags(CpFlag::kCpErrorFlag);
+      }
+      return ret;
+    }
 
     GetSegmentManager().ClearPrefreeSegments();
     superblock_info.ClearDirty();
     meta_vnode_->InvalidatePages();
   }
+  return ZX_OK;
 }
 
 uint32_t F2fs::GetFreeSectionsForDirtyPages() {
@@ -502,13 +521,13 @@ bool F2fs::IsTearDown() const { return teardown_flag_.test(std::memory_order_rel
 void F2fs::SetTearDown() { teardown_flag_.test_and_set(std::memory_order_relaxed); }
 
 // We guarantee that this checkpoint procedure should not fail.
-void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
+zx_status_t F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   Checkpoint &ckpt = superblock_info.GetCheckpoint();
   uint64_t ckpt_ver;
 
   if (superblock_info.TestCpFlags(CpFlag::kCpErrorFlag)) {
-    return;
+    return ZX_ERR_BAD_STATE;
   }
 
   std::lock_guard cp_lock(checkpoint_mutex_);
@@ -519,6 +538,7 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   }
   ZX_DEBUG_ASSERT(IsCheckpointAvailable());
   BlockOperations();
+  auto unblock_operations = fit::defer([&] { UnblockOperations(); });
 
   // update checkpoint pack index
   // Increase the version number so that
@@ -527,11 +547,17 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   ckpt.checkpoint_ver = CpuToLe(static_cast<uint64_t>(++ckpt_ver));
 
   // write cached NAT/SIT entries to NAT/SIT area
-  GetNodeManager().FlushNatEntries();
-  GetSegmentManager().FlushSitEntries();
+  if (zx_status_t ret = GetNodeManager().FlushNatEntries(); ret != ZX_OK) {
+    return ret;
+  }
+  if (zx_status_t ret = GetSegmentManager().FlushSitEntries(); ret != ZX_OK) {
+    return ret;
+  }
 
   // unlock all the fs_lock[] in do_checkpoint()
-  DoCheckpoint(is_umount);
+  if (zx_status_t ret = DoCheckpoint(is_umount); ret != ZX_OK) {
+    return ret;
+  }
 
   if (is_umount && !(superblock_info.TestCpFlags(CpFlag::kCpErrorFlag))) {
     ZX_ASSERT(superblock_info_->GetPageCount(CountType::kDirtyDents) == 0);
@@ -540,7 +566,7 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
     ZX_ASSERT(superblock_info_->GetPageCount(CountType::kDirtyMeta) == 0);
     ZX_ASSERT(superblock_info_->GetPageCount(CountType::kDirtyNodes) == 0);
   }
-  UnblockOperations();
+  return ZX_OK;
 }
 
 }  // namespace f2fs

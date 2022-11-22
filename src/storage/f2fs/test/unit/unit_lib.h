@@ -97,6 +97,7 @@ class MapTester {
   static void CheckBlkaddrsInuse(F2fs *fs, std::unordered_set<block_t> &blkaddrs);
   static void CheckDnodePage(NodePage &page, nid_t exp_nid);
   static void DoWriteNat(F2fs *fs, nid_t nid, block_t blkaddr, uint8_t version);
+  static void DoWriteSit(F2fs *fs, CursegType type, uint32_t exp_segno, block_t *new_blkaddr);
   static void RemoveTruncatedNode(NodeManager &node_manager, std::vector<nid_t> &nids)
       __TA_EXCLUDES(node_manager.nat_tree_lock_);
   static bool IsCachedNat(NodeManager &node_manager, nid_t n)
@@ -129,6 +130,9 @@ class MapTester {
   }
   static void SetNatCount(NodeManager &manager, uint32_t count) {
     manager.nat_entries_count_ = count;
+  }
+  static pgoff_t GetCurrentNatAddr(NodeManager &manager, nid_t start) {
+    return manager.CurrentNatAddr(start);
   }
 };
 

@@ -156,32 +156,6 @@ class CheckpointTest : public F2fsFakeDevTestFixture {
     }
   }
 
-  void DoWriteSit(block_t *new_blkaddr, CursegType type, uint32_t exp_segno) {
-    SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
-    SegmentManager &segment_manager = fs_->GetSegmentManager();
-    SitInfo &sit_i = fs_->GetSegmentManager().GetSitInfo();
-
-    if (!segment_manager.HasCursegSpace(type)) {
-      segment_manager.AllocateSegmentByDefault(type, false);
-    }
-
-    CursegInfo *curseg = segment_manager.CURSEG_I(type);
-    if (exp_segno != kNullSegNo) {
-      ASSERT_EQ(curseg->segno, exp_segno);
-    }
-
-    std::lock_guard curseg_lock(curseg->curseg_mutex);
-    *new_blkaddr = segment_manager.NextFreeBlkAddr(type);
-    uint32_t old_cursegno = curseg->segno;
-
-    std::lock_guard sentry_lock(sit_i.sentry_lock);
-    segment_manager.RefreshNextBlkoff(curseg);
-    superblock_info.IncBlockCount(curseg->alloc_type);
-
-    segment_manager.RefreshSitEntry(kNullSegNo, *new_blkaddr);
-    segment_manager.LocateDirtySegment(old_cursegno);
-  }
-
   bool IsRootInode(CursegType curseg_type, uint32_t offset) {
     return (curseg_type == CursegType::kCursegHotData ||
             curseg_type == CursegType::kCursegHotNode) &&
@@ -325,9 +299,10 @@ TEST_F(CheckpointTest, SitBitmap) {
         continue;
       }
 
-      DoWriteSit(&new_blkaddr, CursegType::kCursegWarmData,
-                 static_cast<uint32_t>((cp->checkpoint_ver - 1) * kSitEntryPerBlock +
-                                       i / kMapPerSitEntry));
+      MapTester::DoWriteSit(
+          fs_.get(), CursegType::kCursegWarmData,
+          static_cast<uint32_t>((cp->checkpoint_ver - 1) * kSitEntryPerBlock + i / kMapPerSitEntry),
+          &new_blkaddr);
     }
   };
 
@@ -517,6 +492,20 @@ TEST_F(CheckpointTest, RecoverOrphanInode) {
         ASSERT_EQ(vnode_refptr.get()->GetNlink(), (uint32_t)1);
       }
 
+      // Check device peer closed exception
+      {
+        auto hook = [](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+          if (_req.opcode == BLOCKIO_READ) {
+            return ZX_ERR_PEER_CLOSED;
+          }
+          return ZX_OK;
+        };
+        static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(std::move(hook));
+        ASSERT_EQ(fs_->RecoverOrphanInodes(), ZX_ERR_PEER_CLOSED);
+        ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+        static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+        superblock_info.ClearCpFlags(CpFlag::kCpErrorFlag);
+      }
       ASSERT_EQ(fs_->RecoverOrphanInodes(), 0);
 
       for (auto &vnode_refptr : vnodes) {
@@ -629,7 +618,7 @@ TEST_F(CheckpointTest, CompactedSummaries) {
       if (!after_mkfs) {
         for (uint32_t j = 0; j < kEntriesInSum / 2; ++j) {
           block_t new_blkaddr;
-          DoWriteSit(&new_blkaddr, static_cast<CursegType>(i), kNullSegNo);
+          MapTester::DoWriteSit(fs_.get(), static_cast<CursegType>(i), kNullSegNo, &new_blkaddr);
         }
       }
 
@@ -646,7 +635,7 @@ TEST_F(CheckpointTest, CompactedSummaries) {
         segment_manager.SetSummary(&sum, 3, j, static_cast<uint8_t>(cp->checkpoint_ver));
         segment_manager.AddSumEntry(static_cast<CursegType>(i), &sum, j);
 
-        DoWriteSit(&new_blkaddr, static_cast<CursegType>(i), kNullSegNo);
+        MapTester::DoWriteSit(fs_.get(), static_cast<CursegType>(i), kNullSegNo, &new_blkaddr);
       }
     }
     // Compact summary page count must less than nomal summary page count(3).
@@ -737,7 +726,7 @@ TEST_F(CheckpointTest, NormalSummaries) {
                                    static_cast<uint8_t>(cp->checkpoint_ver));
         segment_manager.AddSumEntry(static_cast<CursegType>(i), &sum, j);
 
-        DoWriteSit(&new_blkaddr, static_cast<CursegType>(i), kNullSegNo);
+        MapTester::DoWriteSit(fs_.get(), static_cast<CursegType>(i), kNullSegNo, &new_blkaddr);
       }
     }
     // Normal summary page count must more than compact page count(2).
@@ -792,7 +781,7 @@ TEST_F(CheckpointTest, SitJournal) {
         // Add dummy dirty sentries
         for (uint32_t i = 0; i < kMapPerSitEntry; ++i) {
           block_t new_blkaddr;
-          DoWriteSit(&new_blkaddr, CursegType::kCursegColdData, kNullSegNo);
+          MapTester::DoWriteSit(fs_.get(), CursegType::kCursegColdData, kNullSegNo, &new_blkaddr);
         }
 
         // Move journal sentries to dirty sentries
@@ -812,7 +801,7 @@ TEST_F(CheckpointTest, SitJournal) {
     // Fill SIT journal
     for (uint32_t i = 0; i < kSitJournalEntries * kMapPerSitEntry; ++i) {
       block_t new_blkaddr;
-      DoWriteSit(&new_blkaddr, CursegType::kCursegColdData, kNullSegNo);
+      MapTester::DoWriteSit(fs_.get(), CursegType::kCursegColdData, kNullSegNo, &new_blkaddr);
       CursegInfo *curseg = segment_manager.CURSEG_I(CursegType::kCursegColdData);
       if (curseg->next_blkoff == 1) {
         segnos.push_back(curseg->segno);
@@ -970,6 +959,267 @@ TEST_F(CheckpointTest, CpError) {
 
   vnode->Close();
   vnode = nullptr;
+}
+
+TEST_F(CheckpointTest, ValidateCheckpointFirstCpPackDiskFail) {
+  WritebackOperation op;
+  op.bSync = true;
+  fs_->GetMetaVnode().Writeback(op);
+
+  block_t cp_start_blk_no = LeToCpu(fs_->RawSb().cp_blkaddr);
+  block_t target_addr = cp_start_blk_no * kDefaultSectorsPerBlock;
+
+  auto hook = [target_addr](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.dev_offset == target_addr) {
+      return ZX_ERR_PEER_CLOSED;
+    }
+    return ZX_OK;
+  };
+
+  // Check ValidateCheckpoint disk peer closed exception case
+  // Read the 1st cp block in this CP pack
+  {
+    uint64_t cp1_version = 0;
+    LockedPage cp_page;
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(std::move(hook));
+    ASSERT_EQ(fs_->ValidateCheckpoint(cp_start_blk_no, &cp1_version, &cp_page), ZX_ERR_PEER_CLOSED);
+    ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+    fs_->GetSuperblockInfo().ClearCpFlags(CpFlag::kCpErrorFlag);
+  }
+}
+
+TEST_F(CheckpointTest, ValidateCheckpointSecondCpPackDiskFail) {
+  WritebackOperation op;
+  op.bSync = true;
+  fs_->GetMetaVnode().Writeback(op);
+
+  block_t cp_start_blk_no = LeToCpu(fs_->RawSb().cp_blkaddr);
+  block_t first_cp_blk_no = cp_start_blk_no;
+
+  LockedPage cp_page;
+  ASSERT_EQ(fs_->GetMetaPage(first_cp_blk_no, &cp_page), ZX_OK);
+  Checkpoint *cp_block = cp_page->GetAddress<Checkpoint>();
+  block_t second_cp_blk_no = first_cp_blk_no + LeToCpu(cp_block->cp_pack_total_block_count) - 1;
+  cp_page.reset();
+
+  block_t target_addr = second_cp_blk_no * kDefaultSectorsPerBlock;
+
+  auto hook = [target_addr](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.dev_offset == target_addr) {
+      return ZX_ERR_PEER_CLOSED;
+    }
+    return ZX_OK;
+  };
+
+  // Check ValidateCheckpoint disk peer closed exception case
+  // Read the 2nd cp block in this CP pack
+  {
+    uint64_t cp1_version = 0;
+    LockedPage cp_page;
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(std::move(hook));
+    ASSERT_EQ(fs_->ValidateCheckpoint(cp_start_blk_no, &cp1_version, &cp_page), ZX_ERR_PEER_CLOSED);
+    ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+    fs_->GetSuperblockInfo().ClearCpFlags(CpFlag::kCpErrorFlag);
+  }
+}
+
+TEST_F(CheckpointTest, FlushNatEntriesDiskFail) {
+  DisableFsck();
+
+  WritebackOperation op;
+  op.bSync = true;
+  fs_->GetMetaVnode().Writeback(op);
+
+  pgoff_t target_addr =
+      MapTester::GetCurrentNatAddr(fs_->GetNodeManager(), 0) * kDefaultSectorsPerBlock;
+
+  auto hook = [target_addr](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.dev_offset == target_addr) {
+      return ZX_ERR_PEER_CLOSED;
+    }
+    return ZX_OK;
+  };
+
+  // It creates 455 dirty nat to make one dirty NAT block.
+  constexpr int kNidCountForMakeOneDirtyNATBlock = 455;
+
+  uint32_t nid_offset = kRootInodeNid + 1;
+  for (uint32_t i = nid_offset; i < nid_offset + kNidCountForMakeOneDirtyNATBlock; ++i) {
+    MapTester::DoWriteNat(fs_.get(), i, i, 0);
+  }
+
+  // Check disk peer closed exception case in FlushNatEntries()
+  {
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(std::move(hook));
+    ASSERT_EQ(fs_->GetNodeManager().FlushNatEntries(), ZX_ERR_PEER_CLOSED);
+    ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+    fs_->GetSuperblockInfo().ClearCpFlags(CpFlag::kCpErrorFlag);
+  }
+}
+
+TEST_F(CheckpointTest, FlushSitEntriesDiskFail) {
+  DisableFsck();
+
+  WritebackOperation op;
+  op.bSync = true;
+  fs_->GetMetaVnode().Writeback(op);
+
+  block_t cp_start_blk_no = LeToCpu(fs_->RawSb().cp_blkaddr);
+
+  LockedPage cp_page;
+  ASSERT_EQ(fs_->GetMetaPage(cp_start_blk_no, &cp_page), ZX_OK);
+  Checkpoint *cp_block = cp_page->GetAddress<Checkpoint>();
+  uint64_t cp_version = cp_block->checkpoint_ver;
+  cp_page.reset();
+
+  pgoff_t target_addr = fs_->GetSegmentManager().CurrentSitAddr(0) * kDefaultSectorsPerBlock;
+
+  auto hook = [target_addr](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.dev_offset == target_addr) {
+      return ZX_ERR_PEER_CLOSED;
+    }
+    return ZX_OK;
+  };
+
+  // Write sit entries for one block
+  for (uint32_t i = 0; i < kMapPerSitEntry * kSitEntryPerBlock; ++i) {
+    block_t new_blkaddr;
+    if (i < kMapPerSitEntry) {
+      continue;
+    }
+
+    MapTester::DoWriteSit(
+        fs_.get(), CursegType::kCursegWarmData,
+        static_cast<uint32_t>((cp_version - 1) * kSitEntryPerBlock + i / kMapPerSitEntry),
+        &new_blkaddr);
+  }
+
+  // Check disk peer closed exception case in FlushSitEntries()
+  {
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(std::move(hook));
+    ASSERT_EQ(fs_->GetSegmentManager().FlushSitEntries(), ZX_ERR_PEER_CLOSED);
+    ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+    fs_->GetSuperblockInfo().ClearCpFlags(CpFlag::kCpErrorFlag);
+  }
+
+  // Check disk peer closed exception case in WriteCheckpoint()
+  {
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(std::move(hook));
+    ASSERT_EQ(fs_->WriteCheckpoint(false, false), ZX_ERR_PEER_CLOSED);
+    ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+    fs_->GetSuperblockInfo().ClearCpFlags(CpFlag::kCpErrorFlag);
+  }
+}
+
+TEST_F(CheckpointTest, DoCheckpointDiskFail) {
+  DisableFsck();
+
+  WritebackOperation op;
+  op.bSync = true;
+  fs_->GetMetaVnode().Writeback(op);
+
+  uint32_t flush_count = 0;
+  uint32_t target_flush_count = 0;
+  auto hook = [&](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.opcode == BLOCKIO_FLUSH) {
+      if (++flush_count == target_flush_count) {
+        return ZX_ERR_PEER_CLOSED;
+      }
+      return ZX_OK;
+    }
+    return ZX_OK;
+  };
+
+  // Check disk peer closed exception case in DoCheckpoint()
+  {
+    flush_count = 0;
+    target_flush_count = 1;
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(std::move(hook));
+    ASSERT_EQ(fs_->DoCheckpoint(false), ZX_ERR_PEER_CLOSED);
+    ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+    fs_->GetSuperblockInfo().ClearCpFlags(CpFlag::kCpErrorFlag);
+  }
+
+  {
+    flush_count = 0;
+    target_flush_count = 2;
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(std::move(hook));
+    ASSERT_EQ(fs_->DoCheckpoint(false), ZX_ERR_PEER_CLOSED);
+    ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+    fs_->GetSuperblockInfo().ClearCpFlags(CpFlag::kCpErrorFlag);
+  }
+}
+
+TEST_F(CheckpointTest, ReadCompactSummaryDiskFail) {
+  DisableFsck();
+
+  WritebackOperation op;
+  op.bSync = true;
+  fs_->GetMetaVnode().Writeback(op);
+
+  block_t target_addr = fs_->GetSegmentManager().StartSumBlock() * kDefaultSectorsPerBlock;
+
+  auto hook = [target_addr](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.dev_offset == target_addr) {
+      return ZX_ERR_PEER_CLOSED;
+    }
+    return ZX_OK;
+  };
+
+  // Check disk peer closed exception case in ReadCompactedSummaries()
+  {
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(std::move(hook));
+    ASSERT_EQ(fs_->GetSegmentManager().ReadCompactedSummaries(), ZX_ERR_PEER_CLOSED);
+    ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+    fs_->GetSuperblockInfo().ClearCpFlags(CpFlag::kCpErrorFlag);
+  }
+}
+
+TEST_F(CheckpointTest, ReadNormalSummaryDiskFail) {
+  DisableFsck();
+
+  WritebackOperation op;
+  op.bSync = true;
+  fs_->GetMetaVnode().Writeback(op);
+
+  block_t target_addr = fs_->GetSegmentManager().SumBlkAddr(
+                            kNrCursegType, static_cast<int>(CursegType::kCursegWarmData)) *
+                        kDefaultSectorsPerBlock;
+
+  auto hook = [target_addr](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.dev_offset == target_addr) {
+      return ZX_ERR_PEER_CLOSED;
+    }
+    return ZX_OK;
+  };
+
+  // Check disk peer closed exception case in ReadNormalSummaries()
+  {
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(std::move(hook));
+    ASSERT_EQ(
+        fs_->GetSegmentManager().ReadNormalSummaries(static_cast<int>(CursegType::kCursegWarmData)),
+        ZX_ERR_PEER_CLOSED);
+    ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+
+    static_cast<FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+    fs_->GetSuperblockInfo().ClearCpFlags(CpFlag::kCpErrorFlag);
+  }
 }
 
 }  // namespace

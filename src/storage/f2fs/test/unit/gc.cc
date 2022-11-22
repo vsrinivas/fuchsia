@@ -21,7 +21,8 @@ class GcManagerTest : public F2fsFakeDevTestFixture {
       : F2fsFakeDevTestFixture(std::move(options)) {}
 
  protected:
-  std::vector<std::string> MakeGcTriggerCondition(uint32_t invalidate_ratio = 25) {
+  std::vector<std::string> MakeGcTriggerCondition(uint32_t invalidate_ratio = 25,
+                                                  bool sync = true) {
     auto prng = std::default_random_engine(testing::UnitTest::GetInstance()->random_seed());
 
     fs_->GetGcManager().DisableFgGc();
@@ -51,7 +52,9 @@ class GcManagerTest : public F2fsFakeDevTestFixture {
       sync_completion_t completion;
       fs_->ScheduleWriter(&completion);
       sync_completion_wait(&completion, ZX_TIME_INFINITE);
-      fs_->WriteCheckpoint(false, false);
+      if (sync) {
+        fs_->WriteCheckpoint(false, false);
+      }
 
       std::shuffle(file_names.begin(), file_names.end(), prng);
 
@@ -61,7 +64,9 @@ class GcManagerTest : public F2fsFakeDevTestFixture {
         EXPECT_EQ(root_dir_->Unlink(*iter, false), ZX_OK);
         iter = file_names.erase(iter);
       }
-      fs_->WriteCheckpoint(false, false);
+      if (sync) {
+        fs_->WriteCheckpoint(false, false);
+      }
       total_file_names.insert(total_file_names.end(), file_names.begin(), file_names.end());
     }
 
@@ -75,6 +80,96 @@ TEST_F(GcManagerTest, CpError) {
   auto result = fs_->GetGcManager().F2fsGc();
   ASSERT_TRUE(result.is_error());
   ASSERT_EQ(result.error_value(), ZX_ERR_BAD_STATE);
+}
+
+TEST_F(GcManagerTest, CheckpointDiskReadFailOnSyncFs) {
+  DisableFsck();
+
+  WritebackOperation op;
+  op.bSync = true;
+  fs_->GetMetaVnode().Writeback(op);
+
+  pgoff_t target_addr = fs_->GetSegmentManager().CurrentSitAddr(0) * kDefaultSectorsPerBlock;
+
+  auto hook = [target_addr](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.dev_offset == target_addr) {
+      return ZX_ERR_PEER_CLOSED;
+    }
+    return ZX_OK;
+  };
+
+  MakeGcTriggerCondition();
+
+  // Increse dirty page count to perform GC
+  {
+    fs_->GetSuperblockInfo().IncreasePageCount(CountType::kDirtyData);
+
+    static_cast<block_client::FakeBlockDevice *>(fs_->GetBc().GetDevice())
+        ->set_hook(std::move(hook));
+    fs_->SyncFs(true);
+    ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+    static_cast<block_client::FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+
+    fs_->GetSuperblockInfo().DecreasePageCount(CountType::kDirtyData);
+  }
+}
+
+TEST_F(GcManagerTest, CheckpointDiskReadFailOnGc) {
+  DisableFsck();
+
+  WritebackOperation op;
+  op.bSync = true;
+  fs_->GetMetaVnode().Writeback(op);
+
+  pgoff_t target_addr = fs_->GetSegmentManager().CurrentSitAddr(0) * kDefaultSectorsPerBlock;
+
+  auto hook = [target_addr](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.dev_offset == target_addr) {
+      return ZX_ERR_PEER_CLOSED;
+    }
+    return ZX_OK;
+  };
+
+  MakeGcTriggerCondition();
+
+  // Check disk peer closed exception case in F2fsGc()
+  {
+    static_cast<block_client::FakeBlockDevice *>(fs_->GetBc().GetDevice())
+        ->set_hook(std::move(hook));
+    ASSERT_EQ(fs_->GetGcManager().F2fsGc().error_value(), ZX_ERR_PEER_CLOSED);
+    ASSERT_TRUE(fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag));
+    static_cast<block_client::FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+  }
+}
+
+TEST_F(GcManagerTest, CheckpointDiskReadFailOnGcPreFree) {
+  DisableFsck();
+
+  WritebackOperation op;
+  op.bSync = true;
+  fs_->GetMetaVnode().Writeback(op);
+
+  pgoff_t target_addr = fs_->GetSegmentManager().CurrentSitAddr(0) * kDefaultSectorsPerBlock;
+
+  auto hook = [target_addr](const block_fifo_request_t &_req, const zx::vmo *_vmo) {
+    if (_req.dev_offset == target_addr) {
+      return ZX_ERR_PEER_CLOSED;
+    }
+    return ZX_OK;
+  };
+
+  uint32_t prefree_segno = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegWarmData)->segno;
+  MakeGcTriggerCondition(25, false);
+
+  fs_->GetSegmentManager().LocateDirtySegment(prefree_segno + 1, DirtyType::kPre);
+
+  // Check disk peer closed exception case in F2fsGc()
+  {
+    static_cast<block_client::FakeBlockDevice *>(fs_->GetBc().GetDevice())
+        ->set_hook(std::move(hook));
+    ASSERT_EQ(fs_->GetGcManager().F2fsGc().error_value(), ZX_ERR_PEER_CLOSED);
+    static_cast<block_client::FakeBlockDevice *>(fs_->GetBc().GetDevice())->set_hook(nullptr);
+  }
 }
 
 TEST_F(GcManagerTest, PageColdData) {
