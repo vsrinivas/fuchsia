@@ -699,6 +699,12 @@ impl ServingMultiVolumeFilesystem {
         }))
     }
 
+    /// Provides access to the internal |exposed_dir| for use in testing
+    /// callsites which need directory access.
+    pub fn exposed_dir(&self) -> &fio::DirectoryProxy {
+        &self.exposed_dir
+    }
+
     /// Attempts to shutdown the filesystem using the [`fidl_fuchsia_fs::AdminProxy::shutdown()`]
     /// FIDL method.
     ///
