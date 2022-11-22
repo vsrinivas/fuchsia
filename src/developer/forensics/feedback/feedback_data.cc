@@ -31,8 +31,9 @@ FeedbackData::FeedbackData(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       inspect_node_manager_(inspect_root),
       inspect_data_budget_(options.limit_inspect_data, &inspect_node_manager_, cobalt_),
-      attachment_providers_(dispatcher, services, clock, redactor, &inspect_data_budget_,
-                            options.config.attachment_allowlist, GetStaticAttachments()),
+      attachment_providers_(dispatcher, services, *options.delete_previous_boot_logs_time, clock,
+                            redactor, &inspect_data_budget_, options.config.attachment_allowlist,
+                            GetStaticAttachments()),
       data_provider_(dispatcher_, services_, clock_, redactor, options.is_first_instance,
                      options.config.annotation_allowlist, options.config.attachment_allowlist,
                      cobalt_, annotation_manager, attachment_providers_.GetAttachmentManager(),
@@ -40,10 +41,6 @@ FeedbackData::FeedbackData(async_dispatcher_t* dispatcher,
       data_provider_controller_() {
   if (options.spawn_system_log_recorder) {
     SpawnSystemLogRecorder();
-  }
-
-  if (options.delete_previous_boot_logs_time) {
-    DeletePreviousBootLogsAt(*options.delete_previous_boot_logs_time);
   }
 }
 
@@ -129,21 +126,6 @@ void FeedbackData::SpawnSystemLogRecorder() {
   data_provider_controller_.BindSystemLogRecorderController(std::move(controller_client),
                                                             dispatcher_);
   system_log_recorder_lifecycle_.Bind(std::move(lifecycle_client), dispatcher_);
-}
-
-void FeedbackData::DeletePreviousBootLogsAt(zx::duration uptime,
-                                            const std::string& previous_boot_logs_file) {
-  async::PostDelayedTask(
-      dispatcher_,
-      [this, previous_boot_logs_file] {
-        FX_LOGS(INFO) << "Deleting previous boot logs after 24 hours of device uptime";
-
-        attachment_providers_.GetAttachmentManager()->DropStaticAttachment(
-            feedback_data::kAttachmentLogSystemPrevious, Error::kCustom);
-        files::DeletePath(previous_boot_logs_file, /*recursive=*/true);
-      },
-      // The previous boot logs are deleted after |uptime| of device uptime, not component uptime.
-      std::max(zx::sec(0), uptime - zx::nsec(clock_->Now().get())));
 }
 
 }  // namespace forensics::feedback

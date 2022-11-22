@@ -58,8 +58,6 @@ class FeedbackData {
 
  private:
   void SpawnSystemLogRecorder();
-  void DeletePreviousBootLogsAt(zx::duration uptime,
-                                const std::string& previous_boot_logs_file = kPreviousLogsFilePath);
 
   async_dispatcher_t* dispatcher_;
   std::shared_ptr<sys::ServiceDirectory> services_;

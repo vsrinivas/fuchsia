@@ -88,24 +88,6 @@ TEST_F(AttachmentManagerTest, Static) {
   EXPECT_THAT(attachments, ElementsAreArray({Pair("static", AttachmentValue("value"))}));
 }
 
-TEST_F(AttachmentManagerTest, DropStatic) {
-  async::Executor executor(dispatcher());
-  AttachmentManager manager(dispatcher(), {"static"}, {{"static", AttachmentValue("value")}});
-
-  manager.DropStaticAttachment("static", Error::kConnectionError);
-  manager.DropStaticAttachment("unused", Error::kConnectionError);
-
-  Attachments attachments;
-  executor.schedule_task(
-      manager.GetAttachments(zx::duration::infinite())
-          .and_then([&attachments](Attachments& result) { attachments = std::move(result); })
-          .or_else([] { FX_LOGS(FATAL) << "Unreachable branch"; }));
-
-  RunLoopUntilIdle();
-  EXPECT_THAT(attachments,
-              ElementsAreArray({Pair("static", AttachmentValue(Error::kConnectionError))}));
-}
-
 TEST_F(AttachmentManagerTest, Dynamic) {
   async::Executor executor(dispatcher());
 

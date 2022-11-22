@@ -30,8 +30,6 @@ class AttachmentManager {
 
   ::fpromise::promise<Attachments> GetAttachments(zx::duration timeout);
 
-  void DropStaticAttachment(const AttachmentKey& key, Error error);
-
  private:
   async_dispatcher_t* dispatcher_;
 

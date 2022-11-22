@@ -30,7 +30,6 @@ class StaticAttachmentsTest : public ::testing::Test {
 TEST_F(StaticAttachmentsTest, Keys) {
   EXPECT_THAT(GetStaticAttachments(), UnorderedElementsAreArray({
                                           Key(feedback_data::kAttachmentBuildSnapshot),
-                                          Key(feedback_data::kAttachmentLogSystemPrevious),
                                       }));
 }
 
@@ -38,30 +37,24 @@ TEST_F(StaticAttachmentsTest, FilesPresent) {
   testing::ScopedMemFsManager memfs_manager;
 
   memfs_manager.Create("/config/build-info");
-  memfs_manager.Create("/tmp");
 
   WriteFiles({
       {"/config/build-info/snapshot", "build-info"},
-      {feedback_data::kPreviousLogsFilePath, "previous-log"},
   });
 
-  EXPECT_THAT(
-      GetStaticAttachments(),
-      UnorderedElementsAreArray({
-          Pair(feedback_data::kAttachmentBuildSnapshot, AttachmentValue("build-info")),
-          Pair(feedback_data::kAttachmentLogSystemPrevious, AttachmentValue("previous-log")),
-      }));
+  EXPECT_THAT(GetStaticAttachments(),
+              UnorderedElementsAreArray({
+                  Pair(feedback_data::kAttachmentBuildSnapshot, AttachmentValue("build-info")),
+              }));
 }
 
 TEST_F(StaticAttachmentsTest, FilesEmpty) {
   testing::ScopedMemFsManager memfs_manager;
 
   memfs_manager.Create("/config/build-info");
-  memfs_manager.Create("/tmp");
 
   WriteFiles({
       {"/config/build-info/snapshot", ""},
-      {feedback_data::kPreviousLogsFilePath, ""},
   });
 
   std::string data;
@@ -72,7 +65,6 @@ TEST_F(StaticAttachmentsTest, FilesEmpty) {
       GetStaticAttachments(),
       UnorderedElementsAreArray({
           Pair(feedback_data::kAttachmentBuildSnapshot, AttachmentValue(Error::kMissingValue)),
-          Pair(feedback_data::kAttachmentLogSystemPrevious, AttachmentValue(Error::kMissingValue)),
       }));
 }
 
@@ -81,8 +73,6 @@ TEST_F(StaticAttachmentsTest, FilesMissing) {
       GetStaticAttachments(),
       UnorderedElementsAreArray({
           Pair(feedback_data::kAttachmentBuildSnapshot, AttachmentValue(Error::kFileReadFailure)),
-          Pair(feedback_data::kAttachmentLogSystemPrevious,
-               AttachmentValue(Error::kFileReadFailure)),
       }));
 }
 

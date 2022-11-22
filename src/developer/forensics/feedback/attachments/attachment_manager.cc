@@ -93,12 +93,4 @@ AttachmentManager::AttachmentManager(async_dispatcher_t* dispatcher,
   });
 }
 
-void AttachmentManager::DropStaticAttachment(const AttachmentKey& key, const Error error) {
-  if (static_attachments_.find(key) == static_attachments_.end()) {
-    return;
-  }
-
-  static_attachments_.insert_or_assign(key, AttachmentValue(error));
-}
-
 }  // namespace forensics::feedback

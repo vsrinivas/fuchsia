@@ -14,6 +14,7 @@
 #include "src/developer/forensics/feedback/attachments/attachment_manager.h"
 #include "src/developer/forensics/feedback/attachments/inspect.h"
 #include "src/developer/forensics/feedback/attachments/kernel_log.h"
+#include "src/developer/forensics/feedback/attachments/previous_boot_log.h"
 #include "src/developer/forensics/feedback/attachments/system_log.h"
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
@@ -26,7 +27,8 @@ namespace forensics::feedback {
 class AttachmentProviders {
  public:
   AttachmentProviders(async_dispatcher_t* dispatcher,
-                      std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
+                      std::shared_ptr<sys::ServiceDirectory> services,
+                      zx::duration delete_previous_boot_log_at, timekeeper::Clock* clock,
                       RedactorBase* redactor, feedback_data::InspectDataBudget* inspect_data_budget,
                       std::set<std::string> allowlist, Attachments static_attachments);
 
@@ -38,6 +40,7 @@ class AttachmentProviders {
   KernelLog kernel_log_;
   SystemLog system_log_;
   Inspect inspect_;
+  PreviousBootLog previous_boot_log_;
 
   AttachmentManager attachment_manager_;
 };

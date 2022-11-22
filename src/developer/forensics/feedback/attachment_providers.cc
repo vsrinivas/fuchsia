@@ -10,6 +10,7 @@ namespace forensics::feedback {
 
 AttachmentProviders::AttachmentProviders(async_dispatcher_t* dispatcher,
                                          std::shared_ptr<sys::ServiceDirectory> services,
+                                         zx::duration delete_previous_boot_log_at,
                                          timekeeper::Clock* clock, RedactorBase* redactor,
                                          feedback_data::InspectDataBudget* inspect_data_budget,
                                          std::set<std::string> allowlist,
@@ -17,10 +18,13 @@ AttachmentProviders::AttachmentProviders(async_dispatcher_t* dispatcher,
     : kernel_log_(dispatcher, services, AttachmentProviderBackoff(), redactor),
       system_log_(dispatcher, services, clock, redactor, feedback_data::kActiveLoggingPeriod),
       inspect_(dispatcher, services, AttachmentProviderBackoff(), inspect_data_budget),
+      previous_boot_log_(dispatcher, clock, delete_previous_boot_log_at,
+                         feedback_data::kPreviousLogsFilePath),
       attachment_manager_(dispatcher, allowlist, std::move(static_attachments),
                           {
                               {feedback_data::kAttachmentLogKernel, &kernel_log_},
                               {feedback_data::kAttachmentLogSystem, &system_log_},
+                              {feedback_data::kAttachmentLogSystemPrevious, &previous_boot_log_},
                               {feedback_data::kAttachmentInspect, &inspect_},
                           }) {
   if (allowlist.empty()) {

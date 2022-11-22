@@ -31,7 +31,6 @@ AttachmentValue FromFile(const std::string& filepath) {
 Attachments GetStaticAttachments() {
   const std::map<std::string, AttachmentValue> kAttachments({
       {feedback_data::kAttachmentBuildSnapshot, FromFile("/config/build-info/snapshot")},
-      {feedback_data::kAttachmentLogSystemPrevious, FromFile(feedback_data::kPreviousLogsFilePath)},
   });
 
   Attachments attachments;

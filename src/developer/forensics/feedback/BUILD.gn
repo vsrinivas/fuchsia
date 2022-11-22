@@ -110,6 +110,7 @@ source_set("main_service") {
     "//src/developer/forensics/feedback/annotations:ui_state_provider",
     "//src/developer/forensics/feedback/attachments:inspect",
     "//src/developer/forensics/feedback/attachments:kernel_log",
+    "//src/developer/forensics/feedback/attachments:previous_boot_log",
     "//src/developer/forensics/feedback/attachments:system_log",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:data_provider",

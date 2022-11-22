@@ -88,6 +88,21 @@ source_set("kernel_log") {
   ]
 }
 
+source_set("previous_boot_log") {
+  sources = [
+    "previous_boot_log.cc",
+    "previous_boot_log.h",
+  ]
+
+  public_deps = [
+    ":attachments",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
+  ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
 source_set("system_log") {
   sources = [
     "system_log.cc",
