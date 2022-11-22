@@ -180,7 +180,8 @@ function check-for-package-server {
       fx-error ""
       fx-error "$ ffx config set repository.server.mode ffx"
       fx-error "$ ffx config set repository.server.listen \"[::]:8083\""
-      fx-error "$ ffx doctor --restart-daemon"
+      fx-error ""
+      fx-error "Then re-run this command."
       return 1
     fi
 
@@ -299,12 +300,12 @@ function ffx-register-repository {
     "$@"
   err=$?
   if [[ "${err}" -ne 0 ]]; then
-    fx-error "The repository was unable to be added to the target device"
+    fx-error "Could not register the package repository on the target device"
     fx-error ""
-    fx-error "If you recently enabled the ffx server, you may need to restart"
-    fx-error "the ffx daemon with"
+    fx-error "If you recently enabled the ffx server, you may need to start"
+    fx-error "the ffx repository server with"
     fx-error ""
-    fx-error "$ ffx doctor --restart-daemon"
+    fx-error "$ ffx repository server start"
 
     return $err
   fi
@@ -387,7 +388,8 @@ function ffx-repository-check-server-address {
     fx-error "repository server is currently disabled. to re-enable, run:"
     fx-error ""
     fx-error "$ ffx config set repository.server.listen \"[::]:8083\""
-    fx-error "$ ffx doctor --restart-daemon"
+    fx-error ""
+    fx-error "Then re-run this command."
     return 1
   fi
 
@@ -416,7 +418,8 @@ function ffx-repository-check-server-address {
     fx-error "To switch to a different address, run:"
     fx-error ""
     fx-error "$ ffx config set repository.server.listen \"${expected_addr}\""
-    fx-error "$ ffx doctor --restart-daemon"
+    fx-error ""
+    fx-error "Then re-run this command."
     fx-error ""
     fx-error "Note: this will change the address for all repositories served by ffx"
     return 1
