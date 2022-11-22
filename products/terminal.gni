@@ -48,6 +48,8 @@ legacy_cache_package_labels += [
   "//src/ui/bin/hardware_display_controller_provider",
 ]
 
+core_realm_shards += [ "//src/ui/tools/tiles:tiles_core_shard" ]
+
 # End to end (E2E) `dart_inspect_benchmarks` test requires the dart runner.
 core_realm_shards += [ "//src/dart:dart_runner_core_shard" ]
 

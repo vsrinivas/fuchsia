@@ -1,0 +1,43 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "tiles",
+            url: "fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.developer.tiles.Controller",
+            from: "#tiles",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#tiles",
+        },
+        {
+            protocol: "fuchsia.sys.Launcher",
+            from: "self",
+            to: "#tiles",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#ui",
+            to: "#tiles",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: "#tiles",
+        },
+    ],
+}

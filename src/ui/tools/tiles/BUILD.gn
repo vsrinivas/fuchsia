@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 source_set("tiles_lib") {
   sources = [
@@ -51,6 +52,12 @@ fuchsia_component("tiles-gfx") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("tiles-gfx-v2") {
+  component_name = "tiles"
+  manifest = "meta/tiles.cml"
+  deps = [ ":bin" ]
+}
+
 fuchsia_component("tiles-flatland") {
   manifest = "flatland/meta/tiles-flatland.cmx"
   deps = [ "flatland:bin" ]
@@ -60,7 +67,7 @@ fuchsia_package("tiles") {
   deps = [
     ":tiles-flatland",
     ":tiles-gfx",
-    ":tiles_config",
+    ":tiles-gfx-v2",
   ]
 }
 
@@ -82,9 +89,6 @@ fuchsia_unittest_package("tiles_tests") {
   deps = [ ":tiles_unittests" ]
 }
 
-# Add a Sysmgr entry to allow connections to fuchsia.developer.tiles.Controller
-config_data("tiles_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "tiles.config" ]
-  sources = [ "config/service.config" ]
+core_shard("tiles_core_shard") {
+  shard_file = "meta/tiles.core_shard.cml"
 }

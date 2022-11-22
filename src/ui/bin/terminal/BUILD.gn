@@ -135,11 +135,6 @@ fuchsia_package("terminal") {
   ]
 }
 
-config_data("tiles_config") {
-  for_pkg = "sysmgr"
-  sources = [ "config/tiles.config" ]
-}
-
 fuchsia_test_component("terminal_tests_component") {
   component_name = "terminal_tests"
   manifest = "meta/terminal_tests.cml"
