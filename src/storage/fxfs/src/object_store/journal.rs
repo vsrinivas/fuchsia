@@ -63,7 +63,6 @@ use {
     std::{
         clone::Clone,
         collections::HashMap,
-        convert::TryFrom as _,
         ops::Bound,
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -276,7 +275,7 @@ impl Journal {
     /// Used during replay to validate a mutation.  This should return false if the mutation is not
     /// valid and should not be applied.  This could be for benign reasons: e.g. the device flushed
     /// data out-of-order, or because of a malicious actor.
-    fn validate_mutation(&self, mutation: &Mutation) -> bool {
+    fn validate_mutation(&self, mutation: &Mutation, block_size: u64, device_size: u64) -> bool {
         match mutation {
             Mutation::ObjectStore(ObjectStoreMutation {
                 item:
@@ -292,6 +291,7 @@ impl Journal {
                             },
                         value:
                             ObjectValue::Extent(ExtentValue::Some {
+                                device_offset,
                                 checksums: Checksums::Fletcher(checksums),
                                 ..
                             }),
@@ -299,32 +299,40 @@ impl Journal {
                     },
                 ..
             }) => {
+                if range.is_empty() || !range.is_aligned(block_size) {
+                    return false;
+                }
                 if checksums.len() == 0 {
                     return false;
                 }
-                let len =
-                    if let Some(len) = range.length().ok().and_then(|l| usize::try_from(l).ok()) {
-                        len
-                    } else {
-                        return false;
-                    };
-                if len % checksums.len() != 0 {
+                let len = range.length().unwrap();
+                if len % checksums.len() as u64 != 0 {
                     return false;
                 }
-                if (len / checksums.len()) % 4 != 0 {
+                if (len / checksums.len() as u64) % block_size != 0 {
+                    return false;
+                }
+                if *device_offset % block_size != 0
+                    || *device_offset >= device_size
+                    || device_size - *device_offset < len
+                {
                     return false;
                 }
             }
             Mutation::ObjectStore(_) => {}
             Mutation::EncryptedObjectStore(_) => {}
             Mutation::Allocator(AllocatorMutation::Allocate { device_range, owner_object_id }) => {
-                return device_range.is_valid() && *owner_object_id != INVALID_OBJECT_ID;
+                return !device_range.is_empty()
+                    && *owner_object_id != INVALID_OBJECT_ID
+                    && device_range.end <= device_size;
             }
             Mutation::Allocator(AllocatorMutation::Deallocate {
                 device_range,
                 owner_object_id,
             }) => {
-                return device_range.is_valid() && *owner_object_id != INVALID_OBJECT_ID;
+                return !device_range.is_empty()
+                    && *owner_object_id != INVALID_OBJECT_ID
+                    && device_range.end <= device_size;
             }
             Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)) => {
                 return *owner_object_id != INVALID_OBJECT_ID;
@@ -654,9 +662,10 @@ impl Journal {
         // Validate all the mutations.
         let mut checksum_list = ChecksumList::new(device_flushed_offset);
         let mut valid_to = reader.journal_file_checkpoint().file_offset;
+        let device_size = device.size();
         'bad_replay: for (checkpoint, mutations, _) in &transactions {
             for (object_id, mutation) in mutations {
-                if !self.validate_mutation(&mutation) {
+                if !self.validate_mutation(&mutation, block_size, device_size) {
                     info!(?mutation, "Stopping replay at bad mutation");
                     valid_to = checkpoint.file_offset;
                     break 'bad_replay;
