@@ -22,15 +22,10 @@ class AppView extends StatelessWidget {
       return Stack(
         fit: StackFit.expand,
         children: [
-          // Scaling applied at the top of this app's widget hierarchy does not
-          // apply to child view. So undo the scaling here.
-          ScaleWidget(
-            scale: 1.0 / state.scale,
-            child: FuchsiaView(
-              controller: view.viewConnection,
-              hitTestable: view.hitTestable,
-              focusable: view.focusable,
-            ),
+          FuchsiaView(
+            controller: view.viewConnection,
+            hitTestable: view.hitTestable,
+            focusable: view.focusable,
           ),
 
           // Loading and timeout UX.

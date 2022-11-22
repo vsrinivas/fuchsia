@@ -15,11 +15,8 @@ class PreferencesService with Disposable {
   /// The JSON file that stores preferences persistently.
   static const kPreferencesJson = '/data/preferences.json';
   static const kDarkModeKey = 'dark_mode';
-  static const kScaleKey = 'scale';
   static const kScreensaverKey = 'screensaver';
   static const kUserFeedbackStartupKey = 'show_user_feedback_startup';
-  static const kScaleLowerBound = 0.25;
-  static const kScaleUpperBound = 4.0;
 
   /// The JSON file that provides preferences as part of package install.
   static const kStartupPreferencesJson = '/pkg/data/preferences.json';
@@ -33,9 +30,6 @@ class PreferencesService with Disposable {
   // Show user feedback startup dialog: true | false
   final showUserFeedbackStartUpDialog = true.asObservable();
 
-  // UI scaling.
-  final _scale = 1.0.asObservable();
-
   final Map<String, dynamic> _data;
 
   PreferencesService() : _data = _readPreferences() {
@@ -43,7 +37,6 @@ class PreferencesService with Disposable {
     showScreensaver = _data[kScreensaverKey] ?? true;
     showUserFeedbackStartUpDialog.value =
         _data[kUserFeedbackStartupKey] ?? true;
-    _scale.value = _data[kScaleKey] ?? _initialScale();
     reactions
       ..add(reaction<bool>((_) => darkMode.value, _setDarkMode))
       ..add(reaction<bool>((_) => showUserFeedbackStartUpDialog.value,
@@ -58,31 +51,6 @@ class PreferencesService with Disposable {
   void _setUserFeedbackStartUpDialog(bool value) {
     _data[kUserFeedbackStartupKey] = value;
     _writePreferences(_data);
-  }
-
-  double get scale => _scale.value;
-  set scale(double newValue) {
-    runInAction(() {
-      // Only accept sane values.
-      if (0.25 <= newValue && newValue <= 4.0) {
-        _scale.value = newValue;
-        _data[kScaleKey] = newValue;
-        _writePreferences(_data);
-      }
-    });
-  }
-
-  void zoomIn() => scale += 0.5;
-
-  void zoomOut() => scale -= 0.5;
-
-  // TODO(https://fxbug.dev/62096): Remove once hardware resolution is supported.
-  // Set the initial scale that results in a 1k (1080) height.
-  static double _initialScale() {
-    final scale =
-        WidgetsFlutterBinding.ensureInitialized().window.physicalSize.height /
-            1080;
-    return scale;
   }
 
   static Map<String, dynamic> _readPreferences() {
@@ -103,13 +71,6 @@ class PreferencesService with Disposable {
         if (key == kUserFeedbackStartupKey) {
           // ignore: avoid_bool_literals_in_conditional_expressions
           return value is bool ? value : true;
-        }
-
-        // Scale.
-        if (key == kScaleKey) {
-          return value is double
-              ? value.clamp(kScaleLowerBound, kScaleUpperBound)
-              : _initialScale();
         }
 
         return value;

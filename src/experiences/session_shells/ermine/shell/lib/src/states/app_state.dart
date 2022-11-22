@@ -58,7 +58,6 @@ abstract class AppState {
   String get feedbackUuid;
   String get feedbackErrorMsg;
   String get simpleLocale;
-  double get scale;
 
   SettingsState get settingsState;
 
@@ -83,7 +82,6 @@ abstract class AppState {
   void checkingForUpdatesAlert();
   void userFeedbackSubmit(
       {required String desc, required String username, String title});
-  void setScale(double scale);
   void dismissDialogs();
 
   factory AppState.fromEnv() {

@@ -300,47 +300,6 @@ class _ListSettings extends StatelessWidget {
                   ),
                   onTap: appState.settingsState.showTimezoneSettings,
                 ),
-                // Scale
-                Builder(builder: (context) {
-                  var currentScale = appState.scale.asObservable();
-                  final focusNode = FocusNode();
-                  return Observer(builder: (_) {
-                    return ListTile(
-                      enabled: true,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                      leading: Icon(Icons.display_settings),
-                      title: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(Strings.scale),
-                          Expanded(
-                            child: Slider(
-                              focusNode: focusNode,
-                              value: currentScale.value,
-                              min: PreferencesService.kScaleLowerBound,
-                              max: PreferencesService.kScaleUpperBound,
-                              divisions: ((PreferencesService.kScaleUpperBound /
-                                          PreferencesService.kScaleLowerBound) -
-                                      1)
-                                  .toInt(),
-                              onChanged: (value) {
-                                runInAction(() => currentScale.value = value);
-                                focusNode.requestFocus();
-                              },
-                              label: currentScale.value.toString(),
-                            ),
-                          ),
-                        ],
-                      ),
-                      trailing: OutlinedButton(
-                        style:
-                            ErmineButtonStyle.outlinedButton(Theme.of(context)),
-                        onPressed: () => appState.setScale(currentScale.value),
-                        child: Text(Strings.apply.toUpperCase()),
-                      ),
-                    );
-                  });
-                }),
                 // Switch Theme
                 SwitchListTile(
                   key: ValueKey('darkMode'),

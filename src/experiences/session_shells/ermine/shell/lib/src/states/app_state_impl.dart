@@ -246,9 +246,6 @@ class AppStateImpl with Disposable implements AppState {
   String get simpleLocale => _simpleLocale.value;
   final _simpleLocale = ''.asObservable();
 
-  @override
-  double get scale => preferencesService.scale;
-
   late final shellHasFocus = (() {
     return startupService.hostView == _focusedView.value;
   }).asComputed();
@@ -522,9 +519,6 @@ class AppStateImpl with Disposable implements AppState {
   }
 
   @override
-  void setScale(double scale) => preferencesService.scale = scale;
-
-  @override
   void launchLicense() => launch(Strings.license, kLicenseUrl);
 
   @override
@@ -636,8 +630,6 @@ class AppStateImpl with Disposable implements AppState {
       'decreaseVolume': () => settingsState.decreaseVolume(),
       'muteVolume': () => settingsState.toggleMute(),
       'logout': logout,
-      'zoomIn': preferencesService.zoomIn,
-      'zoomOut': preferencesService.zoomOut,
     };
 
     if (isUserFeedbackEnabled) {
