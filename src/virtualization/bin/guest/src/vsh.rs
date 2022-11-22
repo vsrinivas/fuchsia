@@ -224,17 +224,23 @@ pub async fn handle_vsh(
 ) -> Result<i32> {
     let port = port.unwrap_or(util::VSH_PORT);
 
-    loop {
+    'outer: loop {
         // Attempts to launch Termina VM and container if necessary
         if let Err(e) = termina::launch(stdout.as_mut()).await {
             println!("Starting the Linux container has failed because of: {:?}", e);
-            println!("Retry? (Y/n)");
-            let mut answer = [0];
-            stdin.read_exact(&mut answer).await?;
-            println!("{}", answer[0] as char);
-            match answer[0] {
-                b'y' | b'Y' | b'\n' => continue,
-                _ => anyhow::bail!(e),
+            'inner: loop {
+                println!("Retry? (y/n)");
+                let mut answer = [0];
+                stdin.read_exact(&mut answer).await?;
+                println!("{}", answer[0] as char);
+                match answer[0] {
+                    b'y' | b'Y' => continue 'outer,
+                    b'n' | b'N' => break 'outer,
+                    _ => {
+                        println!("Invalid selection, please try again.");
+                        continue 'inner;
+                    }
+                }
             }
         }
         break;
