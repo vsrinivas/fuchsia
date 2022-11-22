@@ -284,10 +284,10 @@ impl<'a> BoundScanner<'a> {
             .map_err(|status| ScanError::StartOffloadScanFails(status))
     }
 
-    /// Called when MLME receives a beacon or probe response so that scanner saves it in a BSS map.
-    ///
-    /// This method is a no-op if no scan request is in progress.
-    pub fn handle_beacon_or_probe_response(
+    /// Called when MLME receives an advertisement from the AP, e.g. a Beacon or Probe
+    /// Response frame. If a scan is in progress, then the advertisement will be saved
+    /// in the BSS map.
+    pub fn handle_ap_advertisement(
         &mut self,
         bssid: Bssid,
         beacon_interval: TimeUnit,
@@ -1002,7 +1002,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_beacon_or_probe_response() {
+    fn test_handle_ap_advertisement() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
@@ -1033,7 +1033,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_beacon_or_probe_response_multiple() {
+    fn test_handle_ap_advertisement_multiple() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
@@ -1087,7 +1087,7 @@ mod tests {
     }
 
     fn handle_beacon_foo(scanner: &mut Scanner, ctx: &mut Context) {
-        scanner.bind(ctx).handle_beacon_or_probe_response(
+        scanner.bind(ctx).handle_ap_advertisement(
             BSSID_FOO,
             TimeUnit(BEACON_INTERVAL_FOO),
             CAPABILITY_INFO_FOO,
@@ -1097,7 +1097,7 @@ mod tests {
     }
 
     fn handle_beacon_bar(scanner: &mut Scanner, ctx: &mut Context) {
-        scanner.bind(ctx).handle_beacon_or_probe_response(
+        scanner.bind(ctx).handle_ap_advertisement(
             BSSID_BAR,
             TimeUnit(BEACON_INTERVAL_BAR),
             CAPABILITY_INFO_BAR,

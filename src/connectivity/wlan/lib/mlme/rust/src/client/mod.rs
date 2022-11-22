@@ -191,7 +191,7 @@ impl ClientMlme {
                 let frame_ctrl = mgmt_hdr.frame_ctrl;
                 match mac::MgmtBody::parse(frame_ctrl.mgmt_subtype(), body) {
                     Some(mac::MgmtBody::Beacon { bcn_hdr, elements }) => {
-                        self.scanner.bind(&mut self.ctx).handle_beacon_or_probe_response(
+                        self.scanner.bind(&mut self.ctx).handle_ap_advertisement(
                             bssid,
                             bcn_hdr.beacon_interval,
                             bcn_hdr.capabilities,
@@ -200,7 +200,7 @@ impl ClientMlme {
                         );
                     }
                     Some(mac::MgmtBody::ProbeResp { probe_resp_hdr, elements }) => {
-                        self.scanner.bind(&mut self.ctx).handle_beacon_or_probe_response(
+                        self.scanner.bind(&mut self.ctx).handle_ap_advertisement(
                             bssid,
                             probe_resp_hdr.beacon_interval,
                             probe_resp_hdr.capabilities,
