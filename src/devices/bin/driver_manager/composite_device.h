@@ -109,6 +109,8 @@ class CompositeDeviceFragment
   // "fragment" driver) that bound to bound_device().
   void set_fragment_device(fbl::RefPtr<Device> device) { fragment_device_ = std::move(device); }
 
+  void set_proxy_device(fbl::RefPtr<Device> device) { proxy_device_ = std::move(device); }
+
  private:
   // The CompositeDevice that this is a part of.
   CompositeDevice* const composite_;
@@ -188,6 +190,13 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   // CompositeDeviceFragment
   void UnbindFragment(CompositeDeviceFragment* fragment);
 
+  // Tries to add a proxy device to this composite. If the device does not
+  // match any of the fragments, this will return ZX_ERR_NOT_FOUND.
+  //
+  // If this proxy does match a fragment, the composite will attempt to assemble
+  // itself.
+  zx_status_t AddProxyDev(fbl::RefPtr<Device> device);
+
   // Creates the actual device and orchestrates the creation of the composite
   // device in a driver_host.
   // Returns ZX_ERR_SHOULD_WAIT if some fragment is not fully ready (i.e. has
@@ -222,6 +231,11 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   }
 
  private:
+  // Get the driver host that the composite device will live in.
+  // If the composite device does not have a driver host yet, this function
+  // will create a new one.
+  zx::result<fbl::RefPtr<DriverHost>> GetDriverHost();
+
   // Returns true if a fragment matches |dev|. Sets |*index_out| will be set to the
   // matching fragment.
   bool IsFragmentMatch(const fbl::RefPtr<Device>& dev, size_t* index_out) const;
@@ -241,6 +255,10 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   MatchedDriverInfo driver_index_driver_;
 
   FragmentList fragments_;
+
+  // The driver host that the composite device will be placed into.
+  // This will only be set once in GetDriverHost().
+  fbl::RefPtr<DriverHost> driver_host_;
 
   // Once the composite has been assembled, this refers to the constructed
   // device.

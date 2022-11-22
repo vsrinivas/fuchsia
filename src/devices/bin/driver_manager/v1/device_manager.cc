@@ -127,6 +127,26 @@ zx_status_t DeviceManager::AddDevice(
     }
   }
 
+  // If we're creating a device that's using the fragment driver, inform the
+  // fragment.
+  if (dev->libname() == coordinator_->GetFragmentProxyDriverUrl()) {
+    bool found = false;
+    for (auto& composite : composite_devices_) {
+      zx_status_t status = composite.AddProxyDev(dev);
+      if (status == ZX_ERR_NOT_FOUND) {
+        continue;
+      }
+      if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
+        LOGF(ERROR, "Failed to assemble composite device: %s", zx_status_get_string(status));
+      }
+      found = true;
+      break;
+    }
+    if (!found) {
+      LOGF(ERROR, "Failed to find composite for device: %s", dev->name().c_str());
+    }
+  }
+
   VLOGF(1, "Added device %p '%s'", dev.get(), dev->name().data());
   // TODO(fxbug.dev/43370): remove this once init tasks can be enabled for all devices.
   if (!want_init_task) {

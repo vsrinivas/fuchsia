@@ -14,11 +14,21 @@
 
 namespace fragment {
 
-zx_status_t FragmentProxy::Create(void* ctx, zx_device_t* parent, const char* name,
-                                  zx_handle_t raw_rpc) {
-  zx::channel rpc(raw_rpc);
-  auto dev = std::make_unique<FragmentProxy>(parent, std::move(rpc));
-  auto status = dev->DdkAdd("fragment-proxy", DEVICE_ADD_NON_BINDABLE);
+zx_status_t FragmentProxy::Create(void* ctx, zx_device_t* parent) {
+  zx::channel client, server;
+  if (zx_status_t status = zx::channel::create(0, &client, &server); status != ZX_OK) {
+    zxlogf(ERROR, "Failed to create endpoints: %s", zx_status_get_string(status));
+    return ZX_ERR_INTERNAL;
+  }
+
+  zx_status_t status = device_connect_fidl_protocol(parent, "proxy_channel", server.release());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to connect fidl protocol: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  auto dev = std::make_unique<FragmentProxy>(parent, std::move(client));
+  status = dev->DdkAdd("fragment-proxy", DEVICE_ADD_NON_BINDABLE);
   if (status == ZX_OK) {
     // devmgr owns the memory now
     __UNUSED auto ptr = dev.release();
@@ -908,7 +918,7 @@ zx_status_t FragmentProxy::PowerSensorConnectServer(zx::channel server) {
 const zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.create = FragmentProxy::Create;
+  ops.bind = FragmentProxy::Create;
   return ops;
 }();
 

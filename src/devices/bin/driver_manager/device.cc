@@ -150,6 +150,14 @@ zx_status_t Device::Create(
     return ZX_ERR_NO_MEMORY;
   }
 
+  // If the device was created by the proxy driver then it's a proxy.
+  if (dev->libname() == dev->coordinator->GetFragmentProxyDriverUrl()) {
+    dev->flags |= DEV_CTX_PROXY;
+    if (real_parent->proxy()) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+  }
+
   if (add_device_config & fuchsia_device_manager::AddDeviceConfig::kSkipAutobind) {
     dev->flags |= DEV_CTX_SKIP_AUTOBIND;
   }
@@ -194,9 +202,16 @@ zx_status_t Device::Create(
     return status;
   }
 
-  real_parent->children_.push_back(dev.get());
-  VLOGF(1, "Created device %p '%s' (child of %p '%s')", dev.get(), dev->name().c_str(),
-        real_parent.get(), real_parent->name().c_str());
+  if (!(dev->flags & DEV_CTX_PROXY)) {
+    real_parent->children_.push_back(dev.get());
+    VLOGF(1, "Created device %p '%s' (child of %p '%s')", dev.get(), dev->name().c_str(),
+          real_parent.get(), real_parent->name().c_str());
+  } else {
+    // We should've already verified that this is null by this point.
+    ZX_ASSERT_MSG(real_parent->proxy_ == nullptr, "Trying to add a second proxy to device %s",
+                  real_parent->libname().c_str());
+    real_parent->proxy_ = dev;
+  }
 
   if (want_init_task) {
     dev->CreateInitTask();
