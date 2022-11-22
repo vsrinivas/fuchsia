@@ -544,7 +544,7 @@ TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
 TEST_F(MultipleDeviceTestCase, UnregisterSystemStorageForShutdown_NoSystemDevices) {
   bool finished = false;
   zx_status_t remove_status;
-  coordinator().suspend_resume_manager()->suspend_handler().UnregisterSystemStorageForShutdown(
+  coordinator().suspend_resume_manager().suspend_handler().UnregisterSystemStorageForShutdown(
       [&](zx_status_t status) {
         finished = true;
         remove_status = status;
@@ -599,7 +599,7 @@ TEST_F(MultipleDeviceTestCase, UnregisterSystemStorageForShutdown_DevicesRemoveC
 
   bool finished = false;
   zx_status_t remove_status;
-  coordinator().suspend_resume_manager()->suspend_handler().UnregisterSystemStorageForShutdown(
+  coordinator().suspend_resume_manager().suspend_handler().UnregisterSystemStorageForShutdown(
       [&](zx_status_t status) {
         finished = true;
         remove_status = status;

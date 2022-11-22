@@ -224,16 +224,16 @@ class Coordinator : public CompositeManagerBridge,
   const fbl::RefPtr<Device>& root_device() { return root_device_; }
   const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
   Devfs& devfs() { return devfs_; }
-  SuspendResumeManager* suspend_resume_manager() { return suspend_resume_manager_.get(); }
+  SuspendResumeManager& suspend_resume_manager() { return *suspend_resume_manager_; }
   InspectManager& inspect_manager() { return *inspect_manager_; }
   DriverLoader& driver_loader() { return driver_loader_; }
   DeviceManager* device_manager() const { return device_manager_.get(); }
-  NodeGroupManager* node_group_manager() const { return node_group_manager_.get(); }
-  BindDriverManager* bind_driver_manager() const { return bind_driver_manager_.get(); }
-  FirmwareLoader* firmware_loader() const { return firmware_loader_.get(); }
+  NodeGroupManager& node_group_manager() const { return *node_group_manager_; }
+  BindDriverManager& bind_driver_manager() const { return *bind_driver_manager_; }
+  FirmwareLoader& firmware_loader() const { return *firmware_loader_; }
   zx::vmo& mexec_kernel_zbi() { return mexec_kernel_zbi_; }
   zx::vmo& mexec_data_zbi() { return mexec_data_zbi_; }
-  component::OutgoingDirectory* outgoing() { return outgoing_; }
+  component::OutgoingDirectory& outgoing() { return *outgoing_; }
 
  private:
   // CompositeManagerBridge interface
