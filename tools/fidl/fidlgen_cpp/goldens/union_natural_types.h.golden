@@ -1563,8 +1563,8 @@ class ReverseOrdinalUnion {
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_xunion_tag_t {
-    kSecond = 2,  // 0x2
     kFirst = 1,  // 0x1
+    kSecond = 2,  // 0x2
   };
 
   ReverseOrdinalUnion(ReverseOrdinalUnion&& other) noexcept
@@ -1595,45 +1595,45 @@ class ReverseOrdinalUnion {
   constexpr ::test_union::ReverseOrdinalUnion::Tag Which() const {
     return ReverseOrdinalUnion::IndexToTag(storage_->index()).value();
   }
-    static ReverseOrdinalUnion WithSecond(uint32_t val) {
+    static ReverseOrdinalUnion WithFirst(uint32_t val) {
       return ReverseOrdinalUnion(std::make_shared<Storage_>(
         std::in_place_index_t<1>{},
         std::move(val)));
     }
 
-    const ::fidl::internal::UnionMemberView<1, Storage_> second() const {
+    const ::fidl::internal::UnionMemberView<1, Storage_> first() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
 
-    ::fidl::internal::UnionMemberView<1, Storage_> second() {
+    ::fidl::internal::UnionMemberView<1, Storage_> first() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
-    }
-
-    // Sets the union to hold the second member.
-    //
-    
-    ReverseOrdinalUnion& second(uint32_t value) {
-      storage_->emplace<1>(std::move(value));
-      return *this;
-    }
-    static ReverseOrdinalUnion WithFirst(uint32_t val) {
-      return ReverseOrdinalUnion(std::make_shared<Storage_>(
-        std::in_place_index_t<2>{},
-        std::move(val)));
-    }
-
-    const ::fidl::internal::UnionMemberView<2, Storage_> first() const {
-      return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
-    }
-
-    ::fidl::internal::UnionMemberView<2, Storage_> first() {
-      return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
     // Sets the union to hold the first member.
     //
     
     ReverseOrdinalUnion& first(uint32_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
+    }
+    static ReverseOrdinalUnion WithSecond(uint32_t val) {
+      return ReverseOrdinalUnion(std::make_shared<Storage_>(
+        std::in_place_index_t<2>{},
+        std::move(val)));
+    }
+
+    const ::fidl::internal::UnionMemberView<2, Storage_> second() const {
+      return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    ::fidl::internal::UnionMemberView<2, Storage_> second() {
+      return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the second member.
+    //
+    
+    ReverseOrdinalUnion& second(uint32_t value) {
       storage_->emplace<2>(std::move(value));
       return *this;
     }
@@ -1654,8 +1654,8 @@ class ReverseOrdinalUnion {
 
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_union::ReverseOrdinalUnion::Tag tag) {
     switch (tag) {
-        case ::test_union::ReverseOrdinalUnion::Tag::kSecond: return 1;
-        case ::test_union::ReverseOrdinalUnion::Tag::kFirst: return 2;
+        case ::test_union::ReverseOrdinalUnion::Tag::kFirst: return 1;
+        case ::test_union::ReverseOrdinalUnion::Tag::kSecond: return 2;
       default: {
           decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -1665,8 +1665,8 @@ class ReverseOrdinalUnion {
 
   static constexpr std::optional<::test_union::ReverseOrdinalUnion::Tag> IndexToTag(size_t index) {
     switch (index) {
-        case 1: return ::test_union::ReverseOrdinalUnion::Tag::kSecond;
-        case 2: return ::test_union::ReverseOrdinalUnion::Tag::kFirst;
+        case 1: return ::test_union::ReverseOrdinalUnion::Tag::kFirst;
+        case 2: return ::test_union::ReverseOrdinalUnion::Tag::kSecond;
         default: return std::nullopt;
     }
   }
@@ -2033,14 +2033,14 @@ class ExplicitFoo {
   using Storage_ =
     std::variant<
       std::monostate
-        , ::std::string
-        , int32_t>;
+        , int32_t
+        , ::std::string>;
 
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_xunion_tag_t {
-    kS = 2,  // 0x2
     kI = 1,  // 0x1
+    kS = 2,  // 0x2
     _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -2075,45 +2075,45 @@ class ExplicitFoo {
   constexpr ::test_union::ExplicitFoo::Tag Which() const {
     return ExplicitFoo::IndexToTag(storage_->index()).value();
   }
-    static ExplicitFoo WithS(::std::string val) {
+    static ExplicitFoo WithI(int32_t val) {
       return ExplicitFoo(std::make_shared<Storage_>(
         std::in_place_index_t<1>{},
         std::move(val)));
     }
 
-    const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
+    const ::fidl::internal::UnionMemberView<1, Storage_> i() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
 
-    ::fidl::internal::UnionMemberView<1, Storage_> s() {
+    ::fidl::internal::UnionMemberView<1, Storage_> i() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
-    }
-
-    // Sets the union to hold the s member.
-    //
-    
-    ExplicitFoo& s(::std::string value) {
-      storage_->emplace<1>(std::move(value));
-      return *this;
-    }
-    static ExplicitFoo WithI(int32_t val) {
-      return ExplicitFoo(std::make_shared<Storage_>(
-        std::in_place_index_t<2>{},
-        std::move(val)));
-    }
-
-    const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
-      return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
-    }
-
-    ::fidl::internal::UnionMemberView<2, Storage_> i() {
-      return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
     // Sets the union to hold the i member.
     //
     
     ExplicitFoo& i(int32_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
+    }
+    static ExplicitFoo WithS(::std::string val) {
+      return ExplicitFoo(std::make_shared<Storage_>(
+        std::in_place_index_t<2>{},
+        std::move(val)));
+    }
+
+    const ::fidl::internal::UnionMemberView<2, Storage_> s() const {
+      return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    ::fidl::internal::UnionMemberView<2, Storage_> s() {
+      return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the s member.
+    //
+    
+    ExplicitFoo& s(::std::string value) {
       storage_->emplace<2>(std::move(value));
       return *this;
     }
@@ -2127,15 +2127,15 @@ class ExplicitFoo {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_union::ExplicitFoo>;
   static constexpr auto kMembers = std::make_tuple(
     ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>()
-      , ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintString<>>()
-      , ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>());
+      , ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>()
+      , ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintString<>>());
 
   explicit ExplicitFoo(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_union::ExplicitFoo::Tag tag) {
     switch (tag) {
-        case ::test_union::ExplicitFoo::Tag::kS: return 1;
-        case ::test_union::ExplicitFoo::Tag::kI: return 2;
+        case ::test_union::ExplicitFoo::Tag::kI: return 1;
+        case ::test_union::ExplicitFoo::Tag::kS: return 2;
       default: {
         return 0;
       }
@@ -2144,8 +2144,8 @@ class ExplicitFoo {
 
   static constexpr std::optional<::test_union::ExplicitFoo::Tag> IndexToTag(size_t index) {
     switch (index) {
-        case 1: return ::test_union::ExplicitFoo::Tag::kS;
-        case 2: return ::test_union::ExplicitFoo::Tag::kI;
+        case 1: return ::test_union::ExplicitFoo::Tag::kI;
+        case 2: return ::test_union::ExplicitFoo::Tag::kS;
         default: return ::test_union::ExplicitFoo::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
@@ -2167,14 +2167,14 @@ class ExplicitStrictFoo {
   using Storage_ =
     std::variant<
       std::monostate
-        , ::std::string
-        , int32_t>;
+        , int32_t
+        , ::std::string>;
 
  public:
   // TODO: share union tag types between wire & natural.
   enum class Tag : fidl_xunion_tag_t {
-    kS = 3,  // 0x3
     kI = 2,  // 0x2
+    kS = 3,  // 0x3
   };
 
   ExplicitStrictFoo(ExplicitStrictFoo&& other) noexcept
@@ -2205,45 +2205,45 @@ class ExplicitStrictFoo {
   constexpr ::test_union::ExplicitStrictFoo::Tag Which() const {
     return ExplicitStrictFoo::IndexToTag(storage_->index()).value();
   }
-    static ExplicitStrictFoo WithS(::std::string val) {
+    static ExplicitStrictFoo WithI(int32_t val) {
       return ExplicitStrictFoo(std::make_shared<Storage_>(
         std::in_place_index_t<1>{},
         std::move(val)));
     }
 
-    const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
+    const ::fidl::internal::UnionMemberView<1, Storage_> i() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
 
-    ::fidl::internal::UnionMemberView<1, Storage_> s() {
+    ::fidl::internal::UnionMemberView<1, Storage_> i() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
-    }
-
-    // Sets the union to hold the s member.
-    //
-    
-    ExplicitStrictFoo& s(::std::string value) {
-      storage_->emplace<1>(std::move(value));
-      return *this;
-    }
-    static ExplicitStrictFoo WithI(int32_t val) {
-      return ExplicitStrictFoo(std::make_shared<Storage_>(
-        std::in_place_index_t<2>{},
-        std::move(val)));
-    }
-
-    const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
-      return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
-    }
-
-    ::fidl::internal::UnionMemberView<2, Storage_> i() {
-      return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
     // Sets the union to hold the i member.
     //
     
     ExplicitStrictFoo& i(int32_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
+    }
+    static ExplicitStrictFoo WithS(::std::string val) {
+      return ExplicitStrictFoo(std::make_shared<Storage_>(
+        std::in_place_index_t<2>{},
+        std::move(val)));
+    }
+
+    const ::fidl::internal::UnionMemberView<2, Storage_> s() const {
+      return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    ::fidl::internal::UnionMemberView<2, Storage_> s() {
+      return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the s member.
+    //
+    
+    ExplicitStrictFoo& s(::std::string value) {
       storage_->emplace<2>(std::move(value));
       return *this;
     }
@@ -2257,15 +2257,15 @@ class ExplicitStrictFoo {
   friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_union::ExplicitStrictFoo>;
   static constexpr auto kMembers = std::make_tuple(
     ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>()
-      , ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintString<>>()
-      , ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>());
+      , ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>()
+      , ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintString<>>());
 
   explicit ExplicitStrictFoo(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
 
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_union::ExplicitStrictFoo::Tag tag) {
     switch (tag) {
-        case ::test_union::ExplicitStrictFoo::Tag::kS: return 1;
-        case ::test_union::ExplicitStrictFoo::Tag::kI: return 2;
+        case ::test_union::ExplicitStrictFoo::Tag::kI: return 1;
+        case ::test_union::ExplicitStrictFoo::Tag::kS: return 2;
       default: {
           decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -2275,8 +2275,8 @@ class ExplicitStrictFoo {
 
   static constexpr std::optional<::test_union::ExplicitStrictFoo::Tag> IndexToTag(size_t index) {
     switch (index) {
-        case 1: return ::test_union::ExplicitStrictFoo::Tag::kS;
-        case 2: return ::test_union::ExplicitStrictFoo::Tag::kI;
+        case 1: return ::test_union::ExplicitStrictFoo::Tag::kI;
+        case 2: return ::test_union::ExplicitStrictFoo::Tag::kS;
         default: return std::nullopt;
     }
   }

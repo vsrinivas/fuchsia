@@ -407,11 +407,11 @@ struct Allocate<ReverseOrdinalUnion> {
     ReverseOrdinalUnion out;
     switch (selector % 2) {
       case 0: {
-        out.set_second(Allocate<uint32_t>{}(src, size));
+        out.set_first(Allocate<uint32_t>{}(src, size));
         break;
       }
       case 1: {
-        out.set_first(Allocate<uint32_t>{}(src, size));
+        out.set_second(Allocate<uint32_t>{}(src, size));
         break;
       }
     }
@@ -506,7 +506,7 @@ struct Allocate<StrictFoo> {
 template <>
 struct MinSize<ExplicitFoo> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::std::string>(), MinSize<int32_t>()};
+    size_t sizes[] = {0, MinSize<int32_t>(), MinSize<::std::string>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -524,11 +524,11 @@ struct Allocate<ExplicitFoo> {
     ExplicitFoo out;
     switch (selector % 2) {
       case 0: {
-        out.set_s(Allocate<::std::string>{}(src, size));
+        out.set_i(Allocate<int32_t>{}(src, size));
         break;
       }
       case 1: {
-        out.set_i(Allocate<int32_t>{}(src, size));
+        out.set_s(Allocate<::std::string>{}(src, size));
         break;
       }
     }
@@ -539,7 +539,7 @@ struct Allocate<ExplicitFoo> {
 template <>
 struct MinSize<ExplicitStrictFoo> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::std::string>(), MinSize<int32_t>()};
+    size_t sizes[] = {0, MinSize<int32_t>(), MinSize<::std::string>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -557,11 +557,11 @@ struct Allocate<ExplicitStrictFoo> {
     ExplicitStrictFoo out;
     switch (selector % 2) {
       case 0: {
-        out.set_s(Allocate<::std::string>{}(src, size));
+        out.set_i(Allocate<int32_t>{}(src, size));
         break;
       }
       case 1: {
-        out.set_i(Allocate<int32_t>{}(src, size));
+        out.set_s(Allocate<::std::string>{}(src, size));
         break;
       }
     }

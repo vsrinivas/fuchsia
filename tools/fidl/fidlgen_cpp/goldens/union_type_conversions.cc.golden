@@ -308,24 +308,24 @@ namespace internal {
 
 ::test_union::ReverseOrdinalUnion WireNaturalConversionTraits<::test_union::wire::ReverseOrdinalUnion, ::test_union::ReverseOrdinalUnion>::ToNatural(::test_union::wire::ReverseOrdinalUnion src) {
   switch (src.Which()) {
-    case ::test_union::wire::ReverseOrdinalUnion::Tag::kSecond:
-      return ::test_union::ReverseOrdinalUnion::WithSecond(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.second())));
     case ::test_union::wire::ReverseOrdinalUnion::Tag::kFirst:
       return ::test_union::ReverseOrdinalUnion::WithFirst(
           WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.first())));
+    case ::test_union::wire::ReverseOrdinalUnion::Tag::kSecond:
+      return ::test_union::ReverseOrdinalUnion::WithSecond(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.second())));
     default:
       ZX_PANIC("unknown union tag in strict union");
   }
 }
 ::test_union::wire::ReverseOrdinalUnion WireNaturalConversionTraits<::test_union::wire::ReverseOrdinalUnion, ::test_union::ReverseOrdinalUnion>::ToWire(fidl::AnyArena& arena, ::test_union::ReverseOrdinalUnion src) {
   switch (src.Which()) {
-    case ::test_union::ReverseOrdinalUnion::Tag::kSecond:
-      return ::test_union::wire::ReverseOrdinalUnion::WithSecond(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.second().value())));
     case ::test_union::ReverseOrdinalUnion::Tag::kFirst:
       return ::test_union::wire::ReverseOrdinalUnion::WithFirst(
           WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.first().value())));
+    case ::test_union::ReverseOrdinalUnion::Tag::kSecond:
+      return ::test_union::wire::ReverseOrdinalUnion::WithSecond(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.second().value())));
   }
 }
 
@@ -379,24 +379,24 @@ namespace internal {
 
 ::test_union::ExplicitFoo WireNaturalConversionTraits<::test_union::wire::ExplicitFoo, ::test_union::ExplicitFoo>::ToNatural(::test_union::wire::ExplicitFoo src) {
   switch (src.Which()) {
-    case ::test_union::wire::ExplicitFoo::Tag::kS:
-      return ::test_union::ExplicitFoo::WithS(
-          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToNatural(std::move(src.s())));
     case ::test_union::wire::ExplicitFoo::Tag::kI:
       return ::test_union::ExplicitFoo::WithI(
           WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.i())));
+    case ::test_union::wire::ExplicitFoo::Tag::kS:
+      return ::test_union::ExplicitFoo::WithS(
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToNatural(std::move(src.s())));
     default:
       return ::test_union::ExplicitFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_union::wire::ExplicitFoo WireNaturalConversionTraits<::test_union::wire::ExplicitFoo, ::test_union::ExplicitFoo>::ToWire(fidl::AnyArena& arena, ::test_union::ExplicitFoo src) {
   switch (src.Which()) {
-    case ::test_union::ExplicitFoo::Tag::kS:
-      return ::test_union::wire::ExplicitFoo::WithS(arena,
-                                                    WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToWire(arena, std::move(src.s().value())));
     case ::test_union::ExplicitFoo::Tag::kI:
       return ::test_union::wire::ExplicitFoo::WithI(
           WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.i().value())));
+    case ::test_union::ExplicitFoo::Tag::kS:
+      return ::test_union::wire::ExplicitFoo::WithS(arena,
+                                                    WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToWire(arena, std::move(src.s().value())));
     default:
       return ::test_union::wire::ExplicitFoo();
   }
@@ -404,24 +404,24 @@ namespace internal {
 
 ::test_union::ExplicitStrictFoo WireNaturalConversionTraits<::test_union::wire::ExplicitStrictFoo, ::test_union::ExplicitStrictFoo>::ToNatural(::test_union::wire::ExplicitStrictFoo src) {
   switch (src.Which()) {
-    case ::test_union::wire::ExplicitStrictFoo::Tag::kS:
-      return ::test_union::ExplicitStrictFoo::WithS(
-          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToNatural(std::move(src.s())));
     case ::test_union::wire::ExplicitStrictFoo::Tag::kI:
       return ::test_union::ExplicitStrictFoo::WithI(
           WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.i())));
+    case ::test_union::wire::ExplicitStrictFoo::Tag::kS:
+      return ::test_union::ExplicitStrictFoo::WithS(
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToNatural(std::move(src.s())));
     default:
       ZX_PANIC("unknown union tag in strict union");
   }
 }
 ::test_union::wire::ExplicitStrictFoo WireNaturalConversionTraits<::test_union::wire::ExplicitStrictFoo, ::test_union::ExplicitStrictFoo>::ToWire(fidl::AnyArena& arena, ::test_union::ExplicitStrictFoo src) {
   switch (src.Which()) {
-    case ::test_union::ExplicitStrictFoo::Tag::kS:
-      return ::test_union::wire::ExplicitStrictFoo::WithS(arena,
-                                                          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToWire(arena, std::move(src.s().value())));
     case ::test_union::ExplicitStrictFoo::Tag::kI:
       return ::test_union::wire::ExplicitStrictFoo::WithI(
           WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.i().value())));
+    case ::test_union::ExplicitStrictFoo::Tag::kS:
+      return ::test_union::wire::ExplicitStrictFoo::WithS(arena,
+                                                          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToWire(arena, std::move(src.s().value())));
   }
 }
 

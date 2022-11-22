@@ -361,7 +361,7 @@
       },
       "members": [
         {
-          "ordinal": 3,
+          "ordinal": 1,
           "reserved": false,
           "type": {
             "kind": "primitive",
@@ -387,10 +387,10 @@
               "has_flexible_envelope": false
             }
           },
-          "name": "x",
+          "name": "z",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 29,
+            "line": 31,
             "column": 8,
             "length": 1
           }
@@ -431,7 +431,7 @@
           }
         },
         {
-          "ordinal": 1,
+          "ordinal": 3,
           "reserved": false,
           "type": {
             "kind": "primitive",
@@ -457,10 +457,10 @@
               "has_flexible_envelope": false
             }
           },
-          "name": "z",
+          "name": "x",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 31,
+            "line": 29,
             "column": 8,
             "length": 1
           }

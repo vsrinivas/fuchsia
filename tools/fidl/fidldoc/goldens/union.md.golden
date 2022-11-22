@@ -166,19 +166,19 @@
 *Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=80)*
 <table>
     <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
-        <tr id="ExplicitFoo.s">
-<td><h3 id="ExplicitFoo.s" class="add-link hide-from-toc">2</h3></td>
-            <td><code>s</code></td>
-            <td>
-                <code>string</code>
-            </td>
-            <td></td>
-        </tr>
         <tr id="ExplicitFoo.i">
 <td><h3 id="ExplicitFoo.i" class="add-link hide-from-toc">1</h3></td>
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
+            </td>
+            <td></td>
+        </tr>
+        <tr id="ExplicitFoo.s">
+<td><h3 id="ExplicitFoo.s" class="add-link hide-from-toc">2</h3></td>
+            <td><code>s</code></td>
+            <td>
+                <code>string</code>
             </td>
             <td></td>
         </tr>
@@ -196,11 +196,11 @@
 *Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=16)*
 <table>
     <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
-        <tr id="ExplicitPizzaOrPasta.">
-<td><h3 id="ExplicitPizzaOrPasta." class="add-link hide-from-toc">3</h3></td>
-            <td><code></code></td>
+        <tr id="ExplicitPizzaOrPasta.pizza">
+<td><h3 id="ExplicitPizzaOrPasta.pizza" class="add-link hide-from-toc">1</h3></td>
+            <td><code>pizza</code></td>
             <td>
-                <code></code>
+                <code><a class='link' href='#Pizza'>Pizza</a></code>
             </td>
             <td></td>
         </tr>
@@ -212,11 +212,11 @@
             </td>
             <td></td>
         </tr>
-        <tr id="ExplicitPizzaOrPasta.pizza">
-<td><h3 id="ExplicitPizzaOrPasta.pizza" class="add-link hide-from-toc">1</h3></td>
-            <td><code>pizza</code></td>
+        <tr id="ExplicitPizzaOrPasta.">
+<td><h3 id="ExplicitPizzaOrPasta." class="add-link hide-from-toc">3</h3></td>
+            <td><code></code></td>
             <td>
-                <code><a class='link' href='#Pizza'>Pizza</a></code>
+                <code></code>
             </td>
             <td></td>
         </tr>
@@ -242,19 +242,19 @@
             </td>
             <td></td>
         </tr>
-        <tr id="ExplicitStrictFoo.s">
-<td><h3 id="ExplicitStrictFoo.s" class="add-link hide-from-toc">3</h3></td>
-            <td><code>s</code></td>
-            <td>
-                <code>string</code>
-            </td>
-            <td></td>
-        </tr>
         <tr id="ExplicitStrictFoo.i">
 <td><h3 id="ExplicitStrictFoo.i" class="add-link hide-from-toc">2</h3></td>
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
+            </td>
+            <td></td>
+        </tr>
+        <tr id="ExplicitStrictFoo.s">
+<td><h3 id="ExplicitStrictFoo.s" class="add-link hide-from-toc">3</h3></td>
+            <td><code>s</code></td>
+            <td>
+                <code>string</code>
             </td>
             <td></td>
         </tr>
@@ -264,19 +264,19 @@
 *Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=55)*
 <table>
     <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
-        <tr id="ExplicitUnion.">
-<td><h3 id="ExplicitUnion." class="add-link hide-from-toc">2</h3></td>
-            <td><code></code></td>
-            <td>
-                <code></code>
-            </td>
-            <td></td>
-        </tr>
         <tr id="ExplicitUnion.Primitive">
 <td><h3 id="ExplicitUnion.Primitive" class="add-link hide-from-toc">1</h3></td>
             <td><code>Primitive</code></td>
             <td>
                 <code>int32</code>
+            </td>
+            <td></td>
+        </tr>
+        <tr id="ExplicitUnion.">
+<td><h3 id="ExplicitUnion." class="add-link hide-from-toc">2</h3></td>
+            <td><code></code></td>
+            <td>
+                <code></code>
             </td>
             <td></td>
         </tr>
@@ -294,11 +294,11 @@
 *Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=137)*
 <table>
     <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
-        <tr id="ExplicitXUnion.">
-<td><h3 id="ExplicitXUnion." class="add-link hide-from-toc">3</h3></td>
-            <td><code></code></td>
+        <tr id="ExplicitXUnion.i">
+<td><h3 id="ExplicitXUnion.i" class="add-link hide-from-toc">1</h3></td>
+            <td><code>i</code></td>
             <td>
-                <code></code>
+                <code>int64</code>
             </td>
             <td></td>
         </tr>
@@ -310,11 +310,11 @@
             </td>
             <td></td>
         </tr>
-        <tr id="ExplicitXUnion.i">
-<td><h3 id="ExplicitXUnion.i" class="add-link hide-from-toc">1</h3></td>
-            <td><code>i</code></td>
+        <tr id="ExplicitXUnion.">
+<td><h3 id="ExplicitXUnion." class="add-link hide-from-toc">3</h3></td>
+            <td><code></code></td>
             <td>
-                <code>int64</code>
+                <code></code>
             </td>
             <td></td>
         </tr>
@@ -508,17 +508,17 @@
 *Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=61)*
 <table>
     <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
-        <tr id="ReverseOrdinalUnion.second">
-<td><h3 id="ReverseOrdinalUnion.second" class="add-link hide-from-toc">2</h3></td>
-            <td><code>second</code></td>
+        <tr id="ReverseOrdinalUnion.first">
+<td><h3 id="ReverseOrdinalUnion.first" class="add-link hide-from-toc">1</h3></td>
+            <td><code>first</code></td>
             <td>
                 <code>uint32</code>
             </td>
             <td></td>
         </tr>
-        <tr id="ReverseOrdinalUnion.first">
-<td><h3 id="ReverseOrdinalUnion.first" class="add-link hide-from-toc">1</h3></td>
-            <td><code>first</code></td>
+        <tr id="ReverseOrdinalUnion.second">
+<td><h3 id="ReverseOrdinalUnion.second" class="add-link hide-from-toc">2</h3></td>
+            <td><code>second</code></td>
             <td>
                 <code>uint32</code>
             </td>

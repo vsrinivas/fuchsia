@@ -994,30 +994,11 @@ class ReverseOrdinalUnion {
   ReverseOrdinalUnion& operator=(ReverseOrdinalUnion&&) = default;
 
   enum class Tag : fidl_xunion_tag_t {
-    kSecond = 2,  // 0x2
     kFirst = 1,  // 0x1
+    kSecond = 2,  // 0x2
   };
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::ReverseOrdinalUnion::Ordinal::Invalid; }
-
-  bool is_second() const { return ordinal_ == ::test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond; }
-  
-  static ReverseOrdinalUnion WithSecond(uint32_t val) {
-    ReverseOrdinalUnion result;
-    result.ordinal_ = ::test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond;
-    result.envelope_.As<uint32_t>().set_data(std::move(val));
-    return result;
-  }
-
-
-  uint32_t& second() {
-    ZX_ASSERT(ordinal_ == ::test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond);
-    return envelope_.As<uint32_t>().get_data();
-  }
-  const uint32_t& second() const {
-    ZX_ASSERT(ordinal_ == ::test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond);
-    return envelope_.As<uint32_t>().get_data();
-  }
 
   bool is_first() const { return ordinal_ == ::test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst; }
   
@@ -1037,6 +1018,25 @@ class ReverseOrdinalUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst);
     return envelope_.As<uint32_t>().get_data();
   }
+
+  bool is_second() const { return ordinal_ == ::test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond; }
+  
+  static ReverseOrdinalUnion WithSecond(uint32_t val) {
+    ReverseOrdinalUnion result;
+    result.ordinal_ = ::test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond;
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
+  }
+
+
+  uint32_t& second() {
+    ZX_ASSERT(ordinal_ == ::test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  const uint32_t& second() const {
+    ZX_ASSERT(ordinal_ == ::test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond);
+    return envelope_.As<uint32_t>().get_data();
+  }
   ::test_union::wire::ReverseOrdinalUnion::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::ReverseOrdinalUnion::Tag>(ordinal_);
@@ -1045,8 +1045,8 @@ class ReverseOrdinalUnion {
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
-    kSecond = 2,  // 0x2
     kFirst = 1,  // 0x1
+    kSecond = 2,  // 0x2
   };
 
   static void SizeAndOffsetAssertionHelper();
@@ -1237,8 +1237,8 @@ class ExplicitFoo {
   ExplicitFoo& operator=(ExplicitFoo&&) = default;
 
   enum class Tag : fidl_xunion_tag_t {
-    kS = 2,  // 0x2
     kI = 1,  // 0x1
+    kS = 2,  // 0x2
     _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
   constexpr bool IsUnknown() const {
@@ -1246,6 +1246,25 @@ class ExplicitFoo {
   }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::Invalid; }
+
+  bool is_i() const { return ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kI; }
+  
+  static ExplicitFoo WithI(int32_t val) {
+    ExplicitFoo result;
+    result.ordinal_ = ::test_union::wire::ExplicitFoo::Ordinal::kI;
+    result.envelope_.As<int32_t>().set_data(std::move(val));
+    return result;
+  }
+
+
+  int32_t& i() {
+    ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kI);
+    return envelope_.As<int32_t>().get_data();
+  }
+  const int32_t& i() const {
+    ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kI);
+    return envelope_.As<int32_t>().get_data();
+  }
 
   bool is_s() const { return ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kS; }
   
@@ -1272,32 +1291,13 @@ class ExplicitFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
-
-  bool is_i() const { return ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kI; }
-  
-  static ExplicitFoo WithI(int32_t val) {
-    ExplicitFoo result;
-    result.ordinal_ = ::test_union::wire::ExplicitFoo::Ordinal::kI;
-    result.envelope_.As<int32_t>().set_data(std::move(val));
-    return result;
-  }
-
-
-  int32_t& i() {
-    ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kI);
-    return envelope_.As<int32_t>().get_data();
-  }
-  const int32_t& i() const {
-    ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kI);
-    return envelope_.As<int32_t>().get_data();
-  }
   ::test_union::wire::ExplicitFoo::Tag Which() const;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
-    kS = 2,  // 0x2
     kI = 1,  // 0x1
+    kS = 2,  // 0x2
   };
 
   static void SizeAndOffsetAssertionHelper();
@@ -1321,11 +1321,30 @@ class ExplicitStrictFoo {
   ExplicitStrictFoo& operator=(ExplicitStrictFoo&&) = default;
 
   enum class Tag : fidl_xunion_tag_t {
-    kS = 3,  // 0x3
     kI = 2,  // 0x2
+    kS = 3,  // 0x3
   };
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::Invalid; }
+
+  bool is_i() const { return ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kI; }
+  
+  static ExplicitStrictFoo WithI(int32_t val) {
+    ExplicitStrictFoo result;
+    result.ordinal_ = ::test_union::wire::ExplicitStrictFoo::Ordinal::kI;
+    result.envelope_.As<int32_t>().set_data(std::move(val));
+    return result;
+  }
+
+
+  int32_t& i() {
+    ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kI);
+    return envelope_.As<int32_t>().get_data();
+  }
+  const int32_t& i() const {
+    ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kI);
+    return envelope_.As<int32_t>().get_data();
+  }
 
   bool is_s() const { return ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kS; }
   
@@ -1352,25 +1371,6 @@ class ExplicitStrictFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
-
-  bool is_i() const { return ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kI; }
-  
-  static ExplicitStrictFoo WithI(int32_t val) {
-    ExplicitStrictFoo result;
-    result.ordinal_ = ::test_union::wire::ExplicitStrictFoo::Ordinal::kI;
-    result.envelope_.As<int32_t>().set_data(std::move(val));
-    return result;
-  }
-
-
-  int32_t& i() {
-    ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kI);
-    return envelope_.As<int32_t>().get_data();
-  }
-  const int32_t& i() const {
-    ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kI);
-    return envelope_.As<int32_t>().get_data();
-  }
   ::test_union::wire::ExplicitStrictFoo::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::ExplicitStrictFoo::Tag>(ordinal_);
@@ -1379,8 +1379,8 @@ class ExplicitStrictFoo {
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
-    kS = 3,  // 0x3
     kI = 2,  // 0x2
+    kS = 3,  // 0x3
   };
 
   static void SizeAndOffsetAssertionHelper();
@@ -3772,10 +3772,10 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ReverseOrdinalUnio
     
     size_t inline_size;
     switch (u->tag) {
-      case 2: // ::test_union::wire::ReverseOrdinalUnion::Tag::kSecond
+      case 1: // ::test_union::wire::ReverseOrdinalUnion::Tag::kFirst
         inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
-      case 1: // ::test_union::wire::ReverseOrdinalUnion::Tag::kFirst
+      case 2: // ::test_union::wire::ReverseOrdinalUnion::Tag::kSecond
         inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
@@ -3784,10 +3784,10 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ReverseOrdinalUnio
     }
     ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
     switch (u->tag) {
-      case 2: // ::test_union::wire::ReverseOrdinalUnion::Tag::kSecond
+      case 1: // ::test_union::wire::ReverseOrdinalUnion::Tag::kFirst
         encode_fn = ::fidl::internal::MakeEncodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
-      case 1: // ::test_union::wire::ReverseOrdinalUnion::Tag::kFirst
+      case 2: // ::test_union::wire::ReverseOrdinalUnion::Tag::kSecond
         encode_fn = ::fidl::internal::MakeEncodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
@@ -3819,10 +3819,10 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ReverseOrdinalUnio
     
     size_t inline_size;
     switch (tag) {
-      case ::test_union::wire::ReverseOrdinalUnion::Tag::kSecond:
+      case ::test_union::wire::ReverseOrdinalUnion::Tag::kFirst:
         inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
-      case ::test_union::wire::ReverseOrdinalUnion::Tag::kFirst:
+      case ::test_union::wire::ReverseOrdinalUnion::Tag::kSecond:
         inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
@@ -3831,10 +3831,10 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ReverseOrdinalUnio
     }
     DecodeFn<IsRecursive> decode_fn;
     switch(tag) {
-      case ::test_union::wire::ReverseOrdinalUnion::Tag::kSecond:
+      case ::test_union::wire::ReverseOrdinalUnion::Tag::kFirst:
         decode_fn = ::fidl::internal::MakeDecodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
-      case ::test_union::wire::ReverseOrdinalUnion::Tag::kFirst:
+      case ::test_union::wire::ReverseOrdinalUnion::Tag::kSecond:
         decode_fn = ::fidl::internal::MakeDecodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
@@ -4150,11 +4150,11 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitFoo, Const
     
     size_t inline_size;
     switch (u->tag) {
-      case 2: // ::test_union::wire::ExplicitFoo::Tag::kS
-        inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::inline_size;
-        break;
       case 1: // ::test_union::wire::ExplicitFoo::Tag::kI
         inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        break;
+      case 2: // ::test_union::wire::ExplicitFoo::Tag::kS
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -4162,11 +4162,11 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitFoo, Const
     }
     ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
     switch (u->tag) {
-      case 2: // ::test_union::wire::ExplicitFoo::Tag::kS
-        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>();
-        break;
       case 1: // ::test_union::wire::ExplicitFoo::Tag::kI
         encode_fn = ::fidl::internal::MakeEncodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 2: // ::test_union::wire::ExplicitFoo::Tag::kS
+        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
@@ -4197,11 +4197,11 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitFoo, Const
     
     size_t inline_size;
     switch (tag) {
-      case ::test_union::wire::ExplicitFoo::Tag::kS:
-        inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::inline_size;
-        break;
       case ::test_union::wire::ExplicitFoo::Tag::kI:
         inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        break;
+      case ::test_union::wire::ExplicitFoo::Tag::kS:
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -4209,11 +4209,11 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitFoo, Const
     }
     DecodeFn<IsRecursive> decode_fn;
     switch(tag) {
-      case ::test_union::wire::ExplicitFoo::Tag::kS:
-        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>();
-        break;
       case ::test_union::wire::ExplicitFoo::Tag::kI:
         decode_fn = ::fidl::internal::MakeDecodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_union::wire::ExplicitFoo::Tag::kS:
+        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;
@@ -4276,11 +4276,11 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitStrictFoo,
     
     size_t inline_size;
     switch (u->tag) {
-      case 3: // ::test_union::wire::ExplicitStrictFoo::Tag::kS
-        inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::inline_size;
-        break;
       case 2: // ::test_union::wire::ExplicitStrictFoo::Tag::kI
         inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        break;
+      case 3: // ::test_union::wire::ExplicitStrictFoo::Tag::kS
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -4288,11 +4288,11 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitStrictFoo,
     }
     ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
     switch (u->tag) {
-      case 3: // ::test_union::wire::ExplicitStrictFoo::Tag::kS
-        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>();
-        break;
       case 2: // ::test_union::wire::ExplicitStrictFoo::Tag::kI
         encode_fn = ::fidl::internal::MakeEncodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case 3: // ::test_union::wire::ExplicitStrictFoo::Tag::kS
+        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
@@ -4323,11 +4323,11 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitStrictFoo,
     
     size_t inline_size;
     switch (tag) {
-      case ::test_union::wire::ExplicitStrictFoo::Tag::kS:
-        inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::inline_size;
-        break;
       case ::test_union::wire::ExplicitStrictFoo::Tag::kI:
         inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        break;
+      case ::test_union::wire::ExplicitStrictFoo::Tag::kS:
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -4335,11 +4335,11 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitStrictFoo,
     }
     DecodeFn<IsRecursive> decode_fn;
     switch(tag) {
-      case ::test_union::wire::ExplicitStrictFoo::Tag::kS:
-        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>();
-        break;
       case ::test_union::wire::ExplicitStrictFoo::Tag::kI:
         decode_fn = ::fidl::internal::MakeDecodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      case ::test_union::wire::ExplicitStrictFoo::Tag::kS:
+        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;

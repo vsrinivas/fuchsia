@@ -205,11 +205,11 @@ std::ostream& fidl::ostream::Formatter<::test_union::ExplicitUnion>::Format(std:
 std::ostream& fidl::ostream::Formatter<::test_union::ReverseOrdinalUnion>::Format(std::ostream& os, const ::test_union::ReverseOrdinalUnion& value) {
   os << "test_union::ReverseOrdinalUnion::";
   switch (value.Which()) {
-    case ::test_union::ReverseOrdinalUnion::Tag::kSecond:
-      os << "second(" << fidl::ostream::Formatted<uint32_t>(value.second().value()) << ")";
-      break;
     case ::test_union::ReverseOrdinalUnion::Tag::kFirst:
       os << "first(" << fidl::ostream::Formatted<uint32_t>(value.first().value()) << ")";
+      break;
+    case ::test_union::ReverseOrdinalUnion::Tag::kSecond:
+      os << "second(" << fidl::ostream::Formatted<uint32_t>(value.second().value()) << ")";
       break;
     default:
       os << "Unknown";
@@ -247,11 +247,11 @@ std::ostream& fidl::ostream::Formatter<::test_union::StrictFoo>::Format(std::ost
 std::ostream& fidl::ostream::Formatter<::test_union::ExplicitFoo>::Format(std::ostream& os, const ::test_union::ExplicitFoo& value) {
   os << "test_union::ExplicitFoo::";
   switch (value.Which()) {
-    case ::test_union::ExplicitFoo::Tag::kS:
-      os << "s(" << fidl::ostream::Formatted<::std::string>(value.s().value()) << ")";
-      break;
     case ::test_union::ExplicitFoo::Tag::kI:
       os << "i(" << fidl::ostream::Formatted<int32_t>(value.i().value()) << ")";
+      break;
+    case ::test_union::ExplicitFoo::Tag::kS:
+      os << "s(" << fidl::ostream::Formatted<::std::string>(value.s().value()) << ")";
       break;
     default:
       os << "Unknown";
@@ -261,11 +261,11 @@ std::ostream& fidl::ostream::Formatter<::test_union::ExplicitFoo>::Format(std::o
 std::ostream& fidl::ostream::Formatter<::test_union::ExplicitStrictFoo>::Format(std::ostream& os, const ::test_union::ExplicitStrictFoo& value) {
   os << "test_union::ExplicitStrictFoo::";
   switch (value.Which()) {
-    case ::test_union::ExplicitStrictFoo::Tag::kS:
-      os << "s(" << fidl::ostream::Formatted<::std::string>(value.s().value()) << ")";
-      break;
     case ::test_union::ExplicitStrictFoo::Tag::kI:
       os << "i(" << fidl::ostream::Formatted<int32_t>(value.i().value()) << ")";
+      break;
+    case ::test_union::ExplicitStrictFoo::Tag::kS:
+      os << "s(" << fidl::ostream::Formatted<::std::string>(value.s().value()) << ")";
       break;
     default:
       os << "Unknown";

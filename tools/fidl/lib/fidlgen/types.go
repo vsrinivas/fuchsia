@@ -1270,6 +1270,8 @@ func (s byTableOrdinal) Swap(i, j int) {
 
 // SortedMembersNoReserved returns the table's members sorted by ordinal,
 // excluding reserved members.
+//
+// TODO(fxbug.dev/115754): Remove.
 func (t *Table) SortedMembersNoReserved() []TableMember {
 	var members []TableMember
 	for _, member := range t.Members {

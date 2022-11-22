@@ -81,8 +81,8 @@ fidl_union! {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExplicitFoo {
-    S(String),
     I(i32),
+    S(String),
     #[deprecated = "Use `ExplicitFoo::unknown()` to construct and `ExplicitFooUnknown!()` to exhaustively match."]
     #[doc(hidden)]
     __Unknown {
@@ -129,13 +129,13 @@ impl fidl::encoding::Persistable for ExplicitFoo {}
 fidl_union! {
     name: ExplicitFoo,
     members: [
-        S {
-            ty: String,
-            ordinal: 2,
-        },
         I {
             ty: i32,
             ordinal: 1,
+        },
+        S {
+            ty: String,
+            ordinal: 2,
         },
     ],
     value_unknown_member: __Unknown,
@@ -179,8 +179,8 @@ fidl_union! {
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum ExplicitStrictFoo {
-    S(String),
     I(i32),
+    S(String),
 }
 
 impl ExplicitStrictFoo {
@@ -202,13 +202,13 @@ impl fidl::encoding::Persistable for ExplicitStrictFoo {}
 fidl_union! {
     name: ExplicitStrictFoo,
     members: [
-        S {
-            ty: String,
-            ordinal: 3,
-        },
         I {
             ty: i32,
             ordinal: 2,
+        },
+        S {
+            ty: String,
+            ordinal: 3,
         },
     ],
 }
@@ -747,8 +747,8 @@ fidl_union! {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum ReverseOrdinalUnion {
-    Second(u32),
     First(u32),
+    Second(u32),
 }
 
 impl ReverseOrdinalUnion {
@@ -770,13 +770,13 @@ impl fidl::encoding::Persistable for ReverseOrdinalUnion {}
 fidl_union! {
     name: ReverseOrdinalUnion,
     members: [
-        Second {
-            ty: u32,
-            ordinal: 2,
-        },
         First {
             ty: u32,
             ordinal: 1,
+        },
+        Second {
+            ty: u32,
+            ordinal: 2,
         },
     ],
 }

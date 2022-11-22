@@ -1537,7 +1537,7 @@
                     "description": "Optional list of table attributes"
                 },
                 "members": {
-                    "description": "List of table members",
+                    "description": "List of table members, sorted by ordinal",
                     "items": {
                         "$ref": "#/definitions/table-member"
                     },
@@ -1817,7 +1817,7 @@
                     "description": "Optional list of extensible union attributes"
                 },
                 "members": {
-                    "description": "List of extensible union members",
+                    "description": "List of extensible union members, sorted by ordinal",
                     "items": {
                         "$ref": "#/definitions/union-member"
                     },

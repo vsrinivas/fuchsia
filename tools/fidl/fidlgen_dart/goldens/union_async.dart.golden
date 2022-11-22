@@ -97,22 +97,22 @@ const $fidl.NullableUnionType<EmptyFlexibleUnion> kEmptyFlexibleUnion_OptType =
 
 enum ExplicitFooTag {
   $unknown,
-  s, // 0x2
   i, // 0x1
+  s, // 0x2
 }
 
 const Map<int, ExplicitFooTag> _ExplicitFooTag_map = {
-  2: ExplicitFooTag.s,
   1: ExplicitFooTag.i,
+  2: ExplicitFooTag.s,
 };
 
 class ExplicitFoo extends $fidl.Union {
-  const ExplicitFoo.withS(String value)
-      : _ordinal = 2,
-        _data = value;
-
   const ExplicitFoo.withI(int value)
       : _ordinal = 1,
+        _data = value;
+
+  const ExplicitFoo.withS(String value)
+      : _ordinal = 2,
         _data = value;
   const ExplicitFoo.with$UnknownData(this._ordinal, $fidl.UnknownRawData data)
       : _data = data;
@@ -127,13 +127,6 @@ class ExplicitFoo extends $fidl.Union {
   ExplicitFooTag get $tag =>
       _ExplicitFooTag_map[_ordinal] ?? ExplicitFooTag.$unknown;
 
-  String? get s {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
   int? get i {
     if (_ordinal != 1) {
       return null;
@@ -141,10 +134,17 @@ class ExplicitFoo extends $fidl.Union {
     return _data;
   }
 
+  String? get s {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
   $fidl.UnknownRawData? get $unknownData {
     switch (_ordinal) {
-      case 2:
       case 1:
+      case 2:
         return null;
       default:
         return _data;
@@ -167,8 +167,8 @@ class ExplicitFoo extends $fidl.Union {
 const $fidl.UnionType<ExplicitFoo> kExplicitFoo_Type =
     $fidl.UnionType<ExplicitFoo>(
   members: <int, $fidl.FidlType>{
-    2: $fidl.StringType(maybeElementCount: null),
     1: $fidl.Int32Type(),
+    2: $fidl.StringType(maybeElementCount: null),
   },
   ctor: ExplicitFoo._ctor,
   flexible: true,
@@ -179,8 +179,8 @@ const $fidl.UnionType<ExplicitFoo> kExplicitFoo_Type =
 const $fidl.NullableUnionType<ExplicitFoo> kExplicitFoo_OptType =
     $fidl.NullableUnionType<ExplicitFoo>(
   members: <int, $fidl.FidlType>{
-    2: $fidl.StringType(maybeElementCount: null),
     1: $fidl.Int32Type(),
+    2: $fidl.StringType(maybeElementCount: null),
   },
   ctor: ExplicitFoo._ctor,
   flexible: true,
@@ -277,22 +277,22 @@ const $fidl.NullableUnionType<ExplicitPizzaOrPasta>
 );
 
 enum ExplicitStrictFooTag {
-  s, // 0x3
   i, // 0x2
+  s, // 0x3
 }
 
 const Map<int, ExplicitStrictFooTag> _ExplicitStrictFooTag_map = {
-  3: ExplicitStrictFooTag.s,
   2: ExplicitStrictFooTag.i,
+  3: ExplicitStrictFooTag.s,
 };
 
 class ExplicitStrictFoo extends $fidl.Union {
-  const ExplicitStrictFoo.withS(String value)
-      : _ordinal = 3,
-        _data = value;
-
   const ExplicitStrictFoo.withI(int value)
       : _ordinal = 2,
+        _data = value;
+
+  const ExplicitStrictFoo.withS(String value)
+      : _ordinal = 3,
         _data = value;
 
   ExplicitStrictFoo._(int ordinal, Object data)
@@ -304,13 +304,6 @@ class ExplicitStrictFoo extends $fidl.Union {
 
   ExplicitStrictFooTag get $tag => _ExplicitStrictFooTag_map[_ordinal]!;
 
-  String? get s {
-    if (_ordinal != 3) {
-      return null;
-    }
-    return _data;
-  }
-
   int? get i {
     if (_ordinal != 2) {
       return null;
@@ -318,10 +311,17 @@ class ExplicitStrictFoo extends $fidl.Union {
     return _data;
   }
 
+  String? get s {
+    if (_ordinal != 3) {
+      return null;
+    }
+    return _data;
+  }
+
   $fidl.UnknownRawData? get $unknownData {
     switch (_ordinal) {
-      case 3:
       case 2:
+      case 3:
         return null;
       default:
         return _data;
@@ -344,8 +344,8 @@ class ExplicitStrictFoo extends $fidl.Union {
 const $fidl.UnionType<ExplicitStrictFoo> kExplicitStrictFoo_Type =
     $fidl.UnionType<ExplicitStrictFoo>(
   members: <int, $fidl.FidlType>{
-    3: $fidl.StringType(maybeElementCount: null),
     2: $fidl.Int32Type(),
+    3: $fidl.StringType(maybeElementCount: null),
   },
   ctor: ExplicitStrictFoo._ctor,
   flexible: false,
@@ -356,8 +356,8 @@ const $fidl.UnionType<ExplicitStrictFoo> kExplicitStrictFoo_Type =
 const $fidl.NullableUnionType<ExplicitStrictFoo> kExplicitStrictFoo_OptType =
     $fidl.NullableUnionType<ExplicitStrictFoo>(
   members: <int, $fidl.FidlType>{
-    3: $fidl.StringType(maybeElementCount: null),
     2: $fidl.Int32Type(),
+    3: $fidl.StringType(maybeElementCount: null),
   },
   ctor: ExplicitStrictFoo._ctor,
   flexible: false,
@@ -1270,22 +1270,22 @@ const $fidl.NullableUnionType<PizzaOrPasta> kPizzaOrPasta_OptType =
 );
 
 enum ReverseOrdinalUnionTag {
-  second, // 0x2
   first, // 0x1
+  second, // 0x2
 }
 
 const Map<int, ReverseOrdinalUnionTag> _ReverseOrdinalUnionTag_map = {
-  2: ReverseOrdinalUnionTag.second,
   1: ReverseOrdinalUnionTag.first,
+  2: ReverseOrdinalUnionTag.second,
 };
 
 class ReverseOrdinalUnion extends $fidl.Union {
-  const ReverseOrdinalUnion.withSecond(int value)
-      : _ordinal = 2,
-        _data = value;
-
   const ReverseOrdinalUnion.withFirst(int value)
       : _ordinal = 1,
+        _data = value;
+
+  const ReverseOrdinalUnion.withSecond(int value)
+      : _ordinal = 2,
         _data = value;
 
   ReverseOrdinalUnion._(int ordinal, Object data)
@@ -1297,13 +1297,6 @@ class ReverseOrdinalUnion extends $fidl.Union {
 
   ReverseOrdinalUnionTag get $tag => _ReverseOrdinalUnionTag_map[_ordinal]!;
 
-  int? get second {
-    if (_ordinal != 2) {
-      return null;
-    }
-    return _data;
-  }
-
   int? get first {
     if (_ordinal != 1) {
       return null;
@@ -1311,10 +1304,17 @@ class ReverseOrdinalUnion extends $fidl.Union {
     return _data;
   }
 
+  int? get second {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
   $fidl.UnknownRawData? get $unknownData {
     switch (_ordinal) {
-      case 2:
       case 1:
+      case 2:
         return null;
       default:
         return _data;
@@ -1337,8 +1337,8 @@ class ReverseOrdinalUnion extends $fidl.Union {
 const $fidl.UnionType<ReverseOrdinalUnion> kReverseOrdinalUnion_Type =
     $fidl.UnionType<ReverseOrdinalUnion>(
   members: <int, $fidl.FidlType>{
-    2: $fidl.Uint32Type(),
     1: $fidl.Uint32Type(),
+    2: $fidl.Uint32Type(),
   },
   ctor: ReverseOrdinalUnion._ctor,
   flexible: false,
@@ -1349,8 +1349,8 @@ const $fidl.UnionType<ReverseOrdinalUnion> kReverseOrdinalUnion_Type =
 const $fidl.NullableUnionType<ReverseOrdinalUnion>
     kReverseOrdinalUnion_OptType = $fidl.NullableUnionType<ReverseOrdinalUnion>(
   members: <int, $fidl.FidlType>{
-    2: $fidl.Uint32Type(),
     1: $fidl.Uint32Type(),
+    2: $fidl.Uint32Type(),
   },
   ctor: ReverseOrdinalUnion._ctor,
   flexible: false,

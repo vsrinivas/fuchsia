@@ -150,13 +150,13 @@
       "members": [
         {
           "is_reserved": false,
-          "name": "x",
+          "name": "z",
           "location": {
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "data": "x",
-            "start_offset": 427,
-            "end_offset": 428
+            "data": "z",
+            "start_offset": 459,
+            "end_offset": 460
           },
           "type": {
             "kind": "primitive"
@@ -178,13 +178,13 @@
         },
         {
           "is_reserved": false,
-          "name": "z",
+          "name": "x",
           "location": {
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "data": "z",
-            "start_offset": 459,
-            "end_offset": 460
+            "data": "x",
+            "start_offset": 427,
+            "end_offset": 428
           },
           "type": {
             "kind": "primitive"

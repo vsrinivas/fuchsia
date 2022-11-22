@@ -153,8 +153,8 @@ type Foo = strict union {
 
   ASSERT_EQ(fidl_union->members.size(), 5);
   auto& member0 = fidl_union->members[0];
-  EXPECT_NOT_NULL(member0.maybe_used);
-  EXPECT_EQ(member0.ordinal->value, 5);
+  EXPECT_NULL(member0.maybe_used);
+  EXPECT_EQ(member0.ordinal->value, 1);
   auto& member1 = fidl_union->members[1];
   EXPECT_NOT_NULL(member1.maybe_used);
   EXPECT_EQ(member1.ordinal->value, 2);
@@ -162,11 +162,11 @@ type Foo = strict union {
   EXPECT_NULL(member2.maybe_used);
   EXPECT_EQ(member2.ordinal->value, 3);
   auto& member3 = fidl_union->members[3];
-  EXPECT_NULL(member3.maybe_used);
-  EXPECT_EQ(member3.ordinal->value, 1);
+  EXPECT_NOT_NULL(member3.maybe_used);
+  EXPECT_EQ(member3.ordinal->value, 4);
   auto& member4 = fidl_union->members[4];
   EXPECT_NOT_NULL(member4.maybe_used);
-  EXPECT_EQ(member4.ordinal->value, 4);
+  EXPECT_EQ(member4.ordinal->value, 5);
 }
 
 TEST(UnionTests, BadOrdinalOutOfBoundsNegative) {

@@ -111,8 +111,8 @@ void ::test_union::wire::StrictFoo::SizeAndOffsetAssertionHelper() {
 auto ::test_union::wire::ExplicitFoo::Which() const -> ::test_union::wire::ExplicitFoo::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-    case ::test_union::wire::ExplicitFoo::Ordinal::kS:
     case ::test_union::wire::ExplicitFoo::Ordinal::kI:
+    case ::test_union::wire::ExplicitFoo::Ordinal::kS:
       return static_cast<::test_union::wire::ExplicitFoo::Tag>(ordinal_);
     default:
       return ::test_union::wire::ExplicitFoo::Tag::_do_not_handle_this__write_a_default_case_instead;

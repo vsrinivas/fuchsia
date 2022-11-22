@@ -40,20 +40,6 @@
       "members": [
         {
           "is_reserved": false,
-          "name": "s",
-          "location": {
-            "is_virtual": false,
-            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
-            "data": "s",
-            "start_offset": 1504,
-            "end_offset": 1505
-          },
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "is_reserved": false,
           "name": "i",
           "location": {
             "is_virtual": false,
@@ -64,6 +50,20 @@
           },
           "type": {
             "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "s",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "s",
+            "start_offset": 1504,
+            "end_offset": 1505
+          },
+          "type": {
+            "kind": "string"
           }
         },
         {
@@ -82,12 +82,6 @@
         "end_offset": 230
       },
       "members": [
-        {
-          "is_reserved": true
-        },
-        {
-          "is_reserved": true
-        },
         {
           "is_reserved": false,
           "name": "pizza",
@@ -110,6 +104,12 @@
               "end_offset": 300
             }
           }
+        },
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": true
         },
         {
           "is_reserved": false,
@@ -152,20 +152,6 @@
         },
         {
           "is_reserved": false,
-          "name": "s",
-          "location": {
-            "is_virtual": false,
-            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
-            "data": "s",
-            "start_offset": 1615,
-            "end_offset": 1616
-          },
-          "type": {
-            "kind": "string"
-          }
-        },
-        {
-          "is_reserved": false,
           "name": "i",
           "location": {
             "is_virtual": false,
@@ -176,6 +162,20 @@
           },
           "type": {
             "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "s",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "s",
+            "start_offset": 1615,
+            "end_offset": 1616
+          },
+          "type": {
+            "kind": "string"
           }
         }
       ]
@@ -192,9 +192,6 @@
       },
       "members": [
         {
-          "is_reserved": true
-        },
-        {
           "is_reserved": false,
           "name": "Primitive",
           "location": {
@@ -207,6 +204,9 @@
           "type": {
             "kind": "primitive"
           }
+        },
+        {
+          "is_reserved": true
         },
         {
           "is_reserved": false,
@@ -236,12 +236,6 @@
       },
       "members": [
         {
-          "is_reserved": true
-        },
-        {
-          "is_reserved": true
-        },
-        {
           "is_reserved": false,
           "name": "i",
           "location": {
@@ -254,6 +248,12 @@
           "type": {
             "kind": "primitive"
           }
+        },
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": true
         },
         {
           "is_reserved": false,
@@ -637,20 +637,6 @@
       "members": [
         {
           "is_reserved": false,
-          "name": "second",
-          "location": {
-            "is_virtual": false,
-            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
-            "data": "second",
-            "start_offset": 1209,
-            "end_offset": 1215
-          },
-          "type": {
-            "kind": "primitive"
-          }
-        },
-        {
-          "is_reserved": false,
           "name": "first",
           "location": {
             "is_virtual": false,
@@ -658,6 +644,20 @@
             "data": "first",
             "start_offset": 1231,
             "end_offset": 1236
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "second",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "second",
+            "start_offset": 1209,
+            "end_offset": 1215
           },
           "type": {
             "kind": "primitive"

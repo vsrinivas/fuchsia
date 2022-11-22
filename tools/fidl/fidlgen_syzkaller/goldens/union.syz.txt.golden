@@ -69,8 +69,8 @@ test_union_EmptyFlexibleUnionHandles [
     void void
 ][varlen]
 test_union_ExplicitFooInLine [
-    sInLine fidl_union_member[2, fidl_string]
     i fidl_union_member[1, int32]
+    sInLine fidl_union_member[2, fidl_string]
 ]
 test_union_ExplicitFooOutOfLine [
     sOutOfLine fidl_aligned[stringnoz]
@@ -91,8 +91,8 @@ test_union_ExplicitPizzaOrPastaHandles [
     pasta test_union_PastaHandles
 ][varlen]
 test_union_ExplicitStrictFooInLine [
-    sInLine fidl_union_member[3, fidl_string]
     i fidl_union_member[2, int32]
+    sInLine fidl_union_member[3, fidl_string]
 ]
 test_union_ExplicitStrictFooOutOfLine [
     sOutOfLine fidl_aligned[stringnoz]
@@ -206,8 +206,8 @@ test_union_PizzaOrPastaHandles [
     pasta test_union_PastaHandles
 ][varlen]
 test_union_ReverseOrdinalUnionInLine [
-    second fidl_union_member[2, int32]
     first fidl_union_member[1, int32]
+    second fidl_union_member[2, int32]
 ]
 test_union_ReverseOrdinalUnionOutOfLine [
     void void

@@ -432,6 +432,16 @@ static std::vector<T> FilterMembers(const std::vector<T>& all, VersionRange rang
   return result;
 }
 
+// Like FilterMembers, but for members with ordinals (table and union members).
+// In addition to filtering, sorts the result by ordinal.
+template <typename T>
+static std::vector<T> FilterOrdinaledMembers(const std::vector<T>& all, VersionRange range) {
+  std::vector<T> result = FilterMembers(all, range);
+  std::sort(result.begin(), result.end(),
+            [](const T& lhs, const T& rhs) { return lhs.ordinal->value < rhs.ordinal->value; });
+  return result;
+}
+
 std::unique_ptr<Decl> Builtin::SplitImpl(VersionRange range) const {
   ZX_PANIC("splitting builtins not allowed");
 }
@@ -460,12 +470,12 @@ std::unique_ptr<Decl> Struct::SplitImpl(VersionRange range) const {
 }
 
 std::unique_ptr<Decl> Table::SplitImpl(VersionRange range) const {
-  return std::make_unique<Table>(attributes->Clone(), name, FilterMembers(members, range),
+  return std::make_unique<Table>(attributes->Clone(), name, FilterOrdinaledMembers(members, range),
                                  strictness, resourceness);
 }
 
 std::unique_ptr<Decl> Union::SplitImpl(VersionRange range) const {
-  return std::make_unique<Union>(attributes->Clone(), name, FilterMembers(members, range),
+  return std::make_unique<Union>(attributes->Clone(), name, FilterOrdinaledMembers(members, range),
                                  strictness, resourceness);
 }
 

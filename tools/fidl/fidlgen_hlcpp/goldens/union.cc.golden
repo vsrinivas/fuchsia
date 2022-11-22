@@ -2111,11 +2111,11 @@ ReverseOrdinalUnion::~ReverseOrdinalUnion() {
 
 ReverseOrdinalUnion::ReverseOrdinalUnion(ReverseOrdinalUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
-    case ::test::union_::ReverseOrdinalUnion::Tag::kSecond:
-      second_ = std::move(other.second_);
-      break;
     case ::test::union_::ReverseOrdinalUnion::Tag::kFirst:
       first_ = std::move(other.first_);
+      break;
+    case ::test::union_::ReverseOrdinalUnion::Tag::kSecond:
+      second_ = std::move(other.second_);
       break;
     case static_cast<fidl_xunion_tag_t>(::test::union_::ReverseOrdinalUnion::Tag::Invalid):
       break;
@@ -2127,11 +2127,11 @@ ReverseOrdinalUnion& ReverseOrdinalUnion::operator=(ReverseOrdinalUnion&& other)
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case ::test::union_::ReverseOrdinalUnion::Tag::kSecond:
-        second_ = std::move(other.second_);
-        break;
       case ::test::union_::ReverseOrdinalUnion::Tag::kFirst:
         first_ = std::move(other.first_);
+        break;
+      case ::test::union_::ReverseOrdinalUnion::Tag::kSecond:
+        second_ = std::move(other.second_);
         break;
       case static_cast<fidl_xunion_tag_t>(::test::union_::ReverseOrdinalUnion::Tag::Invalid):
         break;
@@ -2140,14 +2140,14 @@ ReverseOrdinalUnion& ReverseOrdinalUnion::operator=(ReverseOrdinalUnion&& other)
   return *this;
 }
 
-ReverseOrdinalUnion ReverseOrdinalUnion::WithSecond(uint32_t&& val) {
-  ReverseOrdinalUnion result;
-  result.set_second(std::move(val));
-  return result;
-}
 ReverseOrdinalUnion ReverseOrdinalUnion::WithFirst(uint32_t&& val) {
   ReverseOrdinalUnion result;
   result.set_first(std::move(val));
+  return result;
+}
+ReverseOrdinalUnion ReverseOrdinalUnion::WithSecond(uint32_t&& val) {
+  ReverseOrdinalUnion result;
+  result.set_second(std::move(val));
   return result;
 }
 
@@ -2158,29 +2158,6 @@ void ReverseOrdinalUnion::Encode(::fidl::Encoder* encoder, size_t offset,
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
-    case ::test::union_::ReverseOrdinalUnion::Tag::kSecond: {
-      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &second_, offset + offsetof(fidl_xunion_v2_t, envelope));
-
-        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-        xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
-        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-        break;
-      }
-
-      ::fidl::Encode(
-        encoder,
-        &second_,
-        encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
-
-      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-      xunion->tag = tag_;
-      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
-      xunion->envelope.flags = 0;
-      break;
-    }
     case ::test::union_::ReverseOrdinalUnion::Tag::kFirst: {
       if (::fidl::EncodingInlineSize<uint32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &first_, offset + offsetof(fidl_xunion_v2_t, envelope));
@@ -2195,6 +2172,29 @@ void ReverseOrdinalUnion::Encode(::fidl::Encoder* encoder, size_t offset,
       ::fidl::Encode(
         encoder,
         &first_,
+        encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
+      break;
+    }
+    case ::test::union_::ReverseOrdinalUnion::Tag::kSecond: {
+      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &second_, offset + offsetof(fidl_xunion_v2_t, envelope));
+
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
+      }
+
+      ::fidl::Encode(
+        encoder,
+        &second_,
         encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -2225,12 +2225,12 @@ void ReverseOrdinalUnion::Decode(::fidl::Decoder* _decoder, ReverseOrdinalUnion*
   size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
-    case ::test::union_::ReverseOrdinalUnion::Tag::kSecond: {
-      ::fidl::Decode(_decoder, &value->second_, value_offset);
-      break;
-    }
     case ::test::union_::ReverseOrdinalUnion::Tag::kFirst: {
       ::fidl::Decode(_decoder, &value->first_, value_offset);
+      break;
+    }
+    case ::test::union_::ReverseOrdinalUnion::Tag::kSecond: {
+      ::fidl::Decode(_decoder, &value->second_, value_offset);
       break;
     }
     default: {
@@ -2246,18 +2246,12 @@ zx_status_t ReverseOrdinalUnion::Clone(ReverseOrdinalUnion* result) const {
   switch (tag_) {
     case ::test::union_::ReverseOrdinalUnion::Tag::Invalid:
       return ZX_OK;
-    case ::test::union_::ReverseOrdinalUnion::Tag::kSecond:
-      return ::fidl::Clone(second_, &result->second_);
     case ::test::union_::ReverseOrdinalUnion::Tag::kFirst:
       return ::fidl::Clone(first_, &result->first_);
+    case ::test::union_::ReverseOrdinalUnion::Tag::kSecond:
+      return ::fidl::Clone(second_, &result->second_);
     default:return ZX_OK;
   }
-}
-
-ReverseOrdinalUnion& ReverseOrdinalUnion::set_second(uint32_t value) {
-  EnsureStorageInitialized(::test::union_::ReverseOrdinalUnion::Tag::kSecond);
-  second_ = std::move(value);
-  return *this;
 }
 
 ReverseOrdinalUnion& ReverseOrdinalUnion::set_first(uint32_t value) {
@@ -2266,11 +2260,17 @@ ReverseOrdinalUnion& ReverseOrdinalUnion::set_first(uint32_t value) {
   return *this;
 }
 
+ReverseOrdinalUnion& ReverseOrdinalUnion::set_second(uint32_t value) {
+  EnsureStorageInitialized(::test::union_::ReverseOrdinalUnion::Tag::kSecond);
+  second_ = std::move(value);
+  return *this;
+}
+
 void ReverseOrdinalUnion::Destroy() {
   switch (tag_) {
-    case ::test::union_::ReverseOrdinalUnion::Tag::kSecond:
-      break;
     case ::test::union_::ReverseOrdinalUnion::Tag::kFirst:
+      break;
+    case ::test::union_::ReverseOrdinalUnion::Tag::kSecond:
       break;
   
     default:
@@ -2287,11 +2287,11 @@ void ReverseOrdinalUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(::test::union_::ReverseOrdinalUnion::Tag::Invalid):
         break;
-      case ::test::union_::ReverseOrdinalUnion::Tag::kSecond:
-        new (&second_) uint32_t();
-        break;
       case ::test::union_::ReverseOrdinalUnion::Tag::kFirst:
         new (&first_) uint32_t();
+        break;
+      case ::test::union_::ReverseOrdinalUnion::Tag::kSecond:
+        new (&second_) uint32_t();
         break;
       default:
         break;
@@ -2777,12 +2777,12 @@ ExplicitFoo::~ExplicitFoo() {
 
 ExplicitFoo::ExplicitFoo(ExplicitFoo&& other) : tag_(other.tag_) {
   switch (tag_) {
+    case ::test::union_::ExplicitFoo::Tag::kI:
+      i_ = std::move(other.i_);
+      break;
     case ::test::union_::ExplicitFoo::Tag::kS:
       new (&s_) ::std::string();
       s_ = std::move(other.s_);
-      break;
-    case ::test::union_::ExplicitFoo::Tag::kI:
-      i_ = std::move(other.i_);
       break;
     case static_cast<fidl_xunion_tag_t>(::test::union_::ExplicitFoo::Tag::Invalid):
       break;
@@ -2798,12 +2798,12 @@ ExplicitFoo& ExplicitFoo::operator=(ExplicitFoo&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
+      case ::test::union_::ExplicitFoo::Tag::kI:
+        i_ = std::move(other.i_);
+        break;
       case ::test::union_::ExplicitFoo::Tag::kS:
         new (&s_) ::std::string();
         s_ = std::move(other.s_);
-        break;
-      case ::test::union_::ExplicitFoo::Tag::kI:
-        i_ = std::move(other.i_);
         break;
       case static_cast<fidl_xunion_tag_t>(::test::union_::ExplicitFoo::Tag::Invalid):
         break;
@@ -2816,14 +2816,14 @@ ExplicitFoo& ExplicitFoo::operator=(ExplicitFoo&& other) {
   return *this;
 }
 
-ExplicitFoo ExplicitFoo::WithS(::std::string&& val) {
-  ExplicitFoo result;
-  result.set_s(std::move(val));
-  return result;
-}
 ExplicitFoo ExplicitFoo::WithI(int32_t&& val) {
   ExplicitFoo result;
   result.set_i(std::move(val));
+  return result;
+}
+ExplicitFoo ExplicitFoo::WithS(::std::string&& val) {
+  ExplicitFoo result;
+  result.set_s(std::move(val));
   return result;
 }
 
@@ -2834,29 +2834,6 @@ void ExplicitFoo::Encode(::fidl::Encoder* encoder, size_t offset,
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
-    case ::test::union_::ExplicitFoo::Tag::kS: {
-      if (::fidl::EncodingInlineSize<::std::string>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &s_, offset + offsetof(fidl_xunion_v2_t, envelope));
-
-        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-        xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
-        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-        break;
-      }
-
-      ::fidl::Encode(
-        encoder,
-        &s_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder)));
-
-      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-      xunion->tag = tag_;
-      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
-      xunion->envelope.flags = 0;
-      break;
-    }
     case ::test::union_::ExplicitFoo::Tag::kI: {
       if (::fidl::EncodingInlineSize<int32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &i_, offset + offsetof(fidl_xunion_v2_t, envelope));
@@ -2872,6 +2849,29 @@ void ExplicitFoo::Encode(::fidl::Encoder* encoder, size_t offset,
         encoder,
         &i_,
         encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
+      break;
+    }
+    case ::test::union_::ExplicitFoo::Tag::kS: {
+      if (::fidl::EncodingInlineSize<::std::string>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &s_, offset + offsetof(fidl_xunion_v2_t, envelope));
+
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
+      }
+
+      ::fidl::Encode(
+        encoder,
+        &s_,
+        encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -2906,13 +2906,13 @@ void ExplicitFoo::Decode(::fidl::Decoder* _decoder, ExplicitFoo* value, size_t o
   size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
+    case ::test::union_::ExplicitFoo::Tag::kI: {
+      ::fidl::Decode(_decoder, &value->i_, value_offset);
+      break;
+    }
     case ::test::union_::ExplicitFoo::Tag::kS: {
       new (&value->s_) ::std::string();
       ::fidl::Decode(_decoder, &value->s_, value_offset);
-      break;
-    }
-    case ::test::union_::ExplicitFoo::Tag::kI: {
-      ::fidl::Decode(_decoder, &value->i_, value_offset);
       break;
     }
     default: {
@@ -2931,11 +2931,11 @@ zx_status_t ExplicitFoo::Clone(ExplicitFoo* result) const {
   switch (tag_) {
     case ::test::union_::ExplicitFoo::Tag::Invalid:
       return ZX_OK;
+    case ::test::union_::ExplicitFoo::Tag::kI:
+      return ::fidl::Clone(i_, &result->i_);
     case ::test::union_::ExplicitFoo::Tag::kS:
       new (&result->s_) ::std::string();
       return ::fidl::Clone(s_, &result->s_);
-    case ::test::union_::ExplicitFoo::Tag::kI:
-      return ::fidl::Clone(i_, &result->i_);
     default:
       new (&result->unknown_data_) decltype(unknown_data_);
       return ::fidl::Clone(unknown_data_, &result->unknown_data_);
@@ -2943,15 +2943,15 @@ zx_status_t ExplicitFoo::Clone(ExplicitFoo* result) const {
   }
 }
 
-ExplicitFoo& ExplicitFoo::set_s(::std::string value) {
-  EnsureStorageInitialized(::test::union_::ExplicitFoo::Tag::kS);
-  s_ = std::move(value);
-  return *this;
-}
-
 ExplicitFoo& ExplicitFoo::set_i(int32_t value) {
   EnsureStorageInitialized(::test::union_::ExplicitFoo::Tag::kI);
   i_ = std::move(value);
+  return *this;
+}
+
+ExplicitFoo& ExplicitFoo::set_s(::std::string value) {
+  EnsureStorageInitialized(::test::union_::ExplicitFoo::Tag::kS);
+  s_ = std::move(value);
   return *this;
 }
 ExplicitFoo& ExplicitFoo::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
@@ -2962,10 +2962,10 @@ ExplicitFoo& ExplicitFoo::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<
 
 void ExplicitFoo::Destroy() {
   switch (tag_) {
+    case ::test::union_::ExplicitFoo::Tag::kI:
+      break;
     case ::test::union_::ExplicitFoo::Tag::kS:
       s_.~decltype(s_)();
-      break;
-    case ::test::union_::ExplicitFoo::Tag::kI:
       break;
   
     case static_cast<fidl_xunion_tag_t>(::test::union_::ExplicitFoo::Tag::Invalid):
@@ -2985,11 +2985,11 @@ void ExplicitFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(::test::union_::ExplicitFoo::Tag::Invalid):
         break;
-      case ::test::union_::ExplicitFoo::Tag::kS:
-        new (&s_) ::std::string();
-        break;
       case ::test::union_::ExplicitFoo::Tag::kI:
         new (&i_) int32_t();
+        break;
+      case ::test::union_::ExplicitFoo::Tag::kS:
+        new (&s_) ::std::string();
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -3010,12 +3010,12 @@ ExplicitStrictFoo::~ExplicitStrictFoo() {
 
 ExplicitStrictFoo::ExplicitStrictFoo(ExplicitStrictFoo&& other) : tag_(other.tag_) {
   switch (tag_) {
+    case ::test::union_::ExplicitStrictFoo::Tag::kI:
+      i_ = std::move(other.i_);
+      break;
     case ::test::union_::ExplicitStrictFoo::Tag::kS:
       new (&s_) ::std::string();
       s_ = std::move(other.s_);
-      break;
-    case ::test::union_::ExplicitStrictFoo::Tag::kI:
-      i_ = std::move(other.i_);
       break;
     case static_cast<fidl_xunion_tag_t>(::test::union_::ExplicitStrictFoo::Tag::Invalid):
       break;
@@ -3027,12 +3027,12 @@ ExplicitStrictFoo& ExplicitStrictFoo::operator=(ExplicitStrictFoo&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
+      case ::test::union_::ExplicitStrictFoo::Tag::kI:
+        i_ = std::move(other.i_);
+        break;
       case ::test::union_::ExplicitStrictFoo::Tag::kS:
         new (&s_) ::std::string();
         s_ = std::move(other.s_);
-        break;
-      case ::test::union_::ExplicitStrictFoo::Tag::kI:
-        i_ = std::move(other.i_);
         break;
       case static_cast<fidl_xunion_tag_t>(::test::union_::ExplicitStrictFoo::Tag::Invalid):
         break;
@@ -3041,14 +3041,14 @@ ExplicitStrictFoo& ExplicitStrictFoo::operator=(ExplicitStrictFoo&& other) {
   return *this;
 }
 
-ExplicitStrictFoo ExplicitStrictFoo::WithS(::std::string&& val) {
-  ExplicitStrictFoo result;
-  result.set_s(std::move(val));
-  return result;
-}
 ExplicitStrictFoo ExplicitStrictFoo::WithI(int32_t&& val) {
   ExplicitStrictFoo result;
   result.set_i(std::move(val));
+  return result;
+}
+ExplicitStrictFoo ExplicitStrictFoo::WithS(::std::string&& val) {
+  ExplicitStrictFoo result;
+  result.set_s(std::move(val));
   return result;
 }
 
@@ -3059,29 +3059,6 @@ void ExplicitStrictFoo::Encode(::fidl::Encoder* encoder, size_t offset,
   const size_t handles_before = encoder->CurrentHandleCount();
 
   switch (Which()) {
-    case ::test::union_::ExplicitStrictFoo::Tag::kS: {
-      if (::fidl::EncodingInlineSize<::std::string>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &s_, offset + offsetof(fidl_xunion_v2_t, envelope));
-
-        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-        xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
-        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-        break;
-      }
-
-      ::fidl::Encode(
-        encoder,
-        &s_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder)));
-
-      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-      xunion->tag = tag_;
-      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
-      xunion->envelope.flags = 0;
-      break;
-    }
     case ::test::union_::ExplicitStrictFoo::Tag::kI: {
       if (::fidl::EncodingInlineSize<int32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &i_, offset + offsetof(fidl_xunion_v2_t, envelope));
@@ -3097,6 +3074,29 @@ void ExplicitStrictFoo::Encode(::fidl::Encoder* encoder, size_t offset,
         encoder,
         &i_,
         encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
+      break;
+    }
+    case ::test::union_::ExplicitStrictFoo::Tag::kS: {
+      if (::fidl::EncodingInlineSize<::std::string>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &s_, offset + offsetof(fidl_xunion_v2_t, envelope));
+
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
+      }
+
+      ::fidl::Encode(
+        encoder,
+        &s_,
+        encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -3126,13 +3126,13 @@ void ExplicitStrictFoo::Decode(::fidl::Decoder* _decoder, ExplicitStrictFoo* val
   size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
 
   switch (value->tag_) {
+    case ::test::union_::ExplicitStrictFoo::Tag::kI: {
+      ::fidl::Decode(_decoder, &value->i_, value_offset);
+      break;
+    }
     case ::test::union_::ExplicitStrictFoo::Tag::kS: {
       new (&value->s_) ::std::string();
       ::fidl::Decode(_decoder, &value->s_, value_offset);
-      break;
-    }
-    case ::test::union_::ExplicitStrictFoo::Tag::kI: {
-      ::fidl::Decode(_decoder, &value->i_, value_offset);
       break;
     }
     default: {
@@ -3148,19 +3148,13 @@ zx_status_t ExplicitStrictFoo::Clone(ExplicitStrictFoo* result) const {
   switch (tag_) {
     case ::test::union_::ExplicitStrictFoo::Tag::Invalid:
       return ZX_OK;
+    case ::test::union_::ExplicitStrictFoo::Tag::kI:
+      return ::fidl::Clone(i_, &result->i_);
     case ::test::union_::ExplicitStrictFoo::Tag::kS:
       new (&result->s_) ::std::string();
       return ::fidl::Clone(s_, &result->s_);
-    case ::test::union_::ExplicitStrictFoo::Tag::kI:
-      return ::fidl::Clone(i_, &result->i_);
     default:return ZX_OK;
   }
-}
-
-ExplicitStrictFoo& ExplicitStrictFoo::set_s(::std::string value) {
-  EnsureStorageInitialized(::test::union_::ExplicitStrictFoo::Tag::kS);
-  s_ = std::move(value);
-  return *this;
 }
 
 ExplicitStrictFoo& ExplicitStrictFoo::set_i(int32_t value) {
@@ -3169,12 +3163,18 @@ ExplicitStrictFoo& ExplicitStrictFoo::set_i(int32_t value) {
   return *this;
 }
 
+ExplicitStrictFoo& ExplicitStrictFoo::set_s(::std::string value) {
+  EnsureStorageInitialized(::test::union_::ExplicitStrictFoo::Tag::kS);
+  s_ = std::move(value);
+  return *this;
+}
+
 void ExplicitStrictFoo::Destroy() {
   switch (tag_) {
+    case ::test::union_::ExplicitStrictFoo::Tag::kI:
+      break;
     case ::test::union_::ExplicitStrictFoo::Tag::kS:
       s_.~decltype(s_)();
-      break;
-    case ::test::union_::ExplicitStrictFoo::Tag::kI:
       break;
   
     default:
@@ -3191,11 +3191,11 @@ void ExplicitStrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(::test::union_::ExplicitStrictFoo::Tag::Invalid):
         break;
-      case ::test::union_::ExplicitStrictFoo::Tag::kS:
-        new (&s_) ::std::string();
-        break;
       case ::test::union_::ExplicitStrictFoo::Tag::kI:
         new (&i_) int32_t();
+        break;
+      case ::test::union_::ExplicitStrictFoo::Tag::kS:
+        new (&s_) ::std::string();
         break;
       default:
         break;

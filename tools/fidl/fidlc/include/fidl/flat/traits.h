@@ -14,12 +14,15 @@ namespace fidl::flat {
 // (https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern) to refer
 // to the type of `this` in method signatures.
 
-// Mixin that disables the copy constructor, useful for traits that provide
-// other ways of copying objects.
+// Mixin that disables the copy constructor and copy assignment operator, while
+// keeping the move constructor and move assignment operator. Useful for traits
+// that provide other ways of copying objects.
 struct NoCopy {
   NoCopy() = default;
-  NoCopy(NoCopy&&) = default;
   NoCopy(const NoCopy&) = delete;
+  NoCopy& operator=(const NoCopy&) = delete;
+  NoCopy(NoCopy&&) = default;
+  NoCopy& operator=(NoCopy&&) = default;
 };
 
 // A type that supports polymorphic cloning. This must clone the entire object,

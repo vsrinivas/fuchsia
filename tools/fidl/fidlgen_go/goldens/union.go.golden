@@ -138,15 +138,15 @@ type I_explicitFooTag uint64
 
 const (
 	ExplicitFoo_unknownData = 0 // 0x00000000
-	ExplicitFooS            = 2 // 0x00000002
 	ExplicitFooI            = 1 // 0x00000001
+	ExplicitFooS            = 2 // 0x00000002
 )
 
 type ExplicitFoo struct {
 	I_explicitFooTag `fidl:"x" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData    interface{}
-	S                string `fidl_bounds:"" fidl_ordinal:"2"`
 	I                int32  `fidl_ordinal:"1"`
+	S                string `fidl_bounds:"" fidl_ordinal:"2"`
 }
 
 var _mExplicitFoo = _bindings.CreateLazyMarshaler(ExplicitFoo{})
@@ -157,12 +157,12 @@ func (msg *ExplicitFoo) Marshaler() _bindings.Marshaler {
 
 func (_m *ExplicitFoo) reset() {
 	switch _m.I_explicitFooTag {
-	case 2:
-		var _zeroed string
-		_m.S = _zeroed
 	case 1:
 		var _zeroed int32
 		_m.I = _zeroed
+	case 2:
+		var _zeroed string
+		_m.S = _zeroed
 	default:
 		var _zeroed interface{}
 		_m.I_unknownData = _zeroed
@@ -171,10 +171,10 @@ func (_m *ExplicitFoo) reset() {
 
 func (_m *ExplicitFoo) Which() I_explicitFooTag {
 	switch _m.I_explicitFooTag {
-	case 2:
-		return ExplicitFooS
 	case 1:
 		return ExplicitFooI
+	case 2:
+		return ExplicitFooS
 	default:
 		return ExplicitFoo_unknownData
 	}
@@ -182,18 +182,6 @@ func (_m *ExplicitFoo) Which() I_explicitFooTag {
 
 func (_m *ExplicitFoo) Ordinal() uint64 {
 	return uint64(_m.I_explicitFooTag)
-}
-
-func (_m *ExplicitFoo) SetS(s string) {
-	_m.reset()
-	_m.I_explicitFooTag = ExplicitFooS
-	_m.S = s
-}
-
-func ExplicitFooWithS(s string) ExplicitFoo {
-	var _u ExplicitFoo
-	_u.SetS(s)
-	return _u
 }
 
 func (_m *ExplicitFoo) SetI(i int32) {
@@ -205,6 +193,18 @@ func (_m *ExplicitFoo) SetI(i int32) {
 func ExplicitFooWithI(i int32) ExplicitFoo {
 	var _u ExplicitFoo
 	_u.SetI(i)
+	return _u
+}
+
+func (_m *ExplicitFoo) SetS(s string) {
+	_m.reset()
+	_m.I_explicitFooTag = ExplicitFooS
+	_m.S = s
+}
+
+func ExplicitFooWithS(s string) ExplicitFoo {
+	var _u ExplicitFoo
+	_u.SetS(s)
 	return _u
 }
 func (_m *ExplicitFoo) GetUnknownData() _bindings.UnknownData {
@@ -276,14 +276,14 @@ func ExplicitPizzaOrPastaWithPasta(pasta Pasta) ExplicitPizzaOrPasta {
 type I_explicitStrictFooTag uint64
 
 const (
-	ExplicitStrictFooS = 3 // 0x00000003
 	ExplicitStrictFooI = 2 // 0x00000002
+	ExplicitStrictFooS = 3 // 0x00000003
 )
 
 type ExplicitStrictFoo struct {
 	I_explicitStrictFooTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
-	S                      string `fidl_bounds:"" fidl_ordinal:"3"`
 	I                      int32  `fidl_ordinal:"2"`
+	S                      string `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
 var _mExplicitStrictFoo = _bindings.CreateLazyMarshaler(ExplicitStrictFoo{})
@@ -294,12 +294,12 @@ func (msg *ExplicitStrictFoo) Marshaler() _bindings.Marshaler {
 
 func (_m *ExplicitStrictFoo) reset() {
 	switch _m.I_explicitStrictFooTag {
-	case 3:
-		var _zeroed string
-		_m.S = _zeroed
 	case 2:
 		var _zeroed int32
 		_m.I = _zeroed
+	case 3:
+		var _zeroed string
+		_m.S = _zeroed
 	}
 }
 
@@ -311,18 +311,6 @@ func (_m *ExplicitStrictFoo) Ordinal() uint64 {
 	return uint64(_m.I_explicitStrictFooTag)
 }
 
-func (_m *ExplicitStrictFoo) SetS(s string) {
-	_m.reset()
-	_m.I_explicitStrictFooTag = ExplicitStrictFooS
-	_m.S = s
-}
-
-func ExplicitStrictFooWithS(s string) ExplicitStrictFoo {
-	var _u ExplicitStrictFoo
-	_u.SetS(s)
-	return _u
-}
-
 func (_m *ExplicitStrictFoo) SetI(i int32) {
 	_m.reset()
 	_m.I_explicitStrictFooTag = ExplicitStrictFooI
@@ -332,6 +320,18 @@ func (_m *ExplicitStrictFoo) SetI(i int32) {
 func ExplicitStrictFooWithI(i int32) ExplicitStrictFoo {
 	var _u ExplicitStrictFoo
 	_u.SetI(i)
+	return _u
+}
+
+func (_m *ExplicitStrictFoo) SetS(s string) {
+	_m.reset()
+	_m.I_explicitStrictFooTag = ExplicitStrictFooS
+	_m.S = s
+}
+
+func ExplicitStrictFooWithS(s string) ExplicitStrictFoo {
+	var _u ExplicitStrictFoo
+	_u.SetS(s)
 	return _u
 }
 
@@ -1046,14 +1046,14 @@ func PizzaOrPastaWithPasta(pasta Pasta) PizzaOrPasta {
 type I_reverseOrdinalUnionTag uint64
 
 const (
-	ReverseOrdinalUnionSecond = 2 // 0x00000002
 	ReverseOrdinalUnionFirst  = 1 // 0x00000001
+	ReverseOrdinalUnionSecond = 2 // 0x00000002
 )
 
 type ReverseOrdinalUnion struct {
 	I_reverseOrdinalUnionTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
-	Second                   uint32 `fidl_ordinal:"2"`
 	First                    uint32 `fidl_ordinal:"1"`
+	Second                   uint32 `fidl_ordinal:"2"`
 }
 
 var _mReverseOrdinalUnion = _bindings.CreateLazyMarshaler(ReverseOrdinalUnion{})
@@ -1064,12 +1064,12 @@ func (msg *ReverseOrdinalUnion) Marshaler() _bindings.Marshaler {
 
 func (_m *ReverseOrdinalUnion) reset() {
 	switch _m.I_reverseOrdinalUnionTag {
-	case 2:
-		var _zeroed uint32
-		_m.Second = _zeroed
 	case 1:
 		var _zeroed uint32
 		_m.First = _zeroed
+	case 2:
+		var _zeroed uint32
+		_m.Second = _zeroed
 	}
 }
 
@@ -1081,18 +1081,6 @@ func (_m *ReverseOrdinalUnion) Ordinal() uint64 {
 	return uint64(_m.I_reverseOrdinalUnionTag)
 }
 
-func (_m *ReverseOrdinalUnion) SetSecond(second uint32) {
-	_m.reset()
-	_m.I_reverseOrdinalUnionTag = ReverseOrdinalUnionSecond
-	_m.Second = second
-}
-
-func ReverseOrdinalUnionWithSecond(second uint32) ReverseOrdinalUnion {
-	var _u ReverseOrdinalUnion
-	_u.SetSecond(second)
-	return _u
-}
-
 func (_m *ReverseOrdinalUnion) SetFirst(first uint32) {
 	_m.reset()
 	_m.I_reverseOrdinalUnionTag = ReverseOrdinalUnionFirst
@@ -1102,6 +1090,18 @@ func (_m *ReverseOrdinalUnion) SetFirst(first uint32) {
 func ReverseOrdinalUnionWithFirst(first uint32) ReverseOrdinalUnion {
 	var _u ReverseOrdinalUnion
 	_u.SetFirst(first)
+	return _u
+}
+
+func (_m *ReverseOrdinalUnion) SetSecond(second uint32) {
+	_m.reset()
+	_m.I_reverseOrdinalUnionTag = ReverseOrdinalUnionSecond
+	_m.Second = second
+}
+
+func ReverseOrdinalUnionWithSecond(second uint32) ReverseOrdinalUnion {
+	var _u ReverseOrdinalUnion
+	_u.SetSecond(second)
 	return _u
 }
 

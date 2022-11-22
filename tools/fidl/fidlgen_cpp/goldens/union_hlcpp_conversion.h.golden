@@ -713,11 +713,11 @@ struct HLCPPToNaturalTraits<::test::union_::OnlyReservedFlexibleUnion> {
 ::test::union_::ReverseOrdinalUnion NaturalToHLCPPTraits<::test_union::ReverseOrdinalUnion>::Convert(::test_union::ReverseOrdinalUnion&& value) {
   ::test::union_::ReverseOrdinalUnion hlcpp;
   switch (value.Which()) {
-    case ::test_union::ReverseOrdinalUnion::Tag::kSecond:
-      hlcpp.set_second(::fidl::NaturalToHLCPP(std::move(value.second().value())));
-      break;
     case ::test_union::ReverseOrdinalUnion::Tag::kFirst:
       hlcpp.set_first(::fidl::NaturalToHLCPP(std::move(value.first().value())));
+      break;
+    case ::test_union::ReverseOrdinalUnion::Tag::kSecond:
+      hlcpp.set_second(::fidl::NaturalToHLCPP(std::move(value.second().value())));
       break;
     default:
       break;
@@ -728,12 +728,12 @@ struct HLCPPToNaturalTraits<::test::union_::OnlyReservedFlexibleUnion> {
 ::test_union::ReverseOrdinalUnion HLCPPToNaturalTraits<::test::union_::ReverseOrdinalUnion>::Convert(::test::union_::ReverseOrdinalUnion&& value) {
   using _NaturalUnion = ::test_union::ReverseOrdinalUnion;
   switch (value.Which()) {
-    case ::test::union_::ReverseOrdinalUnion::Tag::kSecond:
-      return _NaturalUnion::WithSecond(
-          ::fidl::HLCPPToNatural(std::move(value.second())));
     case ::test::union_::ReverseOrdinalUnion::Tag::kFirst:
       return _NaturalUnion::WithFirst(
           ::fidl::HLCPPToNatural(std::move(value.first())));
+    case ::test::union_::ReverseOrdinalUnion::Tag::kSecond:
+      return _NaturalUnion::WithSecond(
+          ::fidl::HLCPPToNatural(std::move(value.second())));
     default:
       ZX_PANIC("Can't convert invalid strict union %s from HLCPP to Natural", "::test::union_::ReverseOrdinalUnion");
   }
@@ -797,11 +797,11 @@ struct HLCPPToNaturalTraits<::test::union_::OnlyReservedFlexibleUnion> {
 ::test::union_::ExplicitFoo NaturalToHLCPPTraits<::test_union::ExplicitFoo>::Convert(::test_union::ExplicitFoo&& value) {
   ::test::union_::ExplicitFoo hlcpp;
   switch (value.Which()) {
-    case ::test_union::ExplicitFoo::Tag::kS:
-      hlcpp.set_s(::fidl::NaturalToHLCPP(std::move(value.s().value())));
-      break;
     case ::test_union::ExplicitFoo::Tag::kI:
       hlcpp.set_i(::fidl::NaturalToHLCPP(std::move(value.i().value())));
+      break;
+    case ::test_union::ExplicitFoo::Tag::kS:
+      hlcpp.set_s(::fidl::NaturalToHLCPP(std::move(value.s().value())));
       break;
     default:
       break;
@@ -812,12 +812,12 @@ struct HLCPPToNaturalTraits<::test::union_::OnlyReservedFlexibleUnion> {
 ::test_union::ExplicitFoo HLCPPToNaturalTraits<::test::union_::ExplicitFoo>::Convert(::test::union_::ExplicitFoo&& value) {
   using _NaturalUnion = ::test_union::ExplicitFoo;
   switch (value.Which()) {
-    case ::test::union_::ExplicitFoo::Tag::kS:
-      return _NaturalUnion::WithS(
-          ::fidl::HLCPPToNatural(std::move(value.s())));
     case ::test::union_::ExplicitFoo::Tag::kI:
       return _NaturalUnion::WithI(
           ::fidl::HLCPPToNatural(std::move(value.i())));
+    case ::test::union_::ExplicitFoo::Tag::kS:
+      return _NaturalUnion::WithS(
+          ::fidl::HLCPPToNatural(std::move(value.s())));
     default:
       return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
@@ -825,11 +825,11 @@ struct HLCPPToNaturalTraits<::test::union_::OnlyReservedFlexibleUnion> {
 ::test::union_::ExplicitStrictFoo NaturalToHLCPPTraits<::test_union::ExplicitStrictFoo>::Convert(::test_union::ExplicitStrictFoo&& value) {
   ::test::union_::ExplicitStrictFoo hlcpp;
   switch (value.Which()) {
-    case ::test_union::ExplicitStrictFoo::Tag::kS:
-      hlcpp.set_s(::fidl::NaturalToHLCPP(std::move(value.s().value())));
-      break;
     case ::test_union::ExplicitStrictFoo::Tag::kI:
       hlcpp.set_i(::fidl::NaturalToHLCPP(std::move(value.i().value())));
+      break;
+    case ::test_union::ExplicitStrictFoo::Tag::kS:
+      hlcpp.set_s(::fidl::NaturalToHLCPP(std::move(value.s().value())));
       break;
     default:
       break;
@@ -840,12 +840,12 @@ struct HLCPPToNaturalTraits<::test::union_::OnlyReservedFlexibleUnion> {
 ::test_union::ExplicitStrictFoo HLCPPToNaturalTraits<::test::union_::ExplicitStrictFoo>::Convert(::test::union_::ExplicitStrictFoo&& value) {
   using _NaturalUnion = ::test_union::ExplicitStrictFoo;
   switch (value.Which()) {
-    case ::test::union_::ExplicitStrictFoo::Tag::kS:
-      return _NaturalUnion::WithS(
-          ::fidl::HLCPPToNatural(std::move(value.s())));
     case ::test::union_::ExplicitStrictFoo::Tag::kI:
       return _NaturalUnion::WithI(
           ::fidl::HLCPPToNatural(std::move(value.i())));
+    case ::test::union_::ExplicitStrictFoo::Tag::kS:
+      return _NaturalUnion::WithS(
+          ::fidl::HLCPPToNatural(std::move(value.s())));
     default:
       ZX_PANIC("Can't convert invalid strict union %s from HLCPP to Natural", "::test::union_::ExplicitStrictFoo");
   }
