@@ -9,11 +9,11 @@ import("//build/python/python_action.gni")
 #
 # Arguments
 #
-#   product_config (required)
-#     [path] The path to the product config.
+#   product_configs (required)
+#     [list] List of paths to the product configs.
 #
-#   images_config (required)
-#     [path] The path to the images config.
+#   images_configs (required)
+#     [list] List of paths to the images configs.
 #
 #   partitions_config (required)
 #     [path] The path to the partitions config.
@@ -25,8 +25,8 @@ import("//build/python/python_action.gni")
 #     [list of str] Additional files or directories to list as inputs.
 #
 template("generated_assembly_inputs") {
-  assert(defined(invoker.product_config), "Need to define product_config")
-  assert(defined(invoker.images_config), "Need to define images_config")
+  assert(defined(invoker.product_configs), "Need to define product_configs")
+  assert(defined(invoker.images_configs), "Need to define images_configs")
   assert(defined(invoker.partitions_config), "Need to define partitions_config")
   assert(defined(invoker.output_path), "Need to define output_path")
 
@@ -82,19 +82,13 @@ template("generated_assembly_inputs") {
 
     outputs = [ invoker.output_path ]
     inputs = [
-      files.platform_aibs,
-      invoker.images_config,
-      invoker.partitions_config,
-      invoker.product_config,
-    ]
+               files.platform_aibs,
+               invoker.partitions_config,
+             ] + invoker.images_configs + invoker.product_configs
 
     args = [
-      "--product-config",
-      rebase_path(invoker.product_config, root_build_dir),
       "--assembly-input-bundles",
       rebase_path(files.platform_aibs, root_build_dir),
-      "--images-config",
-      rebase_path(invoker.images_config, root_build_dir),
       "--partitions-config",
       rebase_path(invoker.partitions_config, root_build_dir),
       "--output",
@@ -102,6 +96,16 @@ template("generated_assembly_inputs") {
       "--depfile",
       rebase_path(depfile_path, root_build_dir),
     ]
+
+    args += [ "--product-config" ]
+    foreach(product_config, invoker.product_configs) {
+      args += [ rebase_path(product_config, root_build_dir) ]
+    }
+
+    args += [ "--images-config" ]
+    foreach(images_config, invoker.images_configs) {
+      args += [ rebase_path(images_config, root_build_dir) ]
+    }
 
     if (defined(invoker.sources)) {
       args += [ "--sources" ]

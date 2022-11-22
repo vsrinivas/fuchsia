@@ -19,11 +19,17 @@ def main():
         'Create a flat list of files included in the images. This is used to inform infrastructure what files to upload'
     )
     parser.add_argument(
-        '--product-config', type=argparse.FileType('r'), required=True)
+        '--product-config',
+        type=argparse.FileType('r'),
+        nargs='+',
+        required=True)
     parser.add_argument(
         "--assembly-input-bundles", type=argparse.FileType('r'), required=True)
     parser.add_argument(
-        '--images-config', type=argparse.FileType('r'), required=True)
+        '--images-config',
+        type=argparse.FileType('r'),
+        nargs='+',
+        required=True)
     parser.add_argument(
         '--partitions-config', type=argparse.FileType('r'), required=True)
     parser.add_argument('--sources', type=str, nargs='*')
@@ -65,17 +71,21 @@ def main():
         for config in entry.get("config_data", []):
             add_source(config["source"])
 
-    # Add the product config.
-    add_source(args.product_config.name)
-    product_config = json.load(args.product_config)
-    if "product" in product_config:
-        product = product_config["product"]
-        if "packages" in product:
-            packages = product["packages"]
-            for package in packages.get("base", []):
-                add_package(package)
-            for package in packages.get("cache", []):
-                add_package(package)
+    # Add the product configs.
+    def add_product_config(product_config):
+        add_source(product_config.name)
+        product_config = json.load(product_config)
+        if "product" in product_config:
+            product = product_config["product"]
+            if "packages" in product:
+                packages = product["packages"]
+                for package in packages.get("base", []):
+                    add_package(package)
+                for package in packages.get("cache", []):
+                    add_package(package)
+
+    for product_config in args.product_config:
+        add_product_config(product_config)
 
     # Add the assembly input bundles
     assembly_input_bundles = json.load(args.assembly_input_bundles)
@@ -85,19 +95,23 @@ def main():
             basename = basename[:-4]
         add_source(os.path.join(dirname, basename))
 
-    # Add the images config.
-    add_source(args.images_config.name)
-    images = json.load(args.images_config).get("images", [])
-    for image in images:
-        if image["type"] == "vbmeta":
-            add_source(image["key"])
-            add_source(image["key_metadata"])
-            if "additional_descriptor_files" in image:
-                for descriptor in image["additional_descriptor_files"]:
-                    add_source(descriptor)
-        elif image["type"] == "zbi":
-            if "postprocessing_script" in image:
-                add_source(image["postprocessing_script"]["path"])
+    # Add the images configs.
+    def add_images_config(images_config):
+        add_source(images_config.name)
+        images = json.load(images_config).get("images", [])
+        for image in images:
+            if image["type"] == "vbmeta":
+                add_source(image["key"])
+                add_source(image["key_metadata"])
+                if "additional_descriptor_files" in image:
+                    for descriptor in image["additional_descriptor_files"]:
+                        add_source(descriptor)
+            elif image["type"] == "zbi":
+                if "postprocessing_script" in image:
+                    add_source(image["postprocessing_script"]["path"])
+
+    for images_config in args.images_config:
+        add_images_config(images_config)
 
     # Add the partitions config.
     add_source(args.partitions_config.name)

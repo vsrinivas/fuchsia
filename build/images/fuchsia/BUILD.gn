@@ -47,13 +47,13 @@ if (is_fuchsia) {
   ##################################################
 
   files = {
-    images_config = "$target_out_dir/fuchsia.images_config.json"
     partitions_config = "$target_out_dir/partitions_config.json"
     assembly_inputs = "$target_out_dir/fuchsia/assembly_inputs.json"
     platform_aib_dir = get_label_info("//bundles/assembly", "target_out_dir")
 
     # Outputs of assembly.
     outdir = target_out_dir + "/fuchsia"
+    images_config = "${outdir}.images_config.json"
     zbi = "${outdir}/fuchsia.zbi"
     zbi_signed = "${outdir}/fuchsia.zbi.signed"
     vbmeta = "${outdir}/fuchsia.vbmeta"
@@ -66,6 +66,19 @@ if (is_fuchsia) {
     packages_json = "${outdir}/packages.json"
     images_json = "${outdir}/images.json"
 
+    # If the product definition is specifying a product assembly config file, then
+    # pass that to the assembled_system() call(s).
+    if (fuchsia_product_assembly_config_file != false) {
+      product_assembly_config_file = fuchsia_product_assembly_config_file
+    } else {
+      product_assembly_config_file =
+          "//build/assembly/empty_product_config.json"
+    }
+
+    # Recovery currently uses an empty product config.
+    recovery_product_assembly_config_file =
+        "//build/assembly/empty_product_config.json"
+
     # Outputs of prime assembly.
     outdir_prime = target_out_dir + "/fuchsia_prime_assembly"
     images_prime_json = "${outdir_prime}/images.json"
@@ -75,6 +88,7 @@ if (is_fuchsia) {
     recovery_name = get_label_info(recovery_label, "name")
     recovery_outdir =
         get_label_info(recovery_label, "target_out_dir") + "/" + recovery_name
+    recovery_images_config = "${recovery_outdir}.images_config.json"
     recovery_zbi = "${recovery_outdir}/${recovery_name}.zbi"
     recovery_zbi_signed = "${recovery_outdir}/${recovery_name}.zbi.signed"
     recovery_vbmeta = "${recovery_outdir}/${recovery_name}.vbmeta"
@@ -111,14 +125,7 @@ if (is_fuchsia) {
     # Use the GN arg for including shell commands.
     include_shell_commands = include_shell_commands_package
 
-    # If the product definition is specifying a product assembly config file, then
-    # pass that to the assembled_system() call(s).
-    if (fuchsia_product_assembly_config_file != false) {
-      product_assembly_config_file = fuchsia_product_assembly_config_file
-    } else {
-      product_assembly_config_file =
-          "//build/assembly/empty_product_config.json"
-    }
+    product_assembly_config_file = files.product_assembly_config_file
     if (fuchsia_product_assembly_config_label != false) {
       product_assembly_config_dep = fuchsia_product_assembly_config_label
     }
@@ -411,20 +418,33 @@ if (is_fuchsia) {
 
   generated_assembly_inputs("assembly_inputs") {
     testonly = fuchsia_zbi_testonly
-    images_config = files.images_config
     partitions_config = files.partitions_config
     output_path = files.assembly_inputs
 
-    # Add the legacy AIB for the fuchsia assembly.  The platform AIBs are added
+    # Add the images configs and their dependencies.
+    images_configs = [
+      files.images_config,
+      files.recovery_images_config,
+    ]
+
+    # Add the legacy AIB for the assemblies. The platform AIBs are added
     # automatically from the build_api_module("assembly_input_archives")
-    sources = [ "${files.outdir}/legacy" ]
+    sources = [
+      "${files.outdir}/legacy",
+      "${files.recovery_outdir}/legacy",
+    ]
 
     deps = [
       ":fuchsia_assembly",
       ":partitions_config",
     ]
 
-    product_config = fuchsia_base.product_assembly_config_file
+    # Add the product configs and their dependencies.
+    product_configs = [
+      files.product_assembly_config_file,
+      files.recovery_product_assembly_config_file,
+    ]
+    deps += [ recovery_label ]
     if (fuchsia_product_assembly_config_label != false) {
       deps += [ fuchsia_product_assembly_config_label ]
     }
