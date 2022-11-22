@@ -20,5 +20,11 @@
             from: "#network",
             to: "#starnix_manager",
         },
+        {
+            protocol: [ "fuchsia.power.battery.BatteryManager" ],
+            from: "#battery_manager",
+            to: "#starnix_manager",
+            source_availability: "unknown",
+        },
     ],
 }
