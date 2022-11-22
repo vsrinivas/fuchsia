@@ -942,7 +942,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> IpTransp
         mut udp_packet: &[u8],
         err: I::ErrorCode,
     ) {
-        ctx.increment_counter("UdpIpTransportContext::receive_icmp_error");
+        ctx.increment_debug_counter("UdpIpTransportContext::receive_icmp_error");
         trace!("UdpIpTransportContext::receive_icmp_error({:?})", err);
 
         let udp_packet =

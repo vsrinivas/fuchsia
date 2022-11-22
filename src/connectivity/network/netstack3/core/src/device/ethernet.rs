@@ -523,7 +523,7 @@ pub(super) fn send_ip_frame<
 where
     A::Version: EthernetIpExt,
 {
-    ctx.increment_counter("ethernet::send_ip_frame");
+    ctx.increment_debug_counter("ethernet::send_ip_frame");
 
     trace!("ethernet::send_ip_frame: local_addr = {:?}; device = {:?}", local_addr, device_id);
 

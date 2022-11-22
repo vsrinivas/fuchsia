@@ -427,7 +427,7 @@ pub fn handle_timer<NonSyncCtx: NonSyncContext>(
         }
         #[cfg(test)]
         TimerId(TimerIdInner::Nop(_)) => {
-            ctx.increment_counter("timer::nop");
+            ctx.increment_debug_counter("timer::nop");
         }
     }
 }

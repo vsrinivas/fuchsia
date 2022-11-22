@@ -481,7 +481,7 @@ impl<
             IpVersion::V4 => "send_ipv4_packet",
             IpVersion::V6 => "send_ipv6_packet",
         };
-        ctx.increment_counter(counter_name);
+        ctx.increment_debug_counter(counter_name);
 
         send_ip_packet(self, ctx, ip_sock, body, mtu)
     }

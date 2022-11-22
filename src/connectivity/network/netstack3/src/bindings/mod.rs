@@ -269,9 +269,7 @@ impl InstantContext for BindingsNonSyncCtxImpl {
     }
 }
 
-impl CounterContext for BindingsNonSyncCtxImpl {
-    fn increment_counter(&mut self, _key: &'static str) {}
-}
+impl CounterContext for BindingsNonSyncCtxImpl {}
 
 impl RngContext for BindingsNonSyncCtxImpl {
     type Rng = OsRng;

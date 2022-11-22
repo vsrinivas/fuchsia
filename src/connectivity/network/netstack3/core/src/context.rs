@@ -255,13 +255,15 @@ pub trait FrameContext<C, B: BufferMut, Meta> {
 
 /// A context that stores performance counters.
 ///
-/// `CounterContext` allows counters keyed by string names to be incremented for
-/// testing and debugging purposes. It is assumed that, if a no-op
-/// implementation of [`increment_counter`] is provided, then calls will be
-/// optimized out entirely by the compiler.
+/// `CounterContext` exposes access to named counters for observation and
+/// debugging.
 pub trait CounterContext {
-    /// Increment the counter with the given key.
-    fn increment_counter(&mut self, key: &'static str);
+    /// Increment the debug counter with the given key.
+    ///
+    /// This should not be relied on except in testing environments. The default
+    /// no-op implementation is expected to be optimized out completely by the
+    /// compiler.
+    fn increment_debug_counter(&mut self, _key: &'static str) {}
 }
 
 /// A context for emitting events.
@@ -957,15 +959,15 @@ pub(crate) mod testutil {
     }
 
     impl CounterContext for FakeCounterCtx {
-        fn increment_counter(&mut self, key: &'static str) {
+        fn increment_debug_counter(&mut self, key: &'static str) {
             let val = self.counters.entry(key).or_insert(0);
             *val += 1;
         }
     }
 
     impl<T: AsMut<FakeCounterCtx>> CounterContext for T {
-        fn increment_counter(&mut self, key: &'static str) {
-            self.as_mut().increment_counter(key);
+        fn increment_debug_counter(&mut self, key: &'static str) {
+            self.as_mut().increment_debug_counter(key);
         }
     }
 

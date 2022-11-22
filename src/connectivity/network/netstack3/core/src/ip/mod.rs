@@ -1102,7 +1102,7 @@ fn dispatch_receive_ipv4_packet<
     body: B,
     parse_metadata: Option<ParseMetadata>,
 ) {
-    ctx.increment_counter("dispatch_receive_ipv4_packet");
+    ctx.increment_debug_counter("dispatch_receive_ipv4_packet");
 
     let (mut body, err) =
         match sync_ctx.dispatch_receive_ip_packet(ctx, device, src_ip, dst_ip, proto, body) {
@@ -1182,7 +1182,7 @@ fn dispatch_receive_ipv6_packet<
     // parse_metadata argument which corresponds to a single extension
     // header rather than all of the IPv6 headers.
 
-    ctx.increment_counter("dispatch_receive_ipv6_packet");
+    ctx.increment_debug_counter("dispatch_receive_ipv6_packet");
 
     let (mut body, err) =
         match sync_ctx.dispatch_receive_ip_packet(ctx, device, src_ip, dst_ip, proto, body) {
@@ -1406,7 +1406,7 @@ pub(crate) fn receive_ipv4_packet<
         return;
     }
 
-    ctx.increment_counter("receive_ipv4_packet");
+    ctx.increment_debug_counter("receive_ipv4_packet");
     trace!("receive_ip_packet({})", device);
 
     let mut packet: Ipv4Packet<_> = match try_parse_ip_packet!(buffer) {
@@ -1620,7 +1620,7 @@ pub(crate) fn receive_ipv6_packet<
         return;
     }
 
-    ctx.increment_counter("receive_ipv6_packet");
+    ctx.increment_debug_counter("receive_ipv6_packet");
     trace!("receive_ipv6_packet({})", device);
 
     let mut packet: Ipv6Packet<_> = match try_parse_ip_packet!(buffer) {
@@ -1683,7 +1683,7 @@ pub(crate) fn receive_ipv6_packet<
                 "receive_ipv6_packet: received packet from non-unicast source {}; dropping",
                 packet.src_ip()
             );
-            ctx.increment_counter("receive_ipv6_packet: non-unicast source");
+            ctx.increment_debug_counter("receive_ipv6_packet: non-unicast source");
             return;
         }
     };
@@ -1777,7 +1777,7 @@ pub(crate) fn receive_ipv6_packet<
             }
         }
         ReceivePacketAction::Forward { dst } => {
-            ctx.increment_counter("receive_ipv6_packet::forward");
+            ctx.increment_debug_counter("receive_ipv6_packet::forward");
             let ttl = packet.ttl();
             if ttl > 1 {
                 trace!("receive_ipv6_packet: forwarding");
@@ -1875,7 +1875,7 @@ pub(crate) fn receive_ipv6_packet<
             }
         }
         ReceivePacketAction::Drop { reason } => {
-            ctx.increment_counter("receive_ipv6_packet::drop");
+            ctx.increment_debug_counter("receive_ipv6_packet::drop");
             debug!(
                 "receive_ipv6_packet: dropping packet from {} to {} received on {}: {}",
                 packet.src_ip(),
@@ -1961,7 +1961,7 @@ fn receive_ipv4_packet_action<
             | Ipv4PresentAddressStatus::SubnetBroadcast
             | Ipv4PresentAddressStatus::Multicast
             | Ipv4PresentAddressStatus::Unicast => {
-                ctx.increment_counter("receive_ipv4_packet_action::deliver");
+                ctx.increment_debug_counter("receive_ipv4_packet_action::deliver");
                 ReceivePacketAction::Deliver
             }
         },
@@ -1999,11 +1999,11 @@ fn receive_ipv6_packet_action<
     };
     match address_status {
         AddressStatus::Present(Ipv6PresentAddressStatus::Multicast) => {
-            ctx.increment_counter("receive_ipv6_packet_action::deliver_multicast");
+            ctx.increment_debug_counter("receive_ipv6_packet_action::deliver_multicast");
             ReceivePacketAction::Deliver
         }
         AddressStatus::Present(Ipv6PresentAddressStatus::UnicastAssigned) => {
-            ctx.increment_counter("receive_ipv6_packet_action::deliver_unicast");
+            ctx.increment_debug_counter("receive_ipv6_packet_action::deliver_unicast");
             ReceivePacketAction::Deliver
         }
         AddressStatus::Present(Ipv6PresentAddressStatus::UnicastTentative) => {
@@ -2037,7 +2037,7 @@ fn receive_ipv6_packet_action<
             // address. NS and NA packets should be addressed to a multicast
             // address that we would have joined during DAD so that we can
             // receive those packets.
-            ctx.increment_counter("receive_ipv6_packet_action::drop_for_tentative");
+            ctx.increment_debug_counter("receive_ipv6_packet_action::drop_for_tentative");
             ReceivePacketAction::Drop { reason: DropReason::Tentative }
         }
         AddressStatus::Unassigned => {
@@ -2072,16 +2072,16 @@ fn receive_ip_packet_action_common<
         // case is a Destination Unreachable message, we interpret the RFC text
         // to mean that, consistent with IPv4's behavior, we should silently
         // discard the packet in this case.
-        ctx.increment_counter("receive_ip_packet_action_common::routing_disabled_per_device");
+        ctx.increment_debug_counter("receive_ip_packet_action_common::routing_disabled_per_device");
         ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabledInboundIface }
     } else {
         match lookup_route_table(sync_ctx, ctx, None, dst_ip) {
             Some(dst) => {
-                ctx.increment_counter("receive_ip_packet_action_common::forward");
+                ctx.increment_debug_counter("receive_ip_packet_action_common::forward");
                 ReceivePacketAction::Forward { dst }
             }
             None => {
-                ctx.increment_counter("receive_ip_packet_action_common::no_route_to_host");
+                ctx.increment_debug_counter("receive_ip_packet_action_common::no_route_to_host");
                 ReceivePacketAction::SendNoRouteToDest
             }
         }
@@ -2413,7 +2413,7 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv4, C> for &'_ SyncCtx<C> {
         original_body: &[u8],
         err: Icmpv4ErrorCode,
     ) {
-        ctx.increment_counter("InnerIcmpContext<Ipv4>::receive_icmp_error");
+        ctx.increment_debug_counter("InnerIcmpContext<Ipv4>::receive_icmp_error");
         trace!("InnerIcmpContext<Ipv4>::receive_icmp_error({:?})", err);
 
         macro_rules! mtch {
@@ -2478,7 +2478,7 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv6, C> for &'_ SyncCtx<C> {
         original_body: &[u8],
         err: Icmpv6ErrorCode,
     ) {
-        ctx.increment_counter("InnerIcmpContext<Ipv6>::receive_icmp_error");
+        ctx.increment_debug_counter("InnerIcmpContext<Ipv6>::receive_icmp_error");
         trace!("InnerIcmpContext<Ipv6>::receive_icmp_error({:?})", err);
 
         macro_rules! mtch {

@@ -159,8 +159,8 @@ impl stream::SocketWorkerDispatcher for TestNonSyncCtx {
 }
 
 impl CounterContext for TestNonSyncCtx {
-    fn increment_counter(&mut self, key: &'static str) {
-        self.ctx.increment_counter(key)
+    fn increment_debug_counter(&mut self, key: &'static str) {
+        self.ctx.increment_debug_counter(key)
     }
 }
 
