@@ -75,7 +75,7 @@ type CheckOptions = resource struct {};
 @discoverable
 protocol Startup {
     /// Start this filesystem, using the provided block device and Start options. When start is
-    /// called, the filesystem will populate it's outgoing directory and then return.
+    /// called, the filesystem will populate its outgoing directory and then return.
     Start(resource struct {
         device client_end:fuchsia.hardware.block.Block;
         options StartOptions;
