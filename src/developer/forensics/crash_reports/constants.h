@@ -21,8 +21,6 @@ constexpr char kHourlySnapshot[] = "hourly_snapshot";
 constexpr char kHourlySnapshotProgramName[] = "system";
 constexpr char kHourlySnapshotSignature[] = "fuchsia-hourly-snapshot";
 
-constexpr char kCrashServerUrl[] = "https://clients2.google.com/cr/report";
-
 constexpr const char* kGarbageCollectedSnapshotsPath = "/tmp/garbage_collected_snapshots.txt";
 
 // Up to 512KiB of the non-snapshot portion of reports, like annotations and the minidump, are
