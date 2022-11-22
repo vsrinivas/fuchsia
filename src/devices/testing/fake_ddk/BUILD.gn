@@ -105,7 +105,6 @@ zx_library("fake_ddk") {
     "//src/devices/power/drivers/ti-ina231/*",
     "//src/devices/ram/drivers/aml-ram/*",
     "//src/devices/securemem/drivers/aml-securemem/*",
-    "//src/devices/serial/drivers/ftdi/test/*",
     "//src/devices/serial/drivers/serial-async/tests/*",
     "//src/devices/spi/drivers/aml-spi/*",
     "//src/devices/sysmem/tests/sysmem/fuzz/*",

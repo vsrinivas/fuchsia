@@ -7,7 +7,6 @@
 #include <fidl/fuchsia.hardware.ftdi/cpp/wire.h>
 #include <fuchsia/hardware/serialimpl/cpp/banjo.h>
 #include <lib/ddk/debug.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <stdio.h>
 
 #include <list>
@@ -15,6 +14,7 @@
 #include <zxtest/zxtest.h>
 
 #include "ftdi.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace ftdi_mpsse {
 
@@ -105,7 +105,10 @@ class FakeSerial : public ddk::SerialImplProtocol<FakeSerial> {
 
 class FtdiI2cTest : public zxtest::Test {
  public:
-  void SetUp() override { ddk_.SetProtocol(ZX_PROTOCOL_SERIAL_IMPL, serial_.proto()); }
+  void SetUp() override {
+    fake_parent_ = MockDevice::FakeRootParent();
+    fake_parent_->AddProtocol(ZX_PROTOCOL_SERIAL_IMPL, serial_.proto()->ops, serial_.proto()->ctx);
+  }
 
  protected:
   FtdiI2c FtdiBasicInit(void) {
@@ -115,10 +118,10 @@ class FtdiI2cTest : public zxtest::Test {
     i2c_devices[0].vid = 0;
     i2c_devices[0].pid = 0;
     i2c_devices[0].did = 31;
-    return FtdiI2c(fake_ddk::kFakeParent, layout, i2c_devices);
+    return FtdiI2c(fake_parent_.get(), layout, i2c_devices);
   }
 
-  fake_ddk::Bind ddk_;
+  std::shared_ptr<MockDevice> fake_parent_;
   FakeSerial serial_;
 };
 
@@ -131,7 +134,7 @@ TEST_F(FtdiI2cTest, DdkLifetimeTest) {
   i2c_devices[0].vid = 0;
   i2c_devices[0].pid = 0;
   i2c_devices[0].did = 31;
-  FtdiI2c* device(new FtdiI2c(fake_ddk::kFakeParent, layout, i2c_devices));
+  FtdiI2c* device(new FtdiI2c(fake_parent_.get(), layout, i2c_devices));
 
   // These Reads and Writes are to sync the device on bind.
   std::vector<uint8_t> first_write(1);
@@ -146,12 +149,11 @@ TEST_F(FtdiI2cTest, DdkLifetimeTest) {
 
   // Check that bind works.
   ASSERT_OK(device->Bind());
-  ASSERT_OK(ddk_.WaitUntilInitComplete());
+  auto* child = fake_parent_->GetLatestChild();
+  child->InitOp();
+  child->WaitUntilInitReplyCalled();
   device->DdkAsyncRemove();
-  EXPECT_TRUE(ddk_.Ok());
-
-  // This should delete the object, which means this test should not leak.
-  device->DdkRelease();
+  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
 }
 
 TEST_F(FtdiI2cTest, DdkLifetimeFailedInit) {
@@ -161,7 +163,7 @@ TEST_F(FtdiI2cTest, DdkLifetimeFailedInit) {
   i2c_devices[0].vid = 0;
   i2c_devices[0].pid = 0;
   i2c_devices[0].did = 31;
-  FtdiI2c* device(new FtdiI2c(fake_ddk::kFakeParent, layout, i2c_devices));
+  FtdiI2c* device(new FtdiI2c(fake_parent_.get(), layout, i2c_devices));
 
   // These Reads and Writes are to sync the device on bind.
   std::vector<uint8_t> first_write(1);
@@ -177,12 +179,13 @@ TEST_F(FtdiI2cTest, DdkLifetimeFailedInit) {
 
   // Bind should spawn the worker thread which will fail the init.
   ASSERT_OK(device->Bind());
-  ASSERT_OK(ddk_.WaitUntilInitComplete());
-  ASSERT_OK(ddk_.WaitUntilRemove());
-  EXPECT_TRUE(ddk_.Ok());
+  auto* child = fake_parent_->GetLatestChild();
 
-  // This should delete the object, which means this test should not leak.
-  device->DdkRelease();
+  child->InitOp();
+  child->WaitUntilInitReplyCalled();
+  ASSERT_EQ(ZX_ERR_INTERNAL, child->InitReplyCallStatus());
+
+  mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
 }
 
 TEST_F(FtdiI2cTest, PingTest) {

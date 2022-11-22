@@ -15,9 +15,7 @@ test("ftdi-i2c-test") {
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_cpp_wire",
-
-    # TODO(fxb/115065): Migrate from fake_ddk to mock-ddk.
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -60,6 +58,11 @@ source_set("common") {
 fuchsia_unittest_package("ftdi-i2c-test-package") {
   package_name = "ftdi-i2c-test"
   deps = [ ":ftdi-i2c-test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 test("ftdi-integration") {
