@@ -360,7 +360,7 @@ fn light_sensor_handler_process_reading_lower_gain() {
     let handler = LightSensorHandler::new((), sensor_configuration);
     // Uses AdjustmentSetting with a gain of 1.
     let rgbc = handler.process_reading(Rgbc { red: 1, green: 2, blue: 3, clear: 4 });
-    assert_eq!(rgbc, Rgbc { red: 105, green: 210, blue: 315, clear: 420 });
+    assert_eq!(rgbc, Rgbc { red: 105.0, green: 210.0, blue: 315.0, clear: 420.0 });
 }
 
 #[fuchsia::test]
@@ -375,7 +375,7 @@ fn light_sensor_handler_process_reading_higher_gain() {
 
     let handler = LightSensorHandler::new((), sensor_configuration);
     let rgbc = handler.process_reading(Rgbc { red: 1, green: 2, blue: 3, clear: 4 });
-    assert_eq!(rgbc, Rgbc { red: 2, green: 3, blue: 5, clear: 7 });
+    assert_eq!(rgbc, Rgbc { red: 2.0, green: 3.0, blue: 5.0, clear: 7.0 });
 }
 
 #[fuchsia::test]
@@ -391,6 +391,43 @@ fn light_sensor_handler_calculate_lux() {
     let handler = LightSensorHandler::new((), sensor_configuration);
     let lux = handler.calculate_lux(Rgbc { red: 11.0, green: 13.0, blue: 17.0, clear: 19.0 });
     assert_eq!(lux, 2.0 * 11.0 + 3.0 * 13.0 + 5.0 * 17.0 + 7.0 * 19.0);
+}
+
+#[fuchsia::test(allow_stalls = false)]
+async fn light_sensor_handler_no_calibrator_returns_uncalibrated() {
+    let sensor_configuration = SensorConfiguration {
+        vendor_id: VENDOR_ID,
+        product_id: PRODUCT_ID,
+        rgbc_to_lux_coefficients: Rgbc { red: 1.5, green: 1.6, blue: 1.7, clear: 1.8 },
+        si_scaling_factors: Rgbc { red: 1.1, green: 1.2, blue: 1.3, clear: 1.4 },
+        settings: get_adjustment_settings(),
+    };
+
+    let (device_proxy, called, task) = get_mock_device_proxy();
+    let handler = LightSensorHandler::<DoublingCalibrator>::new(None, sensor_configuration);
+    let reading = handler
+        .get_calibrated_data(Rgbc { red: 1, green: 2, blue: 3, clear: 4 }, device_proxy.clone())
+        .await;
+    let reading = reading.expect("calibration should succeed");
+
+    // TODO(fxbug.dev/110275) Add updated values once adjustment is enabled.
+    assert!((reading.rgbc.red - 1.0).abs() <= f32::EPSILON);
+    assert!((reading.rgbc.green - 2.0).abs() <= f32::EPSILON);
+    assert!((reading.rgbc.blue - 3.0).abs() <= f32::EPSILON);
+    assert!((reading.rgbc.clear - 4.0).abs() <= f32::EPSILON);
+    // = 0.010138694 * 1.5 + 0.022120789 * 1.6 + 0.03594628 * 1.7 + 0.051615167 * 1.8
+    assert!((reading.lux - 0.20461729).abs() <= f32::EPSILON);
+    // n = (0.23881 * 0.010138694 + 0.25499 * 0.022120789 - 0.58291 * 0.03594628)
+    //   / (0.11109 * 0.010138694 - 0.85406 * 0.022120789 + 0.52289 * 0.03594628)
+    // n = -12.518872457912726
+    // cct = 449.0 * n^3 + 3525.0 * n^2 + 6823.3 * n + 5520.33
+    assert!((reading.cct - -408385.84).abs() <= f32::EPSILON);
+
+    // TODO(fxbug.dev/110275) Add updated assertion once adjustment enabled.
+    assert_matches!(&*called.borrow(), &None);
+    drop(device_proxy);
+
+    task.await;
 }
 
 /// Mock calibrator that just multiplies the input by 2.
@@ -418,14 +455,23 @@ async fn light_sensor_handler_get_calibrated_data() {
         .get_calibrated_data(Rgbc { red: 1, green: 2, blue: 3, clear: 4 }, device_proxy.clone())
         .await;
     let reading = reading.expect("calibration should succeed");
-    // = round(1 * 64 * 256 / (256 - 100)) * 2 * 1.1 / (16 * 712)
-    assert!((reading.rgbc.red - 105.0).abs() <= f32::EPSILON);
-    // = round(2 * 64 * 256 / (256 - 100)) * 2 * 1.2 / (16 * 712)
-    assert!((reading.rgbc.green - 210.0).abs() <= f32::EPSILON);
-    // = round(3 * 64 * 256 / (256 - 100)) * 2 * 1.3 / (16 * 712)
-    assert!((reading.rgbc.blue - 315.0).abs() <= f32::EPSILON);
-    // = round(4 * 64 * 256 / (256 - 100)) * 2 * 1.4 / (16 * 712)
-    assert!((reading.rgbc.clear - 420.0).abs() <= f32::EPSILON);
+
+    // TODO(fxbug.dev/110275) Restore once adjustment is enabled.
+    if false {
+        // = round(1 * 64 * 256 / (256 - 100)) * 2 * 1.1 / (16 * 712)
+        assert!((reading.rgbc.red - 105.0).abs() <= f32::EPSILON);
+        // = round(2 * 64 * 256 / (256 - 100)) * 2 * 1.2 / (16 * 712)
+        assert!((reading.rgbc.green - 210.0).abs() <= f32::EPSILON);
+        // = round(3 * 64 * 256 / (256 - 100)) * 2 * 1.3 / (16 * 712)
+        assert!((reading.rgbc.blue - 315.0).abs() <= f32::EPSILON);
+        // = round(4 * 64 * 256 / (256 - 100)) * 2 * 1.4 / (16 * 712)
+        assert!((reading.rgbc.clear - 420.0).abs() <= f32::EPSILON);
+    } else {
+        assert!((reading.rgbc.red - 1.0).abs() <= f32::EPSILON);
+        assert!((reading.rgbc.green - 2.0).abs() <= f32::EPSILON);
+        assert!((reading.rgbc.blue - 3.0).abs() <= f32::EPSILON);
+        assert!((reading.rgbc.clear - 4.0).abs() <= f32::EPSILON);
+    }
     // = 0.020277388 * 1.5 + 0.044241577 * 1.6 + 0.07189256 * 1.7 + 0.103230335 * 1.8
     assert!((reading.lux - 0.40923458).abs() <= f32::EPSILON);
     // n = (0.23881 * 0.020277388 + 0.25499 * 0.044241577 - 0.58291 * 0.07189256)
@@ -546,11 +592,20 @@ async fn light_sensor_handler_input_event_handler() {
     assert_eq!(event.handled, Handled::Yes);
 
     let reading = watch_task.await;
-    // The readings should match the results in the `light_sensor_handler_get_calibrated_data` test.
-    assert!((reading.rgbc.unwrap().red_intensity - 105.0).abs() <= f32::EPSILON);
-    assert!((reading.rgbc.unwrap().green_intensity - 210.0).abs() <= f32::EPSILON);
-    assert!((reading.rgbc.unwrap().blue_intensity - 315.0).abs() <= f32::EPSILON);
-    assert!((reading.rgbc.unwrap().clear_intensity - 420.0).abs() <= f32::EPSILON);
+    // TODO(fxbug.dev/110275) Restore once adjustment is enabled.
+    if false {
+        // The readings should match the results in the `light_sensor_handler_get_calibrated_data` test.
+        assert!((reading.rgbc.unwrap().red_intensity - 105.0).abs() <= f32::EPSILON);
+        assert!((reading.rgbc.unwrap().green_intensity - 210.0).abs() <= f32::EPSILON);
+        assert!((reading.rgbc.unwrap().blue_intensity - 315.0).abs() <= f32::EPSILON);
+        assert!((reading.rgbc.unwrap().clear_intensity - 420.0).abs() <= f32::EPSILON);
+    } else {
+        let rgbc = reading.rgbc.unwrap();
+        assert!((rgbc.red_intensity - 1.0).abs() <= f32::EPSILON);
+        assert!((rgbc.green_intensity - 2.0).abs() <= f32::EPSILON);
+        assert!((rgbc.blue_intensity - 3.0).abs() <= f32::EPSILON);
+        assert!((rgbc.clear_intensity - 4.0).abs() <= f32::EPSILON);
+    }
     assert!((reading.calculated_lux.unwrap() - 0.40923458).abs() <= f32::EPSILON);
     assert!((reading.correlated_color_temperature.unwrap() - -408385.84).abs() <= f32::EPSILON);
     request_task.await;

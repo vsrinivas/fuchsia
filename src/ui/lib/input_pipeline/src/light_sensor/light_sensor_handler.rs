@@ -182,7 +182,7 @@ impl ActiveSetting {
 #[derive(Clone)]
 pub struct LightSensorHandler<T> {
     hanging_get: Rc<RefCell<SensorHangingGet>>,
-    calibrator: T,
+    calibrator: Option<T>,
     // TODO(fxbug.dev/110275) Remove allow once all clients are transitioned.
     #[cfg_attr(not(test), allow(dead_code))]
     active_setting: Rc<RefCell<ActiveSetting>>,
@@ -196,25 +196,32 @@ pub type CalibratedLightSensorHandler = LightSensorHandler<Calibrator<LedWatcher
 pub async fn make_light_sensor_handler_and_spawn_led_watcher(
     light_proxy: LightProxy,
     brightness_proxy: BrightnessControlProxy,
-    calibration: Calibration,
+    calibration: Option<Calibration>,
     configuration: SensorConfiguration,
-) -> Result<(Rc<CalibratedLightSensorHandler>, CancelableTask), Error> {
-    let light_groups =
-        light_proxy.watch_light_groups().await.context("request initial light groups")?;
-    let led_watcher = LedWatcher::new(light_groups);
-    let (cancelation_tx, cancelation_rx) = oneshot::channel();
-    let (led_watcher_handle, watcher_task) = led_watcher.handle_light_groups_and_brightness_watch(
-        light_proxy,
-        brightness_proxy,
-        cancelation_rx,
-    );
-    let watcher_task = CancelableTask::new(cancelation_tx, watcher_task);
-    let calibrator = Calibrator::new(calibration, led_watcher_handle);
+) -> Result<(Rc<CalibratedLightSensorHandler>, Option<CancelableTask>), Error> {
+    let (calibrator, watcher_task) = if let Some(calibration) = calibration {
+        let light_groups =
+            light_proxy.watch_light_groups().await.context("request initial light groups")?;
+        let led_watcher = LedWatcher::new(light_groups);
+        let (cancelation_tx, cancelation_rx) = oneshot::channel();
+        let (led_watcher_handle, watcher_task) = led_watcher
+            .handle_light_groups_and_brightness_watch(
+                light_proxy,
+                brightness_proxy,
+                cancelation_rx,
+            );
+        let watcher_task = CancelableTask::new(cancelation_tx, watcher_task);
+        let calibrator = Calibrator::new(calibration, led_watcher_handle);
+        (Some(calibrator), Some(watcher_task))
+    } else {
+        (None, None)
+    };
     Ok((LightSensorHandler::new(calibrator, configuration), watcher_task))
 }
 
 impl<T> LightSensorHandler<T> {
-    pub fn new(calibrator: T, configuration: SensorConfiguration) -> Rc<Self> {
+    pub fn new(calibrator: impl Into<Option<T>>, configuration: SensorConfiguration) -> Rc<Self> {
+        let calibrator = calibrator.into();
         let hanging_get = Rc::new(RefCell::new(HangingGet::new(
             LightSensorData {
                 rgbc: Rgbc { red: 0.0, green: 0.0, blue: 0.0, clear: 0.0 },
@@ -265,12 +272,13 @@ impl<T> LightSensorHandler<T> {
     /// I.e. values being read in dark lighting will be returned as their original value,
     /// but values in the brighter lighting will be returned larger, as a reading within the true
     /// output range of the light sensor.
-    fn process_reading(&self, reading: Rgbc<u16>) -> Rgbc<u32> {
+    fn process_reading(&self, reading: Rgbc<u16>) -> Rgbc<f32> {
         let active_setting = self.active_setting.borrow().active_setting();
         let gain_bias = MAX_GAIN / active_setting.gain as u32;
 
         reading.map(|v| {
             div_round_closest(v as u32 * gain_bias * MAX_ATIME, num_cycles(active_setting.atime))
+                as f32
         })
     }
 
@@ -292,7 +300,11 @@ where
         device_proxy: InputDeviceProxy,
     ) -> Result<LightReading, Error> {
         let uncalibrated_rgbc = self.process_reading(reading);
-        let rgbc = self.calibrator.calibrate(uncalibrated_rgbc.map(|v| v as f32));
+        let rgbc = self
+            .calibrator
+            .as_ref()
+            .map(|calibrator| calibrator.calibrate(uncalibrated_rgbc))
+            .unwrap_or(uncalibrated_rgbc);
         let rgbc = (self.si_scaling_factors * rgbc).map(|c| c / ADC_SCALING_FACTOR);
         let lux = self.calculate_lux(rgbc);
         let cct = correlated_color_temperature(rgbc);
@@ -309,8 +321,9 @@ where
                 .context("updating active setting")?;
         }
 
-        // TODO(fxbug.dev/110275) Use calibrated rgbc in SI units once all clients are using lux and cct.
-        let rgbc = uncalibrated_rgbc.map(|c| c as f32);
+        // TODO(fxbug.dev/110275) Use normalized/calibrated rgbc in SI units once all clients are
+        // using lux and cct.
+        let rgbc = reading.map(|c| c as f32);
         Ok(LightReading { rgbc, lux, cct })
     }
 }

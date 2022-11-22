@@ -4,7 +4,10 @@
 
 use {
     crate::color_transform_manager::ColorTransformManager,
-    ::input_pipeline::activity::ActivityManager,
+    ::input_pipeline::{
+        activity::ActivityManager, input_device::InputDeviceType,
+        light_sensor::Configuration as LightSensorConfiguration,
+    },
     anyhow::{Context, Error},
     fidl::prelude::*,
     fidl_fuchsia_accessibility::{
@@ -15,6 +18,7 @@ use {
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_input_interaction::NotifierRequestStream,
     fidl_fuchsia_input_interaction_observation::AggregatorRequestStream,
+    fidl_fuchsia_lightsensor::SensorRequestStream as LightSensorRequestStream,
     fidl_fuchsia_recovery_policy::DeviceRequestStream as FactoryResetDeviceRequestStream,
     fidl_fuchsia_recovery_ui::FactoryResetCountdownRequestStream,
     fidl_fuchsia_session_scene::{
@@ -43,6 +47,8 @@ use {
     futures::{StreamExt, TryStreamExt},
     input_config_lib::Config,
     scene_management::{self, SceneManager, ViewingDistance, ViewportToken},
+    std::fs::File,
+    std::io::Read,
     std::rc::Rc,
     std::sync::Arc,
     tracing::{error, info, warn},
@@ -54,6 +60,7 @@ mod factory_reset_device_server;
 mod input_config_server;
 mod input_device_registry_server;
 mod input_pipeline;
+mod light_sensor_server;
 mod media_buttons_listener_registry_server;
 
 enum ExposedServices {
@@ -66,6 +73,7 @@ enum ExposedServices {
     FocusChainProvider(FocusChainProviderRequestStream),
     InputConfigFeatures(InputConfigFeaturesRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
+    LightSensor(LightSensorRequestStream),
     SceneManager(SceneManagerRequestStream),
     UserInteractionObservation(AggregatorRequestStream),
     UserInteraction(NotifierRequestStream),
@@ -80,6 +88,8 @@ async fn main() -> Result<(), Error> {
     }
     Ok(())
 }
+
+const LIGHT_SENSOR_CONFIGURATION: &'static str = "/sensor-config/config.json";
 
 // TODO(fxbug.dev/89425): Ideally we wouldn't need to have separate inner_main() and main()
 // functions in order to catch and log top-level errors.  Instead, the #[fuchsia::main] macro
@@ -122,7 +132,30 @@ async fn inner_main() -> Result<(), Error> {
         .add_fidl_service(ExposedServices::SceneManager)
         .add_fidl_service(ExposedServices::UserInteractionObservation)
         .add_fidl_service(ExposedServices::UserInteraction);
-    fs.take_and_serve_directory_handle()?;
+
+    let light_sensor_configuration: Option<LightSensorConfiguration> =
+        match File::open(LIGHT_SENSOR_CONFIGURATION) {
+            Ok(mut file) => {
+                let mut contents = String::new();
+                let _: usize =
+                    file.read_to_string(&mut contents).context("reading configuration")?;
+                Some(serde_json::from_str(&contents).context("parsing configuration")?)
+            }
+            // Not found signifies that no configuration is supplied for the light sensor, and so it
+            // should be configured off.
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+            Err(e) => {
+                return Err(e).context("opening light sensor config");
+            }
+        };
+    let (light_sensor_server, light_sensor_request_stream_receiver) =
+        if light_sensor_configuration.is_some() {
+            let (light_sensor_server, light_sensor_request_stream_receiver) =
+                light_sensor_server::make_server_and_receiver();
+            (Some(light_sensor_server), Some(light_sensor_request_stream_receiver))
+        } else {
+            (None, None)
+        };
 
     let (input_device_registry_server, input_device_registry_request_stream_receiver) =
         input_device_registry_server::make_server_and_receiver();
@@ -249,11 +282,13 @@ async fn inner_main() -> Result<(), Error> {
     // Start input pipeline.
     let Config { idle_threshold_minutes, supported_input_devices } =
         Config::take_from_startup_handle();
+    let has_light_sensor_configuration = light_sensor_configuration.is_some();
     if let Ok(input_pipeline) = input_pipeline::handle_input(
         use_flatland,
         scene_manager.clone(),
         input_config_receiver,
         input_device_registry_request_stream_receiver,
+        light_sensor_request_stream_receiver,
         media_buttons_listener_registry_request_stream_receiver,
         factory_reset_countdown_request_stream_receiver,
         factory_reset_device_request_stream_receiver,
@@ -262,11 +297,17 @@ async fn inner_main() -> Result<(), Error> {
         display_ownership,
         focus_chain_publisher,
         supported_input_devices,
+        light_sensor_configuration,
     )
     .await
     {
+        if input_pipeline.input_device_types().contains(&InputDeviceType::LightSensor)
+            && has_light_sensor_configuration
+        {
+            fs.dir("svc").add_fidl_service(ExposedServices::LightSensor);
+        }
         fasync::Task::local(input_pipeline.handle_input_events()).detach();
-    }
+    };
 
     // Create Activity Manager.
     let activity_manager =
@@ -294,6 +335,8 @@ async fn inner_main() -> Result<(), Error> {
             }
         },
     }
+
+    fs.take_and_serve_directory_handle()?;
 
     while let Some(service_request) = fs.next().await {
         match service_request {
@@ -357,6 +400,18 @@ async fn inner_main() -> Result<(), Error> {
                     Ok(()) => (),
                     Err(e) => {
                         warn!("failed to forward InputConfigFeaturesRequestStream: {:?}", e)
+                    }
+                }
+            }
+            ExposedServices::LightSensor(request_stream) => {
+                if let Some(light_sensor_server) = light_sensor_server.as_ref() {
+                    match light_sensor_server.handle_request(request_stream).await {
+                        Ok(()) => (),
+                        Err(e) => {
+                            warn!(
+                                "failed to forward light sensor request via LightSensorRequestStream: {e:?}"
+                            );
+                        }
                     }
                 }
             }

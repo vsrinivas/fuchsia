@@ -4,6 +4,13 @@
 
 import("//build/components.gni")
 
+# Define an empty config as the default for the
+# light sensor configuration.
+resource("empty-sensor-config") {
+  outputs = [ "data/empty" ]
+  sources = [ "data/empty" ]
+}
+
 # A non-executable component that provides no configurations
 # to sensors used in the input-pipeline library.
 fuchsia_component("sensor-config-component") {
@@ -15,5 +22,8 @@ fuchsia_component("sensor-config-component") {
 # /sensor-config/ directory with no data.
 fuchsia_package("empty-sensor-config-pkg") {
   package_name = "sensor-config"
-  deps = [ ":sensor-config-component" ]
+  deps = [
+    ":empty-sensor-config",
+    ":sensor-config-component",
+  ]
 }

@@ -37,7 +37,6 @@
         {
             // These protocols are not available in smart products
             protocol: [
-                "fuchsia.lightsensor.Sensor",
                 "fuchsia.ui.pointer.augment.GlobalMouse",
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.shortcut2.Registry",
@@ -45,6 +44,11 @@
             from: "void",
             to: "#session-manager",
             availability: "optional",
+        },
+        {
+            protocol: "fuchsia.lightsensor.Sensor",
+            from: "#ui",
+            to: "#session-manager",
         },
         {
             // Routed from v1 components.
