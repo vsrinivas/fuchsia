@@ -42,12 +42,8 @@ void NodeConnection::Clone(CloneRequestView request, CloneCompleter::Sync& compl
 }
 
 void NodeConnection::Close(CloseCompleter::Sync& completer) {
-  zx::result result = Connection::NodeClose();
-  if (result.is_error()) {
-    completer.ReplyError(result.status_value());
-  } else {
-    completer.ReplySuccess();
-  }
+  zx::result<> result = Connection::NodeClose();
+  completer.Reply(result);
 }
 
 void NodeConnection::Query(QueryCompleter::Sync& completer) {
@@ -76,57 +72,38 @@ void NodeConnection::GetConnectionInfo(GetConnectionInfoCompleter::Sync& complet
 }
 
 void NodeConnection::Sync(SyncCompleter::Sync& completer) {
-  Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
-    if (sync_status != ZX_OK) {
-      completer.ReplyError(sync_status);
-    } else {
-      completer.ReplySuccess();
-    }
+  Connection::NodeSync([completer = completer.ToAsync()](zx_status_t status) mutable {
+    completer.Reply(zx::make_result(status));
   });
 }
 
 void NodeConnection::GetAttr(GetAttrCompleter::Sync& completer) {
-  auto result = Connection::NodeGetAttr();
-  if (result.is_error()) {
-    completer.Reply(result.status_value(), fio::wire::NodeAttributes());
-  } else {
-    completer.Reply(ZX_OK, result.value().ToIoV1NodeAttributes());
-  }
+  zx::result result = Connection::NodeGetAttr();
+  completer.Reply(result.status_value(), result.is_ok() ? result.value().ToIoV1NodeAttributes()
+                                                        : fio::wire::NodeAttributes());
 }
 
 void NodeConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
-  auto result = Connection::NodeSetAttr(request->flags, request->attributes);
-  if (result.is_error()) {
-    completer.Reply(result.status_value());
-  } else {
-    completer.Reply(ZX_OK);
-  }
+  zx::result<> result = Connection::NodeSetAttr(request->flags, request->attributes);
+  completer.Reply(result.status_value());
 }
 
 void NodeConnection::GetFlags(GetFlagsCompleter::Sync& completer) {
-  auto result = Connection::NodeGetFlags();
-  if (result.is_error()) {
-    completer.Reply(result.status_value(), {});
-  } else {
-    completer.Reply(ZX_OK, result.value());
-  }
+  zx::result result = Connection::NodeGetFlags();
+  completer.Reply(result.status_value(), result.is_ok() ? result.value() : fio::wire::OpenFlags{});
 }
 
 void NodeConnection::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
-  auto result = Connection::NodeSetFlags(request->flags);
-  if (result.is_error()) {
-    completer.Reply(result.status_value());
-  } else {
-    completer.Reply(ZX_OK);
-  }
+  zx::result<> result = Connection::NodeSetFlags(request->flags);
+  completer.Reply(result.status_value());
 }
 
 void NodeConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
   zx::result result = Connection::NodeQueryFilesystem();
   completer.Reply(result.status_value(),
-                  result.is_ok() ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(
-                                       &result.value())
-                                 : nullptr);
+                  result.is_ok()
+                      ? fidl::ObjectView<fio::wire::FilesystemInfo>::FromExternal(&result.value())
+                      : nullptr);
 }
 
 }  // namespace internal
