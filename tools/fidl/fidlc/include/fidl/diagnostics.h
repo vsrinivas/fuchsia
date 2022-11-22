@@ -339,7 +339,7 @@ constexpr UndocumentedErrorDef<141> ErrInvalidErrorType(
     "invalid error type: must be int32, uint32 or an enum thereof");
 constexpr UndocumentedErrorDef<142, std::string_view, std::set<std::string_view>>
     ErrInvalidTransportType("invalid transport type: got {} expected one of {}");
-constexpr UndocumentedErrorDef<143, const flat::Attribute *, std::string_view> ErrBoundIsTooBig(
+constexpr ErrorDef<143, const flat::Attribute *, std::string_view> ErrBoundIsTooBig(
     "'{}' bound of '{}' is too big");
 constexpr ErrorDef<144, const flat::Attribute *, std::string_view> ErrUnableToParseBound(
     "unable to parse '{}' bound of '{}'");

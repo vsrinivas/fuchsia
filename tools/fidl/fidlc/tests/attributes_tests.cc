@@ -736,14 +736,8 @@ type MyTable = table {
 }
 
 TEST(AttributesTests, BadMaxBytesBoundTooBig) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-@max_bytes("4294967296") // 2^32
-type MyTable = table {
-  1: u uint8;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0143.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBoundIsTooBig);
 }
 
