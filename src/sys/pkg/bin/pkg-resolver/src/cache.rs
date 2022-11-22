@@ -8,7 +8,7 @@ use {
     fidl_contrib::protocol_connector::ProtocolSender,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_metrics::MetricEvent,
-    fidl_fuchsia_pkg::LocalMirrorProxy,
+    fidl_fuchsia_pkg::{self as fpkg, LocalMirrorProxy},
     fidl_fuchsia_pkg_ext::{self as pkg, BlobId, BlobInfo, MirrorConfig, RepositoryConfig},
     fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_pkg::PackageDirectory,
@@ -671,6 +671,7 @@ async fn fetch_blob(
                 http_client,
                 &context.mirrors,
                 merkle,
+                fpkg::BlobType::Uncompressed,
                 context.opener,
                 context.expected_len,
                 blob_fetch_params,
@@ -711,6 +712,7 @@ async fn fetch_blob_http(
     client: &fuchsia_hyper::HttpsClient,
     mirrors: &[MirrorConfig],
     merkle: BlobId,
+    blob_type: fpkg::BlobType,
     opener: pkg::cache::DeferredOpenBlob,
     expected_len: Option<u64>,
     blob_fetch_params: BlobFetchParams,
@@ -725,7 +727,8 @@ async fn fetch_blob_http(
         return Err(FetchError::NoMirrors);
     };
     let mirror_stats = stats.lock().for_mirror(blob_mirror_url.to_string());
-    let blob_url = make_blob_url(blob_mirror_url, &merkle).map_err(FetchError::BlobUrl)?;
+    let blob_url =
+        make_blob_url(blob_mirror_url, &merkle, blob_type).map_err(FetchError::BlobUrl)?;
     let inspect = inspect.mirror(&blob_url.to_string());
     let flaked = Arc::new(AtomicBool::new(false));
 
@@ -743,7 +746,7 @@ async fn fetch_blob_http(
                 let inspect = inspect.attempt();
                 inspect.state(inspect::Http::CreateBlob);
                 if let Some(pkg::cache::NeededBlob { blob, closer: blob_closer }) =
-                    opener.open().await.map_err(FetchError::CreateBlob)?
+                    opener.open(blob_type).await.map_err(FetchError::CreateBlob)?
                 {
                     inspect.state(inspect::Http::DownloadBlob);
                     let guard = ftrace::async_enter!(
@@ -825,7 +828,7 @@ async fn fetch_blob_local(
     let inspect = inspect.attempt();
     inspect.state(inspect::LocalMirror::CreateBlob);
     if let Some(pkg::cache::NeededBlob { blob, closer: blob_closer }) =
-        opener.open().await.map_err(FetchError::CreateBlob)?
+        opener.open(fpkg::BlobType::Uncompressed).await.map_err(FetchError::CreateBlob)?
     {
         let res = read_local_blob(&inspect, local_mirror, merkle, expected_len, blob).await;
         inspect.state(inspect::LocalMirror::CloseBlob);
@@ -894,8 +897,13 @@ async fn read_local_blob(
 fn make_blob_url(
     blob_mirror_url: http::Uri,
     merkle: &BlobId,
+    blob_type: fpkg::BlobType,
 ) -> Result<hyper::Uri, http_uri_ext::Error> {
-    blob_mirror_url.extend_dir_with_path(&merkle.to_string())
+    let path = match blob_type {
+        fpkg::BlobType::Uncompressed => merkle.to_string(),
+        fpkg::BlobType::Delivery => format!("1/{merkle}"),
+    };
+    blob_mirror_url.extend_dir_with_path(&path)
 }
 
 // On success, returns the size of the downloaded blob in bytes (useful for tracing).
@@ -1238,34 +1246,64 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            make_blob_url("http://example.com".parse::<Uri>().unwrap(), &merkle).unwrap(),
-            format!("http://example.com/{}", merkle).parse::<Uri>().unwrap()
+            make_blob_url(
+                "http://example.com".parse::<Uri>().unwrap(),
+                &merkle,
+                fpkg::BlobType::Uncompressed
+            )
+            .unwrap(),
+            format!("http://example.com/{merkle}").parse::<Uri>().unwrap()
         );
 
         assert_eq!(
-            make_blob_url("http://example.com/noslash".parse::<Uri>().unwrap(), &merkle).unwrap(),
-            format!("http://example.com/noslash/{}", merkle).parse::<Uri>().unwrap()
+            make_blob_url(
+                "http://example.com".parse::<Uri>().unwrap(),
+                &merkle,
+                fpkg::BlobType::Delivery
+            )
+            .unwrap(),
+            format!("http://example.com/1/{merkle}").parse::<Uri>().unwrap()
         );
 
         assert_eq!(
-            make_blob_url("http://example.com/slash/".parse::<Uri>().unwrap(), &merkle).unwrap(),
-            format!("http://example.com/slash/{}", merkle).parse::<Uri>().unwrap()
+            make_blob_url(
+                "http://example.com/noslash".parse::<Uri>().unwrap(),
+                &merkle,
+                fpkg::BlobType::Uncompressed
+            )
+            .unwrap(),
+            format!("http://example.com/noslash/{merkle}").parse::<Uri>().unwrap()
         );
 
         assert_eq!(
-            make_blob_url("http://example.com/twoslashes//".parse::<Uri>().unwrap(), &merkle)
-                .unwrap(),
-            format!("http://example.com/twoslashes//{}", merkle).parse::<Uri>().unwrap()
+            make_blob_url(
+                "http://example.com/slash/".parse::<Uri>().unwrap(),
+                &merkle,
+                fpkg::BlobType::Uncompressed
+            )
+            .unwrap(),
+            format!("http://example.com/slash/{merkle}").parse::<Uri>().unwrap()
+        );
+
+        assert_eq!(
+            make_blob_url(
+                "http://example.com/twoslashes//".parse::<Uri>().unwrap(),
+                &merkle,
+                fpkg::BlobType::Uncompressed
+            )
+            .unwrap(),
+            format!("http://example.com/twoslashes//{merkle}").parse::<Uri>().unwrap()
         );
 
         // IPv6 zone id
         assert_eq!(
             make_blob_url(
                 "http://[fe80::e022:d4ff:fe13:8ec3%252]:8083/blobs/".parse::<Uri>().unwrap(),
-                &merkle
+                &merkle,
+                fpkg::BlobType::Uncompressed
             )
             .unwrap(),
-            format!("http://[fe80::e022:d4ff:fe13:8ec3%252]:8083/blobs/{}", merkle)
+            format!("http://[fe80::e022:d4ff:fe13:8ec3%252]:8083/blobs/{merkle}")
                 .parse::<Uri>()
                 .unwrap()
         );

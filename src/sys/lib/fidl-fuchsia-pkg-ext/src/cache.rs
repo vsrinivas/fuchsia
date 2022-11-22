@@ -78,7 +78,11 @@ impl Client {
         let mut get = self
             .get(BlobInfo { blob_id: meta_far_blob, length: 0 })
             .map_err(GetAlreadyCachedError::Get)?;
-        if let Some(_) = get.open_meta_blob().await.map_err(GetAlreadyCachedError::OpenMetaBlob)? {
+        if let Some(_) = get
+            .open_meta_blob(fpkg::BlobType::Uncompressed)
+            .await
+            .map_err(GetAlreadyCachedError::OpenMetaBlob)?
+        {
             return Err(GetAlreadyCachedError::MissingMetaFar);
         }
 
@@ -137,12 +141,11 @@ impl SharedBoolEvent {
 async fn open_blob(
     needed_blobs: &fpkg::NeededBlobsProxy,
     kind: OpenKind,
+    blob_type: fpkg::BlobType,
     pkg_present: Option<&SharedBoolEvent>,
 ) -> Result<Option<NeededBlob>, OpenBlobError> {
     let (blob, blob_server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>()?;
 
-    // TODO(fxbug.dev/115478): Pass blob type in.
-    let blob_type = fpkg::BlobType::Uncompressed;
     let open_fut = match kind {
         OpenKind::Meta => needed_blobs.open_meta_blob(blob_server_end, blob_type),
         OpenKind::Content(hash) => {
@@ -186,8 +189,11 @@ pub struct DeferredOpenBlob {
 impl DeferredOpenBlob {
     /// Opens the blob for write, if it is still needed. The blob's data can be provided using the
     /// returned NeededBlob.
-    pub async fn open(&self) -> Result<Option<NeededBlob>, OpenBlobError> {
-        open_blob(&self.needed_blobs, self.kind, self.pkg_present.as_ref()).await
+    pub async fn open(
+        &self,
+        blob_type: fpkg::BlobType,
+    ) -> Result<Option<NeededBlob>, OpenBlobError> {
+        open_blob(&self.needed_blobs, self.kind, blob_type, self.pkg_present.as_ref()).await
     }
     fn proxy_cmp_key(&self) -> u32 {
         use fidl::{endpoints::Proxy, AsHandleRef};
@@ -229,8 +235,11 @@ impl Get {
 
     /// Opens the meta blob for write, if it is still needed. The blob's data can be provided using
     /// the returned NeededBlob.
-    pub async fn open_meta_blob(&mut self) -> Result<Option<NeededBlob>, OpenBlobError> {
-        open_blob(&self.needed_blobs, OpenKind::Meta, Some(&self.pkg_present)).await
+    pub async fn open_meta_blob(
+        &mut self,
+        blob_type: fpkg::BlobType,
+    ) -> Result<Option<NeededBlob>, OpenBlobError> {
+        open_blob(&self.needed_blobs, OpenKind::Meta, blob_type, Some(&self.pkg_present)).await
     }
 
     fn start_get_missing_blobs(
@@ -289,8 +298,9 @@ impl Get {
     pub async fn open_blob(
         &mut self,
         content_blob: BlobId,
+        blob_type: fpkg::BlobType,
     ) -> Result<Option<NeededBlob>, OpenBlobError> {
-        open_blob(&self.needed_blobs, OpenKind::Content(content_blob), None).await
+        open_blob(&self.needed_blobs, OpenKind::Content(content_blob), blob_type, None).await
     }
 
     /// Notifies the endpoint that all blobs have been written and wait for the response to the
@@ -897,7 +907,10 @@ mod tests {
             async move {
                 let mut get = client.get(blob_info(2)).unwrap();
 
-                assert_matches!(get.open_meta_blob().await.unwrap(), None);
+                assert_matches!(
+                    get.open_meta_blob(fpkg::BlobType::Uncompressed).await.unwrap(),
+                    None
+                );
                 assert_eq!(get.get_missing_blobs().try_concat().await.unwrap(), vec![]);
                 let pkg_dir = get.finish().await.unwrap();
 
@@ -929,7 +942,10 @@ mod tests {
             async move {
                 let mut get = client.get(blob_info(2)).unwrap();
 
-                assert_matches!(get.open_meta_blob().await.unwrap(), None);
+                assert_matches!(
+                    get.open_meta_blob(fpkg::BlobType::Uncompressed).await.unwrap(),
+                    None
+                );
 
                 // ensure sending the request doesn't fail, then unblock closing the channel, then
                 // ensure the get_missing_blobs call detects the closed iterator as success instead
@@ -971,13 +987,28 @@ mod tests {
             async {
                 {
                     let opener = get.make_open_meta_blob();
-                    assert_matches!(opener.open().await.unwrap(), None);
-                    assert_matches!(opener.open().await.unwrap(), Some(_));
+                    assert_matches!(opener.open(fpkg::BlobType::Uncompressed).await.unwrap(), None);
+                    assert_matches!(
+                        opener.open(fpkg::BlobType::Uncompressed).await.unwrap(),
+                        Some(_)
+                    );
                 }
-                assert_matches!(get.open_meta_blob().await.unwrap(), None);
-                assert_matches!(get.open_meta_blob().await.unwrap(), Some(_));
-                assert_matches!(get.open_meta_blob().await, Err(OpenBlobError::OutOfSpace));
-                assert_matches!(get.open_meta_blob().await, Err(OpenBlobError::UnspecifiedIo));
+                assert_matches!(
+                    get.open_meta_blob(fpkg::BlobType::Uncompressed).await.unwrap(),
+                    None
+                );
+                assert_matches!(
+                    get.open_meta_blob(fpkg::BlobType::Uncompressed).await.unwrap(),
+                    Some(_)
+                );
+                assert_matches!(
+                    get.open_meta_blob(fpkg::BlobType::Uncompressed).await,
+                    Err(OpenBlobError::OutOfSpace)
+                );
+                assert_matches!(
+                    get.open_meta_blob(fpkg::BlobType::Uncompressed).await,
+                    Err(OpenBlobError::UnspecifiedIo)
+                );
             },
         )
         .await;
@@ -1009,14 +1040,26 @@ mod tests {
             async {
                 {
                     let opener = get.make_open_blob(blob_id(2));
-                    assert_matches!(opener.open().await.unwrap(), None);
-                    assert_matches!(opener.open().await.unwrap(), Some(_));
+                    assert_matches!(opener.open(fpkg::BlobType::Uncompressed).await.unwrap(), None);
+                    assert_matches!(
+                        opener.open(fpkg::BlobType::Uncompressed).await.unwrap(),
+                        Some(_)
+                    );
                 }
-                assert_matches!(get.open_blob(blob_id(10)).await.unwrap(), None);
-                assert_matches!(get.open_blob(blob_id(11)).await.unwrap(), Some(_));
-                assert_matches!(get.open_blob(blob_id(12)).await, Err(OpenBlobError::OutOfSpace));
                 assert_matches!(
-                    get.open_blob(blob_id(13)).await,
+                    get.open_blob(blob_id(10), fpkg::BlobType::Uncompressed).await.unwrap(),
+                    None
+                );
+                assert_matches!(
+                    get.open_blob(blob_id(11), fpkg::BlobType::Uncompressed).await.unwrap(),
+                    Some(_)
+                );
+                assert_matches!(
+                    get.open_blob(blob_id(12), fpkg::BlobType::Uncompressed).await,
+                    Err(OpenBlobError::OutOfSpace)
+                );
+                assert_matches!(
+                    get.open_blob(blob_id(13), fpkg::BlobType::Uncompressed).await,
                     Err(OpenBlobError::UnspecifiedIo)
                 );
             },

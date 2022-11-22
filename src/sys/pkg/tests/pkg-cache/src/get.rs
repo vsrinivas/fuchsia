@@ -248,14 +248,14 @@ async fn handles_partially_written_pkg() {
         let pkg_cache = env.client();
         let mut get = pkg_cache.get(meta_blob_info.into()).unwrap();
 
-        assert_matches!(get.open_meta_blob().await.unwrap(), None);
+        assert_matches!(get.open_meta_blob(fpkg::BlobType::Uncompressed).await.unwrap(), None);
         let missing = get.get_missing_blobs().try_concat().await.unwrap();
         assert_eq!(
             missing,
             vec![fidl_fuchsia_pkg_ext::BlobInfo { blob_id: hash.into(), length: 0 }]
         );
 
-        let blob = get.open_blob(hash.into()).await.unwrap().unwrap();
+        let blob = get.open_blob(hash.into(), fpkg::BlobType::Uncompressed).await.unwrap().unwrap();
         let (blob, closer) = (blob.blob, blob.closer);
         let blob = blob.truncate(data.len() as u64).await.unwrap();
         assert_matches!(
