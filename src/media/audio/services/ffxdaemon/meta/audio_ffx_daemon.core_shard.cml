@@ -1,0 +1,30 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "audio_ffx_daemon",
+            url: "fuchsia-pkg://fuchsia.com/audio_ffx_daemon#meta/audio_ffx_daemon.cm",
+            environment: "#core-env",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.audio.ffxdaemon.AudioDaemon" ],
+            from: "#audio_ffx_daemon",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#audio_ffx_daemon",
+        },
+        {
+            protocol: [ "fuchsia.media.Audio" ],
+            from: "#audio_core",
+            to: [ "#audio_ffx_daemon" ],
+        },
+    ],
+}

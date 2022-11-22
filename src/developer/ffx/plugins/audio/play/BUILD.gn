@@ -1,0 +1,33 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_audio_play") {
+  version = "0.1.0"
+  edition = "2021"
+
+  args_deps = [
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.audio.ffxdaemon:fuchsia.audio.ffxdaemon_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio_rust",
+    "//src/developer/ffx/lib/errors:lib",
+    "//src/developer/ffx/plugins/audio/utils:audio-utils",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hound",
+    "//third_party/rust_crates:tokio",
+  ]
+
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
+}

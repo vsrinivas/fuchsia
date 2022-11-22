@@ -1,0 +1,54 @@
+// Copyright 2022 The Fuchsia Authors.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// This library contains protocols used by the `ffx audio` tool only. These
+/// protocols work around limitations of ffx. For example, ffx cannot share VMOs
+/// with a target device.
+@available(added=HEAD)
+library fuchsia.audio.ffxdaemon;
+
+using fuchsia.media;
+using fuchsia.media.audio;
+using zx;
+
+/// The maximum amount of data that can be read or written by a single VmoWrapper
+/// call. This is well under the maximum FIDL message size, which is 64KB.
+const MAX_AUDIO_BUFFER_BYTES uint32 = 32768;
+
+/// This protocol makes a VMO readable and writable from within an ffx tool.
+protocol VmoWrapper {
+    /// Emulates zx_vmo_write() by writing data vector to a VMO at offset.
+    /// Returns an error on failure.
+    Write(resource table {
+        /// Data to be written to VMO. This field is required.
+        1: data vector<uint8>:MAX_AUDIO_BUFFER_BYTES;
+
+        /// Offset index into the VMO. This field is requred.
+        2: offset uint64;
+    }) -> () error zx.status;
+};
+
+/// The main entry point for ffx audio.
+@discoverable
+protocol AudioDaemon {
+    /// Creates an AudioRenderer and VMO with buffer_size bytes.
+    /// Returns client channel ends to both the AudioRenderer and
+    /// VmoWrapper. Data written to VmoWrapper will be used for
+    /// sending packets of data to the proxy generated from AudioRenderer
+    /// channel. Returns an error on failure.
+    CreateAudioRenderer(resource table {
+        /// The AudioRenderer will have a single payload buffer with this size, in bytes.
+        1: buffer_size uint64;
+    }) -> (resource table {
+        /// The new AudioRenderer. This renderer has a single payload buffer (id 0) of
+        /// the requested size.
+        1: renderer client_end:fuchsia.media.AudioRenderer;
+
+        /// The renderer's payload buffer.
+        2: vmo_channel client_end:VmoWrapper;
+
+        /// Renderer's gain control
+        3: gain_control client_end:fuchsia.media.audio.GainControl;
+    }) error zx.status;
+};
