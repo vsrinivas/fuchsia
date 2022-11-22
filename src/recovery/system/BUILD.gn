@@ -130,6 +130,7 @@ rustc_library("ota_lib") {
   with_unit_tests = true
   deps = [
     ":fdr_lib",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
     "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_rust",
     "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
@@ -162,11 +163,15 @@ rustc_library("ota_lib") {
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/testing/blobfs-ramdisk",
+    "//src/sys/pkg/testing/mock-boot-arguments:lib",
     "//src/sys/pkg/testing/mock-paver",
     "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:pretty_assertions",
   ]
   source_root = "src/ota_lib.rs"
   sources = [
+    "src/config.rs",
     "src/ota.rs",
     "src/ota_lib.rs",
     "src/setup.rs",
@@ -304,6 +309,7 @@ fuchsia_structured_config_values("values_from_gn") {
 fuchsia_package("system_recovery") {
   deps = [
     ":component",
+    ":component_ota",
     ":values_from_gn",
   ]
 }

@@ -78,6 +78,7 @@
         },
         {
             protocol: [
+                "fuchsia.boot.Arguments",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.fshost.Admin",

@@ -22,7 +22,7 @@ use isolated_ota::OmahaConfig;
 use isolated_ota_env::{OmahaState, TestEnvBuilder, TestExecutor, TestParams};
 use mock_omaha_server::OmahaResponse;
 use mock_paver::{MockPaverService, PaverEvent};
-use ota_lib::ota::{RecoveryUpdateConfig, UpdateType};
+use ota_lib::config::{JsonUpdateConfig, JsonUpdateType};
 use std::{collections::BTreeSet, sync::Arc};
 use vfs::{directory::entry::DirectoryEntry, file::vmo::asynchronous::read_only_const};
 
@@ -239,9 +239,9 @@ async fn route_config_data(
     version: String,
     repo_config_dir: tempfile::TempDir,
 ) {
-    let recovery_config = serde_json::to_vec(&RecoveryUpdateConfig {
+    let recovery_config = serde_json::to_vec(&JsonUpdateConfig {
         default_channel: channel,
-        update_type: UpdateType::Omaha(omaha_config.app_id, Some(omaha_config.server_url)),
+        update_type: JsonUpdateType::Omaha(omaha_config.app_id, Some(omaha_config.server_url)),
         override_version: Some(version),
     })
     .unwrap();
@@ -687,3 +687,4 @@ async fn test_ota_component_reports_error_when_omaha_broken() -> Result<(), Erro
 }
 
 // TODO(b/257130699): Add more test cases to cover blobfs issues and invalid configurations.
+// TODO(b/259882510): Add more test cases to verify boot args, config-data and build-info affect the resolved config

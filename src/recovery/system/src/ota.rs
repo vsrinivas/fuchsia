@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::setup::DevhostConfig,
+    crate::{
+        config::{RecoveryUpdateConfig, UpdateType},
+        setup::DevhostConfig,
+    },
     anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::ClientEnd,
     fidl::endpoints::ServerEnd,
@@ -12,17 +15,13 @@ use {
     futures::prelude::*,
     hyper::Uri,
     isolated_ota::{download_and_apply_update, OmahaConfig},
-    serde::{Deserialize, Serialize},
     serde_json::{json, Value},
     std::sync::Arc,
-    std::{fs::File, io::BufReader, str::FromStr},
+    std::{fs::File, str::FromStr},
     vfs::directory::{entry::DirectoryEntry, helper::DirectlyMutable, mutable::simple::Simple},
 };
 
 const PATH_TO_CONFIGS_DIR: &'static str = "/config/data/ota-configs";
-const PATH_TO_RECOVERY_CONFIG: &'static str = "/config/data/recovery-config.json";
-const DEFAULT_OMAHA_SERVICE_URL: &'static str =
-    "https://clients2.google.com/service/update2/fuchsia/json";
 
 enum PaverType {
     /// Use the real paver.
@@ -283,23 +282,6 @@ impl OtaEnv {
     }
 }
 
-fn get_config() -> Result<RecoveryUpdateConfig, Error> {
-    //TODO: Read config from vbmeta before falling back to json config
-    let ota_config: RecoveryUpdateConfig = serde_json::from_reader(BufReader::new(
-        File::open(PATH_TO_RECOVERY_CONFIG).context("Failed to find update config data")?,
-    ))?;
-    Ok(ota_config)
-}
-
-async fn get_running_version() -> Result<String, Error> {
-    let proxy = match client::connect_to_protocol::<BuildInfoMarker>() {
-        Ok(p) => p,
-        Err(err) => bail!("Failed to connect to fuchsia.buildinfo.Provider proxy: {:?}", err),
-    };
-    let build_info = proxy.get_build_info().await.context("Failed to read build info")?;
-    build_info.version.ok_or(format_err!("No version string provided"))
-}
-
 /// Run an OTA from a development host. Returns when the system and SSH keys have been installed.
 pub async fn run_devhost_ota(
     cfg: DevhostConfig,
@@ -336,11 +318,10 @@ pub async fn run_wellknown_ota(
     blobfs_proxy: fio::DirectoryProxy,
     outgoing_dir: Arc<Simple>,
 ) -> Result<(), Error> {
-    let config: RecoveryUpdateConfig = get_config().context("Couldn't get config")?;
-
-    let version = get_running_version().await.context("Error reading version")?;
-    // Check for testing override
-    let version = config.override_version.unwrap_or(version);
+    let config =
+        RecoveryUpdateConfig::resolve_update_config().await.context("Couldn't get config")?;
+    let channel = config.channel;
+    let version = config.version;
 
     match config.update_type {
         UpdateType::Tuf => {
@@ -350,20 +331,18 @@ pub async fn run_wellknown_ota(
                 .build()
                 .await
                 .context("Failed to create OTA env")?;
-            let channel = config.default_channel;
             println!(
                 "recovery-ota: Starting TUF OTA on channel '{}' against version '{}'",
                 &channel, &version
             );
             ota_env.do_ota(&channel, &version).await
         }
-        UpdateType::Omaha(app_id, service_url) => {
+        UpdateType::Omaha { app_id, service_url } => {
             println!("recovery-ota: Creating Omaha OTA environment");
             // Check for testing override
-            let service_url = service_url.unwrap_or(DEFAULT_OMAHA_SERVICE_URL.to_string());
             println!(
                 "recovery-ota: trying Omaha OTA on channel '{}' against version '{}', with service URL '{}' and app id '{}'",
-                &config.default_channel, &version, &service_url, &app_id
+                &channel, &version, &service_url, &app_id
             );
 
             let ota_env = OtaEnvBuilder::new(outgoing_dir)
@@ -384,32 +363,13 @@ pub async fn run_wellknown_ota(
 
             println!(
                 "recovery-ota: Starting Omaha OTA on channel '{}' against version '{}'",
-                &config.default_channel, &version
+                &channel, &version
             );
-            let res = ota_env?.do_ota(&config.default_channel, &version).await;
+            let res = ota_env?.do_ota(&channel, &version).await;
             println!("recovery-ota: OTA result: {:?}", res);
             res
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UpdateType {
-    /// Designates an Omaha based update
-    /// Parameters:
-    ///     app_id: The omaha application id
-    ///     omaha_service_url: Override the default omaha service to query
-    Omaha(String, Option<String>),
-    /// Designates a TUF based update
-    Tuf,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub struct RecoveryUpdateConfig {
-    pub default_channel: String,
-    pub update_type: UpdateType,
-    pub override_version: Option<String>,
 }
 
 #[cfg(test)]
@@ -699,61 +659,5 @@ mod tests {
         env.run_ota().await?;
         env.check_blobs().await;
         Ok(())
-    }
-
-    #[test]
-    fn test_omaha_config_new_url() {
-        let a = RecoveryUpdateConfig {
-            default_channel: "some_channel".to_string(),
-            override_version: None,
-            update_type: UpdateType::Omaha(
-                "app_id_here".to_string(),
-                Some("https://override.google.com".to_string()),
-            ),
-        };
-        let string_version = r#"{
-            "default_channel": "some_channel",
-            "update_type": {
-                "omaha": [
-                    "app_id_here",
-                    "https://override.google.com"
-                ]
-            }
-        }"#;
-        assert_eq!(a, serde_json::from_str(string_version).unwrap());
-    }
-
-    #[test]
-    fn test_omaha_config() {
-        let a = RecoveryUpdateConfig {
-            default_channel: "some_channel".to_string(),
-            override_version: None,
-            update_type: UpdateType::Omaha("app_id_here".to_string(), None),
-        };
-        let string_version = r#"{
-            "default_channel": "some_channel",
-            "update_type": {
-                "omaha": [
-                    "app_id_here", null
-                ]
-            }
-        }"#;
-        assert_eq!(a, serde_json::from_str(string_version).unwrap());
-    }
-
-    #[test]
-    fn test_tuf_config() {
-        let a = RecoveryUpdateConfig {
-            default_channel: "another_channel".to_string(),
-            override_version: Some("1.2.3.4".to_string()),
-            update_type: UpdateType::Tuf,
-        };
-        let string_version = r#"
-        {
-            "default_channel": "another_channel",
-            "override_version": "1.2.3.4",
-            "update_type": "tuf"
-        }"#;
-        assert_eq!(a, serde_json::from_str(string_version).unwrap());
     }
 }
