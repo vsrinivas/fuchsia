@@ -230,18 +230,20 @@ enum class ValidationResult {
 };
 
 void ValidateFVM(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device,
-                 ValidationResult result = ValidationResult::Valid) {
-  const fidl::WireResult wire_result = fidl::WireCall(device)->GetInfo();
-  ASSERT_OK(wire_result.status());
-  const fidl::WireResponse wire_response = wire_result.value();
-  ASSERT_OK(wire_response.status);
-  fvm::Checker checker(device, wire_response.info->block_size, true);
-  switch (result) {
+                 ValidationResult expected_result = ValidationResult::Valid) {
+  const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
+  ASSERT_OK(result.status());
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
+  fvm::Checker checker(device, block_info.block_size, true);
+  switch (expected_result) {
     case ValidationResult::Valid:
       ASSERT_TRUE(checker.Validate());
       break;
-    default:
+    case ValidationResult::Corrupted:
       ASSERT_FALSE(checker.Validate());
+      break;
   }
 }
 
@@ -356,10 +358,9 @@ VmoClient::VmoClient(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> devic
   {
     const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    ASSERT_NE(response.info, nullptr);
-    block_size_ = response.info->block_size;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    block_size_ = response.value()->info.block_size;
   }
 
   zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();
@@ -452,9 +453,9 @@ void CheckWriteReadBlock(const fbl::unique_fd& fd, size_t block, size_t count) {
   fidl::UnownedClientEnd device = caller.borrow_as<fuchsia_hardware_block::Block>();
   const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
   size_t len = block_info.block_size * count;
   size_t off = block_info.block_size * block;
   std::unique_ptr<uint8_t[]> in(new uint8_t[len]);
@@ -479,9 +480,9 @@ void CheckNoAccessBlock(const fbl::unique_fd& fd, size_t block, size_t count) {
   fidl::UnownedClientEnd device = caller.borrow_as<fuchsia_hardware_block::Block>();
   const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
   size_t len = block_info.block_size * count;
   size_t off = block_info.block_size * block;
   std::unique_ptr<uint8_t[]> buf(new uint8_t[len]);
@@ -498,16 +499,18 @@ void CheckDeadConnection(const fbl::unique_fd& fd) {
 }
 
 void Upgrade(const fdio_cpp::FdioCaller& caller, const uuid::Uuid& old_guid,
-             const uuid::Uuid& new_guid, zx_status_t result) {
+             const uuid::Uuid& new_guid, zx_status_t status) {
   fuchsia_hardware_block_partition::wire::Guid old_guid_fidl;
   std::copy(old_guid.cbegin(), old_guid.cend(), old_guid_fidl.value.begin());
   fuchsia_hardware_block_partition::wire::Guid new_guid_fidl;
   std::copy(new_guid.cbegin(), new_guid.cend(), new_guid_fidl.value.begin());
 
-  auto response = fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_volume::VolumeManager>())
-                      ->Activate(old_guid_fidl, new_guid_fidl);
-  ASSERT_EQ(ZX_OK, response.status());
-  ASSERT_EQ(result, response.value().status);
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_volume::VolumeManager>())
+          ->Activate(old_guid_fidl, new_guid_fidl);
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_STATUS(response.status, status);
 }
 
 /////////////////////// Actual tests:
@@ -536,9 +539,9 @@ TEST_F(FvmTest, TestLarge) {
 
   const fidl::WireResult result = fidl::WireCall(ramdisk_block_interface())->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
   ASSERT_LT(block_info.max_transfer_size, fvm_header.GetMetadataAllocatedBytes());
 
   ASSERT_EQ(fs_management::FvmInit(ramdisk_block_interface(), kSliceSize), ZX_OK);
@@ -713,9 +716,9 @@ TEST_F(FvmTest, TestVPartitionExtend) {
     const fidl::WireResult result =
         fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
   }
 
@@ -733,9 +736,9 @@ TEST_F(FvmTest, TestVPartitionExtend) {
     const fidl::WireResult result =
         fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
   }
 
@@ -800,9 +803,9 @@ TEST_F(FvmTest, TestVPartitionExtend) {
     const fidl::WireResult result =
         fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
   }
 
@@ -941,9 +944,9 @@ TEST_F(FvmTest, TestVPartitionShrink) {
     const fidl::WireResult result =
         fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
     CheckWriteReadBlock(vp_fd, (slice_size / block_info.block_size) - 1, 1);
     CheckNoAccessBlock(vp_fd, (slice_size / block_info.block_size) - 1, 2);
@@ -982,9 +985,9 @@ TEST_F(FvmTest, TestVPartitionShrink) {
     const fidl::WireResult result =
         fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
   }
 
@@ -1001,9 +1004,9 @@ TEST_F(FvmTest, TestVPartitionShrink) {
     const fidl::WireResult result =
         fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
     FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
   }
@@ -1024,9 +1027,9 @@ TEST_F(FvmTest, TestVPartitionShrink) {
     const fidl::WireResult result =
         fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
     ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
     CheckWriteReadBlock(vp_fd, (slice_size / block_info.block_size) - 1, 1);
     CheckWriteReadBlock(vp_fd, (slice_size / block_info.block_size) - 1, 2);
@@ -1119,9 +1122,9 @@ TEST_F(FvmTest, TestVPartitionSplit) {
   const fidl::WireResult result =
       fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
   ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * slice_count);
 
   extend_request_t reset_erequest;
@@ -1469,9 +1472,9 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
 
   const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
 
   // This is the last 'accessible' block.
   size_t last_block = (slice_size / block_info.block_size) - 1;
@@ -1544,9 +1547,9 @@ TEST_F(FvmTest, TestSliceAccessMany) {
 
   const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
   ASSERT_EQ(block_info.block_size, kBlockSize);
 
   {
@@ -1642,9 +1645,9 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
   const fidl::WireResult result =
       fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
 
   size_t usable_slices_per_vpart = UsableSlicesCount(kDiskSize, kSliceSize) / kNumVParts;
   size_t i = 0;
@@ -1791,9 +1794,9 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
   const fidl::WireResult result =
       fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
 
   size_t usable_slices_per_vpart = UsableSlicesCount(kDiskSize, kSliceSize) / kNumVParts;
   size_t i = 0;
@@ -1885,9 +1888,9 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   {
     const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    block_info = *response.info;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    block_info = response.value()->info;
   }
   std::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * static_cast<size_t>(2)]);
 
@@ -1963,9 +1966,9 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   {
     const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    block_info = *response.info;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    block_info = response.value()->info;
   }
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * 2);
 
@@ -1982,9 +1985,9 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   {
     const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    block_info = *response.info;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    block_info = response.value()->info;
   }
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * kSliceCount);
 
@@ -2003,9 +2006,9 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   {
     const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    block_info = *response.info;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    block_info = response.value()->info;
   }
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * kSliceCount);
 
@@ -2571,9 +2574,9 @@ TEST_F(FvmTest, TestCorruptionOk) {
   const fidl::WireResult result =
       fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * 2);
 
   // Initial slice access
@@ -2649,9 +2652,9 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   const fidl::WireResult result =
       fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
   ASSERT_EQ(block_info.block_count * block_info.block_size, slice_size * 2);
 
   // Initial slice access
@@ -2717,9 +2720,9 @@ TEST_F(FvmTest, TestCorruptionUnrecoverable) {
   const fidl::WireResult result =
       fidl::WireCall(partition_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * 2);
 
   // Initial slice access
@@ -2752,11 +2755,12 @@ TEST_F(FvmTest, TestCorruptionUnrecoverable) {
 TEST_F(FvmTest, TestCheckNewFVM) {
   CreateFVM(512, 1 << 20, 64LU * (1 << 20));
   fidl::UnownedClientEnd device = ramdisk_block_interface();
-  const fidl::WireResult wire_result = fidl::WireCall(device)->GetInfo();
-  ASSERT_OK(wire_result.status());
-  const fidl::WireResponse wire_response = wire_result.value();
-  ASSERT_OK(wire_response.status);
-  fvm::Checker checker(device, wire_response.info->block_size, true);
+  const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
+  ASSERT_OK(result.status());
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
+  fvm::Checker checker(device, block_info.block_size, true);
   ASSERT_TRUE(checker.Validate());
 }
 

@@ -249,8 +249,9 @@ TEST(RamdiskTests, RamdiskStatsTest) {
 
   const fidl::WireResult clear_stats_result = fidl::WireCall(block_interface)->GetStats(true);
   ASSERT_TRUE(clear_stats_result.ok()) << clear_stats_result.FormatDescription();
-  const fidl::WireResponse clear_stats_response = clear_stats_result.value();
-  ASSERT_EQ(clear_stats_response.status, ZX_OK);
+  const fit::result clear_stats_response = clear_stats_result.value();
+  ASSERT_TRUE(clear_stats_response.is_ok())
+      << zx_status_get_string(clear_stats_response.error_value());
 
   // Batch write the VMO to the ramdisk
   // Split it into two requests, spread across the disk
@@ -293,20 +294,21 @@ TEST(RamdiskTests, RamdiskStatsTest) {
 
   const fidl::WireResult stats_result = fidl::WireCall(block_interface)->GetStats(true);
   ASSERT_TRUE(stats_result.ok()) << stats_result.FormatDescription();
-  const fidl::WireResponse stats_response = stats_result.value();
-  ASSERT_EQ(stats_response.status, ZX_OK);
+  const fit::result stats_response = stats_result.value();
+  ASSERT_TRUE(stats_response.is_ok()) << zx_status_get_string(stats_response.error_value());
 
-  ASSERT_EQ(stats_response.stats->write.success.total_calls, 2ul);
-  ASSERT_EQ(stats_response.stats->write.success.bytes_transferred, 2 * kBlockSize);
-  ASSERT_GE(stats_response.stats->read.success.total_calls, 1ul);
-  ASSERT_GE(stats_response.stats->read.success.bytes_transferred, 1 * kBlockSize);
-  ASSERT_EQ(stats_response.stats->flush.success.total_calls, 1ul);
-  ASSERT_EQ(stats_response.stats->flush.success.bytes_transferred, 0ul);
+  const fuchsia_hardware_block::wire::BlockStats& stats = stats_response.value()->stats;
+  ASSERT_EQ(stats.write.success.total_calls, 2ul);
+  ASSERT_EQ(stats.write.success.bytes_transferred, 2 * kBlockSize);
+  ASSERT_GE(stats.read.success.total_calls, 1ul);
+  ASSERT_GE(stats.read.success.bytes_transferred, 1 * kBlockSize);
+  ASSERT_EQ(stats.flush.success.total_calls, 1ul);
+  ASSERT_EQ(stats.flush.success.bytes_transferred, 0ul);
 
-  ASSERT_EQ(stats_response.stats->read.failure.total_calls, 0ul);
-  ASSERT_EQ(stats_response.stats->read.failure.bytes_transferred, 0ul);
-  ASSERT_EQ(stats_response.stats->write.failure.total_calls, 0ul);
-  ASSERT_EQ(stats_response.stats->write.failure.bytes_transferred, 0ul);
+  ASSERT_EQ(stats.read.failure.total_calls, 0ul);
+  ASSERT_EQ(stats.read.failure.bytes_transferred, 0ul);
+  ASSERT_EQ(stats.write.failure.total_calls, 0ul);
+  ASSERT_EQ(stats.write.failure.bytes_transferred, 0ul);
 
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
@@ -326,10 +328,11 @@ TEST(RamdiskTests, RamdiskGrowTestDimensionsChange) {
   // Check new block count.
   const fidl::WireResult result = fidl::WireCall(ramdisk->block_interface())->GetInfo();
   ASSERT_TRUE(result.ok()) << result.FormatDescription();
-  const fidl::WireResponse response = result.value();
-  ASSERT_EQ(response.status, ZX_OK);
-  ASSERT_EQ(response.info->block_count, 2 * kBlockCount);
-  ASSERT_EQ(response.info->block_size, kBlockSize);
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok()) << zx_status_get_string(response.error_value());
+  const fuchsia_hardware_block::wire::BlockInfo& info = response.value()->info;
+  ASSERT_EQ(info.block_count, 2 * kBlockCount);
+  ASSERT_EQ(info.block_size, kBlockSize);
 }
 
 TEST(RamdiskTests, RamdiskGrowTestReadFromOldBlocks) {
@@ -444,10 +447,11 @@ TEST(RamdiskTests, RamdiskTestVmoWithParams) {
   {
     const fidl::WireResult result = fidl::WireCall(block_interface)->GetInfo();
     ASSERT_TRUE(result.ok()) << result.FormatDescription();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK);
-    ASSERT_EQ(response.info->block_count, kBlockCount);
-    ASSERT_EQ(response.info->block_size, kBlockSize);
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok()) << zx_status_get_string(response.error_value());
+    const fuchsia_hardware_block::wire::BlockInfo& info = response.value()->info;
+    ASSERT_EQ(info.block_count, kBlockCount);
+    ASSERT_EQ(info.block_size, kBlockSize);
   }
 
   {

@@ -189,9 +189,8 @@ class FactoryResetTest : public Test {
     const fidl::WireResult result =
         fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
     ASSERT_TRUE(result.ok()) << result.status_string();
-    const fidl::WireResponse response = result.value();
-    ASSERT_EQ(response.status, ZX_OK) << zx_status_get_string(response.status);
-    *out_size = response.info->block_size;
+    const fit::result response = result.value();
+    *out_size = response.value()->info.block_size;
   }
 
   static void WriteBlocks(const fbl::unique_fd& fd, void* buffer, size_t buffer_size,

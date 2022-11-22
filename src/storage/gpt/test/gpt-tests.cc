@@ -482,12 +482,13 @@ class LibGptTest {
     strlcpy(disk_path_, disk_path, sizeof(disk_path_));
     zx::result device = component::Connect<fuchsia_hardware_block::Block>(disk_path_);
     ASSERT_OK(device);
-    auto info_res = fidl::WireCall(device.value())->GetInfo();
-    ASSERT_OK(info_res.status());
-    ASSERT_OK(info_res.value().status);
+    const fidl::WireResult result = fidl::WireCall(device.value())->GetInfo();
+    ASSERT_OK(result.status());
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
 
-    blk_size_ = info_res.value().info->block_size;
-    blk_count_ = info_res.value().info->block_count;
+    blk_size_ = response.value()->info.block_size;
+    blk_count_ = response.value()->info.block_count;
 
     ASSERT_GE(GetDiskSize(), kAcceptableMinimumSize, "Insufficient disk space for tests");
     ASSERT_OK(GptDevice::Create(std::move(device.value()), GetBlockSize(), GetBlockCount(), &gpt_));

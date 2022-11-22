@@ -119,17 +119,21 @@ class BlockDevicesTest : public ::testing::Test {
       return zx::error(status);
     }
 
-    std::unique_ptr<fuchsia::hardware::block::BlockInfo> block_info;
-    status = partition->GetInfo(&op_status, &block_info);
-    if (status != ZX_OK) {
+    fuchsia::hardware::block::Block_GetInfo_Result result;
+    if (zx_status_t status = partition->GetInfo(&result); status != ZX_OK) {
       return zx::error(status);
     }
-    if (op_status != ZX_OK) {
-      return zx::error(status);
+    switch (result.Which()) {
+      case fuchsia::hardware::block::Block_GetInfo_Result::Tag::Invalid:
+        return zx::error(ZX_ERR_INTERNAL);
+      case fuchsia::hardware::block::Block_GetInfo_Result::Tag::kErr:
+        return zx::error(result.err());
+      case fuchsia::hardware::block::Block_GetInfo_Result::Tag::kResponse:
+        break;
     }
-
+    const fuchsia::hardware::block::BlockInfo& info = result.response().info;
     return zx::ok(VolumeInfo{
-        .size = block_info->block_count * block_info->block_size,
+        .size = info.block_count * info.block_size,
         .partition_name = *name,
     });
   }

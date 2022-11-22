@@ -299,18 +299,16 @@ impl BlockServer {
                 let block_size = self.file.get_block_size();
                 let block_count =
                     (self.file.get_size().await.unwrap() + block_size - 1) / block_size;
-                let mut block_info = block::BlockInfo {
+                responder.send(&mut Ok(block::BlockInfo {
                     block_count,
                     block_size: block_size as u32,
                     max_transfer_size: 1024 * 1024,
                     flags: block::Flag::empty(),
-                    reserved: 0,
-                };
-                responder.send(zx::sys::ZX_OK, Some(&mut block_info))?;
+                }))?;
             }
             // TODO(fxbug.dev/89873)
             VolumeAndNodeRequest::GetStats { clear: _, responder } => {
-                responder.send(zx::sys::ZX_OK, None)?;
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }
             VolumeAndNodeRequest::OpenSession { session, control_handle: _ } => {
                 let stream = session.into_stream()?;
@@ -354,7 +352,7 @@ impl BlockServer {
                 dev_offset: _,
                 vmo_offset: _,
             } => {
-                responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }
             // TODO(fxbug.dev/89873)
             VolumeAndNodeRequest::WriteBlocks {
@@ -364,7 +362,7 @@ impl BlockServer {
                 dev_offset: _,
                 vmo_offset: _,
             } => {
-                responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }
             // TODO(fxbug.dev/89873)
             VolumeAndNodeRequest::GetTypeGuid { responder } => {
@@ -970,11 +968,13 @@ mod tests {
                 let original_block_device = ClientEnd::<VolumeAndNodeMarker>::new(client_channel)
                     .into_proxy()
                     .expect("convert into proxy failed");
-                let (status, maybe_info) =
-                    original_block_device.get_info().await.expect("get_info failed");
-                zx::Status::ok(status).expect("block get_info failed");
-                let info = maybe_info.expect("block get_info failed");
-                assert_eq!(info.block_count * info.block_size as u64, file_size);
+                let info = original_block_device
+                    .get_info()
+                    .await
+                    .expect("get_info failed")
+                    .map_err(zx::Status::from_raw)
+                    .expect("block get_info failed");
+                assert_eq!(info.block_count * u64::from(info.block_size), file_size);
             },
             async {
                 let fixture = TestFixture::new().await;

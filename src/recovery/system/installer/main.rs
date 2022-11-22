@@ -786,7 +786,7 @@ async fn wait_for_install_disk() -> Result<(), Error> {
     while let Some(element) = stream.next().await {
         match element {
             PathEvent::Added(path, _) | PathEvent::Existing(path, _) => {
-                match get_block_device(path.to_str().unwrap().to_owned()).await {
+                match get_block_device(path.to_str().unwrap()).await {
                     Ok(Some(bd)) => {
                         devices.push(bd);
                         if let Ok(_) = find_install_source(&devices, bootloader_type).await {

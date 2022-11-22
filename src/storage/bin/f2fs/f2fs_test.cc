@@ -82,13 +82,14 @@ class F2fsComponentTest : public testing::Test {
   }
 
   fidl::ClientEnd<fuchsia_hardware_block::Block> block_client() const {
-    auto block_client_end =
+    zx::result block_client_end =
         component::Connect<fuchsia_hardware_block::Block>(ramdisk_.path().c_str());
-    EXPECT_EQ(block_client_end.status_value(), ZX_OK);
-    auto res = fidl::WireCall(*block_client_end)->GetInfo();
-    EXPECT_EQ(res.status(), ZX_OK);
-    EXPECT_EQ(res.value().status, ZX_OK);
-    return std::move(*block_client_end);
+    EXPECT_TRUE(block_client_end.is_ok()) << block_client_end.status_string();
+    const fidl::WireResult result = fidl::WireCall(block_client_end.value())->GetInfo();
+    EXPECT_TRUE(result.ok()) << result.FormatDescription();
+    const fit::result response = result.value();
+    EXPECT_TRUE(response.is_ok()) << zx_status_get_string(response.error_value());
+    return std::move(block_client_end.value());
   }
 
  private:

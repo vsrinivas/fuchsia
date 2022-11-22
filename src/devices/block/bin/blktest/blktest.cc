@@ -58,11 +58,11 @@ static void get_testdev(uint64_t* blk_size, uint64_t* blk_count,
 
   const fidl::WireResult result = fidl::WireCall(block.value())->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
 
-  *blk_size = response.info->block_size;
-  *blk_count = response.info->block_count;
+  *blk_size = response.value()->info.block_size;
+  *blk_count = response.value()->info.block_count;
   *client = std::move(block.value());
 }
 

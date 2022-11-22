@@ -37,14 +37,11 @@ zx::result<size_t> Checker::Block::Size() const {
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  const fidl::WireResponse response = result.value();
-  if (zx_status_t status = response.status; status != ZX_OK) {
-    return zx::error(status);
+  fit::result response = result.value();
+  if (response.is_error()) {
+    return response.take_error();
   }
-  if (response.info == nullptr) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-  const fuchsia_hardware_block::wire::BlockInfo& info = *response.info;
+  const fuchsia_hardware_block::wire::BlockInfo& info = response.value()->info;
   return zx::ok(info.block_count * info.block_size);
 }
 

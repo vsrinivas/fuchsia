@@ -20,8 +20,7 @@ use {
 #[async_trait]
 pub trait Device: Send + Sync {
     /// Returns BlockInfo (the result of calling fuchsia.hardware.block/Block.Query).
-    async fn get_block_info(&self)
-        -> Result<Option<fidl_fuchsia_hardware_block::BlockInfo>, Error>;
+    async fn get_block_info(&self) -> Result<fidl_fuchsia_hardware_block::BlockInfo, Error>;
 
     /// True if this is a NAND device.
     fn is_nand(&self) -> bool;
@@ -70,10 +69,8 @@ impl Device for NandDevice {
         true
     }
 
-    async fn get_block_info(
-        &self,
-    ) -> Result<Option<fidl_fuchsia_hardware_block::BlockInfo>, Error> {
-        Ok(None)
+    async fn get_block_info(&self) -> Result<fidl_fuchsia_hardware_block::BlockInfo, Error> {
+        Err(anyhow!("not supported by nand device"))
     }
 
     async fn content_format(&mut self) -> Result<DiskFormat, Error> {
@@ -178,16 +175,9 @@ impl BlockDevice {
 
 #[async_trait]
 impl Device for BlockDevice {
-    async fn get_block_info(
-        &self,
-    ) -> Result<Option<fidl_fuchsia_hardware_block::BlockInfo>, Error> {
-        let (status, info) = self.volume_proxy.get_info().await?;
-        zx::Status::ok(status)?;
-        if info.is_some() {
-            Ok(info.map(|i| *i))
-        } else {
-            Err(anyhow!("Expected BlockInfo"))
-        }
+    async fn get_block_info(&self) -> Result<fidl_fuchsia_hardware_block::BlockInfo, Error> {
+        let info = self.volume_proxy.get_info().await?.map_err(zx::Status::from_raw)?;
+        Ok(info)
     }
 
     fn is_nand(&self) -> bool {

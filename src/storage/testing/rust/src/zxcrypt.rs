@@ -121,9 +121,7 @@ mod tests {
 
         let block_device =
             connect_to_protocol_at_path::<BlockMarker>(path.to_str().unwrap()).unwrap();
-        let info = block_device.get_info().await.unwrap();
-        zx::ok(info.0).unwrap();
-        let info = info.1.unwrap();
+        let info = block_device.get_info().await.unwrap().unwrap();
         assert_lt!(info.block_count, BLOCK_COUNT);
     }
 }

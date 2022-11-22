@@ -5,9 +5,9 @@
 pub mod constants;
 
 use {
-    anyhow::{anyhow, ensure, Context, Error},
+    anyhow::{ensure, Context as _, Error},
     fidl_fuchsia_hardware_block::BlockProxy,
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon::{self as zx, HandleBased as _},
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -44,11 +44,12 @@ pub async fn detect_disk_format(block_proxy: &BlockProxy) -> DiskFormat {
 }
 
 async fn detect_disk_format_res(block_proxy: &BlockProxy) -> Result<DiskFormat, Error> {
-    let (status, info) =
-        block_proxy.get_info().await.context("transport error on get_info call")?;
-    zx::Status::ok(status).context("get_info call failed")?;
-    let block_info = info.ok_or(anyhow!("Expected BlockInfo"))?;
-
+    let block_info = block_proxy
+        .get_info()
+        .await
+        .context("transport error on get_info call")?
+        .map_err(zx::Status::from_raw)
+        .context("get_info call failed")?;
     ensure!(block_info.block_size > 0, "block size expected to be non-zero");
 
     let header_size = if constants::HEADER_SIZE > 2 * block_info.block_size {
@@ -64,7 +65,7 @@ async fn detect_disk_format_res(block_proxy: &BlockProxy) -> Result<DiskFormat, 
 
     let buffer_size = round_up(header_size as u64, block_info.block_size as u64);
     let vmo = zx::Vmo::create(buffer_size).context("failed to create vmo")?;
-    let status = block_proxy
+    let () = block_proxy
         .read_blocks(
             vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)
                 .context("vmo duplicate handle call failed")?,
@@ -73,9 +74,9 @@ async fn detect_disk_format_res(block_proxy: &BlockProxy) -> Result<DiskFormat, 
             0,
         )
         .await
-        .context("transport error on read_blocks protocol")?;
-
-    zx::Status::ok(status).context("read_blocks returned an error status")?;
+        .context("transport error on read_blocks protocol")?
+        .map_err(zx::Status::from_raw)
+        .context("read_blocks returned an error status")?;
 
     let mut data = vec![0; buffer_size as usize];
     vmo.read(&mut data, 0).context("vmo read failed")?;
@@ -141,7 +142,6 @@ mod tests {
         super::{constants, detect_disk_format, DiskFormat},
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_hardware_block::{BlockInfo, BlockMarker, BlockRequest, Flag},
-        fuchsia_zircon as zx,
         futures::{pin_mut, select, FutureExt, TryStreamExt},
     };
 
@@ -157,23 +157,19 @@ mod tests {
                 match request {
                     BlockRequest::GetInfo { responder } => {
                         responder
-                            .send(
-                                zx::sys::ZX_OK,
-                                Some(&mut BlockInfo {
-                                    block_count: block_count,
-                                    block_size: block_size as u32,
-                                    max_transfer_size: 1024 * 1024,
-                                    flags: Flag::empty(),
-                                    reserved: 0,
-                                }),
-                            )
+                            .send(&mut Ok(BlockInfo {
+                                block_count: block_count,
+                                block_size: block_size as u32,
+                                max_transfer_size: 1024 * 1024,
+                                flags: Flag::empty(),
+                            }))
                             .unwrap();
                     }
                     BlockRequest::ReadBlocks { vmo, length, dev_offset, vmo_offset, responder } => {
                         assert_eq!(dev_offset, 0);
                         assert_eq!(length, content.len() as u64);
                         vmo.write(content, vmo_offset).unwrap();
-                        responder.send(zx::sys::ZX_OK).unwrap();
+                        responder.send(&mut Ok(())).unwrap();
                     }
                     _ => unreachable!(),
                 }

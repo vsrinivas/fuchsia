@@ -354,15 +354,16 @@ zx::result<fuchsia_hardware_block::wire::BlockInfo> BlockDevice::GetInfo() const
     return zx::ok(*info_);
   }
   fdio_cpp::UnownedFdioCaller connection(fd_);
-  auto res = fidl::WireCall(connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
-  if (!res.ok()) {
-    return zx::error(res.status());
+  const fidl::WireResult result =
+      fidl::WireCall(connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  if (!result.ok()) {
+    return zx::error(result.status());
   }
-  if (res->status != ZX_OK) {
-    return zx::error(res->status);
+  fit::result response = result.value();
+  if (response.is_error()) {
+    return response.take_error();
   }
-  info_ = *res->info.get();
-  return zx::ok(*info_);
+  return zx::ok(info_.emplace(response->info));
 }
 
 const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetInstanceGuid() const {

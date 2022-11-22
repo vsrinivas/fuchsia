@@ -378,10 +378,10 @@ void TestDevice::Connect() {
   {
     const fidl::WireResult result = fidl::WireCall(zxcrypt_block())->GetInfo();
     ASSERT_OK(result.status());
-    const fidl::WireResponse response = result.value();
-    ASSERT_OK(response.status);
-    block_size_ = response.info->block_size;
-    block_count_ = response.info->block_count;
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    block_size_ = response.value()->info.block_size;
+    block_count_ = response.value()->info.block_count;
   }
 
   zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();

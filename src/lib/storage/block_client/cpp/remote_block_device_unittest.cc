@@ -77,16 +77,15 @@ class MockBlockDevice final
   }
 
   void GetInfo(GetInfoCompleter::Sync& completer) override {
-    fuchsia_hardware_block::wire::BlockInfo info = {
+    completer.ReplySuccess({
         .block_count = kBlockCount,
         .block_size = kBlockSize,
         .max_transfer_size = kBlockSize,
-    };
-    completer.Reply(ZX_OK, fidl::ObjectView<decltype(info)>::FromExternal(&info));
+    });
   }
 
   void GetStats(GetStatsRequestView request, GetStatsCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
   void OpenSession(OpenSessionRequestView request, OpenSessionCompleter::Sync& completer) override {
@@ -109,15 +108,23 @@ class MockBlockDevice final
   }
 
   void ReadBlocks(ReadBlocksRequestView request, ReadBlocksCompleter::Sync& completer) override {
-    zx_status_t status = request->vmo.write(buffer_.data() + request->dev_offset,
-                                            request->vmo_offset, request->length);
-    completer.Reply(status);
+    if (zx_status_t status = request->vmo.write(buffer_.data() + request->dev_offset,
+                                                request->vmo_offset, request->length);
+        status != ZX_OK) {
+      completer.ReplyError(status);
+      return;
+    }
+    completer.ReplySuccess();
   }
 
   void WriteBlocks(WriteBlocksRequestView request, WriteBlocksCompleter::Sync& completer) override {
-    zx_status_t status = request->vmo.read(buffer_.data() + request->dev_offset,
-                                           request->vmo_offset, request->length);
-    completer.Reply(status);
+    if (zx_status_t status = request->vmo.read(buffer_.data() + request->dev_offset,
+                                               request->vmo_offset, request->length);
+        status != ZX_OK) {
+      completer.ReplyError(status);
+      return;
+    }
+    completer.ReplySuccess();
   }
 
  private:
@@ -127,7 +134,8 @@ class MockBlockDevice final
       zx::fifo fifo;
       if (zx_status_t status = peer_fifo_.get().duplicate(ZX_RIGHT_SAME_RIGHTS, &fifo);
           status != ZX_OK) {
-        return completer.ReplyError(status);
+        completer.ReplyError(status);
+        return;
       }
       completer.ReplySuccess(std::move(fifo));
     }

@@ -65,12 +65,12 @@ zx_status_t ShredFxfsDevice(const fidl::ClientEnd<fuchsia_hardware_block::Block>
     FX_PLOGS(ERROR, result.status()) << "Failed to fetch block size";
     return result.status();
   }
-  const fidl::WireResponse response = result.value();
-  if (zx_status_t status = response.status; status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to fetch block size";
-    return status;
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    FX_PLOGS(ERROR, response.error_value()) << "Failed to fetch block size";
+    return response.error_value();
   }
-  size_t block_size = response.info->block_size;
+  size_t block_size = response.value()->info.block_size;
   std::unique_ptr<uint8_t[]> block = std::make_unique<uint8_t[]>(block_size);
   memset(block.get(), 0, block_size);
   for (off_t offset : {0L, 512L << 10}) {

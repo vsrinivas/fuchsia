@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_hardware_block_partition::PartitionProxy,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_paver::{Asset, Configuration, DynamicDataSinkProxy},
-    fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
+    fuchsia_zircon as zx,
     futures::future::try_join,
     futures::TryFutureExt,
     payload_streamer::{BlockDevicePayloadStreamer, PayloadStreamer},
@@ -58,8 +58,8 @@ pub enum PartitionPaveType {
 pub struct Partition {
     pave_type: PartitionPaveType,
     src: String,
-    size: usize,
-    block_size: usize,
+    size: u64,
+    block_size: u64,
 }
 
 /// This GUID is used by the installer to identify partitions that contain
@@ -111,7 +111,7 @@ impl Partition {
     ) -> Result<Option<Self>, Error> {
         let (status, guid) = part.get_type_guid().await.context("Get type guid failed")?;
         if let None = guid {
-            return Err(Error::new(zx_status::Status::from_raw(status)));
+            return Err(Error::new(zx::Status::from_raw(status)));
         }
 
         let (_status, name) = part.get_name().await.context("Get name failed")?;
@@ -138,16 +138,12 @@ impl Partition {
         }
 
         if let Some(pave_type) = pave_type {
-            let (status, info) = part.get_info().await.context("Get info failed")?;
-            let info = info.ok_or(Error::new(zx_status::Status::from_raw(status)))?;
-            let size = info.block_count * info.block_size as u64;
+            let info =
+                part.get_info().await.context("Get info failed")?.map_err(zx::Status::from_raw)?;
+            let block_size = info.block_size.into();
+            let size = info.block_count * block_size;
 
-            Ok(Some(Partition {
-                pave_type,
-                src,
-                size: size as usize,
-                block_size: info.block_size as usize,
-            }))
+            Ok(Some(Partition { pave_type, src, size, block_size }))
         } else {
             Ok(None)
         }
@@ -289,7 +285,7 @@ impl Partition {
     /// Will return an error if the partition is not an A/B partition.
     pub async fn pave_b(&self, data_sink: &DynamicDataSinkProxy) -> Result<(), Error> {
         if !self.is_ab() {
-            return Err(Error::from(zx_status::Status::NOT_SUPPORTED));
+            return Err(Error::from(zx::Status::NOT_SUPPORTED));
         }
 
         let mut fidl_buf = self.read_data().await?;
@@ -301,7 +297,7 @@ impl Partition {
                 data_sink.write_asset(Configuration::B, asset, &mut fidl_buf).await?;
                 Ok(())
             }
-            _ => Err(Error::from(zx_status::Status::NOT_SUPPORTED)),
+            _ => Err(Error::from(zx::Status::NOT_SUPPORTED)),
         }
     }
 
@@ -318,25 +314,26 @@ impl Partition {
     /// Read this partition into a FIDL buffer.
     async fn read_data(&self) -> Result<Buffer, Error> {
         let mut rounded_size = self.size;
-        let page_size = zx::system_get_page_size() as usize;
+        let page_size = u64::from(zx::system_get_page_size());
         if rounded_size % page_size != 0 {
             rounded_size += page_size;
             rounded_size -= rounded_size % page_size;
         }
 
-        let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, rounded_size as u64)?;
-        let mut buf: Vec<u8> = vec![0; 100 * self.block_size];
+        let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, rounded_size)?;
+        let mut buf: Vec<u8> = vec![0; 100 * usize::try_from(self.block_size).unwrap()];
         let mut file = fs::File::open(Path::new(&self.src)).context("Opening partition")?;
-        let mut read = 0;
-        while read < self.size {
-            let write_pos = read;
+        let mut read: usize = 0;
+        let size: usize = self.size.try_into().unwrap();
+        while read < size {
+            let write_pos: u64 = read.try_into().unwrap();
             read += file.read(&mut buf).context("Reading data from partition")?;
-            vmo.write(&buf, write_pos as u64).context("Writing data to VMO")?;
-            if self.size - read < buf.len() {
-                buf.truncate(self.size - read);
+            vmo.write(&buf, write_pos).context("Writing data to VMO")?;
+            if size - read < buf.len() {
+                buf.truncate(size - read);
             }
         }
-        Ok(Buffer { vmo: fidl::Vmo::from(vmo), size: self.size as u64 })
+        Ok(Buffer { vmo: fidl::Vmo::from(vmo), size: self.size })
     }
 
     /// Return the |Configuration| that is represented by the given
@@ -381,24 +378,20 @@ mod tests {
 
     async fn serve_partition(
         label: &str,
-        block_size: usize,
-        block_count: usize,
+        block_size: u32,
+        block_count: u64,
         guid: [u8; 16],
         mut stream: PartitionRequestStream,
     ) -> Result<(), Error> {
         while let Some(req) = stream.try_next().await? {
             match req {
                 PartitionRequest::GetName { responder } => responder.send(0, Some(label))?,
-                PartitionRequest::GetInfo { responder } => responder.send(
-                    0,
-                    Some(&mut BlockInfo {
-                        block_count: block_count as u64,
-                        block_size: block_size as u32,
-                        max_transfer_size: 0,
-                        flags: 0,
-                        reserved: 0,
-                    }),
-                )?,
+                PartitionRequest::GetInfo { responder } => responder.send(&mut Ok(BlockInfo {
+                    block_count,
+                    block_size,
+                    max_transfer_size: 0,
+                    flags: 0,
+                }))?,
                 PartitionRequest::GetTypeGuid { responder } => {
                     responder.send(0, Some(&mut Guid { value: guid }))?
                 }

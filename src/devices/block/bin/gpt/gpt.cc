@@ -126,14 +126,14 @@ std::unique_ptr<GptDevice> Init(const char* dev) {
             result.FormatDescription().c_str());
     return nullptr;
   }
-  const fidl::WireResponse response = result.value();
-  if (zx_status_t status = response.status; status != ZX_OK) {
+  const fit::result response = result.value();
+  if (response.is_error()) {
     fprintf(stderr, "gpt: error getting block info from %s: %s\n", dev,
-            zx_status_get_string(status));
+            zx_status_get_string(response.error_value()));
     return nullptr;
   }
 
-  fuchsia_hardware_block::wire::BlockInfo info = *response.info;
+  fuchsia_hardware_block::wire::BlockInfo info = response.value()->info;
   printf("blocksize=0x%X blocks=%" PRIu64 "\n", info.block_size, info.block_count);
 
   std::unique_ptr<GptDevice> gpt;

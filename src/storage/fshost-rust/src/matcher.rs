@@ -159,13 +159,9 @@ impl Matcher for BootpartMatcher {
         device: &mut dyn Device,
         env: &mut dyn Environment,
     ) -> Result<bool, Error> {
-        match device.get_block_info().await? {
-            Some(block_info) => {
-                if !block_info.flags.contains(fidl_fuchsia_hardware_block::Flag::BOOTPART) {
-                    return Ok(false);
-                }
-            }
-            None => return Ok(false),
+        let info = device.get_block_info().await?;
+        if !info.flags.contains(fidl_fuchsia_hardware_block::Flag::BOOTPART) {
+            return Ok(false);
         }
         env.attach_driver(device, BOOTPART_DRIVER_PATH).await?;
         Ok(true)
@@ -463,10 +459,8 @@ mod tests {
 
     #[async_trait]
     impl Device for MockDevice {
-        async fn get_block_info(
-            &self,
-        ) -> Result<Option<fidl_fuchsia_hardware_block::BlockInfo>, Error> {
-            Ok(Some(BlockInfo { flags: self.block_flags, ..BlockInfo::new_empty() }))
+        async fn get_block_info(&self) -> Result<fidl_fuchsia_hardware_block::BlockInfo, Error> {
+            Ok(BlockInfo { flags: self.block_flags, ..BlockInfo::new_empty() })
         }
         fn is_nand(&self) -> bool {
             self.is_nand

@@ -27,8 +27,6 @@
 
 namespace {
 
-namespace fio = fuchsia_io;
-
 int Usage() {
   fprintf(stdout, "usage: storage-metrics [ <option>* ] [paths]\n");
   fprintf(stdout, "storage-metrics reports metrics for block devices\n");
@@ -54,17 +52,18 @@ zx::result<fuchsia_hardware_block::wire::BlockStats> GetBlockStats(const char* d
   if (!client_end.is_ok()) {
     return client_end.take_error();
   }
-  fidl::WireSyncClient client(std::move(client_end.value()));
-
-  auto result = client->GetStats(clear);
-  zx_status_t status = !result.ok() ? result.error().status() : result.value().status;
-
-  if (status != ZX_OK) {
-    fprintf(stderr, "Error getting stats for %s: %s\n", dev, zx_status_get_string(status));
-    return zx::error(status);
+  const fidl::WireResult result = fidl::WireCall(client_end.value())->GetStats(clear);
+  if (!result.ok()) {
+    fprintf(stderr, "Error getting stats for %s: %s\n", dev, result.FormatDescription().c_str());
+    return zx::error(result.status());
   }
-
-  return zx::ok(*result.value().stats);
+  fit::result response = result.value();
+  if (response.is_error()) {
+    fprintf(stderr, "Error getting stats for %s: %s\n", dev,
+            zx_status_get_string(response.error_value()));
+    return response.take_error();
+  }
+  return zx::ok(response.value()->stats);
 }
 
 void ParseCommandLineArguments(int argc, char** argv, StorageMetricOptions* options) {

@@ -52,8 +52,9 @@ protocol Session {
 protocol Block {
     /// Get information about the underlying block device.
     GetInfo() -> (struct {
-        status zx.status;
-        info box<@generated_name("BlockInfo") struct {
+        // TODO(https://fxbug.dev/103484): consider removing the outer struct when the issue is
+        // resolved.
+        info @generated_name("BlockInfo") struct {
             /// The number of blocks in this block device.
             block_count uint64;
 
@@ -78,10 +79,8 @@ protocol Block {
                 /// The device provides trim support.
                 TRIM_SUPPORT = 0x00000008;
             };
-
-            reserved uint32;
-        }>;
-    });
+        };
+    }) error zx.status;
 
     /// Returns stats about the block device on the provided buffer and optionally
     /// clears the counters.
@@ -91,8 +90,9 @@ protocol Block {
     GetStats(struct {
         clear bool;
     }) -> (struct {
-        status zx.status;
-        stats box<@generated_name("BlockStats") struct {
+        // TODO(https://fxbug.dev/103484): consider removing the outer struct when the issue is
+        // resolved.
+        stats @generated_name("BlockStats") struct {
             /// The stats about read from the device.
             read storage_metrics.CallStat;
 
@@ -104,8 +104,8 @@ protocol Block {
 
             /// The stats about flush commands.
             flush storage_metrics.CallStat;
-        }>;
-    });
+        };
+    }) error zx.status;
 
     /// Opens a new FIFO-based session on the block device.
     OpenSession(resource struct {
@@ -133,9 +133,7 @@ protocol Block {
         length uint64;
         dev_offset uint64;
         vmo_offset uint64;
-    }) -> (struct {
-        status zx.status;
-    });
+    }) -> () error zx.status;
 
     /// Writes to a block device.
     ///
@@ -150,9 +148,7 @@ protocol Block {
         length uint64;
         dev_offset uint64;
         vmo_offset uint64;
-    }) -> (struct {
-        status zx.status;
-    });
+    }) -> () error zx.status;
 };
 
 /// This protocol is intended for servers that handles both hardware.block.block

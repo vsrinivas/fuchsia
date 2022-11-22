@@ -249,9 +249,12 @@ TEST_F(UmsTest, DISABLED_CachedWriteWithNoFlushShouldBeDiscarded) {
 
   uint32_t blk_size;
   {
-    auto result = fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
-    ASSERT_NO_FATAL_FAILURE(ValidateResult(result));
-    blk_size = result.value().info->block_size;
+    const fidl::WireResult result =
+        fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    blk_size = response.value()->info.block_size;
   }
 
   std::unique_ptr<uint8_t[]> write_buffer(new uint8_t[blk_size]);
@@ -293,9 +296,12 @@ TEST_F(UmsTest, DISABLED_UncachedWriteShouldBePersistedToBlockDevice) {
 
   uint32_t blk_size;
   {
-    auto result = fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
-    ASSERT_NO_FATAL_FAILURE(ValidateResult(result));
-    blk_size = result.value().info->block_size;
+    const fidl::WireResult result =
+        fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(result.status());
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    blk_size = response.value()->info.block_size;
   }
 
   // Allocate our buffer

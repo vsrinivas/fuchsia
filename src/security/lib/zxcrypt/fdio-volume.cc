@@ -146,13 +146,13 @@ zx_status_t FdioVolume::GetBlockInfo(BlockInfo* out) {
   if (!result.ok()) {
     return result.status();
   }
-  const fidl::WireResponse response = result.value();
-  if (response.status != ZX_OK) {
-    return response.status;
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    return response.error_value();
   }
 
-  out->block_count = response.info->block_count;
-  out->block_size = response.info->block_size;
+  out->block_count = response.value()->info.block_count;
+  out->block_size = response.value()->info.block_size;
   return ZX_OK;
 }
 

@@ -371,12 +371,12 @@ impl DevBlockDevice {
 
     async fn block_size(&self) -> Result<u64, DiskError> {
         let block_proxy = self.0.clone_as::<BlockMarker>()?;
-        let resp = block_proxy.get_info().await?;
-        zx::Status::ok(resp.0).map_err(DiskError::GetBlockInfoFailed)?;
-        let block_size =
-            resp.1.ok_or_else(|| DiskError::GetBlockInfoFailed(zx::Status::NOT_FOUND))?.block_size
-                as u64;
-        Ok(block_size)
+        let info = block_proxy
+            .get_info()
+            .await?
+            .map_err(zx::Status::from_raw)
+            .map_err(DiskError::GetBlockInfoFailed)?;
+        Ok(info.block_size.into())
     }
 }
 
@@ -633,16 +633,12 @@ pub mod test {
                         // fuchsia.hardware.block.Block methods
                         MockPartitionRequest::GetInfo { responder } => {
                             responder
-                                .send(
-                                    0,
-                                    Some(&mut BlockInfo {
-                                        block_count: 1,
-                                        block_size: BLOCK_SIZE as u32,
-                                        max_transfer_size: MAX_TRANSFER_UNBOUNDED,
-                                        flags: Flag::empty(),
-                                        reserved: 0,
-                                    }),
-                                )
+                                .send(&mut Ok(BlockInfo {
+                                    block_count: 1,
+                                    block_size: BLOCK_SIZE as u32,
+                                    max_transfer_size: MAX_TRANSFER_UNBOUNDED,
+                                    flags: Flag::empty(),
+                                }))
                                 .expect("failed to send Block.GetInfo response");
                         }
 

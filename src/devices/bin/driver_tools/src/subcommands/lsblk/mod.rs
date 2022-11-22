@@ -132,10 +132,8 @@ impl New for BlockDevice {
             .map_err(|raw| format_err!("zx error: {}", zx::Status::from_raw(raw)))?;
 
         let block = fblock::BlockProxy::new(controller.into_channel().unwrap());
-        let (status, info) = block.get_info().await?;
-        zx::Status::ok(status)?;
-        let info = info.unwrap();
-        let size = size_to_string(info.block_size as u64 * info.block_count);
+        let info = block.get_info().await?.map_err(zx::Status::from_raw)?;
+        let size = size_to_string(info.block_count * u64::from(info.block_size));
 
         let partition = fpartition::PartitionProxy::new(block.into_channel().unwrap());
         let partition_name = match partition.get_name().await {

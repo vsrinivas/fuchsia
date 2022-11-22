@@ -255,11 +255,13 @@ pub async fn set_up_partition(
         let fvm_device_proxy =
             connect_to_protocol_at_path::<fidl_fuchsia_hardware_block::BlockMarker>(&path)
                 .context("fvm path block connect failed")?;
-        let (status, info) =
-            fvm_device_proxy.get_info().await.context("fvm path get info call failed")?;
-        zx::Status::ok(status).context("fvm path get info returned error")?;
-        let info = info.unwrap();
-        info.block_size as u64 * info.block_count
+        let info = fvm_device_proxy
+            .get_info()
+            .await
+            .context("fvm path get info call failed")?
+            .map_err(zx::Status::from_raw)
+            .context("fvm path get info returned error")?;
+        u64::from(info.block_size) * info.block_count
     };
 
     // It's tricky to really allocate the maximum number of slices, so we use a whole lot less than

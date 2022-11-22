@@ -29,13 +29,18 @@ BlockPartitionClient::ReadBlockInfo() {
   if (block_info_.has_value()) {
     return zx::ok(std::reference_wrapper(block_info_.value()));
   }
-  auto result = partition_->GetInfo();
-  auto status = zx::make_result(result.ok() ? result.value().status : result.status());
-  if (status.is_error()) {
-    ERROR("Failed to get partition info with status: %s\n", status.status_string());
-    return status.take_error();
+  const fidl::WireResult result = partition_->GetInfo();
+  if (!result.ok()) {
+    ERROR("Failed to get partition info with status: %s\n", result.FormatDescription().c_str());
+    return zx::error(result.status());
   }
-  return zx::ok(std::reference_wrapper(block_info_.emplace(*result.value().info)));
+  fit::result response = result.value();
+  if (response.is_error()) {
+    ERROR("Failed to get partition info with status: %s\n",
+          zx_status_get_string(response.error_value()));
+    return response.take_error();
+  }
+  return zx::ok(std::reference_wrapper(block_info_.emplace(response.value()->info)));
 }
 
 zx::result<size_t> BlockPartitionClient::GetBlockSize() {

@@ -105,13 +105,13 @@ static zx_status_t blkdev_open(int fd, const char* dev, size_t bufsz, blkdev_t* 
               result.FormatDescription().c_str());
       return result.status();
     }
-    const fidl::WireResponse response = result.value();
-    if (zx_status_t status = response.status; status != ZX_OK) {
+    const fit::result response = result.value();
+    if (response.is_error()) {
       fprintf(stderr, "error: cannot get block device info for '%s':%s\n", dev,
-              zx_status_get_string(status));
-      return status;
+              zx_status_get_string(response.error_value()));
+      return response.error_value();
     }
-    blk->info = *response.info;
+    blk->info = response.value()->info;
   }
 
   {

@@ -8,7 +8,6 @@ using zx;
 using fuchsia.hardware.block.partition as partition;
 
 /// VolumeManagerInfo describes the properties of the volume manager and not each individual volume.
-@for_deprecated_c_bindings
 type VolumeManagerInfo = struct {
     /// Size of a single slice, in bytes.
     slice_size uint64;
@@ -31,7 +30,6 @@ type VolumeManagerInfo = struct {
     max_virtual_slice uint64;
 };
 
-@for_deprecated_c_bindings
 type VolumeInfo = struct {
     /// Number of slices allocated to the volume.
     partition_slice_count uint64;
@@ -149,7 +147,6 @@ const MAX_SLICE_REQUESTS uint32 = 16;
 ///
 /// These ranges are returned in an ordered container, which implicitly describes the
 /// starting offset, starting from the "index zero" slice.
-@for_deprecated_c_bindings
 type VsliceRange = struct {
     /// True if the virtual slices are allocated, false otherwise.
     allocated bool;
@@ -159,7 +156,6 @@ type VsliceRange = struct {
 };
 
 /// Volume is a partition which may access virtually-mapped blocks within a device.
-@for_deprecated_c_bindings
 protocol Volume {
     compose partition.Partition;
 

@@ -117,12 +117,13 @@ static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, s
               result.FormatDescription().c_str());
       return ZX_TIME_INFINITE;
     }
-    const fidl::WireResponse response = result.value();
-    if (zx_status_t status = response.status; status != ZX_OK) {
-      fprintf(stderr, "error: cannot get info for '%s':%s\n", dev, zx_status_get_string(status));
+    const fit::result response = result.value();
+    if (response.is_error()) {
+      fprintf(stderr, "error: cannot get info for '%s':%s\n", dev,
+              zx_status_get_string(response.error_value()));
       return ZX_TIME_INFINITE;
     }
-    info = *response.info;
+    info = response.value()->info;
   }
 
   zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Session>();

@@ -59,39 +59,46 @@ enum DiskFormatLogVerbosity {
 
 DiskFormat DetectDiskFormatImpl(fidl::UnownedClientEnd<fblock::Block> device,
                                 DiskFormatLogVerbosity verbosity) {
-  auto resp = fidl::WireCall(device)->GetInfo();
-  if (!resp.ok() || resp.value().status != ZX_OK) {
-    fprintf(stderr, "DetectDiskFormat: Could not acquire block device info\n");
+  const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
+  if (!result.ok()) {
+    fprintf(stderr, "DetectDiskFormat: Could not acquire block device info: %s\n",
+            result.FormatDescription().c_str());
+    return kDiskFormatUnknown;
+  }
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    fprintf(stderr, "DetectDiskFormat: Could not acquire block device info: %s\n",
+            zx_status_get_string(response.error_value()));
     return kDiskFormatUnknown;
   }
 
-  if (!resp.value().info->block_size) {
+  const fuchsia_hardware_block::wire::BlockInfo& info = response.value()->info;
+  if (info.block_size == 0) {
     fprintf(stderr, "DetectDiskFormat: Expected a block size of > 0\n");
     return kDiskFormatUnknown;
   }
 
   // We need to read at least two blocks, because the GPT magic is located inside the second block
   // of the disk.
-  size_t header_size = (kHeaderSize > (2 * resp.value().info->block_size))
-                           ? kHeaderSize
-                           : (2 * resp.value().info->block_size);
+  size_t header_size = (kHeaderSize > (2 * info.block_size)) ? kHeaderSize : (2 * info.block_size);
   // check if the partition is big enough to hold the header in the first place
-  if (header_size > resp.value().info->block_size * resp.value().info->block_count) {
+  if (header_size > info.block_size * info.block_count) {
     return kDiskFormatUnknown;
   }
 
   // We expect to read kHeaderSize bytes, but we may need to read
   // extra to read a multiple of the underlying block size.
-  const size_t buffer_size =
-      fbl::round_up(header_size, static_cast<size_t>(resp.value().info->block_size));
+  const size_t buffer_size = fbl::round_up(header_size, static_cast<size_t>(info.block_size));
 
   ZX_DEBUG_ASSERT_MSG(buffer_size > 0, "Expected buffer_size to be greater than 0\n");
 
   uint8_t data[buffer_size];
-  auto result = block_client::SingleReadBytes(device, data, buffer_size, 0);
-  if (result != ZX_OK) {
-    fprintf(stderr, "DetectDiskFormat: Error reading block device.\n");
-    return kDiskFormatUnknown;
+  {
+    auto result = block_client::SingleReadBytes(device, data, buffer_size, 0);
+    if (result != ZX_OK) {
+      fprintf(stderr, "DetectDiskFormat: Error reading block device.\n");
+      return kDiskFormatUnknown;
+    }
   }
 
   if (!memcmp(data, kFvmMagic, sizeof(kFvmMagic))) {
@@ -106,7 +113,7 @@ DiskFormat DetectDiskFormatImpl(fidl::UnownedClientEnd<fblock::Block> device,
     return kDiskFormatBlockVerity;
   }
 
-  if (!memcmp(data + resp.value().info->block_size, kGptMagic, sizeof(kGptMagic))) {
+  if (!memcmp(data + info.block_size, kGptMagic, sizeof(kGptMagic))) {
     return kDiskFormatGpt;
   }
 
@@ -153,8 +160,7 @@ DiskFormat DetectDiskFormatImpl(fidl::UnownedClientEnd<fblock::Block> device,
     // MBR is two bytes at offset 0x1fe, but print 16 just for consistency
     hexdump_very_ex(data + 0x1f0, 16, 0x1f0, hexdump_stdio_printf, stderr);
     // GPT magic is stored one block in, so it can coexist with MBR.
-    hexdump_very_ex(data + resp.value().info->block_size, 16, resp.value().info->block_size,
-                    hexdump_stdio_printf, stderr);
+    hexdump_very_ex(data + info.block_size, 16, info.block_size, hexdump_stdio_printf, stderr);
   }
 
   return kDiskFormatUnknown;

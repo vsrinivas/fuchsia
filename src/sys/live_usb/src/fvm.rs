@@ -21,17 +21,15 @@ use {
 const BLOCK_SIZE: u64 = 512;
 
 /// Returns the size in bytes of the partition at `path`.
-pub async fn get_partition_size(path: &str) -> Result<usize, Error> {
-    let (status, size) =
-        fuchsia_component::client::connect_to_protocol_at_path::<PartitionMarker>(path)
-            .context("connecting to partition")?
-            .get_info()
-            .await
-            .context("sending get info request")?;
-    zx::Status::ok(status).context("getting partition info")?;
-    let size = size.unwrap();
-
-    Ok((size.block_size as usize) * (size.block_count as usize))
+pub async fn get_partition_size(path: &str) -> Result<u64, Error> {
+    let info = fuchsia_component::client::connect_to_protocol_at_path::<PartitionMarker>(path)
+        .context("connecting to partition")?
+        .get_info()
+        .await
+        .context("sending get info request")?
+        .map_err(zx::Status::from_raw)
+        .context("getting partition info")?;
+    Ok(u64::from(info.block_size) * u64::from(info.block_count))
 }
 
 struct BlockWatcherPauser {

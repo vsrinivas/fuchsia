@@ -61,20 +61,20 @@ void TestBlockGetInfo(Volume::Version version, bool fvm) {
 
   const fidl::WireResult parent_result = fidl::WireCall(device.parent_block())->GetInfo();
   ASSERT_OK(parent_result.status());
-  const fidl::WireResponse parent_response = parent_result.value();
-  ASSERT_OK(parent_response.status);
+  const fit::result parent_response = parent_result.value();
+  ASSERT_TRUE(parent_response.is_ok(), "%s", zx_status_get_string(parent_response.error_value()));
 
   const fidl::WireResult zxcrypt_result = fidl::WireCall(device.zxcrypt_block())->GetInfo();
   ASSERT_OK(zxcrypt_result.status());
-  const fidl::WireResponse zxcrypt_response = zxcrypt_result.value();
-  ASSERT_OK(zxcrypt_response.status);
+  const fit::result zxcrypt_response = zxcrypt_result.value();
+  ASSERT_TRUE(zxcrypt_response.is_ok(), "%s", zx_status_get_string(zxcrypt_response.error_value()));
 
   zx::result reserved_blocks = device.reserved_blocks();
   ASSERT_OK(reserved_blocks);
 
-  EXPECT_EQ(parent_response.info->block_size, zxcrypt_response.info->block_size);
-  EXPECT_GE(parent_response.info->block_count,
-            zxcrypt_response.info->block_count + reserved_blocks.value());
+  EXPECT_EQ(parent_response.value()->info.block_size, zxcrypt_response.value()->info.block_size);
+  EXPECT_GE(parent_response.value()->info.block_count,
+            zxcrypt_response.value()->info.block_count + reserved_blocks.value());
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestBlockGetInfo)
 
@@ -431,8 +431,8 @@ void DISABLED_TestVmoStall(Volume::Version version, bool fvm) {
   // TODO(https://fxbug.dev/31974): the result of this call is unused. Why?
   const fidl::WireResult result = fidl::WireCall(device.zxcrypt_block())->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
 
   size_t blks_per_req = 4;
   size_t max = Volume::kBufferSize / (device.block_size() * blks_per_req);

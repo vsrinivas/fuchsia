@@ -224,16 +224,12 @@ mod tests {
                     }
                     Ok(PartitionAndDeviceRequest::GetInfo { responder }) => {
                         responder
-                            .send(
-                                zx::sys::ZX_OK,
-                                Some(&mut BlockInfo {
-                                    block_count: 1000,
-                                    block_size: 512,
-                                    max_transfer_size: 1024 * 1024,
-                                    flags: Flag::empty(),
-                                    reserved: 0,
-                                }),
-                            )
+                            .send(&mut Ok(BlockInfo {
+                                block_count: 1000,
+                                block_size: 512,
+                                max_transfer_size: 1024 * 1024,
+                                flags: Flag::empty(),
+                            }))
                             .unwrap();
                     }
                     Ok(PartitionAndDeviceRequest::ReadBlocks {
@@ -246,7 +242,7 @@ mod tests {
                         assert_eq!(dev_offset, 0);
                         assert_eq!(length, 4096);
                         vmo.write(&constants::FVM_MAGIC, vmo_offset).unwrap();
-                        responder.send(zx::sys::ZX_OK).unwrap();
+                        responder.send(&mut Ok(())).unwrap();
                     }
                     _ => {
                         println!("Unexpected request: {:?}", request);

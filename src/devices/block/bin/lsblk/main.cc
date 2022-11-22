@@ -119,13 +119,14 @@ static int cmd_list_blk() {
     populate_topo_path(caller.borrow_as<fuchsia_device::Controller>(), &info);
 
     fuchsia_block::wire::BlockInfo block_info;
-
-    auto info_resp = fidl::WireCall(caller.borrow_as<fuchsia_block::Block>())->GetInfo();
-
-    if (info_resp.ok() && info_resp.value().status == ZX_OK && info_resp.value().info) {
-      block_info = *info_resp.value().info;
-      size_to_cstring(info.sizestr, sizeof(info.sizestr),
-                      info_resp.value().info->block_size * info_resp.value().info->block_count);
+    if (const fidl::WireResult result =
+            fidl::WireCall(caller.borrow_as<fuchsia_block::Block>())->GetInfo();
+        result.ok()) {
+      if (const fit::result response = result.value(); response.is_ok()) {
+        block_info = response.value()->info;
+        size_to_cstring(info.sizestr, sizeof(info.sizestr),
+                        block_info.block_size * block_info.block_count);
+      }
     }
 
     std::string type;
@@ -294,8 +295,8 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
             result.FormatDescription().c_str());
     return -1;
   }
-  const fidl::WireResponse response = result.value();
-  if (zx_status_t status = response.status; status != ZX_OK) {
+  const fit::result response = result.value();
+  if (response.is_error()) {
     if (try_read_skip_blk(caller.borrow_as<fuchsia_skipblock::SkipBlock>(), offset, count) < 0) {
       fprintf(stderr, "Error getting block size for %s\n", dev);
       return -1;
@@ -303,7 +304,7 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
     return 0;
   }
   // Check that count and offset are aligned to block size.
-  uint64_t blksize = response.info->block_size;
+  uint64_t blksize = response.value()->info.block_size;
   if (count % blksize) {
     fprintf(stderr, "Bytes read must be a multiple of blksize=%" PRIu64 "\n", blksize);
     return -1;
@@ -339,12 +340,19 @@ static int cmd_stats(const char* dev, bool clear) {
     return -1;
   }
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = fidl::WireCall(caller.borrow_as<fuchsia_block::Block>())->GetStats(clear);
-  if (!result.ok() || result.value().status != ZX_OK) {
-    fprintf(stderr, "Error getting stats for %s\n", dev);
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_block::Block>())->GetStats(clear);
+  if (!result.ok()) {
+    fprintf(stderr, "Error getting stats for %s: %s\n", dev, result.FormatDescription().c_str());
     return -1;
   }
-  storage_metrics::BlockDeviceMetrics metrics(result.value().stats.get());
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    fprintf(stderr, "Error getting stats for %s: %s\n", dev,
+            zx_status_get_string(response.error_value()));
+    return -1;
+  }
+  storage_metrics::BlockDeviceMetrics metrics(&response.value()->stats);
   metrics.Dump(stdout);
   return 0;
 }

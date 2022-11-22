@@ -40,9 +40,9 @@ void VolumeCreate(const fbl::unique_fd& fd, const fbl::unique_fd& devfs_root,
   const fidl::WireResult result =
       fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
   ASSERT_OK(result.status());
-  const fidl::WireResponse response = result.value();
-  ASSERT_OK(response.status);
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
 
   if (fvm) {
     const fidl::WireResult result =

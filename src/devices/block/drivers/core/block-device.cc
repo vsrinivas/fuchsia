@@ -183,14 +183,13 @@ void BlockDevice::GetInfo(GetInfoCompleter::Sync& completer) {
   } else {
     info.flags -= fuchsia_hardware_block::wire::Flag::kBootpart;
   }
-
-  completer.Reply(ZX_OK, fidl::ObjectView<decltype(info)>::FromExternal(&info));
+  completer.ReplySuccess(info);
 }
 
 void BlockDevice::GetStats(GetStatsRequestView request, GetStatsCompleter::Sync& completer) {
   fbl::AutoLock lock(&stat_lock_);
   if (!enable_stats_) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
     return;
   }
 
@@ -199,8 +198,7 @@ void BlockDevice::GetStats(GetStatsRequestView request, GetStatsCompleter::Sync&
   if (request->clear) {
     stats_.Reset();
   }
-  completer.Reply(ZX_OK,
-                  fidl::ObjectView<fuchsia_hardware_block::wire::BlockStats>::FromExternal(&stats));
+  completer.ReplySuccess(stats);
 }
 
 void BlockDevice::OpenSession(OpenSessionRequestView request,
@@ -231,14 +229,24 @@ void BlockDevice::RebindDevice(RebindDeviceCompleter::Sync& completer) {
 }
 
 void BlockDevice::ReadBlocks(ReadBlocksRequestView request, ReadBlocksCompleter::Sync& completer) {
-  completer.Reply(
-      DoIo(request->vmo, request->length, request->dev_offset, request->vmo_offset, false));
+  if (zx_status_t status =
+          DoIo(request->vmo, request->length, request->dev_offset, request->vmo_offset, false);
+      status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
 }
 
 void BlockDevice::WriteBlocks(WriteBlocksRequestView request,
                               WriteBlocksCompleter::Sync& completer) {
-  completer.Reply(
-      DoIo(request->vmo, request->length, request->dev_offset, request->vmo_offset, true));
+  if (zx_status_t status =
+          DoIo(request->vmo, request->length, request->dev_offset, request->vmo_offset, true);
+      status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
 }
 
 void BlockDevice::GetTypeGuid(GetTypeGuidCompleter::Sync& completer) {

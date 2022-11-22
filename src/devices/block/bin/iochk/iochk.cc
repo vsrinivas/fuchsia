@@ -630,13 +630,13 @@ int iochk(int argc, char** argv) {
       printf("fd: %d\n", ctx.caller.release().get());
       return -1;
     }
-    const fidl::WireResponse response = result.value();
-    if (zx_status_t status = response.status; status != ZX_OK) {
-      printf("unable to get block info: %s\n", zx_status_get_string(status));
+    const fit::result response = result.value();
+    if (response.is_error()) {
+      printf("unable to get block info: %s\n", zx_status_get_string(response.error_value()));
       printf("fd: %d\n", ctx.caller.release().get());
       return -1;
     }
-    const fuchsia_hardware_block::wire::BlockInfo& info = *response.info;
+    const fuchsia_hardware_block::wire::BlockInfo& info = response.value()->info;
     printf("opened %s - block_size=%u, block_count=%lu\n", device, info.block_size,
            info.block_count);
 

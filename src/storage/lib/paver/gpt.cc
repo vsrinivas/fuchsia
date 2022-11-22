@@ -135,15 +135,15 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
     fdio_cpp::FdioCaller caller(std::move(fd));
 
     {
-      auto result = fidl::WireCall(caller.borrow_as<block::Block>())->GetInfo();
+      const fidl::WireResult result = fidl::WireCall(caller.borrow_as<block::Block>())->GetInfo();
       if (!result.ok()) {
         continue;
       }
-      const auto& response = result.value();
-      if (response.status != ZX_OK) {
+      const fit::result response = result.value();
+      if (response.is_error()) {
         continue;
       }
-      if (response.info->flags & fuchsia_hardware_block::wire::Flag::kRemovable) {
+      if (response.value()->info.flags & fuchsia_hardware_block::wire::Flag::kRemovable) {
         continue;
       }
     }
@@ -195,15 +195,17 @@ zx::result<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
     ERROR("Warning: Could not acquire GPT block info: %s\n", result.FormatDescription().c_str());
     return zx::error(result.status());
   }
-  const auto& response = result.value();
-  if (response.status != ZX_OK) {
-    ERROR("Warning: Could not acquire GPT block info: %s\n", zx_status_get_string(response.status));
-    return zx::error(response.status);
+  fit::result response = result.value();
+  if (response.is_error()) {
+    ERROR("Warning: Could not acquire GPT block info: %s\n",
+          zx_status_get_string(response.error_value()));
+    return response.take_error();
   }
+  const fuchsia_hardware_block::wire::BlockInfo& info = response.value()->info;
 
   std::unique_ptr<GptDevice> gpt;
-  if (GptDevice::Create(std::move(device.value()), response.info->block_size,
-                        response.info->block_count, &gpt) != ZX_OK) {
+  if (GptDevice::Create(std::move(device.value()), info.block_size, info.block_count, &gpt) !=
+      ZX_OK) {
     ERROR("Failed to get GPT info\n");
     return zx::error(ZX_ERR_BAD_STATE);
   }
@@ -226,8 +228,7 @@ zx::result<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
     printf("Rebound GPT driver successfully\n");
   }
 
-  return zx::ok(
-      new GptDevicePartitioner(devfs_root.duplicate(), svc_root, std::move(gpt), *response.info));
+  return zx::ok(new GptDevicePartitioner(devfs_root.duplicate(), svc_root, std::move(gpt), info));
 }
 
 zx::result<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::InitializeGpt(
@@ -263,20 +264,21 @@ zx::result<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::Init
       ERROR("Warning: Could not acquire GPT block info: %s\n", result.FormatDescription().c_str());
       return zx::error(result.status());
     }
-    const auto& response = result.value();
-    if (response.status != ZX_OK) {
+    fit::result response = result.value();
+    if (response.is_error()) {
       ERROR("Warning: Could not acquire GPT block info: %s\n",
-            zx_status_get_string(response.status));
-      return zx::error(response.status);
+            zx_status_get_string(response.error_value()));
+      return response.take_error();
     }
 
-    if (response.info->flags & block::wire::Flag::kRemovable) {
+    const fuchsia_hardware_block::wire::BlockInfo& info = response.value()->info;
+    if (info.flags & block::wire::Flag::kRemovable) {
       continue;
     }
 
     std::unique_ptr<GptDevice> gpt;
-    if (GptDevice::Create(std::move(device.value()), response.info->block_size,
-                          response.info->block_count, &gpt) != ZX_OK) {
+    if (GptDevice::Create(std::move(device.value()), info.block_size, info.block_count, &gpt) !=
+        ZX_OK) {
       ERROR("Failed to get GPT info\n");
       return zx::error(ZX_ERR_BAD_STATE);
     }
@@ -288,7 +290,7 @@ zx::result<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::Init
     non_removable_gpt_devices.emplace_back(caller.release());
 
     auto partitioner = WrapUnique(
-        new GptDevicePartitioner(devfs_root.duplicate(), svc_root, std::move(gpt), *response.info));
+        new GptDevicePartitioner(devfs_root.duplicate(), svc_root, std::move(gpt), info));
 
     if (partitioner->FindPartition(IsFvmPartition).is_error()) {
       continue;

@@ -282,18 +282,18 @@ TemporaryFvmPartition::~TemporaryFvmPartition() {
 std::string TemporaryFvmPartition::GetPartitionPath() { return partition_path_; }
 
 // Start a stress test.
-bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration duration) {
+bool StressFlash(StatusLine* logger, const CommandLineArgs& args, zx::duration duration) {
   // Access the FVM.
   fbl::unique_fd fvm_fd(open(args.fvm_path.c_str(), O_RDWR));
   if (!fvm_fd) {
-    status->Log("Error: Could not open FVM\n");
+    logger->Log("Error: Could not open FVM\n");
     return false;
   }
 
   // Calculate available space and number of slices needed.
   auto fvm_info_or = fs_management::FvmQuery(fvm_fd.get());
   if (fvm_info_or.is_error()) {
-    status->Log("Error: Could not get FVM info\n");
+    logger->Log("Error: Could not get FVM info\n");
     return false;
   }
 
@@ -309,7 +309,7 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
     if (bytes_requested <= bytes_to_test) {
       bytes_to_test = bytes_requested;
     } else {
-      status->Log("Specified disk size (%ld bytes) exceeds available disk size (%ld bytes).\n",
+      logger->Log("Specified disk size (%ld bytes) exceeds available disk size (%ld bytes).\n",
                   bytes_requested, bytes_to_test);
       return false;
     }
@@ -321,7 +321,7 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
       TemporaryFvmPartition::Create(fvm_fd.get(), slices_requested);
 
   if (fvm_partition == nullptr) {
-    status->Log("Failed to create FVM partition");
+    logger->Log("Failed to create FVM partition");
     return false;
   }
 
@@ -335,25 +335,36 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
   }
 
   // Fetch information about the underlying block device, such as block size.
-  zx_status_t info_status;
-  std::unique_ptr<fuchsia::hardware::block::BlockInfo> block_info;
-  zx_status_t io_status = block->GetInfo(&info_status, &block_info);
-  if (io_status != ZX_OK || info_status != ZX_OK) {
-    status->Log("Error: cannot get block device info for '%s'\n", partition_path.c_str());
-    return ZX_ERR_INTERNAL;
+  fuchsia::hardware::block::Block_GetInfo_Result result;
+  if (zx_status_t status = block->GetInfo(&result); status != ZX_OK) {
+    logger->Log("Error: cannot get block device info for '%s': %s\n", partition_path.c_str(),
+                zx_status_get_string(status));
+    return status;
+  }
+  switch (result.Which()) {
+    case fuchsia::hardware::block::Block_GetInfo_Result::Tag::Invalid:
+      logger->Log("Error: cannot get block device info for '%s': invalid tag\n",
+                  partition_path.c_str());
+      return ZX_ERR_INTERNAL;
+    case fuchsia::hardware::block::Block_GetInfo_Result::Tag::kErr:
+      logger->Log("Error: cannot get block device info for '%s': %s\n", partition_path.c_str(),
+                  zx_status_get_string(result.err()));
+      return result.err();
+    case fuchsia::hardware::block::Block_GetInfo_Result::Tag::kResponse:
+      break;
   }
   BlockDevice device;
   if (zx_status_t status = block->OpenSession(device.device.NewRequest()); status != ZX_OK) {
     return status;
   }
-  device.info = *block_info;
+  device.info = result.response().info;
 
   size_t actual_transfer_size = RoundDown(
       std::min(kDefaultTransferSize, device.info.max_transfer_size), device.info.block_size);
   device.vmo_size = actual_transfer_size * kMaxInFlightRequests;
 
   if (SetupBlockFifo(partition_path, &device) != ZX_OK) {
-    status->Log("Error: Block device could not be set up");
+    logger->Log("Error: Block device could not be set up");
     return false;
   }
 
@@ -368,21 +379,21 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
   do {
     zx::time test_start = zx::clock::get_monotonic();
     if (FlashIo(device, bytes_to_test, actual_transfer_size, /*is_write_test=*/true) != ZX_OK) {
-      status->Log("Error writing to vmo.");
+      logger->Log("Error writing to vmo.");
       return false;
     }
     zx::duration test_duration = zx::clock::get_monotonic() - test_start;
-    status->Log("Test %4ld: Write: %0.3fs, throughput: %0.2f MiB/s", num_tests,
+    logger->Log("Test %4ld: Write: %0.3fs, throughput: %0.2f MiB/s", num_tests,
                 DurationToSecs(test_duration),
                 static_cast<double>(bytes_to_test) / (DurationToSecs(test_duration) * 1024 * 1024));
 
     test_start = zx::clock::get_monotonic();
     if (FlashIo(device, bytes_to_test, actual_transfer_size, /*is_write_test=*/false) != ZX_OK) {
-      status->Log("Error reading from vmo.");
+      logger->Log("Error reading from vmo.");
       return false;
     }
     test_duration = zx::clock::get_monotonic() - test_start;
-    status->Log("Test %4ld: Read: %0.3fs, throughput: %0.2f MiB/s", num_tests,
+    logger->Log("Test %4ld: Read: %0.3fs, throughput: %0.2f MiB/s", num_tests,
                 DurationToSecs(test_duration),
                 static_cast<double>(bytes_to_test) / (DurationToSecs(test_duration) * 1024 * 1024));
 

@@ -311,14 +311,19 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
       *format_result = FormatResult::kReformatted;
     }
 
-    auto block_info_result = fidl::WireCall(partition_device)->GetInfo();
-    if (!block_info_result.ok()) {
-      ERROR("Failed to query block info: %s\n", zx_status_get_string(block_info_result.status()));
+    const fidl::WireResult result = fidl::WireCall(partition_device)->GetInfo();
+    if (!result.ok()) {
+      ERROR("Failed to query block info: %s\n", result.FormatDescription().c_str());
       return fbl::unique_fd();
     }
+    const fit::result response = result.value();
+    if (response.is_error()) {
+      ERROR("Failed to query block info: %s\n", zx_status_get_string(response.error_value()));
+      return fbl::unique_fd();
+    }
+    const fuchsia_hardware_block::wire::BlockInfo& info = response.value()->info;
 
-    uint64_t initial_disk_size =
-        block_info_result.value().info->block_count * block_info_result.value().info->block_size;
+    uint64_t initial_disk_size = info.block_count * info.block_size;
     uint64_t max_disk_size =
         (header.maximum_disk_size == 0) ? initial_disk_size : header.maximum_disk_size;
 
@@ -718,14 +723,16 @@ zx::result<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
 
     const fidl::WireResult result = fidl::WireCall(device)->GetInfo();
     if (!result.ok()) {
-      ERROR("Couldn't get partition block info: %s\n", zx_status_get_string(result.status()));
+      ERROR("Couldn't get partition block info: %s\n", result.FormatDescription().c_str());
       return zx::error(result.status());
     }
-    const auto& response = result.value();
-    if (response.status != ZX_OK) {
-      ERROR("Couldn't get partition block info: %s\n", zx_status_get_string(response.status));
-      return zx::error(response.status);
+    fit::result response = result.value();
+    if (response.is_error()) {
+      ERROR("Couldn't get partition block info: %s\n",
+            zx_status_get_string(response.error_value()));
+      return response.take_error();
     }
+    const fuchsia_hardware_block::wire::BlockInfo& info = response.value()->info;
 
     zx::result endpoints = fidl::CreateEndpoints<block::Session>();
     if (endpoints.is_error()) {
@@ -740,9 +747,9 @@ zx::result<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     if (!fifo_result.ok()) {
       return zx::error(fifo_result.status());
     }
-    const fit::result fifo_response = fifo_result.value();
+    fit::result fifo_response = fifo_result.value();
     if (fifo_response.is_error()) {
-      return zx::error(fifo_response.error_value());
+      return fifo_response.take_error();
     }
     block_client::Client client(std::move(session), std::move(fifo_response.value()->fifo));
     zx::result vmoid = client.RegisterVmo(vmo);
@@ -757,8 +764,8 @@ zx::result<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     };
 
     LOG("Streaming partition %zu\n", p);
-    status = zx::make_result(StreamFvmPartition(reader.get(), &parts[p], mapping, client,
-                                                response.info->block_size, &request));
+    status = zx::make_result(
+        StreamFvmPartition(reader.get(), &parts[p], mapping, client, info.block_size, &request));
     LOG("Done streaming partition %zu\n", p);
     if (status.is_error()) {
       ERROR("Failed to stream partition status=%d\n", status.error_value());

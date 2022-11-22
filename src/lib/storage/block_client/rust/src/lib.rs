@@ -536,8 +536,7 @@ pub struct RemoteBlockClient {
 impl RemoteBlockClient {
     /// Returns a connection to a remote block device via the given channel.
     pub async fn new(remote: block::BlockProxy) -> Result<Self, Error> {
-        let (status, maybe_info) = remote.get_info().await?;
-        let info = maybe_info.ok_or(zx::Status::from_raw(status))?;
+        let info = remote.get_info().await?.map_err(zx::Status::from_raw)?;
         let (session, server) = fidl::endpoints::create_proxy()?;
         let () = remote.open_session(server)?;
         let fifo = session.get_fifo().await?.map_err(zx::Status::from_raw)?;
@@ -611,8 +610,7 @@ impl RemoteBlockClientSync {
     /// the calling thread.
     pub fn new(client_end: fidl::endpoints::ClientEnd<block::BlockMarker>) -> Result<Self, Error> {
         let remote = block::BlockSynchronousProxy::new(client_end.into_channel());
-        let (status, maybe_info) = remote.get_info(zx::Time::INFINITE)?;
-        let info = maybe_info.ok_or(zx::Status::from_raw(status))?;
+        let info = remote.get_info(zx::Time::INFINITE)?.map_err(zx::Status::from_raw)?;
         let (client, server) = fidl::endpoints::create_endpoints()?;
         let () = remote.open_session(server)?;
         let session = block::SessionSynchronousProxy::new(client.into_channel());
@@ -779,9 +777,12 @@ mod tests {
     async fn test_against_ram_disk() {
         let (_ramdisk, block_proxy, remote_block_device) = make_ramdisk().await;
 
-        let stats_before = block_proxy.get_stats(false).await.expect("get_stats failed");
-        assert_eq!(stats_before.0, zx::Status::OK.into_raw());
-        let stats_before = stats_before.1.expect("Processing get_stats result failed");
+        let stats_before = block_proxy
+            .get_stats(false)
+            .await
+            .expect("get_stats failed")
+            .map_err(zx::Status::from_raw)
+            .expect("get_stats error");
 
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
         vmo.write(b"hello", 5).expect("vmo.write failed");
@@ -800,9 +801,12 @@ mod tests {
         remote_block_device.detach_vmo(vmo_id).await.expect("detach_vmo failed");
 
         // check that the stats are what we expect them to be
-        let stats_after = block_proxy.get_stats(false).await.expect("get_stats failed");
-        assert_eq!(stats_after.0, zx::Status::OK.into_raw());
-        let stats_after = stats_after.1.expect("Processing get_stats result failed");
+        let stats_after = block_proxy
+            .get_stats(false)
+            .await
+            .expect("get_stats failed")
+            .map_err(zx::Status::from_raw)
+            .expect("get_stats error");
         // write stats
         assert_eq!(
             stats_before.write.success.total_calls + 1,
@@ -826,9 +830,12 @@ mod tests {
     async fn test_against_ram_disk_with_flush() {
         let (_ramdisk, block_proxy, remote_block_device) = make_ramdisk().await;
 
-        let stats_before = block_proxy.get_stats(false).await.expect("get_stats failed");
-        assert_eq!(stats_before.0, zx::Status::OK.into_raw());
-        let stats_before = stats_before.1.expect("Processing get_stats result failed");
+        let stats_before = block_proxy
+            .get_stats(false)
+            .await
+            .expect("get_stats failed")
+            .map_err(zx::Status::from_raw)
+            .expect("get_stats error");
 
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
         vmo.write(b"hello", 5).expect("vmo.write failed");
@@ -848,9 +855,12 @@ mod tests {
         remote_block_device.detach_vmo(vmo_id).await.expect("detach_vmo failed");
 
         // check that the stats are what we expect them to be
-        let stats_after = block_proxy.get_stats(false).await.expect("get_stats failed");
-        assert_eq!(stats_after.0, zx::Status::OK.into_raw());
-        let stats_after = stats_after.1.expect("Processing get_stats result failed");
+        let stats_after = block_proxy
+            .get_stats(false)
+            .await
+            .expect("get_stats failed")
+            .map_err(zx::Status::from_raw)
+            .expect("get_stats error");
         // write stats
         assert_eq!(
             stats_before.write.success.total_calls + 1,
@@ -1069,15 +1079,13 @@ mod tests {
 
                         match request {
                             BlockRequest::GetInfo { responder } => {
-                                let mut block_info = block::BlockInfo {
-                                    block_count: 1024,
-                                    block_size: 512,
-                                    max_transfer_size: 1024 * 1024,
-                                    flags: block::Flag::empty(),
-                                    reserved: 0,
-                                };
                                 responder
-                                    .send(zx::sys::ZX_OK, Some(&mut block_info))
+                                    .send(&mut Ok(block::BlockInfo {
+                                        block_count: 1024,
+                                        block_size: 512,
+                                        max_transfer_size: 1024 * 1024,
+                                        flags: block::Flag::empty(),
+                                    }))
                                     .expect("send failed");
                             }
                             BlockRequest::OpenSession { session, control_handle: _ } => {

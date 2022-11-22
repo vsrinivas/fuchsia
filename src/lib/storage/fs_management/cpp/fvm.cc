@@ -105,11 +105,11 @@ zx_status_t FvmOverwriteImpl(fidl::UnownedClientEnd<fuchsia_hardware_block::Bloc
   if (!result.ok()) {
     return result.status();
   }
-  const fidl::WireResponse response = result.value();
-  if (zx_status_t status = response.status; status != ZX_OK) {
-    return status;
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    return response.error_value();
   }
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
 
   size_t disk_size = block_info.block_count * block_info.block_size;
   fvm::Header header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, disk_size, slice_size);
@@ -396,11 +396,11 @@ zx_status_t FvmInit(fidl::UnownedClientEnd<fuchsia_hardware_block::Block> device
   if (!result.ok()) {
     return result.status();
   }
-  const fidl::WireResponse response = result.value();
-  if (zx_status_t status = response.status; status != ZX_OK) {
-    return status;
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    return response.error_value();
   }
-  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = response.value()->info;
   if (slice_size == 0 || slice_size % block_info.block_size) {
     return ZX_ERR_BAD_STATE;
   }

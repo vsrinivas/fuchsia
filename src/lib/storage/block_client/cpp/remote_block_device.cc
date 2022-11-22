@@ -39,11 +39,11 @@ zx_status_t RemoteBlockDevice::BlockGetInfo(
   if (!result.ok()) {
     return result.status();
   }
-  const fidl::WireResponse response = result.value();
-  if (zx_status_t status = response.status; status != ZX_OK) {
-    return status;
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    return response.error_value();
   }
-  *out_info = *response.info;
+  *out_info = response.value()->info;
   return ZX_OK;
 }
 
@@ -170,9 +170,9 @@ zx_status_t ReadWriteBlocks(fidl::UnownedClientEnd<fuchsia_hardware_block::Block
   if (!result.ok()) {
     return result.status();
   }
-  const fidl::WireResponse response = result.value();
-  if (zx_status_t status = response.status; status != ZX_OK) {
-    return status;
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    return response.error_value();
   }
 
   zx::vmo vmo;
@@ -180,7 +180,7 @@ zx_status_t ReadWriteBlocks(fidl::UnownedClientEnd<fuchsia_hardware_block::Block
     return status;
   }
 
-  size_t block_size = response.info->block_size;
+  size_t block_size = response.value()->info.block_size;
   if (!buffer || buffer_length % block_size != 0 || offset % block_size != 0) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -195,9 +195,9 @@ zx_status_t ReadWriteBlocks(fidl::UnownedClientEnd<fuchsia_hardware_block::Block
     if (!result.ok()) {
       return result.status();
     }
-    const fidl::WireResponse response = result.value();
-    if (zx_status_t status = response.status; status != ZX_OK) {
-      return status;
+    const fit::result response = result.value();
+    if (response.is_error()) {
+      return response.error_value();
     }
   } else {
     // if reading, duplicate the vmo so we will retain a copy
@@ -209,9 +209,9 @@ zx_status_t ReadWriteBlocks(fidl::UnownedClientEnd<fuchsia_hardware_block::Block
     if (!result.ok()) {
       return result.status();
     }
-    const fidl::WireResponse response = result.value();
-    if (zx_status_t status = response.status; status != ZX_OK) {
-      return status;
+    const fit::result response = result.value();
+    if (response.is_error()) {
+      return response.error_value();
     }
   }
 
