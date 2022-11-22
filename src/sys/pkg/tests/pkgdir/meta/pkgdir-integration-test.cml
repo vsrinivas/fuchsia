@@ -12,7 +12,10 @@
     },
     use: [
         {
-            protocol: [ "test.fidl.pkg.Harness" ],
+            protocol: [
+                "fuchsia.component.Binder",
+                "test.fidl.pkg.Harness",
+            ],
             from: "parent",
         },
     ],

@@ -42,6 +42,11 @@
             from: "#pkg_harness",
             to: [ "#pkgdir_integration_test" ],
         },
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+            to: "#pkgdir_integration_test",
+        },
     ],
     expose: [
         {

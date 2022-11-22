@@ -133,7 +133,7 @@ pub async fn run_test_manager_query_server(
                     });
                 match launch_fut.await {
                     Ok(suite_instance) => {
-                        let suite = match suite_instance.connect_to_suite() {
+                        let suite = match suite_instance.connect_to_suite().await {
                             Ok(proxy) => proxy,
                             Err(e) => {
                                 let _ = responder.send(&mut Err(e.into()));

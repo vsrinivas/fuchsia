@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{TEST_ROOT_REALM_NAME, TEST_TYPE_REALM_MAP},
+    crate::constants::{TEST_ROOT_COLLECTION, TEST_TYPE_REALM_MAP},
     anyhow::Error,
     fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_test::Capability as RBCapability,
@@ -55,7 +55,7 @@ impl AboveRootCapabilitiesForTest {
                         Route::new()
                             .capability(capability.clone())
                             .from(Ref::parent())
-                            .to(Ref::child(TEST_ROOT_REALM_NAME)),
+                            .to(Ref::collection(TEST_ROOT_COLLECTION)),
                     )
                     .await?;
             }

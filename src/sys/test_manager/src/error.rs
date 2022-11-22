@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    anyhow, fidl_fuchsia_developer_remotecontrol::StreamError,
-    fidl_fuchsia_test_manager::LaunchError,
+    anyhow, fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_developer_remotecontrol::StreamError, fidl_fuchsia_test_manager::LaunchError,
     fuchsia_component_test::error::Error as RealmBuilderError, thiserror::Error, tracing::warn,
 };
 
@@ -28,6 +28,12 @@ pub enum LaunchTestError {
 
     #[error("Failed to create test realm: {0:?}")]
     CreateTestRealm(#[source] RealmBuilderError),
+
+    #[error("Failed to create test: {0:?}")]
+    CreateTest(fcomponent::Error),
+
+    #[error("Failed to create test: {0:?}")]
+    CreateTestFidl(fidl::Error),
 
     #[error("Failed to connect to embedded ArchiveAccessor: {0:?}")]
     ConnectToArchiveAccessor(#[source] anyhow::Error),
@@ -75,6 +81,8 @@ impl From<LaunchTestError> for LaunchError {
         match e {
             LaunchTestError::InitializeTestRealm(_)
             | LaunchTestError::ConnectToArchiveAccessor(_)
+            | LaunchTestError::CreateTestFidl(_)
+            | LaunchTestError::CreateTest(_)
             | LaunchTestError::StreamIsolatedLogs(_) => Self::InternalError,
             LaunchTestError::InvalidResolverData
             | LaunchTestError::InvalidManifest(_)

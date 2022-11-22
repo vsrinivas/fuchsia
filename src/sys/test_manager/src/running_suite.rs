@@ -5,7 +5,10 @@
 use {
     crate::{
         above_root_capabilities::AboveRootCapabilitiesForTest,
-        constants::{HERMETIC_ENVIRONMENT_NAME, HERMETIC_TESTS_COLLECTION, TEST_ROOT_REALM_NAME},
+        constants::{
+            HERMETIC_ENVIRONMENT_NAME, HERMETIC_TESTS_COLLECTION, TEST_ROOT_COLLECTION,
+            TEST_ROOT_REALM_NAME,
+        },
         diagnostics, enclosing_env,
         error::LaunchTestError,
         facet, resolver,
@@ -16,7 +19,7 @@ use {
     cm_rust,
     fidl::endpoints::{create_proxy, ClientEnd},
     fidl::prelude::*,
-    fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_resolution::ResolverProxy,
     fidl_fuchsia_debugdata as fdebugdata, fidl_fuchsia_diagnostics as fdiagnostics,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys,
@@ -24,7 +27,7 @@ use {
     ftest::Invocation,
     ftest_manager::{CaseStatus, LaunchError, SuiteEvent as FidlSuiteEvent, SuiteStatus},
     fuchsia_async::{self as fasync, TimeoutExt},
-    fuchsia_component::client::connect_to_protocol,
+    fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_dir_root},
     fuchsia_component_test::{
         error::Error as RealmBuilderError, Capability, ChildOptions, Event, RealmBuilder,
         RealmInstance, Ref, Route,
@@ -76,6 +79,8 @@ pub(crate) struct RunningSuite {
     custom_artifact_tokens: Vec<zx::EventPair>,
     /// The test collection in which this suite is running.
     test_collection: &'static str,
+    /// `Realm` protocol for the test root.
+    test_realm_proxy: fcomponent::RealmProxy,
 }
 
 impl RunningSuite {
@@ -107,12 +112,30 @@ impl RunningSuite {
             Some(name) => builder.build_with_name(name).await,
         }
         .map_err(LaunchTestError::CreateTestRealm)?;
+        let test_realm_proxy = instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fcomponent::RealmMarker>()
+            .map_err(|e| LaunchTestError::ConnectToTestSuite(e))?;
+        let mut collection_ref = fdecl::CollectionRef { name: TEST_ROOT_COLLECTION.into() };
+        let child_decl = fdecl::Child {
+            name: Some(TEST_ROOT_REALM_NAME.into()),
+            url: Some(test_url.into()),
+            startup: Some(fdecl::StartupMode::Lazy),
+            environment: None,
+            ..fdecl::Child::EMPTY
+        };
+        test_realm_proxy
+            .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
+            .await
+            .map_err(|e| LaunchTestError::CreateTestFidl(e))?
+            .map_err(|e| LaunchTestError::CreateTest(e))?;
 
         Ok(RunningSuite {
             custom_artifact_tokens: vec![],
             archivist_ready_task: None,
             logs_iterator_task: None,
             instance,
+            test_realm_proxy,
             test_collection: facets.collection,
         })
     }
@@ -187,7 +210,7 @@ impl RunningSuite {
                 None => None,
             };
 
-            let suite = self.connect_to_suite()?;
+            let suite = self.connect_to_suite().await?;
             let invocations = match enumerate_test_cases(&suite, matcher.as_ref()).await {
                 Ok(i) if i.is_empty() && matcher.is_some() => {
                     sender.send(Err(LaunchError::NoMatchingCases)).await.unwrap();
@@ -322,13 +345,26 @@ impl RunningSuite {
         Ok(())
     }
 
-    pub(crate) fn connect_to_suite(&self) -> Result<ftest::SuiteProxy, LaunchTestError> {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<ftest::SuiteMarker>().unwrap();
-        self.instance
-            .root
-            .connect_request_to_protocol_at_exposed_dir::<ftest::SuiteMarker>(server_end)
-            .map_err(LaunchTestError::ConnectToTestSuite)?;
-        Ok(proxy)
+    pub(crate) async fn connect_to_suite(&self) -> Result<ftest::SuiteProxy, LaunchTestError> {
+        let (exposed_dir, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let mut child_ref = fdecl::ChildRef {
+            name: TEST_ROOT_REALM_NAME.into(),
+            collection: Some(TEST_ROOT_COLLECTION.into()),
+        };
+        let () = self
+            .test_realm_proxy
+            .open_exposed_dir(&mut child_ref, server_end)
+            .await
+            .map_err(|e| LaunchTestError::ConnectToTestSuite(e.into()))?
+            .map_err(|e| {
+                LaunchTestError::ConnectToTestSuite(format_err!(
+                    "failed to open exposed dir: {:?}",
+                    e
+                ))
+            })?;
+        connect_to_protocol_at_dir_root::<ftest::SuiteMarker>(&exposed_dir)
+            .map_err(|e| LaunchTestError::ConnectToTestSuite(e))
     }
 
     /// Mark the resources associated with the suite for destruction, then wait for destruction to
@@ -359,6 +395,22 @@ impl RunningSuite {
                 Err(anyhow!("Timeout waiting for clients to access storage"))
             })
             .await?;
+
+        // Make the call to destroy the test, before destroying the entire realm. Once this
+        // completes, it guarantees that any of its service providers (archivist, storage,
+        // debugdata) have received all outgoing requests from the test such as log connections,
+        // etc.
+        let mut child_ref = fdecl::ChildRef {
+            name: TEST_ROOT_REALM_NAME.into(),
+            collection: Some(TEST_ROOT_COLLECTION.into()),
+        };
+        self.test_realm_proxy
+            .destroy_child(&mut child_ref)
+            .map_err(|e| Error::from(e).context("call to destroy test failed"))
+            // This should not hang, but wrap it in a timeout just in case.
+            .on_timeout(TEARDOWN_TIMEOUT, || Err(anyhow!("Timeout waiting for test to destroy")))
+            .await?
+            .map_err(|e| format_err!("call to destroy test failed: {:?}", e))?;
 
         let destroy_waiter = self.instance.root.take_destroy_waiter();
         drop(self.instance);
@@ -603,11 +655,20 @@ async fn get_realm(
         debug_capabilities: vec![],
         stop_timeout_ms: None,
     });
-    wrapper_realm.replace_realm_decl(test_wrapper_decl).await?;
-    let test_root_child_opts = ChildOptions::new().environment(HERMETIC_ENVIRONMENT_NAME).eager();
 
-    let test_root =
-        wrapper_realm.add_child(TEST_ROOT_REALM_NAME, test_url, test_root_child_opts).await?;
+    // Add the collection to hold the test. This lets us individually destroy the test.
+    test_wrapper_decl.collections.push(cm_rust::CollectionDecl {
+        name: TEST_ROOT_COLLECTION.to_string(),
+        durability: fdecl::Durability::Transient,
+        environment: Some(HERMETIC_ENVIRONMENT_NAME.into()),
+        allowed_offers: cm_types::AllowedOffers::StaticOnly,
+        allow_long_names: false,
+        persistent_storage: None,
+    });
+
+    wrapper_realm.replace_realm_decl(test_wrapper_decl).await?;
+
+    let test_root = Ref::collection(TEST_ROOT_COLLECTION);
     let archivist = wrapper_realm
         .add_child(ARCHIVIST_REALM_NAME, ARCHIVIST_FOR_EMBEDDING_URL, ChildOptions::new().eager())
         .await?;
@@ -656,7 +717,7 @@ async fn get_realm(
             Route::new()
                 .capability(Capability::protocol_by_name("fuchsia.logger.Log"))
                 .from(&archivist)
-                .to(&test_root),
+                .to(test_root.clone()),
         )
         .await?;
     wrapper_realm
@@ -664,7 +725,7 @@ async fn get_realm(
             Route::new()
                 .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                 .from(&archivist)
-                .to(&test_root)
+                .to(test_root.clone())
                 .to(&resolver),
         )
         .await?;
@@ -676,17 +737,7 @@ async fn get_realm(
                 .capability(Capability::protocol::<fdiagnostics::ArchiveAccessorMarker>())
                 .from(&archivist)
                 .to(Ref::parent())
-                .to(&test_root),
-        )
-        .await?;
-
-    // test root to parent
-    wrapper_realm
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol::<ftest::SuiteMarker>())
-                .from(&test_root)
-                .to(Ref::parent()),
+                .to(test_root.clone()),
         )
         .await?;
 
@@ -709,48 +760,48 @@ async fn get_realm(
             Route::new()
                 .capability(
                     Capability::event_stream("started_v2")
-                        .with_scope(&test_root)
+                        .with_scope(test_root.clone())
                         .with_scope(&enclosing_env)
                         .with_scope(&resolver),
                 )
                 .capability(
                     Capability::event_stream("stopped_v2")
-                        .with_scope(&test_root)
+                        .with_scope(test_root.clone())
                         .with_scope(&enclosing_env)
                         .with_scope(&resolver),
                 )
                 .capability(
                     Capability::event_stream("debug_started_v2")
-                        .with_scope(&test_root)
+                        .with_scope(test_root.clone())
                         .with_scope(&enclosing_env)
                         .with_scope(&resolver),
                 )
                 .capability(
                     Capability::event_stream("destroyed_v2")
-                        .with_scope(&test_root)
+                        .with_scope(test_root.clone())
                         .with_scope(&enclosing_env)
                         .with_scope(&resolver),
                 )
                 .capability(
                     Capability::event_stream("capability_requested_v2")
-                        .with_scope(&test_root)
+                        .with_scope(test_root.clone())
                         .with_scope(&enclosing_env)
                         .with_scope(&resolver),
                 )
                 .capability(
                     Capability::event_stream("directory_ready_v2")
-                        .with_scope(&test_root)
+                        .with_scope(test_root.clone())
                         .with_scope(&enclosing_env)
                         .with_scope(&resolver),
                 )
                 .capability(
                     Capability::event_stream("discovered_v2")
-                        .with_scope(&test_root)
+                        .with_scope(test_root.clone())
                         .with_scope(&enclosing_env)
                         .with_scope(&resolver),
                 )
                 .from(Ref::parent())
-                .to(&test_root),
+                .to(test_root.clone()),
         )
         .await?;
 
@@ -772,7 +823,7 @@ async fn get_realm(
                 .capability(Capability::protocol::<fv1sys::LauncherMarker>())
                 .capability(Capability::protocol::<fv1sys::LoaderMarker>())
                 .from(&enclosing_env)
-                .to(&test_root),
+                .to(test_root.clone()),
         )
         .await?;
 
@@ -791,6 +842,16 @@ async fn get_realm(
         availability: cm_rust::Availability::Required,
     }));
     wrapper_realm.replace_component_decl(&enclosing_env, enclosing_env_decl).await?;
+
+    // wrapper realm to parent
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fcomponent::RealmMarker>())
+                .from(Ref::framework())
+                .to(Ref::parent()),
+        )
+        .await?;
 
     // wrapper realm to archivist
     wrapper_realm
@@ -811,22 +872,22 @@ async fn get_realm(
             Route::new()
                 .capability(
                     Capability::event_stream("stopped_v2")
-                        .with_scope(&test_root)
+                        .with_scope(test_root.clone())
                         .with_scope(&enclosing_env),
                 )
                 .capability(
                     Capability::event_stream("destroyed_v2")
-                        .with_scope(&test_root)
+                        .with_scope(test_root.clone())
                         .with_scope(&enclosing_env),
                 )
                 .capability(
                     Capability::event_stream("capability_requested_v2")
-                        .with_scope(&test_root)
+                        .with_scope(test_root.clone())
                         .with_scope(&enclosing_env),
                 )
                 .capability(
                     Capability::event_stream("directory_ready_v2")
-                        .with_scope(&test_root)
+                        .with_scope(test_root.clone())
                         .with_scope(&enclosing_env),
                 )
                 .from(Ref::parent())
@@ -841,6 +902,7 @@ async fn get_realm(
                 .capability(Capability::protocol::<fdiagnostics::ArchiveAccessorMarker>())
                 // from test root
                 .capability(Capability::protocol::<ftest::SuiteMarker>())
+                .capability(Capability::protocol::<fcomponent::RealmMarker>())
                 .from(&wrapper_realm)
                 .to(Ref::parent()),
         )

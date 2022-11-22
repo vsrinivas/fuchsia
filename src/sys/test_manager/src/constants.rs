@@ -6,6 +6,7 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 
 pub const TEST_ROOT_REALM_NAME: &'static str = "test_root";
+pub const TEST_ROOT_COLLECTION: &'static str = "test";
 
 // TODO(fxbug.dev/100034): Delete these once we no longer need to hard code these in the code.
 pub const HERMETIC_ENVIRONMENT_NAME: &'static str = "hermetic";
