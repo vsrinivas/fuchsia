@@ -167,8 +167,35 @@ class Coordinator : public CompositeManagerBridge,
                                fbl::RefPtr<DriverHost> target_driver_host,
                                fbl::RefPtr<Device>* fidl_proxy_out);
 
+  async_dispatcher_t* dispatcher() const { return dispatcher_; }
+  const zx::resource& root_resource() const { return config_.root_resource; }
+  const zx::resource& mexec_resource() const { return config_.mexec_resource; }
+  zx::duration resume_timeout() const { return config_.resume_timeout; }
+  fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args() const { return config_.boot_args; }
+  SystemPowerState shutdown_system_state() const { return shutdown_system_state_; }
+  SystemPowerState default_shutdown_system_state() const {
+    return config_.default_shutdown_system_state;
+  }
+  void set_shutdown_system_state(SystemPowerState state) { shutdown_system_state_ = state; }
+
+  void set_running(bool running) { running_ = running; }
+  void set_power_manager_registered(bool registered) { power_manager_registered_ = registered; }
+  bool power_manager_registered() { return power_manager_registered_; }
+
+  void set_loader_service_connector(LoaderServiceConnector loader_service_connector) {
+    loader_service_connector_ = std::move(loader_service_connector);
+  }
+  // Set the DFv2 driver runner. `runner` must outlive this class.
+  void set_driver_runner(dfv2::DriverRunner* runner) { driver_runner_ = runner; }
+
+  SystemStateManager& system_state_manager() { return system_state_manager_; }
+
   // Function to attempt binding a driver to the device.
   zx_status_t AttemptBind(const MatchedDriverInfo matched_driver, const fbl::RefPtr<Device>& dev);
+
+  // These methods are used by the DriverHost class to register in the coordinator's bookkeeping
+  void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }
+  void UnregisterDriverHost(DriverHost* dh) { driver_hosts_.erase(*dh); }
 
   // Returns URL to driver that should be bound to fragments of composite devices.
   std::string GetFragmentDriverUrl() const;
@@ -181,12 +208,6 @@ class Coordinator : public CompositeManagerBridge,
     return driver_loader_.LoadDriverUrl(GetFragmentProxyDriverUrl());
   }
 
-  zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
-
-  // These methods are used by the DriverHost class to register in the coordinator's bookkeeping
-  void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }
-  void UnregisterDriverHost(DriverHost* dh) { driver_hosts_.erase(*dh); }
-
   using RegisterWithPowerManagerCompletion = fit::callback<void(zx_status_t)>;
   void RegisterWithPowerManager(fidl::ClientEnd<fuchsia_io::Directory> devfs,
                                 RegisterWithPowerManagerCompletion completion);
@@ -195,45 +216,34 @@ class Coordinator : public CompositeManagerBridge,
       fidl::ClientEnd<fuchsia_device_manager::SystemStateTransition> system_state_transition,
       fidl::ClientEnd<fuchsia_io::Directory> devfs, RegisterWithPowerManagerCompletion completion);
 
-  zx_status_t SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi);
-
   uint32_t GetNextDfv2DeviceId() { return next_dfv2_device_id_++; }
 
-  // Setter functions.
-  void set_shutdown_system_state(SystemPowerState state) { shutdown_system_state_ = state; }
-  void set_running(bool running) { running_ = running; }
-  void set_power_manager_registered(bool registered) { power_manager_registered_ = registered; }
-  bool power_manager_registered() { return power_manager_registered_; }
-  void set_loader_service_connector(LoaderServiceConnector loader_service_connector) {
-    loader_service_connector_ = std::move(loader_service_connector);
-  }
-  // Set the DFv2 driver runner. `runner` must outlive this class.
-  void set_driver_runner(dfv2::DriverRunner* runner) { driver_runner_ = runner; }
-
-  // Getter functions.
-  async_dispatcher_t* dispatcher() const { return dispatcher_; }
-  const zx::resource& root_resource() const { return config_.root_resource; }
-  const zx::resource& mexec_resource() const { return config_.mexec_resource; }
-  zx::duration resume_timeout() const { return config_.resume_timeout; }
-  fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args() const { return config_.boot_args; }
-  SystemPowerState shutdown_system_state() const { return shutdown_system_state_; }
-  SystemPowerState default_shutdown_system_state() const {
-    return config_.default_shutdown_system_state;
-  }
-  SystemStateManager& system_state_manager() { return system_state_manager_; }
   const fbl::RefPtr<Device>& root_device() { return root_device_; }
   const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
+
   Devfs& devfs() { return devfs_; }
+
+  zx_status_t SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi);
+
   SuspendResumeManager* suspend_resume_manager() { return suspend_resume_manager_.get(); }
+
   InspectManager& inspect_manager() { return *inspect_manager_; }
   DriverLoader& driver_loader() { return driver_loader_; }
+
   DeviceManager* device_manager() const { return device_manager_.get(); }
+
   NodeGroupManager* node_group_manager() const { return node_group_manager_.get(); }
+
   BindDriverManager* bind_driver_manager() const { return bind_driver_manager_.get(); }
+
   FirmwareLoader* firmware_loader() const { return firmware_loader_.get(); }
+
   zx::vmo& mexec_kernel_zbi() { return mexec_kernel_zbi_; }
   zx::vmo& mexec_data_zbi() { return mexec_data_zbi_; }
+
   component::OutgoingDirectory* outgoing() { return outgoing_; }
+
+  zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
 
  private:
   // CompositeManagerBridge interface
