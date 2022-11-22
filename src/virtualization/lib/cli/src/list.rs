@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    crate::platform::PlatformServices,
     anyhow::Error,
     fidl_fuchsia_virtualization::{GuestManagerProxy, GuestStatus},
-    fuchsia_zircon as zx, guest_cli_args as arguments,
+    guest_cli_args as arguments,
     prettytable::{cell, format::consts::FORMAT_CLEAN, row, Table},
 };
 
@@ -20,15 +21,16 @@ fn guest_status_to_string(status: GuestStatus) -> &'static str {
     }
 }
 
-fn uptime_to_string(uptime: Option<zx::Duration>) -> String {
-    match uptime {
+fn uptime_to_string(uptime_nanos: Option<i64>) -> String {
+    match uptime_nanos {
         Some(uptime) => {
-            if uptime < zx::Duration::from_nanos(0) {
+            if uptime < 0 {
                 "Invalid negative uptime!".to_string()
             } else {
-                let seconds = uptime.into_seconds() % 60;
-                let minutes = uptime.into_minutes() % 60;
-                let hours = uptime.into_hours();
+                let uptime = std::time::Duration::from_nanos(uptime as u64);
+                let seconds = uptime.as_secs() % 60;
+                let minutes = (uptime.as_secs() / 60) % 60;
+                let hours = uptime.as_secs() / 3600;
                 format!("{:0>2}:{:0>2}:{:0>2} HH:MM:SS", hours, minutes, seconds)
             }
         }
@@ -36,7 +38,7 @@ fn uptime_to_string(uptime: Option<zx::Duration>) -> String {
     }
 }
 
-pub async fn get_detailed_information(
+async fn get_detailed_information(
     guest_type: arguments::GuestType,
     manager: GuestManagerProxy,
 ) -> Result<String, Error> {
@@ -52,10 +54,7 @@ pub async fn get_detailed_information(
 
     table.add_row(row!["Guest package:", guest_type.package_url()]);
     table.add_row(row!["Guest status:", guest_status_to_string(guest_status)]);
-    table.add_row(row![
-        "Guest uptime:",
-        uptime_to_string(guest_info.uptime.map(|val| zx::Duration::from_nanos(val)))
-    ]);
+    table.add_row(row!["Guest uptime:", uptime_to_string(guest_info.uptime)]);
 
     if guest_status == GuestStatus::NotStarted {
         return Ok(table.to_string());
@@ -163,7 +162,7 @@ pub async fn get_detailed_information(
     Ok(table_string)
 }
 
-pub async fn get_enviornment_summary(
+async fn get_environment_summary(
     managers: Vec<(String, GuestManagerProxy)>,
 ) -> Result<String, Error> {
     let mut table = Table::new();
@@ -176,13 +175,33 @@ pub async fn get_enviornment_summary(
                 guest_status_to_string(
                     guest_info.guest_status.expect("guest status should always be set")
                 ),
-                uptime_to_string(guest_info.uptime.map(|val| zx::Duration::from_nanos(val)))
+                uptime_to_string(guest_info.uptime)
             ]),
             Err(_) => table.add_row(row![name, "Unavailable", "--:--:-- HH:MM:SS"]),
         };
     }
 
     Ok(table.to_string())
+}
+
+pub async fn handle_list<P: PlatformServices>(
+    services: &P,
+    args: &arguments::ListArgs,
+) -> Result<String, Error> {
+    match args.guest_type {
+        Some(guest_type) => {
+            let manager = services.connect_to_manager(guest_type).await?;
+            get_detailed_information(guest_type, manager).await
+        }
+        None => {
+            let mut managers = Vec::new();
+            for guest_type in arguments::GuestType::all_guests() {
+                let manager = services.connect_to_manager(guest_type).await?;
+                managers.push((guest_type.to_string(), manager));
+            }
+            get_environment_summary(managers).await
+        }
+    }
 }
 
 #[cfg(test)]
@@ -225,7 +244,7 @@ mod test {
     async fn negative_uptime() {
         // Note that a negative duration should never happen as we're measuring duration
         // monotonically from a single process.
-        let duration = zx::Duration::from_seconds(-5);
+        let duration = -5;
         let actual = uptime_to_string(Some(duration));
         let expected = "Invalid negative uptime!";
 
@@ -234,12 +253,12 @@ mod test {
 
     #[fasync::run_until_stalled(test)]
     async fn very_large_uptime() {
-        let hours = zx::Duration::from_hours(123);
-        let minutes = zx::Duration::from_minutes(45);
-        let seconds = zx::Duration::from_seconds(54);
+        let hours = std::time::Duration::from_secs(123 * 60 * 60);
+        let minutes = std::time::Duration::from_secs(45 * 60);
+        let seconds = std::time::Duration::from_secs(54);
         let duration = hours + minutes + seconds;
 
-        let actual = uptime_to_string(Some(duration));
+        let actual = uptime_to_string(Some(duration.as_nanos() as i64));
         let expected = "123:45:54 HH:MM:SS";
 
         assert_eq!(actual, expected);
@@ -254,13 +273,13 @@ mod test {
                 "debian".to_string(),
                 serve_mock_manager(Some(GuestInfo {
                     guest_status: Some(GuestStatus::Running),
-                    uptime: Some(zx::Duration::from_seconds(123).into_nanos()),
+                    uptime: Some(std::time::Duration::from_secs(123).as_nanos() as i64),
                     ..GuestInfo::EMPTY
                 })),
             ),
         ];
 
-        let actual = get_enviornment_summary(managers).await.unwrap();
+        let actual = get_environment_summary(managers).await.unwrap();
         let expected = concat!(
             "+---------+-------------+-------------------+\n",
             "| Guest   | Status      | Uptime            |\n",
@@ -280,7 +299,7 @@ mod test {
     async fn get_detailed_info_stopped_clean() {
         let manager = serve_mock_manager(Some(GuestInfo {
             guest_status: Some(GuestStatus::Stopped),
-            uptime: Some(zx::Duration::from_seconds(5).into_nanos()),
+            uptime: Some(std::time::Duration::from_secs(5).as_nanos() as i64),
             ..GuestInfo::EMPTY
         }));
 
@@ -301,7 +320,7 @@ mod test {
     async fn get_detailed_info_stopped_guest_failure() {
         let manager = serve_mock_manager(Some(GuestInfo {
             guest_status: Some(GuestStatus::Stopped),
-            uptime: Some(zx::Duration::from_seconds(65).into_nanos()),
+            uptime: Some(std::time::Duration::from_secs(65).as_nanos() as i64),
             stop_error: Some(GuestError::InternalError),
             ..GuestInfo::EMPTY
         }));
@@ -322,7 +341,7 @@ mod test {
     async fn get_detailed_info_running_guest() {
         let manager = serve_mock_manager(Some(GuestInfo {
             guest_status: Some(GuestStatus::Running),
-            uptime: Some(zx::Duration::from_minutes(125).into_nanos()),
+            uptime: Some(std::time::Duration::from_secs(125 * 60).as_nanos() as i64),
             guest_descriptor: Some(GuestDescriptor {
                 num_cpus: Some(4),
                 guest_memory: Some(1073741824),

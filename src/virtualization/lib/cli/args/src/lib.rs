@@ -7,6 +7,9 @@ use {
     std::fmt,
 };
 
+#[cfg(not(target_os = "fuchsia"))]
+use ffx_core::ffx_command;
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GuestType {
     Debian,
@@ -40,6 +43,14 @@ impl fmt::Display for GuestType {
 }
 
 impl GuestType {
+    pub fn moniker(&self) -> &str {
+        match self {
+            GuestType::Debian => "core/debian-guest-manager",
+            GuestType::Termina => "core/termina-guest-manager",
+            GuestType::Zircon => "core/zircon-guest-manager",
+        }
+    }
+
     pub fn guest_manager_interface(&self) -> &str {
         match *self {
             GuestType::Zircon => "fuchsia.virtualization.ZirconGuestManager",
@@ -131,8 +142,9 @@ pub struct SerialArgs {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// List available guest environments. Usage: guest list [guest-type]
+/// List available guest environments.
 #[argh(subcommand, name = "list")]
+#[cfg_attr(not(target_os = "fuchsia"), ffx_command())]
 pub struct ListArgs {
     #[argh(positional)]
     /// optional guest type to get detailed information about

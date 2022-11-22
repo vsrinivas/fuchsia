@@ -11,7 +11,6 @@ use {
 mod arguments;
 mod balloon;
 mod launch;
-mod list;
 mod serial;
 mod services;
 mod socat;
@@ -23,6 +22,7 @@ mod wipe;
 #[fuchsia::main(logging_tags = ["guest"])]
 async fn main() -> Result<(), Error> {
     let options: GuestOptions = argh::from_env();
+    let services = guest_cli::platform::FuchsiaPlatformServices::new();
 
     match options.nested {
         SubCommands::Launch(launch_args) => {
@@ -51,7 +51,7 @@ async fn main() -> Result<(), Error> {
             serial::handle_serial(guest).await
         }
         SubCommands::List(list_args) => {
-            let output = list::handle_list(&list_args).await?;
+            let output = guest_cli::list::handle_list(&services, &list_args).await?;
             println!("{}", output);
             Ok(())
         }

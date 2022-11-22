@@ -83,6 +83,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/triage:ffx_triage",
       "//src/developer/ffx/plugins/wlan:ffx_wlan",
       "//src/storage/ffx:ffx_storage",
+      "//src/virtualization/ffx:ffx_guest",
     ]
 
     args_sources = [ "src/args.rs" ]

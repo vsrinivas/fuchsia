@@ -11,6 +11,9 @@ group("args") {
 rustc_library("guest_cli_args") {
   edition = "2021"
   deps = [ "//third_party/rust_crates:argh" ]
+  if (is_host) {
+    deps += [ "//src/developer/ffx/core:lib" ]
+  }
 
   sources = [ "src/lib.rs" ]
 }
