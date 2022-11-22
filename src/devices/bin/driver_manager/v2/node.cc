@@ -396,16 +396,12 @@ std::string Node::TopoName() const {
   return fxl::JoinStrings(names, ".");
 }
 
-fuchsia_driver_framework::wire::NodeAddArgs Node::CreateAddArgs(fidl::AnyArena& arena) {
-  fuchsia_driver_framework::wire::NodeAddArgs args(arena);
-  args.set_name(arena, arena, name());
-  args.set_offers(arena, offers());
-  args.set_properties(
-      arena,
-      fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty>::FromExternal(properties_));
-  args.set_symbols(
-      arena, fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol>::FromExternal(symbols_));
-  return args;
+fuchsia_driver_index::wire::MatchDriverArgs Node::CreateMatchArgs(fidl::AnyArena& arena) {
+  return fuchsia_driver_index::wire::MatchDriverArgs::Builder(arena)
+      .name(arena, name())
+      .properties(
+          fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty>::FromExternal(properties_))
+      .Build();
 }
 
 void Node::OnBind() const {

@@ -107,12 +107,20 @@ type MatchedDriver = flexible union {
     3: node_representation MatchedNodeRepresentationInfo;
 };
 
+type MatchDriverArgs = table {
+    /// Properties of the node to be matched.
+    1: properties fuchsia.driver.framework.NodePropertyVector;
+
+    /// The name of the node to be matched. Used for debugging purposes.
+    2: name fuchsia.driver.framework.NodeName;
+};
+
 /// Protocol through which the driver index can be queried.
 @discoverable
 protocol DriverIndex {
     /// Match a set of device arguments to a driver package URL.
     MatchDriver(struct {
-        args fuchsia.driver.framework.NodeAddArgs;
+        args MatchDriverArgs;
     }) -> (struct {
         driver MatchedDriver;
     }) error zx.status;
@@ -125,7 +133,7 @@ protocol DriverIndex {
     /// This should only be used by DFv1 and should be removed.
     /// If more than MAX drivers match, only MAX drivers will be returned.
     MatchDriversV1(struct {
-        args fuchsia.driver.framework.NodeAddArgs;
+        args MatchDriverArgs;
     }) -> (struct {
         drivers vector<MatchedDriver>:MAX;
     }) error zx.status;

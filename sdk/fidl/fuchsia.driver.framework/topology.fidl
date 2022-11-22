@@ -22,6 +22,9 @@ const MAX_PROPERTY_COUNT uint8 = 64;
 const MAX_NODE_NAME_LENGTH uint8 = 128;
 const MAX_SYMBOL_NAME_LENGTH uint8 = 128;
 
+alias NodePropertyVector = vector<NodeProperty>:MAX_PROPERTY_COUNT;
+alias NodeName = string:MAX_NODE_NAME_LENGTH;
+
 /// Definition of a symbol provided by a driver for a node. A symbol is local to
 /// a driver host.
 type NodeSymbol = table {
@@ -57,7 +60,7 @@ type NodeProperty = table {
 /// Arguments for adding a node.
 type NodeAddArgs = table {
     /// Name of the node.
-    1: name string:MAX_NODE_NAME_LENGTH;
+    1: name NodeName;
 
     /// Capabilities to offer to the driver that is bound to this node.
     /// The driver must ensure these capabilities are added to its outgoing directory
@@ -68,7 +71,7 @@ type NodeAddArgs = table {
     3: symbols vector<NodeSymbol>:MAX_SYMBOL_COUNT;
 
     /// Properties of the node.
-    4: properties vector<NodeProperty>:MAX_PROPERTY_COUNT;
+    4: properties NodePropertyVector;
 };
 
 /// Protocol through which a parent node controls one of its children.

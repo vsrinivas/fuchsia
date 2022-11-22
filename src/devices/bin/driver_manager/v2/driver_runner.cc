@@ -533,7 +533,7 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
     }
   };
   fidl::Arena<> arena;
-  driver_index_->MatchDriver(node.CreateAddArgs(arena)).Then(std::move(match_callback));
+  driver_index_->MatchDriver(node.CreateMatchArgs(arena)).Then(std::move(match_callback));
 }
 
 zx::result<DriverHost*> DriverRunner::CreateDriverHost() {

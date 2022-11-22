@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.driver.host/cpp/wire.h>
+#include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <list>
@@ -102,7 +103,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
       std::vector<fuchsia_driver_framework::wire::NodeProperty> properties,
       NodeManager* driver_binder, async_dispatcher_t* dispatcher, uint32_t primary_index = 0);
 
-  fuchsia_driver_framework::wire::NodeAddArgs CreateAddArgs(fidl::AnyArena& arena);
+  fuchsia_driver_index::wire::MatchDriverArgs CreateMatchArgs(fidl::AnyArena& arena);
 
   void OnBind() const;
 

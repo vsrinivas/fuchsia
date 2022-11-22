@@ -161,7 +161,7 @@ impl Indexer {
         self.base_repo.replace(base_repo);
     }
 
-    fn match_driver(&self, args: fdf::NodeAddArgs) -> fdi::DriverIndexMatchDriverResult {
+    fn match_driver(&self, args: fdi::MatchDriverArgs) -> fdi::DriverIndexMatchDriverResult {
         if args.properties.is_none() {
             return Err(Status::INVALID_ARGS.into_raw());
         }
@@ -227,7 +227,7 @@ impl Indexer {
         }
     }
 
-    fn match_drivers_v1(&self, args: fdf::NodeAddArgs) -> fdi::DriverIndexMatchDriversV1Result {
+    fn match_drivers_v1(&self, args: fdi::MatchDriverArgs) -> fdi::DriverIndexMatchDriversV1Result {
         if args.properties.is_none() {
             return Err(Status::INVALID_ARGS.into_raw());
         }
@@ -952,8 +952,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(1)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
             let expected_url =
@@ -979,8 +981,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
             let expected_url =
@@ -1005,8 +1009,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(3)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
             let result = proxy.match_driver(args).await.unwrap();
             assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
         }
@@ -1067,8 +1073,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::StringValue("test-value".to_string())),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
 
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
 
@@ -1140,8 +1148,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::EnumValue("test-value".to_string())),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
 
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
 
@@ -1225,8 +1235,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
 
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
 
@@ -1322,8 +1334,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
 
             let result = proxy.match_driver(args).await.unwrap();
 
@@ -1398,8 +1412,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
 
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
@@ -1503,8 +1519,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
 
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
@@ -1593,8 +1611,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
 
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
 
@@ -1704,8 +1724,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
 
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
 
@@ -1932,8 +1954,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
             let result = proxy.match_driver(args).await.unwrap();
 
             assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
@@ -1968,8 +1992,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
             let expected_result = fdi::MatchedDriver::Driver(create_matched_driver_info(
@@ -2009,8 +2035,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
             let result = proxy.match_drivers_v1(args).await.unwrap();
 
             assert_eq!(result, Ok(vec![]));
@@ -2045,8 +2073,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
 
             let expected_result = vec![fdi::MatchedDriver::Driver(create_matched_driver_info(
@@ -2084,8 +2114,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(1)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
             let expected_url = "fuchsia-boot:///#meta/test-bind-component.cm".to_string();
@@ -2106,8 +2138,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
             let expected_url = "fuchsia-boot:///#meta/test-bind2-component.cm".to_string();
@@ -2128,8 +2162,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(3)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
             let result = proxy.match_driver(args).await.unwrap();
             assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
         }
@@ -2217,8 +2253,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::StringValue("thrasher".to_string())),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
 
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
@@ -2241,7 +2279,7 @@ mod tests {
             assert_eq!(expected_result, result);
 
             // Match secondary node.
-            let args = fdf::NodeAddArgs {
+            let args = fdi::MatchDriverArgs {
                 properties: Some(vec![
                     fdf::NodeProperty {
                         key: Some(fdf::NodePropertyKey::StringValue("thrasher".to_string())),
@@ -2254,7 +2292,7 @@ mod tests {
                         ..fdf::NodeProperty::EMPTY
                     },
                 ]),
-                ..fdf::NodeAddArgs::EMPTY
+                ..fdi::MatchDriverArgs::EMPTY
             };
 
             let result = proxy.match_driver(args).await.unwrap().unwrap();
@@ -2372,8 +2410,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::StringValue("thrasher".to_string())),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
 
             let result = proxy.match_driver(args).await.unwrap().unwrap();
 
@@ -2396,7 +2436,7 @@ mod tests {
             assert_eq!(expected_result, result);
 
             // Match secondary node.
-            let args = fdf::NodeAddArgs {
+            let args = fdi::MatchDriverArgs {
                 properties: Some(vec![
                     fdf::NodeProperty {
                         key: Some(fdf::NodePropertyKey::StringValue("thrasher".to_string())),
@@ -2409,7 +2449,7 @@ mod tests {
                         ..fdf::NodeProperty::EMPTY
                     },
                 ]),
-                ..fdf::NodeAddArgs::EMPTY
+                ..fdi::MatchDriverArgs::EMPTY
             };
 
             let result = proxy.match_driver(args).await.unwrap().unwrap();
@@ -2438,8 +2478,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::StringValue("trembler".to_string())),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
 
             let result = proxy.match_driver(args).await.unwrap();
             assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
@@ -2514,9 +2556,9 @@ mod tests {
                     ..fdf::NodeProperty::EMPTY
                 },
             ];
-            let match_args = fdf::NodeAddArgs {
+            let match_args = fdi::MatchDriverArgs {
                 properties: Some(device_properties_match),
-                ..fdf::NodeAddArgs::EMPTY
+                ..fdi::MatchDriverArgs::EMPTY
             };
 
             let result = proxy.match_driver(match_args).await.unwrap().unwrap();
@@ -2545,9 +2587,9 @@ mod tests {
                     ..fdf::NodeProperty::EMPTY
                 },
             ];
-            let mismatch_args = fdf::NodeAddArgs {
+            let mismatch_args = fdi::MatchDriverArgs {
                 properties: Some(device_properties_mismatch),
-                ..fdf::NodeAddArgs::EMPTY
+                ..fdi::MatchDriverArgs::EMPTY
             };
 
             let result = proxy.match_driver(mismatch_args).await.unwrap();
@@ -2645,9 +2687,9 @@ mod tests {
                     ..fdf::NodeProperty::EMPTY
                 },
             ];
-            let match_args = fdf::NodeAddArgs {
+            let match_args = fdi::MatchDriverArgs {
                 properties: Some(device_properties_match),
-                ..fdf::NodeAddArgs::EMPTY
+                ..fdi::MatchDriverArgs::EMPTY
             };
 
             let result = proxy.match_drivers_v1(match_args).await.unwrap().unwrap();
@@ -2690,9 +2732,9 @@ mod tests {
                     ..fdf::NodeProperty::EMPTY
                 },
             ];
-            let mismatch_args = fdf::NodeAddArgs {
+            let mismatch_args = fdi::MatchDriverArgs {
                 properties: Some(device_properties_mismatch),
-                ..fdf::NodeAddArgs::EMPTY
+                ..fdi::MatchDriverArgs::EMPTY
             };
 
             let result = proxy.match_drivers_v1(mismatch_args).await.unwrap().unwrap();
@@ -3423,9 +3465,9 @@ mod tests {
                     ..fdf::NodeProperty::EMPTY
                 },
             ];
-            let match_args = fdf::NodeAddArgs {
+            let match_args = fdi::MatchDriverArgs {
                 properties: Some(device_properties_match),
-                ..fdf::NodeAddArgs::EMPTY
+                ..fdi::MatchDriverArgs::EMPTY
             };
 
             // We can see the node group comes back without a matched composite.
@@ -3625,9 +3667,9 @@ mod tests {
                     ..fdf::NodeProperty::EMPTY
                 },
             ];
-            let match_args = fdf::NodeAddArgs {
+            let match_args = fdi::MatchDriverArgs {
                 properties: Some(device_properties_match),
-                ..fdf::NodeAddArgs::EMPTY
+                ..fdi::MatchDriverArgs::EMPTY
             };
 
             // We can see the node group comes back without a matched composite.
@@ -3836,9 +3878,9 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(10)),
                 ..fdf::NodeProperty::EMPTY
             }];
-            let match_args = fdf::NodeAddArgs {
+            let match_args = fdi::MatchDriverArgs {
                 properties: Some(device_properties_match),
-                ..fdf::NodeAddArgs::EMPTY
+                ..fdi::MatchDriverArgs::EMPTY
             };
 
             // We can see the node group comes back without a matched composite.
@@ -4117,8 +4159,10 @@ mod tests {
                 value: Some(fdf::NodePropertyValue::IntValue(1)),
                 ..fdf::NodeProperty::EMPTY
             };
-            let args =
-                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let args = fdi::MatchDriverArgs {
+                properties: Some(vec![property]),
+                ..fdi::MatchDriverArgs::EMPTY
+            };
 
             // First attempt should fail since we haven't registered it.
             let result = proxy.match_driver(args.clone()).await.unwrap();
