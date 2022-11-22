@@ -251,21 +251,19 @@ executable("kernel_log_integration_test_exe") {
   sources = [ "kernel_log_integration_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp",
+    "//sdk/lib/component/incoming/cpp",
     "//src/developer/forensics/feedback/attachments",
     "//src/developer/forensics/feedback/attachments:kernel_log",
     "//src/developer/forensics/utils:errors",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture:gtest",
+    "//src/lib/testing/predicates",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 executable("last_reboot_unittest_exe") {

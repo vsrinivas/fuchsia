@@ -74,7 +74,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/connectivity/bluetooth/hci/virtual:fuchsia_driver",
     "//src/connectivity/bluetooth/tools/bt-hci-tool:bin",
     "//src/connectivity/bluetooth/tools/bt-intel-tool:bin",
-    "//src/developer/forensics/feedback/tests:kernel_log_integration_test_exe",
 
     # TODO(https://fxbug.dev/111342): Remove.
     "//src/devices/block/drivers/ums-function:ums-function-driver",

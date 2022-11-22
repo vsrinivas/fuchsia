@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/boot/c/fidl.h>
-#include <fuchsia/boot/cpp/fidl.h>
+#include <fidl/fuchsia.boot/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/component/incoming/cpp/service_client.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/inspect/cpp/vmo/types.h>
@@ -13,6 +13,7 @@
 #include <zircon/errors.h>
 
 #include <memory>
+#include <string_view>
 #include <vector>
 
 #include <gmock/gmock.h>
@@ -22,6 +23,7 @@
 #include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/lib/testing/predicates/status.h"
 
 namespace forensics::feedback {
 namespace {
@@ -60,16 +62,15 @@ class CollectKernelLogTest : public gtest::RealLoopFixture {
   std::unique_ptr<RedactorBase> redactor_;
 };
 
-void SendToKernelLog(const std::string& str) {
-  zx::channel local, remote;
-  ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
-  constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
-  ASSERT_EQ(fdio_service_connect(kWriteOnlyLogPath, remote.release()), ZX_OK);
+void SendToKernelLog(std::string_view str) {
+  auto client_end = component::Connect<fuchsia_boot::WriteOnlyLog>();
+  ASSERT_OK(client_end.status_value());
 
-  zx::debuglog log;
-  ASSERT_EQ(fuchsia_boot_WriteOnlyLogGet(local.get(), log.reset_and_get_address()), ZX_OK);
+  auto result = fidl::WireSyncClient(std::move(*client_end))->Get();
+  ASSERT_OK(result.status());
+  zx::debuglog log = std::move(result->log);
 
-  zx_debuglog_write(log.get(), 0, str.c_str(), str.size());
+  zx_debuglog_write(log.get(), 0, str.data(), str.size());
 }
 
 TEST_F(CollectKernelLogTest, Succeed_BasicCase) {
