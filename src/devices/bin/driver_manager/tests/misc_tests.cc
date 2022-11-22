@@ -397,11 +397,11 @@ TEST(MiscTestCase, DeviceAlreadyBoundFromDriverIndex) {
       &coordinator, fidl::ClientEnd<fuchsia_device_manager::DriverHostController>(),
       fidl::ClientEnd<fuchsia_io::Directory>(), zx::process{});
   dev->set_host(std::move(host));
-  status = coordinator.bind_driver_manager()->BindDriverToDevice(dev, kFakeDriverUrl);
+  status = coordinator.bind_driver_manager().BindDriverToDevice(dev, kFakeDriverUrl);
   ASSERT_OK(status);
   loop.RunUntilIdle();
 
-  status = coordinator.bind_driver_manager()->BindDriverToDevice(dev, kFakeDriverUrl);
+  status = coordinator.bind_driver_manager().BindDriverToDevice(dev, kFakeDriverUrl);
   ASSERT_STATUS(status, ZX_ERR_ALREADY_BOUND);
   loop.RunUntilIdle();
 
@@ -501,7 +501,7 @@ TEST(MiscTestCase, AddNodeGroup) {
 
   ASSERT_OK(coordinator.AddNodeGroup(device, "group", group_desc));
   loop.RunUntilIdle();
-  ZX_ASSERT(coordinator.node_group_manager()->node_groups().count("group") != 0);
+  ZX_ASSERT(coordinator.node_group_manager().node_groups().count("group") != 0);
 
   controller_endpoints->server.reset();
   coordinator_endpoints->client.reset();

@@ -27,13 +27,13 @@ zx_status_t DeviceManager::AddDevice(
   static_assert(fdm::wire::kDeviceNameMax == ZX_DEVICE_NAME_MAX);
   static_assert(fdm::wire::kPropertiesMax <= UINT32_MAX);
 
-  if (coordinator_->suspend_resume_manager()->InSuspend()) {
+  if (coordinator_->suspend_resume_manager().InSuspend()) {
     LOGF(ERROR, "Add device '%.*s' forbidden in suspend", static_cast<int>(name.size()),
          name.data());
     return ZX_ERR_BAD_STATE;
   }
 
-  if (coordinator_->suspend_resume_manager()->InResume()) {
+  if (coordinator_->suspend_resume_manager().InResume()) {
     LOGF(ERROR, "Add device '%.*s' forbidden in resume", static_cast<int>(name.size()),
          name.data());
     return ZX_ERR_BAD_STATE;

@@ -66,7 +66,7 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       publish_task_([this] {
         // TODO(tesienbe): We probably should do something with the return value
         // from this...
-        coordinator->bind_driver_manager()->BindDevice(fbl::RefPtr(this));
+        coordinator->bind_driver_manager().BindDevice(fbl::RefPtr(this));
       }),
       outgoing_dir_(std::move(outgoing_dir)),
       inspect_(coord->inspect_manager().devices(), coord->inspect_manager().device_count(),
@@ -807,15 +807,14 @@ void Device::BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync
   auto dev = fbl::RefPtr(this);
   std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
 
-  if (dev->coordinator->suspend_resume_manager()->InSuspend()) {
+  if (dev->coordinator->suspend_resume_manager().InSuspend()) {
     LOGF(ERROR, "'bind-device' is forbidden in suspend");
     completer.ReplyError(ZX_ERR_BAD_STATE);
     return;
   }
 
   VLOGF(1, "'bind-device' device %p '%s'", dev.get(), dev->name().data());
-  zx_status_t status =
-      dev->coordinator->bind_driver_manager()->BindDriverToDevice(dev, driver_path);
+  zx_status_t status = dev->coordinator->bind_driver_manager().BindDriverToDevice(dev, driver_path);
 
   // Notify observers that this device is available again
   // Needed for non-auto-binding drivers like GPT against block, etc
@@ -852,7 +851,7 @@ void Device::LoadFirmware(LoadFirmwareRequestView request, LoadFirmwareCompleter
   memcpy(fw_path, request->fw_path.data(), request->fw_path.size());
   fw_path[request->fw_path.size()] = 0;
 
-  dev->coordinator->firmware_loader()->LoadFirmware(
+  dev->coordinator->firmware_loader().LoadFirmware(
       dev, driver_path, fw_path,
       [completer = completer.ToAsync()](zx::result<LoadFirmwareResult> result) mutable {
         if (result.is_error()) {
@@ -975,7 +974,7 @@ zx::result<std::shared_ptr<dfv2::Node>> Device::CreateDFv2Device() {
 
   auto dfv2_device =
       dfv2::Device::CreateAndServe(topo_path, name, dfv2_device_symbol_, coordinator->dispatcher(),
-                                   coordinator->outgoing(), std::move(server), this, host().get());
+                                   &coordinator->outgoing(), std::move(server), this, host().get());
   if (dfv2_device.is_error()) {
     return dfv2_device.take_error();
   }
