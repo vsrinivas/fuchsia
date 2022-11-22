@@ -145,6 +145,22 @@
     "C/C++ Include Guard.Spaces After Endif": 2,
 
     ////////
+    // Go
+
+    "gopls": {
+      // Restrict directories that gopls will search in, otherwise it can fail
+      // with "Exhausted" after one million files.
+      "build.directoryFilters": [
+        "-.cache",
+        "-.cipd",
+        "-.git",
+        "-.jiri_root",
+        "-out",
+        "-prebuilt",
+      ]
+    },
+
+    ////////
     // Bazel
     //
     "bazel.enableCodeLens": true,
