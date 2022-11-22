@@ -29,7 +29,7 @@ fidl/{{ .LibraryDots }}/cpp/markers.h
 
       static constexpr ::fidl::internal::Openness kOpenness = {{ .OpennessValue }};
 
-      {{- range .Methods }}
+      {{ range .Methods }}
         {{- .Docs }}
         class {{ .Marker.Self }} final {
           {{ .Marker.Self }}() = delete;

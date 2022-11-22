@@ -14,6 +14,7 @@ class UnknownInteractionsProtocol final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kOpen;
+
   class StrictOneWay final {
     StrictOneWay() = delete;
 
@@ -499,6 +500,7 @@ class UnknownInteractionsAjarProtocol final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kAjar;
+
   class StrictOneWay final {
     StrictOneWay() = delete;
 
@@ -872,6 +874,7 @@ class UnknownInteractionsClosedProtocol final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class StrictOneWay final {
     StrictOneWay() = delete;
 
@@ -1119,6 +1122,7 @@ class UnknownInteractionsDriverProtocol final {
   using Transport = ::fidl::internal::DriverTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kOpen;
+
   class StrictOneWay final {
     StrictOneWay() = delete;
 
@@ -1380,6 +1384,7 @@ class UnknownInteractionsAjarDriverProtocol final {
   using Transport = ::fidl::internal::DriverTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kAjar;
+
   class StrictOneWay final {
     StrictOneWay() = delete;
 
@@ -1529,6 +1534,7 @@ class UnknownInteractionsClosedDriverProtocol final {
   using Transport = ::fidl::internal::DriverTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class StrictOneWay final {
     StrictOneWay() = delete;
 

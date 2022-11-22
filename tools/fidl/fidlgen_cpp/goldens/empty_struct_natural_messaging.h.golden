@@ -65,13 +65,6 @@ class ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive> final : public :
   using ::test_emptystruct::EmptyProtocolReceiveRequest::EmptyProtocolReceiveRequest;
   Event(::test_emptystruct::EmptyProtocolReceiveRequest v) : EmptyProtocolReceiveRequest(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_emptystruct::EmptyProtocolReceiveRequest;
-};
 namespace test_emptystruct {
 }  // namespace test_emptystruct
 
@@ -80,13 +73,6 @@ class ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive> final 
  public:
   using ::test_emptystruct::EmptyProtocolSendAndReceiveResponse::EmptyProtocolSendAndReceiveResponse;
   Response(::test_emptystruct::EmptyProtocolSendAndReceiveResponse v) : EmptyProtocolSendAndReceiveResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_emptystruct::EmptyProtocolSendAndReceiveResponse;
 };
 namespace test_emptystruct {
 }  // namespace test_emptystruct
@@ -182,7 +168,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_emptystruct::EmptyProtocol
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fit::result<::fidl::Error> Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload);
+  ::fit::result<::fidl::Error> Receive(const ::test_emptystruct::EmptyProtocolReceiveRequest& payload);
 };
 
 template <>
@@ -191,7 +177,7 @@ class ::fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fit::result<::fidl::Error> Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload);
+  ::fit::result<::fidl::Error> Receive(const ::test_emptystruct::EmptyProtocolReceiveRequest& payload);
 };
 
 #endif  // __Fuchsia__

@@ -90,15 +90,15 @@ func (p Protocol) WithHlMessaging() protocolWithHlMessaging {
 // These correspond to templated classes and functions forward-declared in
 // /src/lib/fidl/cpp/include/lib/fidl/cpp/unified_messaging.h
 var (
-	NaturalRequest          = fidlNs.member("Request")
-	NaturalResponse         = fidlNs.member("Response")
-	NaturalEvent            = fidlNs.member("Event")
-	NaturalErrorsIn         = fidlNs.member("ErrorsIn")
-	NaturalResult           = transportNs.member("Result")
-	MessageTraits           = internalNs.member("MessageTraits")
-	MessageBase             = internalNs.member("MessageBase")
-	NaturalMessageConverter = internalNs.member("NaturalMessageConverter")
-	NaturalMethodTypes      = internalNs.member("NaturalMethodTypes")
+	NaturalRequest           = fidlNs.member("Request")
+	NaturalResponse          = fidlNs.member("Response")
+	NaturalEvent             = fidlNs.member("Event")
+	NaturalErrorsIn          = fidlNs.member("ErrorsIn")
+	NaturalResult            = transportNs.member("Result")
+	MessageTraits            = internalNs.member("MessageTraits")
+	MessageBase              = internalNs.member("MessageBase")
+	ResponseMessageConverter = internalNs.member("ResponseMessageConverter")
+	NaturalMethodTypes       = internalNs.member("NaturalMethodTypes")
 
 	// Client types
 	NaturalClientImpl           = internalNs.member("NaturalClientImpl")
@@ -603,16 +603,11 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, me
 
 type unifiedMethod struct {
 	NaturalRequest           name
-	NaturalRequestConverter  name
-	RequestMessageTraits     name
 	NaturalResponse          name
 	NaturalResponseConverter name
 	NaturalResult            name
 	NaturalErrorsIn          name
-	ResponseMessageTraits    name
 	NaturalEvent             name
-	NaturalEventConverter    name
-	EventMessageTraits       name
 	ClientCallbackTraits     name
 	NaturalThenable          name
 	NaturalMethodTypes       name
@@ -631,16 +626,11 @@ func newUnifiedMethod(methodMarker name, unifiedTypes unifiedMessagingDetails) u
 	common := unifiedTypes.NaturalServer.nest(methodMarker.Self())
 	return unifiedMethod{
 		NaturalRequest:           naturalRequest,
-		NaturalRequestConverter:  NaturalMessageConverter.template(naturalRequest),
-		RequestMessageTraits:     MessageTraits.template(naturalRequest),
 		NaturalResponse:          naturalResponse,
-		NaturalResponseConverter: NaturalMessageConverter.template(naturalResponse),
+		NaturalResponseConverter: ResponseMessageConverter.template(methodMarker),
 		NaturalResult:            naturalResult,
 		NaturalErrorsIn:          naturalErrorsIn,
-		ResponseMessageTraits:    MessageTraits.template(naturalResponse),
 		NaturalEvent:             naturalEvent,
-		NaturalEventConverter:    NaturalMessageConverter.template(naturalEvent),
-		EventMessageTraits:       MessageTraits.template(naturalEvent),
 		ClientCallbackTraits:     NaturalClientCallbackTraits.template(methodMarker),
 		NaturalThenable:          NaturalThenable.template(methodMarker),
 		NaturalMethodTypes:       NaturalMethodTypes.template(methodMarker),
@@ -739,7 +729,7 @@ func (m Method) NaturalResponseArg(argName string) string {
 	}
 	n := m.NaturalResponse
 	if m.IsEvent {
-		n = m.NaturalEvent
+		n = m.ResponsePayload.Unified
 	}
 	if !m.Response.IsResource {
 		return fmt.Sprintf("const %s& %s", n, argName)
@@ -926,10 +916,6 @@ func (m Method) ResponseMessageBase() string {
 			return ""
 		}
 	}
-}
-
-func (m Method) EventMessageBase() string {
-	return m.ResponseMessageBase()
 }
 
 func (m Method) DynamicFlags() string {

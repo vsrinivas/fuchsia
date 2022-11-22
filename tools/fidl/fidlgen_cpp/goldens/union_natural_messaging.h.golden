@@ -50,13 +50,6 @@ class ::fidl::Response<::test_union::TestProtocol::StrictXUnionHenceResponseMayB
   using ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse;
   Response(::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse v) : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse;
-};
 namespace test_union {
 }  // namespace test_union
 
@@ -74,13 +67,6 @@ class ::fidl::Response<::test_union::TestProtocol::FlexibleXUnionHenceResponseMu
  public:
   using ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
   Response(::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse v) : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
 };
 
 template <>

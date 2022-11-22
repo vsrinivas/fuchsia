@@ -42,27 +42,11 @@ class ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod> final : publi
   Response(::fit::result<::test_anonymous::SomeProtocolSomeMethodError, ::test_anonymous::SomeProtocolSomeMethodResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_anonymous::SomeProtocolSomeMethodTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>> {
+class ::fidl::internal::ResponseMessageConverter<::test_anonymous::SomeProtocol::SomeMethod> {
   using DomainObject = ::test_anonymous::SomeProtocolSomeMethodTopResponse;
 
  public:
-  static ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_anonymous::SomeProtocolSomeMethodResult::WithErr(m.error_value())}};

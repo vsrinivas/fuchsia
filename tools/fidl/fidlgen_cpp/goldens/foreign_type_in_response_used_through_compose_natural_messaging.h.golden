@@ -40,13 +40,6 @@ class ::fidl::Response<::test_foreigntypeinresponseusedthroughcompose::Top::GetF
   using ::test_middle::MiddleGetFooResponse::MiddleGetFooResponse;
   Response(::test_middle::MiddleGetFooResponse v) : MiddleGetFooResponse(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_middle::MiddleGetFooResponse;
-};
 namespace test_foreigntypeinresponseusedthroughcompose {
 }  // namespace test_foreigntypeinresponseusedthroughcompose
 

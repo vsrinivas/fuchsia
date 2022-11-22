@@ -23,6 +23,7 @@ class HandlesInProtocol final {
   using Transport = ::fidl::internal::DriverTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class SendHandles final {
     SendHandles() = delete;
 

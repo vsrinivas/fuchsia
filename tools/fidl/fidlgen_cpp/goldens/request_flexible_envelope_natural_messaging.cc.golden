@@ -101,7 +101,7 @@ void fidl::internal::NaturalCompleterBase<::test_requestflexibleenvelope::Protoc
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_requestflexibleenvelope::kProtocol_RequestStrictResponseFlexible_Ordinal, ::test_requestflexibleenvelope::kProtocol_RequestStrictResponseFlexible_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
@@ -110,7 +110,7 @@ void fidl::internal::NaturalCompleterBase<::test_requestflexibleenvelope::Protoc
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_requestflexibleenvelope::kProtocol_RequestFlexibleResponseStrict_Ordinal, ::test_requestflexibleenvelope::kProtocol_RequestFlexibleResponseStrict_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }

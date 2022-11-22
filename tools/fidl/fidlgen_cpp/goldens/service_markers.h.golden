@@ -14,6 +14,7 @@ class FirstProtocol final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class MethodOnFirst final {
     MethodOnFirst() = delete;
 
@@ -37,6 +38,7 @@ class SecondProtocol final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class MethodOnSecond final {
     MethodOnSecond() = delete;
 

@@ -35,13 +35,6 @@ class ::fidl::Response<::test_drivertwoway::TwoWay::Add> final : public ::test_d
   using ::test_drivertwoway::TwoWayAddResponse::TwoWayAddResponse;
   Response(::test_drivertwoway::TwoWayAddResponse v) : TwoWayAddResponse(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_drivertwoway::TwoWay::Add>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_drivertwoway::TwoWayAddResponse;
-};
 namespace test_drivertwoway {
 }  // namespace test_drivertwoway
 

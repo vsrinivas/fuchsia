@@ -189,7 +189,7 @@ void fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChi
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_GetChild_Ordinal, ::test_protocolrequest::kParent_GetChild_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocolrequest::Parent::GetChild>>::IntoDomainObject(std::move(response)));
+      ::fidl::internal::ResponseMessageConverter<::test_protocolrequest::Parent::GetChild>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
@@ -198,7 +198,7 @@ void fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChi
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_GetChildRequest_Ordinal, ::test_protocolrequest::kParent_GetChildRequest_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>>::IntoDomainObject(std::move(response)));
+      ::fidl::internal::ResponseMessageConverter<::test_protocolrequest::Parent::GetChildRequest>::IntoDomainObject(std::move(response)));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }

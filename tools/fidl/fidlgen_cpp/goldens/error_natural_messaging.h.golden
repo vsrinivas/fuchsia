@@ -42,27 +42,11 @@ class ::fidl::Response<::test_error::Example::Foo> final : public ::fit::result<
   Response(::fit::result<uint32_t, ::test_error::ExampleFooResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_error::Example::Foo>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_error::ExampleFooTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_error::Example::Foo>> {
+class ::fidl::internal::ResponseMessageConverter<::test_error::Example::Foo> {
   using DomainObject = ::test_error::ExampleFooTopResponse;
 
  public:
-  static ::fidl::Response<::test_error::Example::Foo> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_error::Example::Foo>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_error::ExampleFooResult::WithErr(m.error_value())}};

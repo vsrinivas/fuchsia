@@ -14,6 +14,7 @@ class WithAndWithoutRequestResponse final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class NoRequestNoResponse final {
     NoRequestNoResponse() = delete;
 
@@ -135,6 +136,7 @@ class WithErrorSyntax final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class ResponseAsStruct final {
     ResponseAsStruct() = delete;
 
@@ -200,6 +202,7 @@ class ChannelProtocol final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class MethodA final {
     MethodA() = delete;
 
@@ -279,6 +282,7 @@ class Transitional final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class Request final {
     Request() = delete;
 
@@ -330,6 +334,7 @@ class DiscoverableProtocol final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class Method final {
     Method() = delete;
 
@@ -362,6 +367,7 @@ class HandleRightsProtocol final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class NoResponseMethod final {
     NoResponseMethod() = delete;
 
@@ -413,6 +419,7 @@ class WithProtocolEnds final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class ClientEnds final {
     ClientEnds() = delete;
 
@@ -464,6 +471,7 @@ class ManyParameters final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class Fifteen final {
     Fifteen() = delete;
 
@@ -487,6 +495,7 @@ class MethodWithUnion final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class UnionMethod final {
     UnionMethod() = delete;
 

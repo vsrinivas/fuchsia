@@ -40,12 +40,6 @@ class ::fidl::Event<::test_doccomments::Interface::OnEvent> final {
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_doccomments::Interface::OnEvent>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-template <>
 class ::fidl::internal::NaturalClientImpl<::test_doccomments::Interface> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;

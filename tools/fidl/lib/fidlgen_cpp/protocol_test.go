@@ -136,13 +136,13 @@ func TestNaturalArgumentRenderingSendPath(t *testing.T) {
 			desc:          "value event",
 			fidl:          "closed protocol P { strict -> Event(struct { a int32; }); };",
 			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
-			expected:      "const ::fidl::Event<::example::P::Event>& r",
+			expected:      "const ::example::PEventRequest& r",
 		},
 		{
 			desc:          "resource event",
 			fidl:          "closed protocol P { strict -> Event(resource struct { a int32; }); };",
 			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
-			expected:      "::fidl::Event<::example::P::Event> r",
+			expected:      "::example::PEventRequest r",
 		},
 		{
 			desc:          "flexible event",

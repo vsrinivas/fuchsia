@@ -59,27 +59,11 @@ class ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCall
   Response(::fit::result<uint32_t, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
+class ::fidl::internal::ResponseMessageConverter<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> {
   using DomainObject = ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse;
 
  public:
-  static ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResult::WithErr(m.error_value())}};
@@ -107,27 +91,11 @@ class ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMay
   Response(::fit::result<uint32_t, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
+class ::fidl::internal::ResponseMessageConverter<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> {
   using DomainObject = ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
 
  public:
-  static ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult::WithErr(m.error_value())}};

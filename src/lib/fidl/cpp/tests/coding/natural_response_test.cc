@@ -38,11 +38,9 @@ TEST(NaturalResponse, DecodePayloadThenConvertToMessage) {
       fidl::internal::DecodeTransactionalMessage<test_types::BazFooResponse>(std::move(message));
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
-  fidl::Response<test_types::Baz::Foo> response = fidl::internal::NaturalMessageConverter<
-      fidl::Response<test_types::Baz::Foo>>::FromDomainObject(std::move(result.value()));
 
   // Check decoded value.
-  EXPECT_EQ(42, response.res().bar());
+  EXPECT_EQ(42, result.value().res().bar());
 }
 
 TEST(NaturalResponsePayload, Decode) {

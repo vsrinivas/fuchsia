@@ -41,13 +41,6 @@ class ::fidl::Response<::test_nullable::SimpleProtocol::Add> final : public ::te
   using ::test_nullable::SimpleProtocolAddResponse::SimpleProtocolAddResponse;
   Response(::test_nullable::SimpleProtocolAddResponse v) : SimpleProtocolAddResponse(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_nullable::SimpleProtocol::Add>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_nullable::SimpleProtocolAddResponse;
-};
 namespace test_nullable {
 }  // namespace test_nullable
 

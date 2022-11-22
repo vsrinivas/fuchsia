@@ -11,8 +11,45 @@
 
 #include <optional>
 
-namespace fidl {
-namespace internal {
+namespace fidl::internal {
+
+// Convert a transactional response message body to a result object.
+template <typename FidlMethod>
+auto ConvertResponseDomainObjectToResult(
+    typename NaturalMethodTypes<FidlMethod>::Response& domain_object) {
+  using ResultType = typename FidlMethod::Protocol::Transport::template Result<FidlMethod>;
+  constexpr bool kHasDomainError = FidlMethod::kHasDomainError;
+  constexpr bool kHasFrameworkError = FidlMethod::kHasFrameworkError;
+
+  if constexpr (kHasDomainError) {
+    if (domain_object.result().err().has_value()) {
+      return ResultType{::fit::error(std::move(domain_object.result().err().value()))};
+    }
+  }
+  if constexpr (kHasFrameworkError) {
+    if (domain_object.result().transport_err().has_value()) {
+      ::fidl::internal::TransportErr transport_err = domain_object.result().transport_err().value();
+      switch (transport_err) {
+        case ::fidl::internal::TransportErr::kUnknownMethod: {
+          return ResultType{::fit::error(::fidl::Error::UnknownMethod())};
+        }
+      }
+      __builtin_abort();
+    }
+  }
+  if constexpr (kHasDomainError || kHasFrameworkError) {
+    constexpr bool IsEmptyStructPayload = !FidlMethod::kHasNonEmptyPayload;
+
+    ZX_DEBUG_ASSERT(domain_object.result().response().has_value());
+    if constexpr (IsEmptyStructPayload) {
+      return ResultType{::fit::success()};
+    } else {
+      return ResultType{::fit::ok(std::move(domain_object.result().response().value()))};
+    }
+  } else {
+    return ResultType{::fit::ok(std::move(domain_object))};
+  }
+}
 
 // |DecodeResponseAndFoldError| decodes an incoming message |incoming| returns
 // a transport-specific result type (e.g. |fidl::Result| for Zircon channel
@@ -25,10 +62,7 @@ template <typename FidlMethod>
 auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
                                 ::std::optional<::fidl::UnbindInfo>* out_maybe_unbind) {
   using ResultType = typename FidlMethod::Protocol::Transport::template Result<FidlMethod>;
-  using NaturalResponse = ::fidl::Response<FidlMethod>;
   constexpr bool IsAbsentBody = !FidlMethod::kHasResponseBody;
-  constexpr bool kHasDomainError = FidlMethod::kHasDomainError;
-  constexpr bool kHasFrameworkError = FidlMethod::kHasFrameworkError;
 
   // Check error from the underlying transport.
   if (!incoming.ok()) {
@@ -43,7 +77,7 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
     if constexpr (IsAbsentBody) {
       return DecodeTransactionalMessage(std::move(incoming));
     } else {
-      using Body = typename MessageTraits<NaturalResponse>::Payload;
+      using Body = typename NaturalMethodTypes<FidlMethod>::Response;
       return DecodeTransactionalMessage<Body>(std::move(incoming));
     }
   }();
@@ -59,43 +93,10 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
 
   if constexpr (IsAbsentBody) {
     // Absent body.
-    ResultType value = ::fit::success();
-    return value;
+    return ResultType{::fit::success()};
   } else {
     auto& domain_object = decoded.value();
-    if constexpr (kHasDomainError) {
-      if (domain_object.result().err().has_value()) {
-        ResultType value = ::fit::error(std::move(domain_object.result().err().value()));
-        return value;
-      }
-    }
-    if constexpr (kHasFrameworkError) {
-      if (domain_object.result().transport_err().has_value()) {
-        ::fidl::internal::TransportErr transport_err =
-            domain_object.result().transport_err().value();
-        switch (transport_err) {
-          case ::fidl::internal::TransportErr::kUnknownMethod: {
-            ResultType value = ::fit::error(::fidl::Error::UnknownMethod());
-            return value;
-          }
-        }
-      }
-    }
-    if constexpr (kHasDomainError || kHasFrameworkError) {
-      constexpr bool IsEmptyStructPayload = !FidlMethod::kHasNonEmptyPayload;
-
-      ZX_DEBUG_ASSERT(domain_object.result().response().has_value());
-      if constexpr (IsEmptyStructPayload) {
-        ResultType value = ::fit::success();
-        return value;
-      } else {
-        ResultType value = ::fit::ok(std::move(domain_object.result().response().value()));
-        return value;
-      }
-    } else {
-      ResultType value = ::fit::ok(std::move(domain_object));
-      return value;
-    }
+    return ConvertResponseDomainObjectToResult<FidlMethod>(domain_object);
   }
 }
 
@@ -130,7 +131,6 @@ ResponseContext* MakeResponseContext(uint64_t ordinal,
   return new ResponseContext(ordinal, std::forward<CallbackType>(callback));
 }
 
-}  // namespace internal
-}  // namespace fidl
+}  // namespace fidl::internal
 
 #endif  // SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_MAKE_RESPONSE_CONTEXT_H_

@@ -32,6 +32,7 @@ class DenyEachBinding final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class OnlyDenyDart final {
     OnlyDenyDart() = delete;
 
@@ -120,6 +121,7 @@ class ImportsSameNameContext final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class Unattributed final {
     Unattributed() = delete;
 

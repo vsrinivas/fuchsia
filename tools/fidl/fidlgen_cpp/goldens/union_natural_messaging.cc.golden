@@ -97,7 +97,7 @@ void fidl::internal::NaturalCompleterBase<::test_union::TestProtocol::StrictXUni
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal, ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
@@ -106,7 +106,7 @@ void fidl::internal::NaturalCompleterBase<::test_union::TestProtocol::FlexibleXU
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal, ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }

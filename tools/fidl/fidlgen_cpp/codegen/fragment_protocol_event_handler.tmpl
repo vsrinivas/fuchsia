@@ -239,7 +239,7 @@ class {{ .NaturalEventDispatcher }} final :
         if (event_handler()) {
           {{ .NaturalEvent }} event
           {{- if .HasResponsePayload }}
-              = {{ .NaturalEventConverter }}::FromDomainObject(std::move(decoded.value()))
+              = std::move(decoded.value())
           {{- end }};
           event_handler()->{{ .Name }}(event);
         }

@@ -283,7 +283,7 @@ void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBindi
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
@@ -292,7 +292,7 @@ void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBindi
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
@@ -301,7 +301,7 @@ void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBindi
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
@@ -310,7 +310,7 @@ void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBindi
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
@@ -319,7 +319,7 @@ void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBindi
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }

@@ -57,13 +57,6 @@ class ::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestStrictRe
   using ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse::ProtocolRequestStrictResponseFlexibleResponse;
   Response(::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse v) : ProtocolRequestStrictResponseFlexibleResponse(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse;
-};
 namespace test_requestflexibleenvelope {
 }  // namespace test_requestflexibleenvelope
 
@@ -81,13 +74,6 @@ class ::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestFlexible
  public:
   using ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse::ProtocolRequestFlexibleResponseStrictResponse;
   Response(::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse v) : ProtocolRequestFlexibleResponseStrictResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse;
 };
 
 template <>

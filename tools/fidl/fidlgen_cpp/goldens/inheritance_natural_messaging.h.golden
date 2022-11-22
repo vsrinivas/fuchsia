@@ -41,13 +41,6 @@ class ::fidl::Response<::test_inheritance::Super::Foo> final : public ::test_inh
   using ::test_inheritance::SuperFooResponse::SuperFooResponse;
   Response(::test_inheritance::SuperFooResponse v) : SuperFooResponse(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_inheritance::Super::Foo>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_inheritance::SuperFooResponse;
-};
 namespace test_inheritance {
 }  // namespace test_inheritance
 
@@ -225,13 +218,6 @@ class ::fidl::Response<::test_inheritance::Sub::Foo> final : public ::test_inher
  public:
   using ::test_inheritance::SuperFooResponse::SuperFooResponse;
   Response(::test_inheritance::SuperFooResponse v) : SuperFooResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_inheritance::Sub::Foo>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_inheritance::SuperFooResponse;
 };
 
 template <>

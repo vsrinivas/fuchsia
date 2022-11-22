@@ -69,7 +69,7 @@ void fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>::Reply(con
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_error::kExample_foo_Ordinal, ::test_error::kExample_foo_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_error::Example::Foo>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_error::Example::Foo>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }

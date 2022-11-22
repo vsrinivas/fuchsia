@@ -130,62 +130,13 @@ struct ::fidl::internal::WireCodingTraits<{{ .WireTransactionalEvent }}, ::fidl:
 
 template <>
 class {{ .NaturalEvent }} final
-    {{- if .EventMessageBase }} : public {{ .EventMessageBase }} {{ end }} {
+    {{- if .HasResponsePayload }} : public {{ .ResponsePayload }} {{ end }} {
  public:
   {{- if .HasResponsePayload }}
-    {{- if .Result }}
-      using {{ .EventMessageBase }}::result;
-      {{ .NaturalEvent.Self }}({{ .EventMessageBase }} v) : result(std::move(v)) {}
-      {{ .NaturalEvent.Self }}() = delete;
-    {{- else }}
-      using {{ .ResponsePayload }}::{{ .ResponsePayload.Self }};
-      {{ .NaturalEvent.Self }}({{ .EventMessageBase }} v) : {{ .ResponsePayload.Self }}(std::move(v)) {}
-    {{- end }}
+    using {{ .ResponsePayload }}::{{ .ResponsePayload.Self }};
+    {{ .NaturalEvent.Self }}({{ .ResponsePayload }} v) : {{ .ResponsePayload.Self }}(std::move(v)) {}
   {{- end }}
 };
-
-template <>
-struct {{ .EventMessageTraits }} final {
- public:
-  static constexpr bool kHasPayload = {{ .HasResponsePayload }};
-  {{- if .HasResponsePayload }}
-  using Payload = {{ .ResponsePayload }};
-  {{- end }}
-};
-
-{{- if .Result }}
-template <>
-class {{ .NaturalEventConverter }} {
-  using DomainObject = {{ .ResponsePayload }};
-
- public:
-  static {{ .NaturalEvent }} FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-      {{- if .Result.ValueParameters }}
-        return ::fit::ok(std::move(o.result().response().value()));
-      {{- else }}
-        return ::fit::ok();
-      {{- end }}
-    }
-  }
-
-  static DomainObject IntoDomainObject({{ .NaturalResponseArg "m" }}) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithErr(m.error_value()) } };
-    } else {
-      {{- if .Result.ValueParameters }}
-        return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithResponse(std::move(m.value())) } };
-      {{- else }}
-        return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithResponse({}) } };
-      {{- end }}
-    }
-  }
-};
-{{- end }}
-
 
 {{- EndifFuchsia -}}
 {{- end }}
@@ -223,7 +174,7 @@ struct WireTypeForNaturalType<{{ .NaturalEvent }}> {
 {{ .NaturalEvent }}  WireNaturalConversionTraits<{{ .WireEvent }}, {{ .NaturalEvent }}>::ToNatural({{ .WireEvent }} src) {
   {{- if .HasResponsePayload }}
   return {{ .NaturalEvent }}(
-    WireNaturalConversionTraits<{{ .ResponsePayload.Wire }}, {{ .EventMessageBase }}>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<{{ .ResponsePayload.Wire }}, {{ .ResponsePayload }}>::ToNatural(std::move(src)));
   {{- else }}
   return {{ .NaturalEvent }}();
   {{- end }}
@@ -232,7 +183,7 @@ struct WireTypeForNaturalType<{{ .NaturalEvent }}> {
 {{ .WireEvent }}  WireNaturalConversionTraits<{{ .WireEvent }}, {{ .NaturalEvent }}>::ToWire(fidl::AnyArena& arena, {{ .NaturalEvent }} src) {
   {{- if .HasResponsePayload }}
   return {{ .WireEvent }}(
-    WireNaturalConversionTraits<{{ .ResponsePayload.Wire }}, {{ .EventMessageBase }}>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<{{ .ResponsePayload.Wire }}, {{ .ResponsePayload }}>::ToWire(arena, std::move(src)));
   {{- else }}
   return {{ .WireEvent }}();
   {{- end }}

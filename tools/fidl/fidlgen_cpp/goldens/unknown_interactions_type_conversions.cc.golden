@@ -4246,42 +4246,42 @@ namespace internal {
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrRequest, ::fit::result<int32_t>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrRequest, ::fit::result<int32_t>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest>::ToWire(arena, std::move(src)));
 }
 
 
@@ -4317,42 +4317,42 @@ namespace internal {
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrRequest, ::fit::result<int32_t>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrRequest, ::fit::result<int32_t>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrRequest, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest>::ToWire(arena, std::move(src)));
 }
 
 
@@ -4462,42 +4462,42 @@ namespace internal {
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrRequest, ::fit::result<int32_t>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrRequest, ::fit::result<int32_t>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest>::ToWire(arena, std::move(src)));
 }
 
 
@@ -4533,42 +4533,42 @@ namespace internal {
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrRequest, ::fit::result<int32_t>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrRequest, ::fit::result<int32_t>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest>::ToWire(arena, std::move(src)));
 }
 
 
@@ -4677,42 +4677,42 @@ namespace internal {
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrRequest, ::fit::result<int32_t>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrRequest, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrRequest, ::fit::result<int32_t>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrRequest, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>>::ToNatural(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> src) {
   return ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse>>::ToNatural(std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrRequest, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest>::ToNatural(std::move(src)));
 }
 
 ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>  WireNaturalConversionTraits<::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> src) {
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>(
-    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrRequest, ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse>>::ToWire(arena, std::move(src)));
+    WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrRequest, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest>::ToWire(arena, std::move(src)));
 }
 
 #endif  // __Fuchsia__

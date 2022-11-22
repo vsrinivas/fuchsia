@@ -42,26 +42,18 @@ using NaturalCompleter = typename fidl::internal::NaturalMethodTypes<FidlMethod>
 template <typename FidlMethod>
 using NaturalDomainError = typename fidl::internal::WireMethodTypes<FidlMethod>::DomainError;
 
-// |NaturalMessageConverter| extends transactional message wrappers with the
-// ability to convert to and from domain object types. In particular, result
-// unions in methods using the error syntax will be converted to
-// |fit::result<DomainError, Payload>| when sending.
+// |ResponseMessageConverter| converts |fit::result<DomainError, Payload>| in
+// methods using the error syntax into FIDL result unions.
 //
-// |Message| is either a |fidl::Response<Foo>| or |fidl::Event<Foo>|.
-//
-// It should only be used when |Message| has a body.
+// It should only be used when |FidlMethod| has a transactional response
+// and that response has a body.
 //
 // The default implementation passes through the domain object without any
 // transformation.
-//
-// For flexible two-way methods, |FromDomainObject| is not available. This is
-// because the result union for flexible methods contains an extra variant
-// |transport_err| which gets folded into |fidl::Error| during conversion to
-// |fidl::Result<Foo>|, but which cannot be represented as part of
-// |fidl::Response<Foo>|.
-template <typename Message>
-class NaturalMessageConverter {
-  using DomainObject = typename MessageTraits<Message>::Payload;
+template <typename FidlMethod>
+class ResponseMessageConverter {
+  using DomainObject = typename NaturalMethodTypes<FidlMethod>::Response;
+  using Message = fidl::Response<FidlMethod>;
 
   // Resource type: |DomainObject|
   // Value type: |const DomainObject&|
@@ -69,8 +61,6 @@ class NaturalMessageConverter {
       std::conditional_t<fidl::IsResource<DomainObject>::value, Message, const Message&>;
 
  public:
-  static Message FromDomainObject(DomainObject&& o) { return static_cast<Message>(std::move(o)); }
-
   static DomainObject IntoDomainObject(MessageArg m) {
     return DomainObject{std::forward<MessageArg>(m)};
   }

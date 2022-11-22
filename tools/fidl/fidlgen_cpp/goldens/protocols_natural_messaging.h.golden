@@ -112,12 +112,6 @@ template <>
 class ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> final {
  public:
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
 namespace test_protocols {
 }  // namespace test_protocols
 
@@ -127,25 +121,12 @@ class ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithRespo
   using ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest::WithAndWithoutRequestResponseOnWithResponseRequest;
   Event(::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest v) : WithAndWithoutRequestResponseOnWithResponseRequest(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest;
-};
 namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
 class ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> final {
  public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> final {
- public:
-  static constexpr bool kHasPayload = false;
 };
 namespace test_protocols {
 }  // namespace test_protocols
@@ -167,13 +148,6 @@ class ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoReques
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse;
-};
-
-template <>
 class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final : public ::fit::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse> {
  public:
   using ::fit::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse>::result;
@@ -185,12 +159,6 @@ class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestW
 template <>
 class ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final {
  public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> final {
- public:
-  static constexpr bool kHasPayload = false;
 };
 
 template <>
@@ -207,13 +175,6 @@ class ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequ
  public:
   using ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse::WithAndWithoutRequestResponseWithRequestWithResponseResponse;
   Response(::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse v) : WithAndWithoutRequestResponseWithRequestWithResponseResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse;
 };
 
 template <>
@@ -327,7 +288,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocols::WithAndWithoutR
 
   ::fit::result<::fidl::Error> OnEmptyResponse();
 
-  ::fit::result<::fidl::Error> OnWithResponse(const ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>& payload);
+  ::fit::result<::fidl::Error> OnWithResponse(const ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest& payload);
 };
 
 template <>
@@ -338,7 +299,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::WithAndWithoutReque
 
   ::fit::result<::fidl::Error> OnEmptyResponse();
 
-  ::fit::result<::fidl::Error> OnWithResponse(const ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>& payload);
+  ::fit::result<::fidl::Error> OnWithResponse(const ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest& payload);
 };
 
 #endif  // __Fuchsia__
@@ -519,27 +480,11 @@ class ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct> fina
   Response(::fit::result<uint32_t, ::test_protocols::WithErrorSyntaxResponseAsStructResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
+class ::fidl::internal::ResponseMessageConverter<::test_protocols::WithErrorSyntax::ResponseAsStruct> {
   using DomainObject = ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse;
 
  public:
-  static ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocols::WithErrorSyntaxResponseAsStructResult::WithErr(m.error_value())}};
@@ -567,27 +512,11 @@ class ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> fina
   Response(::fit::result<uint32_t> v) : result(std::move(v)) {}
   Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+class ::fidl::internal::ResponseMessageConverter<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> {
   using DomainObject = ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse;
 
  public:
-  static ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fit::ok();
-    }
-  }
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::WithErr(m.error_value())}};
@@ -613,27 +542,11 @@ class ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum> final : p
   Response(::fit::result<::test_protocols::ErrorEnum> v) : result(std::move(v)) {}
   Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+class ::fidl::internal::ResponseMessageConverter<::test_protocols::WithErrorSyntax::ErrorAsEnum> {
   using DomainObject = ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse;
 
  public:
-  static ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fit::ok();
-    }
-  }
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocols::WithErrorSyntaxErrorAsEnumResult::WithErr(m.error_value())}};
@@ -659,27 +572,11 @@ class ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> final 
   Response(::fit::result<uint32_t, ::test_protocols::WithErrorSyntaxHandleInResultResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithErrorSyntaxHandleInResultTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>> {
+class ::fidl::internal::ResponseMessageConverter<::test_protocols::WithErrorSyntax::HandleInResult> {
   using DomainObject = ::test_protocols::WithErrorSyntaxHandleInResultTopResponse;
 
  public:
-  static ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
   static DomainObject IntoDomainObject(::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocols::WithErrorSyntaxHandleInResultResult::WithErr(m.error_value())}};
@@ -974,13 +871,6 @@ class ::fidl::Event<::test_protocols::ChannelProtocol::EventA> final : public ::
   using ::test_protocols::ChannelProtocolEventARequest::ChannelProtocolEventARequest;
   Event(::test_protocols::ChannelProtocolEventARequest v) : ChannelProtocolEventARequest(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocols::ChannelProtocol::EventA>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::ChannelProtocolEventARequest;
-};
 namespace test_protocols {
 }  // namespace test_protocols
 
@@ -989,13 +879,6 @@ class ::fidl::Response<::test_protocols::ChannelProtocol::MethodB> final : publi
  public:
   using ::test_protocols::ChannelProtocolMethodBResponse::ChannelProtocolMethodBResponse;
   Response(::test_protocols::ChannelProtocolMethodBResponse v) : ChannelProtocolMethodBResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::ChannelProtocol::MethodB>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::ChannelProtocolMethodBResponse;
 };
 namespace test_protocols {
 }  // namespace test_protocols
@@ -1015,12 +898,6 @@ class ::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle> final {
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::ChannelProtocol::TakeHandle>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-template <>
 class ::fidl::Result<::test_protocols::ChannelProtocol::TakeHandle> final : public ::fit::result<::fidl::Error> {
  public:
   using ::fit::result<::fidl::Error>::result;
@@ -1034,13 +911,6 @@ class ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket> final : 
  public:
   using ::test_protocols::ChannelProtocolMutateSocketResponse::ChannelProtocolMutateSocketResponse;
   Response(::test_protocols::ChannelProtocolMutateSocketResponse v) : ChannelProtocolMutateSocketResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::ChannelProtocolMutateSocketResponse;
 };
 
 template <>
@@ -1142,7 +1012,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocols::ChannelProtocol
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fit::result<::fidl::Error> EventA(const ::fidl::Event<::test_protocols::ChannelProtocol::EventA>& payload);
+  ::fit::result<::fidl::Error> EventA(const ::test_protocols::ChannelProtocolEventARequest& payload);
 };
 
 template <>
@@ -1151,7 +1021,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fit::result<::fidl::Error> EventA(const ::fidl::Event<::test_protocols::ChannelProtocol::EventA>& payload);
+  ::fit::result<::fidl::Error> EventA(const ::test_protocols::ChannelProtocolEventARequest& payload);
 };
 
 #endif  // __Fuchsia__
@@ -1304,13 +1174,6 @@ class ::fidl::Event<::test_protocols::Transitional::Event> final : public ::test
   using ::test_protocols::TransitionalEventRequest::TransitionalEventRequest;
   Event(::test_protocols::TransitionalEventRequest v) : TransitionalEventRequest(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocols::Transitional::Event>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::TransitionalEventRequest;
-};
 namespace test_protocols {
 }  // namespace test_protocols
 
@@ -1319,13 +1182,6 @@ class ::fidl::Response<::test_protocols::Transitional::Request> final : public :
  public:
   using ::test_protocols::TransitionalRequestResponse::TransitionalRequestResponse;
   Response(::test_protocols::TransitionalRequestResponse v) : TransitionalRequestResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::Transitional::Request>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::TransitionalRequestResponse;
 };
 namespace test_protocols {
 }  // namespace test_protocols
@@ -1422,7 +1278,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional> :
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fit::result<::fidl::Error> Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload);
+  ::fit::result<::fidl::Error> Event(const ::test_protocols::TransitionalEventRequest& payload);
 };
 
 template <>
@@ -1431,7 +1287,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::Transitional>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fit::result<::fidl::Error> Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload);
+  ::fit::result<::fidl::Error> Event(const ::test_protocols::TransitionalEventRequest& payload);
 };
 
 #endif  // __Fuchsia__
@@ -1824,13 +1680,6 @@ class ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> final : pub
   using ::test_protocols::HandleRightsProtocolAnEventRequest::HandleRightsProtocolAnEventRequest;
   Event(::test_protocols::HandleRightsProtocolAnEventRequest v) : HandleRightsProtocolAnEventRequest(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::HandleRightsProtocolAnEventRequest;
-};
 namespace test_protocols {
 }  // namespace test_protocols
 
@@ -1839,13 +1688,6 @@ class ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod> f
  public:
   using ::test_protocols::HandleRightsProtocolResponseMethodResponse::HandleRightsProtocolResponseMethodResponse;
   Response(::test_protocols::HandleRightsProtocolResponseMethodResponse v) : HandleRightsProtocolResponseMethodResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::HandleRightsProtocolResponseMethodResponse;
 };
 namespace test_protocols {
 }  // namespace test_protocols
@@ -1941,7 +1783,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocols::HandleRightsPro
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fit::result<::fidl::Error> AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload);
+  ::fit::result<::fidl::Error> AnEvent(::test_protocols::HandleRightsProtocolAnEventRequest payload);
 };
 
 template <>
@@ -1950,7 +1792,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::HandleRightsProtoco
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fit::result<::fidl::Error> AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload);
+  ::fit::result<::fidl::Error> AnEvent(::test_protocols::HandleRightsProtocolAnEventRequest payload);
 };
 
 #endif  // __Fuchsia__
@@ -2081,13 +1923,6 @@ class ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> final : p
   using ::test_protocols::WithProtocolEndsClientEndsResponse::WithProtocolEndsClientEndsResponse;
   Response(::test_protocols::WithProtocolEndsClientEndsResponse v) : WithProtocolEndsClientEndsResponse(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsClientEndsResponse;
-};
 namespace test_protocols {
 }  // namespace test_protocols
 
@@ -2108,13 +1943,6 @@ class ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds> final : p
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsServerEndsResponse;
-};
-
-template <>
 class ::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::fit::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsResponse> {
  public:
   using ::fit::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsResponse>::result;
@@ -2128,13 +1956,6 @@ class ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>
  public:
   using ::test_protocols::WithProtocolEndsStructContainingEndsResponse::WithProtocolEndsStructContainingEndsResponse;
   Response(::test_protocols::WithProtocolEndsStructContainingEndsResponse v) : WithProtocolEndsStructContainingEndsResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsStructContainingEndsResponse;
 };
 
 template <>
@@ -2506,13 +2327,6 @@ class ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod> final : p
  public:
   using ::test_protocols::MethodWithUnionUnionMethodResponse::MethodWithUnionUnionMethodResponse;
   Response(::test_protocols::MethodWithUnionUnionMethodResponse v) : MethodWithUnionUnionMethodResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::MethodWithUnionUnionMethodResponse;
 };
 namespace test_protocols {
 }  // namespace test_protocols

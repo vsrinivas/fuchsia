@@ -40,13 +40,6 @@ class ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo> final 
   using ::test_bottom::BottomGetFooResponse::BottomGetFooResponse;
   Response(::test_bottom::BottomGetFooResponse v) : BottomGetFooResponse(std::move(v)) {}
 };
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_bottom::BottomGetFooResponse;
-};
 namespace test_transitivedependenciescompose {
 }  // namespace test_transitivedependenciescompose
 

@@ -660,7 +660,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -675,7 +675,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -690,7 +690,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -705,7 +705,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -720,7 +720,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -735,7 +735,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -750,7 +750,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -779,7 +779,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -794,7 +794,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -809,7 +809,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -824,7 +824,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -839,7 +839,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -854,7 +854,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -869,7 +869,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -1572,7 +1572,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -1587,7 +1587,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -1602,7 +1602,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -1617,7 +1617,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -1632,7 +1632,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -1647,7 +1647,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -1662,7 +1662,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -2191,7 +2191,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -2206,7 +2206,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -2221,7 +2221,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -2236,7 +2236,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -2251,7 +2251,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -2266,7 +2266,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
@@ -2281,7 +2281,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::internal::OutgoingTransportContext _context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>>::IntoDomainObject(response));
+      ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));

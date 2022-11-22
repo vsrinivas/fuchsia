@@ -762,12 +762,6 @@ __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteraction
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> final {
  public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>> final {
- public:
-  static constexpr bool kHasPayload = false;
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -775,15 +769,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields> final : public ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest::UnknownInteractionsProtocolStrictEventFieldsRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest v) : UnknownInteractionsProtocolStrictEventFieldsRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest;
+    using ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest::UnknownInteractionsProtocolStrictEventFieldsRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest v) : UnknownInteractionsProtocolStrictEventFieldsRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -791,15 +778,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion> final : public ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::UnknownInteractionsProtocolStrictEventUnionRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest v) : UnknownInteractionsProtocolStrictEventUnionRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest;
+    using ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::UnknownInteractionsProtocolStrictEventUnionRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest v) : UnknownInteractionsProtocolStrictEventUnionRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -807,171 +787,44 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable> final : public ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest::UnknownInteractionsProtocolStrictEventTableRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest v) : UnknownInteractionsProtocolStrictEventTableRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest;
+    using ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest::UnknownInteractionsProtocolStrictEventTableRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest v) : UnknownInteractionsProtocolStrictEventTableRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> final : public ::fit::result<int32_t>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> final : public ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest  {
  public:
-      using ::fit::result<int32_t>::result;
-      Event(::fit::result<int32_t> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok();
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult::WithResponse({}) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest::UnknownInteractionsProtocolStrictEventErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest v) : UnknownInteractionsProtocolStrictEventErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> final : public ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest::UnknownInteractionsProtocolStrictEventFieldsErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest v) : UnknownInteractionsProtocolStrictEventFieldsErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> final : public ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest::UnknownInteractionsProtocolStrictEventUnionErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest v) : UnknownInteractionsProtocolStrictEventUnionErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> final : public ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest::UnknownInteractionsProtocolStrictEventTableErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest v) : UnknownInteractionsProtocolStrictEventTableErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -979,12 +832,6 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> final {
  public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>> final {
- public:
-  static constexpr bool kHasPayload = false;
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -992,15 +839,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields> final : public ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest::UnknownInteractionsProtocolFlexibleEventFieldsRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest v) : UnknownInteractionsProtocolFlexibleEventFieldsRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest;
+    using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest::UnknownInteractionsProtocolFlexibleEventFieldsRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest v) : UnknownInteractionsProtocolFlexibleEventFieldsRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -1008,15 +848,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion> final : public ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::UnknownInteractionsProtocolFlexibleEventUnionRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest v) : UnknownInteractionsProtocolFlexibleEventUnionRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest;
+    using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::UnknownInteractionsProtocolFlexibleEventUnionRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest v) : UnknownInteractionsProtocolFlexibleEventUnionRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -1024,171 +857,44 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable> final : public ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest::UnknownInteractionsProtocolFlexibleEventTableRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest v) : UnknownInteractionsProtocolFlexibleEventTableRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest;
+    using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest::UnknownInteractionsProtocolFlexibleEventTableRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest v) : UnknownInteractionsProtocolFlexibleEventTableRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> final : public ::fit::result<int32_t>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> final : public ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest  {
  public:
-      using ::fit::result<int32_t>::result;
-      Event(::fit::result<int32_t> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok();
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult::WithResponse({}) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest::UnknownInteractionsProtocolFlexibleEventErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest v) : UnknownInteractionsProtocolFlexibleEventErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> final : public ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest v) : UnknownInteractionsProtocolFlexibleEventFieldsErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> final : public ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest::UnknownInteractionsProtocolFlexibleEventUnionErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest v) : UnknownInteractionsProtocolFlexibleEventUnionErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> final : public ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest::UnknownInteractionsProtocolFlexibleEventTableErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest v) : UnknownInteractionsProtocolFlexibleEventTableErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -1196,12 +902,6 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
 template <>
 class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> final {
  public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> final {
- public:
-  static constexpr bool kHasPayload = false;
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -1223,13 +923,6 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       Response(::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse v) : UnknownInteractionsProtocolStrictTwoWayFieldsResponse(std::move(v)) {}
 };
 
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse;
-};
-
 
 template <>
 class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> {
@@ -1247,13 +940,6 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
  public:
       using ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::UnknownInteractionsProtocolStrictTwoWayUnionResponse;
       Response(::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse v) : UnknownInteractionsProtocolStrictTwoWayUnionResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse;
 };
 
 
@@ -1275,13 +961,6 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       Response(::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse v) : UnknownInteractionsProtocolStrictTwoWayTableResponse(std::move(v)) {}
 };
 
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse;
-};
-
 
 template <>
 class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse> {
@@ -1301,30 +980,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       Response(::fit::result<int32_t> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse;
 
  public:
-  
-  
-  static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok();
-    }
-  }
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult::WithErr(m.error_value()) } };
@@ -1353,30 +1013,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse;
 
  public:
-  
-  
-  static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult::WithErr(m.error_value()) } };
@@ -1405,30 +1046,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse;
 
  public:
-  
-  
-  static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult::WithErr(m.error_value()) } };
@@ -1457,30 +1079,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse;
 
  public:
-  
-  
-  static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResult::WithErr(m.error_value()) } };
@@ -1506,20 +1109,11 @@ template <>
 class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> final {
  public:
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTopResponse;
 
  public:
-  
-
   static DomainObject IntoDomainObject() {
     
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult::WithResponse({}) } };
@@ -1544,20 +1138,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse;
       Response(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse v) : UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse(std::move(v)) {}
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse;
 
  public:
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>& m) {
     
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult::WithResponse(std::move(m)) } };
@@ -1582,20 +1167,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse;
       Response(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse v) : UnknownInteractionsProtocolFlexibleTwoWayUnionResponse(std::move(v)) {}
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse;
 
  public:
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>& m) {
     
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult::WithResponse(std::move(m)) } };
@@ -1620,20 +1196,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       using ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResponse::UnknownInteractionsProtocolFlexibleTwoWayTableResponse;
       Response(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResponse v) : UnknownInteractionsProtocolFlexibleTwoWayTableResponse(std::move(v)) {}
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse;
 
  public:
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>& m) {
     
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult::WithResponse(std::move(m)) } };
@@ -1659,20 +1226,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       Response(::fit::result<int32_t> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse;
 
  public:
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithErr(m.error_value()) } };
@@ -1701,20 +1259,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse;
 
  public:
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult::WithErr(m.error_value()) } };
@@ -1743,20 +1292,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse;
 
  public:
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult::WithErr(m.error_value()) } };
@@ -1785,20 +1325,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::
       Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse;
 
  public:
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult::WithErr(m.error_value()) } };
@@ -2046,49 +1577,49 @@ class ::fidl::internal::NaturalWeakEventSender<::test_unknowninteractions::Unkno
     ::fit::result<::fidl::Error> StrictEvent();
 
   
-    ::fit::result<::fidl::Error> StrictEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>& payload);
+    ::fit::result<::fidl::Error> StrictEventFields(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>& payload);
+    ::fit::result<::fidl::Error> StrictEventUnion(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>& payload);
+    ::fit::result<::fidl::Error> StrictEventTable(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventErr(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventFieldsErr(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventUnionErr(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventTableErr(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest& payload);
 
   
     ::fit::result<::fidl::Error> FlexibleEvent();
 
   
-    ::fit::result<::fidl::Error> FlexibleEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventFields(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventUnion(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventTable(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventErr(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventFieldsErr(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventUnionErr(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventTableErr(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest& payload);
 
   
 };
@@ -2102,49 +1633,49 @@ class ::fidl::internal::NaturalEventSender<::test_unknowninteractions::UnknownIn
     ::fit::result<::fidl::Error> StrictEvent();
 
   
-    ::fit::result<::fidl::Error> StrictEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>& payload);
+    ::fit::result<::fidl::Error> StrictEventFields(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>& payload);
+    ::fit::result<::fidl::Error> StrictEventUnion(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>& payload);
+    ::fit::result<::fidl::Error> StrictEventTable(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventErr(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventFieldsErr(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventUnionErr(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventTableErr(const ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest& payload);
 
   
     ::fit::result<::fidl::Error> FlexibleEvent();
 
   
-    ::fit::result<::fidl::Error> FlexibleEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventFields(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventUnion(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventTable(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventErr(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventFieldsErr(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventUnionErr(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventTableErr(const ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest& payload);
 
   
 };
@@ -3056,12 +2587,6 @@ __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteraction
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> final {
  public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>> final {
- public:
-  static constexpr bool kHasPayload = false;
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -3069,15 +2594,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest::UnknownInteractionsAjarProtocolStrictEventFieldsRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest v) : UnknownInteractionsAjarProtocolStrictEventFieldsRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest;
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest::UnknownInteractionsAjarProtocolStrictEventFieldsRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest v) : UnknownInteractionsAjarProtocolStrictEventFieldsRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -3085,15 +2603,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::UnknownInteractionsAjarProtocolStrictEventUnionRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest v) : UnknownInteractionsAjarProtocolStrictEventUnionRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest;
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::UnknownInteractionsAjarProtocolStrictEventUnionRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest v) : UnknownInteractionsAjarProtocolStrictEventUnionRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -3101,171 +2612,44 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest::UnknownInteractionsAjarProtocolStrictEventTableRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest v) : UnknownInteractionsAjarProtocolStrictEventTableRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest;
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest::UnknownInteractionsAjarProtocolStrictEventTableRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest v) : UnknownInteractionsAjarProtocolStrictEventTableRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> final : public ::fit::result<int32_t>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest  {
  public:
-      using ::fit::result<int32_t>::result;
-      Event(::fit::result<int32_t> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok();
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult::WithResponse({}) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest::UnknownInteractionsAjarProtocolStrictEventErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest v) : UnknownInteractionsAjarProtocolStrictEventErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest v) : UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest v) : UnknownInteractionsAjarProtocolStrictEventUnionErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest::UnknownInteractionsAjarProtocolStrictEventTableErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest v) : UnknownInteractionsAjarProtocolStrictEventTableErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -3273,12 +2657,6 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> final {
  public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>> final {
- public:
-  static constexpr bool kHasPayload = false;
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -3286,15 +2664,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest v) : UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest;
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest v) : UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -3302,15 +2673,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest v) : UnknownInteractionsAjarProtocolFlexibleEventUnionRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest;
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest v) : UnknownInteractionsAjarProtocolFlexibleEventUnionRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -3318,171 +2682,44 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest::UnknownInteractionsAjarProtocolFlexibleEventTableRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest v) : UnknownInteractionsAjarProtocolFlexibleEventTableRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest;
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest::UnknownInteractionsAjarProtocolFlexibleEventTableRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest v) : UnknownInteractionsAjarProtocolFlexibleEventTableRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> final : public ::fit::result<int32_t>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest  {
  public:
-      using ::fit::result<int32_t>::result;
-      Event(::fit::result<int32_t> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok();
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult::WithResponse({}) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest::UnknownInteractionsAjarProtocolFlexibleEventErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest v) : UnknownInteractionsAjarProtocolFlexibleEventErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest v) : UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest v) : UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest v) : UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -3490,12 +2727,6 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
 template <>
 class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> final {
  public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> final {
- public:
-  static constexpr bool kHasPayload = false;
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -3517,13 +2748,6 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtoc
       Response(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse v) : UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse(std::move(v)) {}
 };
 
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse;
-};
-
 
 template <>
 class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> {
@@ -3541,13 +2765,6 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtoc
  public:
       using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse;
       Response(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse v) : UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse;
 };
 
 
@@ -3569,13 +2786,6 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtoc
       Response(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse v) : UnknownInteractionsAjarProtocolStrictTwoWayTableResponse(std::move(v)) {}
 };
 
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse;
-};
-
 
 template <>
 class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse> {
@@ -3595,30 +2805,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtoc
       Response(::fit::result<int32_t> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse;
 
  public:
-  
-  
-  static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok();
-    }
-  }
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::WithErr(m.error_value()) } };
@@ -3647,30 +2838,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtoc
       Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse;
 
  public:
-  
-  
-  static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult::WithErr(m.error_value()) } };
@@ -3699,30 +2871,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtoc
       Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse;
 
  public:
-  
-  
-  static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult::WithErr(m.error_value()) } };
@@ -3751,30 +2904,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtoc
       Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse;
 
  public:
-  
-  
-  static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult::WithErr(m.error_value()) } };
@@ -3974,49 +3108,49 @@ class ::fidl::internal::NaturalWeakEventSender<::test_unknowninteractions::Unkno
     ::fit::result<::fidl::Error> StrictEvent();
 
   
-    ::fit::result<::fidl::Error> StrictEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>& payload);
+    ::fit::result<::fidl::Error> StrictEventFields(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>& payload);
+    ::fit::result<::fidl::Error> StrictEventUnion(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>& payload);
+    ::fit::result<::fidl::Error> StrictEventTable(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventFieldsErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventUnionErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventTableErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest& payload);
 
   
     ::fit::result<::fidl::Error> FlexibleEvent();
 
   
-    ::fit::result<::fidl::Error> FlexibleEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventFields(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventUnion(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventTable(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventFieldsErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventUnionErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventTableErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest& payload);
 
   
 };
@@ -4030,49 +3164,49 @@ class ::fidl::internal::NaturalEventSender<::test_unknowninteractions::UnknownIn
     ::fit::result<::fidl::Error> StrictEvent();
 
   
-    ::fit::result<::fidl::Error> StrictEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>& payload);
+    ::fit::result<::fidl::Error> StrictEventFields(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>& payload);
+    ::fit::result<::fidl::Error> StrictEventUnion(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>& payload);
+    ::fit::result<::fidl::Error> StrictEventTable(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventFieldsErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventUnionErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventTableErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest& payload);
 
   
     ::fit::result<::fidl::Error> FlexibleEvent();
 
   
-    ::fit::result<::fidl::Error> FlexibleEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventFields(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventUnion(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventTable(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventFieldsErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventUnionErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> FlexibleEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>& payload);
+    ::fit::result<::fidl::Error> FlexibleEventTableErr(const ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest& payload);
 
   
 };
@@ -4656,12 +3790,6 @@ __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteraction
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> final {
  public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>> final {
- public:
-  static constexpr bool kHasPayload = false;
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -4669,15 +3797,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields> final : public ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest::UnknownInteractionsClosedProtocolStrictEventFieldsRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest v) : UnknownInteractionsClosedProtocolStrictEventFieldsRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest;
+    using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest::UnknownInteractionsClosedProtocolStrictEventFieldsRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest v) : UnknownInteractionsClosedProtocolStrictEventFieldsRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -4685,15 +3806,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion> final : public ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::UnknownInteractionsClosedProtocolStrictEventUnionRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest v) : UnknownInteractionsClosedProtocolStrictEventUnionRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest;
+    using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::UnknownInteractionsClosedProtocolStrictEventUnionRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest v) : UnknownInteractionsClosedProtocolStrictEventUnionRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -4701,171 +3815,44 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
 template <>
 class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable> final : public ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest::UnknownInteractionsClosedProtocolStrictEventTableRequest;
-      Event(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest v) : UnknownInteractionsClosedProtocolStrictEventTableRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest;
+    using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest::UnknownInteractionsClosedProtocolStrictEventTableRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest v) : UnknownInteractionsClosedProtocolStrictEventTableRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> final : public ::fit::result<int32_t>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> final : public ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest  {
  public:
-      using ::fit::result<int32_t>::result;
-      Event(::fit::result<int32_t> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok();
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult::WithResponse({}) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest::UnknownInteractionsClosedProtocolStrictEventErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest v) : UnknownInteractionsClosedProtocolStrictEventErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> final : public ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest v) : UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> final : public ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest v) : UnknownInteractionsClosedProtocolStrictEventUnionErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
 
 template <>
-class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse>  {
+class ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> final : public ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest  {
  public:
-      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse>::result;
-      Event(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse> v) : result(std::move(v)) {}
-      Event() = delete;
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>> {
-  using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest;
-
- public:
-  static ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-
-  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>& m) {
-    if (m.is_error()) {
-      return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult::WithErr(m.error_value()) } };
-    } else {
-        return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult::WithResponse(std::move(m.value())) } };
-    }
-  }
+    using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest::UnknownInteractionsClosedProtocolStrictEventTableErrRequest;
+    Event(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest v) : UnknownInteractionsClosedProtocolStrictEventTableErrRequest(std::move(v)) {}
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -4873,12 +3860,6 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
 template <>
 class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> final {
  public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> final {
- public:
-  static constexpr bool kHasPayload = false;
 };namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 
@@ -4900,13 +3881,6 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProt
       Response(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse v) : UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse(std::move(v)) {}
 };
 
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse;
-};
-
 
 template <>
 class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> {
@@ -4924,13 +3898,6 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProt
  public:
       using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse;
       Response(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse v) : UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse;
 };
 
 
@@ -4952,13 +3919,6 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProt
       Response(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse v) : UnknownInteractionsClosedProtocolStrictTwoWayTableResponse(std::move(v)) {}
 };
 
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse;
-};
-
 
 template <>
 class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse> {
@@ -4978,30 +3938,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProt
       Response(::fit::result<int32_t> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse;
 
  public:
-  
-  
-  static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok();
-    }
-  }
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::WithErr(m.error_value()) } };
@@ -5030,30 +3971,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProt
       Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse;
 
  public:
-  
-  
-  static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult::WithErr(m.error_value()) } };
@@ -5082,30 +4004,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProt
       Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse;
 
  public:
-  
-  
-  static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult::WithErr(m.error_value()) } };
@@ -5134,30 +4037,11 @@ class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProt
       Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
-
 template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse;
-};
-template <>
-class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> {
+class ::fidl::internal::ResponseMessageConverter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse;
 
  public:
-  
-  
-  static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fit::ok(std::move(o.result().response().value()));
-    }
-  }
-  
-
   static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{ { .result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult::WithErr(m.error_value()) } };
@@ -5335,25 +4219,25 @@ class ::fidl::internal::NaturalWeakEventSender<::test_unknowninteractions::Unkno
     ::fit::result<::fidl::Error> StrictEvent();
 
   
-    ::fit::result<::fidl::Error> StrictEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>& payload);
+    ::fit::result<::fidl::Error> StrictEventFields(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>& payload);
+    ::fit::result<::fidl::Error> StrictEventUnion(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>& payload);
+    ::fit::result<::fidl::Error> StrictEventTable(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventErr(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventFieldsErr(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventUnionErr(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventTableErr(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest& payload);
 
   
 };
@@ -5367,25 +4251,25 @@ class ::fidl::internal::NaturalEventSender<::test_unknowninteractions::UnknownIn
     ::fit::result<::fidl::Error> StrictEvent();
 
   
-    ::fit::result<::fidl::Error> StrictEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>& payload);
+    ::fit::result<::fidl::Error> StrictEventFields(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>& payload);
+    ::fit::result<::fidl::Error> StrictEventUnion(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>& payload);
+    ::fit::result<::fidl::Error> StrictEventTable(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventErr(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventFieldsErr(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventUnionErr(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest& payload);
 
   
-    ::fit::result<::fidl::Error> StrictEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>& payload);
+    ::fit::result<::fidl::Error> StrictEventTableErr(const ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest& payload);
 
   
 };

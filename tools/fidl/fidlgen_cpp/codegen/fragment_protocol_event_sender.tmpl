@@ -188,8 +188,7 @@ class {{ .NaturalEventSender }}
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
   {{- if .HasResponsePayload }}
-  _encoder.EncodeBody(
-      {{ .NaturalEventConverter }}::IntoDomainObject({{ .Response.Forward "payload" }}));
+  _encoder.EncodeBody({{ .Response.Forward "payload" }});
   {{- end }}
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
@@ -201,8 +200,7 @@ class {{ .NaturalEventSender }}
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
   {{- if .HasResponsePayload }}
-  _encoder.EncodeBody(
-      {{ .NaturalEventConverter }}::IntoDomainObject({{ .Response.Forward "payload" }}));
+  _encoder.EncodeBody({{ .Response.Forward "payload" }});
   {{- end }}
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());

@@ -14,6 +14,7 @@ class OneWay final {
   using Transport = ::fidl::internal::DriverTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   class Send final {
     Send() = delete;
 

@@ -148,38 +148,12 @@ class {{ .NaturalResponse }} final
   {{- end }}
 };
 
-template <>
-struct {{ .ResponseMessageTraits }} final {
- public:
-  static constexpr bool kHasPayload = {{ .HasResponsePayload }};
-  {{- if .HasResponsePayload }}
-  using Payload = {{ .ResponsePayload }};
-  {{- end }}
-};
-
 {{- if .Result }}
 template <>
 class {{ .NaturalResponseConverter }} {
   using DomainObject = {{ .ResponsePayload }};
 
  public:
-  {{ if not .Result.HasFrameworkError }}
-  {{/* FromDomainObject is not available if HasFrameworkError because framework
-  error variants cannot be converted to fidl::Response. */}}
-  static {{ .NaturalResponse }} FromDomainObject(DomainObject o) {
-    if (o.result().err().has_value()) {
-      return ::fit::error(std::move(o.result().err().value()));
-    } else {
-      ZX_DEBUG_ASSERT(o.result().response().has_value());
-      {{- if .Result.ValueParameters }}
-        return ::fit::ok(std::move(o.result().response().value()));
-      {{- else }}
-        return ::fit::ok();
-      {{- end }}
-    }
-  }
-  {{ end }}
-
   static DomainObject IntoDomainObject({{ .NaturalResponseArg "m" }}) {
     {{ if .Result.HasError -}}
     if (m.is_error()) {

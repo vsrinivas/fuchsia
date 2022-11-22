@@ -17,6 +17,7 @@ class Interface final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+
   /// method comment #1
   ///
   /// method comment #3
