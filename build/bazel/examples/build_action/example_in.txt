@@ -1,1 +1,0 @@
-Input file for example Bazel build action.

@@ -45,7 +45,6 @@ fuchsia_component(
 fuchsia_package(
     name = "pkg",
     package_name = "hello_world",
-    visibility = ["//visibility:public"],
     components = [
         ":component",
     ],
