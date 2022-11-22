@@ -139,46 +139,46 @@ TEST_F(VerbsSettingsTest, GetSet) {
   console().FlushOutputEvents();
 
   // "get" with no input.
-  EXPECT_EQ("", DoInput("get --value-only build-dirs"));
+  EXPECT_EQ("", DoInput("get --value-only source-map"));
 
   // "get" with an invalid object (there is no active filter).
   EXPECT_EQ("No current object of this type.", DoInput("filter get --value-only"));
 
   // Process qualified set.
   EXPECT_EQ(
-      "Set process 1 build-dirs = \n"
+      "Set process 1 source-map = \n"
       "  • prdir\n",
-      DoInput("pr set build-dirs prdir"));
+      DoInput("pr set source-map prdir"));
 
   // Both the unqualified and process-qualified one should get it,
-  EXPECT_EQ("prdir", DoInput("get --value-only build-dirs"));
-  EXPECT_EQ("prdir", DoInput("process get --value-only build-dirs"));
+  EXPECT_EQ("prdir", DoInput("get --value-only source-map"));
+  EXPECT_EQ("prdir", DoInput("process get --value-only source-map"));
 
   // Globally qualified set.
   EXPECT_EQ(
-      "Set global build-dirs = \n"
+      "Set global source-map = \n"
       "  • gldir\n",
-      DoInput("global set build-dirs gldir"));
+      DoInput("global set source-map gldir"));
 
   // The globally qualified one should return it, but the unqualified one should return the process
   // since it's more specific.
-  EXPECT_EQ("prdir", DoInput("process get --value-only build-dirs"));
-  EXPECT_EQ("gldir", DoInput("global get --value-only build-dirs"));
-  EXPECT_EQ("prdir", DoInput("get --value-only build-dirs"));
+  EXPECT_EQ("prdir", DoInput("process get --value-only source-map"));
+  EXPECT_EQ("gldir", DoInput("global get --value-only source-map"));
+  EXPECT_EQ("prdir", DoInput("get --value-only source-map"));
 
   // Unqualified set.
   EXPECT_EQ(
-      "Set global build-dirs = \n"
+      "Set global source-map = \n"
       "  • gldir2\n",
-      DoInput("set build-dirs gldir2"));
+      DoInput("set source-map gldir2"));
 
   // Append.
   EXPECT_EQ(
-      "Set global build-dirs = \n"
+      "Set global source-map = \n"
       "  • gldir2\n"
       "  • gldir3\n"
       "  • \"gldir four\"\n",
-      DoInput("set build-dirs += gldir3 \"gldir four\""));
+      DoInput("set source-map += gldir3 \"gldir four\""));
 
   // Create a breakpoint and test scope assignment (this doesn't need to be quoted).
   DoInput("break main");
@@ -188,8 +188,8 @@ TEST_F(VerbsSettingsTest, GetSet) {
   EXPECT_EQ("There are no threads in the process.", DoInput("bp 1 set scope thread 1"));
   EXPECT_EQ("There is no current thread to use for the scope.", DoInput("bp 1 set scope thread"));
 
-  EXPECT_EQ("gldir2 gldir3 \"gldir four\"", DoInput("global get --value-only build-dirs"));
-  EXPECT_EQ("prdir", DoInput("get --value-only build-dirs"));
+  EXPECT_EQ("gldir2 gldir3 \"gldir four\"", DoInput("global get --value-only source-map"));
+  EXPECT_EQ("prdir", DoInput("get --value-only source-map"));
 
   // Check invalid values.
   EXPECT_EQ("Could not find setting \"unknown-setting\".", DoInput("set unknown-setting = blah"));

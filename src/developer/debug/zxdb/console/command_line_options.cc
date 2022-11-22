@@ -22,13 +22,6 @@ Options
 
 )";
 
-const char kBuildDirHelp[] = R"(  --build-dir=<path>
-  -b <path>
-      Adds the given directory to the list of build directories. These
-      directories are where source file names from the symbols are relative to.
-      There can be multiple ones which will be searched in order.
-      It populates the "build-dirs" setting (see "get build-dirs").)";
-
 const char kUnixConnectHelp[] = R"(  --unix-connect=<filepath>
   -u <filepath>
       Attempts to connect to a debug_agent through a unix socket.)";
@@ -135,7 +128,6 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
 
   cmdline::ArgsParser<CommandLineOptions> parser;
 
-  parser.AddSwitch("build-dir", 'b', kBuildDirHelp, &CommandLineOptions::build_dirs);
   parser.AddSwitch("connect", 'c', kConnectHelp, &CommandLineOptions::connect);
   parser.AddSwitch("unix-connect", 'u', kUnixConnectHelp, &CommandLineOptions::unix_connect);
   parser.AddSwitch("core", 0, kCoreHelp, &CommandLineOptions::core);

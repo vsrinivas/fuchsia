@@ -64,10 +64,6 @@ void SetupCommandLineOptions(const CommandLineOptions& options, zxdb::MapSetting
   if (!options.ids_txts.empty()) {
     settings.SetList(Settings::System::kIdsTxts, options.ids_txts);
   }
-
-  if (!options.build_dirs.empty()) {
-    settings.SetList(Settings::Target::kBuildDirs, options.build_dirs);
-  }
 }
 
 std::string FormatFrameIdAndAddress(uint64_t frame_id, uint64_t inline_index, uint64_t address) {
