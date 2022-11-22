@@ -16,10 +16,10 @@
   area: ["System", "General"]
 
 - term: "ABR"
-  short_description: "Fuchsia uses a bootloader A/B/R slot logic."
-  full_description: "<p>Fuchsia uses a bootloader A/B/R slot logic. This logic is not required to boot
-  Zircon or run a basic Fuchsia system, but it is required to take full advantage of Fuchsia's
-  over-the-air (OTA) update features.</p>
+  short_description: "Fuchsia uses a bootloader with two partitions A and B, and a recovery slot."
+  full_description: "<p>Fuchsia uses a bootloader with two partitions A and B, and a recovery slot.
+  This logic is not required to boot Zircon or run a basic Fuchsia system, but it is required to
+  take full advantage of Fuchsia's over-the-air (OTA) update features.</p>
   <p>The term slot is used to refer to a set of partitions that update together.
   If an update fails, the partitions fall back together. This works because there are two copies
   of each partition on disk. By convention, the slots used for normal updates are denoted A and B,
