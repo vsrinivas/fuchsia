@@ -70,6 +70,8 @@ class DeviceManager {
     return devices_;
   }
 
+  // Returns all composite devices that are not added through node groups.
+  // TODO(fxb/115878): DeviceManager should return node group composites as well.
   fbl::DoublyLinkedList<std::unique_ptr<CompositeDevice>>& composite_devices() {
     return composite_devices_;
   }
@@ -81,7 +83,8 @@ class DeviceManager {
   // All Devices (excluding static immortal devices)
   fbl::TaggedDoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesListTag> devices_;
 
-  // All composite devices
+  // All composite devices that are not added through node groups.
+  // TODO(fxb/115878): DeviceManager should own and manage the node group composites.
   fbl::DoublyLinkedList<std::unique_ptr<CompositeDevice>> composite_devices_;
 
   DriverHostCrashPolicy crash_policy_;
