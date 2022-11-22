@@ -90,6 +90,10 @@ elliptic-curve = { version = "0.11.12", features = [ "ecdh" ] }
 either = "1.5.0"
 eui48 = { version = "1.1.0", default-features = false, features = ["serde", "disp_hexstring"] }
 event-listener = "2.5.1"
+# TODO(fxbug.dev/112722): We're importing this explicitly for now, but eventually
+# it will be imported by valico and the dt-schema tool.
+# Remove this line when valico uses fancy-regex.
+fancy-regex = "0.8"
 fatfs = { path = "forks/fatfs" }
 flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
 futures = "=0.3.19"
@@ -442,6 +446,12 @@ rustflags = [
   # TODO(https://github.com/rust-lang/rust/issues/32976): AtomicU128 is unstable.
   # "--cfg=has_atomic_u128",
 ]
+
+[gn.package.fancy-regex."0.8.0"]
+# TODO(fxbug.dev/112722): We're importing this explicitly for now, but eventually
+# it will be imported by valico and the dt-schema tool.
+# Remove this line when valico uses fancy-regex.
+visibility = [":*"]
 
 [gn.package.futures-core."0.3.19"]
 env_vars = [ "CARGO_PKG_NAME=futures-core" ]

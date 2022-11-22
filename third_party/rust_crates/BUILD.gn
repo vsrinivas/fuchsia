@@ -264,6 +264,10 @@ group("event-listener") {
   public_deps = [ ":event-listener-v2_5_1" ]
 }
 
+group("fancy-regex") {
+  public_deps = [ ":fancy-regex-v0_8_0" ]
+}
+
 group("fatfs") {
   public_deps = [ ":fatfs-v0_4_0" ]
 }
@@ -3949,6 +3953,32 @@ rust_library("event-listener-v2_5_1") {
   ]
 
   visibility = [ ":*" ]
+}
+
+rust_library("fancy-regex-v0_8_0") {
+  crate_name = "fancy_regex"
+  crate_root = "//third_party/rust_crates/vendor/fancy-regex-0.8.0/src/lib.rs"
+  output_name = "fancy_regex-b9fd63eddc01ef4b"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":bit-set-v0_5_0" ]
+  deps += [ ":regex-v1_5_6" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=b9fd63eddc01ef4b",
+    "-Cextra-filename=-b9fd63eddc01ef4b",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"perf\"",
+    "--cfg=feature=\"unicode\"",
+  ]
+
+  visibility = []
+  visibility += [ ":*" ]
 }
 
 rust_library("fastrand-v1_4_0") {
