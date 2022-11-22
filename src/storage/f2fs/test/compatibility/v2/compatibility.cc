@@ -209,6 +209,18 @@ std::unique_ptr<TestFile> FuchsiaOperator::Open(std::string_view path, int flags
   return ret;
 }
 
+void FuchsiaOperator::Rename(std::string_view oldpath, std::string_view newpath) {
+  auto result = GetLastDirVnodeAndFileName(oldpath);
+  ASSERT_TRUE(result.is_ok());
+  auto [oldparent_vn, oldchild_name] = result.value();
+
+  result = GetLastDirVnodeAndFileName(newpath);
+  ASSERT_TRUE(result.is_ok());
+  auto [newparent_vn, newchild_name] = result.value();
+
+  ASSERT_EQ(oldparent_vn->Rename(newparent_vn, oldchild_name, newchild_name, false, false), ZX_OK);
+}
+
 zx::result<std::pair<fbl::RefPtr<fs::Vnode>, std::string>>
 FuchsiaOperator::GetLastDirVnodeAndFileName(std::string_view absolute_path) {
   std::filesystem::path path(absolute_path);
