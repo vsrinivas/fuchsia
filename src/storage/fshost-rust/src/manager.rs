@@ -5,6 +5,7 @@
 use {
     crate::{device::Device, environment::Environment, matcher, service},
     anyhow::{format_err, Error},
+    fs_management::format::DiskFormat,
     futures::{channel::mpsc, StreamExt},
 };
 
@@ -46,6 +47,13 @@ impl<E: Environment> Manager<E> {
                     }
                 },
             };
+
+            let content_format = device.content_format().await.unwrap_or(DiskFormat::Unknown);
+            tracing::info!(
+                path = %device.topological_path(),
+                ?content_format,
+                "Matching device"
+            );
 
             match self.matcher.match_device(device.as_mut(), &mut self.environment).await {
                 Ok(true) => {}

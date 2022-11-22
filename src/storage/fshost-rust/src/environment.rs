@@ -17,8 +17,8 @@ use {
     fidl_fuchsia_io as fio,
     fs_management::{
         filesystem::{ServingMultiVolumeFilesystem, ServingSingleVolumeFilesystem},
-        format::{detect_disk_format, DiskFormat},
-        Blobfs, F2fs, Fxfs, Minfs,
+        format::DiskFormat,
+        Blobfs, F2fs, FSConfig, Fxfs, Minfs,
     },
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon as zx,
@@ -115,6 +115,7 @@ impl<'a> Environment for FshostEnvironment<'a> {
         device: &mut dyn Device,
         driver_path: &str,
     ) -> Result<(), Error> {
+        tracing::info!(path = %device.topological_path(), %driver_path, "Binding driver to device");
         let controller = ControllerProxy::new(device.proxy()?.into_channel().unwrap());
         controller.bind(driver_path).await?.map_err(zx::Status::from_raw)?;
         Ok(())
@@ -127,6 +128,8 @@ impl<'a> Environment for FshostEnvironment<'a> {
 
     async fn mount_blobfs(&mut self, device: &mut dyn Device) -> Result<(), Error> {
         let queue = self.blobfs.queue().ok_or(anyhow!("blobfs already mounted"))?;
+
+        tracing::info!(path = %device.topological_path(), "Mounting /blob");
 
         // Setting max partition size for blobfs
         if let Err(e) = set_partition_max_size(device, self.config.blobfs_max_bytes).await {
@@ -157,88 +160,10 @@ impl<'a> Environment for FshostEnvironment<'a> {
     async fn mount_data(&mut self, device: &mut dyn Device) -> Result<(), Error> {
         let _ = self.data.queue().ok_or_else(|| anyhow!("data partition already mounted"))?;
 
-        // Setting max partition size for data
-        if let Err(e) = set_partition_max_size(device, self.config.data_max_bytes).await {
-            tracing::warn!("Failed to set max partition size for data: {:?}", e);
-        };
         let mut filesystem = match self.config.data_filesystem_format.as_ref() {
-            "fxfs" => {
-                let detected_format = device.content_format().await?;
-                let mut fs = Fxfs::from_channel(device.proxy()?.into_channel().unwrap().into())?;
-                let mut reformatted = false;
-                if detected_format != DiskFormat::Fxfs {
-                    tracing::info!(
-                        "reformatting fxfs: detected different format: {:?}",
-                        detected_format
-                    );
-                    fs.format().await?;
-                    reformatted = true;
-                } else if !fs.fsck().await.is_ok() && self.config.format_data_on_corruption {
-                    tracing::info!("reformatting fxfs: fsck failed, format_on_corruption enabled");
-                    fs.format().await?;
-                    reformatted = true;
-                }
-                let mut serving_fs = fs.serve_multi_volume().await?;
-                let (volume_name, _) = if reformatted {
-                    fxfs::init_data_volume(&mut serving_fs, &self.config).await?
-                } else {
-                    fxfs::unlock_data_volume(&mut serving_fs, &self.config).await?
-                };
-                Filesystem::ServingMultiVolume(serving_fs, volume_name)
-            }
-            "f2fs" => {
-                let proxy = if self.config.no_zxcrypt || self.config.fvm_ramdisk {
-                    device.proxy()?
-                } else {
-                    self.attach_driver(device, "zxcrypt.so").await?;
-                    zxcrypt::unseal_or_format(device).await?;
-
-                    // Instead of waiting for the zxcrypt device to go through the watcher and then
-                    // matching it again, just wait for it to appear and immediately use it. The
-                    // block watcher will find the zxcrypt device later and pass it through the
-                    // matchers, but it won't match anything since the fvm matcher only matches
-                    // immediate children.
-                    device.get_child("/zxcrypt/unsealed/block").await?.proxy()?
-                };
-                let detected_format = detect_disk_format(&proxy).await;
-                let mut fs = F2fs::from_channel(proxy.into_channel().unwrap().into())?;
-                if detected_format != DiskFormat::F2fs {
-                    tracing::info!(
-                        "reformatting f2fs: detected different format: {:?}",
-                        detected_format
-                    );
-                    fs.format().await?;
-                } else if !fs.fsck().await.is_ok() && self.config.format_data_on_corruption {
-                    tracing::info!("reformatting f2fs: fsck failed, format_on_corruption enabled");
-                    fs.format().await?;
-                }
-                Filesystem::Serving(fs.serve().await?)
-            }
-            // Default to minfs
-            _ => {
-                let proxy = if self.config.no_zxcrypt || self.config.fvm_ramdisk {
-                    device.proxy()?
-                } else {
-                    self.attach_driver(device, "zxcrypt.so").await?;
-                    zxcrypt::unseal_or_format(device).await?;
-
-                    // Same reasoning as f2fs
-                    device.get_child("/zxcrypt/unsealed/block").await?.proxy()?
-                };
-                let detected_format = detect_disk_format(&proxy).await;
-                let mut fs = Minfs::from_channel(proxy.into_channel().unwrap().into())?;
-                if detected_format != DiskFormat::Minfs {
-                    tracing::info!(
-                        "reformatting minfs: detected different format: {:?}",
-                        detected_format
-                    );
-                    fs.format().await?;
-                } else if !fs.fsck().await.is_ok() && self.config.format_data_on_corruption {
-                    tracing::info!("reformatting minfs: fsck failed, format_on_corruption enabled");
-                    fs.format().await?;
-                }
-                Filesystem::Serving(fs.serve().await?)
-            }
+            "fxfs" => self.serve_data(device, Fxfs::default()).await?,
+            "f2fs" => self.serve_data(device, F2fs::default()).await?,
+            _ => self.serve_data(device, Minfs::default()).await?,
         };
 
         let queue = self.data.queue().unwrap();
@@ -251,7 +176,102 @@ impl<'a> Environment for FshostEnvironment<'a> {
     }
 }
 
+impl<'a> FshostEnvironment<'a> {
+    async fn serve_data<FSC: FSConfig>(
+        &mut self,
+        device: &mut dyn Device,
+        config: FSC,
+    ) -> Result<Filesystem, Error> {
+        let format = config.disk_format();
+        tracing::info!(
+            path = %device.topological_path(),
+            expected_format = ?format,
+            "Mounting /data"
+        );
+
+        // Set the max partition size for data
+        if let Err(e) = set_partition_max_size(device, self.config.data_max_bytes).await {
+            tracing::warn!(?e, "Failed to set max partition size for data");
+        };
+
+        let mut new_dev;
+        let device = match format {
+            // Fxfs never has zxcrypt underneath
+            DiskFormat::Fxfs => device,
+            // Skip zxcrypt in these configurations.
+            _ if self.config.no_zxcrypt => device,
+            _ if self.config.fvm_ramdisk => device,
+            // Otherwise, we need to bind a zxcrypt device first.
+            _ => {
+                self.bind_zxcrypt(device).await?;
+
+                // Instead of waiting for the zxcrypt device to go through the watcher and then
+                // matching it again, just wait for it to appear and immediately use it. The
+                // block watcher will find the zxcrypt device later and pass it through the
+                // matchers, but it won't match anything since the fvm matcher only matches
+                // immediate children.
+                new_dev = device.get_child("/zxcrypt/unsealed/block").await?;
+                new_dev.as_mut()
+            }
+        };
+
+        let detected_format = device.content_format().await?;
+        let mut fs = fs_management::filesystem::Filesystem::from_channel(
+            device.proxy()?.into_channel().unwrap().into(),
+            config,
+        )?;
+
+        let mut reformatted = false;
+        if detected_format != format {
+            tracing::info!(
+                ?detected_format,
+                expected_format = ?format,
+                "Expected format not detected. Reformatting.",
+            );
+            fs.format().await?;
+            reformatted = true;
+        } else if self.config.check_filesystems {
+            tracing::info!(?format, "fsck started");
+            if let Err(error) = fs.fsck().await {
+                tracing::error!(?format, ?error, "FILESYSTEM CORRUPTION DETECTED!");
+                tracing::error!(
+                    "Please file a bug to the Storage component in http://fxbug.dev, including a\
+                    device snapshot collected with `ffx target snapshot` if possible.",
+                );
+
+                // TODO(fxbug.dev/109290): file a crash report
+
+                if !self.config.format_data_on_corruption {
+                    tracing::error!(?format, "format on corruption is disabled, not continuing");
+                    return Err(error);
+                }
+                fs.format().await?;
+                reformatted = true;
+            } else {
+                tracing::info!(?format, "fsck completed OK");
+            }
+        }
+
+        Ok(match format {
+            DiskFormat::Fxfs => {
+                let mut serving_fs = fs.serve_multi_volume().await?;
+                let (volume_name, _) = if reformatted {
+                    fxfs::init_data_volume(&mut serving_fs, &self.config).await?
+                } else {
+                    fxfs::unlock_data_volume(&mut serving_fs, &self.config).await?
+                };
+                Filesystem::ServingMultiVolume(serving_fs, volume_name)
+            }
+            _ => Filesystem::Serving(fs.serve().await?),
+        })
+    }
+}
+
 async fn set_partition_max_size(device: &mut dyn Device, max_byte_size: u64) -> Result<(), Error> {
+    if max_byte_size == 0 {
+        return Ok(());
+    }
+
     let index =
         device.topological_path().find("/fvm").ok_or(anyhow!("fvm is not in the device path"))?;
     // The 4 is from the 4 characters in "/fvm"

@@ -117,6 +117,10 @@ pub trait FSConfig {
     fn is_multi_volume(&self) -> bool {
         false
     }
+
+    fn disk_format(&self) -> format::DiskFormat {
+        format::DiskFormat::Unknown
+    }
 }
 
 ///
@@ -179,6 +183,10 @@ impl FSConfig for Blobfs {
     fn mode(&self) -> Mode<'_> {
         Mode::Component { name: "blobfs", reuse_component_after_serving: false }
     }
+
+    fn disk_format(&self) -> format::DiskFormat {
+        format::DiskFormat::Blobfs
+    }
 }
 
 /// Minfs Filesystem Configuration
@@ -208,6 +216,10 @@ impl Minfs {
 impl FSConfig for Minfs {
     fn mode(&self) -> Mode<'_> {
         Mode::Component { name: "minfs", reuse_component_after_serving: false }
+    }
+
+    fn disk_format(&self) -> format::DiskFormat {
+        format::DiskFormat::Minfs
     }
 }
 
@@ -261,6 +273,10 @@ impl FSConfig for MinfsLegacy {
             ..Default::default()
         })
     }
+
+    fn disk_format(&self) -> format::DiskFormat {
+        format::DiskFormat::Minfs
+    }
 }
 
 pub type CryptClientFn = Arc<dyn Fn() -> zx::Channel + Send + Sync>;
@@ -298,11 +314,17 @@ impl FSConfig for Fxfs {
     fn mode(&self) -> Mode<'_> {
         Mode::Component { name: "fxfs", reuse_component_after_serving: true }
     }
+
     fn crypt_client(&self) -> Option<zx::Channel> {
         self.crypt_client_fn.as_ref().map(|f| f())
     }
+
     fn is_multi_volume(&self) -> bool {
         true
+    }
+
+    fn disk_format(&self) -> format::DiskFormat {
+        format::DiskFormat::Fxfs
     }
 }
 
@@ -344,6 +366,10 @@ impl FSConfig for F2fs {
             ..Default::default()
         })
     }
+
+    fn disk_format(&self) -> format::DiskFormat {
+        format::DiskFormat::F2fs
+    }
 }
 
 /// Factoryfs Filesystem Configuration
@@ -380,5 +406,9 @@ impl FSConfig for Factoryfs {
             },
             ..Default::default()
         })
+    }
+
+    fn disk_format(&self) -> format::DiskFormat {
+        format::DiskFormat::FactoryFs
     }
 }
