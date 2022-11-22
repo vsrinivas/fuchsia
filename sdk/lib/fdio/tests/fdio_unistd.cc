@@ -19,30 +19,35 @@ namespace {
 constexpr int kInvalidFD = -1;
 static_assert(kInvalidFD != AT_FDCWD);
 
+static std::string TestTempDirPath() {
+  char* tmp = getenv("TEST_TMPDIR");
+  return std::string(tmp == nullptr ? "/tmp" : tmp);
+}
+
 TEST(UnistdTest, TruncateWithNegativeLength) {
-  const char* filename = "/tmp/truncate-with-negative-length-test";
-  fbl::unique_fd fd(open(filename, O_CREAT | O_RDWR, 0666));
-  ASSERT_TRUE(fd);
+  std::string filename = TestTempDirPath() + "/truncate-with-negative-length-test";
+  fbl::unique_fd fd(open(filename.c_str(), O_CREAT | O_RDWR, 0666));
+  ASSERT_TRUE(fd, "open failed with error %s (%d)", strerror(errno), errno);
   EXPECT_EQ(-1, ftruncate(fd.get(), -1));
   EXPECT_EQ(EINVAL, errno);
   EXPECT_EQ(-1, ftruncate(fd.get(), std::numeric_limits<off_t>::min()));
   EXPECT_EQ(EINVAL, errno);
 
-  EXPECT_EQ(-1, truncate(filename, -1));
+  EXPECT_EQ(-1, truncate(filename.c_str(), -1));
   EXPECT_EQ(EINVAL, errno);
-  EXPECT_EQ(-1, truncate(filename, std::numeric_limits<off_t>::min()));
+  EXPECT_EQ(-1, truncate(filename.c_str(), std::numeric_limits<off_t>::min()));
   EXPECT_EQ(EINVAL, errno);
 }
 
 TEST(UnistdTest, LinkAt) {
   // Create a temporary directory, store its absolute path and chdir to it.
-  char root_abs[] = "/tmp/fdio-linkat.XXXXXX";
-  ASSERT_NOT_NULL(mkdtemp(root_abs), "%s", strerror(errno));
+  std::string root_abs = TestTempDirPath() + "/fdio-linkat.XXXXXX";
+  ASSERT_NOT_NULL(mkdtemp(root_abs.data()), "%s", strerror(errno));
   auto cleanup_root =
-      fit::defer([&root_abs]() { EXPECT_EQ(0, rmdir(root_abs), "%s", strerror(errno)); });
+      fit::defer([&root_abs]() { EXPECT_EQ(0, rmdir(root_abs.c_str()), "%s", strerror(errno)); });
   char prev_cwd[PATH_MAX];
   ASSERT_NOT_NULL(getcwd(prev_cwd, sizeof(prev_cwd)));
-  ASSERT_EQ(0, chdir(root_abs), "%s", strerror(errno));
+  ASSERT_EQ(0, chdir(root_abs.c_str()), "%s", strerror(errno));
   auto restore_cwd =
       fit::defer([&prev_cwd]() { EXPECT_EQ(0, chdir(prev_cwd), "%s", strerror(errno)); });
 
@@ -87,10 +92,10 @@ TEST(UnistdTest, LinkAt) {
 }
 
 TEST(UnistdTest, LinkAtFollow) {
-  char root_abs[] = "/tmp/fdio-linkat-follow.XXXXXX";
-  ASSERT_NOT_NULL(mkdtemp(root_abs), "%s", strerror(errno));
+  std::string root_abs = TestTempDirPath() + "/fdio-linkat-follow.XXXXXX";
+  ASSERT_NOT_NULL(mkdtemp(root_abs.data()), "%s", strerror(errno));
   auto cleanup_root =
-      fit::defer([&root_abs]() { EXPECT_EQ(0, rmdir(root_abs), "%s", strerror(errno)); });
+      fit::defer([&root_abs]() { EXPECT_EQ(0, rmdir(root_abs.c_str()), "%s", strerror(errno)); });
 
   const std::string file_abs = fxl::Concatenate({root_abs, "/", "file"});
   ASSERT_TRUE(fbl::unique_fd(creat(file_abs.c_str(), 0666)), "%s", strerror(errno));
@@ -144,8 +149,8 @@ TEST(UnistdTest, LinkAtFollow) {
 }
 
 TEST(UnistdTest, ReadAndWriteWithNegativeOffsets) {
-  const char* filename = "/tmp/read-write-with-negative-offsets-test";
-  fbl::unique_fd fd(open(filename, O_CREAT | O_RDWR, 0666));
+  std::string filename = TestTempDirPath() + "/read-write-with-negative-offsets-test";
+  fbl::unique_fd fd(open(filename.c_str(), O_CREAT | O_RDWR, 0666));
   ASSERT_TRUE(fd);
   ASSERT_EQ(-1, pwrite(fd.get(), "hello", 5, -1));
   ASSERT_EQ(EINVAL, errno, "%s", strerror(errno));
