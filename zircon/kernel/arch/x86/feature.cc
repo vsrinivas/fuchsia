@@ -15,6 +15,7 @@
 #include <lib/arch/x86/power.h>
 #include <lib/arch/x86/speculation.h>
 #include <lib/boot-options/boot-options.h>
+#include <lib/system-topology.h>
 #include <stdint.h>
 #include <string.h>
 #include <trace.h>
@@ -251,6 +252,9 @@ void x86_cpu_feature_init() {
 // Invoked on each CPU during boot, after platform init has taken place.
 void x86_cpu_feature_late_init_percpu(void) {
   const bool on_boot_cpu = arch_curr_cpu_num() == 0;
+  const system_topology::Graph& topology = system_topology::Graph::GetSystemTopology();
+  const bool ht_disabled = (topology.processor_count() == topology.logical_processor_count()) ||
+                           !gBootOptions->smp_ht_enabled;
 
   arch::BootCpuidIo cpuid;
   hwreg::X86MsrIo msr;
@@ -264,7 +268,11 @@ void x86_cpu_feature_late_init_percpu(void) {
   // which is taken care of by the code-patching engine.
   bool stibp_enabled = false;
   if (!gBootOptions->x86_disable_spec_mitigations) {
-    switch (arch::GetPreferredSpectreV2Mitigation(cpuid, msr)) {
+    auto spectre_v2_mitigation = arch::GetPreferredSpectreV2Mitigation(cpuid, msr);
+    if ((spectre_v2_mitigation == arch::SpectreV2Mitigation::kIbpbRetpolineStibp) && ht_disabled) {
+      spectre_v2_mitigation = arch::SpectreV2Mitigation::kIbpbRetpoline;
+    }
+    switch (spectre_v2_mitigation) {
       case arch::SpectreV2Mitigation::kIbrs:  // Enhanced IBRS
         arch::EnableIbrs(cpuid, msr);
         break;
@@ -281,7 +289,7 @@ void x86_cpu_feature_late_init_percpu(void) {
   // Some RETbleed mitigations may overlap with Spectre V2 mitigations.
   if (!gBootOptions->x86_disable_spec_mitigations && g_has_retbleed) {
     if (x86_vendor == X86_VENDOR_AMD) {
-      if (arch::HasStibp(cpuid, false) && !stibp_enabled) {
+      if (arch::HasStibp(cpuid, false) && !stibp_enabled && !ht_disabled) {
         stibp_enabled = true;
         arch::EnableStibp(cpuid, msr);
       }
