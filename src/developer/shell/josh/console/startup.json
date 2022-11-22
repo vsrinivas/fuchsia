@@ -1,0 +1,5 @@
+{
+    "startup": [
+        "task.js"
+    ]
+}

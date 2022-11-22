@@ -38,6 +38,15 @@ class JsTest : public ::testing::Test {
     }
   }
 
+  // Initializes js startup modules in startup_js_path.
+  // |startup_js_path| points to where you look for startup JS libs.
+  void InitStartups(const std::string& startup_js_path) {
+    if (!ctx_->InitStartups(startup_js_path)) {
+      ctx_->DumpError();
+      FAIL();
+    }
+  }
+
   bool Eval(std::string_view command) {
     JSValue result = JS_Eval(ctx_->Get(), command.data(), command.size(), "batch", 0);
     if (JS_IsException(result)) {

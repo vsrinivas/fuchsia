@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-#include "js_testing_utils.h"
+#include "src/developer/shell/josh/lib/test/js_testing_utils.h"
 #include "src/developer/shell/josh/lib/zx.h"
 
 namespace {
@@ -22,6 +22,7 @@ class TaskTest : public shell::JsTest {
 
 TEST_F(TaskTest, SimplePs) {
   InitBuiltins("/pkg/data/fidling", "/pkg/data/lib");
+  InitStartups("/pkg/data/lib/startup");
 
   // Loop up-front to populate the svc object, which is done via a promise.
   js_std_loop(ctx_->Get());
@@ -61,6 +62,7 @@ TEST_F(TaskTest, Kill) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
   InitBuiltins("/pkg/data/fidling", "/pkg/data/lib");
+  InitStartups("/pkg/data/lib/startup");
 
   js_std_loop(ctx_->Get());
 
@@ -145,6 +147,7 @@ TEST_F(TaskTest, KillAll) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
   InitBuiltins("/pkg/data/fidling", "/pkg/data/lib");
+  InitStartups("/pkg/data/lib/startup");
 
   js_std_loop(ctx_->Get());
 

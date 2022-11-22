@@ -16,7 +16,6 @@ distribution_fidl_json("fidl_json_additional") {
   fidl_deps = [
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.device.manager",
-    "//sdk/fidl/fuchsia.hardware.gpio",
     "//sdk/fidl/fuchsia.power.battery",
   ]
 }
@@ -26,7 +25,6 @@ group("josh-test-base") {
   deps = [
     ":fidl_json_additional",
     ":fidl_json_sdk",
-    "josh/lib:js_libs",
     "//src/developer/shell/josh:bin",
     "//src/developer/shell/josh/lib:spawn_child_test_util",
   ]
@@ -85,7 +83,7 @@ fuchsia_shell_package("josh") {
   deps = [
     ":fidl_json_additional",
     ":fidl_json_sdk",
-    "josh/lib:js_libs",
     "//src/developer/shell/josh:bin",
+    "//src/developer/shell/josh/console:startup_js",
   ]
 }

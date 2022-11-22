@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
 import("//third_party/quickjs/compiled_js.gni")
 
 static_library("console") {
@@ -39,6 +40,14 @@ compiled_js("repl_init") {
     "-M",
     "li_internal",
   ]
+}
+
+resource("startup_js") {
+  sources = [
+    "//src/developer/shell/josh/lib/js/optional/task.js",
+    "startup.json",
+  ]
+  outputs = [ "data/lib/startup/{{source_file_part}}" ]
 }
 
 source_set("tests") {

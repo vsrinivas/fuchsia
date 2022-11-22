@@ -1,0 +1,27 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/resource.gni")
+
+# Optional js scripts to test as startup scripts
+resource("opt_js_libs") {
+  sources = [
+    "//src/developer/shell/josh/lib/js/optional/task.js",
+    "startup.json",
+  ]
+  outputs = [ "data/lib/startup/{{source_file_part}}" ]
+}
+
+source_set("opt_js_lib_tests") {
+  testonly = true
+  sources = [
+    "//src/developer/shell/josh/lib/test/js_testing_utils.h",
+    "task_test.cc",
+  ]
+  deps = [
+    ":opt_js_libs",
+    "//src/developer/shell/josh/lib:tests_base",
+  ]
+  configs += [ "//src/developer/shell/josh/lib:tests_base_config" ]
+}

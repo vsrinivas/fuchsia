@@ -25,6 +25,7 @@ static_library("lib") {
   public_deps = [
     ":fidl",
     ":fxlog",
+    ":js_libs",
     ":zx",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl_base",
@@ -75,7 +76,6 @@ resource("js_libs") {
   sources = [
     "js/ns.js",
     "js/pp.js",
-    "js/task.js",
     "js/util.js",
   ]
   outputs = [ "data/lib/{{source_file_part}}" ]
@@ -83,7 +83,6 @@ resource("js_libs") {
 
 executable("spawn_child_test_util") {
   testonly = true
-
   sources = [ "test/spawn_child_test_util.cc" ]
 }
 
@@ -108,6 +107,15 @@ source_set("tests_base") {
   ]
 }
 
+config("tests_base_config") {
+  configs = [
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    #
+    # Might be hard because these conversions come from quickjs.h.
+    "//build/config:Wno-conversion",
+  ]
+}
+
 source_set("log_tests") {
   testonly = true
   sources = [
@@ -118,12 +126,7 @@ source_set("log_tests") {
     ":tests_base",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
   ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    #
-    # Might be hard because these conversions come from quickjs.h.
-    "//build/config:Wno-conversion",
-  ]
+  configs += [ ":tests_base_config" ]
 }
 
 source_set("tests") {
@@ -133,14 +136,11 @@ source_set("tests") {
     "test/js_testing_utils.h",
     "test/ns_test.cc",
     "test/pp_test.cc",
-    "test/task_test.cc",
     "test/zx_test.cc",
   ]
-  deps = [ ":tests_base" ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    #
-    # Might be hard because these conversions come from quickjs.h.
-    "//build/config:Wno-conversion",
+  deps = [
+    ":tests_base",
+    "test/optional:opt_js_lib_tests",
   ]
+  configs += [ ":tests_base_config" ]
 }

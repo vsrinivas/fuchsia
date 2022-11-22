@@ -161,7 +161,6 @@ bool Context::InitBuiltins(const std::string& fidl_path, const std::string& boot
         "pp",
         "util",
         "ns",
-        "task",
     };
 
     for (auto& module : modules) {
