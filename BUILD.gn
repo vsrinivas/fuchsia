@@ -154,6 +154,7 @@ build_api_module("api") {
     ":gerrit_size_report",
     ":golden_files",
     ":images",
+    ":licenses",
     ":package-repositories",
     ":platforms",
     ":prebuilt_binaries",
