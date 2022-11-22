@@ -315,10 +315,6 @@ type Expr = flexible union {
     };
 
     @available(added=3)
-    2: reserved;
-    @available(added=3)
-    3: reserved;
-    @available(added=3)
     4: bin struct {
         kind flexible enum {
             ADD = 1;
@@ -1656,6 +1652,78 @@ protocol RemovedAt3LegacyTrue {
   ASSERT_EQUIVALENT(fidl, v3_to_head, "3");
   ASSERT_EQUIVALENT(fidl, v3_to_head, "HEAD");
   ASSERT_EQUIVALENT(fidl, legacy, "LEGACY");
+}
+
+TEST(DecompositionTests, ImplicitReservedFields) {
+  auto fidl = R"FIDL(
+@available(added=1)
+library example;
+
+type Foo = table {
+    // Explicitly reserved.
+    1: reserved;
+
+    // Explicitly reserved after removal.
+    @available(removed=2)
+    2: x string;
+    @available(added=2)
+    2: reserved;
+
+    // Implicitly reserved before addition and after removal.
+    @available(added=2, removed=3)
+    3: y string;
+
+    // Always-present field so that earlier gaps are not trailing.
+    4: always string;
+
+    // Neither explicitly nor implicity reserved since it's trailing.
+    @available(removed=2)
+    5: trailing string;
+};
+)FIDL";
+
+  auto v1 = R"FIDL(
+@available(added=1, removed=2)
+library example;
+
+type Foo = table {
+  1: reserved;
+  2: x string;
+  3: reserved;
+  4: always string;
+  5: trailing string;
+};
+)FIDL";
+
+  auto v2 = R"FIDL(
+@available(added=2, removed=3)
+library example;
+
+type Foo = table {
+  1: reserved;
+  2: reserved;
+  3: y string;
+  4: always string;
+};
+)FIDL";
+
+  auto v3_onward = R"FIDL(
+@available(added=3)
+library example;
+
+type Foo = table {
+  1: reserved;
+  2: reserved;
+  3: reserved;
+  4: always string;
+};
+)FIDL";
+
+  ASSERT_EQUIVALENT(fidl, v1, "1");
+  ASSERT_EQUIVALENT(fidl, v2, "2");
+  ASSERT_EQUIVALENT(fidl, v3_onward, "3");
+  ASSERT_EQUIVALENT(fidl, v3_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v3_onward, "LEGACY");
 }
 
 }  // namespace

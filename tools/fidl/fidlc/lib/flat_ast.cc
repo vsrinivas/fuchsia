@@ -433,10 +433,41 @@ static std::vector<T> FilterMembers(const std::vector<T>& all, VersionRange rang
 }
 
 // Like FilterMembers, but for members with ordinals (table and union members).
-// In addition to filtering, sorts the result by ordinal.
+// In addition to filtering, it sorts the result by ordinal, and it inserts
+// reserved members so that users only need to explicitly reserve ordinals when
+// they are not used in any version. It only does this to fill gaps: it doesn't
+// add trailing reserved members. For example:
+//
+//     type Foo = table {
+//         @available(removed=2) 1: string x;
+//         @available(added=2) 1: reserved;  // <-- This line becomes implied,
+//         2: string y;                      //     you don't have to write it.
+//     };
+//
+// The purpose of `reserved` is emphasize ordinal density and prevent accidental
+// ordinal reuse, but the @available(removed=2) member serves that purpose fine.
 template <typename T>
 static std::vector<T> FilterOrdinaledMembers(const std::vector<T>& all, VersionRange range) {
   std::vector<T> result = FilterMembers(all, range);
+  if (result.empty()) {
+    return result;
+  }
+  std::set<uint64_t> ordinals;
+  for (auto& member : result) {
+    ordinals.insert(member.ordinal->value);
+  }
+  // Note that rbegin() gives the max ordinal because std::set sorts keys.
+  auto max_ordinal = *ordinals.rbegin();
+  for (auto& member : all) {
+    if (member.ordinal->value >= max_ordinal) {
+      continue;
+    }
+    auto [it, inserted] = ordinals.insert(member.ordinal->value);
+    if (inserted) {
+      result.push_back(T::Reserved(member.ordinal, member.span.value_or(member.maybe_used->name),
+                                   std::make_unique<AttributeList>()));
+    }
+  }
   std::sort(result.begin(), result.end(),
             [](const T& lhs, const T& rhs) { return lhs.ordinal->value < rhs.ordinal->value; });
   return result;

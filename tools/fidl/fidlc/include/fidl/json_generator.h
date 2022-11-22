@@ -155,12 +155,6 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void GenerateTypeShapes(const flat::Object& object);
   void GenerateFieldShapes(const flat::Struct::Member& struct_member);
 
-  template <typename T>
-  std::vector<std::reference_wrapper<const T>> FilterDecls(
-      const std::vector<std::unique_ptr<T>>& vector);
-  template <typename T>
-  std::vector<std::reference_wrapper<const T>> FilterDecls2(const std::vector<const T*>& vector);
-
   const flat::Compilation* compilation_;
   const ExperimentalFlags experimental_flags_;
   std::ostringstream json_file_;

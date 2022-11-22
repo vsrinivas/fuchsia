@@ -595,9 +595,12 @@ struct TableMember : public Element, public Object, public HasCopy<TableMember> 
       : Element(Element::Kind::kTableMember, std::move(attributes)),
         ordinal(ordinal),
         maybe_used(std::make_unique<Used>(std::move(type), name)) {}
-  TableMember(const raw::Ordinal64* ordinal, SourceSpan span,
-              std::unique_ptr<AttributeList> attributes)
-      : Element(Element::Kind::kTableMember, std::move(attributes)), ordinal(ordinal), span(span) {}
+
+  static TableMember Reserved(const raw::Ordinal64* ordinal, SourceSpan span,
+                              std::unique_ptr<AttributeList> attributes) {
+    return TableMember(ordinal, span, nullptr, std::move(attributes));
+  }
+
   TableMember Copy() const override;
   std::any AcceptAny(VisitorAny* visitor) const override;
 
@@ -667,9 +670,12 @@ struct UnionMember : public Element, public Object, public HasCopy<UnionMember> 
       : Element(Element::Kind::kUnionMember, std::move(attributes)),
         ordinal(ordinal),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), name)) {}
-  UnionMember(const raw::Ordinal64* ordinal, SourceSpan span,
-              std::unique_ptr<AttributeList> attributes)
-      : Element(Element::Kind::kUnionMember, std::move(attributes)), ordinal(ordinal), span(span) {}
+
+  static UnionMember Reserved(const raw::Ordinal64* ordinal, SourceSpan span,
+                              std::unique_ptr<AttributeList> attributes) {
+    return UnionMember(ordinal, span, nullptr, std::move(attributes));
+  }
+
   UnionMember Copy() const override;
   std::any AcceptAny(VisitorAny* visitor) const override;
 

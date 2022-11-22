@@ -308,9 +308,9 @@ bool ConsumeStep::CreateMethodResult(
         std::move(error_type_ctor), err_variant_context->name(), std::make_unique<AttributeList>());
   } else {
     // If there's no error, the error variant is reserved.
-    result_members.emplace_back(
+    result_members.emplace_back(Union::Member::Reserved(
         ConsumeOrdinal(std::make_unique<raw::Ordinal64>(sourceElement, kErrorOrdinal)),
-        err_variant_context->name(), std::make_unique<AttributeList>());
+        err_variant_context->name(), std::make_unique<AttributeList>()));
   }
 
   if (has_transport_err) {
@@ -677,8 +677,8 @@ bool ConsumeStep::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
     std::unique_ptr<AttributeList> attributes;
     ConsumeAttributeList(std::move(member->attributes), &attributes);
     if (member->reserved) {
-      members.emplace_back(ConsumeOrdinal(std::move(member->ordinal)), member->span(),
-                           std::move(attributes));
+      members.emplace_back(T::Member::Reserved(ConsumeOrdinal(std::move(member->ordinal)),
+                                               member->span(), std::move(attributes)));
       continue;
     }
 
