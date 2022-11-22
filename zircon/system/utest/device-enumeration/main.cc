@@ -472,7 +472,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 
   static const char* kTouchscreenDevicePaths[] = {
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-56/ft3x27-touch/focaltouch HidDevice/hid-device/InputReport",
+      "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-56/focaltech_touch/focaltouch HidDevice/hid-device/InputReport",
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-93/gt92xx-touch/gt92xx HidDevice/hid-device/InputReport",
   };
   ASSERT_NO_FATAL_FAILURE(
@@ -629,7 +629,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/05:04:17/mali/aml-gpu",
       "sys/platform/05:04:13/sherlock-audio-pdm-in",
       "sys/platform/05:04:12:1/sherlock-i2s-audio-out",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-56/ft5726-touch",
+      "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-56/focaltech_touch",
       "sys/platform/00:00:e/tee/optee",
       "sys/platform/05:00:19/spi-0/aml-spi-0/spi/spi-0-0",
       "sys/platform/05:04:1/aml-gpio/gpio-4/sherlock-buttons/hid-buttons",
@@ -664,6 +664,9 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
 
       // LCD Bias
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-62",
+
+      // Touchscreen
+      "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-56/focaltech_touch/focaltouch HidDevice/hid-device/InputReport",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

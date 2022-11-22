@@ -13,13 +13,16 @@
 #include <limits.h>
 #include <unistd.h>
 
+#include <bind/fuchsia/amlogic/platform/s905d2/cpp/bind.h>
+#include <bind/fuchsia/cpp/bind.h>
+#include <bind/fuchsia/gpio/cpp/bind.h>
+#include <bind/fuchsia/i2c/cpp/bind.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "astro-gpios.h"
 #include "astro.h"
-#include "src/devices/board/drivers/astro/ft3x27-touch-bind.h"
 #include "src/devices/board/drivers/astro/gt92xx-touch-bind.h"
 
 namespace astro {
@@ -31,6 +34,41 @@ static const FocaltechMetadata device_info = {
 };
 static const device_metadata_t ft3x27_touch_metadata[] = {
     {.type = DEVICE_METADATA_PRIVATE, .data = &device_info, .length = sizeof(device_info)},
+};
+
+const ddk::NodeGroupBindRule kFocaltechI2cRules[] = {
+    ddk::MakeAcceptBindRule(bind_fuchsia::FIDL_PROTOCOL,
+                            bind_fuchsia_i2c::BIND_FIDL_PROTOCOL_DEVICE),
+    ddk::MakeAcceptBindRule(bind_fuchsia::I2C_BUS_ID, bind_fuchsia_i2c::BIND_I2C_BUS_ID_ASTRO_2),
+    ddk::MakeAcceptBindRule(bind_fuchsia::I2C_ADDRESS,
+                            bind_fuchsia_i2c::BIND_I2C_ADDRESS_FOCALTECH_TOUCH),
+};
+
+const device_bind_prop_t kFocaltechI2cProperties[] = {
+    ddk::MakeProperty(bind_fuchsia::FIDL_PROTOCOL, bind_fuchsia_i2c::BIND_FIDL_PROTOCOL_DEVICE),
+    ddk::MakeProperty(bind_fuchsia::I2C_ADDRESS,
+                      bind_fuchsia_i2c::BIND_I2C_ADDRESS_FOCALTECH_TOUCH),
+};
+
+const ddk::NodeGroupBindRule kInterruptRules[] = {
+    ddk::MakeAcceptBindRule(bind_fuchsia::PROTOCOL, bind_fuchsia_gpio::BIND_PROTOCOL_DEVICE),
+    ddk::MakeAcceptBindRule(bind_fuchsia::GPIO_PIN,
+                            bind_fuchsia_amlogic_platform_s905d2::GPIOZ_PIN_ID_PIN_4),
+};
+
+const device_bind_prop_t kInterruptProperties[] = {
+    ddk::MakeProperty(bind_fuchsia::PROTOCOL, bind_fuchsia_gpio::BIND_PROTOCOL_DEVICE),
+    ddk::MakeProperty(bind_fuchsia_gpio::FUNCTION, bind_fuchsia_gpio::FUNCTION_TOUCH_INTERRUPT)};
+
+const ddk::NodeGroupBindRule kResetRules[] = {
+    ddk::MakeAcceptBindRule(bind_fuchsia::PROTOCOL, bind_fuchsia_gpio::BIND_PROTOCOL_DEVICE),
+    ddk::MakeAcceptBindRule(bind_fuchsia::GPIO_PIN,
+                            bind_fuchsia_amlogic_platform_s905d2::GPIOZ_PIN_ID_PIN_9),
+};
+
+const device_bind_prop_t kResetProperties[] = {
+    ddk::MakeProperty(bind_fuchsia::PROTOCOL, bind_fuchsia_gpio::BIND_PROTOCOL_DEVICE),
+    ddk::MakeProperty(bind_fuchsia_gpio::FUNCTION, bind_fuchsia_gpio::FUNCTION_TOUCH_RESET),
 };
 
 zx_status_t Astro::TouchInit() {
@@ -70,26 +108,14 @@ zx_status_t Astro::TouchInit() {
       return status;
     }
   } else {
-    const zx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
-        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_ASTRO},
-        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_FOCALTOUCH},
-    };
-
-    const composite_device_desc_t comp_desc = {
-        .props = props,
-        .props_count = std::size(props),
-        .fragments = ft3x27_touch_fragments,
-        .fragments_count = std::size(ft3x27_touch_fragments),
-        .primary_fragment = "i2c",
-        .spawn_colocated = false,
-        .metadata_list = ft3x27_touch_metadata,
-        .metadata_count = std::size(ft3x27_touch_metadata),
-    };
-
-    zx_status_t status = DdkAddComposite("ft3x27-touch", &comp_desc);
+    auto status = DdkAddNodeGroup("ft3x27_touch",
+                                  ddk::NodeGroupDesc(kFocaltechI2cRules, kFocaltechI2cProperties)
+                                      .AddNodeRepresentation(kInterruptRules, kInterruptProperties)
+                                      .AddNodeRepresentation(kResetRules, kResetProperties)
+                                      .set_metadata(ft3x27_touch_metadata)
+                                      .set_spawn_colocated(false));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s(ft3x27): CompositeDeviceAdd failed: %d", __func__, status);
+      zxlogf(ERROR, "%s(ft3x27): DdkAddNodeGroup failed: %d", __func__, status);
       return status;
     }
   }

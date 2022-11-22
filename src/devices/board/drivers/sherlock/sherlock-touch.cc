@@ -11,67 +11,75 @@
 #include <limits.h>
 #include <unistd.h>
 
+#include <bind/fuchsia/amlogic/platform/t931/cpp/bind.h>
+#include <bind/fuchsia/cpp/bind.h>
+#include <bind/fuchsia/gpio/cpp/bind.h>
+#include <bind/fuchsia/i2c/cpp/bind.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
-#include "src/devices/board/drivers/sherlock/luis-touch-bind.h"
-#include "src/devices/board/drivers/sherlock/sherlock-touch-bind.h"
 
 namespace sherlock {
 
-static const zx_device_prop_t sherlock_touch_props[] = {
-    {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
-    {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SHERLOCK},
-    {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_FOCALTOUCH},
+const uint32_t kI2cAddressValues[] = {bind_fuchsia_i2c::BIND_I2C_ADDRESS_FOCALTECH_TOUCH,
+                                      bind_fuchsia_i2c::BIND_I2C_ADDRESS_TI_INA231_SPEAKERS};
+
+const ddk::NodeGroupBindRule kI2cRules[] = {
+    ddk::MakeAcceptBindRule(bind_fuchsia::FIDL_PROTOCOL,
+                            bind_fuchsia_i2c::BIND_FIDL_PROTOCOL_DEVICE),
+    ddk::MakeAcceptBindRule(bind_fuchsia::I2C_BUS_ID, static_cast<uint32_t>(SHERLOCK_I2C_2)),
+    ddk::MakeAcceptBindRuleList(bind_fuchsia::I2C_ADDRESS, kI2cAddressValues),
 };
 
-static const zx_device_prop_t luis_touch_props[] = {
-    {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_FOCALTECH},
-    {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_FOCALTECH_FT8201},
+const device_bind_prop_t kI2cProperties[] = {
+    ddk::MakeProperty(bind_fuchsia::FIDL_PROTOCOL, bind_fuchsia_i2c::BIND_FIDL_PROTOCOL_DEVICE),
+    ddk::MakeProperty(bind_fuchsia::I2C_ADDRESS,
+                      bind_fuchsia_i2c::BIND_I2C_ADDRESS_FOCALTECH_TOUCH),
 };
 
-static const composite_device_desc_t luis_comp_desc = {
-    .props = luis_touch_props,
-    .props_count = std::size(luis_touch_props),
-    .fragments = ft8201_touch_fragments,
-    .fragments_count = std::size(ft8201_touch_fragments),
-    .primary_fragment = "i2c",
-    .spawn_colocated = false,
+const ddk::NodeGroupBindRule kInterruptRules[] = {
+    ddk::MakeAcceptBindRule(bind_fuchsia::PROTOCOL, bind_fuchsia_gpio::BIND_PROTOCOL_DEVICE),
+    ddk::MakeAcceptBindRule(bind_fuchsia::GPIO_PIN,
+                            bind_fuchsia_amlogic_platform_t931::GPIOZ_PIN_ID_PIN_1),
+};
+
+const device_bind_prop_t kInterruptProperties[] = {
+    ddk::MakeProperty(bind_fuchsia::PROTOCOL, bind_fuchsia_gpio::BIND_PROTOCOL_DEVICE),
+    ddk::MakeProperty(bind_fuchsia_gpio::FUNCTION, bind_fuchsia_gpio::FUNCTION_TOUCH_INTERRUPT)};
+
+const ddk::NodeGroupBindRule kResetRules[] = {
+    ddk::MakeAcceptBindRule(bind_fuchsia::PROTOCOL, bind_fuchsia_gpio::BIND_PROTOCOL_DEVICE),
+    ddk::MakeAcceptBindRule(bind_fuchsia::GPIO_PIN,
+                            bind_fuchsia_amlogic_platform_t931::GPIOZ_PIN_ID_PIN_9),
+};
+
+const device_bind_prop_t kResetProperties[] = {
+    ddk::MakeProperty(bind_fuchsia::PROTOCOL, bind_fuchsia_gpio::BIND_PROTOCOL_DEVICE),
+    ddk::MakeProperty(bind_fuchsia_gpio::FUNCTION, bind_fuchsia_gpio::FUNCTION_TOUCH_RESET),
 };
 
 zx_status_t Sherlock::TouchInit() {
-  zx_status_t status;
-  if (pid_ == PDEV_PID_LUIS) {
-    status = DdkAddComposite("ft8201-touch", &luis_comp_desc);
-  } else {
-    static const FocaltechMetadata device_info = {
-        .device_id = FOCALTECH_DEVICE_FT5726,
-        .needs_firmware = true,
-        .display_vendor = GetDisplayVendor(),
-        .ddic_version = GetDdicVersion(),
-    };
-    static const device_metadata_t ft5726_touch_metadata[] = {
-        {.type = DEVICE_METADATA_PRIVATE, .data = &device_info, .length = sizeof(device_info)},
-    };
-    static const composite_device_desc_t sherlock_comp_desc = {
-        .props = sherlock_touch_props,
-        .props_count = std::size(sherlock_touch_props),
-        .fragments = ft5726_touch_fragments,
-        .fragments_count = std::size(ft5726_touch_fragments),
-        .primary_fragment = "i2c",
-        .spawn_colocated = false,
-        .metadata_list = ft5726_touch_metadata,
-        .metadata_count = std::size(ft5726_touch_metadata),
-    };
+  static const FocaltechMetadata device_info = {
+      .device_id = FOCALTECH_DEVICE_FT5726,
+      .needs_firmware = true,
+      .display_vendor = GetDisplayVendor(),
+      .ddic_version = GetDdicVersion(),
+  };
+  static const device_metadata_t ft5726_touch_metadata[] = {
+      {.type = DEVICE_METADATA_PRIVATE, .data = &device_info, .length = sizeof(device_info)},
+  };
 
-    status = DdkAddComposite("ft5726-touch", &sherlock_comp_desc);
-  }
-
+  auto status = DdkAddNodeGroup("ft5726_touch",
+                                ddk::NodeGroupDesc(kI2cRules, kI2cProperties)
+                                    .AddNodeRepresentation(kInterruptRules, kInterruptProperties)
+                                    .AddNodeRepresentation(kResetRules, kResetProperties)
+                                    .set_metadata(ft5726_touch_metadata)
+                                    .set_spawn_colocated(false));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAddComposite failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: DdkAddNodeGroup failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;
