@@ -48,47 +48,13 @@ ProtocolClient<ProtoClientType, ProtoType>::ProtocolClient(zx_device_t* parent, 
 zx_status_t Fragment::Bind(void* ctx, zx_device_t* parent) {
   char name[ZX_DEVICE_NAME_MAX + 1];
   MakeUniqueName(name);
-  auto dev = std::make_unique<Fragment>(parent, fdf::Dispatcher::GetCurrent()->async_dispatcher());
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  if (endpoints.is_error()) {
-    zxlogf(ERROR, "Failed to create directory endpoints: %s", endpoints.status_string());
-    return endpoints.status_value();
-  }
-  {
-    zx::result result = dev->outgoing_->AddProtocol(
-        [dev = dev.get()](zx::channel server) {
-          dev->rpc_channel_ = std::move(server);
-          dev->rpc_wait_.set_object(dev->rpc_channel_.get());
-          dev->rpc_wait_.set_trigger(ZX_CHANNEL_READABLE);
-          dev->rpc_wait_.set_handler([dev](async_dispatcher_t* dispatcher, async::Wait* wait,
-                                           zx_status_t status, const zx_packet_signal_t* signal) {
-            dev->ReadFidlFromChannel();
-            dev->rpc_wait_.Begin(dev->dispatcher_);
-          });
-          dev->rpc_wait_.Begin(dev->dispatcher_);
-        },
-        "proxy_channel");
-    if (result.status_value() != ZX_OK) {
-      zxlogf(ERROR, "Failed to add outgoing protocol: %s", result.status_string());
-      return result.status_value();
-    }
-  }
-
-  zx::result result = dev->outgoing_->Serve(std::move(endpoints->server));
-  if (result.status_value() != ZX_OK) {
-    zxlogf(ERROR, "Failed to service the outgoing directory %s", result.status_string());
-    return result.status_value();
-  }
-
-  std::array offers = {"proxy_channel"};
-
+  auto dev = std::make_unique<Fragment>(parent);
   // The thing before the comma will become the process name, if a new process
   // is created
+  const char* proxy_args = "composite-device,";
   auto status = dev->DdkAdd(ddk::DeviceAddArgs(name)
                                 .set_flags(DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_MUST_ISOLATE)
-                                .set_fidl_protocol_offers(offers)
-                                .set_outgoing_dir(endpoints->client.TakeChannel()));
+                                .set_proxy_args(proxy_args));
   if (status == ZX_OK) {
     // devmgr owns the memory now
     __UNUSED auto ptr = dev.release();
@@ -739,8 +705,9 @@ zx_status_t Fragment::RpcPowerSensor(const uint8_t* req_buf, uint32_t req_size, 
   }
 }
 
-zx_status_t Fragment::ReadFidlFromChannel() {
-  if (!rpc_channel_.is_valid()) {
+zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
+  zx::unowned_channel channel(raw_channel);
+  if (!channel->is_valid()) {
     // This driver is stateless, so we don't need to reset anything here
     return ZX_OK;
   }
@@ -756,7 +723,7 @@ zx_status_t Fragment::ReadFidlFromChannel() {
   zx_handle_t req_handles_raw[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t req_handle_count;
 
-  auto status = zx_channel_read(rpc_channel_.get(), 0, &req_buf, req_handles_raw, sizeof(req_buf),
+  auto status = zx_channel_read(raw_channel, 0, &req_buf, req_handles_raw, sizeof(req_buf),
                                 std::size(req_handles_raw), &actual, &req_handle_count);
   if (status != ZX_OK) {
     zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d", status);
@@ -871,7 +838,7 @@ zx_status_t Fragment::ReadFidlFromChannel() {
 
   // set op to match request so zx_channel_write will return our response
   resp_header->status = status;
-  status = zx_channel_write(rpc_channel_.get(), 0, resp_header, resp_len,
+  status = zx_channel_write(raw_channel, 0, resp_header, resp_len,
                             (resp_handle_count ? resp_handles_raw : nullptr), resp_handle_count);
   if (status != ZX_OK) {
     zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_write failed %d", status);
@@ -1110,16 +1077,6 @@ zx_status_t Fragment::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
 }
 
 void Fragment::DdkRelease() { delete this; }
-
-void Fragment::DdkUnbind(ddk::UnbindTxn txn) {
-  zx_status_t status = rpc_wait_.Cancel();
-  if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
-    zxlogf(ERROR, "fragment: failed to cancel rpc_wait_: %s", zx_status_get_string(status));
-  }
-  outgoing_.reset();
-
-  txn.Reply();
-}
 
 const zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};

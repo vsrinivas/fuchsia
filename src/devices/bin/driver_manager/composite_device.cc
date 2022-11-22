@@ -12,7 +12,6 @@
 
 #include "src/devices/bin/driver_manager/binding.h"
 #include "src/devices/bin/driver_manager/coordinator.h"
-#include "src/devices/bin/driver_manager/driver_host.h"
 #include "src/devices/lib/log/log.h"
 
 namespace fdm = fuchsia_device_manager;
@@ -224,27 +223,6 @@ zx_status_t CompositeDevice::BindFragment(size_t index, const fbl::RefPtr<Device
   return ZX_OK;
 }
 
-zx::result<fbl::RefPtr<DriverHost>> CompositeDevice::GetDriverHost() {
-  // We already have a driver host so return it.
-  if (driver_host_) {
-    return zx::ok(driver_host_);
-  }
-
-  // Find or create the driver_host to put everything in.
-  Coordinator* coordinator = primary_fragment()->bound_device()->coordinator;
-  if (spawn_colocated_) {
-    if (const CompositeDeviceFragment* fragment = primary_fragment(); fragment != nullptr) {
-      driver_host_ = fragment->bound_device()->host();
-    }
-  } else {
-    zx_status_t status = coordinator->NewDriverHost("driver_host:composite", &driver_host_);
-    if (status != ZX_OK) {
-      return zx::error(status);
-    }
-  }
-  return zx::ok(driver_host_);
-}
-
 zx_status_t CompositeDevice::TryAssemble() {
   ZX_ASSERT(device_ == nullptr);
 
@@ -254,14 +232,26 @@ zx_status_t CompositeDevice::TryAssemble() {
     }
   }
 
-  zx::result driver_host = GetDriverHost();
+  // Find or create the driver_host to put everything in.
+  Coordinator* coordinator = primary_fragment()->bound_device()->coordinator;
+  fbl::RefPtr<DriverHost> driver_host;
+  if (spawn_colocated_) {
+    if (const CompositeDeviceFragment* fragment = primary_fragment(); fragment != nullptr) {
+      driver_host = fragment->bound_device()->host();
+    }
+  } else {
+    zx_status_t status = coordinator->NewDriverHost("driver_host:composite", &driver_host);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
 
   fidl::Arena allocator;
   fidl::VectorView<fdm::wire::Fragment> fragments(allocator, fragments_.size_slow());
 
   // Create all of the proxies for the fragment devices, in the same process
   for (auto& fragment : fragments_) {
-    zx_status_t status = fragment.CreateProxy(driver_host.value());
+    zx_status_t status = fragment.CreateProxy(driver_host);
     if (status != ZX_OK) {
       return status;
     }
@@ -281,9 +271,8 @@ zx_status_t CompositeDevice::TryAssemble() {
   }
 
   fbl::RefPtr<Device> new_device;
-  Coordinator* coordinator = primary_fragment()->bound_device()->coordinator;
   auto status = Device::CreateComposite(
-      coordinator, driver_host.value(), *this, std::move(coordinator_endpoints->server),
+      coordinator, driver_host, *this, std::move(coordinator_endpoints->server),
       std::move(device_controller_endpoints->client), &new_device);
   if (status != ZX_OK) {
     return status;
@@ -352,27 +341,11 @@ void CompositeDevice::UnbindFragment(CompositeDeviceFragment* fragment) {
   ZX_ASSERT(fragment->composite() == this);
 }
 
-zx_status_t CompositeDevice::AddProxyDev(fbl::RefPtr<Device> device) {
-  if (device_) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  for (auto& fragment : fragments_) {
-    if (fragment.fragment_device() != device->parent()) {
-      continue;
-    }
-    fragment.set_proxy_device(device);
-    return TryAssemble();
-  }
-  return ZX_ERR_NOT_FOUND;
-}
-
 void CompositeDevice::Remove() {
   if (device_ != nullptr) {
     device_->disassociate_from_composite();
     device_ = nullptr;
   }
-  driver_host_ = nullptr;
 }
 
 // CompositeDeviceFragment methods
@@ -400,7 +373,7 @@ zx_status_t CompositeDeviceFragment::Bind(const fbl::RefPtr<Device>& dev) {
 
   if (!dev->has_outgoing_directory()) {
     zx_status_t status = dev->coordinator->AttemptBind(
-        MatchedDriverInfo{.driver = dev->coordinator->LoadFragmentDriver(), .colocate = true}, dev);
+        MatchedDriverInfo{.driver = dev->coordinator->fragment_driver(), .colocate = true}, dev);
     if (status != ZX_OK) {
       return status;
     }
@@ -462,11 +435,6 @@ zx_status_t CompositeDeviceFragment::CreateProxy(fbl::RefPtr<DriverHost> driver_
 
   // Create a Banjo proxy.
 
-  // We've already created our fragment's proxy, we're waiting for fragment.proxy.so's device.
-  if (!fragment_device()->fidl_proxies().empty()) {
-    return ZX_ERR_SHOULD_WAIT;
-  }
-
   // Double check that we haven't ended up in a state
   // where the proxies would need to be in different processes.
   if (driver_host != nullptr && fragment_device() != nullptr &&
@@ -477,22 +445,12 @@ zx_status_t CompositeDeviceFragment::CreateProxy(fbl::RefPtr<DriverHost> driver_
   }
 
   VLOGF(1, "Preparing Banjo proxy for %s", fragment_device()->name().data());
-  // Here we create a FidlProxy in the composite device's driver host, and then
-  // force-bind the fragment proxy driver to it.
-  fbl::RefPtr<Device> fidl_proxy;
-  zx_status_t status =
-      parent->coordinator->PrepareFidlProxy(fragment_device(), driver_host, &fidl_proxy);
+  zx_status_t status = bound_device()->coordinator->PrepareProxy(fragment_device(), driver_host);
   if (status != ZX_OK) {
     return status;
   }
-  status = parent->coordinator->AttemptBind(
-      MatchedDriverInfo{.driver = parent->coordinator->LoadFragmentProxyDriver(), .colocate = true},
-      fidl_proxy);
-  if (status != ZX_OK) {
-    return status;
-  }
-  // We have to wait until our fragment.proxy.so device is created.
-  return ZX_ERR_SHOULD_WAIT;
+  proxy_device_ = fragment_device()->proxy();
+  return ZX_OK;
 }
 
 void CompositeDeviceFragment::Unbind() {
