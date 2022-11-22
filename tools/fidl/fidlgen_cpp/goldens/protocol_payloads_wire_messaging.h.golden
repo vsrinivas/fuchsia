@@ -2064,7 +2064,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_imported_ImportStructPayloadTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -2086,7 +2086,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_imported_ImportStructPayloadTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -2149,7 +2149,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_imported_ComposedProtocolTwoWayComposedWithErrorTopResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -2171,7 +2171,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_imported_ComposedProtocolTwoWayComposedWithErrorTopResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
@@ -2332,7 +2332,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -2354,7 +2354,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
@@ -2419,7 +2419,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -2441,7 +2441,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
@@ -2600,7 +2600,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_imported_ImportStructPayloadTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -2622,7 +2622,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_imported_ImportStructPayloadTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -2685,7 +2685,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -2707,7 +2707,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
@@ -2868,7 +2868,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_MainProtocolTwoWayAnonResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -2890,7 +2890,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_MainProtocolTwoWayAnonResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
@@ -2955,7 +2955,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -2977,7 +2977,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> {
   static constexpr const fidl_type_t* kType =
     &::test_protocolpayloads::test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;

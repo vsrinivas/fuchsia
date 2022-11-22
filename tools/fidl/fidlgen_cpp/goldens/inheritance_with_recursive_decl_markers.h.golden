@@ -20,12 +20,12 @@ class Parent final {
 
    public:
     using Protocol = ::test_inheritancewithrecursivedecl::Parent;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -44,12 +44,12 @@ class Child final {
 
    public:
     using Protocol = ::test_inheritancewithrecursivedecl::Child;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -58,12 +58,12 @@ class Child final {
 
    public:
     using Protocol = ::test_inheritancewithrecursivedecl::Child;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };

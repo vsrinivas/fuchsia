@@ -230,7 +230,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::test_inheritance_SuperFooResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -251,7 +251,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_inheritance::Super::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::test_inheritance_SuperFooResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
@@ -709,7 +709,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::test_inheritance_SuperFooResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -730,7 +730,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_inheritance::Sub::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::test_inheritance_SuperFooResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;

@@ -35,12 +35,12 @@ fidl/{{ .LibraryDots }}/cpp/markers.h
           {{ .Marker.Self }}() = delete;
          public:
           using Protocol = {{ $protocol }};
-          static constexpr bool kHasRequest = {{ .HasRequest }};
-          static constexpr bool kHasRequestBody = {{ .HasRequestPayload }};
-          static constexpr bool kHasResponse = {{ .HasResponse }};
-          static constexpr bool kHasResponseBody = {{ .HasResponsePayload }};
+          static constexpr bool kHasClientToServer = {{ .HasRequest }};
+          static constexpr bool kHasClientToServerBody = {{ .HasRequestPayload }};
+          static constexpr bool kHasServerToClient = {{ .HasResponse }};
+          static constexpr bool kHasServerToClientBody = {{ .HasResponsePayload }};
 
-          static constexpr bool kHasNonEmptyPayload = {{ .HasNonEmptyPayload }};
+          static constexpr bool kHasNonEmptyUserFacingResponse = {{ .HasNonEmptyPayload }};
           static constexpr bool kHasDomainError = {{ .HasDomainError }};
           static constexpr bool kHasFrameworkError = {{ .HasFrameworkError }};
         };

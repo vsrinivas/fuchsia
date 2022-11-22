@@ -26,7 +26,7 @@ constexpr bool MethodHasResultUnion() {
 // and related methods.
 template <typename FidlMethod>
 constexpr bool MethodHasUnwrapAccessors() {
-  return FidlMethod::kHasNonEmptyPayload || FidlMethod::kHasDomainError;
+  return FidlMethod::kHasNonEmptyUserFacingResponse || FidlMethod::kHasDomainError;
 }
 
 namespace internal {
@@ -78,7 +78,8 @@ class BaseWireResult;
 // - Methods with a header-only response.
 template <typename FidlMethod>
 class BaseWireResult<
-    FidlMethod, std::enable_if_t<!FidlMethod::kHasResponse || !FidlMethod::kHasResponseBody, void>>
+    FidlMethod,
+    std::enable_if_t<!FidlMethod::kHasServerToClient || !FidlMethod::kHasServerToClientBody, void>>
     : public ::fidl::Status {
  protected:
   explicit BaseWireResult(const ::fidl::Status& status) : ::fidl::Status(status) {}
@@ -95,10 +96,10 @@ class BaseWireResult<
 // need |Unwrap| accessors. This means a flexible method which doesn't use error
 // syntax and has an empty payload: `flexible Foo() -> ();`.
 template <typename FidlMethod>
-class BaseWireResult<FidlMethod,
-                     std::enable_if_t<FidlMethod::kHasResponse && FidlMethod::kHasResponseBody &&
-                                          !MethodHasUnwrapAccessors<FidlMethod>(),
-                                      void>> : public ::fidl::Status {
+class BaseWireResult<FidlMethod, std::enable_if_t<FidlMethod::kHasServerToClient &&
+                                                      FidlMethod::kHasServerToClientBody &&
+                                                      !MethodHasUnwrapAccessors<FidlMethod>(),
+                                                  void>> : public ::fidl::Status {
  protected:
   explicit BaseWireResult(const ::fidl::Status& status) : ::fidl::Status(status) {}
 
@@ -119,7 +120,7 @@ class BaseWireResult<FidlMethod,
   // method is flexible) and changes the status to
   // |Status::UnknownMethod()| if necessary.
   void ExtractValueFromDecoded(::fidl::WireResponse<FidlMethod>* raw_response) {
-    static_assert(!FidlMethod::kHasNonEmptyPayload);
+    static_assert(!FidlMethod::kHasNonEmptyUserFacingResponse);
     static_assert(FidlMethod::kHasFrameworkError);
     // For a flexible method, we need to check whether the result is success
     // or transport_err.
@@ -140,8 +141,8 @@ class BaseWireResult<FidlMethod,
 // means a method which has a non-empty payload or uses error syntax.
 template <typename FidlMethod>
 class BaseWireResult<
-    FidlMethod,
-    std::enable_if_t<FidlMethod::kHasResponse && MethodHasUnwrapAccessors<FidlMethod>(), void>>
+    FidlMethod, std::enable_if_t<
+                    FidlMethod::kHasServerToClient && MethodHasUnwrapAccessors<FidlMethod>(), void>>
     : public ::fidl::Status {
  public:
   // Gets a pointer to the result of the method call, if it succeeded. For a
@@ -152,7 +153,7 @@ class BaseWireResult<
     if constexpr (FidlMethod::kHasDomainError) {
       return &result_.value();
     } else {
-      static_assert(FidlMethod::kHasNonEmptyPayload);
+      static_assert(FidlMethod::kHasNonEmptyUserFacingResponse);
       ZX_ASSERT(ok());
       return result_;
     }
@@ -165,7 +166,7 @@ class BaseWireResult<
     if constexpr (FidlMethod::kHasDomainError) {
       return &result_.value();
     } else {
-      static_assert(FidlMethod::kHasNonEmptyPayload);
+      static_assert(FidlMethod::kHasNonEmptyUserFacingResponse);
       ZX_ASSERT(ok());
       return result_;
     }
@@ -217,7 +218,7 @@ class BaseWireResult<
         result_ = fit::error(raw_response->result.err());
       } else {
         ZX_ASSERT_MSG(raw_response->result.is_response(), "Unknown FIDL result union variant");
-        if constexpr (FidlMethod::kHasNonEmptyPayload) {
+        if constexpr (FidlMethod::kHasNonEmptyUserFacingResponse) {
           result_ = fit::ok(&(raw_response->result.response()));
         } else {
           result_ = fit::ok();
@@ -230,7 +231,7 @@ class BaseWireResult<
         // Result must be non-empty, because if there is no domain error
         // and the result is empty, we would use the template without the Unwrap
         // accessors.
-        static_assert(FidlMethod::kHasNonEmptyPayload);
+        static_assert(FidlMethod::kHasNonEmptyUserFacingResponse);
         ZX_ASSERT_MSG(raw_response->result.is_response(), "Unknown FIDL result union variant");
         result_ = &(raw_response->result.response());
       }
@@ -239,7 +240,7 @@ class BaseWireResult<
         result_ = fit::error(raw_response->result.err());
       } else {
         ZX_ASSERT_MSG(raw_response->result.is_response(), "Unknown FIDL result union variant");
-        if constexpr (FidlMethod::kHasNonEmptyPayload) {
+        if constexpr (FidlMethod::kHasNonEmptyUserFacingResponse) {
           result_ = fit::ok(&(raw_response->result.response()));
         } else {
           result_ = fit::ok();

@@ -53,7 +53,7 @@ using WireBufferThenable = typename fidl::internal::WireMethodTypes<FidlMethod>:
 //
 // When |FidlMethod| request has no body, the alias will be undefined.
 template <typename FidlMethod>
-using WireRequest = std::enable_if_t<FidlMethod::kHasRequest,
+using WireRequest = std::enable_if_t<FidlMethod::kHasClientToServer,
                                      typename fidl::internal::WireMethodTypes<FidlMethod>::Request>;
 
 // |WireEvent| is a type alias referencing the request body of a FIDL event,
@@ -63,8 +63,9 @@ using WireRequest = std::enable_if_t<FidlMethod::kHasRequest,
 //
 // When |FidlMethod| request has no body, the alias will be undefined.
 template <typename FidlMethod>
-using WireEvent = std::enable_if_t<FidlMethod::kHasResponse && !FidlMethod::kHasRequest,
-                                   typename fidl::internal::WireMethodTypes<FidlMethod>::Request>;
+using WireEvent =
+    std::enable_if_t<FidlMethod::kHasServerToClient && !FidlMethod::kHasClientToServer,
+                     typename fidl::internal::WireMethodTypes<FidlMethod>::Request>;
 
 enum class DispatchResult;
 
@@ -146,7 +147,7 @@ auto InplaceDecodeTransactionalMessage(::fidl::IncomingHeaderAndMessage&& messag
 
 template <typename FidlMethod>
 auto InplaceDecodeTransactionalResponse(::fidl::IncomingHeaderAndMessage&& message) {
-  if constexpr (!FidlMethod::kHasResponseBody) {
+  if constexpr (!FidlMethod::kHasServerToClientBody) {
     return ::fidl::internal::InplaceDecodeTransactionalMessage(std::move(message));
   } else {
     return ::fidl::internal::InplaceDecodeTransactionalMessage<::fidl::WireResponse<FidlMethod>>(
@@ -156,7 +157,7 @@ auto InplaceDecodeTransactionalResponse(::fidl::IncomingHeaderAndMessage&& messa
 
 template <typename FidlMethod>
 auto InplaceDecodeTransactionalRequest(::fidl::IncomingHeaderAndMessage&& message) {
-  if constexpr (!FidlMethod::kHasRequestBody) {
+  if constexpr (!FidlMethod::kHasClientToServerBody) {
     return ::fidl::internal::InplaceDecodeTransactionalMessage(std::move(message));
   } else {
     return ::fidl::internal::InplaceDecodeTransactionalMessage<::fidl::WireRequest<FidlMethod>>(
@@ -166,7 +167,7 @@ auto InplaceDecodeTransactionalRequest(::fidl::IncomingHeaderAndMessage&& messag
 
 template <typename FidlMethod>
 auto InplaceDecodeTransactionalEvent(::fidl::IncomingHeaderAndMessage&& message) {
-  if constexpr (!FidlMethod::kHasResponseBody) {
+  if constexpr (!FidlMethod::kHasServerToClientBody) {
     return ::fidl::internal::InplaceDecodeTransactionalMessage(std::move(message));
   } else {
     return ::fidl::internal::InplaceDecodeTransactionalMessage<::fidl::WireEvent<FidlMethod>>(

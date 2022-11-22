@@ -20,12 +20,12 @@ class WithAndWithoutRequestResponse final {
 
    public:
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -34,12 +34,12 @@ class WithAndWithoutRequestResponse final {
 
    public:
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -48,12 +48,12 @@ class WithAndWithoutRequestResponse final {
 
    public:
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -62,12 +62,12 @@ class WithAndWithoutRequestResponse final {
 
    public:
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -76,12 +76,12 @@ class WithAndWithoutRequestResponse final {
 
    public:
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -90,12 +90,12 @@ class WithAndWithoutRequestResponse final {
 
    public:
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -104,12 +104,12 @@ class WithAndWithoutRequestResponse final {
 
    public:
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -118,12 +118,12 @@ class WithAndWithoutRequestResponse final {
 
    public:
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -142,12 +142,12 @@ class WithErrorSyntax final {
 
    public:
     using Protocol = ::test_protocols::WithErrorSyntax;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -156,12 +156,12 @@ class WithErrorSyntax final {
 
    public:
     using Protocol = ::test_protocols::WithErrorSyntax;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -170,12 +170,12 @@ class WithErrorSyntax final {
 
    public:
     using Protocol = ::test_protocols::WithErrorSyntax;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -184,12 +184,12 @@ class WithErrorSyntax final {
 
    public:
     using Protocol = ::test_protocols::WithErrorSyntax;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -208,12 +208,12 @@ class ChannelProtocol final {
 
    public:
     using Protocol = ::test_protocols::ChannelProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -222,12 +222,12 @@ class ChannelProtocol final {
 
    public:
     using Protocol = ::test_protocols::ChannelProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -236,12 +236,12 @@ class ChannelProtocol final {
 
    public:
     using Protocol = ::test_protocols::ChannelProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -250,12 +250,12 @@ class ChannelProtocol final {
 
    public:
     using Protocol = ::test_protocols::ChannelProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -264,12 +264,12 @@ class ChannelProtocol final {
 
    public:
     using Protocol = ::test_protocols::ChannelProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -288,12 +288,12 @@ class Transitional final {
 
    public:
     using Protocol = ::test_protocols::Transitional;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -302,12 +302,12 @@ class Transitional final {
 
    public:
     using Protocol = ::test_protocols::Transitional;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -316,12 +316,12 @@ class Transitional final {
 
    public:
     using Protocol = ::test_protocols::Transitional;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -340,12 +340,12 @@ class DiscoverableProtocol final {
 
    public:
     using Protocol = ::test_protocols::DiscoverableProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -373,12 +373,12 @@ class HandleRightsProtocol final {
 
    public:
     using Protocol = ::test_protocols::HandleRightsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -387,12 +387,12 @@ class HandleRightsProtocol final {
 
    public:
     using Protocol = ::test_protocols::HandleRightsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -401,12 +401,12 @@ class HandleRightsProtocol final {
 
    public:
     using Protocol = ::test_protocols::HandleRightsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -425,12 +425,12 @@ class WithProtocolEnds final {
 
    public:
     using Protocol = ::test_protocols::WithProtocolEnds;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -439,12 +439,12 @@ class WithProtocolEnds final {
 
    public:
     using Protocol = ::test_protocols::WithProtocolEnds;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -453,12 +453,12 @@ class WithProtocolEnds final {
 
    public:
     using Protocol = ::test_protocols::WithProtocolEnds;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -477,12 +477,12 @@ class ManyParameters final {
 
    public:
     using Protocol = ::test_protocols::ManyParameters;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -501,12 +501,12 @@ class MethodWithUnion final {
 
    public:
     using Protocol = ::test_protocols::MethodWithUnion;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };

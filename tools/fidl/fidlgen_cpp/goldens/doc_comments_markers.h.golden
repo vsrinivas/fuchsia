@@ -26,12 +26,12 @@ class Interface final {
 
    public:
     using Protocol = ::test_doccomments::Interface;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -43,12 +43,12 @@ class Interface final {
 
    public:
     using Protocol = ::test_doccomments::Interface;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };

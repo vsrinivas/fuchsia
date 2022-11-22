@@ -20,12 +20,12 @@ class Protocol final {
 
    public:
     using Protocol = ::test_requestflexibleenvelope::Protocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -34,12 +34,12 @@ class Protocol final {
 
    public:
     using Protocol = ::test_requestflexibleenvelope::Protocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = true;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = true;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };

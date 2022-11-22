@@ -619,7 +619,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::test_protocolrequest_ParentGetChildResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -640,7 +640,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::test_protocolrequest_ParentGetChildResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -702,7 +702,7 @@ template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::test_protocolrequest_ParentGetChildRequestResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -723,7 +723,7 @@ template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::test_protocolrequest_ParentGetChildRequestResponseTable;
-  static constexpr bool kHasResponseBody = true;
+  static constexpr bool kHasServerToClientBody = true;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;

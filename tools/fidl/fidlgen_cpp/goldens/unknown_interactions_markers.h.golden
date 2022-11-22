@@ -20,12 +20,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -34,12 +34,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -48,12 +48,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -62,12 +62,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -76,12 +76,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -90,12 +90,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -104,12 +104,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -118,12 +118,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -132,12 +132,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -146,12 +146,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -160,12 +160,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -174,12 +174,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -188,12 +188,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -202,12 +202,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -216,12 +216,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -230,12 +230,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -244,12 +244,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -258,12 +258,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -272,12 +272,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -286,12 +286,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -300,12 +300,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -314,12 +314,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -328,12 +328,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -342,12 +342,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -356,12 +356,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -370,12 +370,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -384,12 +384,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -398,12 +398,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -412,12 +412,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -426,12 +426,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -440,12 +440,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -454,12 +454,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -468,12 +468,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -482,12 +482,12 @@ class UnknownInteractionsProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -506,12 +506,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -520,12 +520,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -534,12 +534,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -548,12 +548,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -562,12 +562,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -576,12 +576,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -590,12 +590,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -604,12 +604,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -618,12 +618,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -632,12 +632,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -646,12 +646,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -660,12 +660,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -674,12 +674,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -688,12 +688,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -702,12 +702,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -716,12 +716,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -730,12 +730,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -744,12 +744,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -758,12 +758,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -772,12 +772,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -786,12 +786,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -800,12 +800,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -814,12 +814,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -828,12 +828,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -842,12 +842,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -856,12 +856,12 @@ class UnknownInteractionsAjarProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -880,12 +880,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -894,12 +894,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -908,12 +908,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -922,12 +922,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -936,12 +936,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -950,12 +950,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -964,12 +964,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -978,12 +978,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -992,12 +992,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1006,12 +1006,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1020,12 +1020,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1034,12 +1034,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1048,12 +1048,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1062,12 +1062,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1076,12 +1076,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1090,12 +1090,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1104,12 +1104,12 @@ class UnknownInteractionsClosedProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = false;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1128,12 +1128,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1142,12 +1142,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1156,12 +1156,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1170,12 +1170,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1184,12 +1184,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1198,12 +1198,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1212,12 +1212,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1226,12 +1226,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1240,12 +1240,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1254,12 +1254,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1268,12 +1268,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -1282,12 +1282,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -1296,12 +1296,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -1310,12 +1310,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -1324,12 +1324,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -1338,12 +1338,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -1352,12 +1352,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -1366,12 +1366,12 @@ class UnknownInteractionsDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = true;
   };
@@ -1390,12 +1390,12 @@ class UnknownInteractionsAjarDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1404,12 +1404,12 @@ class UnknownInteractionsAjarDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1418,12 +1418,12 @@ class UnknownInteractionsAjarDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1432,12 +1432,12 @@ class UnknownInteractionsAjarDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1446,12 +1446,12 @@ class UnknownInteractionsAjarDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1460,12 +1460,12 @@ class UnknownInteractionsAjarDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1474,12 +1474,12 @@ class UnknownInteractionsAjarDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1488,12 +1488,12 @@ class UnknownInteractionsAjarDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1502,12 +1502,12 @@ class UnknownInteractionsAjarDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1516,12 +1516,12 @@ class UnknownInteractionsAjarDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1540,12 +1540,12 @@ class UnknownInteractionsClosedDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = false;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = false;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1554,12 +1554,12 @@ class UnknownInteractionsClosedDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = false;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = false;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1568,12 +1568,12 @@ class UnknownInteractionsClosedDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1582,12 +1582,12 @@ class UnknownInteractionsClosedDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1596,12 +1596,12 @@ class UnknownInteractionsClosedDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = false;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1610,12 +1610,12 @@ class UnknownInteractionsClosedDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasNonEmptyUserFacingResponse = false;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1624,12 +1624,12 @@ class UnknownInteractionsClosedDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1638,12 +1638,12 @@ class UnknownInteractionsClosedDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
@@ -1652,12 +1652,12 @@ class UnknownInteractionsClosedDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasRequestBody = false;
-    static constexpr bool kHasResponse = true;
-    static constexpr bool kHasResponseBody = true;
+    static constexpr bool kHasClientToServer = true;
+    static constexpr bool kHasClientToServerBody = false;
+    static constexpr bool kHasServerToClient = true;
+    static constexpr bool kHasServerToClientBody = true;
 
-    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasNonEmptyUserFacingResponse = true;
     static constexpr bool kHasDomainError = true;
     static constexpr bool kHasFrameworkError = false;
   };
