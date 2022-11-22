@@ -28,6 +28,7 @@ using component_testing::RealmRoot;
 
 constexpr fuc::TransformId kRootTransform{.value = 1};
 constexpr auto kEpsilon = 1;
+constexpr auto kByterPerPixel = 4;
 
 fuc::ColorRgba GetColorInFloat(ui_testing::Pixel color) {
   return {static_cast<float>(color.red) / 255.f, static_cast<float>(color.green) / 255.f,
@@ -174,12 +175,12 @@ class FlatlandPixelTestBase : public gtest::RealLoopFixture {
   fuc::FlatlandDisplayPtr flatland_display_;
 };
 
-class YUVParameterizedPixelTest
+class ParameterizedPixelFormatTest
     : public FlatlandPixelTestBase,
       public ::testing::WithParamInterface<fuchsia::sysmem::PixelFormatType> {
  public:
   fuchsia::sysmem::BufferCollectionConstraints GetBufferConstraints(
-      fuchsia::sysmem::PixelFormatType pixel_format) {
+      fuchsia::sysmem::PixelFormatType pixel_format, fuchsia::sysmem::ColorSpaceType color_space) {
     fuchsia::sysmem::BufferCollectionConstraints constraints;
     constraints.has_buffer_memory_constraints = true;
     constraints.buffer_memory_constraints = {.ram_domain_supported = true,
@@ -195,7 +196,7 @@ class YUVParameterizedPixelTest
     image_constraints.pixel_format.has_format_modifier = true;
     image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
+    image_constraints.color_space[0].type = color_space;
     image_constraints.required_min_coded_width = display_width_;
     image_constraints.required_min_coded_height = display_height_;
     image_constraints.required_max_coded_width = display_width_;
@@ -205,11 +206,13 @@ class YUVParameterizedPixelTest
   }
 };
 
-INSTANTIATE_TEST_SUITE_P(YuvPixelFormats, YUVParameterizedPixelTest,
+class ParameterizedYUVPixelTest : public ParameterizedPixelFormatTest {};
+
+INSTANTIATE_TEST_SUITE_P(YuvPixelFormats, ParameterizedYUVPixelTest,
                          ::testing::Values(fuchsia::sysmem::PixelFormatType::NV12,
                                            fuchsia::sysmem::PixelFormatType::I420));
 
-TEST_P(YUVParameterizedPixelTest, YUVTest) {
+TEST_P(ParameterizedYUVPixelTest, YUVTest) {
   // TODO(fxb/59804): Skip this test for AEMU as YUV sysmem images are not supported yet.
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
 
@@ -226,8 +229,9 @@ TEST_P(YUVParameterizedPixelTest, YUVTest) {
   ASSERT_FALSE(result.is_err());
 
   // Use the local token to allocate a protected buffer.
-  auto info =
-      SetConstraintsAndAllocateBuffer(std::move(local_token), GetBufferConstraints(GetParam()));
+  auto info = SetConstraintsAndAllocateBuffer(
+      std::move(local_token),
+      GetBufferConstraints(GetParam(), fuchsia::sysmem::ColorSpaceType::REC709));
 
   // Write the pixel values to the VMO.
   const uint32_t num_pixels = display_width_ * display_height_;
@@ -288,6 +292,86 @@ TEST_P(YUVParameterizedPixelTest, YUVTest) {
   auto screenshot = TakeScreenshot(screenshotter_, display_width_, display_height_);
   auto histogram = screenshot.Histogram();
   EXPECT_EQ(histogram[expected_pixel], num_pixels);
+}
+
+class ParameterizedSRGBPixelTest : public ParameterizedPixelFormatTest {};
+
+INSTANTIATE_TEST_SUITE_P(RgbPixelFormats, ParameterizedSRGBPixelTest,
+                         ::testing::Values(fuchsia::sysmem::PixelFormatType::BGRA32,
+                                           fuchsia::sysmem::PixelFormatType::R8G8B8A8));
+
+TEST_P(ParameterizedSRGBPixelTest, RGBTest) {
+  auto [local_token, scenic_token] = utils::CreateSysmemTokens(sysmem_allocator_.get());
+
+  // Send one token to Flatland Allocator.
+  allocation::BufferCollectionImportExportTokens bc_tokens =
+      allocation::BufferCollectionImportExportTokens::New();
+  fuc::RegisterBufferCollectionArgs rbc_args = {};
+  rbc_args.set_export_token(std::move(bc_tokens.export_token));
+  rbc_args.set_buffer_collection_token(std::move(scenic_token));
+  fuc::Allocator_RegisterBufferCollection_Result result;
+  flatland_allocator_->RegisterBufferCollection(std::move(rbc_args), &result);
+  ASSERT_FALSE(result.is_err());
+
+  // Use the local token to allocate a protected buffer.
+  auto info = SetConstraintsAndAllocateBuffer(
+      std::move(local_token),
+      GetBufferConstraints(GetParam(), fuchsia::sysmem::ColorSpaceType::SRGB));
+
+  // Write the pixel values to the VMO.
+  const uint32_t num_pixels = display_width_ * display_height_;
+  const uint64_t image_vmo_bytes = num_pixels * kByterPerPixel;
+  ASSERT_EQ(image_vmo_bytes, info.settings.buffer_settings.size_bytes);
+
+  zx::vmo& image_vmo = info.buffers[0].vmo;
+
+  uint8_t* vmo_base;
+  auto status =
+      zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
+                                 image_vmo_bytes, reinterpret_cast<uintptr_t*>(&vmo_base));
+  EXPECT_EQ(ZX_OK, status);
+
+  const ui_testing::Pixel color = ui_testing::Screenshot::kBlue;
+  vmo_base += info.buffers[0].vmo_usable_start;
+
+  for (uint32_t i = 0; i < num_pixels * kByterPerPixel; i += kByterPerPixel) {
+    // For BGRA32 pixel format, the first and the third byte in the pixel corresponds to the blue
+    // and the red channel respectively.
+    if (GetParam() == fuchsia::sysmem::PixelFormatType::BGRA32) {
+      vmo_base[i] = color.blue;
+      vmo_base[i + 2] = color.red;
+    }
+    // For R8G8B8A8 pixel format, the first and the third byte in the pixel corresponds to the red
+    // and the blue channel respectively.
+    if (GetParam() == fuchsia::sysmem::PixelFormatType::R8G8B8A8) {
+      vmo_base[i] = color.red;
+      vmo_base[i + 2] = color.blue;
+    }
+    vmo_base[i + 1] = color.green;
+    vmo_base[i + 3] = color.alpha;
+  }
+
+  if (info.settings.buffer_settings.coherency_domain == fuchsia::sysmem::CoherencyDomain::RAM) {
+    EXPECT_EQ(ZX_OK,
+              info.buffers[0].vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, image_vmo_bytes, nullptr, 0));
+  }
+
+  // Create the image in the Flatland instance.
+  fuc::ImageProperties image_properties = {};
+  image_properties.set_size({display_width_, display_height_});
+  const fuc::ContentId kImageContentId{.value = 1};
+
+  root_flatland_->CreateImage(kImageContentId, std::move(bc_tokens.import_token), 0,
+                              std::move(image_properties));
+
+  // Present the created Image.
+  root_flatland_->SetContent(kRootTransform, kImageContentId);
+  BlockingPresent(root_flatland_);
+
+  auto screenshot = TakeScreenshot(screenshotter_, display_width_, display_height_);
+  auto histogram = screenshot.Histogram();
+
+  EXPECT_EQ(histogram[color], num_pixels);
 }
 
 // Draws and tests the following coordinate test pattern without views:
@@ -554,6 +638,176 @@ TEST_F(FlatlandPixelTestBase, TranslateInheritsFromParent) {
   EXPECT_EQ(histogram[default_color], num_pixels / 2);
   EXPECT_EQ(histogram[ui_testing::Screenshot::kBlue], num_pixels / 4);
   EXPECT_EQ(histogram[ui_testing::Screenshot::kGreen], num_pixels / 4);
+}
+
+// This test zooms the entire content by a factor of 2 and verifies that only the top left quadrant
+// is shown.
+// Before zoom:-
+// ______________DISPLAY______________
+// |                |                |
+// |     BLACK      |        RED     |
+// |                |                |
+// |________________|________________|
+// |                |                |
+// |                |                |
+// |      BLUE      |     MAGENTA    |
+// |________________|________________|
+//
+// After zoom:-
+// ______________DISPLAY______________
+// |                                 |
+// |                                 |
+// |                                 |
+// |             BLACK               |
+// |                                 |
+// |                                 |
+// |                                 |
+// |_________________________________|
+//
+// The remaining rectangles get clipped out because they fall outside the view bounds.
+TEST_F(FlatlandPixelTestBase, ScaleTest) {
+  const uint32_t view_width = display_width_;
+  const uint32_t view_height = display_height_;
+
+  const uint32_t pane_width =
+      static_cast<uint32_t>(std::ceil(static_cast<float>(view_width) / 2.f));
+
+  const uint32_t pane_height =
+      static_cast<uint32_t>(std::ceil(static_cast<float>(view_height) / 2.f));
+
+  // Draw the rectangles in the quadrants.
+  for (uint32_t i = 0; i < 2; i++) {
+    for (uint32_t j = 0; j < 2; j++) {
+      ui_testing::Pixel color(static_cast<uint8_t>(j * 255), 0, static_cast<uint8_t>(i * 255), 255);
+      DrawRectangle(root_flatland_, pane_width, pane_height, i * pane_width, j * pane_height,
+                    color);
+    }
+  }
+
+  // Set a scale factor for 2.
+  root_flatland_->SetScale(kRootTransform, {2, 2});
+  BlockingPresent(root_flatland_);
+
+  const auto num_pixels = display_width_ * display_height_;
+  auto screenshot = TakeScreenshot(screenshotter_, display_width_, display_height_);
+
+  // Only the top left quadrant is shown on the screen as the rest of the quadrant are clipped.
+  EXPECT_EQ(screenshot.GetPixelAt(0, 0), ui_testing::Screenshot::kBlack);
+  EXPECT_EQ(screenshot.GetPixelAt(0, display_height_ - 1), ui_testing::Screenshot::kBlack);
+  EXPECT_EQ(screenshot.GetPixelAt(display_width_ - 1, 0), ui_testing::Screenshot::kBlack);
+  EXPECT_EQ(screenshot.GetPixelAt(display_width_ - 1, display_height_ - 1),
+            ui_testing::Screenshot::kBlack);
+
+  auto histogram = screenshot.Histogram();
+  EXPECT_EQ(histogram[ui_testing::Screenshot::kBlack], num_pixels);
+  EXPECT_EQ(histogram[ui_testing::Screenshot::kBlue], 0u);
+  EXPECT_EQ(histogram[ui_testing::Screenshot::kRed], 0u);
+  EXPECT_EQ(histogram[ui_testing::Screenshot::kMagenta], 0u);
+}
+
+// This test ensures that detaching a viewport ceases rendering the view.
+TEST_F(FlatlandPixelTestBase, ViewportDetach) {
+  fuc::FlatlandPtr child;
+  child = realm_->Connect<fuc::Flatland>();
+
+  // Create the child view.
+  auto [view_creation_token, viewport_creation_token] = scenic::ViewCreationTokenPair::New();
+  fidl::InterfacePtr<fuc::ParentViewportWatcher> parent_viewport_watcher;
+  child->CreateView2(std::move(view_creation_token), scenic::NewViewIdentityOnCreation(), {},
+                     parent_viewport_watcher.NewRequest());
+  BlockingPresent(child);
+
+  // Connect the child view to the root view.
+  fuc::TransformId viewport_transform = {get_next_resource_id()};
+  fuc::ContentId viewport_content = {get_next_resource_id()};
+  root_flatland_->CreateTransform(viewport_transform);
+  fidl::InterfacePtr<fuc::ChildViewWatcher> child_view_watcher;
+  fuc::ViewportProperties properties;
+  properties.set_logical_size({display_width_, display_height_});
+  root_flatland_->CreateViewport(viewport_content, std::move(viewport_creation_token),
+                                 std::move(properties), child_view_watcher.NewRequest());
+  root_flatland_->SetContent(viewport_transform, viewport_content);
+  root_flatland_->AddChild(kRootTransform, viewport_transform);
+
+  BlockingPresent(root_flatland_);
+
+  // Child view draws a solid filled rectangle.
+  child->CreateTransform(kRootTransform);
+  child->SetRootTransform(kRootTransform);
+  DrawRectangle(child, display_width_, display_height_, 0, 0, ui_testing::Screenshot::kBlue);
+  BlockingPresent(child);
+
+  const auto num_pixels = display_width_ * display_height_;
+  // The screenshot taken should reflect the content drawn by the child view.
+  {
+    auto screenshot = TakeScreenshot(screenshotter_, display_width_, display_height_);
+    auto histogram = screenshot.Histogram();
+    EXPECT_EQ(histogram[ui_testing::Screenshot::kBlue], num_pixels);
+  }
+
+  // Root view releases the viewport.
+  root_flatland_->ReleaseViewport(viewport_content, [](auto token) {});
+  BlockingPresent(root_flatland_);
+
+  // The screenshot taken should not reflect the content drawn by the child view as its viewport was
+  // released.
+  {
+    auto screenshot = TakeScreenshot(screenshotter_, display_width_, display_height_);
+    auto histogram = screenshot.Histogram();
+    EXPECT_EQ(histogram[ui_testing::Screenshot::kBlue], 0u);
+  }
+}
+
+// This test ensures that |fuchsia.ui.composition.ViewportProperties.inset| is only used
+// as hints for clients, and they won't affect rendering of views in Scenic.
+TEST_F(FlatlandPixelTestBase, InsetNotEnforced) {
+  fuc::FlatlandPtr child;
+  child = realm_->Connect<fuc::Flatland>();
+
+  // Create the child view.
+  auto [view_creation_token, viewport_creation_token] = scenic::ViewCreationTokenPair::New();
+  fidl::InterfacePtr<fuc::ParentViewportWatcher> parent_viewport_watcher;
+  child->CreateView2(std::move(view_creation_token), scenic::NewViewIdentityOnCreation(), {},
+                     parent_viewport_watcher.NewRequest());
+  BlockingPresent(child);
+
+  // Connect the child view to the root view.
+  fuc::TransformId viewport_transform = {get_next_resource_id()};
+  fuc::ContentId viewport_content = {get_next_resource_id()};
+  root_flatland_->CreateTransform(viewport_transform);
+  fidl::InterfacePtr<fuc::ChildViewWatcher> child_view_watcher;
+  fuc::ViewportProperties properties;
+  properties.set_logical_size({display_width_, display_height_});
+
+  // We set non-zero |inset|. These properties should work only as hints, but not affect actual
+  // rendered views.
+  properties.set_inset({
+      .top = static_cast<int32_t>(display_height_) / 4,
+      .right = static_cast<int32_t>(display_width_) / 4,
+      .bottom = static_cast<int32_t>(display_height_) / 4,
+      .left = static_cast<int32_t>(display_width_) / 4,
+  });
+
+  root_flatland_->CreateViewport(viewport_content, std::move(viewport_creation_token),
+                                 std::move(properties), child_view_watcher.NewRequest());
+  root_flatland_->SetContent(viewport_transform, viewport_content);
+  root_flatland_->AddChild(kRootTransform, viewport_transform);
+
+  BlockingPresent(root_flatland_);
+
+  // Child view draws a solid filled rectangle.
+  child->CreateTransform(kRootTransform);
+  child->SetRootTransform(kRootTransform);
+  DrawRectangle(child, display_width_, display_height_, 0, 0, ui_testing::Screenshot::kBlue);
+  BlockingPresent(child);
+
+  // The size of the solid filled rectangle exceeds the child view's bounding box with
+  // inset. Since inset properties are only hints, they should not affect the
+  // rendered size of the rectangle.
+  const auto num_pixels = display_width_ * display_height_;
+  auto screenshot = TakeScreenshot(screenshotter_, display_width_, display_height_);
+  auto histogram = screenshot.Histogram();
+  EXPECT_EQ(histogram[ui_testing::Screenshot::kBlue], num_pixels);
 }
 
 }  // namespace integration_tests
