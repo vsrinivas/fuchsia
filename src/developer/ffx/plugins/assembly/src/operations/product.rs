@@ -51,12 +51,24 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
                 vec!["common_bringup", "common_bringup_eng"]
             }
             (FeatureSupportLevel::Minimal, BuildType::Eng) => {
-                vec!["common_bringup", "common_bringup_eng", "common_minimal", "common_minimal_eng"]
+                vec![
+                    "common_bringup",
+                    "common_bringup_eng",
+                    "common_minimal",
+                    "common_minimal_eng",
+                    "common_minimal_userdebug",
+                ]
             }
-            (FeatureSupportLevel::Bringup, _) => {
+            (FeatureSupportLevel::Bringup, BuildType::UserDebug) => {
                 vec!["common_bringup"]
             }
-            (FeatureSupportLevel::Minimal, _) => {
+            (FeatureSupportLevel::Minimal, BuildType::UserDebug) => {
+                vec!["common_bringup", "common_minimal", "common_minimal_userdebug"]
+            }
+            (FeatureSupportLevel::Bringup, BuildType::User) => {
+                vec!["common_bringup"]
+            }
+            (FeatureSupportLevel::Minimal, BuildType::User) => {
                 vec!["common_bringup", "common_minimal"]
             }
             _ => vec![],

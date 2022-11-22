@@ -110,6 +110,14 @@ assembly_input_bundle("common_minimal_eng") {
   create_aib_archive = true
 }
 
+assembly_input_bundle("common_minimal_userdebug") {
+  base_packages = []
+
+  # Create package and archive for use OOT.
+  create_aib_package = true
+  create_aib_archive = true
+}
+
 # This is the "emulator support" bundle, which provides the kernel that can be
 # booted by an emulator, and which knows how to then boot the Fuchsia kernel
 # itself (Zircon).

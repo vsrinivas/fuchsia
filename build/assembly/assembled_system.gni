@@ -320,6 +320,7 @@ template("assembled_system") {
       "common_bringup",
       "common_minimal",
       "emulator_support",
+      "common_minimal_userdebug",
     ]
     if (defined(invoker.allow_eng_platform_bundle_use) &&
         invoker.allow_eng_platform_bundle_use) {
