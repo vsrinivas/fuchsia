@@ -95,6 +95,7 @@ rustc_library("vfs") {
   ]
 
   test_deps = [
+    "//src/lib/fuchsia",
     "//src/testing/fidl:placeholders_rust",
     "//third_party/rust_crates:assert_matches",
   ]

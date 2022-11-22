@@ -548,7 +548,7 @@ mod tests {
         vfs::common::rights_to_posix_mode_bits,
     };
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_empty_file() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -587,7 +587,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_set_attrs() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -643,7 +643,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_write_read() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -701,7 +701,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_page_in() {
         let input = "hello, world!";
         let reused_device = {
@@ -748,7 +748,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_page_in_io_error() {
         let mut device = FakeDevice::new(8192, 512);
         let succeed_requests = Arc::new(AtomicBool::new(true));
@@ -806,7 +806,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_writes_persist() {
         let mut device = DeviceHolder::new(FakeDevice::new(8192, 512));
         for i in 0..2 {
@@ -849,7 +849,7 @@ mod tests {
         }
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_append() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -899,7 +899,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_seek() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -991,7 +991,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_resize_extend() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -1064,7 +1064,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_resize_shrink() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -1140,7 +1140,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_resize_shrink_repeated() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -1220,7 +1220,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_unlink_with_open_race() {
         let fixture = Arc::new(TestFixture::new().await);
         let fixture1 = fixture.clone();

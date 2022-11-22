@@ -377,7 +377,6 @@ mod tests {
                 volume::root_volume,
             },
         },
-        fuchsia_async as fasync,
         std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
@@ -485,12 +484,12 @@ mod tests {
         }
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_metadata_key_roll() {
         run_key_roll_test(/* flush_before_unlock: */ false).await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_metadata_key_roll_with_flush_before_unlock() {
         run_key_roll_test(/* flush_before_unlock: */ true).await;
     }

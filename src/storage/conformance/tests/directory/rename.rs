@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     io_conformance_util::{test_harness::TestHarness, *},
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn rename_with_sufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_rename.unwrap_or_default()
@@ -42,7 +42,7 @@ async fn rename_with_sufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn rename_with_insufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_rename.unwrap_or_default()
@@ -72,7 +72,7 @@ async fn rename_with_insufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn rename_with_slash_in_path_fails() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_rename.unwrap_or_default()

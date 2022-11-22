@@ -21,7 +21,7 @@ rustc_library("ramdevice_client") {
   ]
   test_deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
   ]
   non_rust_deps = [ "//src/lib/storage/ramdevice_client/cpp" ]
 

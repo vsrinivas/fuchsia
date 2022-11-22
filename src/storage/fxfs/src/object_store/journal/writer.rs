@@ -164,13 +164,12 @@ mod tests {
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         byteorder::{ByteOrder, LittleEndian},
-        fuchsia_async as fasync,
         std::sync::Arc,
     };
 
     const TEST_BLOCK_SIZE: usize = 512;
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_write_single_record_and_pad() {
         let object = Arc::new(FakeObject::new());
         let mut writer = JournalWriter::new(TEST_BLOCK_SIZE, 0);
@@ -202,7 +201,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_journal_file_checkpoint() {
         let object = Arc::new(FakeObject::new());
         let mut writer = JournalWriter::new(TEST_BLOCK_SIZE, 0);

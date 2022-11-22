@@ -20,6 +20,7 @@ rustc_library("fuchsia-vfs-watcher") {
     "//third_party/rust_crates:futures",
   ]
   test_deps = [
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-fs",
     "//third_party/rust_crates:tempfile",
   ]
@@ -36,6 +37,12 @@ fuchsia_unittest_package("fuchsia-vfs-watcher-tests") {
     ":fuchsia-vfs-watcher_test",
     "//src/sys/test_runners:tmp_storage",
   ]
+  test_specs = {
+    log_settings = {
+      # We expect some tests to produce ERROR logs
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

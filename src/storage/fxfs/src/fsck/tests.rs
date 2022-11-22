@@ -28,7 +28,6 @@ use {
     },
     anyhow::{Context, Error},
     assert_matches::assert_matches,
-    fuchsia_async as fasync,
     std::{
         ops::{Bound, Deref},
         sync::{Arc, Mutex},
@@ -187,7 +186,7 @@ async fn install_items_in_store<K: Key, V: Value>(
 }
 
 /* TODO(fxbug.dev/92054): Fix this test
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_missing_graveyard() {
     let mut test = FsckTest::new().await;
 
@@ -222,7 +221,7 @@ async fn test_missing_graveyard() {
 }
 */
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_bad_graveyard_value() {
     let mut test = FsckTest::new().await;
 
@@ -253,7 +252,7 @@ async fn test_bad_graveyard_value() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_extra_allocation() {
     let mut test = FsckTest::new().await;
 
@@ -281,7 +280,7 @@ async fn test_extra_allocation() {
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::ExtraAllocations(_)), ..]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_misaligned_allocation() {
     let mut test = FsckTest::new().await;
 
@@ -311,7 +310,7 @@ async fn test_misaligned_allocation() {
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MisalignedAllocation(..))]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_malformed_allocation() {
     let mut test = FsckTest::new().await;
 
@@ -386,7 +385,7 @@ async fn test_malformed_allocation() {
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MalformedAllocation(..))]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_misaligned_extent_in_root_store() {
     let mut test = FsckTest::new().await;
 
@@ -416,7 +415,7 @@ async fn test_misaligned_extent_in_root_store() {
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MisalignedExtent(..))]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_malformed_extent_in_root_store() {
     let mut test = FsckTest::new().await;
 
@@ -446,7 +445,7 @@ async fn test_malformed_extent_in_root_store() {
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MalformedExtent(..))]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_misaligned_extent_in_child_store() {
     let mut test = FsckTest::new().await;
 
@@ -482,7 +481,7 @@ async fn test_misaligned_extent_in_child_store() {
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MisalignedExtent(..))]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_malformed_extent_in_child_store() {
     let mut test = FsckTest::new().await;
 
@@ -518,7 +517,7 @@ async fn test_malformed_extent_in_child_store() {
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MalformedExtent(..))]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_allocation_mismatch() {
     let mut test = FsckTest::new().await;
 
@@ -556,7 +555,7 @@ async fn test_allocation_mismatch() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_volume_allocation_mismatch() {
     let mut test = FsckTest::new().await;
     let store_id = {
@@ -644,7 +643,7 @@ async fn test_volume_allocation_mismatch() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_missing_allocation() {
     let test = FsckTest::new().await;
 
@@ -678,7 +677,7 @@ async fn test_missing_allocation() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_too_many_object_refs() {
     let mut test = FsckTest::new().await;
 
@@ -723,7 +722,7 @@ async fn test_too_many_object_refs() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_too_few_object_refs() {
     let mut test = FsckTest::new().await;
 
@@ -749,7 +748,7 @@ async fn test_too_few_object_refs() {
     assert_matches!(test.errors()[..], [FsckIssue::Warning(FsckWarning::OrphanedObject(..))]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_missing_object_tree_layer_file() {
     let mut test = FsckTest::new().await;
 
@@ -781,7 +780,7 @@ async fn test_missing_object_tree_layer_file() {
     test.remount().await.expect_err("Remount succeeded");
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_missing_object_store_handle() {
     let mut test = FsckTest::new().await;
 
@@ -801,7 +800,7 @@ async fn test_missing_object_store_handle() {
     test.remount().await.expect_err("Remount succeeded");
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_misordered_layer_file() {
     let mut test = FsckTest::new().await;
 
@@ -828,7 +827,7 @@ async fn test_misordered_layer_file() {
     assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MisOrderedLayerFile(..))]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_overlapping_keys_in_layer_file() {
     let mut test = FsckTest::new().await;
 
@@ -859,7 +858,7 @@ async fn test_overlapping_keys_in_layer_file() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_unexpected_record_in_layer_file() {
     let mut test = FsckTest::new().await;
     // This test relies on the value below being something that doesn't deserialize to a valid
@@ -884,7 +883,7 @@ async fn test_unexpected_record_in_layer_file() {
     assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MalformedLayerFile(..))]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_mismatched_key_and_value() {
     let mut test = FsckTest::new().await;
 
@@ -911,7 +910,7 @@ async fn test_mismatched_key_and_value() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_link_to_root_directory() {
     let mut test = FsckTest::new().await;
 
@@ -943,7 +942,7 @@ async fn test_link_to_root_directory() {
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::RootObjectHasParent(..)), ..]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_multiple_links_to_directory() {
     let mut test = FsckTest::new().await;
 
@@ -981,7 +980,7 @@ async fn test_multiple_links_to_directory() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_conflicting_link_types() {
     let mut test = FsckTest::new().await;
 
@@ -1015,7 +1014,7 @@ async fn test_conflicting_link_types() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_volume_in_child_store() {
     let mut test = FsckTest::new().await;
 
@@ -1046,7 +1045,7 @@ async fn test_volume_in_child_store() {
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::VolumeInChildStore(..)), ..]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_children_on_file() {
     let mut test = FsckTest::new().await;
 
@@ -1088,7 +1087,7 @@ async fn test_children_on_file() {
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::FileHasChildren(..)), ..]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_attribute_on_directory() {
     let mut test = FsckTest::new().await;
 
@@ -1116,7 +1115,7 @@ async fn test_attribute_on_directory() {
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::AttributeOnDirectory(..)), ..]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_orphaned_attribute() {
     let mut test = FsckTest::new().await;
 
@@ -1147,7 +1146,7 @@ async fn test_orphaned_attribute() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_records_for_tombstoned_object() {
     let mut test = FsckTest::new().await;
 
@@ -1181,7 +1180,7 @@ async fn test_records_for_tombstoned_object() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_invalid_object_in_store() {
     let mut test = FsckTest::new().await;
 
@@ -1209,7 +1208,7 @@ async fn test_invalid_object_in_store() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_invalid_child_in_store() {
     let mut test = FsckTest::new().await;
 
@@ -1239,7 +1238,7 @@ async fn test_invalid_child_in_store() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_link_cycle() {
     let mut test = FsckTest::new().await;
 
@@ -1281,7 +1280,7 @@ async fn test_link_cycle() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_file_length_mismatch() {
     let mut test = FsckTest::new().await;
 
@@ -1350,7 +1349,7 @@ async fn test_file_length_mismatch() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_spurious_extents() {
     let mut test = FsckTest::new().await;
     const SPURIOUS_OFFSET: u64 = 100 << 20;

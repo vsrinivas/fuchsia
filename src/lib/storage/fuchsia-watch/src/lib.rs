@@ -259,7 +259,7 @@ mod tests {
         assert_eq!(Path::new("test/a"), PathEvent::Removed("test/a".into()).as_ref());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn watch_single_directory() {
         let dir = tempdir().expect("create temp dir");
         let path = dir.path();
@@ -325,7 +325,7 @@ mod tests {
         assert_eq!(None, watch_stream.next().await);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn watch_error() {
         let dir = tempdir().expect("make tempdir");
         let path = dir.path();
@@ -333,7 +333,7 @@ mod tests {
         assert!(watch(path.join("does_not_exist")).await.is_err());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn watch_recursive_directories() {
         let dir = tempdir().expect("make tempdir");
         let path = dir.path();
@@ -412,7 +412,7 @@ mod tests {
         assert_eq!(None, watch_stream.try_next().await.unwrap());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn watch_recursive_error() {
         let dir = tempdir().expect("create tempdir");
         let path = dir.path();

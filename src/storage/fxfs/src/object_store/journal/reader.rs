@@ -257,7 +257,6 @@ mod tests {
             serialized_types::{VersionedLatest, LATEST_VERSION},
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
-        fuchsia_async as fasync,
         std::{io::Write, sync::Arc},
     };
 
@@ -276,7 +275,7 @@ mod tests {
         handle.write_or_append(Some(offset), buf.as_ref()).await.expect("overwrite failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_single_record() {
         let object = Arc::new(FakeObject::new());
         let handle = FakeObjectHandle::new(object.clone());
@@ -296,7 +295,7 @@ mod tests {
         assert_eq!(value, ReadResult::Some(4u32));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_journal_file_checkpoint() {
         let object = Arc::new(FakeObject::new());
         let checkpoint =
@@ -322,7 +321,7 @@ mod tests {
         assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(7u32));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_skip_to_end_of_block() {
         let object = Arc::new(FakeObject::new());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
@@ -348,7 +347,7 @@ mod tests {
         assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(7u32));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_handle() {
         let object = Arc::new(FakeObject::new());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
@@ -365,7 +364,7 @@ mod tests {
         assert_eq!(reader.handle().get_size(), TEST_BLOCK_SIZE * 3);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_item_spanning_block() {
         let object = Arc::new(FakeObject::new());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
@@ -402,7 +401,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_reset() {
         let object = Arc::new(FakeObject::new());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
@@ -469,7 +468,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_reader_starting_near_end_of_block() {
         let object = Arc::new(FakeObject::new());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
@@ -503,7 +502,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_write_to_block_boundary() {
         let object = Arc::new(FakeObject::new());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.

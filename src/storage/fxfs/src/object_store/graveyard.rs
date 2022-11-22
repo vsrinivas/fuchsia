@@ -317,13 +317,12 @@ mod tests {
             object_store::transaction::{Options, TransactionHandler},
         },
         assert_matches::assert_matches,
-        fuchsia_async as fasync,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_graveyard() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");

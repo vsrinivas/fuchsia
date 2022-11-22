@@ -577,7 +577,6 @@ mod tests {
             },
             serialized_types::LATEST_VERSION,
         },
-        fuchsia_async as fasync,
         std::{ops::Bound, sync::Arc},
         storage_device::{fake_device::FakeDevice, DeviceHolder},
         uuid::Uuid,
@@ -644,7 +643,7 @@ mod tests {
         (fs, handle_a, handle_b)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_written_super_block() {
         let (fs, handle_a, handle_b) = filesystem_and_super_block_handles().await;
         const JOURNAL_OBJECT_ID: u64 = 5;
@@ -738,7 +737,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_guid_assign_on_read() {
         let (fs, handle_a, _handle_b) = filesystem_and_super_block_handles().await;
         const JOURNAL_OBJECT_ID: u64 = 5;
@@ -763,7 +762,7 @@ mod tests {
         assert!(!super_block.0.guid.0.is_nil());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_init_wipes_superblocks() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
 
@@ -806,7 +805,7 @@ mod tests {
             .map(|_| ())
             .expect_err("Super-block B was readable after a re-format");
     }
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_alternating_super_blocks() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
 

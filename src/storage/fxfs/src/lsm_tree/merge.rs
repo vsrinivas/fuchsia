@@ -695,7 +695,6 @@ mod tests {
                 versioned_type, Version, Versioned, VersionedLatest, LATEST_VERSION,
             },
         },
-        fuchsia_async as fasync,
         rand::Rng,
         std::ops::{Bound, Range},
         type_hash::TypeHash,
@@ -726,7 +725,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_emit_left() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
@@ -744,7 +743,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_other_emit() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
@@ -764,7 +763,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_replace_left() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
@@ -786,7 +785,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_replace_right() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
@@ -808,7 +807,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_left_less_than_right() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
@@ -822,7 +821,7 @@ mod tests {
         merger.seek(Bound::Unbounded).await.expect("seek failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_left_equals_right() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let item = Item::new(TestKey(1..1), 1);
@@ -838,7 +837,7 @@ mod tests {
         merger.seek(Bound::Unbounded).await.expect("seek failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_keep() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
@@ -867,7 +866,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_10_layers() {
         let skip_lists: Vec<_> = (0..10).map(|_| SkipListLayer::new(100)).collect();
         let mut rng = rand::thread_rng();
@@ -889,7 +888,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_uses_cmp_lower_bound() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let items = [Item::new(TestKey(1..10), 1), Item::new(TestKey(2..3), 2)];
@@ -908,7 +907,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_into_emit_left() {
         let skip_list = SkipListLayer::new(100);
         let items =
@@ -932,7 +931,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_into_emit_last_after_replacing() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
@@ -965,7 +964,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_into_emit_left_after_replacing() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(3..3), 3)];
@@ -999,7 +998,7 @@ mod tests {
     }
 
     // This tests emitting in both branches of merge_into, and most of the discard paths.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_into_emit_other_and_discard() {
         let skip_list = SkipListLayer::new(100);
         let items =
@@ -1042,7 +1041,7 @@ mod tests {
 
     // This tests replacing the item and discarding the right item (the one remaining untested
     // discard path) in the top branch in merge_into.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_into_replace_and_discard() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(3..3), 3)];
@@ -1068,7 +1067,7 @@ mod tests {
 
     // This tests replacing the right item in the top branch of merge_into and the left item in the
     // bottom branch of merge_into.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_into_replace_merge_item() {
         let skip_list = SkipListLayer::new(100);
         let items =
@@ -1103,7 +1102,7 @@ mod tests {
     }
 
     // This tests replacing the right item in the bottom branch of merge_into.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_into_replace_existing() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(3..3), 3)];
@@ -1133,7 +1132,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_into_discard_last() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
@@ -1154,7 +1153,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_into_empty() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1..1), 1)];
@@ -1172,7 +1171,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_uses_minimum_number_of_iterators() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(1..1), 2)];
@@ -1215,7 +1214,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_skips_replaced_items() {
         // The 1..2 and the 2..3 items are overwritten and merging them should be skipped.
         test_advance(
@@ -1229,7 +1228,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_advance_skips_replaced_items_at_end() {
         // Like the last test, the 1..2 item is overwritten and seeking for it should skip the merge
         // but this time, the keys are at the end.
@@ -1262,7 +1261,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_skips_replaced_items_with_default_next_key() {
         // This differs from the earlier test because with a default next key implementation, the
         // overwritten 2..3 key will get merged because the merger is unable to know whether the
@@ -1287,7 +1286,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_advance_skips_replaced_items_at_end_with_default_next_key() {
         // Like the last test, the 1..2 item is overwritten and seeking for it should skip the merge
         // but this time, the keys are at the end.
@@ -1299,7 +1298,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_less_than() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
@@ -1316,7 +1315,7 @@ mod tests {
         assert_eq!((key, value), (&items[1].key, &items[1].value));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_to_end() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
@@ -1330,7 +1329,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_all_discarded() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
@@ -1343,7 +1342,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_with_merged_key_less_than() {
         let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
         let items = [Item::new(TestKey(1..8), 1), Item::new(TestKey(2..10), 2)];
@@ -1365,7 +1364,7 @@ mod tests {
         assert_eq!((key, value), (&items[1].key, &items[1].value));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_overlapping_keys() {
         let skip_lists =
             [SkipListLayer::new(100), SkipListLayer::new(100), SkipListLayer::new(100)];

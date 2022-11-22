@@ -773,7 +773,7 @@ mod tests {
         (ramdisk, proxy, remote_block_device)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_against_ram_disk() {
         let (_ramdisk, block_proxy, remote_block_device) = make_ramdisk().await;
 
@@ -826,7 +826,7 @@ mod tests {
         assert_eq!(stats_before.read.failure.total_calls, stats_after.read.failure.total_calls);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_against_ram_disk_with_flush() {
         let (_ramdisk, block_proxy, remote_block_device) = make_ramdisk().await;
 
@@ -886,7 +886,7 @@ mod tests {
         assert_eq!(stats_before.read.failure.total_calls, stats_after.read.failure.total_calls);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_alignment() {
         let (_ramdisk, _block_proxy, remote_block_device) = make_ramdisk().await;
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
@@ -898,7 +898,7 @@ mod tests {
         remote_block_device.detach_vmo(vmo_id).await.expect("detach_vmo failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_parallel_io() {
         let (_ramdisk, _block_proxy, remote_block_device) = make_ramdisk().await;
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
@@ -915,7 +915,7 @@ mod tests {
         remote_block_device.detach_vmo(vmo_id).await.expect("detach_vmo failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_closed_device() {
         let (ramdisk, _block_proxy, remote_block_device) = make_ramdisk().await;
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
@@ -950,7 +950,7 @@ mod tests {
         let _ = remote_block_device.detach_vmo(vmo_id).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_cancelled_reads() {
         let (_ramdisk, _block_proxy, remote_block_device) = make_ramdisk().await;
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
@@ -971,7 +971,7 @@ mod tests {
         remote_block_device.detach_vmo(vmo_id).await.expect("detach_vmo failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_parallel_large_read_and_write_with_memory_succeds() {
         let (_ramdisk, _block_proxy, remote_block_device) = make_ramdisk().await;
         let remote_block_device_ref = &remote_block_device;
@@ -1132,7 +1132,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_block_close_is_called() {
         let close_called = std::sync::Mutex::new(false);
         let (client_end, server) =
@@ -1156,7 +1156,7 @@ mod tests {
         assert!(*close_called.lock().unwrap());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_block_flush_is_called() {
         let (proxy, server) = fidl::endpoints::create_proxy().expect("create_proxy failed");
 
@@ -1184,7 +1184,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_trace_flow_ids_set() {
         let (proxy, server) = fidl::endpoints::create_proxy().expect("create_proxy failed");
 

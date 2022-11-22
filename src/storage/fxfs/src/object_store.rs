@@ -1974,7 +1974,7 @@ mod tests {
         FxFilesystem::new_empty(device).await.expect("new_empty failed")
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_item_sequences() {
         let fs = test_filesystem().await;
         let object1;
@@ -2039,7 +2039,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_create_and_open_store() {
         let fs = test_filesystem().await;
         let store_id = {
@@ -2063,7 +2063,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_old_layers_are_purged() {
         let fs = test_filesystem().await;
 
@@ -2120,7 +2120,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_tombstone_deletes_data() {
         let fs = test_filesystem().await;
         let root_store = fs.root_store();
@@ -2154,7 +2154,7 @@ mod tests {
         fsck(fs.clone()).await.expect("fsck failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_major_compaction_discards_unnecessary_records() {
         let fs = test_filesystem().await;
         let root_store = fs.root_store();
@@ -2203,7 +2203,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_overlapping_extents_in_different_layers() {
         let fs = test_filesystem().await;
         let store = fs.root_store();
@@ -2236,7 +2236,7 @@ mod tests {
         fsck(fs.clone()).await.expect("fsck failed");
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_encrypted_mutations() {
         async fn one_iteration(
             fs: OpenFxFilesystem,
@@ -2363,7 +2363,7 @@ mod tests {
         }
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_object_id_cipher_roll() {
         let fs = test_filesystem().await;
         let crypt = Arc::new(InsecureCrypt::new());
@@ -2417,7 +2417,7 @@ mod tests {
         assert_eq!(store.last_object_id.lock().unwrap().id, 2u64 << 32);
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_lock_store() {
         let fs = test_filesystem().await;
         let crypt = Arc::new(InsecureCrypt::new());
@@ -2443,7 +2443,7 @@ mod tests {
         root_directory.lookup("test").await.expect("lookup failed").expect("not found");
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_unlock_read_only() {
         let fs = test_filesystem().await;
         let crypt = Arc::new(InsecureCrypt::new());
@@ -2472,7 +2472,7 @@ mod tests {
         root_directory.lookup("test").await.expect("lookup failed").expect("not found");
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_key_rolled_when_unlocked() {
         let fs = test_filesystem().await;
         let crypt = Arc::new(InsecureCrypt::new());

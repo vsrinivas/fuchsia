@@ -4,11 +4,11 @@
 
 use {
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     io_conformance_util::{flags::build_flag_combinations, test_harness::TestHarness, *},
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn clone_file_with_same_or_fewer_rights() {
     let harness = TestHarness::new().await;
 
@@ -34,7 +34,7 @@ async fn clone_file_with_same_or_fewer_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn clone_file_with_same_rights_flag() {
     let harness = TestHarness::new().await;
 
@@ -58,7 +58,7 @@ async fn clone_file_with_same_rights_flag() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn clone_file_with_additional_rights() {
     let harness = TestHarness::new().await;
 
@@ -83,7 +83,7 @@ async fn clone_file_with_additional_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn clone_directory_with_same_or_fewer_rights() {
     let harness = TestHarness::new().await;
 
@@ -108,7 +108,7 @@ async fn clone_directory_with_same_or_fewer_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn clone_directory_with_same_rights_flag() {
     let harness = TestHarness::new().await;
 
@@ -132,7 +132,7 @@ async fn clone_directory_with_same_rights_flag() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn clone_directory_with_additional_rights() {
     let harness = TestHarness::new().await;
 

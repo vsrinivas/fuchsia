@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     io_conformance_util::{test_harness::TestHarness, *},
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn unlink_file_with_sufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_unlink.unwrap_or_default() {
@@ -53,7 +53,7 @@ async fn unlink_file_with_sufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn unlink_file_with_insufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_unlink.unwrap_or_default() {
@@ -81,7 +81,7 @@ async fn unlink_file_with_insufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn unlink_directory_with_sufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_unlink.unwrap_or_default() {
@@ -101,7 +101,7 @@ async fn unlink_directory_with_sufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn unlink_directory_with_insufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_unlink.unwrap_or_default() {
@@ -124,7 +124,7 @@ async fn unlink_directory_with_insufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn unlink_must_be_directory() {
     let harness = TestHarness::new().await;
 

@@ -281,7 +281,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_drop_placeholder() {
         let cache = Arc::new(NodeCache::new());
         let object_id = 0u64;
@@ -295,7 +295,7 @@ mod tests {
         };
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_simple() {
         let cache = Arc::new(NodeCache::new());
         let object_id = {
@@ -318,7 +318,7 @@ mod tests {
         };
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_subsequent_callers_block() {
         let cache = Arc::new(NodeCache::new());
         let object_id = 0u64;
@@ -351,7 +351,7 @@ mod tests {
         assert_eq!(reads_from_cache.load(Ordering::SeqCst), 9);
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_multiple_nodes() {
         const NUM_OBJECTS: usize = 5;
         const TASKS_PER_OBJECT: usize = 4;

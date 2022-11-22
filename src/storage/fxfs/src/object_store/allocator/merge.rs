@@ -175,7 +175,6 @@ mod tests {
                 AllocatorValue::Abs,
             },
         },
-        fuchsia_async as fasync,
         std::ops::{Bound, Range},
     };
 
@@ -207,7 +206,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_no_overlap() {
         test_merge(
             (0..100, Abs { count: 1, owner_object_id: 1 }),
@@ -220,7 +219,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_touching() {
         test_merge(
             (0..100, Abs { count: 1, owner_object_id: 1 }),
@@ -230,7 +229,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_identical() {
         test_merge(
             (0..100, Abs { count: 2, owner_object_id: 1 }),
@@ -246,7 +245,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_left_smaller_than_right_with_same_start() {
         test_merge(
             (0..100, Abs { count: 2, owner_object_id: 1 }),
@@ -265,7 +264,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_left_starts_before_right_with_overlap() {
         test_merge(
             (0..200, Abs { count: 2, owner_object_id: 1 }),
@@ -278,7 +277,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_different_object_id() {
         // Case 1
         test_merge(
@@ -337,7 +336,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_tombstones() {
         // We have to make sure we don't prematurely discard records. seal() may be called at
         // any time and the resulting layer tree must remain valid.
@@ -383,7 +382,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_preserves_sequences() {
         let tree = LSMTree::new(merge);
         // |1-1-1-1|

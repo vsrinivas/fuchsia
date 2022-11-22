@@ -45,7 +45,7 @@ fxfs_deps = [
   "//third_party/rust_crates:xts-mode",
 ]
 
-fxfs_test_deps = []
+fxfs_test_deps = [ "//src/lib/fuchsia" ]
 
 fxfs_sources = [
   "src/checksum.rs",
@@ -200,6 +200,12 @@ storage_driver_test_realm_v2_component("fxfs-test") {
 
 fuchsia_test_package("fxfs-tests") {
   test_components = [ ":fxfs-test" ]
+  test_specs = {
+    log_settings = {
+      # We expect some tests to produce ERROR logs
+      max_severity = "ERROR"
+    }
+  }
 }
 
 rustc_binary("fxfs") {

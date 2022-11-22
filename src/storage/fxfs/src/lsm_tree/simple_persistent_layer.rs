@@ -375,13 +375,12 @@ mod tests {
             object_handle::Writer,
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
-        fuchsia_async as fasync,
         std::{ops::Bound, sync::Arc},
     };
 
     impl DefaultOrdUpperBound for i32 {}
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_iterate_after_write() {
         const BLOCK_SIZE: u64 = 512;
         const ITEM_COUNT: i32 = 10000;
@@ -409,7 +408,7 @@ mod tests {
         assert!(iterator.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_after_write() {
         const BLOCK_SIZE: u64 = 512;
         const ITEM_COUNT: i32 = 10000;
@@ -445,7 +444,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_unbounded() {
         const BLOCK_SIZE: u64 = 512;
         const ITEM_COUNT: i32 = 10000;
@@ -474,7 +473,7 @@ mod tests {
         assert_eq!((key, value), (&1, &1));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_zero_items() {
         const BLOCK_SIZE: u64 = 512;
 
@@ -497,7 +496,7 @@ mod tests {
         assert!(iterator.get().is_none())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_large_block_size() {
         // Large enough such that we hit the 64k item limit.
         const BLOCK_SIZE: u64 = 2097152;
@@ -528,7 +527,7 @@ mod tests {
         assert!(iterator.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_bound_excluded() {
         const BLOCK_SIZE: u64 = 512;
         const ITEM_COUNT: i32 = 10000;

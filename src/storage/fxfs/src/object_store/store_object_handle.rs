@@ -1595,7 +1595,7 @@ mod tests {
         test_filesystem_and_object_with_key(Some(&InsecureCrypt::new()), false).await
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_zero_buf_len_read() {
         let (fs, object) = test_filesystem_and_object().await;
         let mut buf = object.allocate_buffer(0);
@@ -1603,7 +1603,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_beyond_eof_read() {
         let (fs, object) = test_filesystem_and_object().await;
         let offset = TEST_OBJECT_SIZE as usize - 2;
@@ -1620,7 +1620,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_sparse() {
         let (fs, object) = test_filesystem_and_object().await;
         // Deliberately read not right to eof.
@@ -1635,7 +1635,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_after_writes_interspersed_with_flush() {
         let (fs, object) = test_filesystem_and_object().await;
 
@@ -1659,7 +1659,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_after_truncate_and_extend() {
         let (fs, object) = test_filesystem_and_object().await;
 
@@ -1696,7 +1696,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_whole_blocks_with_multiple_objects() {
         let (fs, object) = test_filesystem_and_object().await;
         let block_size = object.block_size() as usize;
@@ -1741,7 +1741,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_alignment() {
         let (fs, object) = test_filesystem_and_object().await;
 
@@ -1853,7 +1853,7 @@ mod tests {
         assert_eq!(&buf.as_slice()[offset as usize..offset as usize + 2048], &[95; 2048]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_preallocate_range() {
         let (fs, object) = test_filesystem_and_object_with_key(None, true).await;
         test_preallocate_common(&fs, object).await;
@@ -1862,7 +1862,7 @@ mod tests {
 
     // This is identical to the previous test except that we flush so that extents end up in
     // different layers.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_preallocate_suceeds_when_extents_are_in_different_layers() {
         let (fs, object) = test_filesystem_and_object_with_key(None, true).await;
         object.owner().flush().await.expect("flush failed");
@@ -1870,7 +1870,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_already_preallocated() {
         let (fs, object) = test_filesystem_and_object_with_key(None, true).await;
         let allocator = fs.allocator();
@@ -1887,7 +1887,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_overwrite_when_preallocated_at_start_of_file() {
         // The standard test data we put in the test object would cause an extent with checksums
         // to be created, which overwrite() doesn't support. So we create an empty object instead.
@@ -1958,7 +1958,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_overwrite_large_buffer_and_file_with_many_holes() {
         // The standard test data we put in the test object would cause an extent with checksums
         // to be created, which overwrite() doesn't support. So we create an empty object instead.
@@ -2079,7 +2079,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_overwrite_when_unallocated_at_start_of_file() {
         // The standard test data we put in the test object would cause an extent with checksums
         // to be created, which overwrite() doesn't support. So we create an empty object instead.
@@ -2134,7 +2134,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_overwrite_can_extend_a_file() {
         // The standard test data we put in the test object would cause an extent with checksums
         // to be created, which overwrite() doesn't support. So we create an empty object instead.
@@ -2209,7 +2209,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_extend() {
         let fs = test_filesystem().await;
         let handle;
@@ -2237,7 +2237,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_truncate_deallocates_old_extents() {
         let (fs, object) = test_filesystem_and_object().await;
         let mut buf = object.allocate_buffer(5 * fs.block_size() as usize);
@@ -2257,7 +2257,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_truncate_zeroes_tail_block() {
         let (fs, object) = test_filesystem_and_object().await;
 
@@ -2275,7 +2275,7 @@ mod tests {
         assert_eq!(&buf.as_slice()[offset..offset + expected.len()], &expected);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_trim() {
         // Format a new filesystem.
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
@@ -2511,7 +2511,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_adjust_refs() {
         let (fs, object) = test_filesystem_and_object().await;
         let mut transaction = fs
@@ -2591,7 +2591,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_locks() {
         let (fs, object) = test_filesystem_and_object().await;
         let (send1, recv1) = channel();
@@ -2639,7 +2639,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_racy_reads() {
         let fs = test_filesystem().await;
         let object;
@@ -2685,7 +2685,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_allocated_size() {
         let (fs, object) = test_filesystem_and_object_with_key(None, true).await;
 
@@ -2735,7 +2735,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_zero() {
         let (fs, object) = test_filesystem_and_object().await;
         let expected_size = object.get_size();
@@ -2752,7 +2752,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_properties() {
         let (fs, object) = test_filesystem_and_object().await;
         const CRTIME: Timestamp = Timestamp::from_nanos(1234);
@@ -2780,7 +2780,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_is_allocated() {
         let (fs, object) = test_filesystem_and_object().await;
 

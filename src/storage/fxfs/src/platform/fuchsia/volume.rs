@@ -478,7 +478,7 @@ mod tests {
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_rename_different_dirs() {
         use fuchsia_zircon::Event;
 
@@ -535,7 +535,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_rename_same_dir() {
         use fuchsia_zircon::Event;
         let fixture = TestFixture::new().await;
@@ -579,7 +579,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_rename_overwrites_file() {
         use fuchsia_zircon::Event;
         let fixture = TestFixture::new().await;
@@ -651,7 +651,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_rename_overwrites_dir() {
         use fuchsia_zircon::Event;
         let fixture = TestFixture::new().await;
@@ -716,7 +716,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_background_flush() {
         // We have to do a bit of set-up ourselves for this test, since we want to be able to access
         // the underlying StoreObjectHandle at the same time as the FxFile which corresponds to it.
@@ -793,7 +793,7 @@ mod tests {
         device.ensure_unique();
     }
 
-    #[fasync::run(2, test)]
+    #[fuchsia::test(threads = 2)]
     async fn test_background_flush_with_warning_memory_pressure() {
         // We have to do a bit of set-up ourselves for this test, since we want to be able to access
         // the underlying StoreObjectHandle at the same time as the FxFile which corresponds to it.
@@ -888,7 +888,7 @@ mod tests {
         device.ensure_unique();
     }
 
-    #[fasync::run(2, test)]
+    #[fuchsia::test(threads = 2)]
     async fn test_background_flush_with_critical_memory_pressure() {
         // We have to do a bit of set-up ourselves for this test, since we want to be able to access
         // the underlying StoreObjectHandle at the same time as the FxFile which corresponds to it.
@@ -982,7 +982,7 @@ mod tests {
         device.ensure_unique();
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_unencrypted_volume() {
         let fixture = TestFixture::new_unencrypted().await;
         let root = fixture.root();

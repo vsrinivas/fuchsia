@@ -858,7 +858,7 @@ mod tests {
     use {
         super::*,
         crate::platform::fuchsia::testing::{close_file_checked, open_file_checked, TestFixture},
-        fidl_fuchsia_io as fio, fuchsia_async as fasync,
+        fidl_fuchsia_io as fio,
         fuchsia_fs::file,
         fuchsia_zircon as zx,
         std::{sync::atomic::Ordering, time::Duration},
@@ -899,7 +899,7 @@ mod tests {
         zx::Status::ok(status).expect("set_attr failed");
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_large_flush_requiring_multiple_transactions() {
         let device = FakeDevice::new(BLOCK_COUNT, BLOCK_SIZE);
         let fixture = TestFixture::open(DeviceHolder::new(device), true, false).await;
@@ -932,7 +932,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_multi_transaction_flush_with_failing_middle_transaction() {
         let mut device = FakeDevice::new(BLOCK_COUNT, BLOCK_SIZE);
         let fail_device_after = Arc::new(std::sync::atomic::AtomicI64::new(i64::MAX));
@@ -985,7 +985,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_writeback_begin_and_end_are_called_correctly() {
         let device = FakeDevice::new(BLOCK_COUNT, BLOCK_SIZE);
         let fixture = TestFixture::open(DeviceHolder::new(device), true, false).await;
@@ -1037,7 +1037,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_writing_overrides_set_mtime() {
         let device = FakeDevice::new(8192, 512);
         let fixture = TestFixture::open(DeviceHolder::new(device), true, false).await;
@@ -1075,7 +1075,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_flushing_after_get_attr_does_not_change_mtime() {
         let device = FakeDevice::new(8192, 512);
         let fixture = TestFixture::open(DeviceHolder::new(device), true, false).await;
@@ -1109,7 +1109,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_timestamps_are_preserved_across_flush_failures() {
         let mut device = FakeDevice::new(BLOCK_COUNT, BLOCK_SIZE);
         let fail_device = Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -1151,7 +1151,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_max_file_size() {
         let device = FakeDevice::new(BLOCK_COUNT, BLOCK_SIZE);
         let fixture = TestFixture::open(DeviceHolder::new(device), true, false).await;

@@ -187,12 +187,11 @@ mod tests {
                 transaction::{Options, TransactionHandler},
             },
         },
-        fuchsia_async as fasync,
         std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_lookup_nonexistent_volume() {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
@@ -205,7 +204,7 @@ mod tests {
         filesystem.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_add_volume() {
         let device = DeviceHolder::new(FakeDevice::new(16384, 512));
         let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
@@ -246,7 +245,7 @@ mod tests {
         };
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_delete_volume() {
         let device = DeviceHolder::new(FakeDevice::new(16384, 512));
         let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");

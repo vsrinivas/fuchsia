@@ -450,10 +450,10 @@ where
 mod tests {
     use {
         super::*, crate::directory::immutable::simple::simple, assert_matches::assert_matches,
-        fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx, futures::prelude::*,
+        fidl_fuchsia_io as fio, fuchsia_zircon as zx, futures::prelude::*,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_open_not_found() {
         let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("Create proxy to succeed");
@@ -491,7 +491,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_open_not_found_event_stream() {
         let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("Create proxy to succeed");
@@ -531,7 +531,7 @@ mod tests {
         assert_matches!(event_stream.try_next().await, Ok(None));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_open_with_describe_not_found() {
         let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("Create proxy to succeed");
@@ -569,7 +569,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_open_describe_not_found_event_stream() {
         let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("Create proxy to succeed");

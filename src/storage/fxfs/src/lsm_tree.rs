@@ -370,7 +370,6 @@ mod tests {
             },
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
-        fuchsia_async as fasync,
         rand::{seq::SliceRandom, thread_rng},
         std::{ops::Bound, sync::Arc},
         type_hash::TypeHash,
@@ -404,7 +403,7 @@ mod tests {
         MergeResult::EmitLeft
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_iteration() {
         let tree = LSMTree::new(emit_left_merge_fn);
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
@@ -422,7 +421,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_compact() {
         let tree = LSMTree::new(emit_left_merge_fn);
         let items = [
@@ -457,7 +456,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_find() {
         let items = [
             Item::new(TestKey(1..1), 1),
@@ -477,7 +476,7 @@ mod tests {
         assert!(tree.find(&TestKey(100..100)).await.expect("find failed").is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_empty_seal() {
         let tree = LSMTree::new(emit_left_merge_fn);
         tree.seal().await;
@@ -494,7 +493,7 @@ mod tests {
         assert!(tree.find(&TestKey(2..2)).await.expect("find failed").is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_filter() {
         let items = [
             Item::new(TestKey(1..1), 1),
@@ -525,7 +524,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_insert_order_agnostic() {
         let items = [
             Item::new(TestKey(1..1), 1),

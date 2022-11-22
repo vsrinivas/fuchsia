@@ -236,7 +236,6 @@ mod tests {
             object_store::object_record::{AttributeKey, ObjectKey, ObjectValue, Timestamp},
         },
         anyhow::Error,
-        fuchsia_async as fasync,
         std::ops::Bound,
     };
 
@@ -263,7 +262,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_extents_non_overlapping() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -295,7 +294,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_extents_rewrite_right() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -329,7 +328,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_extents_rewrite_left() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -369,7 +368,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_extents_rewrite_middle() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -418,7 +417,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_extents_rewrite_eclipses() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -449,7 +448,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_extents_delete_left() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -483,7 +482,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_extents_delete_right() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -517,7 +516,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_extents_delete_middle() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -554,7 +553,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_extents_delete_eclipses() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -585,7 +584,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_deleted_extents_new_layer_joins_two_deletions() -> Result<(), Error> {
         // Old layer:  [----]    [----]
         // New layer:       [----]
@@ -626,7 +625,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_deleted_extents_new_layer_joined_by_old_deletion() -> Result<(), Error> {
         // Old layer:       [----]
         // New layer:  [----]    [----]
@@ -667,7 +666,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_deleted_extents_overlapping_newest_on_right() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -698,7 +697,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_deleted_extents_overlapping_newest_on_left() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -728,7 +727,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_deleted_extents_new_layer_contained_in_old() -> Result<(), Error> {
         // Old layer:  [--------------]
         // New layer:       [----]
@@ -763,7 +762,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_deleted_extents_new_layer_eclipses_old() -> Result<(), Error> {
         // Old layer:       [----]
         // New layer:  [--------------]
@@ -798,7 +797,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_deleted_extents_does_not_coalesce_if_not_adjacent_layers(
     ) -> Result<(), Error> {
         // Layer 0:  [XXXXX]
@@ -845,7 +844,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_deleted_extents_does_not_coalesce_if_not_adjacent_deletions(
     ) -> Result<(), Error> {
         // Layer 0:  [XXXXX|--------]
@@ -889,7 +888,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_deleted_extent_into_overwrites_extents() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -930,7 +929,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_deleted_extent_into_merges_with_other_deletions() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;
@@ -966,7 +965,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_size_records() {
         let left =
             &[Item::new(ObjectKey::attribute(1, 0, AttributeKey::Size), ObjectValue::attribute(5))];
@@ -978,7 +977,7 @@ mod tests {
         test_merge(&tree, left, right, left).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_different_attributes_not_merged() {
         let left =
             Item::new(ObjectKey::attribute(1, 0, AttributeKey::Size), ObjectValue::attribute(5));
@@ -995,7 +994,7 @@ mod tests {
         test_merge(&tree, &[left.clone()], &[right.clone()], &[left, right]).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_tombstone_discards_all_other_records() {
         let tombstone = Item::new(ObjectKey::object(1), ObjectValue::None);
         let other_object = Item::new(
@@ -1022,7 +1021,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_preserves_sequences() -> Result<(), Error> {
         let object_id = 0;
         let attr_id = 0;

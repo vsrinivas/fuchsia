@@ -44,7 +44,7 @@ fn set_up_remote(scope: ExecutionScope) -> fio::DirectoryProxy {
     remote_proxy
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_set_up_remote() {
     let scope = ExecutionScope::new();
     let remote_proxy = set_up_remote(scope.clone());

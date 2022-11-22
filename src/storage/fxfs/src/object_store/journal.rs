@@ -1344,13 +1344,12 @@ mod tests {
                 HandleOptions, ObjectStore,
             },
         },
-        fuchsia_async as fasync,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_replay() {
         const TEST_DATA: &[u8] = b"hello";
 
@@ -1405,7 +1404,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_reset() {
         const TEST_DATA: &[u8] = b"hello";
 

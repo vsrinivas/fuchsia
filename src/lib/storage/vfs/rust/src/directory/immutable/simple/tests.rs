@@ -32,7 +32,7 @@ use crate::{
 use {
     fidl::endpoints::{create_proxy, Proxy},
     fidl_fuchsia_io as fio,
-    fuchsia_async::{self as fasync, TestExecutor},
+    fuchsia_async::TestExecutor,
     fuchsia_zircon::{
         sys::{self, ZX_OK},
         Status,
@@ -707,7 +707,7 @@ fn directories_restrict_nested_write_permissions() {
     });
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn directories_remove_nested() {
     // Test dynamic removal of a subdirectory under another directory.
     let root = pseudo_directory! {

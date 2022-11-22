@@ -946,7 +946,7 @@ mod tests {
 
     const TEST_DISK_SIZE: u64 = 2048 << 10; // 2048K
 
-    #[fuchsia_async::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_link_fails() {
         let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
         let structure = TestDiskContents::dir().add_child("test_file", "test file contents".into());
@@ -1118,7 +1118,7 @@ mod tests {
         );
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_reopen_root() {
         let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
         let structure = TestDiskContents::dir().add_child("test", "Hello".into());

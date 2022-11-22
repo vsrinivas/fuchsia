@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     io_conformance_util::{test_harness::TestHarness, *},
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_read_with_sufficient_rights() {
     let harness = TestHarness::new().await;
 
@@ -27,7 +27,7 @@ async fn file_read_with_sufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_read_with_insufficient_rights() {
     let harness = TestHarness::new().await;
 
@@ -43,7 +43,7 @@ async fn file_read_with_insufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_read_with_max_transfer() {
     let harness = TestHarness::new().await;
 
@@ -67,7 +67,7 @@ async fn file_read_with_max_transfer() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_read_over_max_transfer() {
     let harness = TestHarness::new().await;
 
@@ -89,7 +89,7 @@ async fn file_read_over_max_transfer() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_read_at_with_sufficient_rights() {
     let harness = TestHarness::new().await;
 
@@ -109,7 +109,7 @@ async fn file_read_at_with_sufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_read_at_with_insufficient_rights() {
     let harness = TestHarness::new().await;
 
@@ -126,7 +126,7 @@ async fn file_read_at_with_insufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_read_at_with_max_transfer() {
     let harness = TestHarness::new().await;
 
@@ -150,7 +150,7 @@ async fn file_read_at_with_max_transfer() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_read_at_over_max_transfer() {
     let harness = TestHarness::new().await;
 
@@ -172,7 +172,7 @@ async fn file_read_at_over_max_transfer() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_read_in_subdirectory() {
     let harness = TestHarness::new().await;
 

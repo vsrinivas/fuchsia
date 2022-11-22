@@ -4,7 +4,10 @@
 
 group("tests") {
   testonly = true
-  deps = [ "rust:tests" ]
+  deps = [
+    "rust:tests",
+    "//src/lib/fuchsia",
+  ]
 }
 
 # Forward some targets for easier transition

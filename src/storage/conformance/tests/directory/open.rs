@@ -4,11 +4,11 @@
 
 use {
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     io_conformance_util::{test_harness::TestHarness, *},
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_dir_without_describe_flag() {
     let harness = TestHarness::new().await;
     let root = root_directory(vec![]);
@@ -26,7 +26,7 @@ async fn open_dir_without_describe_flag() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_file_without_describe_flag() {
     let harness = TestHarness::new().await;
 
@@ -45,7 +45,7 @@ async fn open_file_without_describe_flag() {
 }
 
 /// Checks that open fails with ZX_ERR_BAD_PATH when it should.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_path() {
     let harness = TestHarness::new().await;
     if !harness.config.conformant_path_handling.unwrap_or_default() {
@@ -77,7 +77,7 @@ async fn open_path() {
 }
 
 /// Check that a trailing flash with OPEN_FLAG_NOT_DIRECTORY returns ZX_ERR_INVALID_ARGS.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_trailing_slash_with_not_directory() {
     let harness = TestHarness::new().await;
     let root = root_directory(vec![]);
@@ -96,7 +96,7 @@ async fn open_trailing_slash_with_not_directory() {
 }
 
 /// Checks that mode is ignored when opening existing nodes.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_flags_and_mode() {
     let harness = TestHarness::new().await;
     let root = root_directory(vec![file(TEST_FILE, vec![]), directory("dir", vec![])]);
@@ -194,7 +194,7 @@ async fn open_flags_and_mode() {
 }
 
 // Validate allowed rights for Directory objects.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn validate_directory_rights() {
     let harness = TestHarness::new().await;
     // Create a test directory and ensure we can open it with all supported rights.
@@ -208,7 +208,7 @@ async fn validate_directory_rights() {
 }
 
 // Validate allowed rights for File objects (ensures writable files cannot be opened as executable).
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn validate_file_rights() {
     let harness = TestHarness::new().await;
     // Create a test directory with a single File object, and ensure the directory has all rights.
@@ -248,7 +248,7 @@ async fn validate_file_rights() {
 }
 
 // Validate allowed rights for VmoFile objects (ensures cannot be opened as executable).
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn validate_vmo_file_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_vmo_file.unwrap_or_default() {
@@ -280,7 +280,7 @@ async fn validate_vmo_file_rights() {
 }
 
 // Validate allowed rights for ExecutableFile objects (ensures cannot be opened as writable).
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn validate_executable_file_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_executable_file.unwrap_or_default() {
@@ -312,7 +312,7 @@ async fn validate_executable_file_rights() {
 }
 
 /// Creates a directory with all rights, and checks it can be opened for all subsets of rights.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_dir_with_sufficient_rights() {
     let harness = TestHarness::new().await;
 
@@ -330,7 +330,7 @@ async fn open_dir_with_sufficient_rights() {
 }
 
 /// Creates a directory with no rights, and checks opening it with any rights fails.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_dir_with_insufficient_rights() {
     let harness = TestHarness::new().await;
 
@@ -351,7 +351,7 @@ async fn open_dir_with_insufficient_rights() {
 }
 
 /// Opens a directory, and checks that a child directory can be opened using the same rights.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_child_dir_with_same_rights() {
     let harness = TestHarness::new().await;
 
@@ -380,7 +380,7 @@ async fn open_child_dir_with_same_rights() {
 }
 
 /// Opens a directory as readable, and checks that a child directory cannot be opened as writable.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_child_dir_with_extra_rights() {
     let harness = TestHarness::new().await;
 
@@ -413,7 +413,7 @@ async fn open_child_dir_with_extra_rights() {
 
 /// Creates a child directory and opens it with OPEN_FLAG_POSIX_WRITABLE/EXECUTABLE, ensuring that
 /// the requested rights are expanded to only those which the parent directory connection has.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_child_dir_with_posix_flags() {
     let harness = TestHarness::new().await;
 
@@ -452,7 +452,7 @@ async fn open_child_dir_with_posix_flags() {
 
 /// Ensures that opening a file with more rights than the directory connection fails
 /// with Status::ACCESS_DENIED.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_file_with_extra_rights() {
     let harness = TestHarness::new().await;
 

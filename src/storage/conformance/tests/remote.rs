@@ -4,14 +4,14 @@
 
 use {
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio,
     io_conformance_util::{
         file, open_node, remote_directory, root_directory, test_harness::TestHarness, TEST_FILE,
     },
 };
 
 /// Creates a directory with a remote mount inside of it, and checks that the remote can be opened.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_remote_directory_test() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_remote_dir.unwrap_or_default() {
@@ -41,7 +41,7 @@ async fn open_remote_directory_test() {
 
 /// Creates a directory with a remote mount containing a file inside of it, and checks that the
 /// file can be opened through the remote.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_remote_file_test() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_remote_dir.unwrap_or_default() {
@@ -91,7 +91,7 @@ async fn open_remote_file_test() {
 /// passing in both POSIX_* flags, which if handled correctly, should result in opening
 /// remote_dir_server as RW (and NOT RWX, which can occur if both flags are passed directly to the
 /// remote instead of being removed).
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn open_remote_directory_right_escalation_test() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_remote_dir.unwrap_or_default() {

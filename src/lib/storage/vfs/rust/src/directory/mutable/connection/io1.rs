@@ -318,7 +318,6 @@ mod tests {
             path::Path,
         },
         async_trait::async_trait,
-        fuchsia_async as fasync,
         std::{
             any::Any,
             sync::{Arc, Mutex, Weak},
@@ -502,7 +501,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_rename() {
         use zx::Event;
 
@@ -534,7 +533,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_setattr() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
@@ -571,7 +570,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_link() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
@@ -591,7 +590,7 @@ mod tests {
         assert_eq!(*events, vec![MutableDirectoryAction::Link { id: 1, path: "dest".to_owned() },]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_unlink() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
@@ -610,7 +609,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_sync() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
@@ -622,7 +621,7 @@ mod tests {
         assert_eq!(*events, vec![MutableDirectoryAction::Sync]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_close() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
@@ -634,7 +633,7 @@ mod tests {
         assert_eq!(*events, vec![MutableDirectoryAction::Close]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_implicit_close() {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));

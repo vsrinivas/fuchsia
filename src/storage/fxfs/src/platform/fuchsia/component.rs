@@ -551,7 +551,7 @@ mod tests {
         component_task
     }
 
-    #[fasync::run(2, test)]
+    #[fuchsia::test(threads = 2)]
     async fn test_shutdown() {
         let component_task = run_test(|client, _| {
             let admin_proxy = connect_to_protocol_at_dir_svc::<AdminMarker>(client)
@@ -565,7 +565,7 @@ mod tests {
         assert!(!component_task.is_terminated());
     }
 
-    #[fasync::run(2, test)]
+    #[fuchsia::test(threads = 2)]
     async fn test_lifecycle_stop() {
         let component_task = run_test(|_, lifecycle_client| {
             lifecycle_client.stop().expect("Stop failed");
@@ -583,7 +583,7 @@ mod tests {
         component_task.await;
     }
 
-    #[fasync::run(2, test)]
+    #[fuchsia::test(threads = 2)]
     async fn test_create_and_remove() {
         run_test(|client, _| {
             let volumes_proxy = connect_to_protocol_at_dir_svc::<VolumesMarker>(client)
@@ -649,7 +649,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run(2, test)]
+    #[fuchsia::test(threads = 2)]
     async fn test_volumes_enumeration() {
         run_test(|client, _| {
             let volumes_proxy = connect_to_protocol_at_dir_svc::<VolumesMarker>(client)

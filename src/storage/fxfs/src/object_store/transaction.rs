@@ -1144,7 +1144,7 @@ mod tests {
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_simple() {
         let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
@@ -1157,7 +1157,7 @@ mod tests {
         assert!(!t.is_empty());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_locks() {
         let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
@@ -1202,7 +1202,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_lock_after_write_lock() {
         let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
@@ -1235,7 +1235,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_write_lock_after_read_lock() {
         let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
@@ -1268,7 +1268,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_drop_uncommitted_transaction() {
         let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
@@ -1298,7 +1298,7 @@ mod tests {
             .expect("new_transaction failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_drop_waiting_write_lock() {
         let manager = LockManager::new();
         let keys = &[LockKey::object(1, 1)];
@@ -1312,7 +1312,7 @@ mod tests {
         let _ = manager.lock(keys, LockState::WriteLock).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_write_lock_blocks_everything() {
         let manager = LockManager::new();
         let keys = &[LockKey::object(1, 1)];
@@ -1335,7 +1335,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_downgrade_locks() {
         let manager = LockManager::new();
         let keys = &[LockKey::object(1, 1)];
@@ -1354,7 +1354,7 @@ mod tests {
         assert_matches!(futures::poll!(read_lock.next()), Poll::Ready(_));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_dropped_write_lock_wakes() {
         let manager = LockManager::new();
         let keys = &[LockKey::object(1, 1)];
@@ -1377,7 +1377,7 @@ mod tests {
         assert_matches!(futures::poll!(read_lock), Poll::Ready(_));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_drop_upgrade() {
         let manager = LockManager::new();
         let keys = &[LockKey::object(1, 1)];

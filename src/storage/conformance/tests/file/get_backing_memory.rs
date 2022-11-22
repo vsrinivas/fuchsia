@@ -4,12 +4,11 @@
 
 use {
     fidl::AsHandleRef,
-    fidl_fuchsia_io as fio, fidl_fuchsia_io_test as io_test, fuchsia_async as fasync,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fidl_fuchsia_io_test as io_test, fuchsia_zircon as zx,
     io_conformance_util::{test_harness::TestHarness, *},
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_get_readable_memory_with_sufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_get_backing_memory.unwrap_or_default() {
@@ -44,7 +43,7 @@ async fn file_get_readable_memory_with_sufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_get_readable_memory_with_insufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_get_backing_memory.unwrap_or_default() {
@@ -62,7 +61,7 @@ async fn file_get_readable_memory_with_insufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_get_writable_memory_with_sufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_get_backing_memory.unwrap_or_default() {
@@ -86,7 +85,7 @@ async fn file_get_writable_memory_with_sufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_get_writable_memory_with_insufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_get_backing_memory.unwrap_or_default() {
@@ -106,7 +105,7 @@ async fn file_get_writable_memory_with_insufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_get_executable_memory_with_sufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_get_backing_memory.unwrap_or_default()
@@ -136,7 +135,7 @@ async fn file_get_executable_memory_with_sufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_get_executable_memory_with_insufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_get_backing_memory.unwrap_or_default()
@@ -173,7 +172,7 @@ async fn file_get_executable_memory_with_insufficient_rights() {
 
 // Ensure that passing VmoFlags::SHARED_BUFFER to GetBackingMemory returns the same KOID as the
 // backing VMO.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_get_backing_memory_exact_same_koid() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_get_backing_memory.unwrap_or_default() {

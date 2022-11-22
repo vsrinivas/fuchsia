@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio,
     io_conformance_util::{test_harness::TestHarness, *},
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn directory_query() {
     let harness = TestHarness::new().await;
 
@@ -40,7 +40,7 @@ async fn directory_query() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn file_query() {
     let harness = TestHarness::new().await;
 
@@ -72,7 +72,7 @@ async fn file_query() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn vmo_file_query() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_vmo_file.unwrap_or_default() {

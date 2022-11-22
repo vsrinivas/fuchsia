@@ -25,7 +25,10 @@ rustc_library("remote-block-device") {
     "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:zerocopy",
   ]
-  test_deps = [ "//src/lib/storage/ramdevice_client" ]
+  test_deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/storage/ramdevice_client",
+  ]
 
   sources = [
     "src/cache.rs",

@@ -43,7 +43,7 @@ rustc_library("export_ffs") {
     "//third_party/rust_crates:futures",
   ]
   test_deps = [
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/storage/ramdevice_client",
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:assert_matches",

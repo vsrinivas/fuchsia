@@ -192,7 +192,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn read_dirents_start() {
         let entries = vec![
             (EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory), "dir".into()),
@@ -237,7 +237,7 @@ mod tests {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn read_dirents_index() {
         let entries = vec![
             (EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory), "dir".into()),
@@ -278,7 +278,7 @@ mod tests {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn read_dirents_end() {
         let entries = vec![
             (EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory), "dir".into()),

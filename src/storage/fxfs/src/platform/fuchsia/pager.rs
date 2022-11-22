@@ -644,7 +644,7 @@ mod tests {
         fn on_zero_children(&self) {}
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_do_not_unregister_a_file_that_has_been_replaced() {
         const PAGER_KEY: u64 = 1234;
         let pager_executor = Arc::new(PagerExecutor::start().await.unwrap());
@@ -668,7 +668,7 @@ mod tests {
         pager.terminate().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_pager_packets_are_handled_on_a_separate_executor() {
         struct ExecutorValidatingFile {
             vmo: zx::Vmo,
@@ -764,7 +764,7 @@ mod tests {
         }
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_watch_for_zero_children() {
         let (sender, mut receiver) = mpsc::unbounded();
         let pager_executor = Arc::new(PagerExecutor::start().await.unwrap());
@@ -789,7 +789,7 @@ mod tests {
         pager.terminate().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_multiple_watch_for_zero_children_calls() {
         let (sender, mut receiver) = mpsc::unbounded();
         let pager_executor = Arc::new(PagerExecutor::start().await.unwrap());
@@ -820,7 +820,7 @@ mod tests {
         pager.terminate().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_status_code_mapping() {
         struct StatusCodeFile {
             vmo: zx::Vmo,
@@ -886,7 +886,7 @@ mod tests {
         pager.terminate().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_query_vmo_stats() {
         let pager_executor = Arc::new(PagerExecutor::start().await.unwrap());
         let pager = Arc::new(Pager::<MockFile>::new(pager_executor).unwrap());
@@ -914,7 +914,7 @@ mod tests {
         pager.terminate().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_query_dirty_ranges() {
         let pager_executor = Arc::new(PagerExecutor::start().await.unwrap());
         let pager = Arc::new(Pager::<MockFile>::new(pager_executor).unwrap());

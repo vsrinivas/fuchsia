@@ -300,7 +300,7 @@ pub fn wait_for_device_at(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl_fuchsia_io as fio, fuchsia_async as fasync};
+    use {super::*, fidl_fuchsia_io as fio};
 
     // Note that if these tests flake, all downstream tests that depend on this crate may too.
 
@@ -356,7 +356,7 @@ mod tests {
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn create_describe_destroy() {
         wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
             .expect("ramctl did not appear");

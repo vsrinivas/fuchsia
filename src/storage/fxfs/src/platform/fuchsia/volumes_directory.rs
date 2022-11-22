@@ -575,7 +575,7 @@ mod tests {
         fidl::endpoints::{create_request_stream, ServerEnd},
         fidl_fuchsia_fs::AdminMarker,
         fidl_fuchsia_fxfs::{KeyPurpose, MountOptions, VolumeMarker, VolumeProxy},
-        fidl_fuchsia_io as fio, fuchsia_async as fasync,
+        fidl_fuchsia_io as fio, fuchsia, fuchsia_async as fasync,
         fuchsia_component::client::connect_to_protocol_at_dir_svc,
         fuchsia_zircon::Status,
         futures::join,
@@ -587,7 +587,7 @@ mod tests {
         vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_volume_creation() {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
@@ -630,7 +630,7 @@ mod tests {
         assert!(FxfsError::AlreadyExists.matches(&error));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_volume_reopen() {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
@@ -678,7 +678,7 @@ mod tests {
         filesystem.close().await.expect("close filesystem failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_volume_creation_unencrypted() {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
@@ -724,7 +724,7 @@ mod tests {
         filesystem.close().await.expect("close filesystem failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_volume_reopen_unencrypted() {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
@@ -771,7 +771,7 @@ mod tests {
         filesystem.close().await.expect("close filesystem failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_volume_enumeration() {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
@@ -855,7 +855,7 @@ mod tests {
         filesystem.close().await.expect("close filesystem failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_deleted_encrypted_volume_while_mounted() {
         const VOLUME_NAME: &str = "encrypted";
 
@@ -886,7 +886,7 @@ mod tests {
         filesystem.close().await.expect("close filesystem failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_mount_volume_using_volume_protocol() {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
@@ -1008,7 +1008,7 @@ mod tests {
         volumes_directory.terminate().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_shutdown_volume() {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
@@ -1039,7 +1039,7 @@ mod tests {
         assert!(volumes_directory.mounted_volumes.lock().await.is_empty());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_byte_limit_persistence() {
         const BYTES_LIMIT_1: u64 = 123456;
         const BYTES_LIMIT_2: u64 = 456789;
@@ -1179,7 +1179,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_limit_bytes() {
         const BYTES_LIMIT: u64 = 262_144; // 256KiB
         const BLOCK_SIZE: usize = 8192; // 8KiB
@@ -1248,7 +1248,7 @@ mod tests {
         filesystem.close().await.expect("close filesystem failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_limit_bytes_two_hit_device_limit() {
         const BYTES_LIMIT: u64 = 3_145_728; // 3MiB
         const BLOCK_SIZE: usize = 8192; // 8KiB

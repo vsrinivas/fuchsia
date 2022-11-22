@@ -190,12 +190,11 @@ mod tests {
     use {
         super::ChecksumList,
         crate::checksum::fletcher64,
-        fuchsia_async as fasync,
         std::collections::HashMap,
         storage_device::{fake_device::FakeDevice, Device},
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_verify() {
         let device = FakeDevice::new(2048, 512);
         let mut buffer = device.allocate_buffer(2048);
@@ -265,7 +264,7 @@ mod tests {
         assert_eq!(list.verify(&device, HashMap::new(), 10).await.expect("verify failed"), 1);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_verify_entry_prior_to_flushed_offset_is_ignored() {
         let device = FakeDevice::new(2048, 512);
         let mut buffer = device.allocate_buffer(2048);
@@ -284,7 +283,7 @@ mod tests {
         assert_eq!(list.verify(&device, HashMap::new(), 10).await.expect("verify failed"), 10);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_deallocate_overlap() {
         let device = FakeDevice::new(2048, 512);
         let mut buffer = device.allocate_buffer(512);
@@ -301,7 +300,7 @@ mod tests {
         assert_eq!(list.verify(&device, HashMap::new(), 10).await.expect("verify failed"), 10);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_mark_for_deletion_valid() {
         let device = FakeDevice::new(2048, 512);
         let mut buffer = device.allocate_buffer(512);
@@ -325,7 +324,7 @@ mod tests {
         assert_eq!(list.verify(&device, marked_for_deletion, 4).await.expect("verify failed"), 4);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_mark_for_deletion_invalid() {
         let device = FakeDevice::new(2048, 512);
         let mut buffer = device.allocate_buffer(512);

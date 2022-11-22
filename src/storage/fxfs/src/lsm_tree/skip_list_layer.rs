@@ -690,7 +690,7 @@ mod tests {
     impl DefaultOrdLowerBound for TestKey {}
     impl DefaultOrdUpperBound for TestKey {}
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_iteration() {
         // Insert two items and make sure we can iterate back in the correct order.
         let skip_list = SkipListLayer::new(100);
@@ -707,7 +707,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_exact() {
         // Seek for an exact match.
         let skip_list = SkipListLayer::new(100);
@@ -724,7 +724,7 @@ mod tests {
         assert_eq!((key, value), (&TestKey(58), &58));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_lower_bound() {
         // Seek for a non-exact match.
         let skip_list = SkipListLayer::new(100);
@@ -743,7 +743,7 @@ mod tests {
         assert_eq!((key, value), (&TestKey(expected_index), &expected_index));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_replace_or_insert_replaces() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
@@ -762,7 +762,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_replace_or_insert_inserts() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2), Item::new(TestKey(3), 3)];
@@ -783,7 +783,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_erase() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
@@ -816,7 +816,7 @@ mod tests {
 
     // This test ends up being flaky on CQ. It is left here as it might be useful in case
     // significant changes are made.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     #[ignore]
     async fn test_seek_is_log_n_complexity() {
         // Keep doubling up the number of items until it takes about 500ms to search and then go
@@ -867,7 +867,7 @@ mod tests {
         assert!(elapsed * 4 > time);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_large_number_of_items() {
         let item_count = 1000;
         let skip_list = SkipListLayer::new(1000);
@@ -882,7 +882,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_mutliple_readers_allowed() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
@@ -916,7 +916,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_into() {
         let skip_list = SkipListLayer::new(100);
         skip_list.insert(Item::new(TestKey(1), 1)).await.expect("insert error");
@@ -930,7 +930,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_two_inserts() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
@@ -948,7 +948,7 @@ mod tests {
         assert_eq!((key, value), (&items[1].key, &items[1].value));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_erase_after_insert() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
@@ -966,7 +966,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_insert_after_erase() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
@@ -984,7 +984,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_insert_erase_insert() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2), Item::new(TestKey(3), 3)];
@@ -1004,7 +1004,7 @@ mod tests {
         assert_eq!((key, value), (&items[2].key, &items[2].value));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_two_erase_erases() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2), Item::new(TestKey(3), 3)];
@@ -1024,7 +1024,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_readers_not_blocked_by_writers() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
@@ -1055,7 +1055,7 @@ mod tests {
         });
     }
 
-    #[fasync::run(20, test)]
+    #[fuchsia::test(threads = 20)]
     async fn test_many_readers_and_writers() {
         let skip_list = SkipListLayer::new(100);
         join_all(
@@ -1092,7 +1092,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_insert_advance_erase() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2), Item::new(TestKey(3), 3)];
@@ -1120,7 +1120,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_excluded() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
@@ -1131,7 +1131,7 @@ mod tests {
         assert_eq!((key, value), (&items[1].key, &items[1].value));
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_insert_race() {
         for _ in 0..1000 {
             let skip_list = SkipListLayer::new(100);
@@ -1154,7 +1154,7 @@ mod tests {
         }
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_commit_and_wait_waits() {
         let skip_list = SkipListLayer::new(100);
         let (send, recv) = channel();

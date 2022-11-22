@@ -1665,7 +1665,6 @@ mod tests {
             },
             range::RangeExt,
         },
-        fuchsia_async as fasync,
         std::{
             cmp::{max, min},
             ops::{Bound, Range},
@@ -1674,7 +1673,7 @@ mod tests {
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_coalescing_iterator() {
         let skip_list = SkipListLayer::new(100);
         let items = [
@@ -1705,7 +1704,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_and_coalesce_across_three_layers() {
         let lsm_tree = LSMTree::new(merge);
         lsm_tree
@@ -1743,7 +1742,7 @@ mod tests {
         assert!(iter.get().is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_and_coalesce_wont_merge_across_object_id() {
         let lsm_tree = LSMTree::new(merge);
         lsm_tree
@@ -1840,7 +1839,7 @@ mod tests {
         (fs, allocator, store)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_allocations() {
         const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
@@ -1879,7 +1878,7 @@ mod tests {
         check_allocations(&allocator, &device_ranges).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_allocate_more_than_max_size() {
         const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
@@ -1901,7 +1900,7 @@ mod tests {
         check_allocations(&allocator, &device_ranges).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_deallocations() {
         const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
@@ -1925,7 +1924,7 @@ mod tests {
         check_allocations(&allocator, &[]).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_mark_allocated() {
         const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
@@ -1954,7 +1953,7 @@ mod tests {
         check_allocations(&allocator, &device_ranges).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_mark_for_deletion() {
         const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
@@ -2025,7 +2024,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_allocate_free_reallocate() {
         const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
@@ -2084,7 +2083,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_flush() {
         const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
@@ -2135,7 +2134,7 @@ mod tests {
         check_allocations(&allocator, &device_ranges).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_dropped_transaction() {
         const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
@@ -2166,7 +2165,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_allocated_bytes() {
         const STORE_OBJECT_ID: u64 = 99;
         let (fs, allocator, _) = test_fs().await;
@@ -2225,7 +2224,7 @@ mod tests {
         assert_eq!(allocator.get_allocated_bytes(), 40);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_persist_bytes_limit() {
         const LIMIT: u64 = 12345;
         const OWNER_ID: u64 = 12;

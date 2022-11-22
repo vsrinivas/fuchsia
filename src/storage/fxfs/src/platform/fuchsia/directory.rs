@@ -761,7 +761,7 @@ mod tests {
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_open_root_dir() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -769,7 +769,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_create_dir_persists() {
         let mut device = DeviceHolder::new(FakeDevice::new(8192, 512));
         for i in 0..2 {
@@ -788,7 +788,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_open_nonexistent_file() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -806,7 +806,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_create_file() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -828,7 +828,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_create_dir_nested() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -865,7 +865,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_strict_create_file_fails_if_present() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -901,7 +901,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_unlink_file_with_no_refs_immediately_freed() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -966,7 +966,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_unlink_file() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -1000,7 +1000,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_unlink_file_with_active_references() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -1047,7 +1047,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_unlink_dir_with_children_fails() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -1094,7 +1094,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_unlink_dir_makes_directory_immutable() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -1134,7 +1134,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_unlink_directory_with_children_race() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -1256,7 +1256,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_readdir() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -1333,7 +1333,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_readdir_multiple_calls() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -1390,7 +1390,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_set_attrs() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();

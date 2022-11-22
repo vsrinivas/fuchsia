@@ -847,7 +847,7 @@ mod tests {
         anyhow::Error,
         async_trait::async_trait,
         async_utils::event::Event,
-        fuchsia_async as fasync,
+        fuchsia, fuchsia_async as fasync,
         futures::{future::poll_fn, join, FutureExt},
         std::{
             sync::{
@@ -921,7 +921,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_sequential_reads() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
         let device = Arc::new(FakeDevice::new(100, 8192));
@@ -937,7 +937,7 @@ mod tests {
         assert_eq!(&buf, make_buf(1, PAGE_SIZE).as_slice());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_parallel_reads() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
         let device = Arc::new(FakeDevice::new(100, PAGE_SIZE as u32));
@@ -960,7 +960,7 @@ mod tests {
         assert_eq!(&buf2, make_buf(1, PAGE_SIZE).as_slice());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_unaligned_write() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
         let device = Arc::new(FakeDevice::new(100, 8192));
@@ -984,7 +984,7 @@ mod tests {
         assert!(&buf[..] == expected1 || &buf[..] == expected2);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_dropped_read() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
         let device = Arc::new(FakeDevice::new(100, 8192));
@@ -1008,7 +1008,7 @@ mod tests {
         assert_eq!(&buf2[READ_SIZE as usize..], make_buf(1, READ_SIZE).as_slice());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_with_gap() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
         let device = Arc::new(FakeDevice::new(100, PAGE_SIZE as u32));
@@ -1035,7 +1035,7 @@ mod tests {
         assert_eq!(&buf[PAGE_SIZE as usize..], make_buf(1, PAGE_SIZE).as_slice());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_unaligned() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
         let device = Arc::new(FakeDevice::new(100, 8192));
@@ -1078,7 +1078,7 @@ mod tests {
         assert_eq!(&buf, &expected[10..10 + READ_SIZE as usize]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_write_too_big() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
         let device = Arc::new(FakeDevice::new(100, 8192));
@@ -1089,7 +1089,7 @@ mod tests {
             .matches(&data_buf.write(u64::MAX, &buf, &source).await.expect_err("write succeeded")));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_and_truncate() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
         let device = Arc::new(FakeDevice::new(100, PAGE_SIZE as u32));
@@ -1129,7 +1129,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_block_unaligned_read() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
         let device = Arc::new(FakeDevice::new(100, 8192));
@@ -1150,7 +1150,7 @@ mod tests {
         assert_eq!(&buf, &expected[..PAGE_SIZE as usize]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_readahead() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
         let device = Arc::new(FakeDevice::new(100, 8192));

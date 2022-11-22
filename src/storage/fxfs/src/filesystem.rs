@@ -703,7 +703,7 @@ mod tests {
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_compaction() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
 
@@ -742,7 +742,7 @@ mod tests {
         fs.close().await.expect("Close failed");
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_replay_is_identical() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");

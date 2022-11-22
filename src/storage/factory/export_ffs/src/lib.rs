@@ -352,7 +352,7 @@ mod tests {
     use {
         assert_matches::assert_matches,
         fidl::endpoints,
-        fidl_fuchsia_io as fio, fuchsia_async as fasync,
+        fidl_fuchsia_io as fio,
         ramdevice_client::RamdiskClient,
         vfs::{
             directory::entry::DirectoryEntry as _, execution_scope::ExecutionScope,
@@ -440,7 +440,7 @@ mod tests {
         // TODO(sdemos): check more of the output
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_export() {
         let dir = pseudo_directory! {
             "a" => read_only_static("a content"),
@@ -471,7 +471,7 @@ mod tests {
         // TODO(sdemos): test should check the ramdisk for at least a bit of the expected output
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_entries() {
         let dir = pseudo_directory! {
             "a" => read_only_static("a content"),

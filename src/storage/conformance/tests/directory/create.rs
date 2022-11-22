@@ -4,11 +4,11 @@
 
 use {
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     io_conformance_util::{test_harness::TestHarness, *},
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn create_file_with_sufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_create.unwrap_or_default() {
@@ -35,7 +35,7 @@ async fn create_file_with_sufficient_rights() {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn create_file_with_insufficient_rights() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_create.unwrap_or_default() {

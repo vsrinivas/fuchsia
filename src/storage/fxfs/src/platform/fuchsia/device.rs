@@ -607,7 +607,6 @@ mod tests {
         fidl_fuchsia_hardware_block_volume::VolumeAndNodeMarker,
         fidl_fuchsia_io as fio,
         fs_management::{filesystem::Filesystem, Blobfs},
-        fuchsia_async as fasync,
         fuchsia_merkle::MerkleTree,
         fuchsia_zircon as zx,
         futures::join,
@@ -615,7 +614,7 @@ mod tests {
         std::collections::HashSet,
     };
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_block_server() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
@@ -665,7 +664,7 @@ mod tests {
         );
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_clone() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
@@ -746,7 +745,7 @@ mod tests {
         );
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_attach_vmo() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
@@ -792,7 +791,7 @@ mod tests {
         );
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_detach_vmo() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
@@ -829,7 +828,7 @@ mod tests {
         );
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_read_write_files() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
@@ -892,7 +891,7 @@ mod tests {
         );
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_flush_is_called() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
@@ -925,7 +924,7 @@ mod tests {
         );
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_getattr() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
@@ -958,7 +957,7 @@ mod tests {
         );
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_get_info() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
@@ -1015,7 +1014,7 @@ mod tests {
         );
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_blobfs() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");

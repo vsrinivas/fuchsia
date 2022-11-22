@@ -643,7 +643,6 @@ mod tests {
         anyhow::{anyhow, Error},
         assert_matches::assert_matches,
         async_trait::async_trait,
-        fuchsia_async as fasync,
         futures::{channel::oneshot::channel, join},
         std::{
             collections::BTreeMap,
@@ -838,7 +837,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_write_read() {
         let reserver = FakeReserver::new(8192, 1);
         let cache = WritebackCache::new(MemDataBuffer::new(0));
@@ -857,7 +856,7 @@ mod tests {
         cache.cleanup(&reserver);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_append() {
         let reserver = FakeReserver::new(8192, 1);
         let cache = WritebackCache::new(MemDataBuffer::new(0));
@@ -883,7 +882,7 @@ mod tests {
         cache.cleanup(&reserver);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_write_reserving_bytes_fails() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(16384)));
         // We size the reserver so that only a one-block write can succeed.
@@ -935,7 +934,7 @@ mod tests {
         cache.cleanup(&reserver);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_resize_expand() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(16384)));
         let reserver = FakeReserver::new(8192, 1);
@@ -980,7 +979,7 @@ mod tests {
         cache.cleanup(&reserver);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_resize_shrink() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(16384)));
         let reserver = FakeReserver::new(8192, 1);
@@ -1020,7 +1019,7 @@ mod tests {
         cache.cleanup(&reserver);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_flush_no_data() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(1, 1);
@@ -1040,7 +1039,7 @@ mod tests {
         cache.cleanup(&reserver);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_flush_some_data() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(65536)));
         let reserver = FakeReserver::new(65536, 512);
@@ -1101,7 +1100,7 @@ mod tests {
         cache.cleanup(&reserver);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_flush_returns_reservation_on_abort() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(65536)));
         // Enough room for 2 flushes of 512 bytes each
@@ -1157,7 +1156,7 @@ mod tests {
         cache.cleanup(&reserver);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_flush_most_recent_write_timestamp() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(65536)));
         let reserver = FakeReserver::new(65536, 4096);
@@ -1194,7 +1193,7 @@ mod tests {
         cache.cleanup(&reserver);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_flush_explicit_timestamps() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(65536)));
         let reserver = FakeReserver::new(65536, 4096);
@@ -1223,7 +1222,7 @@ mod tests {
         cache.cleanup(&reserver);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_resize_while_flushing() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(65536, 512);

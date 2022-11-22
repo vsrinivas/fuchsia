@@ -189,7 +189,7 @@ impl<'a> VfsWatchMsg<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
+    use fuchsia_async::{DurationExt, TimeoutExt};
     use fuchsia_fs::OpenFlags;
     use fuchsia_zircon::prelude::*;
     use futures::prelude::*;
@@ -211,7 +211,7 @@ mod tests {
         })
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_existing() {
         let tmp_dir = tempdir().unwrap();
         let _ = File::create(tmp_dir.path().join("file1")).unwrap();
@@ -237,7 +237,7 @@ mod tests {
         assert_eq!(WatchEvent::IDLE, msg.event);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_add() {
         let tmp_dir = tempdir().unwrap();
 
@@ -263,7 +263,7 @@ mod tests {
         assert_eq!(Path::new("file1"), msg.filename);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_remove() {
         let tmp_dir = tempdir().unwrap();
 
@@ -293,7 +293,7 @@ mod tests {
         assert_eq!(Path::new(filename), msg.filename);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     #[should_panic]
     async fn test_timeout() {
         let tmp_dir = tempdir().unwrap();

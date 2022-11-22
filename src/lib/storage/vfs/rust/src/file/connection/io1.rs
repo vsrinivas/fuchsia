@@ -928,7 +928,6 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         async_trait::async_trait,
-        fuchsia_async as fasync,
         fuchsia_zircon::{self as zx, AsHandleRef},
         futures::prelude::*,
         std::sync::Mutex,
@@ -1129,7 +1128,7 @@ mod tests {
         TestEnv { file, proxy, scope }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_open_flag_truncate() {
         let env = init_mock_file(
             Box::new(always_succeed_callback),
@@ -1150,7 +1149,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_clone_same_rights() {
         let env = init_mock_file(
             Box::new(always_succeed_callback),
@@ -1190,7 +1189,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_close_succeeds() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let () = env.proxy.close().await.unwrap().map_err(zx::Status::from_raw).unwrap();
@@ -1205,7 +1204,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_close_fails() {
         let env = init_mock_file(Box::new(only_allow_init), fio::OpenFlags::RIGHT_READABLE);
         let status = env.proxy.close().await.unwrap().map_err(zx::Status::from_raw);
@@ -1221,7 +1220,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_close_called_when_dropped() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let _ = env.proxy.sync().await;
@@ -1239,14 +1238,14 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_describe() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let protocol = env.proxy.query().await.unwrap();
         assert_eq!(protocol, fio::FILE_PROTOCOL_NAME.as_bytes());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_getattr() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::empty());
         let (status, attributes) = env.proxy.get_attr().await.unwrap();
@@ -1270,7 +1269,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_getbuffer() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let result = env
@@ -1290,7 +1289,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_getbuffer_no_perms() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::empty());
         let result = env
@@ -1304,7 +1303,7 @@ mod tests {
         assert_eq!(*events, vec![FileOperation::Init { flags: fio::OpenFlags::empty() },]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_getbuffer_vmo_exec_requires_right_executable() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let result = env
@@ -1318,7 +1317,7 @@ mod tests {
         assert_eq!(*events, vec![FileOperation::Init { flags: fio::OpenFlags::RIGHT_READABLE },]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_getflags() {
         let env = init_mock_file(
             Box::new(always_succeed_callback),
@@ -1344,7 +1343,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_open_flag_describe() {
         let env = init_mock_file(
             Box::new(always_succeed_callback),
@@ -1377,7 +1376,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_succeeds() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let data = env.proxy.read(10).await.unwrap().map_err(zx::Status::from_raw).unwrap();
@@ -1393,14 +1392,14 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_not_readable() {
         let env = init_mock_file(Box::new(only_allow_init), fio::OpenFlags::RIGHT_WRITABLE);
         let result = env.proxy.read(10).await.unwrap().map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::BAD_HANDLE));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_validates_count() {
         let env = init_mock_file(Box::new(only_allow_init), fio::OpenFlags::RIGHT_READABLE);
         let result =
@@ -1408,7 +1407,7 @@ mod tests {
         assert_eq!(result, Err(zx::Status::OUT_OF_RANGE));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_at_succeeds() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let data = env.proxy.read_at(5, 10).await.unwrap().map_err(zx::Status::from_raw).unwrap();
@@ -1424,7 +1423,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_at_validates_count() {
         let env = init_mock_file(Box::new(only_allow_init), fio::OpenFlags::RIGHT_READABLE);
         let result = env
@@ -1436,7 +1435,7 @@ mod tests {
         assert_eq!(result, Err(zx::Status::OUT_OF_RANGE));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_start() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let offset = env
@@ -1460,7 +1459,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_cur() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let offset = env
@@ -1493,7 +1492,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_before_start() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let result = env
@@ -1505,7 +1504,7 @@ mod tests {
         assert_eq!(result, Err(zx::Status::OUT_OF_RANGE));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_seek_end() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let offset = env
@@ -1530,7 +1529,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_set_attrs() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_WRITABLE);
         let mut set_attrs = fio::NodeAttributes {
@@ -1565,7 +1564,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_set_flags() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_WRITABLE);
         let status = env.proxy.set_flags(fio::OpenFlags::APPEND).await.unwrap();
@@ -1575,7 +1574,7 @@ mod tests {
         assert_eq!(flags, fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::APPEND);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_sync() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::empty());
         let () = env.proxy.sync().await.unwrap().map_err(zx::Status::from_raw).unwrap();
@@ -1586,7 +1585,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_resize() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_WRITABLE);
         let () = env.proxy.resize(10).await.unwrap().map_err(zx::Status::from_raw).unwrap();
@@ -1600,7 +1599,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_resize_no_perms() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let result = env.proxy.resize(10).await.unwrap().map_err(zx::Status::from_raw);
@@ -1609,7 +1608,7 @@ mod tests {
         assert_eq!(*events, vec![FileOperation::Init { flags: fio::OpenFlags::RIGHT_READABLE },]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_write() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_WRITABLE);
         let data = "Hello, world!".as_bytes();
@@ -1630,7 +1629,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_write_no_perms() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
         let data = "Hello, world!".as_bytes();
@@ -1640,7 +1639,7 @@ mod tests {
         assert_eq!(*events, vec![FileOperation::Init { flags: fio::OpenFlags::RIGHT_READABLE },]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_write_at() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_WRITABLE);
         let data = "Hello, world!".as_bytes();
@@ -1662,7 +1661,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_append() {
         let env = init_mock_file(
             Box::new(always_succeed_callback),
@@ -1727,7 +1726,7 @@ mod tests {
         zx::Stream::create(create_stream_options_from_open_flags(flags).unwrap(), vmo, 0).unwrap()
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_stream_describe() {
         let vmo = zx::Vmo::create(100).unwrap();
         let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
@@ -1742,7 +1741,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_stream_read() {
         let vmo_contents = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
         let vmo = zx::Vmo::create(vmo_contents.len() as u64).unwrap();
@@ -1764,7 +1763,7 @@ mod tests {
         assert_eq!(*events, [FileOperation::Init { flags: flags },]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_stream_read_at() {
         let vmo_contents = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
         let vmo = zx::Vmo::create(vmo_contents.len() as u64).unwrap();
@@ -1787,7 +1786,7 @@ mod tests {
         assert_eq!(*events, [FileOperation::Init { flags: flags },]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_stream_write() {
         const DATA_SIZE: u64 = 10;
         let vmo = zx::Vmo::create(DATA_SIZE).unwrap();
@@ -1806,7 +1805,7 @@ mod tests {
         assert_eq!(*events, [FileOperation::Init { flags: flags },]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_stream_write_at() {
         const OFFSET: u64 = 4;
         const DATA_SIZE: u64 = 10;
@@ -1827,7 +1826,7 @@ mod tests {
         assert_eq!(*events, [FileOperation::Init { flags: flags },]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_stream_seek() {
         let vmo_contents = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
         let vmo = zx::Vmo::create(vmo_contents.len() as u64).unwrap();
@@ -1880,7 +1879,7 @@ mod tests {
         assert_eq!(e, zx::Status::INVALID_ARGS);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_stream_set_flags() {
         let data = [0, 1, 2, 3, 4];
         let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, 100).unwrap();
@@ -1920,7 +1919,7 @@ mod tests {
         assert_eq!(vmo.get_content_size().unwrap(), 105);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_stream_read_validates_count() {
         let vmo = zx::Vmo::create(10).unwrap();
         let flags = fio::OpenFlags::RIGHT_READABLE;
@@ -1931,7 +1930,7 @@ mod tests {
         assert_eq!(result, Err(zx::Status::OUT_OF_RANGE));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_stream_read_at_validates_count() {
         let vmo = zx::Vmo::create(10).unwrap();
         let flags = fio::OpenFlags::RIGHT_READABLE;
