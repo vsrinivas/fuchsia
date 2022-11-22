@@ -21,8 +21,8 @@ class __TA_CAPABILITY("shared_mutex") SharedLock {
   void Acquire() __TA_ACQUIRE() { m_.lock(); }
   void Release() __TA_RELEASE() { m_.unlock(); }
 
-  void AcquireShared() __TA_ACQUIRE_SHARED() { m_.lock(); }
-  void ReleaseShared() __TA_RELEASE_SHARED() { m_.unlock(); }
+  void AcquireShared() __TA_ACQUIRE_SHARED() { m_.lock_shared(); }
+  void ReleaseShared() __TA_RELEASE_SHARED() { m_.unlock_shared(); }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(SharedLock);
 
