@@ -133,9 +133,6 @@ class BlockDevice : public BlockDeviceType,
   // True if we have metadata for a ZBI partition map.
   bool has_bootpart_ = false;
 
-  // Manages the background FIFO server.
-  Manager manager_;
-
   fbl::Mutex io_lock_;
   zx::vmo io_vmo_ TA_GUARDED(io_lock_);
   zx_status_t io_status_ = ZX_OK;

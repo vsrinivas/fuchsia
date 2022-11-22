@@ -203,13 +203,13 @@ void BlockDevice::GetStats(GetStatsRequestView request, GetStatsCompleter::Sync&
 
 void BlockDevice::OpenSession(OpenSessionRequestView request,
                               OpenSessionCompleter::Sync& completer) {
-  // TODO(https://fxbug.dev/97783): Allow more than one concurrent connection.
-  if (zx_status_t status = manager_.StartServer(zxdev(), &self_protocol_); status != ZX_OK) {
+  auto manager = std::make_unique<Manager>();
+  if (zx_status_t status = manager->StartServer(zxdev(), &self_protocol_); status != ZX_OK) {
     request->session.Close(status);
     return;
   }
   fidl::BindServer(fdf::Dispatcher::GetCurrent()->async_dispatcher(), std::move(request->session),
-                   &manager_,
+                   std::move(manager),
                    [](Manager* manager, fidl::UnbindInfo unbind_info,
                       fidl::ServerEnd<fuchsia_hardware_block::Session>) {
                      if (unbind_info.is_dispatcher_shutdown()) {
