@@ -14,8 +14,10 @@ use crate::handler::setting_handler::{
 use crate::service_context::ExternalServiceProxy;
 use async_trait::async_trait;
 use fidl_fuchsia_recovery_policy::{DeviceMarker, DeviceProxy};
+use fidl_fuchsia_settings::FactoryResetSettings;
 use futures::lock::Mutex;
-use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use settings_storage::device_storage::DeviceStorageCompatible;
+use settings_storage::fidl_storage::{FidlStorage, FidlStorageConvertible};
 use settings_storage::storage_factory::StorageAccess;
 use std::sync::Arc;
 
@@ -24,6 +26,23 @@ impl DeviceStorageCompatible for FactoryResetInfo {
 
     fn default_value() -> Self {
         FactoryResetInfo::new(true)
+    }
+}
+
+impl FidlStorageConvertible for FactoryResetInfo {
+    type Storable = FactoryResetSettings;
+    const KEY: &'static str = "factory_reset_info";
+
+    fn default_value() -> Self {
+        FactoryResetInfo::new(true)
+    }
+
+    fn to_storable(self) -> Self::Storable {
+        self.into()
+    }
+
+    fn from_storable(storable: Self::Storable) -> Self {
+        storable.into()
     }
 }
 
@@ -46,8 +65,9 @@ pub struct FactoryResetController {
 }
 
 impl StorageAccess for FactoryResetController {
-    type Storage = DeviceStorage;
-    const STORAGE_KEYS: &'static [&'static str] = &[FactoryResetInfo::KEY];
+    type Storage = FidlStorage;
+    const STORAGE_KEYS: &'static [&'static str] =
+        &[<FactoryResetInfo as FidlStorageConvertible>::KEY];
 }
 
 /// Keeps track of the current state of factory reset, is responsible for persisting that state to

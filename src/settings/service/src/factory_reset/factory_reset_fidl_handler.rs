@@ -78,9 +78,7 @@ impl TryFrom<FactoryResetRequest> for Job {
 impl From<SettingInfo> for FactoryResetSettings {
     fn from(response: SettingInfo) -> Self {
         if let SettingInfo::FactoryReset(info) = response {
-            let mut factory_reset_settings = FactoryResetSettings::EMPTY;
-            factory_reset_settings.is_local_reset_allowed = Some(info.is_local_reset_allowed);
-            factory_reset_settings
+            info.into()
         } else {
             panic!("incorrect value sent to factory_reset");
         }

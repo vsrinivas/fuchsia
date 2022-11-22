@@ -794,7 +794,7 @@ impl<T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static> Environ
 
         // Factory Reset
         if components.contains(&SettingType::FactoryReset) {
-            device_storage_factory
+            fidl_storage_factory
                 .initialize::<FactoryResetController>()
                 .await
                 .expect("storage should still be initializing");

@@ -10,9 +10,13 @@ use fidl_fuchsia_stash::StoreProxy;
 use std::collections::HashSet;
 use v1653667208_light_migration::V1653667208LightMigration;
 use v1653667210_light_migration_teardown::V1653667210LightMigrationTeardown;
+use v1668815248_factory_reset_migration::V1668815248FactoryResetMigration;
+use v1668815249_factory_reset_migration_teardown::V1668815249FactoryResetMigrationTeardown;
 
 mod v1653667208_light_migration;
 mod v1653667210_light_migration_teardown;
+mod v1668815248_factory_reset_migration;
+mod v1668815249_factory_reset_migration_teardown;
 
 pub(crate) fn register_migrations(
     settings: &HashSet<SettingType>,
@@ -24,8 +28,14 @@ pub(crate) fn register_migrations(
     builder.set_migration_dir(migration_dir);
     if settings.contains(&SettingType::Light) {
         builder.register(V1653667208LightMigration(store_proxy.clone()))?;
-        builder.register(V1653667210LightMigrationTeardown(store_proxy))?;
+        builder.register(V1653667210LightMigrationTeardown(store_proxy.clone()))?;
     }
+
+    if settings.contains(&SettingType::FactoryReset) {
+        builder.register(V1668815248FactoryResetMigration(store_proxy.clone()))?;
+        builder.register(V1668815249FactoryResetMigrationTeardown(store_proxy.clone()))?;
+    }
+
     Ok(builder.build())
 }
 

@@ -324,7 +324,9 @@ where
                     }
                     SettingType::Display => self.read::<DisplayInfo>(id, responder).await,
                     SettingType::DoNotDisturb => self.read::<DoNotDisturbInfo>(id, responder).await,
-                    SettingType::FactoryReset => self.read::<FactoryResetInfo>(id, responder).await,
+                    SettingType::FactoryReset => {
+                        self.fidl_read::<FactoryResetInfo>(id, responder).await
+                    }
                     SettingType::Input => self.read::<InputInfoSources>(id, responder).await,
                     SettingType::Intl => self.read::<IntlInfo>(id, responder).await,
                     SettingType::Keyboard => self.read::<KeyboardInfo>(id, responder).await,
@@ -353,7 +355,7 @@ where
                 }
                 SettingInfo::Brightness(info) => self.write(info, responder).await,
                 SettingInfo::DoNotDisturb(info) => self.write(info, responder).await,
-                SettingInfo::FactoryReset(info) => self.write(info, responder).await,
+                SettingInfo::FactoryReset(info) => self.fidl_write(info, responder).await,
                 SettingInfo::Input(info) => self.write(info, responder).await,
                 SettingInfo::Intl(info) => self.write(info, responder).await,
                 SettingInfo::Keyboard(info) => self.write(info, responder).await,
