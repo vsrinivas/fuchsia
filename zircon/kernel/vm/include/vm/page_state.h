@@ -24,6 +24,7 @@ enum class vm_page_state : uint8_t {
   IPC,
   CACHE,
   SLAB,
+  ZRAM,
 
   COUNT_
 };

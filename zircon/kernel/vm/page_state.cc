@@ -26,6 +26,8 @@ const char* page_state_to_string(vm_page_state state) {
       return "cache";
     case vm_page_state::SLAB:
       return "slab";
+    case vm_page_state::ZRAM:
+      return "zram";
     default:
       return "unknown";
   }
