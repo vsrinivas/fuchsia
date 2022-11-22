@@ -17,6 +17,7 @@
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
+#include "src/ui/testing/util/flatland_test_view.h"
 #include "src/ui/testing/util/gfx_test_view.h"
 
 namespace integration_tests {
@@ -24,6 +25,48 @@ namespace {
 
 constexpr auto kViewProvider = "view-provider";
 constexpr float kEpsilon = 0.005f;
+
+std::vector<ui_testing::UITestRealm::Config> UIConfigurationsToTest(
+    const std::vector<float>& pixel_densities) {
+  std::vector<ui_testing::UITestRealm::Config> configs;
+  std::vector<std::string> protocols_required = {fuchsia::ui::scenic::Scenic::Name_};
+
+  // GFX x root presenter
+  {
+    ui_testing::UITestRealm::Config config;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
+    config.ui_to_client_services = protocols_required;
+    for (auto dpr : pixel_densities) {
+      config.device_pixel_ratio = dpr;
+      configs.push_back(config);
+    }
+  }
+
+  // GFX x scene manager
+  {
+    ui_testing::UITestRealm::Config config;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
+    config.ui_to_client_services = protocols_required;
+    for (auto dpr : pixel_densities) {
+      config.device_pixel_ratio = dpr;
+      configs.push_back(config);
+    }
+  }
+
+  // Flatland x scene manager
+  {
+    ui_testing::UITestRealm::Config config;
+    config.use_flatland = true;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
+    config.ui_to_client_services = protocols_required;
+    config.ui_to_client_services.push_back(fuchsia::ui::composition::Flatland::Name_);
+    for (auto dpr : pixel_densities) {
+      config.device_pixel_ratio = dpr;
+      configs.push_back(config);
+    }
+  }
+  return configs;
+}
 
 }  // namespace
 
@@ -35,10 +78,10 @@ using component_testing::Realm;
 using component_testing::Route;
 
 // This test verifies that Root Presenter and Scene Manager propagate
-// 'config/data/display_pixel_density' correctly.
-class DisplayPixelRatioTest : public gtest::RealLoopFixture,
-                              public ::testing::WithParamInterface<
-                                  std::tuple<ui_testing::UITestRealm::SceneOwnerType, float>> {
+// 'config/data/device_pixel_ratio' correctly.
+class DisplayPixelRatioTest
+    : public gtest::RealLoopFixture,
+      public ::testing::WithParamInterface<ui_testing::UITestRealm::Config> {
  public:
   static std::vector<float> GetDevicePixelRatiosToTest() {
     std::vector<float> pixel_density;
@@ -51,26 +94,33 @@ class DisplayPixelRatioTest : public gtest::RealLoopFixture,
  protected:
   // |testing::Test|
   void SetUp() override {
-    ui_testing::UITestRealm::Config config;
-    config.scene_owner = std::get<0>(GetParam());  // scene owner.
-    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
-    config.device_pixel_ratio = std::get<1>(GetParam());
-    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
+    auto config = GetParam();
+    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(config);
 
     // Build realm.
     FX_LOGS(INFO) << "Building realm";
     realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
 
-    // Add a test view provider.
-    test_view_ = std::make_unique<ui_testing::GfxTestView>(
-        dispatcher(), /* content = */ ui_testing::TestView::ContentType::COORDINATE_GRID);
+    // Add a test view provider. Make either a gfx test view or flatland test view depending
+    // on the config parameters.
+    if (config.use_flatland) {
+      test_view_ = std::make_unique<ui_testing::FlatlandTestView>(
+          dispatcher(), /* content = */ ui_testing::TestView::ContentType::COORDINATE_GRID);
+    } else {
+      test_view_ = std::make_unique<ui_testing::GfxTestView>(
+          dispatcher(), /* content = */ ui_testing::TestView::ContentType::COORDINATE_GRID);
+    }
+
     realm_->AddLocalChild(kViewProvider, test_view_.get());
     realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
                            .source = ChildRef{kViewProvider},
                            .targets = {ParentRef()}});
-    realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                           .source = ParentRef(),
-                           .targets = {ChildRef{kViewProvider}}});
+
+    for (const auto& protocol : config.ui_to_client_services) {
+      realm_->AddRoute(Route{.capabilities = {Protocol{protocol}},
+                             .source = ParentRef(),
+                             .targets = {ChildRef{kViewProvider}}});
+    }
 
     ui_test_manager_->BuildRealm();
     realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
@@ -103,11 +153,9 @@ class DisplayPixelRatioTest : public gtest::RealLoopFixture,
   std::unique_ptr<Realm> realm_;
 };
 
-INSTANTIATE_TEST_SUITE_P(
-    DisplayPixelRatioTestWithParams, DisplayPixelRatioTest,
-    testing::Combine(::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                       ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
-                     testing::ValuesIn(DisplayPixelRatioTest::GetDevicePixelRatiosToTest())));
+INSTANTIATE_TEST_SUITE_P(DisplayPixelRatioTestWithParams, DisplayPixelRatioTest,
+                         ::testing::ValuesIn(UIConfigurationsToTest(
+                             DisplayPixelRatioTest::GetDevicePixelRatiosToTest())));
 
 // This test leverage the coordinate test view to ensure that display pixel ratio is working
 // properly.
@@ -121,8 +169,14 @@ INSTANTIATE_TEST_SUITE_P(
 // |      RED       |     MAGENTA    |
 // |________________|________________|
 TEST_P(DisplayPixelRatioTest, TestScale) {
-  const auto expected_dpr = std::get<1>(GetParam());
-  EXPECT_NEAR(ClientViewScaleFactor(), expected_dpr, kEpsilon);
+  auto config = GetParam();
+  const auto expected_dpr = config.device_pixel_ratio;
+
+  // TODO(fxbug.dev/112999): Only run this check on GFX for now until we update ClientScaleFactor()
+  // to work with Flatland.
+  if (!config.use_flatland) {
+    EXPECT_NEAR(ClientViewScaleFactor(), expected_dpr, kEpsilon);
+  }
 
   EXPECT_NEAR(display_width_ / test_view_->width(), expected_dpr, kEpsilon);
   EXPECT_NEAR(display_height_ / test_view_->height(), expected_dpr, kEpsilon);
