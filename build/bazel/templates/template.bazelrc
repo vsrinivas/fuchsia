@@ -39,3 +39,4 @@ build:sponge --google_default_credentials=true
 build:sponge --bes_instance_name={rbe_project}
 build:sponge --bes_header=X-Goog-User-Project={rbe_project}
 build:sponge --bes_results_url=http://sponge2/
+build:sponge --bes_keywords=fuchsia
