@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::RepositoryError,
     fidl_fuchsia_net_ext::SocketAddress,
+    pkg::config as pkg_config,
     std::io::Write as _,
 };
 
@@ -48,6 +49,20 @@ async fn start_impl(
             }
 
             Ok(())
+        }
+        Err(err @ RepositoryError::ServerAddressAlreadyInUse) => {
+            if let Ok(Some(address)) = pkg_config::repository_listen_addr().await {
+                ffx_bail!("Failed to start repository server on {}: {}", address, err)
+            } else {
+                ffx_bail!(
+                    "Failed to start repository server: {}\n\
+                    The server listening address is now unspecified. You can fix this\n\
+                    with:\n\
+                    $ ffx config set repository.server.listen '[::]:8083'\n\
+                    $ ffx repository server start",
+                    err
+                )
+            }
         }
         Err(RepositoryError::ServerNotRunning) => {
             ffx_bail!(

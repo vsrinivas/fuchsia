@@ -52,7 +52,7 @@ pub async fn determine_why_repository_server_is_not_running() -> anyhow::Error {
             return anyhow!(
                 "Server listening address is unspecified. You can fix this with:\n\
                 $ ffx config set repository.server.listen '[::]:8083'\n\
-                $ ffx doctor --restart-daemon",
+                $ ffx repository server start",
             );
         }
     }
