@@ -122,7 +122,6 @@ zx_library("fake_ddk") {
     "//src/devices/usb/drivers/xhci/*",
     "//src/graphics/display/drivers/aml-hdmi/*",
     "//src/graphics/display/drivers/fake/*",
-    "//src/graphics/display/lib/designware/test/*",
     "//src/graphics/lib/magma/tests/unit_tests/*",
     "//src/media/audio/drivers/aml-g12-pdm/test/*",
     "//src/media/audio/drivers/intel-hda/controller/*",
