@@ -327,18 +327,11 @@ type Foo = struct {
 }
 
 TEST(StructsTests, BadWithFlagStructCannotBeOptional) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type SomeStruct = struct {};
-
-type Foo = struct {
-  foo SomeStruct:optional;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0159.test.fidl");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kNoOptionalStructs);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrStructCannotBeOptional);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "box<SomeStruct>");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "box<Date>");
 }
 
 TEST(StructsTests, BadTypeCannotBeBoxed) {

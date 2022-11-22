@@ -373,7 +373,7 @@ constexpr UndocumentedErrorDef<155, const flat::AttributeArg *, std::string_view
 constexpr UndocumentedErrorDef<156, flat::Name> ErrCannotBeOptional("{} cannot be optional");
 constexpr ErrorDef<157, flat::Name> ErrMustBeAProtocol("{} must be a protocol");
 constexpr ErrorDef<158, flat::Name> ErrCannotBoundTwice("{} cannot bound twice");
-constexpr UndocumentedErrorDef<159, flat::Name> ErrStructCannotBeOptional(
+constexpr ErrorDef<159, flat::Name> ErrStructCannotBeOptional(
     "structs can no longer be marked optional; please use the new syntax, "
     "`box<{}>`");
 constexpr UndocumentedErrorDef<160, flat::Name> ErrCannotIndicateOptionalTwice(

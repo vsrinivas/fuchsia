@@ -286,6 +286,8 @@ redirects:
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0157
 - from: /fuchsia-src/error/fi-0158
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0158
+- from: /fuchsia-src/error/fi-0159
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0159
 - from: /fuchsia-src/error/fi-0162
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0162
 - from: /fuchsia-src/error/fi-0167
