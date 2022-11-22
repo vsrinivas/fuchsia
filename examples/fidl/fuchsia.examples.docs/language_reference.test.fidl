@@ -330,7 +330,8 @@ ajar protocol Messenger {
 // [END unknown-interactions]
 
 // [START aliasing]
-alias StoryID = string:MAX;
+const MAX_SIZE uint32 = 100;
+alias StoryID = string:MAX_SIZE;
 alias Chapters = vector<StoryID>:5;
 // [END aliasing]
 
