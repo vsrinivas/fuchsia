@@ -8,6 +8,7 @@
 namespace {
 TEST(UsbMonitorUtilTest, StartStop) {
   USBMonitor test_monitor;
+  ASSERT_FALSE(test_monitor.Started());
   test_monitor.Start();
   ASSERT_TRUE(test_monitor.Started());
   test_monitor.Stop();
