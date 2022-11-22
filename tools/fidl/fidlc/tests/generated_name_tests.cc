@@ -321,14 +321,8 @@ type Foo = struct {
 }
 
 TEST(GeneratedNameTests, BadInvalidIdentifier) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-type Foo = struct {
-  bad @generated_name("ez$") struct {};
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0146.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidGeneratedName);
 }
 

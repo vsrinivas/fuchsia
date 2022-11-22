@@ -345,8 +345,7 @@ constexpr ErrorDef<144, const flat::Attribute *, std::string_view> ErrUnableToPa
     "unable to parse '{}' bound of '{}'");
 constexpr WarningDef<145, std::string_view, std::string_view> WarnAttributeTypo(
     "suspect attribute with name '{}'; did you mean '{}'?");
-constexpr UndocumentedErrorDef<146> ErrInvalidGeneratedName(
-    "generated name must be a valid identifier");
+constexpr ErrorDef<146> ErrInvalidGeneratedName("generated name must be a valid identifier");
 constexpr UndocumentedErrorDef<147> ErrAvailableMissingArguments(
     "at least one argument is required: 'added', 'deprecated', or 'removed'");
 constexpr UndocumentedErrorDef<148> ErrNoteWithoutDeprecation(

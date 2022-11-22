@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.bad.fi0146;
+
+type Device = table {
+    1: kind flexible enum {
+        DESKTOP = 1;
+        PHONE = 2;
+    };
+};
+
+type Input = table {
+    1: kind @generated_name("_kind") flexible enum {
+        KEYBOARD = 1;
+        MOUSE = 2;
+    };
+};
