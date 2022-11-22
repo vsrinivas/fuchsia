@@ -9,9 +9,7 @@ mod util;
 use {
     anyhow::{anyhow, Context, Result},
     fidl_fuchsia_hardware_pty as fpty,
-    fidl_fuchsia_virtualization::{
-        GuestManagerProxy, GuestMarker, GuestStatus, HostVsockEndpointMarker,
-    },
+    fidl_fuchsia_virtualization::{GuestManagerProxy, GuestMarker, HostVsockEndpointMarker},
     fuchsia_async::{self as fasync, Duration, Timer},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{future::Fuse, pin_mut, select, AsyncReadExt, AsyncWriteExt, FutureExt},
@@ -226,23 +224,20 @@ pub async fn handle_vsh(
 ) -> Result<i32> {
     let port = port.unwrap_or(util::VSH_PORT);
 
-    let guest_info = termina_manager.get_info().await?;
-    match guest_info.guest_status {
-        Some(GuestStatus::Starting) | Some(GuestStatus::Running) => {}
-        _ => loop {
-            if let Err(e) = termina::launch(stdout.as_mut()).await {
-                println!("Starting the Linux container has failed because of: {:?}", e);
-                println!("Retry? (Y/n)");
-                let mut answer = [0];
-                stdin.read_exact(&mut answer).await?;
-                println!("{}", answer[0] as char);
-                match answer[0] {
-                    b'y' | b'Y' | b'\n' => continue,
-                    _ => anyhow::bail!(e),
-                }
+    loop {
+        // Attempts to launch Termina VM and container if necessary
+        if let Err(e) = termina::launch(stdout.as_mut()).await {
+            println!("Starting the Linux container has failed because of: {:?}", e);
+            println!("Retry? (Y/n)");
+            let mut answer = [0];
+            stdin.read_exact(&mut answer).await?;
+            println!("{}", answer[0] as char);
+            match answer[0] {
+                b'y' | b'Y' | b'\n' => continue,
+                _ => anyhow::bail!(e),
             }
-            break;
-        },
+        }
+        break;
     }
 
     let (guest, guest_server_end) = fidl::endpoints::create_proxy::<GuestMarker>()?;
