@@ -5,13 +5,6 @@
 import("//build/config.gni")
 import("//src/virtualization/packages/guest_package.gni")
 
-config_data("services_config") {
-  # This package must be part of the system image (of the guest) so that it
-  # exists before sysmgr comes up.
-  for_pkg = "sysmgr"
-  sources = [ "services.config" ]
-}
-
 guest_image_label = "//build/images/guest"
 guest_image_dir = get_label_info(guest_image_label, "target_out_dir")
 

@@ -21,7 +21,6 @@
 #include <unordered_set>
 
 #include "src/lib/fxl/macros.h"
-#include "src/sys/sysmgr/config.h"
 #include "src/sys/sysmgr/package_updating_loader.h"
 
 namespace sysmgr {
@@ -34,8 +33,8 @@ namespace sysmgr {
 // of the environment.
 class App {
  public:
-  App(bool auto_update_packages, Config config,
-      std::shared_ptr<sys::ServiceDirectory> incoming_services, async::Loop* loop);
+  App(bool auto_update_packages, std::shared_ptr<sys::ServiceDirectory> incoming_services,
+      async::Loop* loop);
   ~App();
 
   // Launch component in the sys realm.
@@ -46,24 +45,14 @@ class App {
  private:
   fidl::InterfaceHandle<fuchsia::io::Directory> OpenAsDirectory();
   void ConnectToService(const std::string& service_name, zx::channel channel);
-
-  void RegisterSingleton(std::string service_name, fuchsia::sys::LaunchInfoPtr launch_info);
   void RegisterLoader();
-  void RegisterDefaultServiceConnector();
-
-  void StartDiagnostics(fuchsia::sys::LaunchInfo launch_diagnostics, async::Loop* loop);
 
   async::Loop* loop_;
   std::shared_ptr<sys::ServiceDirectory> incoming_services_;
 
-  // Keep track of services provided by each component URL.
-  std::map<std::string, std::shared_ptr<sys::ServiceDirectory>> services_;
-
   // Nested environment within which the apps started by sysmgr will run.
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
-  fuchsia::sys::LauncherPtr env_launcher_;
-  std::shared_ptr<sys::ServiceDirectory> env_services_;
 
   vfs::PseudoDir svc_root_;
   std::vector<std::string> svc_names_;
@@ -73,10 +62,6 @@ class App {
   fidl::BindingSet<fuchsia::sys::Loader> loader_bindings_;
 
   bool auto_updates_enabled_;
-
-  // Contains the ComponentControllers of all component URLs launched by sysmgr.
-  // They are removed from this map when the associated component dies.
-  std::unordered_map<std::string, fuchsia::sys::ComponentControllerPtr> controllers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

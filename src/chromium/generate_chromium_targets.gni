@@ -47,7 +47,6 @@ template("generate_chromium_targets") {
   group("web_engine") {
     deps = [
       ":tzdata_for_web_engine",
-      ":web_engine_config",
       ":web_engine_pkg",
     ]
   }
@@ -106,15 +105,11 @@ template("generate_chromium_targets") {
     ]
   }
 
-  generate_package_flavors_and_config("web_engine") {
+  generate_package_flavors("web_engine") {
     prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
 
     custom_package_path = "${build_output_gen_base_path}/fuchsia_web/webengine/${target_name}/${target_name}.far"
     selections = package_flavor_selections
-
-    # Config data arguments.
-    for_pkg = "sysmgr"
-    sources = [ "//src/chromium/config/web_context_provider.config" ]
   }
 
   core_shard("web_context_provider_core_shard") {

@@ -6,17 +6,10 @@ import("//build/components.gni")
 import("//build/config.gni")
 import("//build/security.gni")
 
-group("legacy_tests") {
-  testonly = true
-  deps = [ "integration_tests" ]
-}
-
 source_set("lib") {
   sources = [
     "app.cc",
     "app.h",
-    "config.cc",
-    "config.h",
     "package_updating_loader.cc",
     "package_updating_loader.h",
   ]
@@ -66,18 +59,6 @@ fuchsia_component("sysmgr_component") {
 
 fuchsia_package("sysmgr") {
   deps = [ ":sysmgr_component" ]
-}
-
-template("cfg") {
-  config_data(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    for_pkg = "sysmgr"
-    sources = [ rebase_path("config/${invoker.name}") ]
-  }
 }
 
 config("update_packages_config") {

@@ -15,7 +15,6 @@ group("integration_tests") {
     "fidl",
     "lifecycle",
     "mock_runner",
-    "outdir",
     "policy",
     "sandbox",
     "util",

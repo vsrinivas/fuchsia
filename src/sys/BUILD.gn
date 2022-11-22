@@ -41,7 +41,6 @@ group("legacy_tests") {
   deps = [
     "appmgr:legacy_tests",
     "lib:legacy_tests",
-    "sysmgr:legacy_tests",
     "test_manager:legacy_tests",
     "test_runners:legacy_tests",
     "//src/modular/bin/basemgr:legacy_tests",

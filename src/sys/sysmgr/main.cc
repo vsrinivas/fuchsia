@@ -15,8 +15,6 @@
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/sys/sysmgr/app.h"
 
-constexpr char kConfigDataDir[] = "/config/data/";
-
 #ifdef AUTO_UPDATE_PACKAGES
 constexpr bool kAutoUpdatePackagesDefault = true;
 #else
@@ -46,17 +44,10 @@ int main(int argc, const char** argv) {
     }
   }
 
-  sysmgr::Config config;
-  config.ParseFromDirectory(kConfigDataDir);
-  if (config.HasError()) {
-    FX_LOGS(ERROR) << "Parsing config failed:\n" << config.error_str();
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   FX_DCHECK(component_context);
-  sysmgr::App app(auto_update_packages, std::move(config), component_context->svc(), &loop);
+  sysmgr::App app(auto_update_packages, component_context->svc(), &loop);
   loop.Run();
   return 0;
 }
