@@ -14,10 +14,7 @@ use {
         },
         telemetry::{TelemetryEvent, TelemetrySender},
         util::listener,
-        util::testing::{
-            create_inspect_persistence_channel, create_wlan_hasher,
-            sme_stream::poll_for_and_validate_sme_scan_request_and_send_results,
-        },
+        util::testing::{create_inspect_persistence_channel, create_wlan_hasher},
     },
     anyhow::{format_err, Error},
     fidl::endpoints::{create_proxy, create_request_stream},
@@ -25,8 +22,7 @@ use {
     fidl_fuchsia_wlan_common_security as fidl_common_security,
     fidl_fuchsia_wlan_device_service::DeviceWatcherEvent,
     fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_async as fasync,
-    fuchsia_async::TestExecutor,
+    fuchsia_async::{self as fasync, DurationExt, TestExecutor},
     fuchsia_inspect::{self as inspect},
     fuchsia_zircon as zx,
     futures::{
@@ -39,7 +35,7 @@ use {
     },
     hex,
     lazy_static::lazy_static,
-    log::info,
+    log::{debug, info},
     pin_utils::pin_mut,
     std::{
         convert::{Infallible, TryFrom},
@@ -565,6 +561,45 @@ fn get_client_state_update(
     update
 }
 
+/// It takes an indeterminate amount of time for the scan module to either send the results
+/// to the location sensor, or be notified by the component framework that the location
+/// sensor's channel is closed / non-existent. This function continues trying to advance the
+/// future until the next expected event happens (e.g. an event is present on the sme stream
+/// for the expected active scan).
+#[track_caller]
+pub fn poll_for_sme_scan_request(
+    exec: &mut fasync::TestExecutor,
+    network_selection_fut: &mut (impl futures::Future + std::marker::Unpin),
+    sme_stream: &mut fidl_sme::ClientSmeRequestStream,
+) -> fidl_sme::ClientSmeRequest {
+    let mut counter = 0;
+    let sme_stream_result = loop {
+        counter += 1;
+        if counter > 1000 {
+            panic!("Failed to progress network selection future until active scan");
+        };
+        let sleep_duration = zx::Duration::from_millis(2);
+        exec.run_singlethreaded(fasync::Timer::new(sleep_duration.after_now()));
+        assert_variant!(
+            exec.run_until_stalled(network_selection_fut),
+            Poll::Pending,
+            "Did not get 'poll::Pending' on network_selection_fut"
+        );
+        match exec.run_until_stalled(&mut sme_stream.next()) {
+            Poll::Pending => continue,
+            other_result => {
+                debug!("Required {} iterations to get an SME stream message", counter);
+                break other_result;
+            }
+        }
+    };
+
+    assert_variant!(
+        sme_stream_result,
+        Poll::Ready(Some(Ok(scan_req))) => scan_req
+    )
+}
+
 /// Gets a set of security protocols that describe the protection of a BSS.
 ///
 /// This function does **not** consider hardware and driver support. Returns an empty `Vec` if
@@ -741,12 +776,19 @@ fn save_and_connect(
             channel: types::WlanChan::new(1, types::Cbw::Cbw20),
         ),
     }];
-    poll_for_and_validate_sme_scan_request_and_send_results(
+    let sme_request = poll_for_sme_scan_request(
         &mut exec,
         &mut test_values.internal_objects.internal_futures,
         &mut iface_sme_stream,
-        &expected_scan_request,
-        mock_scan_results,
+    );
+    assert_variant!(
+        sme_request,
+        fidl_sme::ClientSmeRequest::Scan {
+            req, responder
+        } => {
+            assert_eq!(req, expected_scan_request);
+            responder.send(&mut Ok(mock_scan_results)).expect("failed to send scan data");
+        }
     );
 
     assert_variant!(
@@ -960,10 +1002,8 @@ fn save_and_fail_to_connect(
         }
 
         // BSS selection scans occur for requested network. Return scan results.
-        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![TEST_SSID.clone().into()],
-            channels: vec![],
-        });
+        let expected_scan_request =
+            fidl_sme::ActiveScanRequest { ssids: vec![TEST_SSID.clone().into()], channels: vec![] };
         let mutual_security_protocols = security_protocols_from_protection(scanned_security);
         assert!(!mutual_security_protocols.is_empty(), "no mutual security protocols");
         let mock_scan_results = vec![fidl_sme::ScanResult {
@@ -978,12 +1018,25 @@ fn save_and_fail_to_connect(
                 channel: types::WlanChan::new(1, types::Cbw::Cbw20),
             ),
         }];
-        poll_for_and_validate_sme_scan_request_and_send_results(
+        let sme_request = poll_for_sme_scan_request(
             &mut exec,
             &mut test_values.internal_objects.internal_futures,
             &mut iface_sme_stream,
-            &expected_scan_request,
-            mock_scan_results.clone(),
+        );
+        assert_variant!(
+            sme_request,
+            fidl_sme::ClientSmeRequest::Scan {
+                req, responder
+            } => {
+                match req {
+                    fidl_sme::ScanRequest::Active(req) => assert_eq!(req, expected_scan_request),
+                    fidl_sme::ScanRequest::Passive(_req) => {
+                        // Sometimes, a passive scan sneaks in for the idle interface. Ignore it.
+                        // Context: https://fxbug.dev/115137
+                    },
+                }
+                responder.send(&mut Ok(mock_scan_results)).expect("failed to send scan data");
+            }
         );
 
         assert_variant!(
