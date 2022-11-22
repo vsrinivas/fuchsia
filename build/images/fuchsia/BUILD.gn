@@ -428,6 +428,37 @@ if (is_fuchsia) {
     if (fuchsia_product_assembly_config_label != false) {
       deps += [ fuchsia_product_assembly_config_label ]
     }
+
+    # Add the security configs and goldens.
+    sources += fuchsia_static_pkgs_goldens
+    sources += fuchsia_verify_routes_exceptions_allowlist_product
+    sources += fuchsia_zbi_bootfs_filelist_goldens
+    sources += fuchsia_zbi_bootfs_packages_goldens
+    sources += fuchsia_zbi_kernel_cmdline_goldens
+    sources += recovery_static_pkgs_goldens
+    sources += recovery_verify_routes_exceptions_allowlist_product
+    sources += recovery_zbi_bootfs_filelist_goldens
+    sources += recovery_zbi_bootfs_packages_goldens
+    sources += recovery_zbi_kernel_cmdline_goldens
+    _optional_files = [
+      fuchsia_route_sources_config,
+      fuchsia_structured_config_policy,
+      fuchsia_verify_component_resolvers_allowlist,
+      fuchsia_verify_routes_component_tree_config,
+      fuchsia_verify_routes_exceptions_allowlist,
+      fuchsia_verify_routes_exceptions_allowlist_bootfs,
+      recovery_route_sources_config,
+      recovery_structured_config_policy,
+      recovery_verify_component_resolvers_allowlist,
+      recovery_verify_routes_component_tree_config,
+      recovery_verify_routes_exceptions_allowlist,
+      recovery_verify_routes_exceptions_allowlist_bootfs,
+    ]
+    foreach(file, _optional_files) {
+      if (file != "") {
+        sources += [ file ]
+      }
+    }
   }
 
   ##################################################
