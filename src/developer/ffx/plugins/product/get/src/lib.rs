@@ -48,7 +48,7 @@ async fn pb_get_impl<I: structured_ui::Interface + Sync>(
     transfer_download(
         &transfer_manifest_url,
         local_dir,
-        cmd.auth,
+        &cmd.auth,
         &|layers| {
             let mut progress = structured_ui::Progress::builder();
             progress.title("Transfer download");

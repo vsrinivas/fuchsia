@@ -38,7 +38,7 @@ pub(crate) const GS_SCHEME: &str = "gs";
 pub(crate) async fn fetch_product_metadata<F, I>(
     repo: &url::Url,
     output_dir: &Path,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -193,7 +193,7 @@ pub(crate) fn url_sans_fragment(product_url: &url::Url) -> Result<url::Url> {
 pub(crate) async fn get_product_data_from_gcs<I>(
     product_url: &url::Url,
     local_repo_dir: &std::path::Path,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     ui: &I,
 ) -> Result<()>
 where
@@ -230,7 +230,7 @@ pub async fn fetch_data_for_product_bundle_v1<I>(
     product_bundle: &sdk_metadata::ProductBundleV1,
     product_url: &url::Url,
     local_repo_dir: &std::path::Path,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     ui: &I,
 ) -> Result<()>
 where
@@ -349,7 +349,7 @@ async fn fetch_by_format<F, I>(
     format: &str,
     uri: &url::Url,
     local_dir: &Path,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -382,7 +382,7 @@ where
 pub(crate) async fn fetch_bundle_uri<F, I>(
     product_url: &url::Url,
     local_dir: &Path,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -595,7 +595,7 @@ mod tests {
             "bad",
             &url,
             &Path::new("unused"),
-            AuthFlowChoice::Default,
+            &AuthFlowChoice::Default,
             &mut |_d, _f| Ok(ProgressResponse::Continue),
             &ui,
         )
@@ -611,7 +611,7 @@ mod tests {
         fetch_bundle_uri(
             &url,
             &Path::new("unused"),
-            AuthFlowChoice::Default,
+            &AuthFlowChoice::Default,
             &mut |_d, _f| Ok(ProgressResponse::Continue),
             &ui,
         )

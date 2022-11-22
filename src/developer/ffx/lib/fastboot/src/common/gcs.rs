@@ -37,8 +37,7 @@ impl GcsResolver {
         let auth = match boto {
             Some(boto_path) => {
                 TokenStore::new_with_auth(
-                    read_boto_refresh_token(&boto_path)?
-                        .ok_or(anyhow!("Could not read boto token store"))?,
+                    read_boto_refresh_token(&boto_path)?,
                     /*access_token=*/ None,
                 )?
             }

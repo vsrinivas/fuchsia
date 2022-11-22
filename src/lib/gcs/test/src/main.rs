@@ -7,7 +7,11 @@
 use {
     anyhow::{Context, Result},
     fuchsia_hyper::new_https_client,
-    gcs::{auth::pkce::new_refresh_token, client::ClientFactory, token_store::TokenStore},
+    gcs::{
+        auth::pkce::new_refresh_token,
+        client::ClientFactory,
+        token_store::{RefreshAccessType, TokenStore},
+    },
 };
 
 /// A simple test to be sure the base libs haven't changed in an incompatible
@@ -42,7 +46,9 @@ async fn auth_test() -> Result<()> {
     let mut output = std::io::stdout();
     let mut err_out = std::io::stderr();
     let mut ui = structured_ui::TextUi::new(&mut input, &mut output, &mut err_out);
-    let refresh_token = new_refresh_token(&mut ui).await.context("get refresh token")?;
+    let refresh_token = RefreshAccessType::RefreshToken(
+        new_refresh_token(&mut ui).await.context("get refresh token")?,
+    );
     let token_store =
         TokenStore::new_with_auth(refresh_token, /*access_token=*/ None).expect("token_store");
 

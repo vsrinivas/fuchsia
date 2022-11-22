@@ -25,7 +25,7 @@ use {
 pub async fn transfer_download<F, I>(
     transfer_manifest_url: &url::Url,
     local_dir: &std::path::Path,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -67,7 +67,7 @@ async fn transfer_download_v1<F, I>(
     transfer_manifest_url: &url::Url,
     transfer_manifest: &transfer_manifest::TransferManifestV1,
     local_dir: &std::path::Path,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>

@@ -14,7 +14,11 @@ use {
     once_cell::sync::OnceCell,
     regex::Regex,
     serde_json,
-    std::{fmt, fs, path::Path, string::String},
+    std::{
+        fmt, fs,
+        path::{Path, PathBuf},
+        string::String,
+    },
     url::Url,
 };
 
@@ -43,6 +47,32 @@ struct ListResponseItem {
     name: String,
 }
 
+/// How to get a new access token.
+#[derive(PartialEq)]
+pub enum RefreshAccessType {
+    /// No auth is available.
+    NoAuth,
+
+    /// A long lasting secret token used to attain a new `access_token`. This
+    /// value is a user secret and must not be misused (such as by logging).
+    RefreshToken(String),
+
+    /// A path to an executable which will print an access token to stdout.
+    Exec(PathBuf),
+}
+
+/// Custom debug to avoid printing the RefreshToken.
+impl fmt::Debug for RefreshAccessType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let value = match self {
+            RefreshAccessType::Exec(e) => format!("Exec({:?})", e),
+            RefreshAccessType::RefreshToken(_) => "RefreshToken(<hidden>)".to_string(),
+            RefreshAccessType::NoAuth => "NoAuth".to_string(),
+        };
+        write!(f, "RefreshAccessType {}", value)
+    }
+}
+
 /// User credentials for use with GCS.
 ///
 /// Specifically to:
@@ -55,9 +85,8 @@ pub struct TokenStore {
     /// Base URL for reading (blob) objects.
     storage_base: Url,
 
-    /// A long lasting secret token used to attain a new `access_token`. This
-    /// value is a user secret and must not be misused (such as by logging).
-    refresh_token: Option<String>,
+    /// How to get a new access token.
+    refresh_token: RefreshAccessType,
 
     /// A limited time token used in an Authorization header.
     ///
@@ -72,7 +101,7 @@ impl TokenStore {
         Self {
             api_base: Url::parse(API_BASE).expect("parse API_BASE"),
             storage_base: Url::parse(STORAGE_BASE).expect("parse STORAGE_BASE"),
-            refresh_token: None,
+            refresh_token: RefreshAccessType::NoAuth,
             access_token: Mutex::new("".to_string()),
         }
     }
@@ -85,29 +114,38 @@ impl TokenStore {
     /// The `access_token` is not required, but if it happens to be available,
     /// i.e. if a code exchange was just done, it avoids an extra round-trip to
     /// provide it here.
-    pub fn new_with_auth<T>(refresh_token: String, access_token: T) -> Result<Self, GcsError>
+    pub fn new_with_auth<T>(
+        refresh_token: RefreshAccessType,
+        access_token: T,
+    ) -> Result<Self, GcsError>
     where
         T: Into<Option<String>>,
     {
-        if refresh_token.is_empty() {
-            return Err(GcsError::MissingRefreshToken);
+        match &refresh_token {
+            RefreshAccessType::Exec(exec) => {
+                if !exec.is_file() {
+                    return Err(GcsError::AccessTokenExecInvalid);
+                }
+            }
+            RefreshAccessType::RefreshToken(refresh_token) => {
+                if refresh_token.is_empty() {
+                    return Err(GcsError::MissingRefreshToken);
+                }
+            }
+            RefreshAccessType::NoAuth => (),
         }
         let access_token = Mutex::new(access_token.into().unwrap_or("".to_string()));
         Ok(Self {
             api_base: Url::parse(API_BASE).expect("parse API_BASE"),
             storage_base: Url::parse(STORAGE_BASE).expect("parse STORAGE_BASE"),
-            refresh_token: Some(refresh_token),
+            refresh_token,
             access_token,
         })
     }
 
-    pub fn refresh_token(&self) -> Option<String> {
-        self.refresh_token.to_owned()
-    }
-
     /// Create localhost base URLs and fake credentials for testing.
     #[cfg(test)]
-    fn local_fake(refresh_token: Option<String>) -> Self {
+    fn local_fake(refresh_token: RefreshAccessType) -> Self {
         let api_base = Url::parse("http://localhost:9000").expect("api_base");
         let storage_base = Url::parse("http://localhost:9001").expect("storage_base");
         Self { api_base, storage_base, refresh_token, access_token: Mutex::new("".to_string()) }
@@ -117,7 +155,7 @@ impl TokenStore {
     ///
     /// If no access_token is set, no changes are made to the builder.
     async fn authorize(&self, builder: request::Builder) -> Result<request::Builder> {
-        if self.refresh_token.is_none() {
+        if self.refresh_token == RefreshAccessType::NoAuth {
             return Ok(builder);
         }
         let access_token = self.access_token.lock().await;
@@ -128,13 +166,28 @@ impl TokenStore {
     async fn refresh_access_token(&self, _https_client: &HttpsClient) -> Result<(), GcsError> {
         tracing::debug!("refresh_access_token");
         match &self.refresh_token {
-            Some(refresh_token) => {
+            RefreshAccessType::Exec(exec) => {
+                let output = std::process::Command::new(exec).output()?;
+                if !output.status.success() {
+                    tracing::error!(
+                        "The {:?} process to get an access token returned {:?}.",
+                        exec,
+                        output.status.code()
+                    );
+                    return Err(GcsError::MissingRefreshToken);
+                }
+                let new_token = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                let mut access_token = self.access_token.lock().await;
+                *access_token = new_token;
+                Ok(())
+            }
+            RefreshAccessType::RefreshToken(refresh_token) => {
                 let new_token = new_access_token(refresh_token).await?;
                 let mut access_token = self.access_token.lock().await;
                 *access_token = new_token;
                 Ok(())
             }
-            None => return Err(GcsError::MissingRefreshToken),
+            RefreshAccessType::NoAuth => return Err(GcsError::MissingRefreshToken),
         }
     }
 
@@ -159,14 +212,16 @@ impl TokenStore {
         Ok(match res.status() {
             StatusCode::FORBIDDEN | StatusCode::UNAUTHORIZED => {
                 match &self.refresh_token {
-                    Some(_) => {
+                    RefreshAccessType::Exec(_) | RefreshAccessType::RefreshToken(_) => {
                         // Refresh the access token and make one extra try.
                         self.refresh_access_token(&https_client)
                             .await
                             .context("refresh_access_token")?;
-                        self.attempt_download(https_client, bucket, object).await?
+                        self.attempt_download(https_client, bucket, object)
+                            .await
+                            .context("attempting download")?
                     }
-                    None => {
+                    RefreshAccessType::NoAuth => {
                         // With no refresh token, there's no option to retry.
                         res
                     }
@@ -187,7 +242,10 @@ impl TokenStore {
         bucket: &str,
         object: &str,
     ) -> Result<Response<Body>> {
-        let url = self.storage_base.join(&format!("{}/{}", bucket, object))?;
+        let url = self
+            .storage_base
+            .join(&format!("{}/{}", bucket, object))
+            .context("joining to storage base")?;
         self.send_request(https_client, url).await
     }
 
@@ -198,10 +256,10 @@ impl TokenStore {
     async fn send_request(&self, https_client: &HttpsClient, url: Url) -> Result<Response<Body>> {
         tracing::debug!("https_client.request {:?}", url);
         let req = Request::builder().method(Method::GET).uri(url.into_string());
-        let req = self.authorize(req).await?;
-        let req = req.body(Body::from(""))?;
+        let req = self.authorize(req).await.context("authorizing in send_request")?;
+        let req = req.body(Body::empty()).context("creating request body")?;
 
-        let res = https_client.request(req).await?;
+        let res = https_client.request(req).await.context("https_client.request")?;
         Ok(res)
     }
 
@@ -248,7 +306,7 @@ impl TokenStore {
                 match e.downcast_ref::<GcsError>() {
                     Some(GcsError::NeedNewAccessToken) => {
                         match &self.refresh_token {
-                            Some(_) => {
+                            RefreshAccessType::Exec(_) | RefreshAccessType::RefreshToken(_) => {
                                 // Refresh the access token and make one extra try.
                                 self.refresh_access_token(&https_client)
                                     .await
@@ -257,7 +315,7 @@ impl TokenStore {
                                     .await
                                     .context("attempting list")?
                             }
-                            None => {
+                            RefreshAccessType::NoAuth => {
                                 // With no refresh token, there's no option to retry.
                                 bail!(
                                     "Access to gs://{}/{} requires authorization. Error {:?}",
@@ -350,8 +408,8 @@ impl fmt::Debug for TokenStore {
         f.debug_struct("TokenStore")
             .field("api_base", &self.api_base)
             .field("storage_base", &self.storage_base)
-            .field("refresh_token", &self.refresh_token.as_ref().map(|_| ".."))
-            .field("access_token", &"..")
+            .field("refresh_token", &self.refresh_token)
+            .field("access_token", &"<hidden>")
             .finish()
     }
 }
@@ -370,7 +428,10 @@ impl fmt::Debug for TokenStore {
 ///
 /// Alert: The refresh token is considered a private secret for the user. Do
 ///        not print the token to a log or otherwise disclose it.
-pub fn read_boto_refresh_token<P: AsRef<Path>>(boto_path: P) -> Result<Option<String>> {
+pub fn read_boto_refresh_token<P>(boto_path: P) -> Result<RefreshAccessType>
+where
+    P: AsRef<Path> + std::fmt::Debug,
+{
     // Read the file at `boto_path` to retrieve a value from a line resembling
     // "gs_oauth2_refresh_token = <string_of_chars>".
     static GS_REFRESH_TOKEN_RE: OnceCell<Regex> = OnceCell::new();
@@ -378,10 +439,15 @@ pub fn read_boto_refresh_token<P: AsRef<Path>>(boto_path: P) -> Result<Option<St
         .get_or_init(|| Regex::new(r#"\n\s*gs_oauth2_refresh_token\s*=\s*(\S+)"#).expect("regex"));
     let data = fs::read_to_string(boto_path.as_ref()).context("read_to_string boto_path")?;
     let refresh_token = match re.captures(&data) {
-        Some(found) => Some(found.get(1).expect("found at least one").as_str().to_string()),
-        None => None,
+        Some(found) => found.get(1).expect("found at least one").as_str().to_string(),
+        None => bail!(
+            "A gs_oauth2_refresh_token entry was not found in {:?}. \
+            Please check that the file is writable, that there's available \
+            disk space, and authenticate again",
+            boto_path
+        ),
     };
-    Ok(refresh_token)
+    Ok(RefreshAccessType::RefreshToken(refresh_token))
 }
 
 /// Overwrite the 'gs_oauth2_refresh_token' in the file at `boto_path`.
@@ -413,7 +479,7 @@ pub fn write_boto_refresh_token<P: AsRef<Path>>(boto_path: P, token: &str) -> Re
         let re = GS_UPDATE_REFRESH_TOKEN_RE.get_or_init(|| {
             Regex::new(r#"(\n\s*gs_oauth2_refresh_token\s*=\s*)\S*"#).expect("regex")
         });
-        let data = fs::read_to_string(boto_path).context("read boto refresh")?;
+        let data = fs::read_to_string(boto_path).context("replace boto refresh")?;
         re.replace(&data, format!("${{1}}{}", token).as_str()).to_string()
     };
     fs::write(boto_path, data).context("Writing .boto file")?;
@@ -427,7 +493,7 @@ mod test {
     #[should_panic(expected = "Connection refused")]
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fake_download() {
-        let token_store = TokenStore::local_fake(/*refresh_token=*/ None);
+        let token_store = TokenStore::local_fake(RefreshAccessType::NoAuth);
         let bucket = "fake_bucket";
         let object = "fake/object/path.txt";
         token_store.download(&new_https_client(), bucket, object).await.expect("client download");
@@ -458,14 +524,12 @@ mod test {
         // Test with no .boto file.
         write_boto_refresh_token(&boto_path, "first-token").expect("write token");
         assert!(boto_path.is_file());
-        let refresh_token =
-            read_boto_refresh_token(&boto_path).expect("boto").expect("first token");
-        assert_eq!(refresh_token, "first-token");
+        let refresh_token = read_boto_refresh_token(&boto_path).expect("first token");
+        assert_eq!(refresh_token, RefreshAccessType::RefreshToken("first-token".to_string()));
         // Test updating existing .boto file.
         write_boto_refresh_token(&boto_path, "second-token").expect("write token");
-        let refresh_token =
-            read_boto_refresh_token(&boto_path).expect("boto").expect("second token");
-        assert_eq!(refresh_token, "second-token");
+        let refresh_token = read_boto_refresh_token(&boto_path).expect("second token");
+        assert_eq!(refresh_token, RefreshAccessType::RefreshToken("second-token".to_string()));
     }
 
     // This test is marked "ignore" because it actually downloads from GCS,
@@ -477,8 +541,7 @@ mod test {
     async fn test_gcs_download_auth() {
         use home::home_dir;
         let boto_path = Path::new(&home_dir().expect("home dir")).join(".boto");
-        let refresh_token =
-            read_boto_refresh_token(&boto_path).expect("boto file").expect("refresh token");
+        let refresh_token = read_boto_refresh_token(&boto_path).expect("refresh token");
         let token_store = TokenStore::new_with_auth(refresh_token, /*access_token=*/ None)
             .expect("new with auth");
         let https = new_https_client();
@@ -498,8 +561,7 @@ mod test {
     async fn test_gcs_exits() {
         use home::home_dir;
         let boto_path = Path::new(&home_dir().expect("home dir")).join(".boto");
-        let refresh_token =
-            read_boto_refresh_token(&boto_path).expect("boto file").expect("refresh token");
+        let refresh_token = read_boto_refresh_token(&boto_path).expect("refresh token");
         let token_store = TokenStore::new_with_auth(refresh_token, /*access_token=*/ None)
             .expect("new with auth");
         let https = new_https_client();

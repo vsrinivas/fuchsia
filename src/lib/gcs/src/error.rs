@@ -32,8 +32,19 @@ pub enum GcsError {
     MissingAuthCode,
 
     /// Likely a mistake in the calling application.
-    #[error("A GCS refresh token is required to gain a new access token. Report as a bug.")]
+    #[error(
+        "A GCS refresh token is required to gain a new access token. \
+        Report as a bug."
+    )]
     MissingRefreshToken,
+
+    /// The user should check that the path passed in is a file that can be
+    /// executed.
+    #[error(
+        "The executable passed in with the --auth exec: arg is invalid. \
+        Please check the file and try again."
+    )]
+    AccessTokenExecInvalid,
 
     /// May be a network issue. Consider informing the user and offer to retry.
     #[error(
@@ -57,4 +68,8 @@ pub enum GcsError {
     /// changed. May need to update GCS lib.
     #[error("GCS SerdeError: {0}. Report as a bug.")]
     SerdeError(#[from] serde_json::Error),
+
+    /// Problem executing a subprocess command, file IO, etc.
+    #[error("GCS IoError: {0}. Report as a bug.")]
+    IoError(#[from] std::io::Error),
 }

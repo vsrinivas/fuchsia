@@ -52,19 +52,20 @@ mod repo_info;
 pub mod transfer_manifest;
 
 /// Select an Oauth2 authorization flow.
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum AuthFlowChoice {
     Default,
     Device,
+    Exec(PathBuf),
     Oob,
     Pkce,
 }
 
 /// Convert common cli switches to AuthFlowChoice.
-pub fn select_auth(oob_auth: bool, auth_flow: AuthFlowChoice) -> AuthFlowChoice {
+pub fn select_auth(oob_auth: bool, auth_flow: &AuthFlowChoice) -> &AuthFlowChoice {
     if oob_auth {
         eprintln!("\n\nPlease use `--auth oob` rather than `--oob-auth`\n\n");
-        AuthFlowChoice::Oob
+        &AuthFlowChoice::Oob
     } else {
         auth_flow
     }
@@ -80,9 +81,17 @@ impl FromStr for AuthFlowChoice {
             "device-experimental" => Ok(AuthFlowChoice::Device),
             "oob" => Ok(AuthFlowChoice::Oob),
             "pkce" => Ok(AuthFlowChoice::Pkce),
-            _ => Err("Unknown auth flow choice. Use one of oob, \
-                    device-experimental, pkce, or default."
-                .to_string()),
+            exec => {
+                let path = Path::new(exec);
+                if path.is_file() {
+                    Ok(AuthFlowChoice::Exec(path.to_path_buf()))
+                } else {
+                    Err("Unknown auth flow choice. Use one of oob, \
+                        device-experimental, pkce, default, or a path to an \
+                        executable which prints an access token to stdout."
+                        .to_string())
+                }
+            }
         }
     }
 }
@@ -125,7 +134,7 @@ pub async fn load_product_bundle(
 /// For each non-local URL in ffx CONFIG_METADATA, fetch updated info.
 pub async fn update_metadata_all<I>(
     output_dir: &Path,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     ui: &mut I,
 ) -> Result<()>
 where
@@ -156,7 +165,7 @@ where
 pub async fn update_metadata_from<I>(
     product_url: &url::Url,
     output_dir: &Path,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     ui: &mut I,
 ) -> Result<()>
 where
@@ -166,7 +175,7 @@ where
     fetch_product_metadata(
         &product_url,
         output_dir,
-        auth_flow,
+        &auth_flow,
         &mut |_d, _f| Ok(ProgressResponse::Continue),
         ui,
     )
@@ -400,7 +409,7 @@ pub async fn is_pb_ready(product_url: &url::Url) -> Result<bool> {
 pub async fn get_product_data<I>(
     product_url: &url::Url,
     output_dir: &std::path::Path,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     ui: &mut I,
 ) -> Result<bool>
 where
@@ -573,7 +582,9 @@ mod tests {
         let mut output = Vec::new();
         let mut err_out = Vec::new();
         let mut ui = structured_ui::TextUi::new(&mut input, &mut output, &mut err_out);
-        update_metadata_all(&output_dir, AuthFlowChoice::Default, &mut ui).await.expect("get pbms");
+        update_metadata_all(&output_dir, &AuthFlowChoice::Default, &mut ui)
+            .await
+            .expect("get pbms");
         let urls = product_bundle_urls().await.expect("get pbms");
         assert!(!urls.is_empty());
     }

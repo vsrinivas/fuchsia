@@ -276,7 +276,10 @@ impl Client {
         W: Write + Sync,
         F: Fn(FileProgress<'_>) -> ProgressResult,
     {
-        let mut res = self.stream(bucket, object).await?;
+        let mut res = self
+            .stream(bucket, object)
+            .await
+            .with_context(|| format!("gcs streaming from {:?} {:?}", bucket, object))?;
         if res.status() == StatusCode::OK {
             let mut at: u64 = 0;
             let length = if res.headers().contains_key(CONTENT_LENGTH) {
@@ -285,14 +288,14 @@ impl Client {
                     .context("getting content length")?
                     .to_str()?
                     .parse::<u64>()
-                    .context("parsing content length")?
+                    .context("parsing content length as u64")?
             } else if res.headers().contains_key("x-goog-stored-content-length") {
                 // The size of gzipped files is a guess.
                 res.headers()["x-goog-stored-content-length"]
                     .to_str()
-                    .context("getting content length")?
+                    .context("getting x-goog content length as str")?
                     .parse::<u64>()
-                    .context("parsing content length")?
+                    .context("parsing x-goog content length as u64")?
                     * 3
             } else {
                 println!("missing content-length in {}: res.headers() {:?}", object, res.headers());
@@ -357,8 +360,7 @@ mod test {
         // Set up authorized client.
         use home::home_dir;
         let boto_path = Path::new(&home_dir().expect("home dir")).join(".boto");
-        let refresh =
-            read_boto_refresh_token(&boto_path).expect("boto file").expect("refresh token");
+        let refresh = read_boto_refresh_token(&boto_path).expect("refresh token");
         let auth =
             TokenStore::new_with_auth(refresh, /*access_token=*/ None).expect("new with auth");
         let client_factory = ClientFactory::new(auth);

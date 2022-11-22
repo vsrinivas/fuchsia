@@ -40,7 +40,7 @@ pub(crate) async fn fetch_package_repository_from_mirrors<F, I>(
     product_url: &url::Url,
     local_dir: &Path,
     packages: &[PackageBundle],
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -78,7 +78,7 @@ async fn fetch_package_repository<F, I>(
     product_url: &url::Url,
     local_dir: &Path,
     package: &PackageBundle,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -170,7 +170,7 @@ async fn fetch_package_repository_from_files<F, I>(
     repo_keys_uri: Url,
     repo_metadata_uri: Url,
     repo_blobs_uri: Url,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -214,8 +214,8 @@ where
 
             tracing::debug!("fetch_package_repository_from_backend failed");
             let boto_path = get_boto_path(auth_flow, ui).await?;
-            let client =
-                get_gcs_client_with_auth(&boto_path).context("get_gcs_client_with_auth")?;
+            let client = get_gcs_client_with_auth(auth_flow, &boto_path)
+                .context("get_gcs_client_with_auth")?;
 
             let backend = Box::new(GcsRepository::new(
                 client,
@@ -276,7 +276,7 @@ async fn fetch_package_repository_from_backend<'a, F, I>(
     repo_blobs_uri: Url,
     backend: Box<dyn RepoProvider>,
     metadata_current_time: DateTime<Utc>,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &'a AuthFlowChoice,
     progress: &'a F,
     ui: &'a I,
 ) -> Result<()>
@@ -431,7 +431,7 @@ where
 async fn fetch_package_repository_from_tgz<F, I>(
     local_dir: &Path,
     repo_uri: Url,
-    auth_flow: AuthFlowChoice,
+    auth_flow: &AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -582,7 +582,7 @@ mod tests {
             blobs_url,
             Box::new(remote_repo),
             metadata_current_time,
-            AuthFlowChoice::Default,
+            &AuthFlowChoice::Default,
             &|_, _| Ok(ProgressResponse::Continue),
             &ui,
         )

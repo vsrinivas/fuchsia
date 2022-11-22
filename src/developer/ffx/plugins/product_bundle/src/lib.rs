@@ -272,7 +272,7 @@ where
     tracing::debug!("pb_list");
     if !cmd.cached {
         let storage_dir = pbms::get_storage_dir().await?;
-        update_metadata_all(&storage_dir, select_auth(cmd.oob_auth, cmd.auth), ui).await?;
+        update_metadata_all(&storage_dir, select_auth(cmd.oob_auth, &cmd.auth), ui).await?;
     }
     let mut entries = product_bundle_urls().await.context("list pbms")?;
     if entries.is_empty() {
@@ -479,7 +479,7 @@ where
         }
     }
 
-    get_product_data(&product_url, &output_dir, select_auth(cmd.oob_auth, cmd.auth), ui).await
+    get_product_data(&product_url, &output_dir, select_auth(cmd.oob_auth, &cmd.auth), ui).await
 }
 
 /// Sets up a package server repository for the product bundle being downloaded. This is
@@ -518,7 +518,7 @@ where
 {
     if !cmd.cached {
         let base_dir = pbms::get_storage_dir().await?;
-        update_metadata_all(&base_dir, select_auth(cmd.oob_auth, cmd.auth), ui).await?;
+        update_metadata_all(&base_dir, select_auth(cmd.oob_auth, &cmd.auth), ui).await?;
     }
     let should_print = true;
     select_product_bundle(&cmd.product_bundle_name, ListingMode::GetableBundles, should_print).await
