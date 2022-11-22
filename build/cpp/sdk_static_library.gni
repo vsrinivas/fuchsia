@@ -56,7 +56,6 @@ set_defaults("sdk_static_library") {
 
 template("sdk_static_library") {
   assert(defined(invoker.category), "Must define an SDK category")
-  not_needed(invoker, [ "private_headers" ])
 
   output_name = target_name
   if (defined(invoker.output_name)) {
@@ -115,6 +114,7 @@ template("sdk_static_library") {
                              "api",
                              "category",
                              "include_base",
+                             "private_headers",
                              "runtime_deps",
                              "sdk_name",
                            ])
@@ -256,6 +256,8 @@ template("sdk_static_library") {
                              ])
       file_base = file_base
     }
+  } else {
+    not_needed(invoker, [ "private_headers" ])
   }
 
   metadata_file = "$target_gen_dir/$metadata_target_name.sdk_meta.json"

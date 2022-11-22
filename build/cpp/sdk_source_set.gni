@@ -56,9 +56,6 @@ template("sdk_source_set") {
   assert(invoker.category == "internal" || defined(invoker.sdk_name),
          "Non-internal sdk_source_set must define an SDK name")
 
-  not_needed(invoker, [ "private_headers" ])  # Avoid GN error as not all code
-                                              # paths use this parameter.
-
   if (defined(invoker.sdk_name)) {
     sdk_name = invoker.sdk_name
     sdk_root_path = "pkg/${sdk_name}"
@@ -103,6 +100,7 @@ template("sdk_source_set") {
                              "include_base",
                              "metadata",
                              "non_sdk_deps",
+                             "private_headers",
                              "source_dir",
                            ])
 
@@ -235,6 +233,8 @@ template("sdk_source_set") {
                              ])
       file_base = sdk_root_path
     }
+  } else {
+    not_needed(invoker, [ "private_headers" ])
   }
 
   metadata_target_name = "${target_name}_sdk_metadata"

@@ -67,9 +67,6 @@ set_defaults("sdk_shared_library") {
 template("sdk_shared_library") {
   assert(defined(invoker.category), "Must define an SDK category")
 
-  # Not all code paths use this option.
-  not_needed(invoker, [ "private_headers" ])
-
   output_name = target_name
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
@@ -114,6 +111,7 @@ template("sdk_shared_library") {
                              "category",
                              "include_base",
                              "no_headers",
+                             "private_headers",
                              "runtime_deps",
                              "sdk_name",
                              "symbols_api",
@@ -275,7 +273,10 @@ template("sdk_shared_library") {
       file_base = file_base
     }
   } else {
-    not_needed([ "all_deps" ])
+    not_needed([
+                 "all_deps",
+                 "private_headers",
+               ])
   }
 
   metadata_file = "$target_gen_dir/$metadata_target_name.sdk_meta.json"
