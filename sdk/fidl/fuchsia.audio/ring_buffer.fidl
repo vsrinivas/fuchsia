@@ -5,6 +5,7 @@
 library fuchsia.audio;
 
 using zx;
+using fuchsia.mem;
 
 /// A ring buffer of audio data.
 ///
@@ -77,34 +78,10 @@ using zx;
 /// the producer and consumer, where the maximum batch sizes are limited by the
 /// ring buffer size.
 ///
-/// ## Computing `SafeWritePos`
+/// ## Defining `SafeWritePos`
 ///
-/// By convention, we define `SafeWritePos` as follows:
-///
-/// ```
-/// SafeWritePos(T) = (RefTimeToPresentationTime(T) - PresentationOffset).nsec()
-///                 * FramesPerNs
-/// ```
-///
-/// This defines `SafeWritePos` as a function of the current *presentation
-/// timeline*. The presentation timeline is identical to ring buffer frame
-/// numbers, as described earlier, except in units time instead of units frames:
-/// frame number 0 corresponds to time 0 on the presentation timeline, frame 1
-/// corresponds to time `NsPerFrame`, and so on.
-///
-/// When the presentation timeline is established, we are given a function
-/// `RefTimeToPresentationTime(T)` which translates a reference time T to a
-/// presentation time TP. It is called the "presentation" timeline because T is
-/// the time at which TP's frame is "presented" at a hardware device. For output
-/// pipelines, this is the time the frame is played at the speaker. For input
-/// pipelines, this is the time the frame is heard by a microphone.
-///
-/// The `PresentationOffset` is defined as a field of this `RingBuffer` type.
-///
-/// TODO(fxbug.dev/114907): If the ring buffer is used by a client as part of an
-/// output pipeline, the presentation offset (aka "lead time") is variable as it
-/// depends on where the audio stream gets routed, which may change over time.
-/// It's unclear how this should be supported.
+/// The definition of `SafeWritePos` (and, implicitly, `SafeReadPos`) must be
+/// provided out-of-band.
 ///
 /// ## Non-PCM Data
 ///
@@ -112,20 +89,11 @@ using zx;
 /// expressed as "byte offsets" instead of "frame numbers", where the infinite
 /// sequence starts at byte offset 0.
 type RingBuffer = resource table {
-    /// The buffer starts at the first byte in the VMO. The sum of producer_bytes and
-    /// consumer_bytes must be <= the VMO's ZX_PROP_VMO_CONTENT_SIZE.
-    ///
-    /// For PCM data, the VMO's CONTENT_SIZE must be an integer multiple of the number
-    /// of bytes-per-PCM-frame.
-    ///
-    /// For non-PCM data, there are no constraints. For constant bitrate encodings,
-    /// and for variable bitrate encodings with a maximum chunk size, the ring buffer
-    /// should usually be large enough to include at least two chunks of data (one for
-    /// the producer and one for the consumer), however this is not required.
-    /// Individual encodings may impose additional requirements.
+    /// The actual ring buffer. The sum of `producer_bytes` and `consumer_bytes`
+    /// must be <= `buffer.size`.
     ///
     /// Required.
-    1: vmo zx.handle:VMO;
+    1: buffer fuchsia.mem.Buffer;
 
     /// Encoding of audio data in the buffer.
     /// Required.
@@ -133,8 +101,8 @@ type RingBuffer = resource table {
 
     /// The number of bytes allocated to the producer.
     ///
-    /// For PCM encodings, P = producer_bytes / BytesPerFrame(encoding), where
-    /// P must be integral.
+    /// For PCM encodings, `P = producer_bytes / BytesPerFrame(format)`, where P
+    /// must be integral.
     ///
     /// For non-PCM encodings, there are no constraints, however individual encodings
     /// may impose stricter requirements.
@@ -144,8 +112,8 @@ type RingBuffer = resource table {
 
     /// The number of bytes allocated to the consumer.
     ///
-    /// For PCM encodings, C = consumer_bytes / BytesPerFrame(encoding), where
-    /// C must be integral.
+    /// For PCM encodings, `C = consumer_bytes / BytesPerFrame(format)`, where C
+    /// must be integral.
     ///
     /// For non-PCM encodings, there are no constraints, however individual encodings
     /// may impose stricter requirements.
@@ -164,19 +132,4 @@ type RingBuffer = resource table {
     ///
     /// Optional. If not specified, defaults to CLOCK_DOMAIN_EXTERNAL.
     6: reference_clock_domain uint32;
-
-    /// Offset between time T and the time when the frame at SafeWritePos(T) is
-    /// actually presented at an external device.
-    ///
-    /// For output pipelines, this number is positive: after the consumer reads a
-    /// frame from the ring buffer, it may perform some processing before presenting
-    /// that frame at an output device (e.g. speaker).
-    ///
-    /// For input pipelines, this number is negative: after the producer obtains a
-    /// frame from an input device (e.g. microphone), it may perform some processing
-    /// before writing the frame to the ring buffer.
-    ///
-    /// The presentation offset is unlikely to be zero because that would imply
-    /// instantaneous presentation.
-    7: presentation_offset zx.duration;
 };

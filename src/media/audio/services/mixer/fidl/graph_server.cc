@@ -119,7 +119,8 @@ ValidateStreamSink(std::string_view debug_description, std::string_view node_nam
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
   }
 
-  auto payload_buffer_result = MemoryMappedBuffer::Create(stream_sink.payload_buffer(), writable);
+  auto payload_buffer_result =
+      MemoryMappedBuffer::CreateWithFullSize(stream_sink.payload_buffer(), writable);
   if (!payload_buffer_result.is_ok()) {
     FX_LOGS(WARNING) << debug_description
                      << ": invalid stream sink payload buffer: " << payload_buffer_result.error();
@@ -163,10 +164,10 @@ fpromise::result<RingBufferInfo, fuchsia_audio_mixer::CreateNodeError>  //
 ValidateRingBuffer(std::string_view debug_description, std::string_view node_name,
                    ClockRegistry& clock_registry, ClockFactory& clock_factory,
                    fuchsia_audio::wire::RingBuffer& ring_buffer, const bool writable) {
-  if (!ring_buffer.has_vmo() || !ring_buffer.vmo().is_valid() ||  //
-      !ring_buffer.has_format() ||                                //
-      !ring_buffer.has_producer_bytes() ||                        //
-      !ring_buffer.has_consumer_bytes() ||                        //
+  if (!ring_buffer.has_buffer() || !ring_buffer.buffer().vmo.is_valid() ||  //
+      !ring_buffer.has_format() ||                                          //
+      !ring_buffer.has_producer_bytes() ||                                  //
+      !ring_buffer.has_consumer_bytes() ||                                  //
       !ring_buffer.has_reference_clock() || !ring_buffer.reference_clock().is_valid()) {
     FX_LOGS(WARNING) << debug_description << ": missing field";
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
@@ -179,7 +180,8 @@ ValidateRingBuffer(std::string_view debug_description, std::string_view node_nam
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
   }
 
-  auto mapped_buffer_result = MemoryMappedBuffer::Create(ring_buffer.vmo(), writable);
+  auto mapped_buffer_result =
+      MemoryMappedBuffer::Create(ring_buffer.buffer().vmo, ring_buffer.buffer().size, writable);
   if (!mapped_buffer_result.is_ok()) {
     FX_LOGS(WARNING) << debug_description
                      << ": invalid ring buffer vmo: " << mapped_buffer_result.error();
@@ -191,18 +193,18 @@ ValidateRingBuffer(std::string_view debug_description, std::string_view node_nam
 
   if (ring_buffer.producer_bytes() % format.bytes_per_frame() != 0 ||
       ring_buffer.consumer_bytes() % format.bytes_per_frame() != 0 ||
-      ring_buffer.producer_bytes() + ring_buffer.consumer_bytes() > mapped_buffer->content_size()) {
+      ring_buffer.producer_bytes() + ring_buffer.consumer_bytes() > mapped_buffer->size()) {
     FX_LOGS(WARNING) << debug_description << ": invalid ring buffer partition:"
                      << " producer_bytes=" << ring_buffer.producer_bytes()
                      << ", consumer_bytes=" << ring_buffer.consumer_bytes()
-                     << ", content_size=" << mapped_buffer->content_size()
+                     << ", buffer_bytes=" << mapped_buffer->size()
                      << ", bytes_per_frame=" << format.bytes_per_frame();
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
   }
 
-  if (format.bytes_per_frame() > static_cast<int64_t>(mapped_buffer->content_size())) {
-    FX_LOGS(WARNING) << debug_description << ": ring buffer too small for format, content_size="
-                     << mapped_buffer->content_size();
+  if (format.bytes_per_frame() > static_cast<int64_t>(mapped_buffer->size())) {
+    FX_LOGS(WARNING) << debug_description << ": ring buffer too small for format, buffer_bytes="
+                     << mapped_buffer->size();
     return fpromise::error(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
   }
 
@@ -627,7 +629,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     const int64_t frames_per_mix_period = dest_format->integer_frames_per(
         mix_thread->mix_period(), media::TimelineRate::RoundingMode::Floor);
     const int64_t frames_per_payload_buffer =
-        static_cast<int64_t>(result.value().payload_buffer->content_size()) /
+        static_cast<int64_t>(result.value().payload_buffer->size()) /
         dest_format->bytes_per_frame();
     if (frames_per_payload_buffer <= 0) {
       FX_LOGS(WARNING) << "CreateConsumer: invalid field `payload_buffer`";

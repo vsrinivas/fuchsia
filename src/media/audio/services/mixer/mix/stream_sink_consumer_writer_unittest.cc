@@ -66,15 +66,7 @@ TestHarness MakeTestHarness(TimelineRate media_ticks_per_ns = kFormat.frames_per
       .call_end = [&h]() mutable { h.end_calls.push_back(h.last_payload_offset); },
       .recycled_packet_queue = h.recycled_packet_queue,
   });
-
-  zx::vmo vmo;
-  if (auto status = zx::vmo::create(kFramesPerBuffer * kBytesPerFrame, 0, &vmo); status != ZX_OK) {
-    FX_PLOGS(FATAL, status) << "zx::vmo::create failed";
-  }
-
-  auto buffer_result = MemoryMappedBuffer::Create(std::move(vmo), /*writable=*/true);
-  FX_CHECK(buffer_result.is_ok()) << buffer_result.error();
-  h.buffer = std::move(buffer_result.value());
+  h.buffer = MemoryMappedBuffer::CreateOrDie(kFramesPerBuffer * kBytesPerFrame, /*writable=*/true);
   return h;
 }
 

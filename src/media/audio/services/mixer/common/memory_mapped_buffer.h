@@ -14,12 +14,18 @@ namespace media_audio {
 
 // A simple wrapper around a VMO that is used as a payload buffer for audio data. Typically there
 // are many packets per buffer. The buffer should be `writable` iff the buffer will be written by
-// the mixer service, such as when producing captured audio.
+// the mixer service, such as when producing captured audio. The buffer may be DISCARDABLE but
+// cannot be RESIZABLE.
 class MemoryMappedBuffer {
  public:
   // Creates a MemoryMappedBuffer from the given object, which must be a valid, readable,
-  // non-resizable, and mappable VMO, and if `writable`, the VMO must be writable.
+  // non-resizable, and mappable VMO, and if `writable`, the VMO must be writable. The
+  // `size` must fit within the VMO.
   static fpromise::result<std::shared_ptr<MemoryMappedBuffer>, std::string> Create(
+      const zx::vmo& vmo, size_t size, bool writable);
+
+  // Like Create, but sets `size` to the full size of the VMO.
+  static fpromise::result<std::shared_ptr<MemoryMappedBuffer>, std::string> CreateWithFullSize(
       const zx::vmo& vmo, bool writable);
 
   // Creates a MemoryMappedBuffer with the given size, crashing if the buffer cannot be created.
@@ -36,16 +42,12 @@ class MemoryMappedBuffer {
     return static_cast<char*>(start()) + bytes_from_start;
   }
 
-  // Returns the size of the buffer in bytes.
-  size_t size() const { return mapper_.size(); }
-
-  // Returns the ZX_PROP_VMO_CONTENT_SIZE of the buffer, in bytes, recorded at the time this
-  // MemoryMappedBuffer was created.
-  size_t content_size() const { return content_size_; }
+  // Returns the size of the buffer.
+  size_t size() const { return size_; }
 
  private:
-  MemoryMappedBuffer(fzl::VmoMapper mapper, size_t content_size)
-      : mapper_(std::move(mapper)), content_size_(content_size) {}
+  MemoryMappedBuffer(fzl::VmoMapper mapper, size_t size)
+      : mapper_(std::move(mapper)), size_(size) {}
 
   MemoryMappedBuffer(const MemoryMappedBuffer&) = delete;
   MemoryMappedBuffer& operator=(const MemoryMappedBuffer&) = delete;
@@ -53,7 +55,7 @@ class MemoryMappedBuffer {
   MemoryMappedBuffer& operator=(MemoryMappedBuffer&&) = delete;
 
   const fzl::VmoMapper mapper_;
-  const size_t content_size_;
+  const size_t size_;
 };
 
 }  // namespace media_audio

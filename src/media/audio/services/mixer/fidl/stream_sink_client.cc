@@ -22,7 +22,7 @@ StreamSinkClient::StreamSinkClient(Args args)
   // `payload_buffers_` is a map instead of an unordered_map so that this loop is deterministic.
   // Since we never lookup a buffer by id, there's no benefit to using an unordered_map.
   for (auto& [id, buffer] : payload_buffers_) {
-    const size_t packet_count = buffer->content_size() / bytes_per_packet;
+    const size_t packet_count = buffer->size() / bytes_per_packet;
     FX_CHECK(packet_count > 0);
 
     for (size_t k = 0; k < packet_count; k++) {

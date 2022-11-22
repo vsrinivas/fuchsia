@@ -107,6 +107,14 @@ zx::vmo MakeInvalidVmo(size_t size = 1024) {
   return vmo;
 }
 
+fuchsia_mem::wire::Buffer MakeFuchsiaMemBuffer(size_t size = 1024) {
+  return {.vmo = MakeVmo(size), .size = size};
+}
+
+fuchsia_mem::wire::Buffer MakeInvalidFuchsiaMemBuffer(size_t size = 1024) {
+  return {.vmo = MakeInvalidVmo(size), .size = size};
+}
+
 fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkProducer> MakeDefaultStreamSinkProducer(
     fidl::AnyArena& arena) {
   auto [stream_sink_client, stream_sink_server] =
@@ -137,7 +145,7 @@ fidl::WireTableBuilder<fuchsia_audio::wire::RingBuffer> MakeDefaultRingBuffer(
     fidl::AnyArena& arena) {
   auto bytes = kFormat.bytes_per(4 * kDefaultMixPeriod);
   auto builder = fuchsia_audio::wire::RingBuffer::Builder(arena);
-  builder.vmo(MakeVmo(bytes));
+  builder.buffer(MakeFuchsiaMemBuffer(bytes));
   builder.format(kFormat.ToWireFidl(arena));
   builder.producer_bytes(bytes / 2);
   builder.consumer_bytes(bytes / 2);
@@ -495,8 +503,8 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
   };
   std::vector<TestCase> cases = {
       {
-          .name = "MissingVmo",
-          .edit = [](auto ring_buffer) { ring_buffer.clear_vmo(); },
+          .name = "MissingBuffer",
+          .edit = [](auto ring_buffer) { ring_buffer.clear_buffer(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
@@ -526,7 +534,7 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
       },
       {
           .name = "InvalidVmo",
-          .edit = [](auto ring_buffer) { ring_buffer.vmo(MakeInvalidVmo()); },
+          .edit = [](auto ring_buffer) { ring_buffer.buffer(MakeInvalidFuchsiaMemBuffer()); },
           .expected_error = CreateNodeError::kInvalidParameter,
       },
       {
@@ -545,7 +553,7 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
           .name = "ProducerPlusConsumerBytesTooBig",
           .edit =
               [](auto ring_buffer) {
-                ring_buffer.vmo(MakeVmo(1024));
+                ring_buffer.buffer(MakeFuchsiaMemBuffer(1024));
                 ring_buffer.producer_bytes(512);
                 ring_buffer.consumer_bytes(513);
               },
@@ -553,7 +561,10 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
       },
       {
           .name = "VmoTooSmall",
-          .edit = [](auto ring_buffer) { ring_buffer.vmo(MakeVmo(kFormat.bytes_per_frame() - 1)); },
+          .edit =
+              [](auto ring_buffer) {
+                ring_buffer.buffer(MakeFuchsiaMemBuffer(kFormat.bytes_per_frame() - 1));
+              },
           .expected_error = CreateNodeError::kInvalidParameter,
       },
   };

@@ -41,7 +41,7 @@ const fbl::RefPtr<fzl::VmarManager>* const vmar_manager = CreateVmarManager();
 
 // static
 fpromise::result<std::shared_ptr<MemoryMappedBuffer>, std::string> MemoryMappedBuffer::Create(
-    const zx::vmo& vmo, bool writable) {
+    const zx::vmo& vmo, const size_t size, const bool writable) {
   // Since this class does not support dynamic size changes, the VMO cannot be resizable.
   zx_info_vmo_t info;
   if (auto status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
@@ -52,8 +52,13 @@ fpromise::result<std::shared_ptr<MemoryMappedBuffer>, std::string> MemoryMappedB
     return fpromise::error("vmo is resizable");
   }
 
-  // The VMO must allow mapping with appropriate permissions and determining the CONTENT_SIZE.
-  zx_rights_t expected_rights = ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
+  if (size > info.size_bytes) {
+    return fpromise::error("requested size (" + std::to_string(size) + ") > vmo size (" +
+                           std::to_string(info.size_bytes) + ")");
+  }
+
+  // The VMO must allow mapping with appropriate permissions.
+  zx_rights_t expected_rights = ZX_RIGHT_READ | ZX_RIGHT_MAP;
   if (writable) {
     expected_rights |= ZX_RIGHT_WRITE;
   }
@@ -62,13 +67,6 @@ fpromise::result<std::shared_ptr<MemoryMappedBuffer>, std::string> MemoryMappedB
     err << "invalid rights=" << std::hex << info.handle_rights
         << ", expected rights=" << expected_rights;
     return fpromise::error(err.str());
-  }
-
-  uint64_t content_size;
-  if (auto status = vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
-      status != ZX_OK) {
-    return fpromise::error("vmo.get_property(CONTENT_SIZE) failed with status=" +
-                           std::to_string(status));
   }
 
   // If the VMO is discardable, lock it to ensure the pages are not reclaimed until they are
@@ -110,10 +108,21 @@ fpromise::result<std::shared_ptr<MemoryMappedBuffer>, std::string> MemoryMappedB
 
   struct WithPublicCtor : public MemoryMappedBuffer {
    public:
-    WithPublicCtor(fzl::VmoMapper mapper, size_t content_size)
-        : MemoryMappedBuffer(std::move(mapper), content_size) {}
+    WithPublicCtor(fzl::VmoMapper mapper, size_t size)
+        : MemoryMappedBuffer(std::move(mapper), size) {}
   };
-  return fpromise::ok(std::make_shared<WithPublicCtor>(std::move(mapper), content_size));
+  return fpromise::ok(std::make_shared<WithPublicCtor>(std::move(mapper), size));
+}
+
+// static
+fpromise::result<std::shared_ptr<MemoryMappedBuffer>, std::string>
+MemoryMappedBuffer::CreateWithFullSize(const zx::vmo& vmo, bool writable) {
+  zx_info_vmo_t info;
+  if (auto status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
+      status != ZX_OK) {
+    return fpromise::error("vmo.get_info failed with status=" + std::to_string(status));
+  }
+  return Create(vmo, info.size_bytes, writable);
 }
 
 // static
@@ -123,7 +132,7 @@ std::shared_ptr<MemoryMappedBuffer> MemoryMappedBuffer::CreateOrDie(size_t size,
     FX_PLOGS(FATAL, status) << "zx::vmo::create failed";
   }
 
-  auto buffer_result = Create(vmo, writable);
+  auto buffer_result = Create(vmo, size, writable);
   FX_CHECK(buffer_result.is_ok()) << "MemoryMappedBuffer::Create failed: " << buffer_result.error();
   return buffer_result.value();
 }

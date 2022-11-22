@@ -91,7 +91,7 @@ void RingBuffer::SetBufferAsync(std::shared_ptr<MemoryMappedBuffer> new_buffer) 
 }
 
 int64_t RingBuffer::TotalFramesForBuffer(const MemoryMappedBuffer& buffer) const {
-  return buffer.content_size() / format_.bytes_per_frame();
+  return buffer.size() / format_.bytes_per_frame();
 }
 
 PacketView RingBuffer::PacketForRange(const MemoryMappedBuffer& buffer, const int64_t start_frame,
