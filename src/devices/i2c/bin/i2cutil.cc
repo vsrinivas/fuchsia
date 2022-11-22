@@ -16,6 +16,7 @@
 
 #include <fbl/unique_fd.h>
 
+// LINT.IfChange
 constexpr char kUsageSummary[] = R"""(
 Usage:
   i2cutil read <device> <address> [<address>...]
@@ -54,7 +55,7 @@ Examples:
   $ i2cutil transact 4 w 0x20 r 3
 
   Read one byte from the register at the multi-byte address `0x203D` of the
-  same I2C device as the last example:
+  I2C device represented by devfs node index `4`:
   $ i2cutil read 4 0x20 0x3D
 
   Same as the last example but represent the I2C device with a devfs node path:
@@ -65,7 +66,6 @@ Examples:
   $ i2cutil write 3 0x2C 0x12
 
   Write byte `0x121B` to the same device and register as the last example:
-  devfs node index `3`:
   $ i2cutil write 3 0x2C 0x12 0x1B
 
   Write byte `0x1B to register `0x2C12` of a different device (note that
@@ -85,6 +85,7 @@ Examples:
 Notes:
   Source code for `i2cutil`: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/devices/i2c/bin/i2cutil.cc
 )""";
+// LINT.ThenChange(//docs/reference/tools/hardware/i2cutil.md)
 
 static void usage(bool show_details) {
   printf(kUsageSummary);
