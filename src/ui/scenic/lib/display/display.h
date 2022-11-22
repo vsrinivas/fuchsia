@@ -37,6 +37,9 @@ class Display {
       zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp)>;
   void SetVsyncCallback(VsyncCallback callback) { vsync_callback_ = std::move(callback); }
 
+  using DPRCallback = fit::function<void(const glm::vec2& dpr)>;
+  void SetDPRCallback(DPRCallback callback) { dpr_callback_ = std::move(callback); }
+
   std::shared_ptr<const scheduling::VsyncTiming> vsync_timing() { return vsync_timing_; }
 
   // Claiming a display means that no other display renderer can use it.
@@ -47,6 +50,9 @@ class Display {
   // Sets the device_pixel ratio that should be used for this specific Display.
   void set_device_pixel_ratio(const glm::vec2& device_pixel_ratio) {
     device_pixel_ratio_.store(device_pixel_ratio);
+    if (dpr_callback_) {
+      dpr_callback_(device_pixel_ratio);
+    }
   }
 
   // The display's ID in the context of the DisplayManager's DisplayController.
@@ -73,6 +79,7 @@ class Display {
 
  private:
   VsyncCallback vsync_callback_;
+  DPRCallback dpr_callback_;
 
   // The maximum vsync interval we would ever expect.
   static constexpr zx::duration kMaximumVsyncInterval = zx::msec(100);

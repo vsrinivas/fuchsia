@@ -119,12 +119,13 @@ LinkSystem::LinkToParent LinkSystem::CreateLinkToParent(
       std::move(token.value),
       /* error_reporter */ nullptr);
 
+  auto initial_dpr = initial_device_pixel_ratio_.load();
   auto parent_transform_handle = std::make_shared<TransformHandle>();  // Uninitialized.
   auto topology_map_key = std::make_shared<TransformHandle>();         // Uninitialized.
   exporter.Initialize(
       /* link_resolved = */
       [ref = shared_from_this(), impl, parent_transform_handle, topology_map_key,
-       child_transform_handle, dpr = initial_device_pixel_ratio_](LinkToChildInfo info) {
+       child_transform_handle, dpr = initial_dpr](LinkToChildInfo info) {
         *parent_transform_handle = info.parent_transform_handle;
         *topology_map_key = info.internal_link_handle;
 

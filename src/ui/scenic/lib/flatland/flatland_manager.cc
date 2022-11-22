@@ -191,11 +191,16 @@ void FlatlandManager::CreateFlatlandDisplay(
       std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), flatland_presenter_,
       link_system_, uber_struct_system_->AllocateQueueForSession(id));
 
+  // Don't set DPR on the link system right away. Provide the display with a callback to set
+  // the DPR once it receives it.
+  auto dpr_callback = [this](const glm::vec2& dpr) {
+    link_system_->set_initial_device_pixel_ratio(dpr);
+  };
+  hw_display->SetDPRCallback(std::move(dpr_callback));
+
   const std::string name = "Flatland Display ID=" + std::to_string(id);
   zx_status_t status = instance->loop->loop().StartThread(name.c_str());
   FX_DCHECK(status == ZX_OK);
-
-  link_system_->set_initial_device_pixel_ratio(hw_display->device_pixel_ratio());
 
   alive_sessions_++;
 }
