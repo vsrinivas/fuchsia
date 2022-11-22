@@ -72,6 +72,34 @@ async fn data_formatted() {
     builder.with_disk();
     let fixture = builder.build().await;
 
+    fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
+    fixture.check_fs_type("data", data_fs_type()).await;
+
+    fixture.tear_down().await;
+}
+
+#[fuchsia::test]
+async fn data_formatted_with_small_initial_volume() {
+    let mut builder = new_builder();
+    builder.with_disk().data_volume_size(1);
+    let fixture = builder.build().await;
+
+    fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
+    fixture.check_fs_type("data", data_fs_type()).await;
+
+    fixture.tear_down().await;
+}
+
+#[fuchsia::test]
+async fn data_formatted_with_small_initial_volume_big_target() {
+    let mut builder = new_builder();
+    // The formatting uses the max bytes argument as the initial target to resize to. If this
+    // target is larger than the disk, the resize should still succeed.
+    builder.fshost().set_data_max_bytes(fshost_test_fixture::disk_builder::DEFAULT_DISK_SIZE * 2);
+    builder.with_disk().data_volume_size(1);
+    let fixture = builder.build().await;
+
+    fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
     fixture.check_fs_type("data", data_fs_type()).await;
 
     fixture.tear_down().await;

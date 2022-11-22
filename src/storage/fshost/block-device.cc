@@ -1020,13 +1020,10 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
     target_bytes = std::max(target_bytes, required_size);
   }
   FX_LOGS(INFO) << "Resizing data volume, target = " << target_bytes << " bytes";
-  auto result = ResizeVolume(volume_client, target_bytes, inside_zxcrypt);
-  if (result.is_error()) {
-  }
   auto actual_size = ResizeVolume(volume_client, target_bytes, inside_zxcrypt);
   if (actual_size.is_error()) {
     FX_PLOGS(ERROR, actual_size.status_value()) << "Failed to resize data volume";
-    return result.status_value();
+    return actual_size.status_value();
   }
   if (format == fs_management::kDiskFormatF2fs && *actual_size < kDefaultF2fsMinBytes) {
     FX_LOGS(ERROR) << "Only allocated " << *actual_size << " bytes but needed "

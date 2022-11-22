@@ -6,7 +6,8 @@ use {
     crate::{
         boot_args::BootArgs,
         crypt::{fxfs, zxcrypt},
-        device::Device,
+        device::{constants::DEFAULT_F2FS_MIN_BYTES, Device},
+        volume::resize_volume,
     },
     anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
@@ -195,6 +196,7 @@ impl<'a> FshostEnvironment<'a> {
         };
 
         let mut new_dev;
+        let mut inside_zxcrypt = false;
         let device = match format {
             // Fxfs never has zxcrypt underneath
             DiskFormat::Fxfs => device,
@@ -203,6 +205,7 @@ impl<'a> FshostEnvironment<'a> {
             _ if self.config.fvm_ramdisk => device,
             // Otherwise, we need to bind a zxcrypt device first.
             _ => {
+                inside_zxcrypt = true;
                 self.bind_zxcrypt(device).await?;
 
                 // Instead of waiting for the zxcrypt device to go through the watcher and then
@@ -216,6 +219,9 @@ impl<'a> FshostEnvironment<'a> {
         };
 
         let detected_format = device.content_format().await?;
+        let volume_proxy = fidl_fuchsia_hardware_block_volume::VolumeProxy::from_channel(
+            device.proxy()?.into_channel().unwrap(),
+        );
         let mut fs = fs_management::filesystem::Filesystem::from_channel(
             device.proxy()?.into_channel().unwrap().into(),
             config,
@@ -228,7 +234,7 @@ impl<'a> FshostEnvironment<'a> {
                 expected_format = ?format,
                 "Expected format not detected. Reformatting.",
             );
-            fs.format().await?;
+            self.format_data(&mut fs, volume_proxy, inside_zxcrypt).await?;
             reformatted = true;
         } else if self.config.check_filesystems {
             tracing::info!(?format, "fsck started");
@@ -245,7 +251,7 @@ impl<'a> FshostEnvironment<'a> {
                     tracing::error!(?format, "format on corruption is disabled, not continuing");
                     return Err(error);
                 }
-                fs.format().await?;
+                self.format_data(&mut fs, volume_proxy, inside_zxcrypt).await?;
                 reformatted = true;
             } else {
                 tracing::info!(?format, "fsck completed OK");
@@ -264,6 +270,68 @@ impl<'a> FshostEnvironment<'a> {
             }
             _ => Filesystem::Serving(fs.serve().await?),
         })
+    }
+
+    async fn format_data<FSC: FSConfig>(
+        &mut self,
+        fs: &mut fs_management::filesystem::Filesystem<FSC>,
+        volume_proxy: fidl_fuchsia_hardware_block_volume::VolumeProxy,
+        inside_zxcrypt: bool,
+    ) -> Result<(), Error> {
+        let format = fs.config().disk_format();
+        tracing::info!(?format, "Formatting");
+        match format {
+            DiskFormat::Fxfs => {
+                let target_bytes = self.config.data_max_bytes;
+                tracing::info!(target_bytes, "Resizing data volume");
+                let allocated_bytes = resize_volume(&volume_proxy, target_bytes, inside_zxcrypt)
+                    .await
+                    .context("format volume resize")?;
+                if allocated_bytes < target_bytes {
+                    tracing::warn!(
+                        target_bytes,
+                        allocated_bytes,
+                        "Allocated less space than desired"
+                    );
+                }
+            }
+            DiskFormat::F2fs => {
+                let target_bytes = self.config.data_max_bytes;
+                let (status, info, _) =
+                    volume_proxy.get_volume_info().await.context("volume get_info call failed")?;
+                zx::Status::ok(status).context("volume get_info returned an error")?;
+                let info = info.ok_or_else(|| anyhow!("volume get_info returned no info"))?;
+                let slice_size = info.slice_size;
+                let round_up = |val: u64, divisor: u64| ((val + (divisor - 1)) / divisor) * divisor;
+                let mut required_size = round_up(DEFAULT_F2FS_MIN_BYTES, slice_size);
+                if inside_zxcrypt {
+                    required_size += slice_size;
+                }
+
+                let target_bytes = std::cmp::max(target_bytes, required_size);
+                tracing::info!(target_bytes, "Resizing data volume");
+                let allocated_bytes = resize_volume(&volume_proxy, target_bytes, inside_zxcrypt)
+                    .await
+                    .context("format volume resize")?;
+                if allocated_bytes < DEFAULT_F2FS_MIN_BYTES {
+                    tracing::error!(
+                        minimum_bytes = DEFAULT_F2FS_MIN_BYTES,
+                        allocated_bytes,
+                        "Not enough space for f2fs"
+                    )
+                }
+                if allocated_bytes < target_bytes {
+                    tracing::warn!(
+                        target_bytes,
+                        allocated_bytes,
+                        "Allocated less space than desired"
+                    );
+                }
+            }
+            _ => (),
+        }
+
+        fs.format().await
     }
 }
 

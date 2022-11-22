@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Context, Error},
-    fidl_fuchsia_hardware_block_volume::VolumeAndNodeProxy,
+    fidl_fuchsia_hardware_block_volume::VolumeProxy,
     fuchsia_zircon as zx,
     std::cmp,
 };
@@ -17,7 +17,7 @@ const DEFAULT_VOLUME_PERCENTAGE: u64 = 10;
 const DEFAULT_VOLUME_SIZE: u64 = 24 * 1024 * 1024;
 
 pub async fn resize_volume(
-    volume_proxy: &VolumeAndNodeProxy,
+    volume_proxy: &VolumeProxy,
     target_bytes: u64,
     inside_zxcrypt: bool,
 ) -> Result<u64, Error> {
@@ -96,7 +96,7 @@ mod tests {
         anyhow::Error,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_hardware_block_volume::{
-            VolumeAndNodeMarker, VolumeAndNodeRequest, VolumeManagerInfo, VsliceRange,
+            VolumeManagerInfo, VolumeMarker, VolumeRequest, VsliceRange,
         },
         fuchsia_zircon as zx,
         futures::{pin_mut, select, FutureExt, StreamExt},
@@ -113,23 +113,23 @@ mod tests {
         assigned_slice_count: u64,
         expected_extend_slice_count: u64,
     ) -> Result<u64, Error> {
-        let (proxy, mut stream) = create_proxy_and_stream::<VolumeAndNodeMarker>().unwrap();
+        let (proxy, mut stream) = create_proxy_and_stream::<VolumeMarker>().unwrap();
         let mock_device = async {
             while let Some(request) = stream.next().await {
                 match request {
-                    Ok(VolumeAndNodeRequest::QuerySlices { responder, start_slices }) => {
+                    Ok(VolumeRequest::QuerySlices { responder, start_slices }) => {
                         let mut slices = vec![VsliceRange { allocated: false, count: 0 }; 16];
                         slices[0] = VsliceRange { allocated: true, count: RANGE_ALLOCATED };
                         let mut arr = slices.iter_mut().collect::<Vec<_>>().try_into().unwrap();
                         let count = if start_slices[0] == 1 { 1 } else { 0 };
                         responder.send(zx::sys::ZX_OK, &mut arr, count).unwrap();
                     }
-                    Ok(VolumeAndNodeRequest::Shrink { responder, start_slice, slice_count }) => {
+                    Ok(VolumeRequest::Shrink { responder, start_slice, slice_count }) => {
                         assert_eq!(start_slice, 1);
                         assert_eq!(slice_count, RANGE_ALLOCATED);
                         responder.send(zx::sys::ZX_OK).unwrap();
                     }
-                    Ok(VolumeAndNodeRequest::GetVolumeInfo { responder }) => {
+                    Ok(VolumeRequest::GetVolumeInfo { responder }) => {
                         responder
                             .send(
                                 zx::sys::ZX_OK,
@@ -144,7 +144,7 @@ mod tests {
                             )
                             .unwrap();
                     }
-                    Ok(VolumeAndNodeRequest::Extend { responder, start_slice, slice_count }) => {
+                    Ok(VolumeRequest::Extend { responder, start_slice, slice_count }) => {
                         assert_eq!(start_slice, 1);
                         assert_eq!(slice_count, expected_extend_slice_count);
                         responder.send(zx::sys::ZX_OK).unwrap();

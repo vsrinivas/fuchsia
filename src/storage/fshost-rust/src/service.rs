@@ -8,7 +8,7 @@ use {
     fidl::endpoints::{Proxy, RequestStream},
     fidl_fuchsia_fshost as fshost,
     fidl_fuchsia_hardware_block::BlockMarker,
-    fidl_fuchsia_hardware_block_volume::VolumeAndNodeMarker,
+    fidl_fuchsia_hardware_block_volume::VolumeMarker,
     fidl_fuchsia_io::OpenFlags,
     fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
     fs_management::{
@@ -139,7 +139,7 @@ async fn write_data_file(
         partition_path,
         detected_format
     );
-    let volume_proxy = connect_to_protocol_at_path::<VolumeAndNodeMarker>(&partition_path)?;
+    let volume_proxy = connect_to_protocol_at_path::<VolumeMarker>(&partition_path)?;
     let mut serving_fs = match format {
         DiskFormat::Fxfs => {
             let mut different_format = false;
