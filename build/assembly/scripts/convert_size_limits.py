@@ -40,10 +40,11 @@ class InvalidInputError(Exception):
     pass
 
 
-def convert_budget_format(component, all_manifests):
+def convert_budget_format(platform_aib_paths, component, all_manifests):
     """Converts a component budget to the new budget format.
 
   Args:
+    platform_aib_paths: list of platform AIB paths.
     component: dictionary, former size checker configuration entry.
     all_manifests: [string], list of path to packages manifests.
   Returns:
@@ -57,8 +58,8 @@ def convert_budget_format(component, all_manifests):
         "obj/build/images/fuchsia/fuchsia/repackaged",
     ]
     # And these are the assembly bundle locations that packages can be from
-    for bundle_name in ["common_minimal", "common_minimal_eng"]:
-        prefixes_for_prefixes.append("obj/bundles/assembly/" + bundle_name)
+    for bundle_path in platform_aib_paths:
+        prefixes_for_prefixes.append(bundle_path)
 
     prefixes = tuple(
         os.path.join(prefix, src)
@@ -86,14 +87,15 @@ def count_packages(budgets, all_manifests):
     return more_than_once, zero
 
 
-def make_package_set_budgets(size_limits, product_config):
+def make_package_set_budgets(platform_aib_paths, size_limits, product_config):
     # Convert each budget to the new format and packages from base and cache.
     # Package from system belongs the system budget.
     all_manifests = product_config.get("base", []) + product_config.get(
         "cache", [])
     components = size_limits.get("components", [])
     packages_budgets = list(
-        convert_budget_format(pkg, all_manifests) for pkg in components)
+        convert_budget_format(platform_aib_paths, pkg, all_manifests)
+        for pkg in components)
 
     # Verify packages are in exactly one budget.
     more_than_once, zero = count_packages(packages_budgets, all_manifests)
@@ -157,6 +159,8 @@ def main():
         'Converts the former size_checker.go budget file to the new format as part of RFC-0144'
     )
     parser.add_argument(
+        '--platform-aibs', type=argparse.FileType('r'), required=True)
+    parser.add_argument(
         '--size-limits', type=argparse.FileType('r'), required=True)
     parser.add_argument(
         '--image-assembly-config', type=argparse.FileType('r'), required=True)
@@ -165,6 +169,15 @@ def main():
     parser.add_argument('--blobfs-capacity', type=int, required=True)
     parser.add_argument('--max-blob-contents-size', type=int, required=True)
     args = parser.parse_args()
+
+    # Gather the list of platform AIB names.
+    platform_aibs = json.load(args.platform_aibs)
+    platform_aib_paths = []
+    for bundle_entry in platform_aibs:
+        dirname, basename = os.path.split(bundle_entry["path"])
+        if basename.endswith(".tgz"):
+            basename = basename[:-4]
+        platform_aib_paths.append(os.path.join(dirname, basename))
 
     # Read all input configurations.
     size_limits = json.load(args.size_limits)
@@ -175,7 +188,7 @@ def main():
         # Convert all the budget formats.
         resource_budgets = make_resources_budgets(size_limits)
         package_set_budgets = make_package_set_budgets(
-            size_limits, image_assembly_config)
+            platform_aib_paths, size_limits, image_assembly_config)
 
         output_contents = dict(
             resource_budgets=resource_budgets,

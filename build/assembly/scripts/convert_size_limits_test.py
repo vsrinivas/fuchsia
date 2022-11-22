@@ -166,6 +166,9 @@ class ConvertTest(unittest.TestCase):
             blobfs_capacity, max_blob_contents_size, return_value):
         self.maxDiff = None  # Do not truncate the diff result.
         with tempfile.TemporaryDirectory() as tmpdir:
+            platform_aibs_path = os.path.join(tmpdir, "platform_aibs.json")
+            with open(platform_aibs_path, "w") as file:
+                json.dump([], file)
 
             size_limits_path = os.path.join(tmpdir, "size_limits.json")
             with open(size_limits_path, "w") as file:
@@ -183,6 +186,8 @@ class ConvertTest(unittest.TestCase):
             # It is unused and left empty.
             sys.argv = [
                 "",
+                "--platform-aibs",
+                platform_aibs_path,
                 "--size-limits",
                 size_limits_path,
                 "--image-assembly-config",

@@ -74,6 +74,7 @@ if (blobfs_capacity != false && max_blob_contents_size != false &&
   _blobs_config = "${_output_dir}/../fuchsia/fuchsia/gen/blobs.json"
   _image_assembly_config =
       "${_output_dir}/../fuchsia/fuchsia/image_assembly.json"
+  _platform_aibs = "${target_out_dir}/platform_assembly_input_bundles.json"
 
   generated_file("size_checker_json") {
     outputs = [ "$root_build_dir/size_checker.json" ]
@@ -99,19 +100,34 @@ if (blobfs_capacity != false && max_blob_contents_size != false &&
     output_conversion = "json"
   }
 
+  generated_file("platform_assembly_input_bundles") {
+    testonly = true
+    outputs = [ _platform_aibs ]
+    data_keys = [ "assembly_input_archives" ]
+    output_conversion = "json"
+    deps = [
+      "//bundles/assembly",
+      "//bundles/assembly:prod_only",
+    ]
+  }
+
   action("convert_size_limits_to_size_budgets") {
     script = "//build/assembly/scripts/convert_size_limits.py"
     inputs = [
       "$root_build_dir/size_checker.json",
       _image_assembly_config,
+      _platform_aibs,
     ]
     outputs = [ _size_budgets_blobfs_file ]
     deps = [
+      ":platform_assembly_input_bundles",
       ":size_checker_json",
       "//build/images/fuchsia:fuchsia.product_assembler",
     ]
     testonly = true
     args = [
+      "--platform-aibs",
+      rebase_path(_platform_aibs, root_build_dir),
       "--size-limits",
       rebase_path("$root_build_dir/size_checker.json", root_build_dir),
       "--image-assembly-config",
