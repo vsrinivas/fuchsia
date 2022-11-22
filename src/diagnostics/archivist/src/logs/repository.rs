@@ -44,19 +44,28 @@ lazy_static! {
 pub struct LogsRepository {
     log_sender: Arc<RwLock<mpsc::UnboundedSender<fasync::Task<()>>>>,
     mutable_state: RwLock<LogsRepositoryState>,
+    /// Processes removal of components emitted by the budget handler. This is done to prevent a
+    /// deadlock. It's behind a mutex, but it's only set once. Holds an Arc<Self>.
+    component_removal_task: Mutex<Option<fasync::Task<()>>>,
 }
 
 impl LogsRepository {
-    pub fn new(logs_budget: &BudgetManager, parent: &fuchsia_inspect::Node) -> Self {
+    pub async fn new(
+        logs_max_cached_original_bytes: u64,
+        parent: &fuchsia_inspect::Node,
+    ) -> Arc<Self> {
+        let (remover_snd, remover_rcv) = mpsc::unbounded();
+        let logs_budget = BudgetManager::new(logs_max_cached_original_bytes as usize, remover_snd);
         let (log_sender, log_receiver) = mpsc::unbounded();
-        LogsRepository {
-            mutable_state: RwLock::new(LogsRepositoryState::new(
-                logs_budget.clone(),
-                log_receiver,
-                parent,
-            )),
+        let this = Arc::new(LogsRepository {
+            mutable_state: RwLock::new(LogsRepositoryState::new(logs_budget, log_receiver, parent)),
             log_sender: Arc::new(RwLock::new(log_sender)),
-        }
+            component_removal_task: Mutex::new(None),
+        });
+        *this.component_removal_task.lock().await = Some(fasync::Task::spawn(
+            Self::process_removal_of_components(remover_rcv, this.clone()),
+        ));
+        this
     }
 
     /// Drain the kernel's debug log. The returned future completes once
@@ -128,16 +137,6 @@ impl LogsRepository {
         merged
     }
 
-    /// Returns `true` if a container exists for the requested `identity` and that container either
-    /// corresponds to a running component or we've decided to still retain it.
-    pub async fn is_live(&self, identity: &ComponentIdentity) -> bool {
-        let this = self.mutable_state.read().await;
-        match this.logs_data_store.get(&identity.unique_key()) {
-            Some(container) => container.should_retain().await,
-            None => false,
-        }
-    }
-
     pub async fn get_log_container(
         &self,
         identity: ComponentIdentity,
@@ -145,9 +144,6 @@ impl LogsRepository {
         self.mutable_state.write().await.get_log_container(identity).await
     }
 
-    pub async fn remove(&self, identity: &ComponentIdentity) {
-        self.mutable_state.write().await.remove(identity);
-    }
     /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
     /// consuming any messages received before this call.
     pub async fn wait_for_termination(&self) {
@@ -160,6 +156,9 @@ impl LogsRepository {
             container.terminate();
         }
         repo.logs_multiplexers.terminate().await;
+
+        debug!("Terminated logs");
+        repo.logs_budget.terminate().await;
     }
 
     /// Closes the connection in which new logger draining tasks are sent. No more logger tasks
@@ -188,10 +187,26 @@ impl LogsRepository {
         self.mutable_state.write().await.finish_interest_connection(connection_id).await;
     }
 
+    async fn process_removal_of_components(
+        mut removal_requests: mpsc::UnboundedReceiver<Arc<ComponentIdentity>>,
+        logs_repo: Arc<LogsRepository>,
+    ) {
+        while let Some(identity) = removal_requests.next().await {
+            let mut repo = logs_repo.mutable_state.write().await;
+            if !repo.is_live(&identity).await {
+                debug!(%identity, "Removing component from repository.");
+                repo.remove(&identity);
+            }
+        }
+    }
+
     #[cfg(test)]
-    pub(crate) fn default() -> Self {
-        let budget = BudgetManager::new(crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES);
-        LogsRepository::new(&budget, &Default::default())
+    pub(crate) async fn default() -> Arc<Self> {
+        LogsRepository::new(
+            crate::constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES,
+            &Default::default(),
+        )
+        .await
     }
 }
 
@@ -282,6 +297,13 @@ impl LogsRepositoryState {
                 container
             }
             Some(existing) => existing.clone(),
+        }
+    }
+
+    async fn is_live(&self, identity: &ComponentIdentity) -> bool {
+        match self.logs_data_store.get(&identity.unique_key()) {
+            Some(container) => container.should_retain().await,
+            None => false,
         }
     }
 
@@ -394,7 +416,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn data_repo_filters_logs_by_selectors() {
-        let repo = LogsRepository::default();
+        let repo = LogsRepository::default().await;
         let foo_container = repo
             .get_log_container(ComponentIdentity::from_identifier_and_url(
                 ComponentIdentifier::parse_from_moniker("./foo").unwrap(),
@@ -433,7 +455,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn multiplexer_broker_cleanup() {
-        let repo = LogsRepository::default();
+        let repo = LogsRepository::default().await;
         let stream =
             repo.logs_cursor(StreamMode::SnapshotThenSubscribe, None, ftrace::Id::random()).await;
 

@@ -647,7 +647,8 @@ mod tests {
     async fn initialize_container(
     ) -> (Arc<LogsArtifactsContainer>, LogSinkProxy, UnboundedReceiver<Task<()>>) {
         // Initialize container
-        let budget_manager = BudgetManager::new(0);
+        let (snd, _rcv) = mpsc::unbounded();
+        let budget_manager = BudgetManager::new(0, snd);
         let container = Arc::new(
             LogsArtifactsContainer::new(
                 Arc::new(ComponentIdentity::from_identifier_and_url(
