@@ -60,7 +60,6 @@ impl<T: FileLike> Read for WrappedBlockDevice<T> {
 }
 
 impl<T: FileLike> Write for WrappedBlockDevice<T> {
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95090)
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
         let start = self.cur_pos;
         let end = self.cur_pos + buf.len() as u64;
@@ -79,7 +78,7 @@ impl<T: FileLike> Write for WrappedBlockDevice<T> {
         real_buf[offset..end].copy_from_slice(buf);
         // Write out full blocks to the disk.
         self.inner.seek(SeekFrom::Start(rounded_start))?;
-        self.inner.write(&real_buf)?;
+        self.inner.write_all(&real_buf)?;
 
         let bytes_written = end - offset;
         self.cur_pos += bytes_written as u64;
@@ -183,20 +182,18 @@ mod tests {
         }
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95090)
     #[test]
     fn test_block_read() {
         let disk = ExactDisk::new(vec![0, 0, 1, 1, 3, 3, 4, 4], 4);
         let mut wrapper = WrappedBlockDevice::new(disk, 4);
         let mut buf = [0; 2];
-        wrapper.read(&mut buf).unwrap();
+        wrapper.read_exact(&mut buf).unwrap();
         assert_eq!(buf, [0, 0]);
         let mut buf = [0; 6];
-        wrapper.read(&mut buf).unwrap();
+        wrapper.read_exact(&mut buf).unwrap();
         assert_eq!(buf, [1, 1, 3, 3, 4, 4]);
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95090)
     #[test]
     fn test_block_write_seek() {
         let disk = ExactDisk::new(vec![0, 0, 1, 1, 3, 3, 4, 4], 4);
@@ -205,7 +202,7 @@ mod tests {
         let len = wrapper.write(&buf).unwrap();
         assert_eq!(len, 2);
         wrapper.seek(SeekFrom::Start(0)).unwrap();
-        wrapper.read(&mut buf).unwrap();
+        wrapper.read_exact(&mut buf).unwrap();
         assert_eq!(buf, [4, 4]);
     }
 }
