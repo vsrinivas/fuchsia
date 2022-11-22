@@ -11,6 +11,8 @@ static_library("lib") {
     "fdio.h",
     "fidl.cc",
     "fidl.h",
+    "fxlog.cc",
+    "fxlog.h",
     "object_converter.cc",
     "object_converter.h",
     "qjs_util.h",
@@ -22,6 +24,7 @@ static_library("lib") {
 
   public_deps = [
     ":fidl",
+    ":fxlog",
     ":zx",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl_base",
@@ -59,6 +62,15 @@ compiled_js("zx") {
   ]
 }
 
+compiled_js("fxlog") {
+  source = "fxlog.js"
+  module = true
+  extra_args = [
+    "-M",
+    "fxlog_internal",
+  ]
+}
+
 resource("js_libs") {
   sources = [
     "ns.js",
@@ -84,22 +96,13 @@ executable("spawn_child_test_util") {
   sources = [ "spawn_child_test_util.cc" ]
 }
 
-source_set("tests") {
+source_set("tests_base") {
   testonly = true
-  sources = [
-    "fidl_test.cc",
-    "js_testing_utils.h",
-    "ns_test.cc",
-    "pp_test.cc",
-    "runtime_test.cc",
-    "task_test.cc",
-    "zx_test.cc",
-  ]
-  deps = [
+  public_deps = [
     ":lib",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
     "//sdk/testing/fidl:test",
     "//sdk/testing/fidl:test_support",
     "//src/developer/shell/josh/console",
@@ -112,6 +115,38 @@ source_set("tests") {
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/zx",
   ]
+}
+
+source_set("log_tests") {
+  testonly = true
+  sources = [
+    "fxlog_test.cc",
+    "js_testing_utils.h",
+  ]
+  deps = [
+    ":tests_base",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+  ]
+  configs += [
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    #
+    # Might be hard because these conversions come from quickjs.h.
+    "//build/config:Wno-conversion",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+  sources = [
+    "fidl_test.cc",
+    "js_testing_utils.h",
+    "ns_test.cc",
+    "pp_test.cc",
+    "runtime_test.cc",
+    "task_test.cc",
+    "zx_test.cc",
+  ]
+  deps = [ ":tests_base" ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     #

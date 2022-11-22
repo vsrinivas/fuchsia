@@ -4,15 +4,36 @@
 
 import("//build/test.gni")
 
-test("josh_tests_bin") {
+group("josh_test_bin_base") {
+  testonly = true
   deps = [
     "//sdk/testing/fidl:test",
-    "//src/developer/shell/josh/console:tests",
-    "//src/developer/shell/josh/lib:tests",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+test("josh_log_tests_bin") {
+  deps = [
+    ":josh_test_bin_base",
+    "//src/developer/shell/josh/lib:log_tests",
+  ]
+
+  # Extra stack needed to avoid crashes when calling QuickJS functions
+  # with asan enabled.
+  ldflags = [ "-Wl,-z,stack-size=0x200000" ]
+
+  # TODO(67365): Temporarily disable lsan for this target. Reenable once all leaks are fixed.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+test("josh_tests_bin") {
+  deps = [
+    ":josh_test_bin_base",
+    "//src/developer/shell/josh/console:tests",
+    "//src/developer/shell/josh/lib:tests",
   ]
 
   # Extra stack needed to avoid crashes when calling QuickJS functions

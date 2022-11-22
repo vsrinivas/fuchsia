@@ -66,6 +66,9 @@ int ConsoleMain(int argc, const char **argv) {
   // command line, which might be nice at some point.
   js_std_add_helpers(ctx_ptr, 0, nullptr);
 
+  // Finish loading everything before moving on to user's tasks
+  js_std_loop(ctx_ptr);
+
   if (!options.command_string && !options.run_script_path) {
     if (!options.line_editor) {
       // Use the qjs repl for the time being.

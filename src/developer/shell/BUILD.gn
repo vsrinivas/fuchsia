@@ -21,6 +21,33 @@ distribution_fidl_json("fidl_json_additional") {
   ]
 }
 
+group("josh-test-base") {
+  testonly = true
+  deps = [
+    ":fidl_json_additional",
+    ":fidl_json_sdk",
+    "josh/lib:js_libs",
+    "//src/developer/shell/josh:bin",
+    "//src/developer/shell/josh/lib:spawn_child_test_util",
+  ]
+}
+
+fuchsia_test_component("josh-log-tests-component") {
+  component_name = "josh_log_tests_bin"
+  manifest = "meta/josh_log_tests_bin.cml"
+  deps = [ "//src/developer/shell/josh:josh_log_tests_bin" ]
+}
+
+fuchsia_test_package("josh-log-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "FATAL"
+    }
+  }
+  test_components = [ ":josh-log-tests-component" ]
+  deps = [ ":josh-test-base" ]
+}
+
 fuchsia_test_component("josh-tests-component") {
   component_name = "josh_tests_bin"
   manifest = "meta/josh_tests_bin.cml"
@@ -29,13 +56,7 @@ fuchsia_test_component("josh-tests-component") {
 
 fuchsia_test_package("josh-tests") {
   test_components = [ ":josh-tests-component" ]
-  deps = [
-    ":fidl_json_additional",
-    ":fidl_json_sdk",
-    "josh/lib:js_libs",
-    "//src/developer/shell/josh:bin",
-    "//src/developer/shell/josh/lib:spawn_child_test_util",
-  ]
+  deps = [ ":josh-test-base" ]
 }
 
 group("tests") {
@@ -52,7 +73,10 @@ group("tests") {
         "lto",
         "thinlto",
       ] == select_variant) {
-    deps += [ ":josh-tests" ]
+    deps += [
+      ":josh-log-tests",
+      ":josh-tests",
+    ]
   }
 }
 

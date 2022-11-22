@@ -16,6 +16,7 @@
 
 #include "src/developer/shell/josh/lib/fdio.h"
 #include "src/developer/shell/josh/lib/fidl.h"
+#include "src/developer/shell/josh/lib/fxlog.h"
 #include "src/developer/shell/josh/lib/zx.h"
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"
@@ -129,8 +130,15 @@ extern "C" const uint8_t qjsc_fdio[];
 extern "C" const uint32_t qjsc_fdio_size;
 extern "C" const uint8_t qjsc_zx[];
 extern "C" const uint32_t qjsc_zx_size;
+extern "C" const uint8_t qjsc_fxlog[];
+extern "C" const uint32_t qjsc_fxlog_size;
 
 bool Context::InitBuiltins(const std::string& fidl_path, const std::string& boot_js_path) {
+  if (fxlog::FxLogModuleInit(ctx_, "fxlog_internal") == nullptr) {
+    return false;
+  }
+  js_std_eval_binary(ctx_, qjsc_fxlog, qjsc_fxlog_size, 0);
+
   if (fdio::FdioModuleInit(ctx_, "fdio") == nullptr) {
     return false;
   }
