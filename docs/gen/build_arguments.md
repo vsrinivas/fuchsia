@@ -1130,9 +1130,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"socket"`
+**Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/5d8e9274ea8927a7624cf3ed89177aa9bd9153e7/util/net/tls.gni#19)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/5d8e9274ea8927a7624cf3ed89177aa9bd9153e7/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -2442,7 +2442,7 @@ From [//third_party/perfetto/gn/perfetto.gni:193](https://fuchsia.googlesource.c
 
 ### enable_perfetto_ipc
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From [//third_party/perfetto/gn/perfetto.gni:150](https://fuchsia.googlesource.com/third_party/android.googlesource.com/platform/external/perfetto//+/c5fb93e71014315880f4e38620f11cad5cca0a2c/gn/perfetto.gni#150)
 
@@ -2476,7 +2476,7 @@ From [//third_party/perfetto/gn/perfetto.gni:235](https://fuchsia.googlesource.c
 
 ### enable_perfetto_system_consumer
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From [//third_party/perfetto/gn/perfetto.gni:251](https://fuchsia.googlesource.com/third_party/android.googlesource.com/platform/external/perfetto//+/c5fb93e71014315880f4e38620f11cad5cca0a2c/gn/perfetto.gni#251)
 
@@ -3630,6 +3630,16 @@ Include an account partition in the FVM image if set to true.
 **Current value (from the default):** `false`
 
 From //build/images/args.gni:150
+
+### include_bazel_examples_and_tests
+Whether to include Bazel build examples and tests in this build.
+
+TODO(https://fxbug.dev/112023): Default to true when Bazel is stable in
+CI/CQ.
+
+**Current value (from the default):** `false`
+
+From //BUILD.gn:99
 
 ### include_clippy
 Turns rust targets into a group with both the normal target and clippy target. This
@@ -7362,7 +7372,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //src/lib/vulkan/build/config.gni:40
 
