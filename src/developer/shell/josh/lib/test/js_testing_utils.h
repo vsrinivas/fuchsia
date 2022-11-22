@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_SHELL_JOSH_LIB_JS_TESTING_UTILS_H_
-#define SRC_DEVELOPER_SHELL_JOSH_LIB_JS_TESTING_UTILS_H_
+#ifndef SRC_DEVELOPER_SHELL_JOSH_LIB_TEST_JS_TESTING_UTILS_H_
+#define SRC_DEVELOPER_SHELL_JOSH_LIB_TEST_JS_TESTING_UTILS_H_
 
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -53,4 +53,4 @@ class JsTest : public ::testing::Test {
 
 }  // namespace shell
 
-#endif  // SRC_DEVELOPER_SHELL_JOSH_LIB_JS_TESTING_UTILS_H_
+#endif  // SRC_DEVELOPER_SHELL_JOSH_LIB_TEST_JS_TESTING_UTILS_H_

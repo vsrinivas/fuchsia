@@ -13,8 +13,8 @@
 
 #include <gtest/gtest.h>
 
+#include "js_testing_utils.h"
 #include "lib/fidl/cpp/binding.h"
-#include "src/developer/shell/josh/lib/js_testing_utils.h"
 #include "src/developer/shell/josh/lib/runtime.h"
 #include "src/developer/shell/josh/lib/zx.h"
 #include "src/lib/fidl_codec/library_loader_test_data.h"

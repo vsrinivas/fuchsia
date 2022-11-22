@@ -11,7 +11,7 @@
 #include <gtest/gtest.h>
 
 #include "js_testing_utils.h"
-#include "zx.h"
+#include "src/developer/shell/josh/lib/zx.h"
 
 namespace {
 

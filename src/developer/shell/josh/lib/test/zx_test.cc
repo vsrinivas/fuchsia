@@ -9,7 +9,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/shell/josh/lib/js_testing_utils.h"
+#include "js_testing_utils.h"
 #include "src/developer/shell/josh/lib/runtime.h"
 
 namespace shell {

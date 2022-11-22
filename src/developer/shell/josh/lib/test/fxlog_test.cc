@@ -20,7 +20,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/shell/josh/lib/js_testing_utils.h"
+#include "js_testing_utils.h"
 #include "third_party/quickjs/quickjs.h"
 
 namespace fs = std::filesystem;

@@ -154,18 +154,20 @@ bool Context::InitBuiltins(const std::string& fidl_path, const std::string& boot
   if (zx::ZxModuleInit(ctx_, "zx_internal") == nullptr) {
     return false;
   }
-
   js_std_eval_binary(ctx_, qjsc_zx, qjsc_zx_size, 0);
 
   if (!boot_js_path.empty()) {
-    if (!Export("pp", boot_js_path)) {
-      return false;
-    }
-    if (!Export("ns", boot_js_path)) {
-      return false;
-    }
-    if (!Export("task", boot_js_path)) {
-      return false;
+    constexpr std::array modules{
+        "pp",
+        "util",
+        "ns",
+        "task",
+    };
+
+    for (auto& module : modules) {
+      if (!Export(std::string(module), boot_js_path)) {
+        return false;
+      }
     }
   }
 
