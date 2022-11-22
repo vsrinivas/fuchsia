@@ -39,6 +39,20 @@ use crate::{
     storage_unlock_mechanism::StorageUnlockMechanism,
 };
 
+/// PasswordAuthenticator config, populated from a build-time generated
+/// config.
+#[derive(Clone, Copy)]
+pub struct Config {
+    pub allow_scrypt: bool,
+    pub allow_pinweaver: bool,
+}
+
+impl From<password_authenticator_config::Config> for Config {
+    fn from(source: password_authenticator_config::Config) -> Self {
+        Config { allow_scrypt: source.allow_scrypt, allow_pinweaver: source.allow_pinweaver }
+    }
+}
+
 enum Services {
     AccountManager(AccountManagerRequestStream),
     StorageUnlockMechanism(StorageUnlockMechanismRequestStream),
@@ -48,7 +62,7 @@ enum Services {
 async fn main() -> Result<(), Error> {
     info!("Starting password authenticator");
 
-    let config = password_authenticator_config::Config::take_from_startup_handle();
+    let config: Config = password_authenticator_config::Config::take_from_startup_handle().into();
     // validate that at least one account metadata type is enabled
     if !config.allow_scrypt && !config.allow_pinweaver {
         let err = anyhow!("No account types allowed by config, exiting");

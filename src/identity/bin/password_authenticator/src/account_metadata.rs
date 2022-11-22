@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{account_manager::AccountId, pinweaver::PinweaverParams, scrypt::ScryptParams},
+    crate::{account_manager::AccountId, pinweaver::PinweaverParams, scrypt::ScryptParams, Config},
     async_trait::async_trait,
     fidl_fuchsia_identity_account as faccount, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     identity_common::StagedFile,
-    password_authenticator_config::Config,
     serde::{Deserialize, Serialize},
     std::str::FromStr,
 };

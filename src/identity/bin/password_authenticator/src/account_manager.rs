@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::Config;
 use crate::{
     account::{Account, AccountError, CheckNewClientResult},
     account_metadata::{
@@ -21,7 +22,6 @@ use fidl_fuchsia_identity_credential::{ManagerMarker, ManagerProxy};
 use fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream};
 use fuchsia_component::client::connect_to_protocol;
 use futures::{lock::Mutex, prelude::*};
-use password_authenticator_config::Config;
 use std::{collections::HashMap, sync::Arc};
 use storage_manager::{minfs::disk::DiskError, StorageManager};
 use tracing::{error, info, warn};
