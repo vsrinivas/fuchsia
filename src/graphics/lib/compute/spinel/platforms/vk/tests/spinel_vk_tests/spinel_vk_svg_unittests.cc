@@ -578,6 +578,11 @@ param const params[] = {
     .name        = "arcs",
     .surface     = { 1024, 512 },
     .checksums = {
+      //
+      // Fuchsia's `ulib/musl/.../math` trig functions produce a slightly
+      // different set of rational quad control points than the trig functions
+      // in the gLinux host environment. See fxbug.dev/115402 for more info.
+      //
       { 0xC337DEDF, {
           { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
         }
@@ -587,11 +592,12 @@ param const params[] = {
         }
       },
       { 0xC2E4C2A9, {
-          { param::INTEL,  { { 0x9A49, 0x9A49 } } }, // Xe TGL GT2
+          { param::INTEL,  { { 0x9A49, 0x9A49 } } }, // Xe TGL GT2 - Host: fxbug.dev/115402
         }
       },
       { 0xC2E4C3A9, {
           { param::INTEL,  { { 0x0, 0x9A48 } } },
+          { param::INTEL,  { { 0x9A49, 0x9A49 } } }, // Xe TGL GT2 - Fuchsia: fxbug.dev/115402
           { param::INTEL,  { { 0x9A4A, UINT32_MAX } } },
           { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } },
         }
