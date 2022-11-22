@@ -19,7 +19,7 @@ use {
         platform::{
             fuchsia::{
                 component::map_to_raw_status,
-                memory_pressure::MemoryPressureMonitor,
+                memory_pressure::{MemoryPressureLevel, MemoryPressureMonitor},
                 volume::{FlushTaskConfig, FxVolumeAndRoot},
             },
             RemoteCrypt,
@@ -35,10 +35,13 @@ use {
     fs_inspect::{FsInspectTree, FsInspectVolume},
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, Status},
-    futures::TryStreamExt,
+    futures::{stream::FuturesUnordered, StreamExt, TryStreamExt},
     std::{
         collections::{hash_map::Entry::Occupied, HashMap},
-        sync::{Arc, Mutex, Weak},
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            Arc, Weak,
+        },
     },
     vfs::{
         self,
@@ -46,6 +49,8 @@ use {
         path::Path,
     },
 };
+
+const MEBIBYTE: u64 = 1024 * 1024;
 
 /// VolumesDirectory is a special pseudo-directory used to enumerate and operate on volumes.
 /// Volume creation happens via fuchsia.fxfs.Volumes.Create, rather than open.
@@ -55,9 +60,13 @@ use {
 pub struct VolumesDirectory {
     root_volume: RootVolume,
     directory_node: Arc<vfs::directory::immutable::Simple>,
-    mounted_volumes: Mutex<HashMap<u64, FxVolumeAndRoot>>,
+    mounted_volumes: futures::lock::Mutex<HashMap<u64, FxVolumeAndRoot>>,
     inspect_tree: Weak<FsInspectTree>,
     mem_monitor: Option<MemoryPressureMonitor>,
+
+    /// A running estimate of the number of dirty bytes outstanding in all pager-backed VMOs across
+    /// all volumes.
+    pager_dirty_bytes_count: AtomicU64,
 }
 
 impl VolumesDirectory {
@@ -73,9 +82,10 @@ impl VolumesDirectory {
         let me = Arc::new(Self {
             root_volume,
             directory_node: vfs::directory::immutable::simple(),
-            mounted_volumes: Mutex::new(HashMap::new()),
+            mounted_volumes: futures::lock::Mutex::new(HashMap::new()),
             inspect_tree,
             mem_monitor,
+            pager_dirty_bytes_count: AtomicU64::new(0),
         });
         let mut iter = me.root_volume.volume_directory().iter(&mut merger).await?;
         while let Some((name, store_id, object_descriptor)) = iter.get() {
@@ -160,7 +170,7 @@ impl VolumesDirectory {
             .await;
         let store = self.root_volume.volume(name, crypt).await?;
         ensure!(
-            !self.mounted_volumes.lock().unwrap().contains_key(&store.store_object_id()),
+            !self.mounted_volumes.lock().await.contains_key(&store.store_object_id()),
             FxfsError::AlreadyBound
         );
         self.mount_store(name, store, FlushTaskConfig::default()).await
@@ -176,9 +186,14 @@ impl VolumesDirectory {
         store.track_statistics(&*OBJECT_STORES_NODE.lock().unwrap(), name);
         let store_id = store.store_object_id();
         let unique_id = zx::Event::create().expect("Failed to create event");
-        let volume = FxVolumeAndRoot::new(store, unique_id.get_koid().unwrap().raw_koid()).await?;
+        let volume = FxVolumeAndRoot::new(
+            Arc::downgrade(self),
+            store,
+            unique_id.get_koid().unwrap().raw_koid(),
+        )
+        .await?;
         volume.volume().start_flush_task(flush_task_config, self.mem_monitor.as_ref());
-        self.mounted_volumes.lock().unwrap().insert(store_id, volume.clone());
+        self.mounted_volumes.lock().await.insert(store_id, volume.clone());
         if let Some(inspect) = self.inspect_tree.upgrade() {
             inspect.register_volume(
                 name.to_string(),
@@ -210,7 +225,7 @@ impl VolumesDirectory {
         };
         // Cowardly refuse to delete a mounted volume.
         ensure!(
-            !self.mounted_volumes.lock().unwrap().contains_key(&object_id),
+            !self.mounted_volumes.lock().await.contains_key(&object_id),
             FxfsError::AlreadyBound
         );
         if let Some(inspect) = self.inspect_tree.upgrade() {
@@ -233,7 +248,7 @@ impl VolumesDirectory {
             )])
             .await;
 
-        let volumes = std::mem::take(&mut *self.mounted_volumes.lock().unwrap());
+        let volumes = std::mem::take(&mut *self.mounted_volumes.lock().await);
         for (_, volume) in volumes {
             volume.volume().terminate().await;
         }
@@ -292,7 +307,7 @@ impl VolumesDirectory {
                 .await;
 
             let volume = {
-                let mut mounted_volumes = me.mounted_volumes.lock().unwrap();
+                let mut mounted_volumes = me.mounted_volumes.lock().await;
                 let entry = mounted_volumes.entry(store_id);
                 if let Occupied(entry) = entry {
                     if entry.get().volume().scope() == &scope {
@@ -358,6 +373,74 @@ impl VolumesDirectory {
         Ok(())
     }
 
+    /// Reports that a certain number of bytes will be dirtied in a pager-backed VMO.
+    ///
+    /// Note that this function may await flush tasks.
+    pub async fn report_pager_dirty(&self, num_bytes: u64) {
+        let mut total_dirty = self.pager_dirty_bytes_count.load(Ordering::Acquire);
+
+        let mut mem_pressure = self
+            .mem_monitor
+            .as_ref()
+            .map(|mem_monitor| mem_monitor.level())
+            .unwrap_or(MemoryPressureLevel::Normal);
+
+        if matches!(mem_pressure, MemoryPressureLevel::Critical)
+            && total_dirty + num_bytes >= Self::get_max_pager_dirty_when_mem_critical()
+        {
+            let volumes = self.mounted_volumes.lock().await;
+
+            mem_pressure = self
+                .mem_monitor
+                .as_ref()
+                .map(|mem_monitor| mem_monitor.level())
+                .unwrap_or(MemoryPressureLevel::Normal);
+
+            // Re-check the number of outstanding pager dirty bytes because another thread could
+            // have raced and flushed the volumes first.
+            total_dirty = self.pager_dirty_bytes_count.load(Ordering::Acquire);
+            if matches!(mem_pressure, MemoryPressureLevel::Critical)
+                && total_dirty + num_bytes >= Self::get_max_pager_dirty_when_mem_critical()
+            {
+                debug!(
+                    "Flushing all volumes. Memory pressure is critical & dirty pager bytes \
+                    ({} MiB) >= limit ({} MiB)",
+                    total_dirty / MEBIBYTE,
+                    Self::get_max_pager_dirty_when_mem_critical() / MEBIBYTE
+                );
+
+                let flushes = FuturesUnordered::new();
+                for vol_and_root in volumes.values() {
+                    let vol = vol_and_root.volume().clone();
+                    flushes.push(async move {
+                        vol.flush_all_files().await;
+                    });
+                }
+
+                flushes.collect::<Vec<_>>().await;
+            }
+        }
+
+        self.pager_dirty_bytes_count.fetch_add(num_bytes, Ordering::AcqRel);
+    }
+
+    /// Reports that a certain number of bytes were cleaned in a pager-backed VMO.
+    pub fn report_pager_clean(&self, num_bytes: u64) {
+        let prev_dirty = self.pager_dirty_bytes_count.fetch_sub(num_bytes, Ordering::AcqRel);
+
+        if prev_dirty < num_bytes {
+            // An unlikely scenario, but if there was an underflow, reset the pager dirty bytes to
+            // zero.
+            self.pager_dirty_bytes_count.store(0, Ordering::Release);
+        }
+    }
+
+    /// Gets the maximum amount of bytes to allow to be dirty when memory pressure is CRITICAL.
+    fn get_max_pager_dirty_when_mem_critical() -> u64 {
+        // Only allow up to 1% of available physical memory
+        zx::system_get_physmem() / 100
+    }
+
     async fn handle_check(
         self: &Arc<Self>,
         store_id: u64,
@@ -399,7 +482,7 @@ impl VolumesDirectory {
             )])
             .await;
         ensure!(
-            !self.mounted_volumes.lock().unwrap().contains_key(&store_id),
+            !self.mounted_volumes.lock().await.contains_key(&store_id),
             FxfsError::AlreadyBound
         );
 
@@ -466,7 +549,7 @@ impl VolumesDirectory {
     // necessary.
     async fn unmount(&self, store_id: u64) -> Result<(), Error> {
         let volume =
-            self.mounted_volumes.lock().unwrap().remove(&store_id).ok_or(FxfsError::NotFound)?;
+            self.mounted_volumes.lock().await.remove(&store_id).ok_or(FxfsError::NotFound)?;
         volume.volume().terminate().await;
         Ok(())
     }
@@ -898,7 +981,7 @@ mod tests {
                 // The volume should get unmounted a short time later.
                 let mut count = 0;
                 loop {
-                    if volumes_directory.mounted_volumes.lock().unwrap().is_empty() {
+                    if volumes_directory.mounted_volumes.lock().await.is_empty() {
                         break;
                     }
                     count += 1;
@@ -953,7 +1036,7 @@ mod tests {
 
         admin_proxy.shutdown().await.expect("shutdown failed");
 
-        assert!(volumes_directory.mounted_volumes.lock().unwrap().is_empty());
+        assert!(volumes_directory.mounted_volumes.lock().await.is_empty());
     }
 
     #[fasync::run_singlethreaded(test)]

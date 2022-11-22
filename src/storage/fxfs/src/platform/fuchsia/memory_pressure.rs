@@ -70,6 +70,11 @@ impl MemoryPressureMonitor {
         Self::try_from(watcher_server)
     }
 
+    /// Gets the current memory pressure level.
+    pub fn level(&self) -> MemoryPressureLevel {
+        self.inner.level()
+    }
+
     /// Returns a [`Stream`] that provides memory pressure updates.
     pub fn get_level_stream(&self) -> MemoryPressureLevelStream {
         MemoryPressureLevelStream::new(self.inner.clone())

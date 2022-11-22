@@ -15,7 +15,7 @@ use {
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io as fio,
     fuchsia_zircon::{self as zx, Status},
-    std::sync::Arc,
+    std::sync::{Arc, Weak},
     storage_device::{fake_device::FakeDevice, DeviceHolder},
     vfs::{directory::entry::DirectoryEntry, path::Path},
 };
@@ -51,6 +51,7 @@ impl TestFixture {
             let filesystem = FxFilesystem::new_empty(device).await.unwrap();
             let root_volume = root_volume(filesystem.clone()).await.unwrap();
             let vol = FxVolumeAndRoot::new(
+                Weak::new(),
                 root_volume
                     .new_volume(
                         "vol",
@@ -67,6 +68,7 @@ impl TestFixture {
             let filesystem = FxFilesystem::open(device).await.unwrap();
             let root_volume = root_volume(filesystem.clone()).await.unwrap();
             let vol = FxVolumeAndRoot::new(
+                Weak::new(),
                 root_volume
                     .volume(
                         "vol",

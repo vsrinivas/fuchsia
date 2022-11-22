@@ -19,6 +19,7 @@ use {
             node::{FxNode, GetResult, NodeCache},
             pager::{Pager, PagerExecutor},
             vmo_data_buffer::VmoDataBuffer,
+            volumes_directory::VolumesDirectory,
         },
     },
     anyhow::{bail, Error},
@@ -35,7 +36,7 @@ use {
     std::{
         convert::TryInto,
         marker::Unpin,
-        sync::{Arc, Mutex},
+        sync::{Arc, Mutex, Weak},
         time::Duration,
     },
     vfs::execution_scope::ExecutionScope,
@@ -78,6 +79,7 @@ impl Default for FlushTaskConfig {
 /// FxVolume represents an opened volume. It is also a (weak) cache for all opened Nodes within the
 /// volume.
 pub struct FxVolume {
+    parent: Weak<VolumesDirectory>,
     cache: NodeCache,
     store: Arc<ObjectStore>,
     pager: Pager<FxFile>,
@@ -94,8 +96,13 @@ pub struct FxVolume {
 }
 
 impl FxVolume {
-    fn new(store: Arc<ObjectStore>, fs_id: u64) -> Result<Self, Error> {
+    fn new(
+        parent: Weak<VolumesDirectory>,
+        store: Arc<ObjectStore>,
+        fs_id: u64,
+    ) -> Result<Self, Error> {
         Ok(Self {
+            parent,
             cache: NodeCache::new(),
             store,
             pager: Pager::<FxFile>::new(PagerExecutor::global_instance())?,
@@ -307,7 +314,23 @@ impl FxVolume {
         debug!(store_id = self.store.store_object_id(), "FxVolume::flush_task end");
     }
 
-    async fn flush_all_files(&self) {
+    /// Reports that a certain number of bytes will be dirtied in a pager-backed VMO.
+    ///
+    /// Note that this function may await flush tasks.
+    pub async fn report_pager_dirty(&self, num_bytes: u64) {
+        if let Some(parent) = self.parent.upgrade() {
+            parent.report_pager_dirty(num_bytes).await;
+        }
+    }
+
+    /// Reports that a certain number of bytes were cleaned in a pager-backed VMO.
+    pub fn report_pager_clean(&self, num_bytes: u64) {
+        if let Some(parent) = self.parent.upgrade() {
+            parent.report_pager_clean(num_bytes);
+        }
+    }
+
+    pub async fn flush_all_files(&self) {
         let mut flushed = 0;
         for file in self.cache.files() {
             if let Err(e) = file.flush().await {
@@ -356,8 +379,12 @@ pub struct FxVolumeAndRoot {
 }
 
 impl FxVolumeAndRoot {
-    pub async fn new(store: Arc<ObjectStore>, unique_id: u64) -> Result<Self, Error> {
-        let volume = Arc::new(FxVolume::new(store, unique_id)?);
+    pub async fn new(
+        parent: Weak<VolumesDirectory>,
+        store: Arc<ObjectStore>,
+        unique_id: u64,
+    ) -> Result<Self, Error> {
+        let volume = Arc::new(FxVolume::new(parent, store, unique_id)?);
         let root_object_id = volume.store().root_directory_object_id();
         let root_dir = Directory::open(&volume, root_object_id).await?;
         let root = Arc::new(FxDirectory::new(None, root_dir));
@@ -444,7 +471,10 @@ mod tests {
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_fs::file,
         fuchsia_zircon::Status,
-        std::{sync::Arc, time::Duration},
+        std::{
+            sync::{Arc, Weak},
+            time::Duration,
+        },
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
@@ -711,7 +741,7 @@ mod tests {
             .expect("create_object failed")
             .object_id();
             transaction.commit().await.expect("commit failed");
-            let vol = FxVolumeAndRoot::new(volume.clone(), 0).await.unwrap();
+            let vol = FxVolumeAndRoot::new(Weak::new(), volume.clone(), 0).await.unwrap();
 
             let file = vol
                 .volume()
@@ -788,7 +818,7 @@ mod tests {
             .expect("create_object failed")
             .object_id();
             transaction.commit().await.expect("commit failed");
-            let vol = FxVolumeAndRoot::new(volume.clone(), 0).await.unwrap();
+            let vol = FxVolumeAndRoot::new(Weak::new(), volume.clone(), 0).await.unwrap();
 
             let file = vol
                 .volume()
@@ -883,7 +913,7 @@ mod tests {
             .expect("create_object failed")
             .object_id();
             transaction.commit().await.expect("commit failed");
-            let vol = FxVolumeAndRoot::new(volume.clone(), 0).await.unwrap();
+            let vol = FxVolumeAndRoot::new(Weak::new(), volume.clone(), 0).await.unwrap();
 
             let file = vol
                 .volume()

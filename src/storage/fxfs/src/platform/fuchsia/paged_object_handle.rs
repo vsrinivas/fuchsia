@@ -221,6 +221,10 @@ impl PagedObjectHandle {
             None => return,
         };
 
+        // This must occur before making the reservation because this call may trigger a flush
+        // that would consume the reservation.
+        self.owner().report_pager_dirty(page_range.end - page_range.start).await;
+
         let mut inner = self.inner.lock().unwrap();
         let new_inner = Inner {
             dirty_page_count: inner.dirty_page_count + page_count(page_range.clone()),
@@ -241,6 +245,8 @@ impl PagedObjectHandle {
                     reservation.forget();
                 }
                 None => {
+                    // Undo the report of the dirty pages since this has failed.
+                    self.owner().report_pager_clean(page_range.end - page_range.start);
                     self.pager().report_failure(vmo, page_range, zx::Status::NO_SPACE);
                     return;
                 }
@@ -435,10 +441,17 @@ impl PagedObjectHandle {
             if is_first_transaction {
                 dismiss_scopeguard(timestamp_guard.take().unwrap());
             }
+
             batch.writeback_end(vmo, pager);
+            self.owner().report_pager_clean(batch.dirty_byte_count);
+
             is_first_transaction = false;
         }
+
+        // Before releasing the reservation, mark those pages as cleaned, since they weren't used.
+        self.owner().report_pager_clean(*reservation_guard);
         dismiss_scopeguard(reservation_guard);
+
         Ok(())
     }
 
