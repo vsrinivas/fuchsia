@@ -15,6 +15,7 @@ test("uart-unittests") {
   sources = [
     "amlogic-tests.cc",
     "driver-tests.cc",
+    "imx-tests.cc",
     "motmot-tests.cc",
     "ns8250-tests.cc",
     "onlcr-tests.cc",
