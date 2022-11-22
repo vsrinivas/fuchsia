@@ -105,8 +105,8 @@ group("non_hermetic_deps") {
     "//build/assembly/scripts:bazel_assembly_input_bundle_tool",
     "//build/bazel:*",
     "//build/bazel/assembly:*",
-    "//build/bazel/tests/bazel_input_resource_directory:*",
-    "//build/bazel/tests/build_action:*",
+    "//build/bazel/examples/*",
+    "//build/bazel/tests/*",
   ]
 }
 

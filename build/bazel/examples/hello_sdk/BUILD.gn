@@ -1,0 +1,24 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bazel/bazel_build_action.gni")
+
+# TODO(https://fxbug.dev/115699): Add targets for package when
+# `bazel_build_action` supports outputs in bazel-out.
+
+bazel_build_action("hello_sdk_pkg_publish") {
+  bazel_targets = [ "//build/bazel/examples/hello_sdk:pkg.publish" ]
+  bazel_outputs = [
+    "build/bazel/examples/hello_sdk/pkg.publish_base.sh",
+    "build/bazel/examples/hello_sdk/pkg.publish_base_workflow.json",
+  ]
+  ninja_outputs = [
+    "pkg.publish_base.sh",
+    "pkg.publish_base_workflow.json",
+  ]
+}
+
+group("hello_sdk") {
+  deps = [ ":hello_sdk_pkg_publish($default_toolchain)" ]
+}

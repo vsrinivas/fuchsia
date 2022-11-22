@@ -91,6 +91,12 @@ declare_args() {
   # This is a build that imports a board (vs. sdk).  If a board is set
   # (fx set <product>.<board>) this is true.
   has_board = false
+
+  # Whether to include Bazel build examples and tests in this build.
+  #
+  # TODO(https://fxbug.dev/112023): Default to true when Bazel is stable in
+  # CI/CQ.
+  include_bazel_examples_and_tests = false
 }
 
 if (host_os == "mac") {
@@ -1317,6 +1323,13 @@ group("default") {
   if (has_board) {
     deps += [ "//build/images:default-images" ]
     deps += [ "//:drivers-check" ]
+  }
+
+  if (include_bazel_examples_and_tests) {
+    deps += [
+      "//build/bazel/examples",
+      "//build/bazel/tests",
+    ]
   }
 }
 

@@ -4,6 +4,9 @@
 
 import("//build/bazel/bazel_inputs.gni")
 
+# TODO(jayzhaung): Move bazel_input_resource_directory test logic from
+# scripts/test-all.py and add a target here.
+
 action("generator") {
   script = "generate-directory.py"
   outputs = [ "$target_gen_dir/$target_name.stamp" ]
