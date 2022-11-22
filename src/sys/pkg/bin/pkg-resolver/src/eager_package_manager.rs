@@ -743,7 +743,11 @@ mod tests {
                     let mut needed_blobs = needed_blobs.into_stream().unwrap();
                     while let Some(request) = needed_blobs.try_next().await.unwrap() {
                         match request {
-                            NeededBlobsRequest::OpenMetaBlob { file: _, responder } => {
+                            NeededBlobsRequest::OpenMetaBlob {
+                                file: _,
+                                blob_type: _,
+                                responder,
+                            } => {
                                 responder.send(&mut Ok(false)).unwrap();
                             }
                             NeededBlobsRequest::GetMissingBlobs { iterator, control_handle: _ } => {

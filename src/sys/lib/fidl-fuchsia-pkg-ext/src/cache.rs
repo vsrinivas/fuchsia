@@ -141,9 +141,13 @@ async fn open_blob(
 ) -> Result<Option<NeededBlob>, OpenBlobError> {
     let (blob, blob_server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>()?;
 
+    // TODO(fxbug.dev/115478): Pass blob type in.
+    let blob_type = fpkg::BlobType::Uncompressed;
     let open_fut = match kind {
-        OpenKind::Meta => needed_blobs.open_meta_blob(blob_server_end),
-        OpenKind::Content(hash) => needed_blobs.open_blob(&mut hash.into(), blob_server_end),
+        OpenKind::Meta => needed_blobs.open_meta_blob(blob_server_end, blob_type),
+        OpenKind::Content(hash) => {
+            needed_blobs.open_blob(&mut hash.into(), blob_server_end, blob_type)
+        }
     };
     match open_fut.await {
         Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }) => {
@@ -702,7 +706,8 @@ mod tests {
             mut res: Result<bool, fidl_fuchsia_pkg::OpenBlobError>,
         ) -> Self {
             match self.stream.next().await {
-                Some(Ok(NeededBlobsRequest::OpenMetaBlob { file: _, responder })) => {
+                Some(Ok(NeededBlobsRequest::OpenMetaBlob { file: _, blob_type, responder })) => {
+                    assert_eq!(blob_type, fpkg::BlobType::Uncompressed);
                     responder.send(&mut res).unwrap();
                 }
                 r => panic!("Unexpected request: {:?}", r),
@@ -716,8 +721,14 @@ mod tests {
             mut res: Result<bool, fidl_fuchsia_pkg::OpenBlobError>,
         ) -> Self {
             match self.stream.next().await {
-                Some(Ok(NeededBlobsRequest::OpenBlob { blob_id, file: _, responder })) => {
+                Some(Ok(NeededBlobsRequest::OpenBlob {
+                    blob_id,
+                    file: _,
+                    blob_type,
+                    responder,
+                })) => {
                     assert_eq!(BlobId::from(blob_id), expected_blob_id);
+                    assert_eq!(blob_type, fpkg::BlobType::Uncompressed);
                     responder.send(&mut res).unwrap();
                 }
                 r => panic!("Unexpected request: {:?}", r),

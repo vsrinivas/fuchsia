@@ -9,7 +9,7 @@ use {
     },
     assert_matches::assert_matches,
     fidl_fuchsia_io as fio,
-    fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker, PackageCacheMarker},
+    fidl_fuchsia_pkg::{self as fpkg, BlobInfo, NeededBlobsMarker, PackageCacheMarker},
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
     fuchsia_inspect::{
@@ -272,7 +272,11 @@ async fn dynamic_index_needed_blobs() {
 
     let (meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-    assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
+    assert!(needed_blobs
+        .open_meta_blob(meta_blob_server_end, fpkg::BlobType::Uncompressed)
+        .await
+        .unwrap()
+        .unwrap());
 
     let hierarchy = env.inspect_hierarchy().await;
 
@@ -368,7 +372,11 @@ async fn dynamic_index_package_hash_update() {
 
     let (meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-    assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
+    assert!(needed_blobs
+        .open_meta_blob(meta_blob_server_end, fpkg::BlobType::Uncompressed)
+        .await
+        .unwrap()
+        .unwrap());
 
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
 
@@ -536,7 +544,7 @@ async fn package_cache_get() {
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
     assert!(needed_blobs
-        .open_blob(&mut blob.blob_id, content_blob_server_end)
+        .open_blob(&mut blob.blob_id, content_blob_server_end, fpkg::BlobType::Uncompressed)
         .await
         .unwrap()
         .unwrap());
@@ -561,7 +569,11 @@ async fn package_cache_get() {
 
     assert_eq!(
         true,
-        needed_blobs.open_blob(&mut blob.blob_id, content_blob_server_end).await.unwrap().unwrap()
+        needed_blobs
+            .open_blob(&mut blob.blob_id, content_blob_server_end, fpkg::BlobType::Uncompressed)
+            .await
+            .unwrap()
+            .unwrap()
     );
 
     // Last content blob open for writing.

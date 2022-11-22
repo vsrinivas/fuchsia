@@ -108,7 +108,11 @@ async fn get_and_verify_package(
 pub async fn write_meta_far(needed_blobs: &fpkg::NeededBlobsProxy, meta_far: BlobContents) {
     let (meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-    assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
+    assert!(needed_blobs
+        .open_meta_blob(meta_blob_server_end, fpkg::BlobType::Uncompressed)
+        .await
+        .unwrap()
+        .unwrap());
     write_blob(&meta_far.contents, meta_blob).await.unwrap();
 }
 
@@ -129,7 +133,7 @@ pub async fn write_needed_blobs(
             let (blob_proxy, blob_server_end) =
                 fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
             assert!(needed_blobs
-                .open_blob(&mut blob_info.blob_id, blob_server_end)
+                .open_blob(&mut blob_info.blob_id, blob_server_end, fpkg::BlobType::Uncompressed)
                 .await
                 .unwrap()
                 .unwrap());
@@ -191,16 +195,18 @@ async fn verify_package_cached(
     // If all the blobs are cached but the package is not active in the dynamic index the server
     // will reply with `Ok(false)`, meaning that the metadata blob is cached and GetMissingBlobs
     // needs to be performed (but the iterator obtained with GetMissingBlobs should be empty).
-    let epitaph_received = match needed_blobs.open_meta_blob(meta_blob_server_end).await {
-        Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }) => true,
-        Ok(Ok(false)) => false,
-        Ok(r) => {
-            panic!("Meta blob not cached: unexpected response {:?}", r)
-        }
-        Err(e) => {
-            panic!("Meta blob not cached: unexpected FIDL error {:?}", e)
-        }
-    };
+    let epitaph_received =
+        match needed_blobs.open_meta_blob(meta_blob_server_end, fpkg::BlobType::Uncompressed).await
+        {
+            Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }) => true,
+            Ok(Ok(false)) => false,
+            Ok(r) => {
+                panic!("Meta blob not cached: unexpected response {:?}", r)
+            }
+            Err(e) => {
+                panic!("Meta blob not cached: unexpected FIDL error {:?}", e)
+            }
+        };
 
     let (blob_iterator, blob_iterator_server_end) =
         fidl::endpoints::create_proxy::<fpkg::BlobInfoIteratorMarker>().unwrap();

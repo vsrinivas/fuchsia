@@ -576,9 +576,11 @@ async fn handle_open_meta_blob(
     package_index.write().await.start_install(hash);
 
     loop {
-        let (file, responder) =
+        let (file, blob_type, responder) =
             match stream.try_next().await.map_err(ServeNeededBlobsError::ReceiveRequest)? {
-                Some(NeededBlobsRequest::OpenMetaBlob { file, responder }) => Ok((file, responder)),
+                Some(NeededBlobsRequest::OpenMetaBlob { file, blob_type, responder }) => {
+                    Ok((file, blob_type, responder))
+                }
                 Some(NeededBlobsRequest::Abort { responder: _ }) => {
                     Err(ServeNeededBlobsError::Aborted)
                 }
@@ -591,8 +593,16 @@ async fn handle_open_meta_blob(
 
         let file_stream = file.into_stream().map_err(ServeNeededBlobsError::ReceiveRequest)?;
 
-        match open_write_blob(file_stream, responder, blobfs, hash, BlobKind::Package, trace_id)
-            .await
+        match open_write_blob(
+            file_stream,
+            responder,
+            blobfs,
+            hash,
+            blob_type,
+            BlobKind::Package,
+            trace_id,
+        )
+        .await
         {
             Ok(()) => break,
             Err(OpenWriteBlobError::Serve(e)) => return Err(e),
@@ -675,7 +685,12 @@ async fn handle_open_blobs(
         };
 
         match event {
-            Event::Request(Some(NeededBlobsRequest::OpenBlob { blob_id, file, responder })) => {
+            Event::Request(Some(NeededBlobsRequest::OpenBlob {
+                blob_id,
+                file,
+                blob_type,
+                responder,
+            })) => {
                 let blob_id = Hash::from(BlobId::from(blob_id));
 
                 if !missing_blobs.should_cache(&blob_id) {
@@ -693,6 +708,7 @@ async fn handle_open_blobs(
                     responder,
                     blobfs,
                     blob_id,
+                    blob_type,
                     BlobKind::Data,
                     trace_id,
                 );
@@ -775,6 +791,7 @@ async fn open_write_blob(
     responder: impl OpenBlobResponder,
     blobfs: &blobfs::Client,
     blob_id: Hash,
+    _blob_type: fpkg::BlobType,
     kind: BlobKind,
     parent_trace_id: ftrace::Id,
 ) -> Result<(), OpenWriteBlobError> {
@@ -1218,6 +1235,7 @@ mod serve_needed_blobs_tests {
             response.responder(),
             &blobfs,
             [0; 32].into(),
+            fpkg::BlobType::Uncompressed,
             BlobKind::Package,
             0.into(),
         )
@@ -1279,7 +1297,10 @@ mod serve_needed_blobs_tests {
                 let (blob, blob_server_end) =
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
+                assert_matches!(
+                    proxy.open_meta_blob(blob_server_end, fpkg::BlobType::Uncompressed).await,
+                    Ok(Ok(true))
+                );
 
                 let () = blob
                     .resize(4)
@@ -1306,7 +1327,7 @@ mod serve_needed_blobs_tests {
         // Trying to open the meta FAR blob again after writing it successfully is a protocol violation.
         let (_blob, blob_server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         assert_matches!(
-            proxy.open_meta_blob(blob_server_end).await,
+            proxy.open_meta_blob(blob_server_end, fpkg::BlobType::Uncompressed).await,
             Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
         );
 
@@ -1347,7 +1368,10 @@ mod serve_needed_blobs_tests {
                 let (blob, blob_server_end) =
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(false)));
+                assert_matches!(
+                    proxy.open_meta_blob(blob_server_end, fpkg::BlobType::Uncompressed).await,
+                    Ok(Ok(false))
+                );
                 assert_matches!(
                     blob.resize(0).await,
                     Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
@@ -1360,7 +1384,7 @@ mod serve_needed_blobs_tests {
         // violation.
         let (_blob, blob_server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         assert_matches!(
-            proxy.open_meta_blob(blob_server_end).await,
+            proxy.open_meta_blob(blob_server_end, fpkg::BlobType::Uncompressed).await,
             Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
         );
 
@@ -1392,7 +1416,7 @@ mod serve_needed_blobs_tests {
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
                 assert_matches!(
-                    proxy.open_meta_blob(blob_server_end).await,
+                    proxy.open_meta_blob(blob_server_end, fpkg::BlobType::Uncompressed).await,
                     Ok(Err(fidl_fuchsia_pkg::OpenBlobError::ConcurrentWrite))
                 );
                 assert_matches!(
@@ -1412,7 +1436,10 @@ mod serve_needed_blobs_tests {
                 let (blob, blob_server_end) =
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
+                assert_matches!(
+                    proxy.open_meta_blob(blob_server_end, fpkg::BlobType::Uncompressed).await,
+                    Ok(Ok(true))
+                );
 
                 let () = blob
                     .resize(1)
@@ -1440,7 +1467,10 @@ mod serve_needed_blobs_tests {
                 let (blob, blob_server_end) =
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
+                assert_matches!(
+                    proxy.open_meta_blob(blob_server_end, fpkg::BlobType::Uncompressed).await,
+                    Ok(Ok(true))
+                );
 
                 let () = blob
                     .close()
@@ -1467,7 +1497,10 @@ mod serve_needed_blobs_tests {
                 let (blob, blob_server_end) =
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
+                assert_matches!(
+                    proxy.open_meta_blob(blob_server_end, fpkg::BlobType::Uncompressed).await,
+                    Ok(Ok(true))
+                );
 
                 let () = blob
                     .resize(1)
@@ -1494,7 +1527,7 @@ mod serve_needed_blobs_tests {
         // Task moves to next state after retried write operation succeeds.
         let (_blob, blob_server_end) = fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         assert_matches!(
-            proxy.open_meta_blob(blob_server_end).await,
+            proxy.open_meta_blob(blob_server_end, fpkg::BlobType::Uncompressed).await,
             Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
         );
         assert_matches!(
@@ -1553,7 +1586,10 @@ mod serve_needed_blobs_tests {
                 let (_blob, blob_server_end) =
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(false)));
+                assert_matches!(
+                    proxy.open_meta_blob(blob_server_end, fpkg::BlobType::Uncompressed).await,
+                    Ok(Ok(false))
+                );
             },
         )
         .await;
@@ -1675,7 +1711,10 @@ mod serve_needed_blobs_tests {
                 let (_blob, blob_server_end) =
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(false)));
+                assert_matches!(
+                    proxy.open_meta_blob(blob_server_end, fpkg::BlobType::Uncompressed).await,
+                    Ok(Ok(false))
+                );
             },
         )
         .await;
@@ -1835,7 +1874,13 @@ mod serve_needed_blobs_tests {
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
                 assert_matches!(
-                    proxy.open_blob(&mut BlobId::from([2; 32]).into(), blob_server_end).await,
+                    proxy
+                        .open_blob(
+                            &mut BlobId::from([2; 32]).into(),
+                            blob_server_end,
+                            fpkg::BlobType::Uncompressed
+                        )
+                        .await,
                     Ok(Ok(true))
                 );
 
@@ -1903,8 +1948,11 @@ mod serve_needed_blobs_tests {
                         let (blob, blob_server_end) =
                             fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-                        let open_fut =
-                            proxy.open_blob(&mut BlobId::from(hash).into(), blob_server_end);
+                        let open_fut = proxy.open_blob(
+                            &mut BlobId::from(hash).into(),
+                            blob_server_end,
+                            fpkg::BlobType::Uncompressed,
+                        );
 
                         async move {
                             assert_matches!(open_fut.await, Ok(Ok(true)));
@@ -1970,8 +2018,11 @@ mod serve_needed_blobs_tests {
                         let (blob, blob_server_end) =
                             fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-                        let open_fut =
-                            proxy.open_blob(&mut BlobId::from(hash).into(), blob_server_end);
+                        let open_fut = proxy.open_blob(
+                            &mut BlobId::from(hash).into(),
+                            blob_server_end,
+                            fpkg::BlobType::Uncompressed,
+                        );
 
                         async move {
                             assert_matches!(open_fut.await, Ok(Ok(false)));
@@ -2021,7 +2072,13 @@ mod serve_needed_blobs_tests {
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
                 assert_matches!(
-                    proxy.open_blob(&mut BlobId::from(content_blob).into(), blob_server_end).await,
+                    proxy
+                        .open_blob(
+                            &mut BlobId::from(content_blob).into(),
+                            blob_server_end,
+                            fpkg::BlobType::Uncompressed
+                        )
+                        .await,
                     Ok(Err(fidl_fuchsia_pkg::OpenBlobError::ConcurrentWrite))
                 );
                 assert_matches!(
@@ -2042,7 +2099,13 @@ mod serve_needed_blobs_tests {
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
                 assert_matches!(
-                    proxy.open_blob(&mut BlobId::from(content_blob).into(), blob_server_end).await,
+                    proxy
+                        .open_blob(
+                            &mut BlobId::from(content_blob).into(),
+                            blob_server_end,
+                            fpkg::BlobType::Uncompressed
+                        )
+                        .await,
                     Ok(Ok(true))
                 );
 
@@ -2073,7 +2136,13 @@ mod serve_needed_blobs_tests {
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
                 assert_matches!(
-                    proxy.open_blob(&mut BlobId::from(content_blob).into(), blob_server_end).await,
+                    proxy
+                        .open_blob(
+                            &mut BlobId::from(content_blob).into(),
+                            blob_server_end,
+                            fpkg::BlobType::Uncompressed
+                        )
+                        .await,
                     Ok(Ok(true))
                 );
 
@@ -2097,7 +2166,13 @@ mod serve_needed_blobs_tests {
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
                 assert_matches!(
-                    proxy.open_blob(&mut BlobId::from(content_blob).into(), blob_server_end).await,
+                    proxy
+                        .open_blob(
+                            &mut BlobId::from(content_blob).into(),
+                            blob_server_end,
+                            fpkg::BlobType::Uncompressed
+                        )
+                        .await,
                     Ok(Ok(true))
                 );
 
@@ -2172,8 +2247,11 @@ mod serve_needed_blobs_tests {
                 let (blob, blob_server_end) =
                     fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
 
-                let open_fut =
-                    proxy.open_blob(&mut BlobId::from(content_blob).into(), blob_server_end);
+                let open_fut = proxy.open_blob(
+                    &mut BlobId::from(content_blob).into(),
+                    blob_server_end,
+                    fpkg::BlobType::Uncompressed,
+                );
 
                 async move {
                     assert_matches!(open_fut.await, Ok(Ok(true)));

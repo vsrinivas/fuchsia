@@ -117,23 +117,26 @@ protocol NeededBlobs {
     /// should not be called until writing the meta blob or this request
     /// responds with `false`.
     ///
-    /// If the package was already cached, server will close the channel
-    /// with a `ZX_OK` epitaph.
+    /// If the package was already cached, server will close the channel with a
+    /// `ZX_OK` epitaph.
     ///
     /// + request `file` resolves to an opened writable file which must be
-    ///   truncated to the correct size by the caller and then written from
-    ///   start to finish (seeks are not supported). A corrupt blob is indicated
-    ///   by a `Write()` (usually the final write) failing with
-    ///   `ZX_ERR_IO_DATA_INTEGRITY`. On error or a response of `false`, `file`
-    ///   will be closed by the server.
+    ///   truncated to the correct size by the caller (if it's an uncompressed
+    ///   blob) and then written from start to finish (seeks are not supported).
+    ///   A corrupt blob is indicated by a `Write()` (usually the final write)
+    ///   failing with `ZX_ERR_IO_DATA_INTEGRITY`. On error or a response of
+    ///   `false`, `file` will be closed by the server.
+    /// + request `blob_type` the type of the blob to be written. Will be
+    ///   removed once the transition to offline compression is complete.
     /// - response `needed` `true` if the blob is still needed and should be
-    ///   written by the client. On `false`, the blob now exists, does not
-    ///   need to be written by the client, and `file` will be closed.
+    ///   written by the client. On `false`, the blob now exists, does not need
+    ///   to be written by the client, and `file` will be closed.
     /// * error an OpenBlobError indicating failure. Clients may retry this
     ///   request, though the server end may abort this cache operation on
     ///   errors it considers to be fatal.
     OpenMetaBlob(resource struct {
         file server_end:fuchsia.io.File;
+        blob_type BlobType;
     }) -> (struct {
         needed bool;
     }) error OpenBlobError;
@@ -163,20 +166,23 @@ protocol NeededBlobs {
     ///
     /// + request `blob_id` the blob id describing this blob.
     /// + request `file` resolves to an opened writable file which must be
-    ///   truncated to the correct size by the caller and then written from
-    ///   start to finish (seeks are not supported). A corrupt blob is indicated
-    ///   by a `Write()` (usually the final write) failing with
-    ///   `ZX_ERR_IO_DATA_INTEGRITY`. On error or a response of `false`, `file`
-    ///   will be closed by the server.
+    ///   truncated to the correct size by the caller (if it's an uncompressed
+    ///   blob) and then written from start to finish (seeks are not supported).
+    ///   A corrupt blob is indicated by a `Write()` (usually the final write)
+    ///   failing with `ZX_ERR_IO_DATA_INTEGRITY`. On error or a response of
+    ///   `false`, `file` will be closed by the server.
+    /// + request `blob_type` the type of the blob to be written. Will be
+    ///   removed once the transition to offline compression is complete.
     /// - response `needed` `true` if the blob is still needed and should be
-    ///   written by the client. On `false`, the blob now exists, does not
-    ///   need to be written by the client, and `file` will be closed.
+    ///   written by the client. On `false`, the blob now exists, does not need
+    ///   to be written by the client, and `file` will be closed.
     /// * error an OpenBlobError indicating failure. Clients may retry this
     ///   request, though the server end may abort this cache operation on
     ///   errors it considers to be fatal.
     OpenBlob(resource struct {
         blob_id BlobId;
         file server_end:fuchsia.io.File;
+        blob_type BlobType;
     }) -> (struct {
         needed bool;
     }) error OpenBlobError;
@@ -191,6 +197,16 @@ protocol NeededBlobs {
     /// will also abort the package cache operation. However, this API provides
     /// the ability to wait for the operation to be torn down.
     Abort() -> ();
+};
+
+/// The type of the blob. Will be removed once the transition to offline
+/// compression is complete.
+type BlobType = strict enum {
+    /// Raw uncompressed blob.
+    UNCOMPRESSED = 1;
+
+    /// Delivery blob.
+    DELIVERY = 2;
 };
 
 /// A chunked iterator of [`BlobInfo`], allowing transfer of more [`BlobInfo`]s

@@ -42,7 +42,11 @@ async fn do_fetch(package_cache: &fpkg::PackageCacheProxy, pkg: &Package) {
 
     let (meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-    let res = needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap();
+    let res = needed_blobs
+        .open_meta_blob(meta_blob_server_end, fpkg::BlobType::Uncompressed)
+        .await
+        .unwrap()
+        .unwrap();
     assert!(res);
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
 
@@ -53,7 +57,7 @@ async fn do_fetch(package_cache: &fpkg::PackageCacheProxy, pkg: &Package) {
         let (content_blob, content_blob_server_end) =
             fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         assert!(needed_blobs
-            .open_blob(&mut blob.blob_id, content_blob_server_end)
+            .open_blob(&mut blob.blob_id, content_blob_server_end, fpkg::BlobType::Uncompressed)
             .await
             .unwrap()
             .unwrap());
@@ -198,7 +202,11 @@ async fn gc_dynamic_index_protected() {
 
     let (meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-    let res = needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap();
+    let res = needed_blobs
+        .open_meta_blob(meta_blob_server_end, fpkg::BlobType::Uncompressed)
+        .await
+        .unwrap()
+        .unwrap();
     assert!(res);
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
 
@@ -216,7 +224,7 @@ async fn gc_dynamic_index_protected() {
         let (content_blob, content_blob_server_end) =
             fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         assert!(needed_blobs
-            .open_blob(&mut blob.blob_id, content_blob_server_end)
+            .open_blob(&mut blob.blob_id, content_blob_server_end, fpkg::BlobType::Uncompressed)
             .await
             .unwrap()
             .unwrap());
@@ -331,7 +339,11 @@ async fn gc_updated_static_package() {
 
     let (meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-    let res = needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap();
+    let res = needed_blobs
+        .open_meta_blob(meta_blob_server_end, fpkg::BlobType::Uncompressed)
+        .await
+        .unwrap()
+        .unwrap();
     assert!(res);
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
 
@@ -349,7 +361,7 @@ async fn gc_updated_static_package() {
         let (content_blob, content_blob_server_end) =
             fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
         assert!(needed_blobs
-            .open_blob(&mut blob.blob_id, content_blob_server_end)
+            .open_blob(&mut blob.blob_id, content_blob_server_end, fpkg::BlobType::Uncompressed)
             .await
             .unwrap()
             .unwrap());
@@ -437,7 +449,11 @@ async fn blob_write_fails_when_out_of_space() {
 
     let (meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-    let res = needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap();
+    let res = needed_blobs
+        .open_meta_blob(meta_blob_server_end, fpkg::BlobType::Uncompressed)
+        .await
+        .unwrap()
+        .unwrap();
     assert!(res);
 
     let (meta_far, _contents) = pkg.contents();
@@ -496,7 +512,11 @@ async fn subpackage_blobs_protected_from_gc(gc_protection: GcProtection) {
     let meta_far = superpackage.contents().0;
     let (meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-    assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
+    assert!(needed_blobs
+        .open_meta_blob(meta_blob_server_end, fpkg::BlobType::Uncompressed)
+        .await
+        .unwrap()
+        .unwrap());
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
 
     // Get the missing blobs iterator.
@@ -524,7 +544,8 @@ async fn subpackage_blobs_protected_from_gc(gc_protection: GcProtection) {
     assert!(needed_blobs
         .open_blob(
             &mut BlobId::from(*subpackage.meta_far_merkle_root()).into(),
-            subpackage_meta_blob_server_end
+            subpackage_meta_blob_server_end,
+            fpkg::BlobType::Uncompressed,
         )
         .await
         .unwrap()
@@ -564,7 +585,8 @@ async fn subpackage_blobs_protected_from_gc(gc_protection: GcProtection) {
     assert!(needed_blobs
         .open_blob(
             &mut BlobId::from(subpackage_content_files[0].0).into(),
-            subpackage_content_blob_a_server_end
+            subpackage_content_blob_a_server_end,
+            fpkg::BlobType::Uncompressed,
         )
         .await
         .unwrap()
@@ -584,7 +606,8 @@ async fn subpackage_blobs_protected_from_gc(gc_protection: GcProtection) {
     assert!(needed_blobs
         .open_blob(
             &mut BlobId::from(subpackage_content_files[1].0).into(),
-            subpackage_content_blob_b_server_end
+            subpackage_content_blob_b_server_end,
+            fpkg::BlobType::Uncompressed,
         )
         .await
         .unwrap()

@@ -8,7 +8,7 @@ use {
     },
     assert_matches::assert_matches,
     fidl_fuchsia_io as fio,
-    fidl_fuchsia_pkg::{BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker},
+    fidl_fuchsia_pkg::{self as fpkg, BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker},
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
@@ -63,7 +63,11 @@ async fn get_single_package_with_no_content_blobs() {
 
     let (meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
-    assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
+    assert!(needed_blobs
+        .open_meta_blob(meta_blob_server_end, fpkg::BlobType::Uncompressed)
+        .await
+        .unwrap()
+        .unwrap());
 
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
 
@@ -147,7 +151,7 @@ async fn get_and_hold_directory() {
     let (_meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     assert_matches!(
-        needed_blobs.open_meta_blob(meta_blob_server_end).await,
+        needed_blobs.open_meta_blob(meta_blob_server_end, fpkg::BlobType::Uncompressed).await,
         Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
     );
 
@@ -300,7 +304,7 @@ async fn get_package_already_present_on_fs() {
     let (_meta_blob, meta_blob_server_end) =
         fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
     assert_matches!(
-        needed_blobs.open_meta_blob(meta_blob_server_end).await,
+        needed_blobs.open_meta_blob(meta_blob_server_end, fpkg::BlobType::Uncompressed).await,
         Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
     );
 
