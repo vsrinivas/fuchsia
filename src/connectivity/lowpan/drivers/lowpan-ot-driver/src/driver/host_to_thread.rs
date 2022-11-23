@@ -36,7 +36,7 @@ where
         &self,
         event: NetworkInterfaceEvent,
     ) -> Result<(), Error> {
-        Ok(match event {
+        match event {
             NetworkInterfaceEvent::InterfaceEnabledChanged(enabled) => {
                 let mut driver_state = self.driver_state.lock();
 
@@ -68,7 +68,8 @@ where
                 self.on_netstack_removed_route(x).await?
             }
             _ => {}
-        })
+        };
+        Ok(())
     }
 
     pub(crate) fn on_netstack_joined_multicast_group(
@@ -189,24 +190,20 @@ where
             fx_log_info!("OpenThread Send Failed: Active scan in progress.");
         } else if driver_state.ot_instance.is_energy_scan_in_progress() {
             fx_log_info!("OpenThread Send Failed: Energy scan in progress.");
-        } else {
-            if let Err(err) = driver_state.ot_instance.ip6_send_data(packet.as_slice()) {
-                match err {
-                    ot::Error::MessageDropped => {
-                        fx_log_info!("OpenThread dropped a packet due to packet processing rules.");
-                    }
-                    ot::Error::NoRoute => {
-                        fx_log_info!(
-                            "OpenThread dropped a packet because there was no route to host."
-                        );
-                    }
-                    x => {
-                        fx_log_warn!("Send packet to OpenThread failed: \"{:?}\"", x);
-                        fx_log_debug!(
-                            "Message Buffer Info: {:?}",
-                            driver_state.ot_instance.get_buffer_info()
-                        );
-                    }
+        } else if let Err(err) = driver_state.ot_instance.ip6_send_data(packet.as_slice()) {
+            match err {
+                ot::Error::MessageDropped => {
+                    fx_log_info!("OpenThread dropped a packet due to packet processing rules.");
+                }
+                ot::Error::NoRoute => {
+                    fx_log_info!("OpenThread dropped a packet because there was no route to host.");
+                }
+                x => {
+                    fx_log_warn!("Send packet to OpenThread failed: \"{:?}\"", x);
+                    fx_log_debug!(
+                        "Message Buffer Info: {:?}",
+                        driver_state.ot_instance.get_buffer_info()
+                    );
                 }
             }
         }
@@ -269,6 +266,7 @@ where
         }
 
         match Ipv6Packet::parse(&mut packet_bytes, ()) {
+            #[allow(clippy::single_match)]
             Ok(packet) => match packet.proto() {
                 Ipv6Proto::Icmpv6 => {
                     let args = IcmpParseArgs::new(packet.src_ip(), packet.dst_ip());

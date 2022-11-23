@@ -262,7 +262,7 @@ fn create_galaxy_inspect(kernel: Arc<Kernel>, parent: &inspect::Node) {
         for thread_group in kernel.pids.read().get_thread_groups() {
             let tg = thread_group.read();
 
-            let tg_node = thread_groups.create_child(&format!("{}", thread_group.leader));
+            let tg_node = thread_groups.create_child(format!("{}", thread_group.leader));
             tg_node.record_int(&*PPID, tg.get_ppid() as i64);
             tg_node.record_bool(&*STOPPED, tg.stopped);
 
@@ -272,7 +272,7 @@ fn create_galaxy_inspect(kernel: Arc<Kernel>, parent: &inspect::Node) {
                     record_task_command_to_node(&task, &*COMMAND, &tg_node);
                     continue;
                 }
-                record_task_command_to_node(&task, &format!("{}", task.id), &tasks_node);
+                record_task_command_to_node(&task, format!("{}", task.id), &tasks_node);
             }
             tg_node.record(tasks_node);
             thread_groups.record(tg_node);
@@ -290,7 +290,7 @@ fn record_task_command_to_node<'a>(
 ) {
     match task.command().to_str() {
         Ok(command) => node.record_string(name, command),
-        Err(err) => node.record_string(name, &format!("{}", err)),
+        Err(err) => node.record_string(name, format!("{}", err)),
     }
 }
 

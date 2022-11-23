@@ -294,12 +294,12 @@ impl Handler {
     /// Adds a [Job] to be handled by this [Handler].
     pub(crate) fn add_pending_job(&mut self, incoming_job: Job) -> Result<(), GroupError> {
         let job_info = job::Info::new(self.job_id_generator.generate(), incoming_job);
-        let execution_type = job_info.get_execution_type().clone();
+        let execution_type = *job_info.get_execution_type();
 
         // Execution groups are based on matching execution::Type.
         let execution_group = self
             .jobs
-            .entry(execution_type.clone())
+            .entry(execution_type)
             .or_insert_with(move || execution::Group::new(execution_type));
         execution_group.add(job_info)
     }

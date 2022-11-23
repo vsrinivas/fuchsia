@@ -4,6 +4,7 @@
 
 mod ffi;
 mod file;
+#[allow(clippy::module_inception)]
 mod magma;
 
 pub use file::MagmaFile;

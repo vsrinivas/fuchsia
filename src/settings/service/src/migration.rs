@@ -498,9 +498,9 @@ mod tests {
     }
 
     const ID_LEN: u64 = 15;
-    const ID: u64 = 2022_01_30__12_00_00;
+    const ID: u64 = 20_220_130_120_000;
     const COBALT_ID: u32 = 99;
-    const ID2: u64 = 2022_05_23__12_00_00;
+    const ID2: u64 = 20_220_523_120_000;
     const COBALT_ID2: u32 = 100;
     const DATA_FILE_NAME: &str = "test_20220130120000.pfidl";
 
@@ -976,6 +976,7 @@ mod tests {
         assert!(triggered.load(Ordering::SeqCst));
     }
 
+    #[allow(clippy::unused_unit)]
     #[test_case(MigrationError::NoData, MigrationError::NoData, ErrorMetric::NoData)]
     #[test_case(MigrationError::DiskFull, MigrationError::DiskFull, ErrorMetric::DiskFull)]
     #[test_case(
@@ -1036,12 +1037,12 @@ mod tests {
         let migration_manager = builder.build();
 
         let result = migration_manager.run_tracked_migrations(Some(proxy)).await;
-        assert!(match (result, expected_error) {
+        assert!(matches!(
+            (result, expected_error),
             (Err(MigrationError::NoData), MigrationError::NoData)
-            | (Err(MigrationError::DiskFull), MigrationError::DiskFull)
-            | (Err(MigrationError::Unrecoverable(_)), MigrationError::Unrecoverable(_)) => true,
-            _ => false,
-        });
+                | (Err(MigrationError::DiskFull), MigrationError::DiskFull)
+                | (Err(MigrationError::Unrecoverable(_)), MigrationError::Unrecoverable(_))
+        ));
 
         join_handle.await;
         assert!(triggered.load(Ordering::SeqCst));

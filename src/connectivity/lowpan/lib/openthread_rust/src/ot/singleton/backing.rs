@@ -8,6 +8,7 @@ use std::task::Waker;
 
 /// Backing struct for OpenThread instances. This type contains information
 /// related to the rust API implementation.
+#[allow(clippy::type_complexity)]
 pub(crate) struct InstanceBacking {
     pub waker: Cell<Waker>,
     pub platform: RefCell<std::boxed::Box<dyn Platform>>,

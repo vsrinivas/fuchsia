@@ -5,7 +5,7 @@
 use crate::prelude_internal::*;
 
 /// DNS-SD Service Name for TREL
-pub const TREL_DNSSD_SERVICE_NAME: &'static str = "_trel._udp.";
+pub const TREL_DNSSD_SERVICE_NAME: &str = "_trel._udp.";
 
 /// Methods from the [OpenThread TREL Module][1].
 ///
@@ -92,10 +92,9 @@ impl<'a> PlatTrelPeerInfo<'a> {
     /// Returns the TXT field as an escaped ASCII string.
     pub fn txt_escaped(&self) -> String {
         self.txt()
-            .into_iter()
+            .iter()
             .map(Clone::clone)
-            .map(std::ascii::escape_default)
-            .flatten()
+            .flat_map(std::ascii::escape_default)
             .map(char::from)
             .collect::<String>()
     }

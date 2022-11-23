@@ -175,7 +175,7 @@ impl From<Result<(), Error>> for Error {
 
 impl From<otError> for Error {
     fn from(err: otError) -> Self {
-        Error::from_u32(err).expect(format!("Unknown otError value: {}", err).as_str())
+        Error::from_u32(err).unwrap_or_else(|| panic!("Unknown otError value: {}", err))
     }
 }
 
@@ -191,8 +191,8 @@ impl From<Error> for otError {
     }
 }
 
-impl Into<Result> for Error {
-    fn into(self) -> Result {
-        self.into_result()
+impl From<Error> for Result {
+    fn from(val: Error) -> Self {
+        val.into_result()
     }
 }

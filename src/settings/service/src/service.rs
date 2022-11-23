@@ -156,8 +156,8 @@ macro_rules! payload_convert {
     ($service_payload_type:ident, $payload_type:ty) => {
         pub(super) mod convert {
             use super::*;
-            use crate::service;
-            use crate::service::TryFromWithClient;
+            use $crate::service;
+            use $crate::service::TryFromWithClient;
 
             use std::convert::TryFrom;
 

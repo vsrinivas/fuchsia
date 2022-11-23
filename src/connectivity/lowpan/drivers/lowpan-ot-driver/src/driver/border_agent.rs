@@ -62,7 +62,7 @@ where
     txt.push(("tv".to_string(), b"1.2.0".to_vec()));
 
     // `sb` - State bitmap
-    txt.push(("sb".to_string(), (border_agent_state.bits as u32).to_be_bytes().to_vec()));
+    txt.push(("sb".to_string(), border_agent_state.bits.to_be_bytes().to_vec()));
 
     // `nn` - Network Name
     if ot_instance.is_commissioned() {

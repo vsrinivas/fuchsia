@@ -300,6 +300,7 @@ pub fn random_connection_data() -> PastConnectionData {
 }
 
 #[derive(Clone)]
+#[allow(clippy::type_complexity)]
 pub struct FakeScanRequester {
     // A type alias for this complex type would be needless indirection, so allow the complex type
     #[allow(clippy::complexity)]

@@ -141,7 +141,7 @@ impl StoredAccountList {
     pub fn new(account_list_dir: &Path, accounts: Vec<StoredAccount>) -> StoredAccountList {
         let mut account_map = BTreeMap::new();
         for account in accounts {
-            account_map.insert(account.account_id().clone(), account);
+            account_map.insert(*account.account_id(), account);
         }
         Self { account_list_dir: account_list_dir.to_path_buf(), accounts: account_map }
     }
@@ -159,10 +159,8 @@ impl StoredAccountList {
             return Err(AccountManagerError::new(ApiError::Internal).with_cause(cause));
         }
 
-        self.accounts.insert(
-            account_id.clone(),
-            StoredAccount::new(account_id.clone(), pre_auth_state, metadata),
-        );
+        self.accounts
+            .insert(*account_id, StoredAccount::new(*account_id, pre_auth_state, metadata));
 
         self.save()
     }
@@ -263,7 +261,7 @@ impl StoredAccountList {
                 AccountManagerError::new(ApiError::Resource).with_cause(err)
             })?;
         }
-        fs::rename(&tmp_path, &path).map_err(|err| {
+        fs::rename(&tmp_path, path).map_err(|err| {
             warn!("Failed to rename account list: {:?}", err);
             AccountManagerError::new(ApiError::Resource).with_cause(err)
         })
@@ -293,12 +291,12 @@ mod tests {
         static ref ACCOUNT_METADATA_1: AccountMetadata = AccountMetadata::new("test1".to_string());
         static ref ACCOUNT_METADATA_2: AccountMetadata = AccountMetadata::new("test2".to_string());
         static ref STORED_ACCOUNT_1: StoredAccount = StoredAccount::new(
-            ACCOUNT_ID_1.clone(),
+            *ACCOUNT_ID_1,
             ACCOUNT_PRE_AUTH_STATE_1.to_vec(),
             ACCOUNT_METADATA_1.clone(),
         );
         static ref STORED_ACCOUNT_2: StoredAccount = StoredAccount::new(
-            ACCOUNT_ID_2.clone(),
+            *ACCOUNT_ID_2,
             ACCOUNT_PRE_AUTH_STATE_2.to_vec(),
             ACCOUNT_METADATA_2.clone(),
         );

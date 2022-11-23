@@ -3761,9 +3761,7 @@ mod tests {
             }
         }
 
-        fn lock_receiver_shared_memory<'a>(
-            &'a self,
-        ) -> crate::lock::MappedMutexGuard<'a, SharedMemory> {
+        fn lock_receiver_shared_memory(&self) -> crate::lock::MappedMutexGuard<'_, SharedMemory> {
             crate::lock::MutexGuard::map(self.receiver_proc.shared_memory.lock(), |value| {
                 value.as_mut().unwrap()
             })
@@ -5471,7 +5469,7 @@ mod tests {
         let (kernel, _task) = create_kernel_and_task();
         let process =
             fuchsia_runtime::process_self().duplicate(zx::Rights::SAME_RIGHTS).expect("process");
-        let remote_binder_task = RemoteBinderTask { process, kernel: kernel.clone() };
+        let remote_binder_task = RemoteBinderTask { process, kernel };
         let mut vector = Vec::with_capacity(vector_size);
         for i in 0..vector_size {
             vector.push((i & 255) as u8);

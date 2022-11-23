@@ -179,7 +179,7 @@ mod tests {
     fn test_clonable() {
         let id: u64 = 456;
         let value = AccountId::new(id);
-        let cloned = value.clone();
+        let cloned = value;
         assert_eq!(id, value.inner);
         assert_eq!(id, cloned.inner);
     }

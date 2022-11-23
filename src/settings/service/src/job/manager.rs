@@ -80,7 +80,7 @@ impl Manager {
         // to the caller for sending new sources.
         let signature = receptor.get_signature();
         let event_publisher =
-            event::Publisher::create(&message_hub_delegate, MessengerType::Unbound).await;
+            event::Publisher::create(message_hub_delegate, MessengerType::Unbound).await;
 
         let mut manager = Self {
             sources: HashMap::new(),

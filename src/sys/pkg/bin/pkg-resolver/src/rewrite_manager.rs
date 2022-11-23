@@ -173,7 +173,7 @@ impl RewriteManager {
     ) {
         states.clear();
         for (i, rule) in rules.iter().enumerate() {
-            let rule_node = node.create_child(&i.to_string());
+            let rule_node = node.create_child(i.to_string());
             states.push(create_rule_inspect_state(rule, rule_node));
         }
     }
@@ -389,7 +389,7 @@ impl RewriteManagerBuilder<inspect::Node> {
             generation_property: self.inspect_node.create_uint("generation", 0),
             dynamic_rules_path_property: self
                 .inspect_node
-                .create_string("dynamic_rules_path", &format!("{:?}", self.dynamic_rules_path)),
+                .create_string("dynamic_rules_path", format!("{:?}", self.dynamic_rules_path)),
             node: self.inspect_node,
         };
 

@@ -48,18 +48,21 @@ impl<T: Tasklets + ot::Boxable> Tasklets for ot::Box<T> {
 pub trait ProcessPollAsync {
     /// Processes all tasks that need to be handled for this instance,
     /// including those from the platform implementation.
-    fn process_poll(self: &Self, cx: &mut Context<'_>) -> std::task::Poll<Option<()>>;
+    fn process_poll(&self, cx: &mut Context<'_>) -> std::task::Poll<Option<()>>;
 }
 
 impl ProcessPollAsync for ot::Instance {
-    fn process_poll(self: &Self, cx: &mut Context<'_>) -> std::task::Poll<Option<()>> {
+    fn process_poll(&self, cx: &mut Context<'_>) -> std::task::Poll<Option<()>> {
         if let Err(err) = self.platform_poll(cx) {
             warn!("process_poll terminating: {:?}", err);
             return std::task::Poll::Ready(None);
         };
         self.set_waker(cx.waker().clone());
         if self.has_pending() {
-            std::task::Poll::Ready(Some(self.process()))
+            std::task::Poll::Ready({
+                self.process();
+                Some(())
+            })
         } else {
             std::task::Poll::Pending
         }

@@ -719,7 +719,9 @@ impl SocketOps for UnixSocket {
                     .as_bytes()
                     .to_owned(),
                 SO_PEERSEC => "unconfined".as_bytes().to_vec(),
-                SO_ACCEPTCONN => {
+                SO_ACCEPTCONN =>
+                {
+                    #[allow(clippy::bool_to_int_with_if)]
                     if self.is_listening(socket) { 1u32 } else { 0u32 }.to_ne_bytes().to_vec()
                 }
                 SO_SNDBUF => (self.get_send_capacity() as socklen_t).to_ne_bytes().to_vec(),
@@ -975,7 +977,7 @@ mod tests {
         let user_address = map_memory(&current_task, UserAddress::default(), opt_size as u64);
         let send_capacity: socklen_t = 4 * 4096;
         current_task.mm.write_memory(user_address, &send_capacity.to_ne_bytes()).unwrap();
-        let user_buffer = UserBuffer { address: user_address, length: opt_size as usize };
+        let user_buffer = UserBuffer { address: user_address, length: opt_size };
         server_socket.setsockopt(&current_task, SOL_SOCKET, SO_SNDBUF, user_buffer).unwrap();
 
         let opt_bytes = server_socket.getsockopt(SOL_SOCKET, SO_SNDBUF, 0).unwrap();

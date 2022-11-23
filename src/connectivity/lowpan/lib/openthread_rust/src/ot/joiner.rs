@@ -31,7 +31,7 @@ pub enum JoinerState {
 impl From<otJoinerState> for JoinerState {
     fn from(x: otJoinerState) -> Self {
         use num::FromPrimitive;
-        Self::from_u32(x).expect(format!("Unknown otJoinerState value: {}", x).as_str())
+        Self::from_u32(x).unwrap_or_else(|| panic!("Unknown otJoinerState value: {}", x))
     }
 }
 
@@ -47,6 +47,7 @@ impl From<JoinerState> for otJoinerState {
 pub trait Joiner {
     /// Functional equivalent of
     /// [`otsys::otJoinerStart`](crate::otsys::otJoinerStart).
+    #[allow(clippy::too_many_arguments)]
     fn joiner_start<'a, F: FnOnce(Result) + 'a>(
         &self,
         pskd: &str,

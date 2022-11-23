@@ -309,7 +309,7 @@ impl<R: ext4_readers::Reader> AndroidSparseReader<R> {
             let mut out_offset = 0;
             for _ in 0..header.total_chunks {
                 let mut chunk_header = RawChunkHeader::default();
-                inner.read(in_offset as u64, chunk_header.as_bytes_mut())?;
+                inner.read(in_offset, chunk_header.as_bytes_mut())?;
                 let data_offset = in_offset + size_of_val(&chunk_header) as u64;
                 let data_size = chunk_header.total_sz - size_of_val(&chunk_header) as u32;
                 in_offset += chunk_header.total_sz as u64;
@@ -328,7 +328,7 @@ impl<R: ext4_readers::Reader> AndroidSparseReader<R> {
                                 size_of_val(&fill),
                             );
                         }
-                        inner.read(data_offset as u64, fill.as_bytes_mut())?;
+                        inner.read(data_offset, fill.as_bytes_mut())?;
                         SparseChunk::Fill { fill }
                     }
                     CHUNK_TYPE_DONT_CARE => SparseChunk::DontCare,
@@ -359,7 +359,7 @@ impl<R: ext4_readers::Reader> ext4_readers::Reader for AndroidSparseReader<R> {
                 if chunk_offset > *in_size as u64 {
                     return Err(ext4_readers::ReaderError::OutOfBounds(chunk_offset, total_size));
                 }
-                self.inner.read(*in_offset as u64 + chunk_offset, data)?;
+                self.inner.read(*in_offset + chunk_offset, data)?;
             }
             SparseChunk::Fill { fill } => {
                 for i in offset_usize..offset_usize + data.len() {

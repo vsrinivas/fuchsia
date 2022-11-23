@@ -575,10 +575,10 @@ mod tests {
         let meta_package = meta_dir.join("package");
         let meta_data = meta_dir.join("data");
 
-        fs::write(&blob1, b"blob1").unwrap();
-        fs::write(&blob2, b"blob2").unwrap();
-        fs::write(&meta_package, b"meta_package").unwrap();
-        fs::write(&meta_data, b"meta_data").unwrap();
+        fs::write(blob1, b"blob1").unwrap();
+        fs::write(blob2, b"blob2").unwrap();
+        fs::write(meta_package, b"meta_package").unwrap();
+        fs::write(meta_data, b"meta_data").unwrap();
 
         let creation_manifest = PackageBuildManifest::from_dir(dir.path()).unwrap();
         let far_contents = creation_manifest.far_contents();

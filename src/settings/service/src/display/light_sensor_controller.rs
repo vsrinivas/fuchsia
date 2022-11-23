@@ -241,7 +241,7 @@ where
 async fn get_sensor_data(sensor: &Sensor) -> LightData {
     loop {
         if let Some(sensor_data) =
-            read_sensor(&sensor).await.expect("Could not read from the sensor")
+            read_sensor(sensor).await.expect("Could not read from the sensor")
         {
             let lux = sensor_data.illuminance as f32;
             let red = sensor_data.red as f32;
@@ -434,7 +434,7 @@ mod tests {
 
         let sensor = Sensor::new(&proxy, &service_context).await.unwrap();
         let (cancellation_tx, cancellation_rx) = oneshot::channel();
-        let trigger_factory = || futures::future::pending();
+        let trigger_factory = futures::future::pending;
         let (task, data_receiver) =
             start_light_sensor_scanner(sensor, trigger_factory, cancellation_rx);
         *receiver.lock().await = Some(data_receiver);

@@ -82,7 +82,7 @@ fn populate_initial_stack(
     // auxv
     for (tag, val) in auxv {
         main_data.extend_from_slice(&(tag as u64).to_ne_bytes());
-        main_data.extend_from_slice(&(val as u64).to_ne_bytes());
+        main_data.extend_from_slice(&val.to_ne_bytes());
     }
 
     // Time to push.

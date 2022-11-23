@@ -1545,7 +1545,7 @@ impl FileOps for ProcStatFile {
                 stats[24] = mm_state.stack_start.ptr() as u64;
             }
             let stat_str = stats.map(|n| n.to_string()).join(" ");
-            write!(sink, "{} ({}) R {}\n", self.task.get_pid(), command, stat_str)?;
+            writeln!(sink, "{} ({}) R {}", self.task.get_pid(), command, stat_str)?;
             Ok(None)
         };
         seq.read_at(current_task, iter, offset, data)

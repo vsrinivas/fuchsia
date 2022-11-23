@@ -303,7 +303,7 @@ impl From<InputDevice> for FidlInputDevice {
                     let mut source_state = FidlSourceState::EMPTY;
                     source_state.source = Some((*source).into());
                     source_state.state = Some(
-                        (*source_state_map.get(&source).expect("Source state map key missing"))
+                        (*source_state_map.get(source).expect("Source state map key missing"))
                             .into(),
                     );
                     source_state
@@ -323,6 +323,7 @@ impl From<InputDevice> for FidlInputDevice {
 }
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone, Hash, Serialize, Deserialize)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum InputDeviceType {
     CAMERA,
     MICROPHONE,
@@ -363,6 +364,7 @@ impl From<InputDeviceType> for FidlDeviceType {
 }
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone, Hash, Serialize, Deserialize)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum DeviceStateSource {
     HARDWARE,
     SOFTWARE,

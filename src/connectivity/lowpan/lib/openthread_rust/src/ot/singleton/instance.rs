@@ -70,7 +70,7 @@ impl Instance {
         }
     }
 
-    pub(crate) fn platform_poll(self: &Self, cx: &mut Context<'_>) -> Result<(), anyhow::Error> {
+    pub(crate) fn platform_poll(&self, cx: &mut Context<'_>) -> Result<(), anyhow::Error> {
         unsafe {
             // SAFETY: The underlying unsafe call, process_poll(), must
             //         only be called from the same thread that the OpenThread

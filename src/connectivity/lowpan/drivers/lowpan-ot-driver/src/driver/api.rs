@@ -352,7 +352,7 @@ where
 
         let dwell_time_ms: u64 = params.dwell_time_ms.unwrap_or(DEFAULT_SCAN_DWELL_TIME_MS).into();
 
-        let dwell_time = std::time::Duration::from_millis(dwell_time_ms.into());
+        let dwell_time = std::time::Duration::from_millis(dwell_time_ms);
 
         let timeout = fasync::Time::after(
             Duration::from_millis((dwell_time_ms * all_channels.len() as u64).try_into().unwrap())
@@ -372,7 +372,7 @@ where
                 move |x| {
                     fx_log_trace!("energy_scan_callback: Got result {:?}", x);
                     if let Some(x) = x {
-                        if let Err(_) = sender.unbounded_send(x.clone()) {
+                        if sender.unbounded_send(x.clone()).is_err() {
                             // If this is an error then that just means the
                             // other end has been dropped. We really don't care,
                             // not even worth logging.
@@ -423,7 +423,7 @@ where
 
         let dwell_time_ms: u64 = DEFAULT_SCAN_DWELL_TIME_MS.into();
 
-        let dwell_time = std::time::Duration::from_millis(dwell_time_ms.into());
+        let dwell_time = std::time::Duration::from_millis(dwell_time_ms);
 
         let timeout = fasync::Time::after(
             Duration::from_millis((dwell_time_ms * all_channels.len() as u64).try_into().unwrap())
@@ -443,7 +443,7 @@ where
                 move |x| {
                     fx_log_trace!("active_scan_callback: Got result {:?}", x);
                     if let Some(x) = x {
-                        if let Err(_) = sender.unbounded_send(x.clone()) {
+                        if sender.unbounded_send(x.clone()).is_err() {
                             // If this is an error then that just means the
                             // other end has been dropped. We really don't care,
                             // not even worth logging.
@@ -581,6 +581,7 @@ where
         return Err(ZxStatus::NOT_SUPPORTED);
     }
 
+    #[allow(clippy::useless_conversion)]
     async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>> {
         Ok(self
             .driver_state

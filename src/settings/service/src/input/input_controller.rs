@@ -38,8 +38,8 @@ impl DeviceStorageCompatible for InputInfoSources {
     }
 
     fn deserialize_from(value: &str) -> Self {
-        Self::extract(&value)
-            .unwrap_or_else(|_| Self::from(InputInfoSourcesV2::deserialize_from(&value)))
+        Self::extract(value)
+            .unwrap_or_else(|_| Self::from(InputInfoSourcesV2::deserialize_from(value)))
     }
 }
 
@@ -102,8 +102,8 @@ impl DeviceStorageCompatible for InputInfoSourcesV2 {
     }
 
     fn deserialize_from(value: &str) -> Self {
-        Self::extract(&value)
-            .unwrap_or_else(|_| Self::from(InputInfoSourcesV1::deserialize_from(&value)))
+        Self::extract(value)
+            .unwrap_or_else(|_| Self::from(InputInfoSourcesV1::deserialize_from(value)))
     }
 }
 

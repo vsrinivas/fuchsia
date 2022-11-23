@@ -85,7 +85,7 @@ impl StoredAccount {
                 AccountManagerError::new(ApiError::Resource).with_cause(err)
             })?;
         }
-        fs::rename(&tmp_path, &path).map_err(|err| {
+        fs::rename(&tmp_path, path).map_err(|err| {
             warn!("Failed to rename account doc: {:?}", err);
             AccountManagerError::new(ApiError::Resource).with_cause(err)
         })

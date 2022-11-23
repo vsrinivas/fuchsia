@@ -50,7 +50,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
         let mut accounts = InnerMap::new();
         let stored_account_list = StoredAccountList::load(&data_dir)?;
         for stored_account in &stored_account_list {
-            accounts.insert(stored_account.account_id().clone(), None);
+            accounts.insert(*stored_account.account_id(), None);
         }
         let inspect = inspect::Accounts::new(inspect_parent);
         let account_map = Self { accounts, stored_account_list, inspect };
@@ -72,8 +72,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
             None => Err(AccountManagerError::new(ApiError::NotFound)),
             Some(Some(handler)) => Ok(Arc::clone(handler)),
             Some(ref mut handler_option) => {
-                let new_handler =
-                    Arc::new(AHC::new(account_id.clone(), Lifetime::Persistent).await?);
+                let new_handler = Arc::new(AHC::new(*account_id, Lifetime::Persistent).await?);
                 let pre_auth_state =
                     self.stored_account_list.get_account_pre_auth_state(account_id)?;
                 new_handler
@@ -112,7 +111,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
         while self.accounts.contains_key(&account_id) {
             account_id = AccountId::new(rand::random::<u64>());
         }
-        let new_handler = AHC::new(account_id.clone(), lifetime).await?;
+        let new_handler = AHC::new(account_id, lifetime).await?;
         Ok(Arc::new(new_handler))
     }
 
@@ -147,7 +146,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
         }
 
         // Reflect in the map
-        self.accounts.insert(account_id.clone(), Some(handler));
+        self.accounts.insert(*account_id, Some(handler));
 
         // Refresh inspect
         self.refresh_inspect();
@@ -245,7 +244,7 @@ mod tests {
                 .keys()
                 .map(|id| {
                     StoredAccount::new(
-                        id.clone(),
+                        *id,
                         ACCOUNT_PRE_AUTH_STATE.to_vec(),
                         ACCOUNT_METADATA.clone(),
                     )
@@ -301,7 +300,7 @@ mod tests {
         let conn_test = Arc::new(
             FakeAccountHandlerConnection::new_with_defaults(
                 Lifetime::Persistent,
-                TEST_ACCOUNT_ID_1.clone(),
+                *TEST_ACCOUNT_ID_1,
             )
             .await?,
         );
@@ -312,7 +311,7 @@ mod tests {
         let conn_ephemeral = Arc::new(
             FakeAccountHandlerConnection::new_with_defaults(
                 Lifetime::Ephemeral,
-                TEST_ACCOUNT_ID_2.clone(),
+                *TEST_ACCOUNT_ID_2,
             )
             .await?,
         );
@@ -401,8 +400,8 @@ mod tests {
         let data_dir = TempDir::new().unwrap();
         let inspector = Inspector::new();
         let mut accounts = InnerMap::new();
-        accounts.insert(CORRUPT_HANDLER_ACCOUNT_ID.clone(), None);
-        accounts.insert(UNKNOWN_ERROR_ACCOUNT_ID.clone(), None);
+        accounts.insert(*CORRUPT_HANDLER_ACCOUNT_ID, None);
+        accounts.insert(*UNKNOWN_ERROR_ACCOUNT_ID, None);
         let mut map = TestAccountMap::new(accounts, data_dir.path().into(), inspector.root());
         // Initial state
         assert_data_tree!(inspector, root: { accounts: {
@@ -438,7 +437,7 @@ mod tests {
         let data_dir = TempDir::new().unwrap();
         let inspector = Inspector::new();
         let mut accounts = InnerMap::new();
-        accounts.insert(TEST_ACCOUNT_ID_1.clone(), None);
+        accounts.insert(*TEST_ACCOUNT_ID_1, None);
         let mut map = TestAccountMap::new(accounts, data_dir.path().into(), inspector.root());
         // Initial state
         assert_data_tree!(inspector, root: { accounts: {
@@ -448,7 +447,7 @@ mod tests {
         let conn_test = Arc::new(
             FakeAccountHandlerConnection::new_with_defaults(
                 Lifetime::Persistent,
-                TEST_ACCOUNT_ID_1.clone(),
+                *TEST_ACCOUNT_ID_1,
             )
             .await?,
         );

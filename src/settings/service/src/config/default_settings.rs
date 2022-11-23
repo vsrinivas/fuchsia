@@ -57,7 +57,7 @@ where
     ///
     /// If the value isn't present, returns the default value.
     pub fn load_default_value(&mut self) -> Result<Option<T>, Error> {
-        Ok(self.load_default_settings()?)
+        self.load_default_settings()
     }
 
     /// Attempts to load the settings from the given config_file_path.
@@ -69,6 +69,7 @@ where
         let path = self.config_file_path.to_string();
         let load_result = match File::open(self.config_file_path.as_ref()) {
             Ok(file) => {
+                #[allow(clippy::manual_map)]
                 match serde_json::from_reader(BufReader::new(file)) {
                     Ok(config) => {
                         // Success path.

@@ -631,13 +631,13 @@ impl RepositoryManagerBuilder<ProtocolSender<MetricEvent>, inspect::Node> {
         let inspect = RepositoryManagerInspectState {
             dynamic_configs_path_property: self
                 .inspect_node
-                .create_string("dynamic_configs_path", &format!("{:?}", self.dynamic_configs_path)),
+                .create_string("dynamic_configs_path", format!("{:?}", self.dynamic_configs_path)),
             dynamic_configs_node: self.inspect_node.create_child("dynamic_configs"),
             static_configs_node: self.inspect_node.create_child("static_configs"),
             stats: Arc::new(Mutex::new(Stats::new(self.inspect_node.create_child("stats")))),
             persisted_repos_dir_property: self
                 .inspect_node
-                .create_string("persisted_repos_dir", &format!("{:?}", self.persisted_repos_dir)),
+                .create_string("persisted_repos_dir", format!("{:?}", self.persisted_repos_dir)),
             repos_node: Arc::new(self.inspect_node.create_child("repos")),
             node: self.inspect_node,
         };
@@ -1003,7 +1003,7 @@ mod tests {
                 let path = data_dir.path().join(DYNAMIC_CONFIG_NAME);
 
                 if let Some(configs) = dynamic_configs {
-                    let mut f = io::BufWriter::new(File::create(&path).unwrap());
+                    let mut f = io::BufWriter::new(File::create(path).unwrap());
                     serde_json::to_writer(&mut f, &configs).unwrap();
                     f.flush().unwrap();
                 }
@@ -1437,7 +1437,7 @@ mod tests {
         let invalid_path = "invalid".to_string();
 
         {
-            let mut f = File::create(&dir.path().join(&invalid_path)).unwrap();
+            let mut f = File::create(dir.path().join(&invalid_path)).unwrap();
             f.write_all(b"hello world").unwrap();
         }
 

@@ -83,13 +83,11 @@ impl Client {
     ) -> impl Future<Output = Result<(), fidl::Error>> {
         match event {
             AccountEvent::AccountAdded(id) => {
-                let mut account_state = AccountAuthState {
-                    account_id: id.clone().into(),
-                    auth_state: MINIMUM_AUTH_STATE,
-                };
+                let mut account_state =
+                    AccountAuthState { account_id: (*id).into(), auth_state: MINIMUM_AUTH_STATE };
                 self.listener.on_account_added(&mut account_state)
             }
-            AccountEvent::AccountRemoved(id) => self.listener.on_account_removed(id.clone().into()),
+            AccountEvent::AccountRemoved(id) => self.listener.on_account_removed((*id).into()),
         }
     }
 
@@ -151,7 +149,7 @@ impl AccountEventEmitter {
             let mut v = initial_account_ids
                 .iter()
                 .map(|id| AccountAuthState {
-                    account_id: id.clone().into(),
+                    account_id: (*id).into(),
                     auth_state: MINIMUM_AUTH_STATE,
                 })
                 .collect::<Vec<_>>();
@@ -180,10 +178,9 @@ mod tests {
         static ref ACCOUNT_ID_ADD: AccountId = AccountId::new(1);
         static ref ACCOUNT_ID_REMOVE: AccountId = AccountId::new(2);
         static ref TEST_ACCOUNT_ID: AccountId = AccountId::new(3);
-        static ref EVENT_ADDED: AccountEvent = AccountEvent::AccountAdded(ACCOUNT_ID_ADD.clone());
-        static ref EVENT_REMOVED: AccountEvent =
-            AccountEvent::AccountRemoved(ACCOUNT_ID_REMOVE.clone());
-        static ref TEST_ACCOUNT_IDS: Vec<AccountId> = vec![TEST_ACCOUNT_ID.clone()];
+        static ref EVENT_ADDED: AccountEvent = AccountEvent::AccountAdded(*ACCOUNT_ID_ADD);
+        static ref EVENT_REMOVED: AccountEvent = AccountEvent::AccountRemoved(*ACCOUNT_ID_REMOVE);
+        static ref TEST_ACCOUNT_IDS: Vec<AccountId> = vec![*TEST_ACCOUNT_ID];
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -279,7 +276,7 @@ mod tests {
                 assert_eq!(
                     account_states,
                     vec![AccountAuthState {
-                        account_id: TEST_ACCOUNT_ID.clone().into(),
+                        account_id: (*TEST_ACCOUNT_ID).into(),
                         auth_state: MINIMUM_AUTH_STATE
                     }]
                 );

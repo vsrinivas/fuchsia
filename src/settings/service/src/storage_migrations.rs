@@ -33,7 +33,7 @@ pub(crate) fn register_migrations(
 
     if settings.contains(&SettingType::FactoryReset) {
         builder.register(V1668815248FactoryResetMigration(store_proxy.clone()))?;
-        builder.register(V1668815249FactoryResetMigrationTeardown(store_proxy.clone()))?;
+        builder.register(V1668815249FactoryResetMigrationTeardown(store_proxy))?;
     }
 
     Ok(builder.build())

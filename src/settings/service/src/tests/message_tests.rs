@@ -327,7 +327,7 @@ fn test_timeout() {
     };
 
     pin_utils::pin_mut!(fut);
-    let _result = loop {
+    loop {
         executor.wake_main_future();
         let new_time = fuchsia_async::Time::from_nanos(
             executor.now().into_nanos()
@@ -340,7 +340,7 @@ fn test_timeout() {
                 executor.set_fake_time(new_time);
             }
         }
-    };
+    }
 }
 
 // Tests the broadcast functionality. Ensures all non-sending, addressable

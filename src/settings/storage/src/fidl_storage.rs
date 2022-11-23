@@ -951,6 +951,7 @@ mod tests {
 
     // Tests that syncing can recover after a failed write. The test cases list the number of failed
     // attempts and the maximum amount of time waited from the previous write.
+    #[allow(clippy::unused_unit)]
     #[test_case(1, 500)]
     #[test_case(2, 1_000)]
     #[test_case(3, 2_000)]

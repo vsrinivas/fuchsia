@@ -195,7 +195,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
         Ok(match signature {
             Signature::Anonymous(id) => *id,
             Signature::Address(address) => {
-                *self.addresses.get(&address).ok_or(Error::MessengerNotFound)?
+                *self.addresses.get(address).ok_or(Error::MessengerNotFound)?
             }
         })
     }
@@ -249,7 +249,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             let mut return_path: Vec<Beacon<P, A, R>> = broker_ids
                 .iter()
                 .map(|broker_id| {
-                    self.beacons.get(&broker_id).expect("beacon should resolve").clone()
+                    self.beacons.get(broker_id).expect("beacon should resolve").clone()
                 })
                 .collect();
 
@@ -273,7 +273,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 while candidate_index < self.brokers.len() && target_index.is_none() {
                     target_index = broker_ids.iter().position(|broker_id| {
                         *broker_id == self.brokers[candidate_index].messenger_id
-                            && !source_return_path_messenger_ids.contains(&broker_id)
+                            && !source_return_path_messenger_ids.contains(broker_id)
                     });
 
                     candidate_index += 1;
@@ -350,7 +350,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             if target_messengers.is_empty() {
                 if let MessageType::Origin(audience) = message_type {
                     if let Ok((resolved_messengers, delivery_required)) =
-                        self.resolve_audience(sender_id, &audience)
+                        self.resolve_audience(sender_id, audience)
                     {
                         target_messengers.append(&mut Vec::from_iter(resolved_messengers));
                         require_delivery |= delivery_required;
@@ -415,7 +415,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
         match audience {
             Audience::Address(address) => {
                 delivery_required = true;
-                if let Some(&messenger_id) = self.addresses.get(&address) {
+                if let Some(&messenger_id) = self.addresses.get(address) {
                     let _ = return_set.insert(messenger_id);
                 } else {
                     return Err(format_err!("could not resolve address"));
@@ -428,7 +428,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             }
             Audience::Group(group) => {
                 for audience in &group.audiences {
-                    let resolved_audience = self.resolve_audience(sender_id, &audience)?;
+                    let resolved_audience = self.resolve_audience(sender_id, audience)?;
                     return_set.extend(resolved_audience.0);
                     delivery_required |= resolved_audience.1;
                 }
@@ -437,7 +437,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 delivery_required = true;
                 match signature {
                     Signature::Address(address) => {
-                        if let Some(&messenger_id) = self.addresses.get(&address) {
+                        if let Some(&messenger_id) = self.addresses.get(address) {
                             let _ = return_set.insert(messenger_id);
                         } else {
                             return Err(format_err!("could not resolve signature"));
@@ -543,6 +543,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
 
                 let response_result =
                     responder.send(Ok((MessengerClient::new(messenger, fuse), receptor)));
+                #[allow(clippy::redundant_pattern_matching)]
                 if let Err(_) = response_result {
                     // TODO(fxbug.dev/85529) Track whether this is common, if so, bubble the error
                     // up.

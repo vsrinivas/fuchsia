@@ -128,7 +128,7 @@ impl Timestamp {
         let duration = self.to_duration_since_epoch();
         chrono::naive::NaiveDateTime::from_timestamp(
             duration.as_secs().try_into().unwrap(),
-            duration.subsec_nanos().try_into().unwrap(),
+            duration.subsec_nanos(),
         )
     }
 }
@@ -161,7 +161,7 @@ impl From<u64> for Timestamp {
 
 impl From<openthread_sys::otTimestamp> for Timestamp {
     fn from(ts: otTimestamp) -> Self {
-        let mut ret = Timestamp::from(((ts.mSeconds << 16) | ((ts.mTicks as u64) << 1)) as u64);
+        let mut ret = Timestamp::from((ts.mSeconds << 16) | ((ts.mTicks as u64) << 1));
         ret.set_authoritative(ts.mAuthoritative);
         ret
     }

@@ -145,7 +145,7 @@ mod tests {
     fn create_persona() -> Persona {
         let inspector = Inspector::new();
         Persona::new(
-            TEST_PERSONA_ID.clone(),
+            *TEST_PERSONA_ID,
             Arc::new(AccountLifetime::Persistent { account_dir: PathBuf::from("/nowhere") }),
             TaskGroup::new(),
             inspector.root(),
@@ -155,7 +155,7 @@ mod tests {
     fn create_ephemeral_persona() -> Persona {
         let inspector = Inspector::new();
         Persona::new(
-            TEST_PERSONA_ID.clone(),
+            *TEST_PERSONA_ID,
             Arc::new(AccountLifetime::Ephemeral),
             TaskGroup::new(),
             inspector.root(),

@@ -190,7 +190,7 @@ impl LastResultsNode {
     ) {
         // Use formatted time string as the name of the node.
         let time_str = DateTime::<Utc>::from(start_time).to_rfc3339();
-        let result_node = self.node.create_child(&time_str);
+        let result_node = self.node.create_child(time_str);
 
         result_node.record_string("result", format!("{:#?}", result));
 

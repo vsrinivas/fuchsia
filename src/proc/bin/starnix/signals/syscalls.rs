@@ -1509,7 +1509,7 @@ mod tests {
         child2.thread_group.exit(ExitStatus::Exit(42));
         std::mem::drop(child2);
 
-        let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE as u64);
+        let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         assert_eq!(sys_waitid(&current_task, P_PGID, child2_pid, address, WEXITED), Ok(()));
         // The previous wait matched child2, only child1 should be in the available zombies.
         assert_eq!(current_task.thread_group.read().zombie_children[0].pid, child1_pid);

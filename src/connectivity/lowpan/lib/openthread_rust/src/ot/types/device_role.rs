@@ -31,6 +31,7 @@ pub enum DeviceRole {
 impl DeviceRole {
     /// Returns true if the role is not disabled nor detached.
     pub fn is_active(&self) -> bool {
+        #[allow(clippy::match_like_matches_macro)]
         match self {
             DeviceRole::Disabled | DeviceRole::Detached => false,
             _ => true,
@@ -41,7 +42,7 @@ impl DeviceRole {
 impl From<otDeviceRole> for DeviceRole {
     fn from(x: otDeviceRole) -> Self {
         use num::FromPrimitive;
-        Self::from_u32(x).expect(format!("Unknown otDeviceRole value: {}", x).as_str())
+        Self::from_u32(x).unwrap_or_else(|| panic!("Unknown otDeviceRole value: {}", x))
     }
 }
 

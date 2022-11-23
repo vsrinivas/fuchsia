@@ -430,7 +430,7 @@ mod tests {
         test_utils::make_empty_pm_repo_dir(dir);
 
         let keys_dir = dir.join("keys");
-        std::fs::remove_file(&keys_dir.join("root.json")).unwrap();
+        std::fs::remove_file(keys_dir.join("root.json")).unwrap();
         let keys = RepoKeys::from_dir(&keys_dir.into_std_path_buf()).unwrap();
 
         assert_keys!(keys.root_keys(), &[]);

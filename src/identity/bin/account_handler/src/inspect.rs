@@ -70,7 +70,7 @@ impl Persona {
     /// Creates a new Persona as a child of the supplied node.
     pub fn new(parent: &Node, persona_id: &PersonaId) -> Self {
         let node = parent.create_child("default_persona");
-        let persona_id = node.create_uint("persona_id", persona_id.clone().into());
+        let persona_id = node.create_uint("persona_id", (*persona_id).into());
         let open_client_channels = node.create_uint("open_client_channels", 0);
         Self { _node: node, persona_id, open_client_channels }
     }

@@ -116,7 +116,7 @@ mod tests {
         ]);
 
         assert_eq!(
-            serde_json::to_value(&package_manifest_list).unwrap(),
+            serde_json::to_value(package_manifest_list).unwrap(),
             json!([
                 "obj/build/images/config-data/package_manifest.json",
                 "obj/build/images/shell-commands/package_manifest.json",

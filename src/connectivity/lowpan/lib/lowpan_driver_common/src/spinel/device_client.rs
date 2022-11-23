@@ -90,7 +90,7 @@ where
 
     async fn close(&self) -> Result<(), Error> {
         // Defer to our struct method implementation.
-        SpinelDeviceSink::close(&self).await
+        SpinelDeviceSink::close(self).await
     }
 
     async fn get_max_frame_size(&self) -> Result<usize, Error> {

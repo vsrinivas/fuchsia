@@ -43,8 +43,8 @@ pub struct FlowWindowDec<'a>(&'a FlowWindow, u32);
 
 impl<'a> Future for FlowWindowDec<'a> {
     type Output = ();
-    fn poll(mut self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
-        (&mut self.0).poll_dec(context, self.1)
+    fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
+        self.0.poll_dec(context, self.1)
     }
 }
 
@@ -77,9 +77,9 @@ impl FlowWindow {
         traceln!(
             "FlowWindow::inc: Incrementing by {} slot(s), for a total of {} slot(s).",
             amount,
-            amount + (*inner).0
+            amount + inner.0
         );
-        (*inner).0 += amount;
+        inner.0 += amount;
         for waker in inner.1.drain(..) {
             traceln!("FlowWindow::inc: Calling waker");
             waker.wake();
@@ -90,7 +90,7 @@ impl FlowWindow {
     pub fn reset(&self) {
         let mut inner = self.inner.lock();
         traceln!("FlowWindow::reset");
-        (*inner).0 = 0;
+        inner.0 = 0;
     }
 
     /// Method for getting the current value of the

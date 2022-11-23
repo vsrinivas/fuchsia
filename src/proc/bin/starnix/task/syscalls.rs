@@ -446,6 +446,7 @@ pub fn sys_prctl(
         }
         PR_GET_CHILD_SUBREAPER => {
             let addr = UserAddress::from(arg2);
+            #[allow(clippy::bool_to_int_with_if)]
             let value: i32 =
                 if current_task.thread_group.read().is_child_subreaper { 1 } else { 0 };
             current_task.mm.write_object(addr.into(), &value)?;

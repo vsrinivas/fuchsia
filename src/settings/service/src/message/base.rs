@@ -248,7 +248,7 @@ impl<A: Address + 'static, R: Role + 'static> Audience<A, R> {
     pub fn flatten(&self) -> HashSet<Audience<A, R>> {
         match self {
             Audience::Group(group) => {
-                group.audiences.iter().map(|audience| audience.flatten()).flatten().collect()
+                group.audiences.iter().flat_map(|audience| audience.flatten()).collect()
             }
             _ => [self.clone()].into(),
         }
@@ -349,6 +349,7 @@ pub mod filter {
         /// Matches on the author's signature.
         Author(Signature<A>),
         /// Matches on a custom closure that may evaluate the sent message.
+        #[allow(clippy::type_complexity)]
         Custom(Arc<dyn Fn(&Message<P, A, R>) -> bool + Send + Sync>),
         /// Matches on another filter and its conditions.
         Filter(Filter<P, A, R>),
@@ -425,7 +426,7 @@ pub mod filter {
                             message.get_type(),
                             MessageType::Origin(target) if target.contains(audience)),
                     Condition::Custom(check_fn) => (check_fn)(message),
-                    Condition::Filter(filter) => filter.matches(&message),
+                    Condition::Filter(filter) => filter.matches(message),
                     Condition::Author(signature) => message.get_author().eq(signature),
                 };
                 if match_found {

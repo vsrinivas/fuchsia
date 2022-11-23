@@ -7,6 +7,7 @@ mod kernel;
 mod pid_table;
 mod process_group;
 mod session;
+#[allow(clippy::module_inception)]
 mod task;
 mod thread_group;
 mod waiter;

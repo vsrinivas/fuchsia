@@ -22,7 +22,7 @@ impl RecordLength {
         if value == 0 {
             Self::Infinite
         } else {
-            Self::Value(value as usize)
+            Self::Value(value)
         }
     }
     fn value(&self) -> __kernel_off_t {

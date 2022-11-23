@@ -57,9 +57,9 @@ mod tests {
             .with_inspect(inspector.root(), "wrapper_node")
             .expect("Failed to attach wrapper_node");
 
-        let _ = wrapper.test_vec_deque.as_mut().0.push_back("test1".to_string());
-        let _ = wrapper.test_vec_deque.as_mut().0.push_back("test2".to_string());
-        let _ = wrapper.test_vec_deque.as_mut().0.push_back("test3".to_string());
+        wrapper.test_vec_deque.as_mut().0.push_back("test1".to_string());
+        wrapper.test_vec_deque.as_mut().0.push_back("test2".to_string());
+        wrapper.test_vec_deque.as_mut().0.push_back("test3".to_string());
 
         let _ = wrapper.test_vec_deque.as_mut().0.pop_front();
 

@@ -104,6 +104,7 @@ impl Authority {
 
             if sequential {
                 let result = process_payload(debug_id, receptor.next_of::<Payload>().await);
+                #[allow(clippy::question_mark)]
                 if result.is_err() {
                     return result;
                 }
@@ -116,6 +117,7 @@ impl Authority {
         // this case wait for each to complete.
         for (debug_id, mut receptor) in pending_receptors {
             let result = process_payload(debug_id, receptor.next_of::<Payload>().await);
+            #[allow(clippy::question_mark)]
             if result.is_err() {
                 return result;
             }

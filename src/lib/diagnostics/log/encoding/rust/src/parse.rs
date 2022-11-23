@@ -87,6 +87,7 @@ fn parse_argument_internal<'a, 'b>(
     let arg_ty = ArgType::try_from(header.raw_type()).map_err(nom::Err::Failure)?;
 
     let (after_name, name) = string_ref(header.name_ref(), after_header, false)?;
+    #[allow(clippy::single_match)]
     match (&state, &name) {
         (ParseState::Initial, StringRef::Inline(Cow::Borrowed("message"))) => {
             *state = ParseState::InMessage;
@@ -137,6 +138,7 @@ fn string_ref(
         // zero out the top bit
         let name_len = (ref_mask & !(1 << 15)) as usize;
         let (after_name, name) = take(name_len)(buf)?;
+        #[allow(clippy::needless_late_init)]
         let parsed;
         if support_invalid_utf8 {
             parsed = match std::str::from_utf8(name) {

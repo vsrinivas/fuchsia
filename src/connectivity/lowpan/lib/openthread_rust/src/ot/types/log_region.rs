@@ -37,7 +37,7 @@ pub enum LogRegion {
 impl From<otLogRegion> for LogRegion {
     fn from(x: otLogRegion) -> Self {
         use num::FromPrimitive;
-        Self::from_u64(x as u64).expect(format!("Unknown otLogRegion value: {}", x).as_str())
+        Self::from_u64(x as u64).unwrap_or_else(|| panic!("Unknown otLogRegion value: {}", x))
     }
 }
 
@@ -63,7 +63,7 @@ pub enum LogLevel {
 impl From<otLogLevel> for LogLevel {
     fn from(x: otLogLevel) -> Self {
         use num::FromPrimitive;
-        Self::from_u64(x as u64).expect(format!("Unknown otLogLevel value: {}", x).as_str())
+        Self::from_u64(x as u64).unwrap_or_else(|| panic!("Unknown otLogLevel value: {}", x))
     }
 }
 

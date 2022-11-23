@@ -36,6 +36,7 @@ impl Ipv6PacketMatcherRule {
 
     /// Decodes the protocol, source address, destination address, source port,
     /// destination port
+    #[allow(clippy::type_complexity)]
     fn decode_packet(
         mut packet_bytes: &[u8],
     ) -> Result<(Ipv6Proto, Ipv6Addr, Ipv6Addr, Option<NonZeroU16>, Option<NonZeroU16>), Error>
@@ -77,8 +78,8 @@ impl Ipv6PacketMatcherRule {
         remote_port: Option<NonZeroU16>,
     ) -> bool {
         self.proto.unwrap_or(proto) == proto
-            && self.local_address.contains(&local_addr.into())
-            && self.remote_address.contains(&remote_addr.into())
+            && self.local_address.contains(&local_addr)
+            && self.remote_address.contains(&remote_addr)
             && self.local_port.or(local_port) == local_port
             && self.remote_port.or(remote_port) == remote_port
     }
@@ -154,7 +155,7 @@ impl Ipv6PacketMatcher {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     /// Determines if an outbound packet matches at least one of the rules in the set.
@@ -164,7 +165,7 @@ impl Ipv6PacketMatcher {
                 return true;
             }
         }
-        return false;
+        false
     }
 }
 

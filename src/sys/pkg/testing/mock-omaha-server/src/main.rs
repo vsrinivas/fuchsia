@@ -103,7 +103,6 @@ impl tokio::io::AsyncRead for ConnectionStream {
         }
         .map_ok(|sz| {
             buf.advance(sz);
-            ()
         })
     }
 }
@@ -145,7 +144,7 @@ async fn main() -> Result<(), anyhow::Error> {
         .responses_by_appid(args.responses_by_appid)
         .private_keys(PrivateKeys {
             latest: PrivateKeyAndId {
-                id: args.key_id.try_into().expect("key id parse"),
+                id: args.key_id,
                 key: std::fs::read_to_string(args.key_path)
                     .expect("read from key_path failed")
                     .parse()
@@ -170,7 +169,7 @@ async fn main() -> Result<(), anyhow::Error> {
             Ok::<_, Infallible>(service_fn(move |req| {
                 println!("received req: {req:?}");
                 let arc_server = Arc::clone(&arc_server);
-                async move { handle_request(req, &*arc_server).await }
+                async move { handle_request(req, &arc_server).await }
             }))
         }
     });

@@ -43,6 +43,7 @@ const LAST_VALUE_KEY: &str = "LAST_VALUE";
 /// listeners should be notified. If true is returned, listeners will be notified.
 pub(crate) struct ChangeFunction {
     /// The function that will be used to evaluate whether or not a setting has changed.
+    #[allow(clippy::type_complexity)]
     function: Box<dyn Fn(&SettingInfo, &SettingInfo) -> bool + Send + Sync + 'static>,
 
     /// An identifier for the change function that is used to group hanging gets. This identifier
@@ -53,6 +54,7 @@ pub(crate) struct ChangeFunction {
 }
 
 impl ChangeFunction {
+    #[allow(clippy::type_complexity)]
     pub fn new(
         id: u64,
         function: Box<dyn Fn(&SettingInfo, &SettingInfo) -> bool + Send + Sync + 'static>,

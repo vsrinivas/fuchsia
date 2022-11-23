@@ -1610,7 +1610,7 @@ fn poll(
         if poll_descriptor.fd < 0 {
             continue;
         }
-        let file = current_task.files.get(FdNumber::from_raw(poll_descriptor.fd as i32))?;
+        let file = current_task.files.get(FdNumber::from_raw(poll_descriptor.fd))?;
         let handler_ready_items = ready_items.clone();
         let handler = move |observed: FdEvents| {
             handler_ready_items.lock().push(ReadyPollItem { index, events: observed.mask() });

@@ -125,13 +125,10 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn corrupt_handler() {
         assert_eq!(
-            FakeAccountHandlerConnection::new(
-                CORRUPT_HANDLER_ACCOUNT_ID.clone(),
-                Lifetime::Persistent,
-            )
-            .await
-            .unwrap_err()
-            .api_error,
+            FakeAccountHandlerConnection::new(*CORRUPT_HANDLER_ACCOUNT_ID, Lifetime::Persistent,)
+                .await
+                .unwrap_err()
+                .api_error,
             ApiError::Resource
         );
     }
@@ -140,7 +137,7 @@ mod tests {
     async fn new_persistent() -> Result<(), AccountManagerError> {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
-            DEFAULT_ACCOUNT_ID.clone(),
+            *DEFAULT_ACCOUNT_ID,
         )
         .await?;
         assert_eq!(conn.get_lifetime(), &Lifetime::Persistent);
@@ -151,7 +148,7 @@ mod tests {
     async fn new_ephemeral() -> Result<(), AccountManagerError> {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Ephemeral,
-            DEFAULT_ACCOUNT_ID.clone(),
+            *DEFAULT_ACCOUNT_ID,
         )
         .await?;
         assert_eq!(conn.get_lifetime(), &Lifetime::Ephemeral);
@@ -162,7 +159,7 @@ mod tests {
     async fn preload_success() -> Result<(), AccountManagerError> {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
-            DEFAULT_ACCOUNT_ID.clone(),
+            *DEFAULT_ACCOUNT_ID,
         )
         .await?;
         assert!(conn.proxy().preload(&EMPTY_PRE_AUTH_STATE).await.unwrap().is_ok());
@@ -173,7 +170,7 @@ mod tests {
     async fn preload_corrupt() -> Result<(), AccountManagerError> {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
-            UNKNOWN_ERROR_ACCOUNT_ID.clone(),
+            *UNKNOWN_ERROR_ACCOUNT_ID,
         )
         .await?;
         assert_eq!(
@@ -187,7 +184,7 @@ mod tests {
     async fn preload_ephemeral() -> Result<(), AccountManagerError> {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Ephemeral,
-            DEFAULT_ACCOUNT_ID.clone(),
+            *DEFAULT_ACCOUNT_ID,
         )
         .await?;
         assert_eq!(
@@ -201,7 +198,7 @@ mod tests {
     async fn create_success() -> Result<(), AccountManagerError> {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
-            DEFAULT_ACCOUNT_ID.clone(),
+            *DEFAULT_ACCOUNT_ID,
         )
         .await?;
         assert!(conn
@@ -217,7 +214,7 @@ mod tests {
     async fn create_corrupt() -> Result<(), AccountManagerError> {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
-            UNKNOWN_ERROR_ACCOUNT_ID.clone(),
+            *UNKNOWN_ERROR_ACCOUNT_ID,
         )
         .await?;
         assert_eq!(
@@ -235,7 +232,7 @@ mod tests {
     async fn create_after_terminate() -> Result<(), AccountManagerError> {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
-            DEFAULT_ACCOUNT_ID.clone(),
+            *DEFAULT_ACCOUNT_ID,
         )
         .await?;
         assert!(conn.proxy().terminate().is_ok());
@@ -253,7 +250,7 @@ mod tests {
     async fn unsupported_method() {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
-            DEFAULT_ACCOUNT_ID.clone(),
+            *DEFAULT_ACCOUNT_ID,
         )
         .await
         .unwrap();

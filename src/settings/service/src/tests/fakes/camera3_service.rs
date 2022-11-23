@@ -81,7 +81,7 @@ impl Service for Camera3Service {
 
                         let mut devices = if delay_camera_device.load(Ordering::Relaxed) {
                             if watch_count == 0 {
-                                watch_count = watch_count + 1;
+                                watch_count += 1;
                                 empty_devices.into_iter()
                             } else {
                                 let timer = fasync::Timer::new(
@@ -90,12 +90,10 @@ impl Service for Camera3Service {
                                 timer.await;
                                 camera_devices.into_iter()
                             }
+                        } else if has_camera_device.load(Ordering::Relaxed) {
+                            camera_devices.into_iter()
                         } else {
-                            if has_camera_device.load(Ordering::Relaxed) {
-                                camera_devices.into_iter()
-                            } else {
-                                empty_devices.into_iter()
-                            }
+                            empty_devices.into_iter()
                         };
                         responder.send(&mut devices).expect("Failed to send devices response");
                     }

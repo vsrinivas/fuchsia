@@ -993,8 +993,8 @@ mod tests {
             }
 
             fn deserialize_from(value: &str) -> Self {
-                Self::extract(&value).unwrap_or_else(|_| {
-                    V1::extract(&value).map_or(Self::default_value(), Self::from)
+                Self::extract(value).unwrap_or_else(|_| {
+                    V1::extract(value).map_or(Self::default_value(), Self::from)
                 })
             }
         }

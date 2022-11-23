@@ -118,8 +118,8 @@ mod tests {
         packet.metadata.pid = 1;
         packet.metadata.severity = 0x30; // INFO
         packet.data[0] = 5;
-        packet.fill_data(1..6, 'A' as _);
-        packet.fill_data(7..12, 'B' as _);
+        packet.fill_data(1..6, b'A' as _);
+        packet.fill_data(7..12, b'B' as _);
 
         let mut ls = LogMessageSocket::new(sout, Default::default()).unwrap();
         sin.write(packet.as_bytes()).unwrap();

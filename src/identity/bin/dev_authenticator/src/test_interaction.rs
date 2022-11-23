@@ -148,7 +148,7 @@ mod tests {
         std::mem::drop(proxy); // close the channel.
 
         // The task should return false since we didn't call SetSuccess.
-        assert_eq!(testinteraction_task.await, false);
+        assert!(!testinteraction_task.await);
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -165,7 +165,7 @@ mod tests {
         proxy.set_success()?;
 
         // The task should return true after calling SetSuccess.
-        assert_eq!(testinteraction_task.await, true);
+        assert!(testinteraction_task.await);
 
         Ok(())
     }

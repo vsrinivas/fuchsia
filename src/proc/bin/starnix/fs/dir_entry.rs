@@ -77,6 +77,7 @@ type DirEntryChildren = BTreeMap<FsString, Weak<DirEntry>>;
 pub type DirEntryHandle = Arc<DirEntry>;
 
 impl DirEntry {
+    #[allow(clippy::let_and_return)]
     pub fn new(
         node: FsNodeHandle,
         parent: Option<DirEntryHandle>,

@@ -90,7 +90,7 @@ impl MagmaFile {
     ) {
         self.connections
             .lock()
-            .entry(connection as u64)
+            .entry(connection)
             .or_insert_with(HashMap::new)
             .insert(buffer, buffer_info);
     }
@@ -102,7 +102,7 @@ impl MagmaFile {
         connection: magma_connection_t,
         buffer: magma_buffer_t,
     ) -> Option<BufferInfo> {
-        match self.connections.lock().get(&(connection as u64)) {
+        match self.connections.lock().get(&connection) {
             Some(buffers) => buffers.get(&buffer).cloned(),
             _ => None,
         }
@@ -249,7 +249,8 @@ impl FileOps for MagmaFile {
                 ) = read_control_and_response(current_task, &command)?;
 
                 if let Some(buffers) = self.connections.lock().get_mut(&{ control.connection }) {
-                    match buffers.remove(&(control.buffer as u64)) {
+                    #[allow(unaligned_references)]
+                    match buffers.remove(&control.buffer) {
                         Some(_) => release_buffer(control, &mut response),
                         _ => {
                             log_error!(
@@ -340,7 +341,7 @@ impl FileOps for MagmaFile {
                 unsafe {
                     magma_release_context(
                         control.connection as magma_connection_t,
-                        control.context_id as u32,
+                        control.context_id,
                     );
                 }
 
@@ -444,9 +445,8 @@ impl FileOps for MagmaFile {
                     virtio_magma_get_semaphore_id_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                response.result_return = unsafe {
-                    magma_get_semaphore_id(control.semaphore as magma_semaphore_t) as u64
-                };
+                response.result_return =
+                    unsafe { magma_get_semaphore_id(control.semaphore as magma_semaphore_t) };
 
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_SEMAPHORE_ID as u32;

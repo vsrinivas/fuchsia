@@ -217,7 +217,7 @@ impl Scope {
     pub const GLOBAL: Scope = Scope(0xe);
 }
 
-impl<'a> Debug for Scope {
+impl Debug for Scope {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match *self {
             Self::INTERFACE_LOCAL => write!(f, "Scope::INTERFACE_LOCAL"),
@@ -266,7 +266,7 @@ impl AddressOrigin {
     pub const THREAD: AddressOrigin = AddressOrigin(OT_ADDRESS_ORIGIN_THREAD as u8);
 }
 
-impl<'a> Debug for AddressOrigin {
+impl Debug for AddressOrigin {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match *self {
             Self::DHCPV6 => write!(f, "AddressOrigin::DHCPV6"),
@@ -501,7 +501,7 @@ impl From<Ip6Address> for SockAddr {
 
 impl From<std::net::SocketAddrV6> for SockAddr {
     fn from(x: std::net::SocketAddrV6) -> Self {
-        SockAddr::new(x.ip().clone(), x.port())
+        SockAddr::new(*x.ip(), x.port())
     }
 }
 
@@ -536,7 +536,7 @@ pub enum NetifIdentifier {
 impl From<otNetifIdentifier> for NetifIdentifier {
     fn from(x: otNetifIdentifier) -> Self {
         use num::FromPrimitive;
-        Self::from_u32(x).expect(format!("Unknown otNetifIdentifier value: {}", x).as_str())
+        Self::from_u32(x).unwrap_or_else(|| panic!("Unknown otNetifIdentifier value: {}", x))
     }
 }
 

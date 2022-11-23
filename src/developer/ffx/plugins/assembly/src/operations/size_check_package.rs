@@ -243,6 +243,7 @@ fn verify_budgets_with_tools(
 
 /// Reads each mentioned package manifest.
 /// Returns pairs of budget and the list of blobs consuming this budget.
+#[allow(clippy::ptr_arg)]
 fn load_manifests_blobs_match_budgets(budgets: &Vec<PackageSetBudget>) -> Result<Vec<BudgetBlobs>> {
     let mut budget_blobs = Vec::new();
     for budget in budgets.iter() {
@@ -276,7 +277,7 @@ fn load_manifests_blobs_match_budgets(budgets: &Vec<PackageSetBudget>) -> Result
                     // Because we are merging the packages into a single package, remove the
                     // meta.fars from each individual input.
                     "meta/" => None,
-                    _ => Some((b.hash.clone(), b)),
+                    _ => Some((b.hash, b)),
                 })
                 .collect();
             budget_blob.blobs = map.drain().map(|(_k, v)| v).collect();
@@ -292,6 +293,7 @@ fn load_manifests_blobs_match_budgets(budgets: &Vec<PackageSetBudget>) -> Result
 
 /// Reads blob declaration file, and count how many times blobs are used.
 /// TODO(fxbug.dev/103906): Pass BlobsJson struct from blobfs.rs as input.
+#[allow(clippy::ptr_arg)]
 fn load_blob_info(blob_size_paths: &Vec<Utf8PathBuf>) -> Result<Vec<BlobJsonEntry>> {
     let mut result = vec![];
     for blobs_path in blob_size_paths.iter() {
@@ -302,6 +304,7 @@ fn load_blob_info(blob_size_paths: &Vec<Utf8PathBuf>) -> Result<Vec<BlobJsonEntr
 }
 
 /// Reads blob declaration file, build blobfs for missing blobs, and count how many times blobs are used.
+#[allow(clippy::ptr_arg)]
 fn index_blobs_by_hash(
     blob_sizes: &Vec<BlobJsonEntry>,
     blob_count_by_hash: &mut HashMap<Hash, BlobSizeAndCount>,
@@ -322,6 +325,7 @@ fn index_blobs_by_hash(
 }
 
 /// Reads blob declaration file, and count how many times blobs are used.
+#[allow(clippy::ptr_arg)]
 fn count_blobs(
     blob_sizes: &Vec<BlobJsonEntry>,
     blob_usages: &Vec<BudgetBlobs>,
@@ -374,6 +378,7 @@ fn count_blobs(
 }
 
 /// Computes the total size of each resource budget.
+#[allow(clippy::ptr_arg)]
 fn compute_resources_budget_blobs(
     budgets: &Vec<ResourceBudget>,
     package_budget_blobs: &Vec<BudgetBlobs>,
@@ -411,6 +416,7 @@ fn compute_resources_budget_blobs(
 }
 
 // Computes the total size of each component taking into account blob sharing.
+#[allow(clippy::ptr_arg)]
 fn compute_budget_results(
     budget_usages: &Vec<BudgetBlobs>,
     blob_count_by_hash: &HashMap<Hash, BlobSizeAndCount>,
@@ -435,11 +441,9 @@ fn compute_budget_results(
 
         let mut package_breakdown = HashMap::new();
         for blob in filtered_blobs {
-            let count = blob_count_by_hash.get(&blob.hash).ok_or(format_err!(
-                "Can't find blob {} from package {:?} in map",
-                blob.hash,
-                blob.package
-            ))?;
+            let count = blob_count_by_hash.get(&blob.hash).ok_or_else(|| {
+                format_err!("Can't find blob {} from package {:?} in map", blob.hash, blob.package)
+            })?;
             let package_result =
                 package_breakdown.entry(blob.package.clone()).or_insert(PackageSizeInfo {
                     name: "".to_string(),
@@ -469,6 +473,7 @@ fn compute_budget_results(
 }
 
 /// Builds a report with the gerrit size checker format from the computed component size and budget.
+#[allow(clippy::ptr_arg)]
 fn to_json_output(
     budget_usages: &Vec<BudgetResult>,
 ) -> Result<BTreeMap<String, serde_json::Value>> {
@@ -489,6 +494,7 @@ fn to_json_output(
 }
 
 #[cfg(test)]
+#[allow(clippy::box_default)]
 mod tests {
     use crate::operations::size_check_package::{
         compute_budget_results, verify_budgets_with_tools, BlobInstance, BlobSizeAndCount,
@@ -528,7 +534,7 @@ mod tests {
 
         fn assert_eq(&self, rel_path: &str, expected: serde_json::Value) {
             let path = self.root.path().join(rel_path);
-            let actual: serde_json::Value = read_config(&path).unwrap();
+            let actual: serde_json::Value = read_config(path).unwrap();
             assert_eq!(actual, expected);
         }
 
@@ -565,7 +571,7 @@ mod tests {
         .unwrap();
         assert_eq!(budgets.package_set_budgets.len(), 1);
         let package_set_budget = &budgets.package_set_budgets[0];
-        assert_eq!(package_set_budget.merge, false);
+        assert!(!package_set_budget.merge);
         assert_eq!(package_set_budget.creep_budget_bytes, 0);
     }
 

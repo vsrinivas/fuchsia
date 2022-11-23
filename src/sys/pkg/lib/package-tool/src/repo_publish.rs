@@ -456,8 +456,7 @@ mod tests {
             let (_, pkg_manifest) =
                 test_utils::make_package_manifest(name, pkg_build_path.as_std_path());
 
-            serde_json::to_writer(File::create(&pkg_manifest_path).unwrap(), &pkg_manifest)
-                .unwrap();
+            serde_json::to_writer(File::create(pkg_manifest_path).unwrap(), &pkg_manifest).unwrap();
 
             manifests.push(pkg_manifest);
         }
@@ -526,11 +525,11 @@ mod tests {
             for blob in package_manifest.blobs() {
                 expected_deps.insert(blob.source_path.clone().into());
 
-                let blob_path = blob_repo_path.join(&blob.merkle.to_string());
+                let blob_path = blob_repo_path.join(blob.merkle.to_string());
 
                 assert_eq!(
                     std::fs::read(&blob.source_path).unwrap(),
-                    std::fs::read(&blob_path).unwrap(),
+                    std::fs::read(blob_path).unwrap(),
                 );
             }
         }

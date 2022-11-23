@@ -285,7 +285,7 @@ mod tests {
 
         let request_processor = RequestProcessor::new(context.delegate.clone());
 
-        let _agent = SettingTypeUsageInspectAgent::create_with_node(context, inspect_node).await;
+        SettingTypeUsageInspectAgent::create_with_node(context, inspect_node).await;
 
         // Interlace different request types to make sure the counter is correct.
         request_processor

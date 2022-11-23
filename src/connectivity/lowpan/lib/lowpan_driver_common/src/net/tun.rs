@@ -180,6 +180,7 @@ impl NetworkInterface for TunNetworkInterface {
             );
         }
 
+        #[allow(clippy::or_fun_call)]
         Ok(frame.data.ok_or(format_err!("data field was absent"))?)
     }
 
@@ -396,14 +397,14 @@ impl NetworkInterface for TunNetworkInterface {
                     match state.watcher.as_ref().unwrap().watch().await? {
                         Event::Existing(prop) if prop.id == Some(self.id) => {
                             assert!(
-                                state.prev_prop.id == None,
+                                state.prev_prop.id.is_none(),
                                 "Got Event::Existing twice for same interface"
                             );
                             state.prev_prop = prop;
                             continue;
                         }
                         Event::Idle(_) => {
-                            if state.prev_prop.id == None {
+                            if state.prev_prop.id.is_none() {
                                 return Err(format_err!("Interface no longer exists"));
                             }
                         }

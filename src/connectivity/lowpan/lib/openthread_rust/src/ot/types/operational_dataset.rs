@@ -100,7 +100,7 @@ impl OperationalDataset {
 
     /// Returns the delay, if present.
     pub fn get_delay(&self) -> Option<u32> {
-        self.0.mComponents.mIsDelayPresent().then(|| self.0.mDelay)
+        self.0.mComponents.mIsDelayPresent().then_some(self.0.mDelay)
     }
 
     /// Returns the extended PAN-ID, if present.
@@ -134,7 +134,7 @@ impl OperationalDataset {
 
     /// Returns the PAN-ID, if present.
     pub fn get_pan_id(&self) -> Option<PanId> {
-        self.0.mComponents.mIsPanIdPresent().then(|| self.0.mPanId)
+        self.0.mComponents.mIsPanIdPresent().then_some(self.0.mPanId)
     }
 
     /// Returns the active timestamp, if present.
@@ -160,7 +160,7 @@ impl OperationalDataset {
         self.0
             .mComponents
             .mIsMeshLocalPrefixPresent()
-            .then(|| &self.0.mMeshLocalPrefix)
+            .then_some(&self.0.mMeshLocalPrefix)
             .map(Into::into)
     }
 }
@@ -199,7 +199,7 @@ impl OperationalDataset {
     /// Sets or clears the extended PAN-ID.
     pub fn set_extended_pan_id(&mut self, opt: Option<&ExtendedPanId>) {
         if let Some(x) = opt {
-            self.0.mExtendedPanId = x.as_ot_ref().clone();
+            self.0.mExtendedPanId = *x.as_ot_ref();
             self.0.mComponents.set_mIsExtendedPanIdPresent(true);
         } else {
             self.0.mComponents.set_mIsExtendedPanIdPresent(false);
@@ -209,7 +209,7 @@ impl OperationalDataset {
     /// Sets or clears the network key.
     pub fn set_network_key(&mut self, opt: Option<&NetworkKey>) {
         if let Some(x) = opt {
-            self.0.mNetworkKey = x.as_ot_ref().clone();
+            self.0.mNetworkKey = *x.as_ot_ref();
             self.0.mComponents.set_mIsNetworkKeyPresent(true);
         } else {
             self.0.mComponents.set_mIsNetworkKeyPresent(false);
@@ -219,7 +219,7 @@ impl OperationalDataset {
     /// Sets or clears the network name.
     pub fn set_network_name(&mut self, opt: Option<&NetworkName>) {
         if let Some(x) = opt {
-            self.0.mNetworkName = x.as_ot_ref().clone();
+            self.0.mNetworkName = *x.as_ot_ref();
             self.0.mComponents.set_mIsNetworkNamePresent(true);
         } else {
             self.0.mComponents.set_mIsNetworkNamePresent(false);
@@ -259,7 +259,7 @@ impl OperationalDataset {
     /// Sets or clears the security policy.
     pub fn set_security_policy(&mut self, opt: Option<SecurityPolicy>) {
         if let Some(x) = opt {
-            self.0.mSecurityPolicy = x.as_ot_ref().clone();
+            self.0.mSecurityPolicy = *x.as_ot_ref();
             self.0.mComponents.set_mIsSecurityPolicyPresent(true);
         } else {
             self.0.mComponents.set_mIsSecurityPolicyPresent(false);
@@ -269,7 +269,7 @@ impl OperationalDataset {
     /// Sets or clears the mesh-local prefix.
     pub fn set_mesh_local_prefix(&mut self, opt: Option<&MeshLocalPrefix>) {
         if let Some(x) = opt {
-            self.0.mMeshLocalPrefix = x.as_ot_ref().clone();
+            self.0.mMeshLocalPrefix = *x.as_ot_ref();
             self.0.mComponents.set_mIsMeshLocalPrefixPresent(true);
         } else {
             self.0.mComponents.set_mIsMeshLocalPrefixPresent(false);
@@ -311,6 +311,7 @@ impl OperationalDatasetTlvs {
     }
 
     /// Returns length of the TLVs in bytes. 0-16.
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.0.mLength as usize
     }

@@ -90,7 +90,7 @@ mod tests {
         };
         static ref TEST_ACCOUNT_ID_1: AccountId = AccountId::new(1);
         static ref TEST_STATE: State =
-            State::new(TEST_ACCOUNT_ID_1.clone(), TEST_ENROLLMENT_STATE.clone(),);
+            State::new(*TEST_ACCOUNT_ID_1, TEST_ENROLLMENT_STATE.clone(),);
         static ref TEST_STATE_BYTES: Vec<u8> = vec![
             1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 116, 101, 115,
             116, 95, 105, 100, 3, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3

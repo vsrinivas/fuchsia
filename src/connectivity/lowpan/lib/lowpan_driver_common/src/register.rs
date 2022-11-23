@@ -133,7 +133,7 @@ where
         .try_for_each_concurrent(MAX_CONCURRENT, |cmd| async {
             match cmd {
                 FactoryDriverRequest::GetFactoryDevice { device_factory, .. } => {
-                    if let Some(stream) = device_factory.into_stream().ok() {
+                    if let Ok(stream) = device_factory.into_stream() {
                         let _ = driver.serve_to(stream).await;
                     }
                 }

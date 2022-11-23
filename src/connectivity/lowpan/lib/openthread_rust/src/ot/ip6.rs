@@ -23,7 +23,7 @@ pub enum Icmp6EchoMode {
 impl From<otIcmp6EchoMode> for Icmp6EchoMode {
     fn from(x: otIcmp6EchoMode) -> Self {
         use num::FromPrimitive;
-        Self::from_u32(x).expect(format!("Unknown otIcmp6EchoMode value: {}", x).as_str())
+        Self::from_u32(x).unwrap_or_else(|| panic!("Unknown otIcmp6EchoMode value: {}", x))
     }
 }
 
@@ -198,12 +198,10 @@ impl Ip6 for Instance {
     fn ip6_send_data(&self, data: &[u8]) -> Result {
         if let Ok(msg) = Message::ip6_new_from_bytes(self, data, None) {
             self.ip6_send(msg)
+        } else if self.get_buffer_info().0.mFreeBuffers == 0 {
+            Err(ot::Error::NoBufs)
         } else {
-            if self.get_buffer_info().0.mFreeBuffers == 0 {
-                Err(ot::Error::NoBufs)
-            } else {
-                Err(ot::Error::Failed)
-            }
+            Err(ot::Error::Failed)
         }
     }
 
@@ -211,12 +209,10 @@ impl Ip6 for Instance {
         if let Ok(mut msg) = Message::ip6_new_from_bytes(self, data, None) {
             msg.set_direct_transmission(true);
             self.ip6_send(msg)
+        } else if self.get_buffer_info().0.mFreeBuffers == 0 {
+            Err(ot::Error::NoBufs)
         } else {
-            if self.get_buffer_info().0.mFreeBuffers == 0 {
-                Err(ot::Error::NoBufs)
-            } else {
-                Err(ot::Error::Failed)
-            }
+            Err(ot::Error::Failed)
         }
     }
 
@@ -308,7 +304,7 @@ impl Ip6 for Instance {
             trace!("_ot_ip6_address_callback");
 
             // Convert the `*otIp6AddressInfo` into an `&ot::Ip6AddressInfo`.
-            let info = Ip6AddressInfo::ref_from_ot_ptr(info).unwrap().clone();
+            let info = *Ip6AddressInfo::ref_from_ot_ptr(info).unwrap();
 
             // Reconstitute a reference to our closure.
             let sender = &mut *(context as *mut F);

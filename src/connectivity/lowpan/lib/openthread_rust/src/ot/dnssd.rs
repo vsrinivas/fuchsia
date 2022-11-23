@@ -84,6 +84,7 @@ impl<'a> DnsTxtEntry<'a> {
     ///
     /// Will only return the value part if the key is included in `value_field()`.
     pub fn value(&self) -> Option<&'a [u8]> {
+        #[allow(clippy::manual_filter)]
         if let Some(value) = self.value_field() {
             if self.0.mKey.is_null() {
                 let mut iter = value.splitn(2, |x| *x == b'=');
@@ -278,6 +279,7 @@ pub trait Dnssd {
     /// * `ttl`: Service TTL (in seconds).
     /// * `txt_data`: Array of bytes representing the TXT record.
     /// * `weight`: Service weight.
+    #[allow(clippy::too_many_arguments)]
     fn dnssd_query_handle_discovered_service_instance(
         &self,
         service_full_name: &CStr,

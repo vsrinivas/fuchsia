@@ -304,12 +304,13 @@ impl FileOps for DevPtmxFile {
         match request {
             TIOCGPTN => {
                 // Get the therminal id.
-                let value: u32 = self.terminal.id as u32;
+                let value: u32 = self.terminal.id;
                 current_task.mm.write_object(UserRef::<u32>::new(user_addr), &value)?;
                 Ok(SUCCESS)
             }
             TIOCGPTLCK => {
                 // Get the lock status.
+                #[allow(clippy::bool_to_int_with_if)]
                 let value = if self.terminal.read().locked { 1 } else { 0 };
                 current_task.mm.write_object(UserRef::<i32>::new(user_addr), &value)?;
                 Ok(SUCCESS)
@@ -544,6 +545,7 @@ mod tests {
         file: &FileHandle,
         steal: bool,
     ) -> Result<SyscallResult, Errno> {
+        #[allow(clippy::bool_to_int_with_if)]
         file.ioctl(task, TIOCSCTTY, UserAddress::from(if steal { 1 } else { 0 }))
     }
 

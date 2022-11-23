@@ -609,7 +609,7 @@ mod tests {
         T: serde::de::DeserializeOwned,
     {
         let mut cursor = std::io::Cursor::new(json);
-        return from_reader(&mut cursor);
+        from_reader(&mut cursor)
     }
 
     #[test]

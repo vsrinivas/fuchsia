@@ -427,6 +427,7 @@ async fn test_provision_network_online() {
 }
 
 #[fasync::run(10, test)]
+#[allow(clippy::or_fun_call)]
 async fn test_add_on_mesh_prefix() {
     test_harness(|driver| async move {
         assert_eq!(
@@ -459,21 +460,20 @@ async fn test_add_on_mesh_prefix() {
                 .get_local_on_mesh_prefixes()
                 .map(|x| x.context("get_local_on_mesh_prefixes"))
                 .and_then(|x| futures::future::ready(
-                    x.first()
-                        .ok_or(format_err!("on-mesh-prefixes is empty"))
-                        .map(|x| x.subnet.clone())
+                    x.first().ok_or(format_err!("on-mesh-prefixes is empty")).map(|x| x.subnet)
                 ))
                 .await
                 .unwrap(),
             x.subnet
         );
-        assert_eq!(driver.unregister_on_mesh_prefix(on_mesh_prefix_subnet.clone()).await, Ok(()));
+        assert_eq!(driver.unregister_on_mesh_prefix(on_mesh_prefix_subnet).await, Ok(()));
         assert_eq!(driver.get_local_on_mesh_prefixes().await, Ok(vec![]));
     })
     .await;
 }
 
 #[fasync::run(10, test)]
+#[allow(clippy::or_fun_call)]
 async fn test_add_external_route() {
     test_harness(|driver| async move {
         assert_eq!(
@@ -508,13 +508,13 @@ async fn test_add_external_route() {
                 .and_then(|x| futures::future::ready(
                     x.first()
                         .ok_or(format_err!("local_external_routes is empty"))
-                        .map(|x| x.subnet.clone())
+                        .map(|x| x.subnet)
                 ))
                 .await
                 .unwrap(),
             x.subnet
         );
-        assert_eq!(driver.unregister_external_route(external_route_subnet.clone()).await, Ok(()));
+        assert_eq!(driver.unregister_external_route(external_route_subnet).await, Ok(()));
         assert_eq!(driver.get_local_external_routes().await, Ok(vec![]));
     })
     .await;
@@ -522,6 +522,7 @@ async fn test_add_external_route() {
 
 #[fasync::run(10, test)]
 #[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
+#[allow(clippy::or_fun_call)]
 async fn test_grind_lowpan_ot_driver() {
     test_harness(|driver| async move {
         let mut device_state_stream = driver.watch_device_state();
@@ -680,9 +681,7 @@ async fn test_grind_lowpan_ot_driver() {
                     .get_local_on_mesh_prefixes()
                     .map(|x| x.context("get_local_on_mesh_prefixes"))
                     .and_then(|x| futures::future::ready(
-                        x.first()
-                            .ok_or(format_err!("on-mesh-prefixes is empty"))
-                            .map(|x| x.subnet.clone())
+                        x.first().ok_or(format_err!("on-mesh-prefixes is empty")).map(|x| x.subnet)
                     ))
                     .await
                     .unwrap(),
@@ -691,10 +690,7 @@ async fn test_grind_lowpan_ot_driver() {
             fx_log_debug!("app_task: Populated!");
 
             fx_log_debug!("app_task: Removing an on-mesh prefix...");
-            assert_eq!(
-                driver.unregister_on_mesh_prefix(on_mesh_prefix_subnet.clone()).await,
-                Ok(())
-            );
+            assert_eq!(driver.unregister_on_mesh_prefix(on_mesh_prefix_subnet).await, Ok(()));
             fx_log_debug!("app_task: Unregistered!");
 
             fx_log_debug!("app_task: Checking on-mesh prefixes to make sure it is empty...");

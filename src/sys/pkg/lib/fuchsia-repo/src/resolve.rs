@@ -464,8 +464,8 @@ mod tests {
             let src_path = src_metadata_dir.join(name);
             let dst_path = dst_metadata_dir.join(name);
 
-            let src = std::fs::read_to_string(&src_path).unwrap();
-            let dst = std::fs::read_to_string(&dst_path).unwrap();
+            let src = std::fs::read_to_string(src_path).unwrap();
+            let dst = std::fs::read_to_string(dst_path).unwrap();
 
             assert_eq!(src, dst);
         }
@@ -479,7 +479,7 @@ mod tests {
             let dst_path = dst_blobs_dir.as_std_path().join(blob);
 
             let src = std::fs::read(&src_path).unwrap();
-            let dst = std::fs::read(&dst_path).unwrap();
+            let dst = std::fs::read(dst_path).unwrap();
 
             assert_eq!(src, dst);
         }

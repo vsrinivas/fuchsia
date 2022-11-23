@@ -40,12 +40,13 @@ impl FidlStorageConvertible for LightInfo {
         LightInfo { light_groups: Default::default() }
     }
 
+    #[allow(clippy::redundant_closure)]
     fn to_storable(self) -> Self::Storable {
         LightGroups {
             groups: self
                 .light_groups
-                .into_iter()
-                .map(|(_, group)| fidl_fuchsia_settings::LightGroup::from(group))
+                .into_values()
+                .map(|group| fidl_fuchsia_settings::LightGroup::from(group))
                 .collect(),
         }
     }

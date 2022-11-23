@@ -35,6 +35,7 @@ impl InputDeviceRegistryService {
         self.fail = fail;
     }
 
+    #[allow(clippy::await_holding_lock)]
     pub(crate) async fn send_media_button_event(&self, event: MediaButtonsEvent) {
         *self.last_sent_event.write() = Some(event.clone());
         for listener in self.listeners.read().iter() {

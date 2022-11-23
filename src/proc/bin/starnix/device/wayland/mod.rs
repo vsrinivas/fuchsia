@@ -6,6 +6,7 @@ mod bridge_client;
 mod buffer_collection_file;
 mod dma_buf_file;
 mod file_creation;
+#[allow(clippy::module_inception)]
 mod wayland;
 
 pub use buffer_collection_file::*;

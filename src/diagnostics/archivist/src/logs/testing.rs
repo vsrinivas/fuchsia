@@ -354,9 +354,8 @@ impl LogReader for EventStreamLogReader {
             log_sender.clone(),
             self.log_manager.clone(),
         ));
-        let tx_clone = tx.clone();
         let event_stream_server = Task::spawn(async move {
-            let _tx_clone = tx_clone;
+            let _tx_clone = tx;
             while let Some(Ok(request)) = event_stream.next().await {
                 match request {
                     fsys::EventStream2Request::GetNext { responder } => {

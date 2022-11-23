@@ -32,7 +32,6 @@ pub trait Thread {
 
     /// Functional equivalent of
     /// [`otsys::otThreadGetChildInfoById`](crate::otsys::otThreadGetChildInfoById).
-    #[must_use]
     fn get_child_info_by_id(&self, child_id: u16) -> Result<otChildInfo>;
 
     /// Functional equivalent of

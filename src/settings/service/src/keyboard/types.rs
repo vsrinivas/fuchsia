@@ -70,11 +70,7 @@ pub(crate) struct Autorepeat {
 
 impl Autorepeat {
     pub(crate) fn is_valid(&self) -> bool {
-        if self.delay >= 0 && self.period >= 0 {
-            true
-        } else {
-            false
-        }
+        self.delay >= 0 && self.period >= 0
     }
 }
 

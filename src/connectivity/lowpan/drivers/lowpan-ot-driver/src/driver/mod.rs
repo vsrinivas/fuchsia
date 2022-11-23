@@ -81,6 +81,7 @@ pub struct OtDriver<OT, NI, BI> {
     border_agent_service: parking_lot::Mutex<Option<fasync::Task<Result<(), anyhow::Error>>>>,
 
     /// The current meshcop TXT records.
+    #[allow(clippy::type_complexity)]
     border_agent_current_txt_entries: std::sync::Arc<futures::lock::Mutex<Vec<(String, Vec<u8>)>>>,
 
     /// Additional TXT records set by `meshcop_update_txt_entries`.

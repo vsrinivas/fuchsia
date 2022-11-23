@@ -138,9 +138,9 @@ macro_rules! blueprint_definition {
         pub(crate) mod blueprint {
             #[allow(unused_imports)]
             use super::*;
-            use crate::agent::{Blueprint, BlueprintHandle, Context};
             use futures::future::BoxFuture;
             use std::sync::Arc;
+            use $crate::agent::{Blueprint, BlueprintHandle, Context};
 
             pub(crate) fn create() -> BlueprintHandle {
                 Arc::new(BlueprintImpl)

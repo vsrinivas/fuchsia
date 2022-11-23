@@ -195,7 +195,7 @@ async fn test_display_failure() {
                             Err(anyhow!("could not move brightness channel into stream"))
                         });
                     }
-                    return Box::pin(async { Ok(()) });
+                    Box::pin(async { Ok(()) })
                 }
                 _ => Box::pin(async { Err(anyhow!("unsupported")) }),
             }

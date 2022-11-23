@@ -26,6 +26,7 @@ impl BlobJsonGenerator {
     }
 
     /// Returns information blobs used by the specified packages.
+    #[allow(clippy::ptr_arg)]
     pub fn build(&self, package_manifests: &Vec<&Utf8Path>) -> Result<Vec<BlobJsonEntry>> {
         let mut builder = assembly_blobfs::BlobFSBuilder::new(
             self.tools.get_tool("blobfs")?,

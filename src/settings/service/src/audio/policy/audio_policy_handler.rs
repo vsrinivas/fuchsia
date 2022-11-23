@@ -348,6 +348,7 @@ impl AudioPolicyHandler {
         let VolumeLimits { max_volume, min_volume } = self.determine_volume_limits(target);
 
         // We don't need to round this value as the audio setting internals will round it anyways.
+        #[allow(clippy::manual_clamp)]
         internal_volume.max(min_volume).min(max_volume)
     }
 
@@ -418,7 +419,7 @@ impl AudioPolicyHandler {
         let external_volume = self.calculate_external_volume(target, stream.user_volume_level);
 
         // Attempt to remove the policy.
-        if let None = self.state.remove_policy(policy_id) {
+        if self.state.remove_policy(policy_id).is_none() {
             return Err(PolicyError::InvalidArgument(
                 PolicyType::Audio,
                 ARG_POLICY_ID.into(),

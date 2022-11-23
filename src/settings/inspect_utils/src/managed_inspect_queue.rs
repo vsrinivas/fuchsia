@@ -232,7 +232,7 @@ mod tests {
 
         queue.push("0", "value1".to_string().into());
         queue.push("1", "value2".to_string().into());
-        let _ = queue.retain(|item| **item != "value1".to_string());
+        queue.retain(|item| **item != "value1");
 
         assert_data_tree!(inspector, root: {
             managed_node: {

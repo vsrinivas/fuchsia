@@ -220,7 +220,7 @@ async fn play_bluetooth_sound(
         match sound_type {
             BluetoothSoundType::Connected => {
                 if play_sound(
-                    &sound_player_proxy,
+                    sound_player_proxy,
                     BLUETOOTH_CONNECTED_FILE_PATH,
                     BLUETOOTH_CONNECTED_SOUND_ID,
                     sound_player_added_files.clone(),
@@ -233,7 +233,7 @@ async fn play_bluetooth_sound(
             }
             BluetoothSoundType::Disconnected => {
                 if play_sound(
-                    &sound_player_proxy,
+                    sound_player_proxy,
                     BLUETOOTH_DISCONNECTED_FILE_PATH,
                     BLUETOOTH_DISCONNECTED_SOUND_ID,
                     sound_player_added_files.clone(),

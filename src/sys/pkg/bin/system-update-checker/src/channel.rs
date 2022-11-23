@@ -756,7 +756,7 @@ mod tests {
 
         let package_map_path = dir.path().join(CHANNEL_PACKAGE_MAP);
 
-        fs::write(&package_map_path,
+        fs::write(package_map_path,
             r#"{"version":"1","content":[{"channel":"first","package":"fuchsia-pkg://asdfghjkl.example.com/update"}]}"#,
         ).unwrap();
 

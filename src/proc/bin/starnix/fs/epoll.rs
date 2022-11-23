@@ -136,6 +136,7 @@ impl EpollFileObject {
     }
 
     /// Checks if this EpollFileObject monitors the `epoll_file_object` at `epoll_file_handle`.
+    #[allow(clippy::only_used_in_recursion)]
     fn monitors(
         &self,
         epoll_file_handle: &FileHandle,

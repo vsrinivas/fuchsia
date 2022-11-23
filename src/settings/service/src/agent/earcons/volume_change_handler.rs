@@ -180,7 +180,7 @@ impl VolumeChangeHandler {
             // to hear feedback for such changes. For system sounds that need to play earcons,
             // the source should be AudioSettingSource::SystemWithFeedback. An example
             // of a system change is when the volume is reset after night mode deactivates.
-            if last_user_volume != None && change_source != Some(AudioSettingSource::System) {
+            if last_user_volume.is_some() && change_source != Some(AudioSettingSource::System) {
                 let id = ftrace::Id::new();
                 trace!(id, "volume_change_handler set background");
                 let mut receptor = self
@@ -267,7 +267,7 @@ impl VolumeChangeHandler {
             {
                 let play_sound_result = if volume_level >= 1.0 {
                     play_sound(
-                        &sound_player_proxy,
+                        sound_player_proxy,
                         VOLUME_MAX_FILE_PATH,
                         VOLUME_MAX_SOUND_ID,
                         sound_player_added_files.clone(),
@@ -275,7 +275,7 @@ impl VolumeChangeHandler {
                     .await
                 } else if volume_level > 0.0 {
                     play_sound(
-                        &sound_player_proxy,
+                        sound_player_proxy,
                         VOLUME_CHANGED_FILE_PATH,
                         VOLUME_CHANGED_SOUND_ID,
                         sound_player_added_files.clone(),

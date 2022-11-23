@@ -594,7 +594,9 @@ impl From<u32> for Prop {
             0x2b => Phy(PropPhy::ChanMaxPower),
             0x2c => Phy(PropPhy::RegionCode),
             0x120c => Phy(PropPhy::RadioCoexMetrics),
-            x if (x >= 0x20 && x < 0x30) || (x >= 0x1200 && x < 0x1300) => Phy(PropPhy::Unknown(x)),
+            x if (0x20..0x30).contains(&x) || (0x1200..0x1300).contains(&x) => {
+                Phy(PropPhy::Unknown(x))
+            }
 
             0x30 => Mac(PropMac::ScanState),
             0x31 => Mac(PropMac::ScanMask),
@@ -611,7 +613,9 @@ impl From<u32> for Prop {
             0x1301 => Mac(PropMac::AllowListEnabled),
             0x1306 => Mac(PropMac::DenyList),
             0x1307 => Mac(PropMac::DenyListEnabled),
-            x if (x >= 0x30 && x < 0x40) || (x >= 0x1300 && x < 0x1400) => Mac(PropMac::Unknown(x)),
+            x if (0x30..0x40).contains(&x) || (0x1300..0x1400).contains(&x) => {
+                Mac(PropMac::Unknown(x))
+            }
 
             0x40 => Net(PropNet::Saved),
             0x41 => Net(PropNet::InterfaceUp),
@@ -625,7 +629,9 @@ impl From<u32> for Prop {
             0x49 => Net(PropNet::RequireJoinExisting),
             0x4A => Net(PropNet::KeySwitchGuardtime),
             0x4B => Net(PropNet::Pskc),
-            x if (x >= 0x40 && x < 0x50) || (x >= 0x1400 && x < 0x1500) => Net(PropNet::Unknown(x)),
+            x if (0x40..0x50).contains(&x) || (0x1400..0x1500).contains(&x) => {
+                Net(PropNet::Unknown(x))
+            }
 
             0x50 => Thread(PropThread::LeaderAddr),
             0x51 => Thread(PropThread::Parent),
@@ -668,7 +674,7 @@ impl From<u32> for Prop {
             0x1519 => Thread(PropThread::PendingDataset),
             0x151a => Thread(PropThread::MgmtSetActiveDataset),
             0x151b => Thread(PropThread::MgmtSetPendingDataset),
-            x if (x >= 0x50 && x < 0x60) || (x >= 0x1500 && x < 0x1600) => {
+            x if (0x50..0x60).contains(&x) || (0x1500..0x1600).contains(&x) => {
                 Thread(PropThread::Unknown(x))
             }
 
@@ -680,7 +686,7 @@ impl From<u32> for Prop {
             0x65 => Ipv6(PropIpv6::IcmpPingOffload),
             0x66 => Ipv6(PropIpv6::MulticastAddressTable),
             0x67 => Ipv6(PropIpv6::IcmpPingOffloadMode),
-            x if (x >= 0x60 && x < 0x70) || (x >= 0x1600 && x < 0x1700) => {
+            x if (0x60..0x70).contains(&x) || (0x1600..0x1700).contains(&x) => {
                 Ipv6(PropIpv6::Unknown(x))
             }
 
@@ -693,14 +699,14 @@ impl From<u32> for Prop {
             113 => Stream(PropStream::Raw),
             114 => Stream(PropStream::Net),
             115 => Stream(PropStream::NetInsecure),
-            0x3Bc0 => Stream(PropStream::Mfg),
-            x if (x >= 0x70 && x < 0x80) || (x >= 0x1700 && x < 0x1800) => {
+            0x3BC0 => Stream(PropStream::Mfg),
+            x if (0x70..0x80).contains(&x) || (0x1700..0x1800).contains(&x) => {
                 Stream(PropStream::Unknown(x))
             }
 
             0x3BC1 => NestLegacy(PropNestLegacy::UlaPrefix),
             0x3BC2 => NestLegacy(PropNestLegacy::LastNodeJoined),
-            x if (x >= 0x3BC0 && x < 0x3C00) => NestLegacy(PropNestLegacy::Unknown(x)),
+            x if (0x3BC0..0x3C00).contains(&x) => NestLegacy(PropNestLegacy::Unknown(x)),
 
             x => Unknown(x),
         }
@@ -873,10 +879,10 @@ impl From<u32> for Status {
             119 => Reset(StatusReset::ExplicitlyUnknown),
             120 => Reset(StatusReset::Watchdog),
 
-            x if x >= 0x70 && x < 0x80 => Reset(StatusReset::Unknown(x)),
+            x if (0x70..0x80).contains(&x) => Reset(StatusReset::Unknown(x)),
 
-            x if x >= 15360 && x < 16384 => Vendor(x),
-            x if x >= 16384 && x < 81920 => StackNative(x),
+            x if (15360..16384).contains(&x) => Vendor(x),
+            x if (16384..81920).contains(&x) => StackNative(x),
             x => Unknown(x),
         }
     }
@@ -1203,20 +1209,20 @@ impl From<u32> for Cap {
             28 => Ieee802154(CapIeee802154::Mod868MhzBpsk),
             29 => Ieee802154(CapIeee802154::Mod915MhzAsk),
             30 => Ieee802154(CapIeee802154::Mod868MhzAsk),
-            x if x >= 0x10 && x < 0x20 => Ieee802154(CapIeee802154::Unknown(x)),
+            x if (0x10..0x20).contains(&x) => Ieee802154(CapIeee802154::Unknown(x)),
 
             32 => Config(CapConfig::Ftd),
             33 => Config(CapConfig::Mtd),
             34 => Config(CapConfig::Radio),
-            x if x >= 0x20 && x < 0x30 => Config(CapConfig::Unknown(x)),
+            x if (0x20..0x30).contains(&x) => Config(CapConfig::Unknown(x)),
 
             48 => Role(CapRole::Router),
             49 => Role(CapRole::Sleepy),
-            x if x >= 0x30 && x < 0x40 => Role(CapRole::Unknown(x)),
+            x if (0x30..0x40).contains(&x) => Role(CapRole::Unknown(x)),
 
             52 => Net(CapNet::Thread(1, 0)),
             53 => Net(CapNet::Thread(1, 1)),
-            x if x >= 0x40 && x < 0x50 => Net(CapNet::Unknown(x)),
+            x if (0x40..0x50).contains(&x) => Net(CapNet::Unknown(x)),
 
             512 => Ot(CapOt::MacWhitelist),
             513 => Ot(CapOt::MacRaw),
@@ -1231,7 +1237,7 @@ impl From<u32> for Cap {
             522 => Ot(CapOt::Slaac),
             523 => Ot(CapOt::RadioCoex),
             524 => Ot(CapOt::MacRetryHistogram),
-            x if x >= 512 && x < 640 => Ot(CapOt::Unknown(x)),
+            x if (512..640).contains(&x) => Ot(CapOt::Unknown(x)),
 
             1024 => Thread(CapThread::Commissioner),
             1025 => Thread(CapThread::TmfProxy),
@@ -1239,15 +1245,15 @@ impl From<u32> for Cap {
             1027 => Thread(CapThread::Joiner),
             1028 => Thread(CapThread::BorderRouter),
             1029 => Thread(CapThread::Service),
-            x if x >= 1024 && x < 1152 => Thread(CapThread::Unknown(x)),
+            x if (1024..1152).contains(&x) => Thread(CapThread::Unknown(x)),
 
             15296 => Nest(CapNest::LegacyInterface),
             15297 => Nest(CapNest::LegacyNetWake),
             15298 => Nest(CapNest::TransmitHook),
-            x if x >= 15296 && x < 15360 => Nest(CapNest::Unknown(x)),
+            x if (15296..15360).contains(&x) => Nest(CapNest::Unknown(x)),
 
-            x if x >= 15360 && x < 16384 => Vendor(x),
-            x if x >= 2000000 && x < 2097152 => Experimental(x),
+            x if (15360..16384).contains(&x) => Vendor(x),
+            x if (2000000..2097152).contains(&x) => Experimental(x),
 
             x => Unknown(x),
         }

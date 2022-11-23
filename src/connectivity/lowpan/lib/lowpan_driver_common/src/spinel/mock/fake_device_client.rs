@@ -170,7 +170,7 @@ impl FakeSpinelDevice {
         } else if let Some(value) = properties.get(&prop) {
             // Dumb insert.
             let mut value =
-                HashSet::<Vec<u8>>::try_unpack_from_slice(&value).expect("bad list encoding");
+                HashSet::<Vec<u8>>::try_unpack_from_slice(value).expect("bad list encoding");
             value.insert(new_value.to_vec());
             properties.insert(prop, value.try_packed().unwrap());
             spinel_write!(
@@ -208,8 +208,8 @@ impl FakeSpinelDevice {
         let mut properties = self.properties.lock();
         if let Some(value) = properties.get(&prop) {
             // Dumb remove.
-            let value = Vec::<Vec<u8>>::try_unpack_from_slice(&value)
-                .expect(&format!("bad list encoding for {:?}: {:?}", prop, &value))
+            let value = Vec::<Vec<u8>>::try_unpack_from_slice(value)
+                .unwrap_or_else(|_| panic!("bad list encoding for {:?}: {:?}", prop, &value))
                 .into_iter()
                 .filter(|x| !x.starts_with(new_value))
                 .collect::<Vec<Vec<u8>>>()
@@ -583,7 +583,7 @@ impl FakeSpinelDevice {
                     )
                     .unwrap();
                 } else if prop == Prop::Thread(PropThread::AllowLocalNetDataChange)
-                    && new_value != &[0u8]
+                    && new_value != [0u8]
                     && properties.get(&Prop::Thread(PropThread::AllowLocalNetDataChange)).unwrap()
                         != &[0u8]
                 {
@@ -596,30 +596,28 @@ impl FakeSpinelDevice {
                         Status::Already
                     )
                     .unwrap();
+                } else if let Some(value) = properties.get_mut(&prop) {
+                    value.clear();
+                    value.extend_from_slice(new_value);
+                    spinel_write!(
+                        &mut response,
+                        "CiiD",
+                        frame.header,
+                        Cmd::PropValueIs,
+                        prop,
+                        new_value
+                    )
+                    .unwrap();
                 } else {
-                    if let Some(value) = properties.get_mut(&prop) {
-                        value.clear();
-                        value.extend_from_slice(new_value);
-                        spinel_write!(
-                            &mut response,
-                            "CiiD",
-                            frame.header,
-                            Cmd::PropValueIs,
-                            prop,
-                            new_value
-                        )
-                        .unwrap();
-                    } else {
-                        spinel_write!(
-                            &mut response,
-                            "Ciii",
-                            frame.header,
-                            Cmd::PropValueIs,
-                            Prop::LastStatus,
-                            Status::PropNotFound
-                        )
-                        .unwrap();
-                    }
+                    spinel_write!(
+                        &mut response,
+                        "Ciii",
+                        frame.header,
+                        Cmd::PropValueIs,
+                        Prop::LastStatus,
+                        Status::PropNotFound
+                    )
+                    .unwrap();
                 }
             }
         }
@@ -857,7 +855,7 @@ impl FakeSpinelDevice {
                     prop.ok()
                         .and_then(|prop| self.handle_get_prop(frame, prop))
                         .map(|r| vec![r])
-                        .unwrap_or(vec![])
+                        .unwrap_or_default()
                 } else {
                     // There was data after the property value,
                     // which isn't allowed on a get, so we
@@ -879,38 +877,40 @@ impl FakeSpinelDevice {
                 let mut payload = frame.payload.iter();
                 let prop = Prop::try_unpack(&mut payload).ok();
                 let value = <&[u8]>::try_unpack(&mut payload).unwrap();
-                prop.and_then(|prop| self.handle_set_prop(frame, prop, value)).unwrap_or(vec![])
+                prop.and_then(|prop| self.handle_set_prop(frame, prop, value)).unwrap_or_default()
             }
             Cmd::PropValueInsert => {
                 let mut payload = frame.payload.iter();
                 let prop = Prop::try_unpack(&mut payload).ok();
                 let value = <&[u8]>::try_unpack(&mut payload).unwrap();
-                prop.and_then(|prop| self.handle_insert_prop(frame, prop, value)).unwrap_or(vec![])
+                prop.and_then(|prop| self.handle_insert_prop(frame, prop, value))
+                    .unwrap_or_default()
             }
             Cmd::PropValueRemove => {
                 let mut payload = frame.payload.iter();
                 let prop = Prop::try_unpack(&mut payload).ok();
                 let value = <&[u8]>::try_unpack(&mut payload).unwrap();
-                prop.and_then(|prop| self.handle_remove_prop(frame, prop, value)).unwrap_or(vec![])
+                prop.and_then(|prop| self.handle_remove_prop(frame, prop, value))
+                    .unwrap_or_default()
             }
             Cmd::NetClear => {
                 self.handle_net_clear();
                 self.handle_get_prop(frame, Prop::Net(PropNet::Saved))
                     .map(|r| vec![r])
-                    .unwrap_or(vec![])
+                    .unwrap_or_default()
             }
             Cmd::NetSave => {
                 self.handle_net_save();
                 self.handle_get_prop(frame, Prop::Net(PropNet::Saved))
                     .map(|r| vec![r])
-                    .unwrap_or(vec![])
+                    .unwrap_or_default()
             }
             Cmd::NetRecall => {
                 self.handle_net_recall();
                 let mut ret = self
                     .handle_get_prop(frame, Prop::Net(PropNet::Saved))
                     .map(|r| vec![r])
-                    .unwrap_or(vec![]);
+                    .unwrap_or_default();
                 frame.header = Header::new(frame.header.nli(), None).unwrap();
                 ret.extend(self.handle_get_prop(frame, Prop::Net(PropNet::NetworkName)));
                 ret.extend(self.handle_get_prop(frame, Prop::Net(PropNet::Xpanid)));
@@ -939,6 +939,7 @@ impl FakeSpinelDevice {
 /// to run in the background.
 ///
 /// This is only used for testing.
+#[allow(clippy::type_complexity)]
 pub fn new_fake_spinel_pair() -> (
     SpinelDeviceSink<MockDeviceProxy>,
     SpinelDeviceStream<MockDeviceProxy, mpsc::Receiver<Result<SpinelDeviceEvent, fidl::Error>>>,

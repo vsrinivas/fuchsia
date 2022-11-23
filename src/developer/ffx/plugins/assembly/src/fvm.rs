@@ -27,7 +27,7 @@ use tracing::info;
 ///
 /// If the |fvm_config| includes information for a NAND, then an NAND-supported
 /// sparse FVM will also be generated for fastboot flashing.
-pub fn construct_fvm<'a>(
+pub fn construct_fvm(
     outdir: impl AsRef<Utf8Path>,
     gendir: impl AsRef<Utf8Path>,
     tools: &impl ToolProvider,
@@ -189,6 +189,7 @@ impl<'a> MultiFvmBuilder<'a> {
                 let mut has_minfs = false;
                 for filesystem_name in &config.filesystems {
                     let fs = self.get_filesystem(tools, filesystem_name)?;
+                    #[allow(clippy::single_match)]
                     match fs {
                         Filesystem::MinFS { path: _, attributes: _ } => has_minfs = true,
                         _ => {}

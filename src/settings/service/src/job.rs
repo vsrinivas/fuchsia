@@ -313,7 +313,7 @@ pub(self) struct Info {
 
 impl Info {
     fn new(id: Id, mut job: Job) -> Self {
-        let execution_type = job.execution_type.clone();
+        let execution_type = job.execution_type;
         let cancelation_tx = job.cancelation_tx.take();
         Self { id, state: State::Ready(job), execution_type, cancelation_tx }
     }

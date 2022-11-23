@@ -20,6 +20,7 @@ pub enum DeviceRequest {
     ReadyToReceiveFrames(u32),
 }
 
+#[allow(clippy::type_complexity)]
 pub fn new_mock_spinel_pair(
     max_frame_size: u32,
 ) -> (

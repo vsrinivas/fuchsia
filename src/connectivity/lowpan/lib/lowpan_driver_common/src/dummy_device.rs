@@ -12,7 +12,6 @@ use core::future::ready;
 use fuchsia_zircon_status as zx_status;
 use futures::stream::BoxStream;
 use futures::FutureExt;
-use hex;
 
 /// A dummy LoWPAN Driver implementation, for testing.
 #[derive(Debug, Copy, Clone, Default)]
@@ -98,7 +97,7 @@ impl Driver for DummyDevice {
     async fn get_credential(&self) -> ZxResult<Option<Credential>> {
         fx_log_info!("Got get credential command");
 
-        let res: Vec<u8> = hex::decode("000102030405060708090a0b0c0d0f".to_string())
+        let res: Vec<u8> = hex::decode("000102030405060708090a0b0c0d0f")
             .map_err(|_| zx_status::Status::INTERNAL)?
             .to_vec();
 
@@ -168,7 +167,7 @@ impl Driver for DummyDevice {
                 ])
                 .into_stream(),
             )
-            .map(|x| Ok(x))
+            .map(Ok)
             .boxed()
     }
 
@@ -233,7 +232,7 @@ impl Driver for DummyDevice {
                 ])
                 .into_stream(),
             )
-            .map(|x| Ok(x))
+            .map(Ok)
             .boxed()
     }
 

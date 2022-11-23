@@ -667,7 +667,7 @@ mod tests {
                 ],
             },
         ];
-        let serialized = serde_json::to_value(&entries).unwrap();
+        let serialized = serde_json::to_value(entries).unwrap();
         let expected = serde_json::json!(
             [
                 {

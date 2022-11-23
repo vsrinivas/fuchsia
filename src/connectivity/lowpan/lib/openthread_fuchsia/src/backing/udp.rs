@@ -522,118 +522,82 @@ mod test {
 
     #[test]
     fn test_dest_needs_scope() {
-        assert_eq!(
-            dest_needs_scope(&SocketAddrV6::new(
-                Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1),
-                8080,
-                0,
-                0
-            )),
-            false
-        );
-        assert_eq!(
-            dest_needs_scope(&SocketAddrV6::new(
-                Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1),
-                8080,
-                0,
-                1
-            )),
-            false
-        );
+        assert!(!dest_needs_scope(&SocketAddrV6::new(
+            Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1),
+            8080,
+            0,
+            0
+        )));
+        assert!(!dest_needs_scope(&SocketAddrV6::new(
+            Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1),
+            8080,
+            0,
+            1
+        )));
 
-        assert_eq!(
-            dest_needs_scope(&SocketAddrV6::new(
-                Ipv6Addr::new(0xfe80, 0xdb8, 0, 0, 0, 0, 0, 1),
-                8080,
-                0,
-                0
-            )),
-            true
-        );
-        assert_eq!(
-            dest_needs_scope(&SocketAddrV6::new(
-                Ipv6Addr::new(0xfe80, 0xdb8, 0, 0, 0, 0, 0, 1),
-                8080,
-                0,
-                1
-            )),
-            false
-        );
+        assert!(dest_needs_scope(&SocketAddrV6::new(
+            Ipv6Addr::new(0xfe80, 0xdb8, 0, 0, 0, 0, 0, 1),
+            8080,
+            0,
+            0
+        )));
+        assert!(!dest_needs_scope(&SocketAddrV6::new(
+            Ipv6Addr::new(0xfe80, 0xdb8, 0, 0, 0, 0, 0, 1),
+            8080,
+            0,
+            1
+        )));
 
-        assert_eq!(
-            dest_needs_scope(&SocketAddrV6::new(
-                Ipv6Addr::new(0xff05, 0xdb8, 0, 0, 0, 0, 0, 1),
-                8080,
-                0,
-                0
-            )),
-            false
-        );
-        assert_eq!(
-            dest_needs_scope(&SocketAddrV6::new(
-                Ipv6Addr::new(0xff05, 0xdb8, 0, 0, 0, 0, 0, 1),
-                8080,
-                0,
-                1
-            )),
-            false
-        );
+        assert!(!dest_needs_scope(&SocketAddrV6::new(
+            Ipv6Addr::new(0xff05, 0xdb8, 0, 0, 0, 0, 0, 1),
+            8080,
+            0,
+            0
+        )));
+        assert!(!dest_needs_scope(&SocketAddrV6::new(
+            Ipv6Addr::new(0xff05, 0xdb8, 0, 0, 0, 0, 0, 1),
+            8080,
+            0,
+            1
+        )));
 
-        assert_eq!(
-            dest_needs_scope(&SocketAddrV6::new(
-                Ipv6Addr::new(0xff03, 0xdb8, 0, 0, 0, 0, 0, 1),
-                8080,
-                0,
-                0
-            )),
-            true
-        );
-        assert_eq!(
-            dest_needs_scope(&SocketAddrV6::new(
-                Ipv6Addr::new(0xff03, 0xdb8, 0, 0, 0, 0, 0, 1),
-                8080,
-                0,
-                1
-            )),
-            false
-        );
+        assert!(dest_needs_scope(&SocketAddrV6::new(
+            Ipv6Addr::new(0xff03, 0xdb8, 0, 0, 0, 0, 0, 1),
+            8080,
+            0,
+            0
+        )));
+        assert!(!dest_needs_scope(&SocketAddrV6::new(
+            Ipv6Addr::new(0xff03, 0xdb8, 0, 0, 0, 0, 0, 1),
+            8080,
+            0,
+            1
+        )));
 
-        assert_eq!(
-            dest_needs_scope(&SocketAddrV6::new(
-                Ipv6Addr::new(0xff02, 0xdb8, 0, 0, 0, 0, 0, 1),
-                8080,
-                0,
-                0
-            )),
-            true
-        );
-        assert_eq!(
-            dest_needs_scope(&SocketAddrV6::new(
-                Ipv6Addr::new(0xff02, 0xdb8, 0, 0, 0, 0, 0, 1),
-                8080,
-                0,
-                1
-            )),
-            false
-        );
+        assert!(dest_needs_scope(&SocketAddrV6::new(
+            Ipv6Addr::new(0xff02, 0xdb8, 0, 0, 0, 0, 0, 1),
+            8080,
+            0,
+            0
+        )));
+        assert!(!dest_needs_scope(&SocketAddrV6::new(
+            Ipv6Addr::new(0xff02, 0xdb8, 0, 0, 0, 0, 0, 1),
+            8080,
+            0,
+            1
+        )));
 
-        assert_eq!(
-            dest_needs_scope(&SocketAddrV6::new(
-                Ipv6Addr::new(0xff01, 0xdb8, 0, 0, 0, 0, 0, 1),
-                8080,
-                0,
-                0
-            )),
-            false
-        );
-        assert_eq!(
-            dest_needs_scope(&SocketAddrV6::new(
-                Ipv6Addr::new(0xff01, 0xdb8, 0, 0, 0, 0, 0, 1),
-                8080,
-                0,
-                1
-            )),
-            false
-        );
+        assert!(!dest_needs_scope(&SocketAddrV6::new(
+            Ipv6Addr::new(0xff01, 0xdb8, 0, 0, 0, 0, 0, 1),
+            8080,
+            0,
+            0
+        )));
+        assert!(!dest_needs_scope(&SocketAddrV6::new(
+            Ipv6Addr::new(0xff01, 0xdb8, 0, 0, 0, 0, 0, 1),
+            8080,
+            0,
+            1
+        )));
     }
 }

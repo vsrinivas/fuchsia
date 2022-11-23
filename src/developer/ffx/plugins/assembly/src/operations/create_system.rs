@@ -25,8 +25,8 @@ use tracing::info;
 pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     let CreateSystemArgs { image_assembly_config, images, outdir, gendir, base_package_name, mode } =
         args;
-    let gendir = gendir.unwrap_or(outdir.clone());
-    let base_package_name = base_package_name.unwrap_or("system_image".to_string());
+    let gendir = gendir.unwrap_or_else(|| outdir.clone());
+    let base_package_name = base_package_name.unwrap_or_else(|| "system_image".to_string());
 
     let image_assembly_config: ImageAssemblyConfig = util::read_config(image_assembly_config)
         .context("Failed to read the image assembly config")?;
@@ -112,7 +112,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     };
 
     // Building a ZBI is expected, therefore throw an error otherwise.
-    let zbi_path = zbi_path.ok_or(anyhow!("Missing a ZBI in the images config"))?;
+    let zbi_path = zbi_path.ok_or_else(|| anyhow!("Missing a ZBI in the images config"))?;
 
     // Get the VBMeta config.
     let vbmeta_config: Option<&VBMeta> = images_config.images.iter().find_map(|i| match i {
@@ -131,6 +131,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     // If the board specifies a vendor-specific signing script, use that to
     // post-process the ZBI.
     if let Some(zbi_config) = zbi_config {
+        #[allow(clippy::single_match)]
         match &zbi_config.postprocessing_script {
             Some(script) => {
                 let signing_tool = tools.get_tool_with_path(script.path.clone())?;

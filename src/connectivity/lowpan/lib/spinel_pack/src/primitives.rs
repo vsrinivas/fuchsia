@@ -537,7 +537,7 @@ impl<'a> TryUnpackAs<'a, str> for &'a str {
     fn try_unpack_as(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self> {
         let mut split = iter.as_slice().splitn(2, |c| *c == 0);
 
-        let str_bytes: &[u8] = split.next().ok_or(UnpackingError::UnterminatedString)?.into();
+        let str_bytes: &[u8] = split.next().ok_or(UnpackingError::UnterminatedString)?;
 
         *iter = split.next().ok_or(UnpackingError::UnterminatedString)?.iter();
 
@@ -593,9 +593,10 @@ impl TryPackAs<SpinelUint> for u32 {
         let mut value = *self;
         let mut inner_buffer = [0u8; 5];
 
+        #[allow(clippy::needless_range_loop)]
         for i in 0..(len - 1) {
             inner_buffer[i] = ((value & 0x7F) | 0x80) as u8;
-            value = value >> 7;
+            value >>= 7;
         }
 
         inner_buffer[len - 1] = (value & 0x7F) as u8;

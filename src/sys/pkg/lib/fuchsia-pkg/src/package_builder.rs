@@ -144,7 +144,7 @@ impl PackageBuilder {
                 inner_name = Some(name);
                 meta_blobs = meta_contents;
                 for (target_path, source_path) in blob_contents {
-                    blob_paths.insert(target_path, outdir.join(&source_path));
+                    blob_paths.insert(target_path, outdir.join(source_path));
                 }
             } else {
                 // unpack the blob files to disk, we add them to the builder based on meta/contents
@@ -737,7 +737,7 @@ mod tests {
 
         // Write the package again after we've modified its contents
         let second_metafar_path = second_outdir.path().join("meta.far");
-        let second_manifest = second_builder.build(&second_outdir, &second_metafar_path).unwrap();
+        let second_manifest = second_builder.build(&second_outdir, second_metafar_path).unwrap();
         assert_eq!(first_manifest.name(), second_manifest.name(), "package names must match");
         assert_eq!(
             second_manifest.blobs().len(),
@@ -903,7 +903,7 @@ mod tests {
         let manifest_path = outdir.join("package_manifest.json");
 
         // Create a file to write to the package metafar
-        let far_source_file_path = NamedTempFile::new_in(&outdir).unwrap();
+        let far_source_file_path = NamedTempFile::new_in(outdir).unwrap();
         std::fs::write(&far_source_file_path, "some data for far").unwrap();
 
         // Create a file to include as a blob
@@ -914,7 +914,7 @@ mod tests {
 
         // Create the builder
         let mut builder = PackageBuilder::new("some_pkg_name");
-        builder.add_file_as_blob("some/blob", blob_source_file_path.to_string()).unwrap();
+        builder.add_file_as_blob("some/blob", &blob_source_file_path).unwrap();
         builder
             .add_file_to_far(
                 "meta/some/file",
@@ -927,7 +927,7 @@ mod tests {
         builder.manifest_blobs_relative_to(RelativeTo::File);
 
         // Build the package
-        let manifest = builder.build(&outdir, &metafar_path).unwrap();
+        let manifest = builder.build(outdir, metafar_path).unwrap();
 
         manifest
             .blobs()

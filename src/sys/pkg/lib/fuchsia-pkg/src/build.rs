@@ -296,7 +296,7 @@ mod test_build_with_file_system {
         };
         let result = build_with_file_system(
             &creation_manifest,
-            &meta_far_path,
+            meta_far_path,
             "published-name",
             None,
             &file_system,

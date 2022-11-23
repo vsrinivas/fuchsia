@@ -643,7 +643,7 @@ impl AllCountersUpdate<AllMacCounters> for AllCounters {
     fn update_from<R: AsRef<AllMacCounters>>(&mut self, data: R) {
         let data = data.as_ref();
         self.mac_tx = Some(MacCounters {
-            total: data.tx_counters.get(0).cloned(),
+            total: data.tx_counters.first().cloned(),
             unicast: data.tx_counters.get(1).cloned(),
             broadcast: data.tx_counters.get(2).cloned(),
             ack_requested: data.tx_counters.get(3).cloned(),
@@ -663,7 +663,7 @@ impl AllCountersUpdate<AllMacCounters> for AllCounters {
             ..MacCounters::EMPTY
         });
         self.mac_rx = Some(MacCounters {
-            total: data.rx_counters.get(0).cloned(),
+            total: data.rx_counters.first().cloned(),
             unicast: data.rx_counters.get(1).cloned(),
             broadcast: data.rx_counters.get(2).cloned(),
             data: data.rx_counters.get(3).cloned(),
@@ -685,11 +685,11 @@ impl AllCountersUpdate<AllMacCounters> for AllCounters {
     }
 }
 
-impl std::convert::Into<AllCounters> for AllMacCounters {
-    fn into(self) -> AllCounters {
+impl std::convert::From<AllMacCounters> for AllCounters {
+    fn from(val: AllMacCounters) -> Self {
         let mut ret = AllCounters::EMPTY;
-        ret.update_from(self);
-        return ret;
+        ret.update_from(val);
+        ret
     }
 }
 
@@ -734,8 +734,8 @@ impl RadioCoexMetrics {
             return Err(format_err!("Field size mismatch"));
         }
 
-        self.stopped = self.stopped | data.stopped;
-        self.grant_glitches = self.grant_glitches + data.grant_glitches;
+        self.stopped |= data.stopped;
+        self.grant_glitches += data.grant_glitches;
         Ok(())
     }
 }
@@ -751,7 +751,7 @@ impl AllCountersUpdate<RadioCoexMetrics> for AllCounters {
         let data = data.as_ref();
 
         self.coex_tx = Some(CoexCounters {
-            requests: data.tx.get(0).cloned().map(Into::into),
+            requests: data.tx.first().cloned().map(Into::into),
             grant_immediate: data.tx.get(1).cloned().map(Into::into),
             grant_wait: data.tx.get(2).cloned().map(Into::into),
             grant_wait_activated: data.tx.get(3).cloned().map(Into::into),
@@ -762,7 +762,7 @@ impl AllCountersUpdate<RadioCoexMetrics> for AllCounters {
             ..CoexCounters::EMPTY
         });
         self.coex_rx = Some(CoexCounters {
-            requests: data.rx.get(0).cloned().map(Into::into),
+            requests: data.rx.first().cloned().map(Into::into),
             grant_immediate: data.rx.get(1).cloned().map(Into::into),
             grant_wait: data.rx.get(2).cloned().map(Into::into),
             grant_wait_activated: data.rx.get(3).cloned().map(Into::into),
@@ -779,11 +779,11 @@ impl AllCountersUpdate<RadioCoexMetrics> for AllCounters {
     }
 }
 
-impl std::convert::Into<AllCounters> for RadioCoexMetrics {
-    fn into(self) -> AllCounters {
+impl std::convert::From<RadioCoexMetrics> for AllCounters {
+    fn from(val: RadioCoexMetrics) -> Self {
         let mut ret = AllCounters::EMPTY;
-        ret.update_from(self);
-        return ret;
+        ret.update_from(val);
+        ret
     }
 }
 
@@ -802,6 +802,7 @@ pub struct JoinerCommissioning {
 impl std::convert::TryInto<JoinerCommissioning> for JoinerCommissioningParams {
     type Error = anyhow::Error;
 
+    #[allow(clippy::or_fun_call)]
     fn try_into(self) -> Result<JoinerCommissioning, Self::Error> {
         Ok(JoinerCommissioning {
             switch: true,
@@ -833,6 +834,7 @@ impl TryFrom<&str> for RegionCode {
             return Ok(RegionCode(0, 0));
         }
         if region.len() == 2 {
+            #[allow(clippy::bytes_nth)]
             let ret = RegionCode(region.bytes().nth(0).unwrap(), region.bytes().nth(1).unwrap());
             if ret.is_valid() {
                 return Ok(ret);

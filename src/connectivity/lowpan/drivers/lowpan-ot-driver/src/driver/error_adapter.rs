@@ -61,28 +61,18 @@ pub trait ErrorExt {
 impl ErrorExt for anyhow::Error {
     /// If this error is based on a `ZxStatus`, then return it.
     fn get_zx_status(&self) -> Option<ZxStatus> {
-        if let Some(status) = self.downcast_ref::<ZxStatus>() {
-            Some(*status)
-        } else {
-            None
-        }
+        #[allow(clippy::map_clone)]
+        self.downcast_ref::<ZxStatus>().map(|status| *status)
     }
 
     /// If this error is based on a Netstack `Error`, then return it.
     fn get_netstack_error(&self) -> Option<fidl_fuchsia_net_stack::Error> {
-        if let Some(err) = self.downcast_ref::<NetstackError>() {
-            Some(err.0)
-        } else {
-            None
-        }
+        self.downcast_ref::<NetstackError>().map(|err| err.0)
     }
 
     fn get_ot_error(&self) -> Option<ot::Error> {
-        if let Some(err) = self.downcast_ref::<ot::Error>() {
-            Some(*err)
-        } else {
-            None
-        }
+        #[allow(clippy::map_clone)]
+        self.downcast_ref::<ot::Error>().map(|err| *err)
     }
 }
 

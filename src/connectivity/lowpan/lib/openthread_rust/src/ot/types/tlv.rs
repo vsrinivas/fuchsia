@@ -109,6 +109,7 @@ impl<'a> MeshcopTlv<'a> {
     }
 
     /// Serialized length of this TLV.
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         if self.value_len() > (TLV_ESCAPE_LENGTH as usize - 1) {
             3 + self.value_len()
@@ -121,7 +122,7 @@ impl<'a> MeshcopTlv<'a> {
     /// slice if the given slice was large enough to hold the value. If the given
     /// slice was too small, it remains unchanged and the method returns `None`.
     #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95089)
-    pub fn write_to<'b, T: Write>(&self, out: &mut T) -> std::io::Result<()> {
+    pub fn write_to<T: Write>(&self, out: &mut T) -> std::io::Result<()> {
         let value_len = self.value_len();
 
         if value_len > (TLV_ESCAPE_LENGTH as usize - 1) {
@@ -139,7 +140,7 @@ impl<'a> MeshcopTlv<'a> {
     /// Writes the value of this TLV to the given slice, returning the trimmed
     /// slice if the given slice was large enough to hold the value. If the given
     /// slice was too small, it remains unchanged and the method returns `None`.
-    pub fn write_value_to<'b, T: Write>(&self, out: &mut T) -> std::io::Result<()> {
+    pub fn write_value_to<T: Write>(&self, out: &mut T) -> std::io::Result<()> {
         match self {
             MeshcopTlv::NetworkName(x) => out.write_all(x.as_slice()),
 

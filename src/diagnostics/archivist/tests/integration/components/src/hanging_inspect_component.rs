@@ -27,7 +27,7 @@ async fn main() -> Result<(), Error> {
     insp.root().record_int("int", 3);
 
     let mut fs = ServiceFs::new();
-    inspect_runtime::serve(&insp, &mut fs)?;
+    inspect_runtime::serve(insp, &mut fs)?;
     fs.take_and_serve_directory_handle()?;
     fs.collect::<()>().await;
     Ok(())

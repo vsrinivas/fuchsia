@@ -112,7 +112,7 @@ where
                 info!("Attempting to create account twice");
                 return Err(AccountManagerError::new(ApiError::Internal));
             }
-            let stored_account = StoredAccount::new(persona_id.clone());
+            let stored_account = StoredAccount::new(persona_id);
             stored_account.save(account_dir)?;
         }
         Self::new(persona_id, lifetime, lock_request_sender, storage_manager, inspect_parent).await
@@ -136,7 +136,7 @@ where
             }
         };
         let stored_account = StoredAccount::load(account_dir)?;
-        let persona_id = stored_account.get_default_persona_id().clone();
+        let persona_id = *stored_account.get_default_persona_id();
         Self::new(persona_id, lifetime, lock_request_sender, storage_manager, inspect_parent).await
     }
 
@@ -255,7 +255,7 @@ where
     }
 
     fn get_persona_ids(&self) -> Vec<FidlPersonaId> {
-        vec![self.default_persona.id().clone().into()]
+        vec![(*self.default_persona.id()).into()]
     }
 
     async fn get_default_persona<'a>(
@@ -279,7 +279,7 @@ where
             })
             .await
             .map_err(|_| ApiError::RemovalInProgress)?;
-        Ok(self.default_persona.id().clone().into())
+        Ok((*self.default_persona.id()).into())
     }
 
     async fn get_persona<'a>(
@@ -657,7 +657,7 @@ mod tests {
     async fn test_get_persona_by_correct_id() {
         let mut test = Test::new();
         let account = test.create_persistent_account().await.unwrap();
-        let persona_id = account.default_persona.id().clone();
+        let persona_id = *account.default_persona.id();
 
         test.run(account, |(account_proxy, _storage_manager)| {
             async move {

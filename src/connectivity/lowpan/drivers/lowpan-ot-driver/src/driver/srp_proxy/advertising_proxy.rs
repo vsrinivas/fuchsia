@@ -268,7 +268,7 @@ impl AdvertisingProxyInner {
             let publish_proxy_host_future = self
                 .mdns_proxy_host_publisher
                 .publish_proxy_host(
-                    &local_name,
+                    local_name,
                     &mut addrs.iter_mut(),
                     ProxyHostPublicationOptions {
                         perform_probe: Some(false),
@@ -411,8 +411,8 @@ impl AdvertisingProxyInner {
             let publish_init_future = host
                 .service_publisher
                 .publish_service_instance(
-                    &local_service_name,
-                    &local_instance_name,
+                    local_service_name,
+                    local_instance_name,
                     ServiceInstancePublicationOptions::EMPTY,
                     client,
                 )

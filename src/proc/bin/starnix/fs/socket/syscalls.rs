@@ -373,7 +373,7 @@ fn recvmsg_internal(
 
     message_header.msg_flags = 0;
 
-    let cmsg_buffer_size = message_header.msg_controllen as usize;
+    let cmsg_buffer_size = message_header.msg_controllen;
     let mut cmsg_bytes_written = 0;
     let header_size = std::mem::size_of::<cmsghdr>();
 

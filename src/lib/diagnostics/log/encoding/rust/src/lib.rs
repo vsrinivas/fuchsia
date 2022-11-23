@@ -54,6 +54,7 @@ impl Header {
     /// Sets the length of the item the header refers to. Panics if not 8-byte aligned.
     fn set_len(&mut self, new_len: usize) {
         assert_eq!(new_len % 8, 0, "encoded message must be 8-byte aligned");
+        #[allow(clippy::bool_to_int_with_if)]
         self.set_size_words((new_len / 8) as u16 + if new_len % 8 > 0 { 1 } else { 0 });
     }
 }
@@ -212,7 +213,7 @@ mod tests {
     fn no_args_roundtrip() {
         let mut expected_record = MINIMAL_LOG_HEADER.to_le_bytes().to_vec();
         let timestamp = 5_000_000i64;
-        expected_record.extend(&timestamp.to_le_bytes());
+        expected_record.extend(timestamp.to_le_bytes());
 
         assert_roundtrips(
             Record { timestamp, severity: Severity::Info, arguments: vec![] },

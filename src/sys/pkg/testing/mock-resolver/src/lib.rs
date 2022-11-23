@@ -211,9 +211,9 @@ impl MockResolverService {
 
         // Create the package directory and the meta directory for the fake package.
         create_dir(&root).expect("package to not yet exist");
-        create_dir(&root.join(PACKAGE_CONTENTS_PATH))
+        create_dir(root.join(PACKAGE_CONTENTS_PATH))
             .expect("package_contents dir to not yet exist");
-        create_dir(&root.join(PACKAGE_CONTENTS_PATH).join("meta"))
+        create_dir(root.join(PACKAGE_CONTENTS_PATH).join("meta"))
             .expect("meta dir to not yet exist");
 
         // Create the file which holds the merkle root of the package, to redirect requests for 'meta' to.

@@ -60,7 +60,7 @@ where
     ) -> Option<V> {
         // `with_inspect` will only return an error on types with interior mutability.
         let value_with_inspect =
-            value.with_inspect(&self.node, &property_name).expect("Failed to attach new map entry");
+            value.with_inspect(&self.node, property_name).expect("Failed to attach new map entry");
         self.map.insert(map_key, value_with_inspect)
     }
 

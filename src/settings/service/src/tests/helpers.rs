@@ -52,7 +52,7 @@ pub async fn create_messenger_and_publisher(
     let messenger =
         message_hub.create(MessengerType::Unbound).await.expect("Unable to create messenger").0;
 
-    return (messenger, publisher);
+    (messenger, publisher)
 }
 
 // Create and return an unbound messenger and publisher from a given `message_hub`.
@@ -63,7 +63,7 @@ pub async fn create_messenger_and_publisher_from_hub(
     let messenger =
         message_hub.create(MessengerType::Unbound).await.expect("Unable to create messenger").0;
 
-    return (messenger, publisher);
+    (messenger, publisher)
 }
 
 // Given a `setting_type` and `message_hub`, creates a receptor from the message hub with the address

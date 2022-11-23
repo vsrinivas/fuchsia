@@ -32,7 +32,10 @@ where
         OT: AsRef<ot::Instance>,
     {
         // init future
-        let init_future = async move { Ok(self.init_ot()) };
+        let init_future = async move {
+            self.init_ot();
+            Ok(())
+        };
 
         // Stream for handling OpenThread tasklets.
         let tasklets_stream = self
@@ -378,6 +381,7 @@ where
 
         fx_log_info!("offline_loop: Waiting");
 
+        #[allow(clippy::unit_arg)]
         Ok(futures::future::pending().await)
     }
 }

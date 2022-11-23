@@ -172,6 +172,7 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<bool> {
     Ok(contents_fit)
 }
 
+#[allow(clippy::ptr_arg)]
 fn generate_visualization_tree(package_sizes: &Vec<PackageSizeInfo>) -> VisualizationRootNode {
     VisualizationRootNode {
         name: "packages".to_string(),
@@ -292,10 +293,7 @@ fn build_blob_share_counts(
             }
         })
         .for_each(|merkle: String| {
-            blob_share_count_map
-                .entry(merkle.to_string())
-                .and_modify(|counter| *counter += 1)
-                .or_insert(1);
+            blob_share_count_map.entry(merkle).and_modify(|counter| *counter += 1).or_insert(1);
         });
     blob_share_count_map
 }
@@ -317,6 +315,7 @@ fn calculate_total_blobfs_size(blobfs_contents: &BlobfsContents) -> Result<u64> 
 
 /// Prints the difference between the contents of two blobfs images broken down by package
 /// and blob sorted by the amount of change in size.
+#[allow(clippy::ptr_arg)]
 fn print_size_diff(
     package_sizes: &Vec<PackageSizeInfo>,
     other_package_sizes: &Vec<PackageSizeInfo>,
@@ -353,6 +352,7 @@ fn print_size_diff(
             other_package_sizes_map.get(&package_name),
             &common_merkles,
         );
+        #[allow(clippy::single_match)]
         match package_diff_opt {
             Some((package_name, package_level_diffs)) => {
                 merge_package_and_product_diffs(
@@ -430,7 +430,8 @@ fn generate_package_level_diff_output(
             package_level_diffs[0].package_size_diff,
             ""
         ));
-        package_level_diffs.into_iter().for_each(|package_level_diff| {
+        #[allow(clippy::format_in_format_args)]
+        package_level_diffs.iter().for_each(|package_level_diff| {
             package_level_output_lines.push(format!(
                 "  {}",
                 format!(
@@ -441,12 +442,12 @@ fn generate_package_level_diff_output(
                         .base_merkle_opt
                         .as_ref()
                         .map(|s| String::from(&s[..10]))
-                        .unwrap_or("".to_string()),
+                        .unwrap_or_else(|| "".to_string()),
                     package_level_diff
                         .new_merkle_opt
                         .as_ref()
                         .map(|s| String::from(&s[..10]))
-                        .unwrap_or("".to_string()),
+                        .unwrap_or_else(|| "".to_string()),
                     package_level_diff.package_delta,
                     package_level_diff.proportional_delta
                 )
@@ -458,12 +459,13 @@ fn generate_package_level_diff_output(
 
 // Each PackageLevelDiff is compared with the existing entries in product_level_diffs map using merkle as key.
 // Information from PackageLevelDiffs are merged into corresponding ProductLevelDiffs.
+#[allow(clippy::ptr_arg)]
 fn merge_package_and_product_diffs(
     package_name: String,
     product_level_diffs: &mut HashMap<String, ProductLevelDiff>,
     package_level_diffs: &Vec<PackageLevelDiff>,
 ) {
-    package_level_diffs.into_iter().for_each(|package_level_diff| {
+    package_level_diffs.iter().for_each(|package_level_diff| {
         let merkle_key = package_level_diff.new_merkle_opt.as_ref().map_or_else(
             || package_level_diff.base_merkle_opt.as_ref().map(|m| m.to_string()).unwrap(),
             |merkle| merkle.to_string(),
@@ -482,6 +484,7 @@ fn merge_package_and_product_diffs(
             None => new_sign,
         };
 
+        #[allow(clippy::format_in_format_args)]
         product_level_diffs.insert(
             merkle_key.to_string(),
             ProductLevelDiff {
@@ -489,11 +492,7 @@ fn merge_package_and_product_diffs(
                 package_path: format!(
                     "{} {}",
                     blob_sign,
-                    format!(
-                        "{} : {}",
-                        package_name.to_string(),
-                        package_level_diff.path.to_string()
-                    )
+                    format!("{} : {}", package_name, package_level_diff.path)
                 ),
                 size_delta: product_level_diff_opt.map(|diff| diff.size_delta).unwrap_or(0.0)
                     + package_level_diff.proportional_delta,
@@ -556,7 +555,7 @@ fn calculate_package_diff(
                 .filter(|b| !common_merkles.contains(&b.1.merkle.to_string()))
                 .collect()
         })
-        .unwrap_or(HashMap::new());
+        .unwrap_or_else(HashMap::new);
     let other_package_blobs_map: HashMap<String, &PackageBlobSizeInfo> = other_package_opt
         .map(|other_package| {
             other_package
@@ -566,7 +565,7 @@ fn calculate_package_diff(
                 .filter(|b| !common_merkles.contains(&b.1.merkle.to_string()))
                 .collect()
         })
-        .unwrap_or(HashMap::new());
+        .unwrap_or_else(HashMap::new);
 
     // Sort paths alphabetically within a package.
     let all_paths: BTreeSet<String> = current_package_blobs_map
@@ -842,10 +841,7 @@ test_base_package                                                            65 
 
 * indicates that this blob is a duplicate within this package and it therefore does not contribute to the overall package size
 "#;
-        assert_eq!(
-            expected_output.to_string(),
-            format!("{}", PackageSizeInfos { 0: &package_sizes })
-        );
+        assert_eq!(expected_output.to_string(), format!("{}", PackageSizeInfos(&package_sizes)));
         Ok(())
     }
 
@@ -1129,13 +1125,13 @@ test_base_package                                                            65 
                 name: "package1".to_string(),
                 used_space_in_blobfs: 80,
                 proportional_size: 50,
-                blobs: vec![blob1_info.clone(), blob2_info.clone()],
+                blobs: vec![blob1_info, blob2_info.clone()],
             },
             PackageSizeInfo {
                 name: "package2".to_string(),
                 used_space_in_blobfs: 100,
                 proportional_size: 70,
-                blobs: vec![blob2_info.clone(), blob3_info.clone()],
+                blobs: vec![blob2_info, blob3_info],
             },
         ];
         let visualization_tree = generate_visualization_tree(&package_size_infos);
@@ -1791,6 +1787,7 @@ test_base_package                                                            65 
         assert_eq!(expected_size, actual_size);
     }
 
+    #[allow(clippy::field_reassign_with_default)]
     fn create_blobfs_contents() -> BlobfsContents {
         let tmp = tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();

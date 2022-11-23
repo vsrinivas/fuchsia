@@ -48,7 +48,7 @@ where
         #[derive(Debug)]
         struct Response<'a>(Prop, &'a [u8]);
 
-        self.inner.on_response(response.clone())?;
+        self.inner.on_response(response)?;
 
         T::try_owned_unpack_from_slice(Response::try_unpack_from_slice(response?.payload)?.1)
     }

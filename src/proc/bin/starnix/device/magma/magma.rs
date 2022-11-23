@@ -354,7 +354,7 @@ impl StarnixPollItem {
     pub fn new(poll_item: &magma_poll_item_t) -> StarnixPollItem {
         let semaphore_or_handle = unsafe {
             if poll_item.type_ == MAGMA_POLL_TYPE_SEMAPHORE {
-                poll_item.__bindgen_anon_1.semaphore as u64
+                poll_item.__bindgen_anon_1.semaphore
             } else {
                 poll_item.__bindgen_anon_1.handle as u64
             }

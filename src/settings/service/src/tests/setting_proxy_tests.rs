@@ -386,7 +386,7 @@ fn test_notify() {
 
     let listen_fut = run_listen(env_handle.clone());
     futures::pin_mut!(listen_fut);
-    let _ = if let Poll::Ready(res) = executor.run_until_stalled(&mut listen_fut) {
+    if let Poll::Ready(res) = executor.run_until_stalled(&mut listen_fut) {
         res
     } else {
         panic!("Listen failed");
@@ -394,7 +394,7 @@ fn test_notify() {
 
     let end_listen_fut = run_end_listen(env_handle.clone(), receptor);
     futures::pin_mut!(end_listen_fut);
-    let _ = if let Poll::Ready(res) = executor.run_until_stalled(&mut end_listen_fut) {
+    if let Poll::Ready(res) = executor.run_until_stalled(&mut end_listen_fut) {
         res
     } else {
         panic!("EndListen failed");
@@ -1162,7 +1162,7 @@ fn test_timeout() {
     };
 
     pin_utils::pin_mut!(fut);
-    let _result = loop {
+    loop {
         executor.wake_main_future();
         let new_time = fuchsia_async::Time::from_nanos(
             executor.now().into_nanos()
@@ -1175,7 +1175,7 @@ fn test_timeout() {
                 executor.set_fake_time(new_time);
             }
         }
-    };
+    }
 }
 
 // Ensures that timeouts cause an error when retry is not enabled for them.
@@ -1242,7 +1242,7 @@ fn test_timeout_no_retry() {
     };
 
     pin_utils::pin_mut!(fut);
-    let _result = loop {
+    loop {
         executor.wake_main_future();
         let new_time = fuchsia_async::Time::from_nanos(
             executor.now().into_nanos()
@@ -1255,7 +1255,7 @@ fn test_timeout_no_retry() {
                 executor.set_fake_time(new_time);
             }
         }
-    };
+    }
 }
 
 /// Checks that the supplied message event specifies the supplied handler event.

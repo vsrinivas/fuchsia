@@ -16,7 +16,7 @@ async fn writes_recovery_and_force_reboots_into_it_v1() {
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
         .add_file("epoch.json", make_current_epoch_json())
-        .add_file("update-mode", &force_recovery_json())
+        .add_file("update-mode", force_recovery_json())
         .add_file("recovery", "the recovery image")
         .add_file("recovery.vbmeta", "the recovery vbmeta");
 
@@ -87,7 +87,7 @@ async fn writes_recovery_and_force_reboots_into_it() {
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
         .add_file("epoch.json", make_current_epoch_json())
-        .add_file("update-mode", &force_recovery_json())
+        .add_file("update-mode", force_recovery_json())
         .add_file("images.json", make_images_json_recovery());
 
     env.run_update().await.expect("run system updater");
@@ -151,7 +151,7 @@ async fn reboots_regardless_of_reboot_arg() {
         .register_package("update", "upd4t3")
         .add_file("packages", make_packages_json([]))
         .add_file("epoch.json", make_current_epoch_json())
-        .add_file("update-mode", &force_recovery_json());
+        .add_file("update-mode", force_recovery_json());
 
     env.run_update().await.expect("run system updater");
 
@@ -167,7 +167,7 @@ async fn reboots_regardless_of_reboot_controller() {
         .register_package("update", "upd4t3")
         .add_file("packages", make_packages_json([]))
         .add_file("epoch.json", make_current_epoch_json())
-        .add_file("update-mode", &force_recovery_json());
+        .add_file("update-mode", force_recovery_json());
 
     // Start the system update.
     let (reboot_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
@@ -197,7 +197,7 @@ async fn rejects_zbi_v1() {
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
         .add_file("epoch.json", make_current_epoch_json())
-        .add_file("update-mode", &force_recovery_json())
+        .add_file("update-mode", force_recovery_json())
         .add_file("bootloader", "new bootloader")
         .add_file("zbi", "fake zbi");
 
@@ -236,7 +236,7 @@ async fn rejects_zbi() {
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
         .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi())
-        .add_file("update-mode", &force_recovery_json());
+        .add_file("update-mode", force_recovery_json());
 
     let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -271,7 +271,7 @@ async fn rejects_skip_recovery_flag() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages", make_packages_json([]))
-        .add_file("update-mode", &force_recovery_json());
+        .add_file("update-mode", force_recovery_json());
 
     let result = env
         .run_update_with_options(

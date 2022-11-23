@@ -184,6 +184,7 @@ impl Task {
     /// Any fields that should be initialized fresh for every task, even if the task was created
     /// with fork, are initialized to their defaults inside this function. All other fields are
     /// passed as parameters.
+    #[allow(clippy::let_and_return)]
     fn new(
         id: pid_t,
         command: CString,

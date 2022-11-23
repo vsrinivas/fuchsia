@@ -117,7 +117,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
     }
 
     async fn get_account_ids(&self) -> Vec<FidlAccountId> {
-        self.account_map.lock().await.get_account_ids().iter().map(|id| id.clone().into()).collect()
+        self.account_map.lock().await.get_account_ids().iter().map(|id| (*id).into()).collect()
     }
 
     async fn get_account_metadata(
@@ -217,7 +217,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                 err.api_error
             }
         })?;
-        let event = AccountEvent::AccountRemoved(account_id.clone());
+        let event = AccountEvent::AccountRemoved(account_id);
         self.event_emitter.publish(&event).await;
         Ok(())
     }
@@ -234,7 +234,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                 warn!("Could not initialize account handler: {:?}", err);
                 err.api_error
             })?;
-        let account_id = Some(account_handler.get_account_id().clone().into());
+        let account_id = Some((*account_handler.get_account_id()).into());
         let pre_auth_state = account_handler
             .proxy()
             .create_account(AccountHandlerControlCreateAccountRequest {
@@ -277,7 +277,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             Err(err.api_error)
         } else {
             info!(?account_id, "Adding new local account");
-            Ok(account_id.clone().into())
+            Ok((*account_id).into())
         }
     }
 
@@ -302,7 +302,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                     err.api_error
                 }
             })?;
-        let event = AccountEvent::AccountAdded(account_handler.get_account_id().clone());
+        let event = AccountEvent::AccountAdded(*account_handler.get_account_id());
         self.event_emitter.publish(&event).await;
         Ok(())
     }

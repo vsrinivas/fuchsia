@@ -62,7 +62,7 @@ impl TestEnvBuilder {
             let path = config_data.path().join(path);
             assert!(!path.exists());
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            std::fs::write(path, &data).unwrap();
+            std::fs::write(path, data).unwrap();
         }
 
         let mut fs = ServiceFs::new();

@@ -66,12 +66,8 @@ where
         tid: zx::Koid,
         dropped: u32,
     ) -> Result<(), EncodingError> {
-        let mut builder = RecordBuilder::from_tracing_event(
-            event,
-            pid.raw_koid() as u64,
-            tid.raw_koid() as u64,
-            dropped,
-        );
+        let mut builder =
+            RecordBuilder::from_tracing_event(event, pid.raw_koid(), tid.raw_koid(), dropped);
         if let Some(tags) = tags {
             for tag in tags {
                 builder.add_tag(tag.as_ref());
@@ -85,8 +81,8 @@ where
     pub fn write_record_for_test(&mut self, args: TestRecordArgs<'_>) -> Result<(), EncodingError> {
         let mut builder = RecordBuilder::new(
             args.severity,
-            args.pid.raw_koid() as u64,
-            args.tid.raw_koid() as u64,
+            args.pid.raw_koid(),
+            args.tid.raw_koid(),
             Some(args.file),
             Some(args.line),
             args.dropped,

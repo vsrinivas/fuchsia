@@ -59,6 +59,7 @@ impl From<Signal> for SyscallResult {
 
 impl From<bool> for SyscallResult {
     fn from(value: bool) -> Self {
+        #[allow(clippy::bool_to_int_with_if)]
         SyscallResult(if value { 1 } else { 0 })
     }
 }

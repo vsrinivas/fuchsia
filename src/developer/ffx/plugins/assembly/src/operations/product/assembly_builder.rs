@@ -76,6 +76,7 @@ pub struct ImageAssemblyConfigBuilder {
 /// An enum representing unique identifiers for the 4 types of supported package sets in the
 /// ImageAssemblyConfigBuilder. Used to dereference PackageSet fields on the builder by name
 #[derive(Debug)]
+#[allow(clippy::upper_case_acronyms)]
 enum PackageSets {
     BASE,
     CACHE,
@@ -127,7 +128,8 @@ impl ImageAssemblyConfigBuilder {
         let bundle = util::read_config(bundle_path.as_ref())?;
 
         // Strip filename from bundle path.
-        let bundle_path = bundle_path.as_ref().parent().map(Utf8PathBuf::from).unwrap_or("".into());
+        let bundle_path =
+            bundle_path.as_ref().parent().map(Utf8PathBuf::from).unwrap_or_else(|| "".into());
 
         // Now add the parsed bundle
         self.add_parsed_bundle(bundle_path, bundle)
@@ -240,10 +242,9 @@ impl ImageAssemblyConfigBuilder {
             PackageSets::BOOTFS => &mut self.bootfs_packages,
         };
 
-        let package_url = package_entry
-            .manifest
-            .package_url()?
-            .ok_or(anyhow::anyhow!("Something happened when trying to get the package_url"))?;
+        let package_url = package_entry.manifest.package_url()?.ok_or_else(|| {
+            anyhow::anyhow!("Something happened when trying to get the package_url")
+        })?;
         self.package_urls.try_insert_unique(package_url).map_err(|e| {
             anyhow::anyhow!("duplicate package {} found in {}", e, package_set.name)
         })?;
@@ -1040,7 +1041,7 @@ mod tests {
             base: vec![
                 write_empty_pkg(outdir, "base_a", None).into(),
                 ProductPackageDetails {
-                    manifest: write_empty_pkg(outdir, "base_b", None).into(),
+                    manifest: write_empty_pkg(outdir, "base_b", None),
                     config_data: Vec::default(),
                 },
                 ProductPackageDetails {

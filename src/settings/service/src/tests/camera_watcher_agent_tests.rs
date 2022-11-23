@@ -16,7 +16,6 @@ use crate::tests::helpers::{move_executor_forward, move_executor_forward_and_get
 use fuchsia_async::{TestExecutor, Time};
 use futures::lock::Mutex;
 use std::collections::HashSet;
-use std::convert::TryInto;
 use std::sync::Arc;
 
 struct FakeServices {
@@ -178,11 +177,7 @@ fn test_camera_devices_watcher_timeout() {
         .send();
 
     // Advance time past the timeout.
-    executor.set_fake_time(
-        Time::from_nanos(CAMERA_WATCHER_TIMEOUT * 10_i64.pow(6))
-            .try_into()
-            .expect("could not convert timeout into nanos"),
-    );
+    executor.set_fake_time(Time::from_nanos(CAMERA_WATCHER_TIMEOUT * 10_i64.pow(6)));
 
     let completion_future = reply_receptor.next_of::<Payload>();
     let completion =

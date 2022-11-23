@@ -147,14 +147,14 @@ impl BackboneNetworkInterface {
                     match state.watcher.as_ref().unwrap().watch().await? {
                         Event::Existing(prop) if prop.id == Some(self.id) => {
                             assert!(
-                                state.prev_prop.id == None,
+                                state.prev_prop.id.is_none(),
                                 "Got `Event::Existing` twice for same interface"
                             );
                             state.prev_prop = prop;
                             continue;
                         }
                         Event::Idle(_) => {
-                            if state.prev_prop.id == None {
+                            if state.prev_prop.id.is_none() {
                                 // The interface has been removed before the watcher is setup
                                 // need to restart lowpan-ot-driver
                                 return Err(format_err!("Interface no longer exists"));

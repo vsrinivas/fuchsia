@@ -35,7 +35,7 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
 
     let board_info = board_info
         .map(|path| {
-            util::read_config::<BoardInformation>(&path).context("Loading board information")
+            util::read_config::<BoardInformation>(path).context("Loading board information")
         })
         .transpose()?;
 
@@ -110,7 +110,7 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
 
     if let Some(package_config_path) = additional_packages_path {
         let additional_packages =
-            util::read_config(&package_config_path).context("Loading additional package config")?;
+            util::read_config(package_config_path).context("Loading additional package config")?;
         builder.add_product_packages(additional_packages).context("Adding additional packages")?;
     }
 

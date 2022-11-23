@@ -41,6 +41,7 @@ pub fn construct_vbmeta(
     Ok(vbmeta_path_relative)
 }
 
+#[allow(clippy::ptr_arg)]
 pub fn sign<FSP: FilesystemProvider>(
     name: impl AsRef<str>,
     image_path: impl AsRef<Path>,
@@ -135,7 +136,7 @@ mod tests {
         vfs.add("key", test_keys::TEST_RSA_4096_PEM.as_bytes());
         vfs.add("key_metadata", &b"TEST_METADATA"[..]);
         vfs.add("image", &[0x00u8; 128]);
-        vfs.add("salt", &hex::encode(&[0xAAu8; 32]).as_bytes());
+        vfs.add("salt", hex::encode([0xAAu8; 32]).as_bytes());
 
         let salt = Salt::try_from(&[0xAAu8; 32][..]).unwrap();
 

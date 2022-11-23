@@ -361,12 +361,12 @@ mod tests {
         let tag_end = tag_start + tag_count;
 
         packet.data[0] = tag_count as c_char;
-        packet.fill_data(tag_start..tag_end, 'T' as _);
+        packet.fill_data(tag_start..tag_end, b'T' as _);
         packet.data[tag_end] = 0; // terminate tags
 
         let message_start = tag_start + tag_count + 1;
         let message_end = message_start + message_size;
-        packet.fill_data(message_start..message_end, 'D' as _);
+        packet.fill_data(message_start..message_end, b'D' as _);
     }
 
     fn get_test_identity() -> ComponentIdentity {

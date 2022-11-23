@@ -24,6 +24,7 @@ use std::sync::{Arc, Weak};
 /// is asynchronous---if there are no available TIDs,
 /// it will block until one becomes available. The TID
 /// is returned by `register_handler()`.
+#[derive(Default)]
 pub struct RequestTracker {
     /// Mutex-protected array keeping track of outstanding
     /// transactions. TID zero is not used, so the indexes
@@ -33,6 +34,7 @@ pub struct RequestTracker {
     /// mutex-protected [`ResponseHandler`]. A given "slot"
     /// is considered open if the option is `None`. TIDs
     /// are allocated from open slots.
+    #[allow(clippy::type_complexity)]
     requests: Mutex<[Option<Weak<Mutex<dyn ResponseHandler>>>; Self::MAX_REQUESTS as usize]>,
 
     /// An asynchronous condition that is triggered whenever
@@ -47,12 +49,6 @@ impl Debug for RequestTracker {
             .field("requests", &()) // TODO: May want to actually dump transactions
             .field("condition", &self.condition)
             .finish()
-    }
-}
-
-impl Default for RequestTracker {
-    fn default() -> RequestTracker {
-        RequestTracker { requests: Default::default(), condition: Default::default() }
     }
 }
 
@@ -112,7 +108,7 @@ impl RequestTracker {
         // Extract our handler from our list.
         let ret = {
             let mut requests = self.requests.lock();
-            match requests.get_mut(i as usize) {
+            match requests.get_mut(i) {
                 Some(x) => x.take(),
                 None => return None,
             }
@@ -179,7 +175,7 @@ pub(crate) mod tests {
 
         request_tracker.clear();
 
-        assert_eq!(*flag.lock(), true);
+        assert!(*flag.lock());
 
         assert!(request_tracker.retrieve_handler(tid).is_none());
     }
@@ -224,7 +220,7 @@ pub(crate) mod tests {
 
         assert_matches!(handler.on_response(Err(Canceled)), Ok(()));
 
-        assert_eq!(*flag.lock(), true);
+        assert!(*flag.lock());
 
         assert!(request_tracker.retrieve_handler(tid).is_none());
     }

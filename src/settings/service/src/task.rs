@@ -258,7 +258,7 @@ impl<C: Category + 'static> Summary<C> {
     /// [`Category`]: enum.Category.html
     /// [`Statistics`]: struct.Statistics.html
     pub(super) fn get_statistics(&self, category: &C) -> Option<Statistics<C>> {
-        self.statistics.get(&category).cloned()
+        self.statistics.get(category).cloned()
     }
 
     /// Returns the [`Category`] and duration of the longest completed task.

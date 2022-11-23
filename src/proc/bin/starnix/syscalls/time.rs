@@ -103,6 +103,7 @@ pub fn sys_clock_nanosleep(
     clock_nanosleep_with_deadline(current_task, which_clock, flags, deadline, user_remaining)
 }
 
+#[allow(clippy::only_used_in_recursion)]
 fn clock_nanosleep_with_deadline(
     current_task: &mut CurrentTask,
     which_clock: u32,

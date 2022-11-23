@@ -53,6 +53,7 @@ impl TryFrom<&str> for RadioRegion {
             return Ok(RadioRegion::default());
         }
         if region.len() == 2 {
+            #[allow(clippy::bytes_nth)]
             let ret = RadioRegion::from_bytes([
                 region.bytes().nth(0).unwrap(),
                 region.bytes().nth(1).unwrap(),

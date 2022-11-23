@@ -29,6 +29,7 @@ impl ChannelMask {
     }
 
     /// Number of channels in the set.
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.0.count_ones() as usize
     }
@@ -149,9 +150,9 @@ mod tests {
         assert_eq!(ChannelMask::from(0xFFFF0000).collect::<Vec<_>>(), (16..32).collect::<Vec<_>>());
         assert_eq!(ChannelMask::from(0xFFFFFFFF).collect::<Vec<_>>(), (0..32).collect::<Vec<_>>());
 
-        assert_eq!(ChannelMask::from(0xFFFFFFFF).contains(MAX_NUM_CHANNELS - 1), true);
-        assert_eq!(ChannelMask::from(0xFFFFFFFF).contains(MAX_NUM_CHANNELS), false);
-        assert_eq!(ChannelMask::from(0xFFFFFFFF).contains(255), false);
+        assert!(ChannelMask::from(0xFFFFFFFF).contains(MAX_NUM_CHANNELS - 1));
+        assert!(!ChannelMask::from(0xFFFFFFFF).contains(MAX_NUM_CHANNELS));
+        assert!(!ChannelMask::from(0xFFFFFFFF).contains(255));
 
         assert_eq!(ChannelMask::from(0xFFFFFFFF).len(), 32);
         assert_eq!(ChannelMask::from(0x0000FFFF).len(), 16);

@@ -69,11 +69,9 @@ pub(crate) mod mock {
     impl FilesystemProvider for MockFilesystemProvider {
         /// Implementation of `std::fs::read()`.
         fn read<P: AsRef<Path>>(&self, path: P) -> io::Result<Vec<u8>> {
-            self.files
-                .borrow()
-                .get(path.as_ref())
-                .map(Clone::clone)
-                .ok_or(io::Error::new(io::ErrorKind::NotFound, path.as_ref().to_string_lossy()))
+            self.files.borrow().get(path.as_ref()).map(Clone::clone).ok_or_else(|| {
+                io::Error::new(io::ErrorKind::NotFound, path.as_ref().to_string_lossy())
+            })
         }
 
         /// Shim for `std::fs::read_to_string()`

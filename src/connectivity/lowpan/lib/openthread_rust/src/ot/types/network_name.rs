@@ -66,6 +66,7 @@ impl NetworkName {
     }
 
     /// Returns length of the network name in bytes. 0-16.
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.0.m8.iter().position(|&x| x == 0).unwrap_or(OT_NETWORK_NAME_MAX_SIZE as usize)
     }
@@ -113,7 +114,7 @@ impl<'a> TryFrom<&'a [u8]> for NetworkName {
     }
 }
 
-impl<'a> TryFrom<Vec<u8>> for NetworkName {
+impl TryFrom<Vec<u8>> for NetworkName {
     type Error = ot::WrongSize;
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
@@ -123,6 +124,6 @@ impl<'a> TryFrom<Vec<u8>> for NetworkName {
 
 impl From<&NetworkName> for otNetworkName {
     fn from(x: &NetworkName) -> Self {
-        x.as_ot_ref().clone()
+        *x.as_ot_ref()
     }
 }

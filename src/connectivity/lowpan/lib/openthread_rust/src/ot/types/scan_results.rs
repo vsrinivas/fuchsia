@@ -74,7 +74,7 @@ impl ActiveScanResult {
 
     /// Version field from this beacon.
     pub fn version(&self) -> u32 {
-        self.0.mVersion().try_into().unwrap()
+        self.0.mVersion()
     }
 
     /// Steering Data.

@@ -408,6 +408,7 @@ impl<T: Driver> ServeTo<DeviceRequestStream> for T {
 
                 DeviceRequest::WatchDeviceState { responder } => {
                     let responder = ResponderNoShutdown::wrap(responder);
+                    #[allow(clippy::or_fun_call)]
                     watcher
                         .try_lock()
                         .ok_or(format_err!(

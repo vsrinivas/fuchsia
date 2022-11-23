@@ -97,7 +97,7 @@ pub(super) async fn open_sensor(
             if let Some(DeviceInfo { vendor_id, product_id, .. }) = device_descriptor.device_info {
                 let LightSensorConfig::VendorAndProduct { vendor_id: v, product_id: p } = config;
                 if vendor_id == v && product_id == p {
-                    return Sensor::new(&proxy, &*service_context).await;
+                    return Sensor::new(&proxy, &service_context).await;
                 }
             }
         }

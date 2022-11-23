@@ -210,6 +210,7 @@ where
 
         self.driver_state_change.trigger();
 
+        #[allow(clippy::match_single_binding)]
         match (old_state, new_state) {
             // TODO: Add state transition tasks here.
 

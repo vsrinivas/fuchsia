@@ -233,7 +233,7 @@ impl DynamicIndex {
                 if let Package::WithMetaFar { path, required_blobs } =
                     std::mem::replace(package, Package::Pending)
                 {
-                    let child_node = self.node.create_child(&package_hash.to_string());
+                    let child_node = self.node.create_child(package_hash.to_string());
                     let required_blobs_size = required_blobs.len().try_into().unwrap_or(-1);
                     *package = Package::Active { path: path.clone(), required_blobs };
                     *package_node = PackageNode::Active {

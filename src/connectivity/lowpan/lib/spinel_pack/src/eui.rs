@@ -18,18 +18,13 @@ impl Display for WrongSize {
 /// Data type representing a EUI64 address.
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
+#[derive(Default)]
 pub struct EUI64(pub [u8; 8]);
 
-impl std::default::Default for EUI64 {
-    fn default() -> Self {
-        EUI64([0u8; 8])
-    }
-}
-
 /// Converts a borrowed EUI64 into a borrowed byte slice.
-impl<'a> std::convert::Into<&'a [u8]> for &'a EUI64 {
-    fn into(self) -> &'a [u8] {
-        &self.0
+impl<'a> std::convert::From<&'a EUI64> for &'a [u8] {
+    fn from(val: &'a EUI64) -> Self {
+        &val.0
     }
 }
 
@@ -48,18 +43,13 @@ impl<'a> std::convert::TryInto<&'a EUI64> for &'a [u8] {
 /// Data type representing a EUI48 address.
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
+#[derive(Default)]
 pub struct EUI48(pub [u8; 6]);
 
-impl std::default::Default for EUI48 {
-    fn default() -> Self {
-        EUI48([0u8; 6])
-    }
-}
-
 /// Converts a borrowed EUI48 into a borrowed byte slice.
-impl<'a> std::convert::Into<&'a [u8]> for &'a EUI48 {
-    fn into(self) -> &'a [u8] {
-        &self.0
+impl<'a> std::convert::From<&'a EUI48> for &'a [u8] {
+    fn from(val: &'a EUI48) -> Self {
+        &val.0
     }
 }
 

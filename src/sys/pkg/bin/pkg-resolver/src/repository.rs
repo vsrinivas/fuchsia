@@ -142,7 +142,7 @@ impl Repository {
             inspect: RepositoryInspectState {
                 last_merkle_successfully_resolved_time: node.create_string(
                     "last_merkle_successfully_resolved_time",
-                    &format!("{:?}", Option::<zx::Time>::None),
+                    format!("{:?}", Option::<zx::Time>::None),
                 ),
                 merkles_successfully_resolved_count: inspect_util::Counter::new(
                     &node,

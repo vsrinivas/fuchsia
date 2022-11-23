@@ -19,6 +19,7 @@ use zbi::ZbiBuilder;
 /// in the bootfs.
 const BOOTFS_PACKAGE_INDEX: &str = "data/bootfs_packages";
 
+#[allow(clippy::too_many_arguments)]
 pub fn construct_zbi(
     zbi_tool: Box<dyn Tool>,
     assembly_manifest: &mut AssemblyManifest,
@@ -91,7 +92,7 @@ pub fn construct_zbi(
         let bootfs_package_index_source = gendir.as_ref().join(BOOTFS_PACKAGE_INDEX);
 
         // Write the bootfs package index from the gendir to the bootfs.
-        zbi_builder.add_bootfs_file(&bootfs_package_index_source, &BOOTFS_PACKAGE_INDEX);
+        zbi_builder.add_bootfs_file(&bootfs_package_index_source, BOOTFS_PACKAGE_INDEX);
     }
 
     // Add the BootFS files.
@@ -119,7 +120,7 @@ pub fn construct_zbi(
 
     // Only add the unsigned ZBI to the images manifest if we will not be signing the ZBI.
     let zbi_path_relative = path_relative_from_current_dir(zbi_path)?;
-    if let None = zbi_config.postprocessing_script {
+    if zbi_config.postprocessing_script.is_none() {
         assembly_manifest
             .images
             .push(Image::ZBI { path: zbi_path_relative.clone(), signed: false });
@@ -283,6 +284,7 @@ mod tests {
             .unwrap()
             .args
             .clone();
+        #[allow(clippy::cmp_owned)]
         let bootfs_file_index =
             zbi_args.iter().enumerate().find(|(_, arg)| **arg == "--files".to_string()).unwrap().0
                 + 1;
