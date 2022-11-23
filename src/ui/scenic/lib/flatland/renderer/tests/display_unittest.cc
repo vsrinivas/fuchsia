@@ -226,7 +226,7 @@ VK_TEST_F(DisplayTest, SetDisplayImageTest) {
 
   // Import the images to the display.
   uint64_t image_ids[kNumVmos];
-  for (uint64_t i = 0; i < kNumVmos; i++) {
+  for (uint32_t i = 0; i < kNumVmos; i++) {
     image_ids[i] = allocation::GenerateUniqueImageId();
     zx_status_t import_image_status = ZX_OK;
     auto transport_status = (*display_controller.get())

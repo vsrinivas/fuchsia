@@ -98,12 +98,12 @@ static std::vector<escher::Rectangle2D> GetNormalizedUvRects(
     const auto& image = images[i];
     const auto& texel_uvs = rectangles[i].texel_uvs;
     const auto& orientation = rectangles[i].orientation;
-    float w = image.width;
-    float h = image.height;
+    const float w = static_cast<float>(image.width);
+    const float h = static_cast<float>(image.height);
     FX_DCHECK(w >= 0.f && h >= 0.f);
 
     // First, reorder the UVs based on whether the image was flipped.
-    std::array<uint32_t, 4> flip_indices;
+    std::array<size_t, 4> flip_indices;
     switch (image.flip) {
       case ImageFlip::NONE:
         flip_indices = {0, 1, 2, 3};
@@ -120,7 +120,7 @@ static std::vector<escher::Rectangle2D> GetNormalizedUvRects(
         break;
     }
     std::array<glm::ivec2, 4> flipped_uvs;
-    for (unsigned int i = 0; i < texel_uvs.size(); i++) {
+    for (size_t i = 0; i < texel_uvs.size(); i++) {
       flipped_uvs[i] = texel_uvs[flip_indices[i]];
     }
 
@@ -137,8 +137,8 @@ static std::vector<escher::Rectangle2D> GetNormalizedUvRects(
     for (int j = 0; j < 4; j++) {
       const int index = (starting_index + j) % 4;
       // Clamp values to ensure they are normalized to the range [0, 1].
-      normalized_uvs[j] =
-          glm::vec2(clamp(flipped_uvs[index].x, 0, w) / w, clamp(flipped_uvs[index].y, 0, h) / h);
+      normalized_uvs[j] = glm::vec2(clamp(static_cast<float>(flipped_uvs[index].x), 0, w) / w,
+                                    clamp(static_cast<float>(flipped_uvs[index].y), 0, h) / h);
     }
 
     normalized_rects.push_back({rect.origin, rect.extent, normalized_uvs});

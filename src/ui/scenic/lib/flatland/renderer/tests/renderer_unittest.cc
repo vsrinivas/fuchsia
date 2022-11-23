@@ -56,9 +56,9 @@ static void sRGBtoLinear(const uint8_t* in_sRGB, uint8_t* out_linear, uint32_t n
     // Function to convert from sRGB to linear RGB.
     float s_val = (float(in_sRGB[i]) / float(0xFF));
     if (0.f <= s_val && s_val <= 0.04045f) {
-      out_linear[i] = (s_val / 12.92f) * 255U;
+      out_linear[i] = static_cast<uint8_t>((s_val / 12.92f) * 255.f);
     } else {
-      out_linear[i] = std::powf(((s_val + 0.055f) / 1.055f), 2.4f) * 255U;
+      out_linear[i] = static_cast<uint8_t>(std::powf(((s_val + 0.055f) / 1.055f), 2.4f) * 255.f);
     }
   }
 }
@@ -1483,7 +1483,7 @@ VK_TEST_F(VulkanRendererTest, FlipUpDownAndRotate90RenderTest) {
       [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
         uint32_t pixels_per_row = GetPixelsPerRow(client_collection_info.settings, 4U, 1U);
 
-        const uint8_t kNumWrites = (pixels_per_row * 4) + 4;
+        const uint8_t kNumWrites = static_cast<uint8_t>((pixels_per_row * 4) + 4);
 
         const uint8_t kWriteRed[] = {/*red*/ 255U, 0, 0, 255U};
         const uint8_t kWriteGreen[] = {/*green*/ 0, 255U, 0, 255U};
@@ -1583,7 +1583,7 @@ VK_TEST_F(VulkanRendererTest, SolidColorTest) {
   // Create the image meta data for the solid color renderable.
   ImageMetadata renderable_image_data = {
       .identifier = allocation::kInvalidImageId,
-      .multiply_color = {1, 0.4, 0, 1},
+      .multiply_color = {1.f, 0.4f, 0.f, 1.f},
       .blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER};
 
   renderer.ImportBufferImage(render_target, BufferCollectionUsage::kRenderTarget);
@@ -1637,8 +1637,9 @@ VK_TEST_F(VulkanRendererTest, ColorCorrectionTest) {
 
   // Set the color correction data on the renderer.
   static const std::array<float, 3> preoffsets = {0, 0, 0};
-  static const std::array<float, 9> matrix = {.288299,  0.052709, -0.257912, 0.711701, 0.947291,
-                                              0.257912, 0.000000, -0.000000, 1.000000};
+  static const std::array<float, 9> matrix = {0.288299f, 0.052709f,  -0.257912f,
+                                              0.711701f, 0.947291f,  0.257912f,
+                                              0.000000f, -0.000000f, 1.000000f};
   static const std::array<float, 3> postoffsets = {0, 0, 0};
   renderer.SetColorConversionValues(matrix, preoffsets, postoffsets);
 
@@ -2511,7 +2512,7 @@ VK_TEST_F(VulkanRendererTest, ReadbackTest) {
   // Create the image metadata for the solid color renderable.
   ImageMetadata renderable_image_data = {
       .identifier = allocation::kInvalidImageId,
-      .multiply_color = {1, 0.4, 0, 1},
+      .multiply_color = {1.f, 0.4f, 0.f, 1.f},
       .blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER};
   ImageRect renderable(glm::vec2(0, 0), glm::vec2(kTargetWidth, kTargetHeight));
 
