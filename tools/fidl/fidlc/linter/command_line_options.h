@@ -16,6 +16,7 @@ namespace fidl::linter {
 struct CommandLineOptions {
   std::vector<std::string> included_checks;
   std::vector<std::string> excluded_checks;
+  std::vector<std::string> experimental_checks;
   bool must_find_excluded_checks = false;
   std::string format = "text";
 };

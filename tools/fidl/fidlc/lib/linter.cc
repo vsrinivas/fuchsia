@@ -32,7 +32,16 @@ constexpr std::string_view kZirconLibraryZbi = "zbi";
 // if they are not excluded.
 constexpr bool IsCheckExperimental(std::string_view check_id) {
   return check_id == "explicit-flexible-method-modifier" ||
-         check_id == "explicit-openness-modifier";
+         check_id == "explicit-openness-modifier" ||
+         // This check does currently highlight some potential issues with
+         // formatting and with 2-slash comments that will be converted to
+         // 3-slash Doc-Comments, but the rule cannot currently check 3-slash
+         // Doc-Comments (they are stripped out before they reach the linter,
+         // and converted to Attributes), and trailing non-Doc comments are
+         // supposed to be allowed. Therefore, the rule will eventually be
+         // removed, once the valid issues it currently surfaces have been
+         // addressed.
+         check_id == "no-trailing-comment";
 }
 
 constexpr bool IsZirconLibrary(std::string_view name) {

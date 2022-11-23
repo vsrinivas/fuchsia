@@ -29,6 +29,11 @@ const char kExcludeCheck[] = R"(  --exclude-check=<check-id>
       --exclude-check. Option order is ignored. Multiple check IDs can be
       excluded with:
         fidl-lint -e some-check -e another-check)";
+const char kExperimentalCheck[] = R"(  --experimental-check=<check-id>
+   -x A check ID to check. Works the same as --include-check, but does not cause
+      all other checks to be excluded. This is usually only useful for
+      experimental checks, since all non-experimental checks are included by
+      default unless the --include-check option is used.)";
 const char kMustFindExcludedChecks[] = R"(  --must-find-excluded-checks
    -m If this flag is set, at least one --exclude-check option is required.
       After lint checking all given FIDL files, if an excluded check is
@@ -64,6 +69,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
 
   parser.AddSwitch("include-check", 'i', help::kIncludeCheck, &CommandLineOptions::included_checks);
   parser.AddSwitch("exclude-check", 'e', help::kExcludeCheck, &CommandLineOptions::excluded_checks);
+  parser.AddSwitch("experimental-check", 'x', help::kExperimentalCheck,
+                   &CommandLineOptions::experimental_checks);
   parser.AddSwitch("must-find-excluded-checks", 'm', help::kMustFindExcludedChecks,
                    &CommandLineOptions::must_find_excluded_checks);
   parser.AddSwitch("format", 'f', help::kFormat, &CommandLineOptions::format,

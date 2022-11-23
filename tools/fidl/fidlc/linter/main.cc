@@ -123,26 +123,31 @@ int main(int argc, char* argv[]) {
   // Convert command line vectors to sets, and add internally-disabled checks to excluded
   auto included_checks =
       std::set<std::string>(options.included_checks.begin(), options.included_checks.end());
-  auto excluded_and_disabled_checks =
+  auto excluded_checks =
       std::set<std::string>(options.excluded_checks.begin(), options.excluded_checks.end());
 
-  // The following checks can be opted-in via command line option "included-checks",
-  // but are otherwise disabled for the reasons described in the comments:
-
-  // This check does currently highlight some potential issues with
-  // formatting and with 2-slash comments that will be converted to
-  // 3-slash Doc-Comments, but the rule cannot currently check 3-slash
-  // Doc-Comments (they are stripped out before they reach the linter,
-  // and converted to Attributes), and trailing non-Doc comments are
-  // supposed to be allowed. Therefore, the rule will eventually be
-  // removed, once the valid issues it currently surfaces have been
-  // addressed.
-  excluded_and_disabled_checks.insert("no-trailing-comment");
+  // Add experimental checks to included checks. Experimental checks don't count
+  // for enabling exclude_by_default, but do get added added to included_checks
+  // to turn them on. Merging included-checks and experimental-checks allows
+  // experimental checks to be enabled through either the --include-checks flag
+  // or the --experimental-checks flag, which makes it possible to use
+  // exclude-by-default mode even if you only want to turn on experimental
+  // checks, by passing them through --include-checks rather than
+  // --experimental-checks.
+  //
+  // Note that this works in reverse as well; it is possible to enable a normal
+  // check via --experimental-checks, however this has no effect unless the
+  // check is also being excluded via --exclude-checks or exclude-by-default in
+  // being used because some other check was passed with --include-checks.
+  // Allowing non-experimental checks to be enabled via --experimental-checks
+  // ensures forward compatibility when a previously-experimental check is
+  // officially released an so no-longer experimental.
+  included_checks.insert(options.experimental_checks.begin(), options.experimental_checks.end());
 
   fidl::Findings findings;
   bool enable_color = !std::getenv("NO_COLOR") && isatty(fileno(stderr));
   for (const auto& source_file : source_manager.sources()) {
-    Lint(*source_file, &findings, included_checks, excluded_and_disabled_checks, exclude_by_default,
+    Lint(*source_file, &findings, included_checks, excluded_checks, exclude_by_default,
          &excluded_checks_not_found);
   }
 

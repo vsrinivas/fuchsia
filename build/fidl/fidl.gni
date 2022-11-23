@@ -51,6 +51,10 @@ import("//zircon/tools/zither/zither_library.gni")
 #     A list of fidl-lint check IDs to ignore (by passing the command line flag
 #     "-e some-check-id" for each value).
 #
+#   experimental_checks (optional)
+#     A list of fidl-lint check IDs to include (by passing the command line flag
+#     "-x some-check-id" for each value).
+#
 #   fuzzers (optional)
 #     Protocol/methods for which to generate LibFuzzer fuzz targets. Example:
 #       [
@@ -131,6 +135,7 @@ template("fidl") {
   fidl_only = [
     "api",
     "excluded_checks",
+    "experimental_checks",
     "experimental_flags",
     "goldens_dir",
     "non_fidl_deps",

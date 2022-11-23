@@ -1465,6 +1465,8 @@ using zx as ${TEST};
 TEST(LintFindingsTests, NoTrailingComment) {
   LintTest test;
   test.check_id("no-trailing-comment")
+      // this check is marked as experimental, so has to be explicitly included.
+      .include_checks({"no-trailing-comment"})
       .message("Place comments above the thing being described")
       .source_template(R"FIDL(
 library fidl.a;
@@ -1483,7 +1485,10 @@ type SeasonToShirtAndPantMapEntry = struct {
 
   ASSERT_NO_FINDINGS(test);
 
-  test.source_template(R"FIDL(
+  test
+      // this check is marked as experimental, so has to be explicitly included.
+      .include_checks({"no-trailing-comment"})
+      .source_template(R"FIDL(
 library fidl.a;
 
 type SeasonToShirtAndPantMapEntry = struct {

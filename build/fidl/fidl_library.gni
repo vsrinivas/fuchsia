@@ -47,8 +47,8 @@ declare_args() {
 #    - Required: See //build/fidl/fidl.gni for a description.
 #    - Type: list(path)
 #
-#  * api, excluded_checks, experimental_flags, goldens_dir, non_fidl_deps,
-#    sdk_category, should_lint
+#  * api, excluded_checks, experimental_checks, experimental_flags, goldens_dir,
+#    non_fidl_deps, sdk_category, should_lint
 #    - Optional: See //build/fidl/fidl.gni for a description.
 #
 #  * testonly, visibility, public_deps
@@ -193,6 +193,7 @@ template("fidl_library") {
     if (fidl_to_lint == []) {
       args += [ ":" ]  # NOOP - Nothing to lint, but touch the stamp file
       not_needed(invoker, [ "excluded_checks" ])
+      not_needed(invoker, [ "experimental_checks" ])
     } else {
       args += [ rebase_path(host_executable, root_build_dir) ]
 
@@ -216,6 +217,18 @@ template("fidl_library") {
             excluded_check,
           ]
         }
+      }
+
+      experimental_checks = []
+      if (defined(invoker.experimental_checks)) {
+        experimental_checks = invoker.experimental_checks
+      }
+
+      foreach(experimental_check, experimental_checks) {
+        args += [
+          "-x",
+          experimental_check,
+        ]
       }
 
       args += fidl_to_lint
