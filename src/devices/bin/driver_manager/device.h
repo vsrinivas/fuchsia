@@ -131,6 +131,9 @@ class Device final
   std::list<const Device*> children() const;
   std::list<Device*> children();
 
+  void AdvertiseModifiedToDevfs();
+  void PublishToDevfs();
+
   // Signal that this device is ready for bind to happen.  This should happen
   // either immediately after the device is created, if it's created visible,
   // or after it becomes visible.

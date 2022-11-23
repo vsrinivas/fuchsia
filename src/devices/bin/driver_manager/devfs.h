@@ -67,6 +67,7 @@ class Devnode {
   PseudoDir& children() const { return node().children(); }
   ExportOptions export_options() const;
   ExportOptions* export_options();
+  void advertise_modified();
 
   // Publishes the node to devfs. Asserts if called more than once.
   void publish();
@@ -191,8 +192,6 @@ class Devfs {
   zx::result<fidl::ClientEnd<fuchsia_io::Directory>> Connect(fs::FuchsiaVfs& vfs);
 
   zx_status_t initialize(Device& device);
-  void publish(Device& device);
-  void advertise_modified(Device& dev);
 
   // This method is exposed for testing.
   ProtoNode* proto_node(uint32_t protocol_id);

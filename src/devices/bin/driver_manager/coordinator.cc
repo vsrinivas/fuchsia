@@ -562,7 +562,7 @@ zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
   }
   if (dev->flags & DEV_CTX_INVISIBLE) {
     dev->flags &= ~DEV_CTX_INVISIBLE;
-    devfs_.publish(*dev);
+    dev->PublishToDevfs();
     zx_status_t r = dev->SignalReadyForBind();
     if (r != ZX_OK) {
       return r;

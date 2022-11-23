@@ -89,6 +89,12 @@ Devnode::ExportOptions* Devnode::export_options() {
                     target());
 }
 
+void Devnode::advertise_modified() {
+  ZX_ASSERT(parent_ != nullptr);
+  parent_->Notify(name(), fio::wire::WatchEvent::kRemoved);
+  parent_->Notify(name(), fio::wire::WatchEvent::kAdded);
+}
+
 zx::result<Devnode*> Devnode::walk(std::string_view path) {
   Devnode* dn = this;
 
@@ -348,29 +354,6 @@ void Devnode::publish() {
   MustAddEntry(parent, name, node_);
 }
 
-void Devfs::publish(Device& device) {
-  for (auto* ptr : {&device.link, &device.self}) {
-    auto& dn_opt = *ptr;
-    if (dn_opt.has_value()) {
-      dn_opt.value().publish();
-    }
-  }
-}
-
-void Devfs::advertise_modified(Device& device) {
-  for (auto* ptr : {&device.link, &device.self}) {
-    auto& dn_opt = *ptr;
-    if (dn_opt.has_value()) {
-      const Devnode& dn = dn_opt.value();
-      ZX_ASSERT(dn.parent_ != nullptr);
-      PseudoDir& parent = *dn.parent_;
-      for (const auto event : {fio::wire::WatchEvent::kRemoved, fio::wire::WatchEvent::kAdded}) {
-        parent.Notify(dn.name(), event);
-      }
-    }
-  }
-}
-
 ProtoNode::ProtoNode(fbl::String name, uint32_t initial_device_number)
     : name_(std::move(name)), next_device_number_(initial_device_number) {}
 
@@ -444,7 +427,7 @@ zx_status_t Devfs::initialize(Device& device) {
   }
 
   if (!(device.flags & DEV_CTX_INVISIBLE)) {
-    publish(device);
+    device.PublishToDevfs();
   }
   return ZX_OK;
 }

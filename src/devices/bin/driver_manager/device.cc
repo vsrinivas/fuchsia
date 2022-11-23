@@ -433,6 +433,24 @@ std::list<const Device*> Device::children() const {
 
 std::list<Device*> Device::children() { return Device::GetChildren<Device>(this); }
 
+void Device::AdvertiseModifiedToDevfs() {
+  if (link) {
+    link->advertise_modified();
+  }
+  if (self) {
+    self->advertise_modified();
+  }
+}
+
+void Device::PublishToDevfs() {
+  if (self) {
+    self->publish();
+  }
+  if (link) {
+    link->publish();
+  }
+}
+
 zx_status_t Device::SignalReadyForBind(zx::duration delay) {
   return publish_task_.PostDelayed(this->coordinator->dispatcher(), delay);
 }
@@ -819,7 +837,7 @@ void Device::BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync
   // Notify observers that this device is available again
   // Needed for non-auto-binding drivers like GPT against block, etc
   if (driver_path.empty()) {
-    coordinator->devfs().advertise_modified(*this);
+    AdvertiseModifiedToDevfs();
   }
   if (status != ZX_OK) {
     completer.ReplyError(status);
