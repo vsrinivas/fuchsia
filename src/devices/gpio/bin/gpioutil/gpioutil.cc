@@ -11,8 +11,12 @@
 #include <lib/fit/defer.h>
 #include <stdio.h>
 
+#include <filesystem>
+
 // Directory path to the GPIO class
-constexpr char kGpioDevClassDir[] = "/dev/class/gpio/";
+#define GPIO_DEV_CLASS_PATH "/dev/class/gpio/"
+constexpr char kGpioDevClassDir[] = GPIO_DEV_CLASS_PATH;
+constexpr char kGpioDevClassNsDir[] = "/ns" GPIO_DEV_CLASS_PATH;
 
 int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
               fuchsia_hardware_gpio::wire::GpioFlags* in_flag, uint8_t* out_value,
@@ -93,16 +97,21 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
 }
 
 int ListGpios(void) {
-  DIR* gpio_dir = opendir(kGpioDevClassDir);
+  const char* dev_class_dir = kGpioDevClassNsDir;
+  if (!std::filesystem::is_directory(dev_class_dir)) {
+    dev_class_dir = kGpioDevClassDir;
+  }
+
+  DIR* gpio_dir = opendir(dev_class_dir);
   if (!gpio_dir) {
-    fprintf(stderr, "Failed to open GPIO device dir %s\n", kGpioDevClassDir);
+    fprintf(stderr, "Failed to open GPIO device dir %s\n", dev_class_dir);
     return -1;
   }
   auto cleanup = fit::defer([&gpio_dir]() { closedir(gpio_dir); });
 
   struct dirent* dir;
   while ((dir = readdir(gpio_dir)) != NULL) {
-    std::string gpio_path(kGpioDevClassDir);
+    std::string gpio_path(dev_class_dir);
     gpio_path += std::string(dir->d_name);
     auto client_end = component::Connect<fuchsia_hardware_gpio::Gpio>(gpio_path);
 
@@ -135,16 +144,21 @@ int ListGpios(void) {
 
 zx::result<fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>> FindGpioClientByName(
     std::string_view name) {
-  DIR* gpio_dir = opendir(kGpioDevClassDir);
+  const char* dev_class_dir = kGpioDevClassNsDir;
+  if (!std::filesystem::is_directory(dev_class_dir)) {
+    dev_class_dir = kGpioDevClassDir;
+  }
+
+  DIR* gpio_dir = opendir(dev_class_dir);
   if (!gpio_dir) {
-    fprintf(stderr, "Failed to open GPIO device dir %s\n", kGpioDevClassDir);
+    fprintf(stderr, "Failed to open GPIO device dir %s\n", dev_class_dir);
     return zx::error(ZX_ERR_NOT_FOUND);
   }
   auto cleanup = fit::defer([&gpio_dir]() { closedir(gpio_dir); });
 
   struct dirent* dir;
   while ((dir = readdir(gpio_dir)) != NULL) {
-    std::string gpio_path(kGpioDevClassDir);
+    std::string gpio_path(dev_class_dir);
     gpio_path += std::string(dir->d_name);
     auto client_end = component::Connect<fuchsia_hardware_gpio::Gpio>(gpio_path);
 
