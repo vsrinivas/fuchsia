@@ -325,7 +325,7 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
     }
 
     if (!port.WithPort([frame_type = desc.frame_type](DevicePort& p) {
-          return p.IsValidRxFrameType(static_cast<netdev::wire::FrameType>(frame_type));
+          return p.IsValidTxFrameType(static_cast<netdev::wire::FrameType>(frame_type));
         })) {
       return ZX_ERR_IO_INVALID;
     }

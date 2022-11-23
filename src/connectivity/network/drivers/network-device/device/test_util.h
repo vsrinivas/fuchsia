@@ -150,6 +150,16 @@ class FakeNetworkPortImpl : public ddk::NetworkPortProtocol<FakeNetworkPortImpl>
   void RemoveSync();
   void SetMac(mac_addr_protocol_t proto) { mac_proto_ = proto; }
   void SetOnSetActiveCallback(OnSetActiveCallback cb) { on_set_active_ = std::move(cb); }
+  void SetSupportedRxType(netdev::wire::FrameType frame_type) {
+    rx_types_ = {static_cast<uint8_t>(frame_type)};
+  }
+  void SetSupportedTxType(netdev::wire::FrameType frame_type) {
+    tx_types_ = {tx_support_t{
+        .type = static_cast<uint8_t>(frame_type),
+        .features = netdev::wire::kFrameFeaturesRaw,
+        .supported_flags = 0,
+    }};
+  }
 
   network_port_protocol_t protocol() {
     return {

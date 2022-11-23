@@ -1176,6 +1176,9 @@ TEST_F(NetworkDeviceTest, TxHeadLength) {
 }
 
 TEST_F(NetworkDeviceTest, InvalidTxFrameType) {
+  constexpr netdev::wire::FrameType kDescriptorFrameType = netdev::wire::FrameType::kIpv4;
+  port13_.SetSupportedRxType(kDescriptorFrameType);
+  port13_.SetSupportedTxType(netdev::wire::FrameType::kEthernet);
   ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
@@ -1187,7 +1190,7 @@ TEST_F(NetworkDeviceTest, InvalidTxFrameType) {
       .base = kPort13,
       .salt = GetSaltedPortId(kPort13).salt,
   };
-  desc.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kIpv4);
+  desc.frame_type = static_cast<uint8_t>(kDescriptorFrameType);
   ASSERT_OK(session.SendTx(kDescriptorIndex0));
   // Session should be killed because of contract breach:
   ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
@@ -1282,12 +1285,15 @@ TEST_F(NetworkDeviceTest, ReturnTxInline) {
 
 // Test that attaching a session with unknown Rx types will fail.
 TEST_F(NetworkDeviceTest, RejectsInvalidRxTypes) {
+  constexpr netdev::wire::FrameType kDescriptorFrameType = netdev::wire::FrameType::kIpv4;
+  port13_.SetSupportedRxType(netdev::wire::FrameType::kEthernet);
+  port13_.SetSupportedTxType(kDescriptorFrameType);
   ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session, netdev::wire::SessionFlags::kPrimary, kDefaultDescriptorCount,
                         kDefaultBufferLength));
-  ASSERT_STATUS(session.AttachPort(GetSaltedPortId(kPort13), {netdev::wire::FrameType::kIpv4}),
+  ASSERT_STATUS(session.AttachPort(GetSaltedPortId(kPort13), {kDescriptorFrameType}),
                 ZX_ERR_INVALID_ARGS);
 }
 
