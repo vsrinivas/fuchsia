@@ -86,6 +86,9 @@ type RunCommand struct {
 
 	// Any image overrides for boot.
 	imageOverrides imageOverridesFlagValue
+
+	// Args passed to testrunner
+	testrunnerFlags testrunner.TestrunnerFlags
 }
 
 type imageOverridesFlagValue build.ImageOverrides
@@ -154,6 +157,16 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.downloadManifest, "download-manifest", "", "Path to a manifest containing all package server downloads")
 	f.IntVar(&r.ffxExperimentLevel, "ffx-experiment-level", 0, "The level of experimental features to enable. If -ffx is not set, this will have no effect.")
 	f.Var(&r.imageOverrides, "image-overrides", "A json struct following the ImageOverrides schema at //tools/build/tests.go with the names of the images to use from images.json.")
+
+	// Parsing of testrunner flags.
+	f.StringVar(&r.testrunnerFlags.OutDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
+	f.StringVar(&r.testrunnerFlags.NsjailPath, "nsjail", "", "Optional path to an NsJail binary to use for linux host test sandboxing.")
+	f.StringVar(&r.testrunnerFlags.NsjailRoot, "nsjail-root", "", "Path to the directory to use as the NsJail root directory")
+	f.StringVar(&r.testrunnerFlags.LocalWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
+	f.BoolVar(&r.testrunnerFlags.UseRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
+	f.StringVar(&r.testrunnerFlags.SnapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
+	f.BoolVar(&r.testrunnerFlags.PrefetchPackages, "prefetch-packages", false, "Prefetch any test packages in the background.")
+	f.BoolVar(&r.testrunnerFlags.UseSerial, "use-serial", false, "Use serial to run tests on the target.")
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
@@ -562,33 +575,49 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t targets.Target, arg
 	// testrunner from the args we can remove this.
 	tf := flag.NewFlagSet("testrunner flags", flag.ContinueOnError)
 	var testrunnerFlags testrunner.TestrunnerFlags
+	var testsPath string
 
-	logger.Tracef(ctx, "parsing testrunner flags with args=%v", args)
-	tf.BoolVar(&testrunnerFlags.Help, "help", false, "Whether to show Usage and exit.")
-	tf.StringVar(&testrunnerFlags.OutDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
-	tf.StringVar(&testrunnerFlags.NsjailPath, "nsjail", "", "Optional path to an NsJail binary to use for linux host test sandboxing.")
-	tf.StringVar(&testrunnerFlags.NsjailRoot, "nsjail-root", "", "Path to the directory to use as the NsJail root directory")
-	tf.StringVar(&testrunnerFlags.LocalWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
-	tf.BoolVar(&testrunnerFlags.UseRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
-	tf.StringVar(&testrunnerFlags.SnapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
-	tf.Var(&testrunnerFlags.LogLevel, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
-	tf.StringVar(&testrunnerFlags.FfxPath, "ffx", "", "Path to the ffx tool.")
-	tf.IntVar(&testrunnerFlags.FfxExperimentLevel, "ffx-experiment-level", 0, "The level of experimental features to enable. If -ffx is not set, this will have no effect.")
-	tf.BoolVar(&testrunnerFlags.PrefetchPackages, "prefetch-packages", false, "Prefetch any test packages in the background.")
-	tf.BoolVar(&testrunnerFlags.UseSerial, "use-serial", false, "Use serial to run tests on the target.")
+	// In case it is not possible to parse the testrunner flags as botanist flags
+	// it is necessary to parse them in this branch.
+	if len(args) > 1 {
+		logger.Tracef(ctx, "parsing testrunner flags with args=%v", args)
 
-	// Once we remove "./testrunner" from the args we can remove this
-	// branch.
-	if args[0] == "./testrunner" {
-		args = args[1:]
+		tf.BoolVar(&testrunnerFlags.Help, "help", false, "Whether to show Usage and exit.")
+		tf.StringVar(&testrunnerFlags.OutDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
+		tf.StringVar(&testrunnerFlags.NsjailPath, "nsjail", "", "Optional path to an NsJail binary to use for linux host test sandboxing.")
+		tf.StringVar(&testrunnerFlags.NsjailRoot, "nsjail-root", "", "Path to the directory to use as the NsJail root directory")
+		tf.StringVar(&testrunnerFlags.LocalWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
+		tf.BoolVar(&testrunnerFlags.UseRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
+		tf.StringVar(&testrunnerFlags.SnapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
+		tf.Var(&testrunnerFlags.LogLevel, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
+		tf.StringVar(&testrunnerFlags.FfxPath, "ffx", "", "Path to the ffx tool.")
+		tf.IntVar(&testrunnerFlags.FfxExperimentLevel, "ffx-experiment-level", 0, "The level of experimental features to enable. If -ffx is not set, this will have no effect.")
+		tf.BoolVar(&testrunnerFlags.PrefetchPackages, "prefetch-packages", false, "Prefetch any test packages in the background.")
+		tf.BoolVar(&testrunnerFlags.UseSerial, "use-serial", false, "Use serial to run tests on the target.")
+
+		// Once we remove "./testrunner" from the args we can remove this
+		// branch.
+		if args[0] == "./testrunner" {
+			args = args[1:]
+		}
+
+		if err := tf.Parse(args); err != nil {
+			return err
+		}
+
+		logger.Debugf(ctx, "testrunner positional args %v", tf.Args())
+		testsPath = tf.Arg(0)
+
+	} else {
+		// This branch is only taken when the './testrunner' is not part of the
+		// args, therefore |args| only contain the testspath
+		testrunnerFlags = r.testrunnerFlags
+		testrunnerFlags.FfxExperimentLevel = r.ffxExperimentLevel
+		testrunnerFlags.FfxPath = r.ffxPath
+
+		logger.Debugf(ctx, "testrunner positional args %v", args)
+		testsPath = args[0]
 	}
-
-	if err := tf.Parse(args); err != nil {
-		return err
-	}
-
-	testsPath := tf.Arg(0)
-	logger.Debugf(ctx, "testrunner positional args %v", tf.Args())
 
 	if err := testrunner.SetupAndExecute(ctx, testrunnerFlags, testsPath); err != nil {
 		return fmt.Errorf("testrunner with args: %v, with timeout: %s, failed: %w", testrunnerFlags, r.timeout, err)
