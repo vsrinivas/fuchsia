@@ -5,7 +5,7 @@
     include: [ "//src/proc/tests/starnix_test.shard.cml" ],
     program: {
         binary: "data/tests/fdio-test",
-        args: [ "--gtest_filter=BadFdTest.*:DirectoryTest.*:EventFdTest.*:Poll.*:Pipe2.*:MmapTest.*:UnistdTest.*:-UnistdTest.LinkAtFollow" ],
+        args: [ "--gtest_filter=BadFdTest.*:DirectoryTest.*:EventFdTest.*:Poll.*:Pipe2.*:MmapTest.*:UnistdTest.*" ],
         environ: [ "TEST_TMPDIR=/data/tmp" ],
     },
 }

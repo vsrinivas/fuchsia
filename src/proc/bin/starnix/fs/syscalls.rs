@@ -1057,6 +1057,15 @@ pub fn sys_ioctl(
     }
 }
 
+// https://man7.org/linux/man-pages/man2/symlink.2.html
+pub fn sys_symlink(
+    current_task: &CurrentTask,
+    user_target: UserCString,
+    user_path: UserCString,
+) -> Result<(), Errno> {
+    sys_symlinkat(current_task, user_target, FdNumber::AT_FDCWD, user_path)
+}
+
 pub fn sys_symlinkat(
     current_task: &CurrentTask,
     user_target: UserCString,

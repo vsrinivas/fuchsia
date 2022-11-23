@@ -220,6 +220,7 @@ pub fn dispatch_syscall(
         socketpair[4],
         stat[2],
         statfs[2],
+        symlink[2],
         symlinkat[3],
         tgkill[3],
         time[1],
