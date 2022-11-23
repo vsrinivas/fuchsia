@@ -212,8 +212,10 @@ void DriverHostContext::FinalizeDyingDevices() {
 
       // Shut down the dispatcher if this is the last device.
       if (dev->driver->device_count() == 1) {
-        dev->driver->StopDispatcher();
+        // Drop the api_lock_ *before* stopping the dispatcher since otherwise we can get deadlocks
+        // because anything currently running on the dispatcher might need api_lock_.
         api_lock_.Release();
+        dev->driver->StopDispatcher();
         dev->ReleaseSyncOp();
         api_lock_.Acquire();
       } else {

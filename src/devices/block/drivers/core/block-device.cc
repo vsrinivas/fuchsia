@@ -209,19 +209,7 @@ void BlockDevice::OpenSession(OpenSessionRequestView request,
     return;
   }
   fidl::BindServer(fdf::Dispatcher::GetCurrent()->async_dispatcher(), std::move(request->session),
-                   std::move(manager),
-                   [](Manager* manager, fidl::UnbindInfo unbind_info,
-                      fidl::ServerEnd<fuchsia_hardware_block::Session>) {
-                     if (unbind_info.is_dispatcher_shutdown()) {
-                       // We are shutting down. The driver framework is holding its API lock, which
-                       // may deadlock with closing the fifo server.
-                       //
-                       // TODO(https://fxbug.dev/97783): Implement ddk::Unbindable so that we can
-                       // perform orderly shutdown before allowing the framework to tear us down.
-                       return;
-                     }
-                     manager->CloseFifoServer();
-                   });
+                   std::move(manager));
 }
 
 void BlockDevice::RebindDevice(RebindDeviceCompleter::Sync& completer) {

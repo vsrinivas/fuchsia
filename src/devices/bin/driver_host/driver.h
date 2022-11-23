@@ -36,6 +36,8 @@ class Driver : public fbl::RefCounted<Driver> {
 
   fdf::UnownedDispatcher dispatcher() const { return dispatcher_.borrow(); }
 
+  // api_lock_ should *not* be held when calling this since anything running on the dispatcher might
+  // need it and we'd end up in a deadlock.
   void StopDispatcher() {
     dispatcher_.ShutdownAsync();
     released_.Wait();
