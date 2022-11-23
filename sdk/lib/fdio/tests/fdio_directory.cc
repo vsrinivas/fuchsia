@@ -47,12 +47,17 @@ TEST(DirectoryTest, Open) {
   ASSERT_OK(fdio_open_at(h2.get(), fidl::DiscoverableProtocolName<fuchsia_process::Launcher>,
                          static_cast<uint32_t>(kReadFlags), h4.release()));
 
+// We need to test the deprecated fdio_service_clone(_to) functions, so allow use of deprecated
+// APIs here without printing any warnings.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   h3.reset(fdio_service_clone(h2.get()));
   ASSERT_TRUE(h3.is_valid());
 
   ASSERT_OK(zx::channel::create(0, &h3, &h4));
   ASSERT_STATUS(ZX_ERR_INVALID_ARGS, fdio_service_clone_to(h2.get(), ZX_HANDLE_INVALID));
   ASSERT_OK(fdio_service_clone_to(h2.get(), h3.release()));
+#pragma clang diagnostic pop
 }
 
 TEST(DirectoryTest, OpenFD) {
