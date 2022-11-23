@@ -209,7 +209,7 @@ class FuseStatus : public hwreg::RegisterBase<FuseStatus, uint32_t> {
 
 // NDE_RSTWRN_OPT (North Display Reset Warn Options)
 //
-// Tiger Lake: IHD-OS-DG1-Vol 2c-2.21 Part 2 page 134
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 page 134
 // DG1: IHD-OS-DG1-Vol 2c-2.21 Part 2 page 141
 // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 page 440
 // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 page 436

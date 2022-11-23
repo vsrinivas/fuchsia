@@ -268,7 +268,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
   // Initialize Display" > "Initialize Sequence", with the tweak that we attempt
   // to reuse the setup left in place by the boot firmware.
   //
-  // Tiger Lake: IHD-OS-DG1-Vol 12-2.21 pages 141-142
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 pages 141-142
   // DG1: IHD-OS-DG1-Vol 12-2.21 pages 119-120
   // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 page 112-113
   // Skylake: IHD-OS-SKL-Vol 12-05.16 page 110
